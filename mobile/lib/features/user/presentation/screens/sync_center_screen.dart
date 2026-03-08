@@ -23,7 +23,8 @@ class _SyncCenterScreenState extends ConsumerState<SyncCenterScreen> {
 
     return DefaultTabController(
       length: 4,
-      child: Scaffold(
+      child: SparklePageScaffold(
+        role: SparklePageRole.settings,
         appBar: AppBar(
           leading: SparkleIconButton(
             variant: ButtonVariant.ghost,
@@ -59,41 +60,54 @@ class _SyncCenterScreenState extends ConsumerState<SyncCenterScreen> {
             ],
           ),
         ),
-        body: ContentConstraint(
+        child: ContentConstraint(
           child: Padding(
             padding: const EdgeInsets.all(DS.spacing16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                statsAsync.when(
-                  data: (stats) => _StatsView(stats: stats),
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (error, stackTrace) => Text('加载失败: $error'),
+                GraphiteCardSurface(
+                  surfaceRole: SparkleSurfaceRole.card,
+                  child: statsAsync.when(
+                    data: (stats) => _StatsView(stats: stats),
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (error, stackTrace) => Text('加载失败: $error'),
+                  ),
                 ),
                 const SizedBox(height: DS.spacing16),
-                _TopicFilter(
-                  value: _topicFilter,
-                  onChanged: (value) {
-                    setState(() {
-                      _topicFilter = value;
-                    });
-                  },
-                ),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: SparkleButton.ghost(
-                    onPressed: () async {
-                      final diagnostics = await service.buildDiagnostics();
-                      await Clipboard.setData(
-                        ClipboardData(text: diagnostics),
-                      );
-                      if (context.mounted) {
-                        AppFeedback.success(context, '已复制诊断信息');
-                      }
-                    },
-                    icon: const Icon(Icons.copy),
-                    label: 'Copy diagnostics',
+                GraphiteCardSurface(
+                  surfaceRole: SparkleSurfaceRole.card,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _TopicFilter(
+                        value: _topicFilter,
+                        onChanged: (value) {
+                          setState(() {
+                            _topicFilter = value;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: DS.spacing8),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: SparkleButton.ghost(
+                          onPressed: () async {
+                            final diagnostics =
+                                await service.buildDiagnostics();
+                            await Clipboard.setData(
+                              ClipboardData(text: diagnostics),
+                            );
+                            if (context.mounted) {
+                              AppFeedback.success(context, '已复制诊断信息');
+                            }
+                          },
+                          icon: const Icon(Icons.copy),
+                          label: 'Copy diagnostics',
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: DS.spacing8),
@@ -133,23 +147,26 @@ class _SyncCenterScreenState extends ConsumerState<SyncCenterScreen> {
             ),
           ),
         ),
-        bottomNavigationBar: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            DS.spacing16,
-            0,
-            DS.spacing16,
-            DS.spacing16,
-          ),
-          child: SparkleButton(
-            onPressed: () async {
-              await service.retryFailed();
-              if (context.mounted) {
-                AppFeedback.success(context, '已触发失败重试');
-              }
-            },
-            icon: const Icon(Icons.sync),
-            label: 'Retry failed',
-            expand: true,
+        bottomNavigationBar: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              DS.spacing16,
+              0,
+              DS.spacing16,
+              DS.spacing16,
+            ),
+            child: SparkleButton(
+              onPressed: () async {
+                await service.retryFailed();
+                if (context.mounted) {
+                  AppFeedback.success(context, '已触发失败重试');
+                }
+              },
+              icon: const Icon(Icons.sync),
+              label: 'Retry failed',
+              expand: true,
+            ),
           ),
         ),
       ),

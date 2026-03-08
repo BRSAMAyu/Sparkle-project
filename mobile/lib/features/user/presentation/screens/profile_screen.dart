@@ -24,6 +24,7 @@ class ProfileScreen extends ConsumerWidget {
     if (user == null) return const SizedBox.shrink();
 
     return GraphiteScaffold(
+      role: SparklePageRole.content,
       safeArea: false,
       child: SingleChildScrollView(
         padding: EdgeInsets.zero,
@@ -62,7 +63,14 @@ class ProfileScreen extends ConsumerWidget {
           // Wave Background
           Positioned.fill(
             child: CustomPaint(
-              painter: _WaveHeaderPainter(),
+              painter: _WaveHeaderPainter(
+                startColor: Color.lerp(
+                    DS.surfacePrimaryElevated, DS.brandPrimary, 0.04)!,
+                middleColor:
+                    Color.lerp(DS.surfaceCanvas, DS.surfaceSecondary, 0.54)!,
+                endColor:
+                    Color.lerp(DS.surfaceCanvas, DS.brandSecondary, 0.06)!,
+              ),
             ),
           ),
           // Content
@@ -373,6 +381,16 @@ class ProfileScreen extends ConsumerWidget {
 }
 
 class _WaveHeaderPainter extends CustomPainter {
+  const _WaveHeaderPainter({
+    required this.startColor,
+    required this.middleColor,
+    required this.endColor,
+  });
+
+  final Color startColor;
+  final Color middleColor;
+  final Color endColor;
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
@@ -380,9 +398,9 @@ class _WaveHeaderPainter extends CustomPainter {
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          DS.surfaceOverlay,
-          Color.lerp(DS.surfaceCanvas, DS.brandPrimary, 0.18)!,
-          Color.lerp(DS.surfaceCanvas, DS.brandSecondary, 0.16)!,
+          startColor,
+          middleColor,
+          endColor,
         ],
       ).createShader(
         Rect.fromLTWH(0, 0, size.width, size.height),
@@ -414,5 +432,8 @@ class _WaveHeaderPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _WaveHeaderPainter oldDelegate) =>
+      oldDelegate.startColor != startColor ||
+      oldDelegate.middleColor != middleColor ||
+      oldDelegate.endColor != endColor;
 }

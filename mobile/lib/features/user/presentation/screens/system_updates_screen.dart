@@ -25,11 +25,12 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
   @override
   Widget build(BuildContext context) {
     final updatesAsync = ref.watch(systemUpdatesProvider);
-    return Scaffold(
+    return SparklePageScaffold(
+      role: SparklePageRole.settings,
       appBar: AppBar(
         title: const Text('系统活动'),
       ),
-      body: updatesAsync.when(
+      child: updatesAsync.when(
         data: (items) => ContentConstraint(child: _buildList(context, items)),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('加载失败：$err')),
@@ -53,20 +54,30 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
       child: ListView(
         padding: const EdgeInsets.all(DS.spacing16),
         children: [
-          _buildSearchField(),
-          const SizedBox(height: DS.spacing12),
-          _buildFilterRow(
-            title: '类型',
-            options: categories,
-            selected: _categoryFilter,
-            onSelected: (value) => setState(() => _categoryFilter = value),
-          ),
-          const SizedBox(height: DS.spacing12),
-          _buildFilterRow(
-            title: '优先级',
-            options: priorities,
-            selected: _priorityFilter,
-            onSelected: (value) => setState(() => _priorityFilter = value),
+          GraphiteCardSurface(
+            surfaceRole: SparkleSurfaceRole.card,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildSearchField(),
+                const SizedBox(height: DS.spacing12),
+                _buildFilterRow(
+                  title: '类型',
+                  options: categories,
+                  selected: _categoryFilter,
+                  onSelected: (value) =>
+                      setState(() => _categoryFilter = value),
+                ),
+                const SizedBox(height: DS.spacing12),
+                _buildFilterRow(
+                  title: '优先级',
+                  options: priorities,
+                  selected: _priorityFilter,
+                  onSelected: (value) =>
+                      setState(() => _priorityFilter = value),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: DS.spacing16),
           Text(
@@ -85,71 +96,74 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
               ),
             )
           else
-            ...filtered.map((item) => Padding(
-                  padding: const EdgeInsets.only(bottom: DS.spacing12),
-                  child: _buildUpdateCard(item),
-                ),),
+            ...filtered.map(
+              (item) => Padding(
+                padding: const EdgeInsets.only(bottom: DS.spacing12),
+                child: _buildUpdateCard(item),
+              ),
+            ),
         ],
       ),
     );
   }
 
   Widget _buildSearchField() => TextField(
-      controller: _searchController,
-      onChanged: (_) => setState(() {}),
-      decoration: InputDecoration(
-        prefixIcon: const Icon(Icons.search_rounded),
-        hintText: '搜索标题或描述',
-        filled: true,
-        fillColor: DS.surfaceSecondary,
-        border: OutlineInputBorder(
-          borderRadius: DS.borderRadius12,
-          borderSide: BorderSide(color: DS.neutral200),
+        controller: _searchController,
+        onChanged: (_) => setState(() {}),
+        decoration: InputDecoration(
+          prefixIcon: const Icon(Icons.search_rounded),
+          hintText: '搜索标题或描述',
+          filled: true,
+          fillColor: DS.surfaceRoleColor(SparkleSurfaceRole.panel),
+          border: OutlineInputBorder(
+            borderRadius: DS.borderRadius12,
+            borderSide: BorderSide(color: DS.neutral200),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: DS.borderRadius12,
+            borderSide: BorderSide(color: DS.neutral200),
+          ),
+          contentPadding: const EdgeInsets.symmetric(
+              horizontal: DS.spacing12, vertical: 12),
         ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: DS.borderRadius12,
-          borderSide: BorderSide(color: DS.neutral200),
-        ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: DS.spacing12, vertical: 12),
-      ),
-    );
+      );
 
   Widget _buildFilterRow({
     required String title,
     required List<String> options,
     required String selected,
     required ValueChanged<String> onSelected,
-  }) => Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: TextStyle(
-            fontWeight: DS.fontWeightSemibold,
-            color: DS.textSecondary,
+  }) =>
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontWeight: DS.fontWeightSemibold,
+              color: DS.textSecondary,
+            ),
           ),
-        ),
-        const SizedBox(height: DS.spacing8),
-        Wrap(
-          spacing: DS.spacing8,
-          runSpacing: DS.spacing8,
-          children: options
-              .map(
-                (item) => ChoiceChip(
-                  label: Text(item),
-                  selected: selected == item,
-                  selectedColor: DS.primaryBase.withValues(alpha: 0.15),
-                  labelStyle: TextStyle(
-                    color: selected == item ? DS.primaryBase : DS.neutral600,
+          const SizedBox(height: DS.spacing8),
+          Wrap(
+            spacing: DS.spacing8,
+            runSpacing: DS.spacing8,
+            children: options
+                .map(
+                  (item) => ChoiceChip(
+                    label: Text(item),
+                    selected: selected == item,
+                    selectedColor: DS.primaryBase.withValues(alpha: 0.15),
+                    labelStyle: TextStyle(
+                      color: selected == item ? DS.primaryBase : DS.neutral600,
+                    ),
+                    onSelected: (_) => onSelected(item),
                   ),
-                  onSelected: (_) => onSelected(item),
-                ),
-              )
-              .toList(),
-        ),
-      ],
-    );
+                )
+                .toList(),
+          ),
+        ],
+      );
 
   Widget _buildUpdateCard(Map<String, dynamic> item) {
     final title = item['title']?.toString() ?? '系统更新';
@@ -160,51 +174,45 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
 
     final priorityStyle = _priorityStyle(priority);
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: DS.surfacePrimaryElevated,
-        borderRadius: DS.borderRadius12,
-        boxShadow: DS.shadowSm,
-        border: Border.all(color: priorityStyle.border),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(DS.spacing12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    title,
-                    style: TextStyle(
-                      fontWeight: DS.fontWeightSemibold,
-                      color: DS.textPrimary,
-                    ),
+    return GraphiteCardSurface(
+      surfaceRole: SparkleSurfaceRole.card,
+      padding: const EdgeInsets.all(DS.spacing12),
+      borderColor: priorityStyle.border,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontWeight: DS.fontWeightSemibold,
+                    color: DS.textPrimary,
                   ),
                 ),
-                if (priority.isNotEmpty)
-                  _pill(priority, priorityStyle.bg, priorityStyle.fg),
-              ],
+              ),
+              if (priority.isNotEmpty)
+                _pill(priority, priorityStyle.bg, priorityStyle.fg),
+            ],
+          ),
+          if (createdAt.isNotEmpty)
+            Text(
+              createdAt,
+              style: TextStyle(color: DS.neutral500, fontSize: DS.fontSizeSm),
             ),
-            if (createdAt.isNotEmpty)
-              Text(
-                createdAt,
-                style: TextStyle(color: DS.neutral500, fontSize: DS.fontSizeSm),
-              ),
-            if (description.isNotEmpty) ...[
-              const SizedBox(height: DS.spacing8),
-              Text(
-                description,
-                style: TextStyle(color: DS.textSecondary),
-              ),
-            ],
-            if (category.isNotEmpty) ...[
-              const SizedBox(height: DS.spacing8),
-              _pill(category, DS.neutral100, DS.neutral600),
-            ],
+          if (description.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing8),
+            Text(
+              description,
+              style: TextStyle(color: DS.textSecondary),
+            ),
           ],
-        ),
+          if (category.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing8),
+            _pill(category, DS.neutral100, DS.neutral600),
+          ],
+        ],
       ),
     );
   }
@@ -274,20 +282,20 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
   }
 
   Widget _pill(String text, Color bg, Color fg) => Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: DS.spacing10,
-        vertical: DS.spacing6,
-      ),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: DS.borderRadius20,
-        border: Border.all(color: DS.neutral200),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(color: fg, fontSize: DS.fontSizeSm),
-      ),
-    );
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing10,
+          vertical: DS.spacing6,
+        ),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: DS.borderRadius20,
+          border: Border.all(color: DS.neutral200),
+        ),
+        child: Text(
+          text,
+          style: TextStyle(color: fg, fontSize: DS.fontSizeSm),
+        ),
+      );
 
   String _formatTime(dynamic raw) {
     if (raw is int && raw > 0) {

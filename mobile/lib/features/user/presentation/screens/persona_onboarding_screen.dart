@@ -37,39 +37,44 @@ class _PersonaOnboardingScreenState
   @override
   Widget build(BuildContext context) {
     final steps = _buildSteps();
-    return Scaffold(
+    return SparklePageScaffold(
+      role: SparklePageRole.settings,
       appBar: AppBar(
         title: const Text('画像引导'),
       ),
-      body: ContentConstraint(
-        child: Stepper(
-          currentStep: _currentStep,
-          onStepContinue: _submitting
-              ? null
-              : () {
-                  unawaited(_handleContinue(steps.length));
-                },
-          onStepCancel: _submitting ? null : _handleBack,
-          controlsBuilder: (context, details) {
-            final isLast = _currentStep == steps.length - 1;
-            return Row(
-              children: [
-                SparkleButton(
-                  label: isLast ? '完成' : '下一步',
-                  onPressed: details.onStepContinue,
-                  loading: _submitting,
-                ),
-                const SizedBox(width: DS.spacing12),
-                if (_currentStep > 0)
+      child: ContentConstraint(
+        child: GraphiteCardSurface(
+          surfaceRole: SparkleSurfaceRole.card,
+          margin: const EdgeInsets.all(DS.spacing16),
+          child: Stepper(
+            currentStep: _currentStep,
+            onStepContinue: _submitting
+                ? null
+                : () {
+                    unawaited(_handleContinue(steps.length));
+                  },
+            onStepCancel: _submitting ? null : _handleBack,
+            controlsBuilder: (context, details) {
+              final isLast = _currentStep == steps.length - 1;
+              return Row(
+                children: [
                   SparkleButton(
-                    label: '上一步',
-                    variant: ButtonVariant.ghost,
-                    onPressed: details.onStepCancel,
+                    label: isLast ? '完成' : '下一步',
+                    onPressed: details.onStepContinue,
+                    loading: _submitting,
                   ),
-              ],
-            );
-          },
-          steps: steps,
+                  const SizedBox(width: DS.spacing12),
+                  if (_currentStep > 0)
+                    SparkleButton(
+                      label: '上一步',
+                      variant: ButtonVariant.ghost,
+                      onPressed: details.onStepCancel,
+                    ),
+                ],
+              );
+            },
+            steps: steps,
+          ),
         ),
       ),
     );

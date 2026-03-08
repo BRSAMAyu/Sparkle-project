@@ -57,7 +57,8 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
       }
     });
 
-    return Scaffold(
+    return GraphiteScaffold(
+      role: SparklePageRole.content,
       appBar: AppBar(
         leading: SparkleIconButton(
           icon: const Icon(Icons.arrow_back),
@@ -79,7 +80,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
           ],
         ),
       ),
-      body: ContentConstraint(
+      child: ContentConstraint(
         child: Column(
           children: [
             Expanded(

@@ -168,24 +168,15 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
             _showNudgesAfterCreation = true;
             _isSubmitting = false;
           });
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('任务已创建，但有以下建议'),
-              duration: Duration(seconds: 3),
-            ),
-          );
+          AppFeedback.info(context, '任务已创建，但有以下建议');
         } else {
           context.pop(); // Go back to task list
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('任务创建成功')),
-          );
+          AppFeedback.success(context, '任务创建成功');
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('创建失败: $e')),
-        );
+        AppFeedback.error(context, '创建失败: $e');
       }
     } finally {
       if (mounted && _nudges.isEmpty) {
@@ -207,9 +198,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
         _showNudgesAfterCreation = false;
       }
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('已应用: ${nudge.title}')),
-    );
+    AppFeedback.success(context, '已应用: ${nudge.title}');
   }
 
   void _dismissNudges() {
@@ -221,11 +210,12 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => SparklePageScaffold(
+        role: SparklePageRole.content,
         appBar: AppBar(
           title: const Text('新建任务'),
         ),
-        body: ContentConstraint(
+        child: ContentConstraint(
           child: Form(
             key: _formKey,
             child: ListView(

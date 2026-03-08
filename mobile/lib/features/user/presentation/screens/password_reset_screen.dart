@@ -57,7 +57,8 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Scaffold(
+    return SparklePageScaffold(
+      role: SparklePageRole.settings,
       appBar: AppBar(
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
@@ -68,70 +69,69 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
         title: const Text('重置密码'),
         centerTitle: true,
       ),
-      body: ContentConstraint(
+      child: ContentConstraint(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(DS.spacing24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  '请确保您的新密码包含至少 8 个字符。',
-                  style: TextStyle(
-                    color:
-                        isDark ? DS.brandPrimary70 : DS.brandPrimary.shade600,
-                    fontSize: 14,
+          child: GraphiteCardSurface(
+            surfaceRole: SparkleSurfaceRole.card,
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    '请确保您的新密码包含至少 8 个字符。',
+                    style: TextStyle(
+                      color:
+                          isDark ? DS.brandPrimary70 : DS.brandPrimary.shade600,
+                      fontSize: 14,
+                    ),
                   ),
-                ),
-                const SizedBox(height: DS.spacing24),
-                _buildPasswordField(
-                  label: '当前密码',
-                  controller: _oldPasswordController,
-                  obscureText: _obscureOld,
-                  onToggle: () => setState(() => _obscureOld = !_obscureOld),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) return '请输入当前密码';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: DS.spacing16),
-                _buildPasswordField(
-                  label: '新密码',
-                  controller: _newPasswordController,
-                  obscureText: _obscureNew,
-                  onToggle: () => setState(() => _obscureNew = !_obscureNew),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) return '请输入新密码';
-                    if (value.length < 8) return '密码长度至少为 8 位';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: DS.spacing16),
-                _buildPasswordField(
-                  label: '确认新密码',
-                  controller: _confirmPasswordController,
-                  obscureText: _obscureConfirm,
-                  onToggle: () =>
-                      setState(() => _obscureConfirm = !_obscureConfirm),
-                  validator: (value) {
-                    if (value != _newPasswordController.text)
-                      return '两次输入的密码不一致';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: DS.spacing32),
-                SparkleButton(
-                  onPressed: _isLoading
-                      ? null
-                      : () {
-                          _handleReset();
-                        },
-                  label: '更新密码',
-                  loading: _isLoading,
-                  expand: true,
-                ),
-              ],
+                  const SizedBox(height: DS.spacing24),
+                  _buildPasswordField(
+                    label: '当前密码',
+                    controller: _oldPasswordController,
+                    obscureText: _obscureOld,
+                    onToggle: () => setState(() => _obscureOld = !_obscureOld),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) return '请输入当前密码';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: DS.spacing16),
+                  _buildPasswordField(
+                    label: '新密码',
+                    controller: _newPasswordController,
+                    obscureText: _obscureNew,
+                    onToggle: () => setState(() => _obscureNew = !_obscureNew),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) return '请输入新密码';
+                      if (value.length < 8) return '密码长度至少为 8 位';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: DS.spacing16),
+                  _buildPasswordField(
+                    label: '确认新密码',
+                    controller: _confirmPasswordController,
+                    obscureText: _obscureConfirm,
+                    onToggle: () =>
+                        setState(() => _obscureConfirm = !_obscureConfirm),
+                    validator: (value) {
+                      if (value != _newPasswordController.text)
+                        return '两次输入的密码不一致';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: DS.spacing32),
+                  SparkleButton(
+                    onPressed: _isLoading ? null : _handleReset,
+                    label: '更新密码',
+                    loading: _isLoading,
+                    expand: true,
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -179,23 +179,14 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
               onPressed: onToggle,
             ),
             filled: true,
-            fillColor:
-                isDark ? DS.brandPrimary.shade900 : DS.brandPrimary.shade50,
+            fillColor: DS.surfaceRoleColor(SparkleSurfaceRole.panel),
             border: OutlineInputBorder(
               borderRadius: DS.borderRadius12,
-              borderSide: BorderSide(
-                color: isDark
-                    ? DS.brandPrimary.shade700
-                    : DS.brandPrimary.shade300,
-              ),
+              borderSide: BorderSide(color: DS.borderSubtle),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: DS.borderRadius12,
-              borderSide: BorderSide(
-                color: isDark
-                    ? DS.brandPrimary.shade700
-                    : DS.brandPrimary.shade300,
-              ),
+              borderSide: BorderSide(color: DS.borderSubtle),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: DS.borderRadius12,

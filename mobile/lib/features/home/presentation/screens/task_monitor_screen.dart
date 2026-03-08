@@ -121,14 +121,10 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
     final state = ref.watch(backgroundTaskProvider);
     final filteredTasks = state.filteredTasks;
 
-    return Scaffold(
-      backgroundColor: DS.deepSpaceStart,
+    return SparklePageScaffold(
+      role: SparklePageRole.content,
       appBar: AppBar(
-        backgroundColor: DS.deepSpaceStart,
-        title: Text(
-          '后台任务监控',
-          style: TextStyle(color: DS.brandPrimary),
-        ),
+        title: const Text('后台任务监控'),
         leading: SparkleIconButton(
           icon: const Icon(Icons.arrow_back_ios_new),
           onPressed: () => Navigator.pop(context),
@@ -136,7 +132,7 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
           size: DS.touchTargetMinSize,
         ),
       ),
-      body: ContentConstraint(
+      child: ContentConstraint(
         child: Column(
           children: [
             _buildFilterChips(state.selectedFilter),
@@ -216,16 +212,11 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
         ),
       );
 
-  Widget _buildTaskCard(BackgroundTaskModel task) => Container(
+  Widget _buildTaskCard(BackgroundTaskModel task) => GraphiteCardSurface(
+        surfaceRole: SparkleSurfaceRole.card,
         margin: const EdgeInsets.only(bottom: DS.md),
         padding: const EdgeInsets.all(DS.md),
-        decoration: BoxDecoration(
-          color: DS.surfaceBase,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: _getStatusColor(task.status).withValues(alpha: 0.3),
-          ),
-        ),
+        borderColor: _getStatusColor(task.status).withValues(alpha: 0.3),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

@@ -7,70 +7,102 @@ class AppFeedback {
   const AppFeedback._();
 
   static void info(BuildContext context, String message) {
-    _show(
-      context: context,
-      message: message,
-      icon: Icons.info_outline,
-      backgroundColor: DS.surfaceTertiary,
-      foregroundColor: DS.textPrimary,
-    );
+    _show(context: context, message: message, role: SparkleFeedbackRole.info);
   }
 
   static void success(BuildContext context, String message) {
-    final backgroundColor = DS.success;
     _show(
       context: context,
       message: message,
-      icon: Icons.check_circle_outline,
-      backgroundColor: backgroundColor,
-      foregroundColor: ThemeUtils.getContrastSafeText(
-        backgroundColor,
-        darkText: DS.textPrimary,
-      ),
+      role: SparkleFeedbackRole.success,
+    );
+  }
+
+  static void warning(BuildContext context, String message) {
+    _show(
+      context: context,
+      message: message,
+      role: SparkleFeedbackRole.warning,
     );
   }
 
   static void error(BuildContext context, String message) {
-    final backgroundColor = DS.error;
     _show(
       context: context,
       message: message,
-      icon: Icons.error_outline,
-      backgroundColor: backgroundColor,
-      foregroundColor: ThemeUtils.getContrastSafeText(
-        backgroundColor,
-        darkText: DS.textPrimary,
-      ),
+      role: SparkleFeedbackRole.error,
+    );
+  }
+
+  static void loading(BuildContext context, String message) {
+    _show(
+      context: context,
+      message: message,
+      role: SparkleFeedbackRole.loading,
+    );
+  }
+
+  static void undoable({
+    required BuildContext context,
+    required String message,
+    required String actionLabel,
+    required VoidCallback onAction,
+  }) {
+    _show(
+      context: context,
+      message: message,
+      role: SparkleFeedbackRole.undoable,
+      actionLabel: actionLabel,
+      onAction: onAction,
     );
   }
 
   static void _show({
     required BuildContext context,
     required String message,
-    required IconData icon,
-    required Color backgroundColor,
-    required Color foregroundColor,
+    required SparkleFeedbackRole role,
+    String? actionLabel,
+    VoidCallback? onAction,
   }) {
     final messenger = ScaffoldMessenger.maybeOf(context);
     if (messenger == null) return;
+    final style = DS.feedbackStyle(role);
     messenger
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
           behavior: SnackBarBehavior.floating,
-          backgroundColor: backgroundColor,
+          duration: style.duration,
+          backgroundColor: style.backgroundColor,
+          showCloseIcon: role == SparkleFeedbackRole.loading,
+          closeIconColor: style.foregroundColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
           content: Row(
             children: [
-              Icon(icon, color: foregroundColor, size: 18),
+              Icon(style.icon, color: style.foregroundColor, size: 18),
               const SizedBox(width: DS.spacing8),
               Expanded(
                 child: Text(
                   message,
-                  style: TextStyle(color: foregroundColor),
+                  style: TextStyle(color: style.foregroundColor),
                 ),
               ),
             ],
           ),
+          action: actionLabel != null && onAction != null
+              ? SnackBarAction(
+                  label: actionLabel,
+                  textColor: role == SparkleFeedbackRole.undoable
+                      ? DS.brandPrimary
+                      : ThemeUtils.getContrastSafeText(
+                          style.backgroundColor,
+                          darkText: DS.brandPrimary,
+                        ),
+                  onPressed: onAction,
+                )
+              : null,
         ),
       );
   }

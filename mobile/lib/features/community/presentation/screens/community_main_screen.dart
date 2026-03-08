@@ -141,9 +141,15 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
   @override
   Widget build(BuildContext context) {
     final focusMode = ref.watch(focusModeProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return GraphiteScaffold(
+      role: SparklePageRole.content,
       appBar: AppBar(
+        backgroundColor:
+            DS.surfaceOverlay.withValues(alpha: isDark ? 0.9 : 0.96),
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
           size: DS.touchTargetMinSize,
@@ -251,17 +257,16 @@ class _FriendsListTab extends ConsumerWidget {
           );
         }
         return ListView.builder(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
           itemCount: friends.length,
           itemBuilder: (context, index) {
             final f = friends[index];
-            return InkWell(
-              onTap: () => context.push(
-                '/chat/private/${f.friend.id}?name=${Uri.encodeComponent(f.friend.displayName)}',
-              ),
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: GraphiteCardSurface(
+                onTap: () => context.push(
+                  '/chat/private/${f.friend.id}?name=${Uri.encodeComponent(f.friend.displayName)}',
+                ),
                 child: Row(
                   children: [
                     StatusAvatar(
@@ -275,9 +280,9 @@ class _FriendsListTab extends ConsumerWidget {
                         children: [
                           Text(
                             f.friend.displayName,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w500,
-                              fontSize: 16,
+                            style: DS.bodyLarge.copyWith(
+                              color: DS.textPrimary,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -301,7 +306,7 @@ class _FriendsListTab extends ConsumerWidget {
                                 style: TextStyle(
                                   color: f.friend.status == UserStatus.online
                                       ? DS.success
-                                      : DS.neutral500,
+                                      : DS.textSecondary,
                                   fontSize: 12,
                                 ),
                               ),
@@ -309,7 +314,7 @@ class _FriendsListTab extends ConsumerWidget {
                               Text(
                                 'Lv.${f.friend.flameLevel}',
                                 style: TextStyle(
-                                  color: DS.neutral500,
+                                  color: DS.textSecondary,
                                   fontSize: 12,
                                 ),
                               ),
@@ -356,70 +361,66 @@ class _GroupsListTab extends ConsumerWidget {
           itemCount: groups.length,
           itemBuilder: (context, index) {
             final g = groups[index];
-            return Card(
-              margin: const EdgeInsets.only(bottom: 12),
-              child: InkWell(
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: GraphiteCardSurface(
                 onTap: () => context.push('/chat/group/${g.id}'),
-                borderRadius: BorderRadius.circular(12),
-                child: Padding(
-                  padding: const EdgeInsets.all(DS.lg),
-                  child: Row(
-                    children: [
-                      SparkleAvatar(
-                        radius: 24,
-                        backgroundColor: DS.brandPrimary.withValues(alpha: 0.1),
-                        fallbackText: g.name,
-                      ),
-                      const SizedBox(width: DS.md),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              g.name,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
+                child: Row(
+                  children: [
+                    SparkleAvatar(
+                      radius: 24,
+                      backgroundColor: DS.surfacePanel,
+                      fallbackText: g.name,
+                    ),
+                    const SizedBox(width: DS.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            g.name,
+                            style: DS.bodyLarge.copyWith(
+                              color: DS.textPrimary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: DS.xs),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.people,
+                                size: 14,
+                                color: DS.textSecondary,
                               ),
-                            ),
-                            const SizedBox(height: DS.xs),
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.people,
-                                  size: 14,
-                                  color: DS.neutral500,
+                              const SizedBox(width: DS.xs),
+                              Text(
+                                '${g.memberCount} 成员',
+                                style: TextStyle(
+                                  color: DS.textSecondary,
+                                  fontSize: 12,
                                 ),
-                                const SizedBox(width: DS.xs),
-                                Text(
-                                  '${g.memberCount} 成员',
-                                  style: TextStyle(
-                                    color: DS.neutral500,
-                                    fontSize: 12,
-                                  ),
+                              ),
+                              const SizedBox(width: DS.md),
+                              Icon(
+                                Icons.local_fire_department,
+                                size: 14,
+                                color: DS.brandPrimaryConst,
+                              ),
+                              const SizedBox(width: DS.xs),
+                              Text(
+                                '${g.totalFlamePower}',
+                                style: TextStyle(
+                                  color: DS.textSecondary,
+                                  fontSize: 12,
                                 ),
-                                const SizedBox(width: DS.md),
-                                Icon(
-                                  Icons.local_fire_department,
-                                  size: 14,
-                                  color: DS.brandPrimaryConst,
-                                ),
-                                const SizedBox(width: DS.xs),
-                                Text(
-                                  '${g.totalFlamePower}',
-                                  style: TextStyle(
-                                    color: DS.neutral500,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                      Icon(Icons.chevron_right, color: DS.neutral400),
-                    ],
-                  ),
+                    ),
+                    Icon(Icons.chevron_right, color: DS.neutral400),
+                  ],
                 ),
               ),
             );

@@ -69,7 +69,8 @@ class _LearningModeScreenState extends ConsumerState<LearningModeScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => SparklePageScaffold(
+        role: SparklePageRole.settings,
         appBar: AppBar(
           leading: SparkleIconButton(
             variant: ButtonVariant.ghost,
@@ -79,61 +80,60 @@ class _LearningModeScreenState extends ConsumerState<LearningModeScreen> {
           ),
           title: const Text('学习模式设置'),
         ),
-        body: ContentConstraint(
-          child: Padding(
+        child: ContentConstraint(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.all(DS.spacing16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '拖动火苗调整你的学习偏好',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: DS.fontWeightMedium,
-                      ),
-                ),
-                const SizedBox(height: DS.spacing24),
-                Center(
-                  child: PreferenceController2D(
-                    initialDepth: _currentDepthPreference,
-                    initialCuriosity: _currentCuriosityPreference,
-                    onPreferenceChanged: (newPreferences) {
-                      setState(() {
-                        _currentCuriosityPreference =
-                            newPreferences.dx; // dx is curiosity
-                        _currentDepthPreference =
-                            newPreferences.dy; // dy is depth
-                      });
-                    },
+            child: GraphiteCardSurface(
+              surfaceRole: SparkleSurfaceRole.card,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '拖动火苗调整你的学习偏好',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: DS.fontWeightMedium,
+                        ),
                   ),
-                ),
-                const SizedBox(height: DS.spacing24),
-                Text(
-                  '深度偏好 (Y轴): ${(_currentDepthPreference * 100).toStringAsFixed(0)}%',
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(color: DS.neutral600),
-                ),
-                Text(
-                  '好奇心偏好 (X轴): ${(_currentCuriosityPreference * 100).toStringAsFixed(0)}%',
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(color: DS.neutral600),
-                ),
-                const Spacer(),
-                Center(
-                  child: SparkleButton(
-                    onPressed: _isLoading
-                        ? null
-                        : () {
-                            _savePreferences();
-                          },
-                    label: '保存偏好',
-                    loading: _isLoading,
+                  const SizedBox(height: DS.spacing24),
+                  Center(
+                    child: PreferenceController2D(
+                      initialDepth: _currentDepthPreference,
+                      initialCuriosity: _currentCuriosityPreference,
+                      onPreferenceChanged: (newPreferences) {
+                        setState(() {
+                          _currentCuriosityPreference =
+                              newPreferences.dx; // dx is curiosity
+                          _currentDepthPreference =
+                              newPreferences.dy; // dy is depth
+                        });
+                      },
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: DS.spacing24),
+                  Text(
+                    '深度偏好 (Y轴): ${(_currentDepthPreference * 100).toStringAsFixed(0)}%',
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(color: DS.neutral600),
+                  ),
+                  Text(
+                    '好奇心偏好 (X轴): ${(_currentCuriosityPreference * 100).toStringAsFixed(0)}%',
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(color: DS.neutral600),
+                  ),
+                  const SizedBox(height: DS.spacing24),
+                  Center(
+                    child: SparkleButton(
+                      onPressed: _isLoading ? null : _savePreferences,
+                      label: '保存偏好',
+                      loading: _isLoading,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

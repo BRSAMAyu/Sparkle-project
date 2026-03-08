@@ -50,18 +50,14 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
           .toList();
     }
 
-    return Scaffold(
+    return SparklePageScaffold(
+      role: SparklePageRole.content,
       appBar: AppBar(
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
           size: DS.touchTargetMinSize,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
-        ),
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: DS.primaryGradient,
-          ),
         ),
         title: AnimatedSwitcher(
           duration: DS.durationNormal,
@@ -71,18 +67,18 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                   controller: _searchController,
                   autofocus: true,
                   style: TextStyle(
-                    color: DS.brandPrimaryConst,
+                    color: DS.textPrimary,
                     fontSize: DS.fontSizeBase,
                   ),
                   decoration: InputDecoration(
                     hintText: '搜索任务...',
                     border: InputBorder.none,
                     hintStyle: TextStyle(
-                      color: DS.brandPrimary.withValues(alpha: 0.7),
+                      color: DS.textSecondary,
                     ),
                     prefixIcon: Icon(
                       Icons.search,
-                      color: DS.brandPrimary70Const,
+                      color: DS.textSecondary,
                     ),
                   ),
                   onChanged: (value) => setState(() {}),
@@ -98,7 +94,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                       ),
                       child: Icon(
                         Icons.task_alt_rounded,
-                        color: DS.brandPrimaryConst,
+                        color: DS.primaryBase,
                         size: DS.iconSizeSm,
                       ),
                     ),
@@ -106,7 +102,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                     Text(
                       '我的任务',
                       style: TextStyle(
-                        color: DS.brandPrimaryConst,
+                        color: DS.textPrimary,
                         fontWeight: DS.fontWeightBold,
                         fontSize: DS.fontSizeLg,
                       ),
@@ -121,7 +117,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
             icon: Icon(
               _isSearching ? Icons.close_rounded : Icons.search_rounded,
               size: DS.iconSizeBase,
-              color: DS.brandPrimaryConst,
+              color: DS.textPrimary,
             ),
             onPressed: () {
               setState(() {
@@ -132,7 +128,19 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
           ),
         ],
       ),
-      body: RefreshIndicator(
+      floatingActionButton: SparkleIconButton(
+        size: 60,
+        onPressed: () {
+          HapticFeedback.mediumImpact();
+          context.push('/tasks/new');
+        },
+        icon: Icon(
+          Icons.add_rounded,
+          color: DS.textPrimary,
+          size: 32,
+        ),
+      ),
+      child: RefreshIndicator(
         onRefresh: () => ref.read(taskListProvider.notifier).refreshTasks(),
         child: ContentConstraint(
           child: Column(
@@ -143,18 +151,6 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
               ),
             ],
           ),
-        ),
-      ),
-      floatingActionButton: SparkleIconButton(
-        size: 60,
-        onPressed: () {
-          HapticFeedback.mediumImpact();
-          context.push('/tasks/new');
-        },
-        icon: Icon(
-          Icons.add_rounded,
-          color: DS.brandPrimaryConst,
-          size: 32,
         ),
       ),
     );

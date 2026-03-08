@@ -36,6 +36,9 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
             builder: (context, constraints) {
               final size = constraints.biggest.shortestSide;
               const double handleSize = 40; // Size of the draggable flame icon
+              final axisColor = Theme.of(context).brightness == Brightness.dark
+                  ? DS.neutral600
+                  : DS.neutral300;
 
               // Convert normalized position to local pixel coordinates
               var x = _currentPosition.dx * size;
@@ -132,7 +135,7 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
                       // Grid lines and axes
                       CustomPaint(
                         size: Size(size, size),
-                        painter: _GridAxisPainter(),
+                        painter: _GridAxisPainter(axisColor: axisColor),
                       ),
 
                       // Labels
@@ -246,10 +249,14 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
 }
 
 class _GridAxisPainter extends CustomPainter {
+  const _GridAxisPainter({required this.axisColor});
+
+  final Color axisColor;
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = DS.neutral300
+      ..color = axisColor
       ..strokeWidth = 1;
 
     // Center Cross
@@ -306,5 +313,6 @@ class _GridAxisPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _GridAxisPainter oldDelegate) =>
+      oldDelegate.axisColor != axisColor;
 }

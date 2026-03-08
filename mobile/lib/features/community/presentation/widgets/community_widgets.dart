@@ -33,7 +33,9 @@ class StatusAvatar extends StatelessWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             border: Border.all(
-                color: DS.brandPrimary.withValues(alpha: 0.1), width: 2,),
+              color: DS.borderSubtle,
+              width: 2,
+            ),
           ),
           child: SparkleAvatar(
             radius: size / 2,
@@ -50,7 +52,7 @@ class StatusAvatar extends StatelessWidget {
             decoration: BoxDecoration(
               color: statusColor,
               shape: BoxShape.circle,
-              border: Border.all(color: DS.brandPrimaryConst, width: 2),
+              border: Border.all(color: DS.surfaceOverlay, width: 2),
               boxShadow: [
                 BoxShadow(
                   color: statusColor.withValues(alpha: 0.4),
@@ -89,7 +91,8 @@ class ChatBubble extends StatelessWidget {
           margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
           padding: const EdgeInsets.all(DS.md),
           constraints: BoxConstraints(
-              maxWidth: _bubbleMaxWidth(context),),
+            maxWidth: _bubbleMaxWidth(context),
+          ),
           decoration: BoxDecoration(
             color: isMe ? DS.brandPrimary : DS.brandPrimary,
             borderRadius: BorderRadius.only(
@@ -139,14 +142,13 @@ class ChatBubble extends StatelessWidget {
               ),
             ],
           ),
-      ),
-    );
+        ),
+      );
 
   double _bubbleMaxWidth(BuildContext context) {
     final screenWidth = ResponsiveSystem.width(context);
     final contentMaxWidth = ContentConstraintSystem.maxWidth(context);
-    final baseMax =
-        contentMaxWidth.isFinite ? contentMaxWidth : screenWidth;
+    final baseMax = contentMaxWidth.isFinite ? contentMaxWidth : screenWidth;
     return min(screenWidth * 0.75, baseMax * 0.9);
   }
 }
@@ -167,8 +169,9 @@ class _TypingIndicatorState extends State<TypingIndicator>
   void initState() {
     super.initState();
     _controller = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1000),)
-      ..repeat();
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    )..repeat();
   }
 
   @override

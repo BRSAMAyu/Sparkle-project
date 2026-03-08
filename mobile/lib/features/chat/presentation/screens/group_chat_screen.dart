@@ -97,7 +97,8 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
     final groupInfoState = ref.watch(groupDetailProvider(widget.groupId));
     final agentState = ref.watch(groupChatAgentProvider(widget.groupId));
 
-    return Scaffold(
+    return GraphiteScaffold(
+      role: SparklePageRole.content,
       appBar: AppBar(
         leading: SparkleIconButton(
           icon: const Icon(Icons.arrow_back),
@@ -166,7 +167,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
           ),
         ],
       ),
-      body: ContentConstraint(
+      child: ContentConstraint(
         child: Column(
           children: [
             Expanded(

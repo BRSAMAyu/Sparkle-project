@@ -173,6 +173,21 @@ class AppThemes {
           borderRadius: BorderRadius.circular(20),
         ),
       ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: colors.surfaceSecondary,
+        foregroundColor: colors.textPrimary,
+        elevation: 0,
+        hoverElevation: 0,
+        focusElevation: 0,
+        highlightElevation: 0,
+        splashColor: colors.brandPrimary.withValues(alpha: 0.12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(22),
+          side: BorderSide(
+            color: colors.surfaceTertiary.withValues(alpha: 0.9),
+          ),
+        ),
+      ),
       chipTheme: ChipThemeData(
         backgroundColor: colors.surfaceSecondary,
         selectedColor: colors.brandPrimary.withValues(alpha: 0.14),
@@ -187,6 +202,55 @@ class AppThemes {
           color: colors.textPrimary,
         ),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      ),
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: colors.brandPrimary,
+        linearTrackColor: colors.surfaceTertiary,
+        circularTrackColor: colors.surfaceTertiary,
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return colors.brandPrimary;
+          }
+          return isDark ? colors.neutral500 : colors.neutral400;
+        }),
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return colors.brandPrimary.withValues(alpha: 0.36);
+          }
+          return colors.surfaceTertiary;
+        }),
+        trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
+      ),
+      checkboxTheme: CheckboxThemeData(
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return colors.brandPrimary;
+          }
+          return Colors.transparent;
+        }),
+        side: BorderSide(color: colors.surfaceTertiary),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(6),
+        ),
+      ),
+      radioTheme: RadioThemeData(
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return colors.brandPrimary;
+          }
+          return colors.textSecondary;
+        }),
+      ),
+      popupMenuTheme: PopupMenuThemeData(
+        color: colors.surfaceSecondary,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: BorderSide(color: colors.surfaceTertiary),
+        ),
+        textStyle: textTheme.bodyMedium?.copyWith(color: colors.textPrimary),
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor:
@@ -401,6 +465,55 @@ class SparkleColorAliases {
   Color getPlanColor(String planType) => _theme.colors.getPlanColor(planType);
 }
 
+enum SparkleSurfaceRole {
+  canvas,
+  panel,
+  card,
+  elevated,
+  glass,
+  modal,
+  accent,
+}
+
+enum SparkleFeedbackRole {
+  info,
+  success,
+  warning,
+  error,
+  loading,
+  undoable,
+}
+
+enum SparklePageRole {
+  auth,
+  dashboard,
+  content,
+  settings,
+  immersive,
+}
+
+enum SparkleMotionToken {
+  micro,
+  standard,
+  scene,
+  hero,
+}
+
+@immutable
+class SparkleFeedbackStyle {
+  const SparkleFeedbackStyle({
+    required this.backgroundColor,
+    required this.foregroundColor,
+    required this.icon,
+    required this.duration,
+  });
+
+  final Color backgroundColor;
+  final Color foregroundColor;
+  final IconData icon;
+  final Duration duration;
+}
+
 /// 设计令牌快捷访问
 class DS {
   DS._();
@@ -611,12 +724,147 @@ class DS {
         begin: Alignment.topCenter,
         endAlignment: Alignment.bottomCenter,
       );
+  static LinearGradient pageGradientForRole(SparklePageRole role) {
+    switch (role) {
+      case SparklePageRole.auth:
+        return LinearGradient(
+          colors: [
+            surfacePrimary,
+            _blend(surfacePrimary, surfaceCanvas, _isDark ? 0.52 : 0.36),
+            surfaceCanvas,
+          ],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        );
+      case SparklePageRole.dashboard:
+        return LinearGradient(
+          colors: [
+            _blend(surfacePrimary, surfaceCanvas, _isDark ? 0.42 : 0.28),
+            _blend(surfaceCanvas, surfaceSecondary, _isDark ? 0.36 : 0.18),
+            surfaceCanvas,
+          ],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        );
+      case SparklePageRole.content:
+        return LinearGradient(
+          colors: [
+            surfacePrimary,
+            _blend(surfacePrimary, surfaceCanvas, _isDark ? 0.64 : 0.48),
+            surfaceCanvas,
+          ],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        );
+      case SparklePageRole.settings:
+        return LinearGradient(
+          colors: [
+            surfacePrimary,
+            _blend(surfacePrimary, surfaceSecondary, _isDark ? 0.52 : 0.32),
+            surfaceCanvas,
+          ],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        );
+      case SparklePageRole.immersive:
+        return LinearGradient(
+          colors: [
+            deepSpaceStart,
+            _blend(deepSpaceStart, deepSpaceEnd, 0.4),
+            deepSpaceEnd,
+          ],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        );
+    }
+  }
+
   static LinearGradient get flameGradient => _buildGradient(
         flameCore,
         warning,
         begin: Alignment.topCenter,
         endAlignment: Alignment.bottomCenter,
       );
+
+  static Color pageScaffoldBackground(SparklePageRole role) {
+    switch (role) {
+      case SparklePageRole.immersive:
+        return galaxyBackground;
+      case SparklePageRole.dashboard:
+        return surfaceCanvas;
+      case SparklePageRole.auth:
+      case SparklePageRole.content:
+      case SparklePageRole.settings:
+        return surfacePrimary;
+    }
+  }
+
+  static Color surfaceRoleColor(SparkleSurfaceRole role) {
+    switch (role) {
+      case SparkleSurfaceRole.canvas:
+        return surfaceCanvas;
+      case SparkleSurfaceRole.panel:
+        return surfacePanel;
+      case SparkleSurfaceRole.card:
+        return surfaceOverlay;
+      case SparkleSurfaceRole.elevated:
+        return surfacePrimaryElevated;
+      case SparkleSurfaceRole.glass:
+        return glassBackground;
+      case SparkleSurfaceRole.modal:
+        return _blend(surfaceOverlay, surfaceSecondary, _isDark ? 0.18 : 0.1);
+      case SparkleSurfaceRole.accent:
+        return _blend(surfacePanel, brandPrimary, _isDark ? 0.12 : 0.08);
+    }
+  }
+
+  static SparkleFeedbackStyle feedbackStyle(SparkleFeedbackRole role) {
+    final backgroundColor = switch (role) {
+      SparkleFeedbackRole.info => surfaceTertiary,
+      SparkleFeedbackRole.success => success,
+      SparkleFeedbackRole.warning => warning,
+      SparkleFeedbackRole.error => error,
+      SparkleFeedbackRole.loading =>
+        _blend(surfaceTertiary, brandSecondary, _isDark ? 0.28 : 0.18),
+      SparkleFeedbackRole.undoable =>
+        _blend(surfaceTertiary, brandPrimary, _isDark ? 0.22 : 0.12),
+    };
+
+    final foregroundColor = role == SparkleFeedbackRole.info ||
+            role == SparkleFeedbackRole.loading ||
+            role == SparkleFeedbackRole.undoable
+        ? textPrimary
+        : ThemeUtils.getContrastSafeText(
+            backgroundColor,
+            darkText: textPrimary,
+          );
+
+    final icon = switch (role) {
+      SparkleFeedbackRole.info => Icons.info_outline,
+      SparkleFeedbackRole.success => Icons.check_circle_outline,
+      SparkleFeedbackRole.warning => Icons.warning_amber_rounded,
+      SparkleFeedbackRole.error => Icons.error_outline,
+      SparkleFeedbackRole.loading => Icons.hourglass_top_rounded,
+      SparkleFeedbackRole.undoable => Icons.undo_rounded,
+    };
+
+    final duration = switch (role) {
+      SparkleFeedbackRole.loading => const Duration(milliseconds: 1400),
+      SparkleFeedbackRole.undoable => const Duration(seconds: 4),
+      SparkleFeedbackRole.info ||
+      SparkleFeedbackRole.success ||
+      SparkleFeedbackRole.warning ||
+      SparkleFeedbackRole.error =>
+        const Duration(seconds: 3),
+    };
+
+    return SparkleFeedbackStyle(
+      backgroundColor: backgroundColor,
+      foregroundColor: foregroundColor,
+      icon: icon,
+      duration: duration,
+    );
+  }
 
   // 间距 (常量版本用于const构造函数)
   static const double xs = 4.0;
@@ -707,6 +955,39 @@ class DS {
   static Duration get durationFast => AnimationSystem.quick;
   static Duration get durationNormal => AnimationSystem.normal;
   static Duration get durationSlow => AnimationSystem.slow;
+  static Duration motionDuration(
+    SparkleMotionToken token, {
+    bool reduceMotion = false,
+  }) {
+    if (reduceMotion) {
+      return Duration.zero;
+    }
+
+    switch (token) {
+      case SparkleMotionToken.micro:
+        return AnimationSystem.micro;
+      case SparkleMotionToken.standard:
+        return AnimationSystem.standard;
+      case SparkleMotionToken.scene:
+        return AnimationSystem.scene;
+      case SparkleMotionToken.hero:
+        return AnimationSystem.hero;
+    }
+  }
+
+  static Curve motionCurve(SparkleMotionToken token) {
+    switch (token) {
+      case SparkleMotionToken.micro:
+        return AnimationSystem.easeOut;
+      case SparkleMotionToken.standard:
+        return AnimationSystem.smooth;
+      case SparkleMotionToken.scene:
+        return Curves.easeInOutCubicEmphasized;
+      case SparkleMotionToken.hero:
+        return Curves.easeOutCubic;
+    }
+  }
+
   static Curve get curveEaseOut => AnimationSystem.easeOut;
   static Curve get curveEaseInOut => Curves.easeInOut;
 

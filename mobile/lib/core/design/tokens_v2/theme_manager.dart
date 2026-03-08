@@ -478,7 +478,7 @@ class SparkleColors {
       taskLearning: Color(0xFF6A84A2),
       taskTraining: Color(0xFFB2864F),
       taskErrorFix: Color(0xFFB86458),
-      taskReflection: Color(0xFF7B6E8D),
+      taskReflection: Color(0xFF8B67B8),
       taskSocial: Color(0xFF6B8A73),
       taskPlanning: Color(0xFF5C7C82),
       planSprint: Color(0xFF9D6158),

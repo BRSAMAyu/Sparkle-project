@@ -51,6 +51,7 @@ class _LearningModeControlState extends State<LearningModeControl> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final gridColor = DS.brandPrimary10;
 
     return Column(
       children: [
@@ -95,7 +96,7 @@ class _LearningModeControlState extends State<LearningModeControl> {
                     child: Stack(
                       children: [
                         // Grid lines
-                        _buildGrid(maxSize, maxSize),
+                        _buildGrid(maxSize, maxSize, gridColor),
 
                         // Labels - positioned at edge centers
                         // Depth+ at top center
@@ -214,9 +215,10 @@ class _LearningModeControlState extends State<LearningModeControl> {
     );
   }
 
-  Widget _buildGrid(double width, double height) => CustomPaint(
+  Widget _buildGrid(double width, double height, Color gridColor) =>
+      CustomPaint(
         size: Size(width, height),
-        painter: GridPainter(),
+        painter: GridPainter(gridColor: gridColor),
       );
 
   Widget _buildInfoChip(String label) {
@@ -242,10 +244,14 @@ class _LearningModeControlState extends State<LearningModeControl> {
 }
 
 class GridPainter extends CustomPainter {
+  const GridPainter({required this.gridColor});
+
+  final Color gridColor;
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = DS.brandPrimary10
+      ..color = gridColor
       ..strokeWidth = 1;
 
     // Vertical lines
@@ -262,5 +268,6 @@ class GridPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant GridPainter oldDelegate) =>
+      oldDelegate.gridColor != gridColor;
 }

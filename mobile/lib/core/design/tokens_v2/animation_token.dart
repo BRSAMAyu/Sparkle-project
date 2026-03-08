@@ -14,9 +14,13 @@ class AnimationSystem {
 
   // 语义化时长
   static const Duration instant = Duration.zero;
+  static const Duration micro = Duration(milliseconds: 120);
   static const Duration quick = Duration(milliseconds: 150);
+  static const Duration standard = Duration(milliseconds: 220);
   static const Duration normal = Duration(milliseconds: 250);
+  static const Duration scene = Duration(milliseconds: 400);
   static const Duration slow = Duration(milliseconds: 400);
+  static const Duration hero = Duration(milliseconds: 620);
   static const Duration deliberate = Duration(milliseconds: 600);
 
   // 组合配置

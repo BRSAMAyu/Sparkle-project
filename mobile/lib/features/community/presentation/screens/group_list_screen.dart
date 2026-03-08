@@ -15,7 +15,8 @@ class GroupListScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final groupsState = ref.watch(myGroupsProvider);
 
-    return Scaffold(
+    return SparklePageScaffold(
+      role: SparklePageRole.content,
       appBar: AppBar(
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
@@ -43,7 +44,7 @@ class GroupListScreen extends ConsumerWidget {
           context.push('/community/groups/create');
         },
       ),
-      body: groupsState.when(
+      child: groupsState.when(
         data: (groups) {
           if (groups.isEmpty) {
             return Center(
@@ -157,10 +158,10 @@ class _GroupListTile extends StatelessWidget {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: DS.brandPrimaryConst,
+        color: DS.surfaceRoleColor(SparkleSurfaceRole.card),
         borderRadius: DS.borderRadius16,
         boxShadow: DS.shadowSm,
-        border: Border.all(color: DS.neutral100),
+        border: Border.all(color: DS.borderSubtle),
       ),
       child: Material(
         color: DS.surfacePrimary.withValues(alpha: 0),
@@ -230,7 +231,7 @@ class _GroupListTile extends StatelessWidget {
                                   .titleMedium
                                   ?.copyWith(
                                     fontWeight: FontWeight.bold,
-                                    color: DS.neutral900,
+                                    color: DS.textPrimary,
                                   ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -324,7 +325,7 @@ class _GroupListLoading extends StatelessWidget {
           child: Container(
             height: 88,
             decoration: BoxDecoration(
-              color: DS.brandPrimaryConst,
+              color: DS.surfaceRoleColor(SparkleSurfaceRole.card),
               borderRadius: DS.borderRadius16,
             ),
           ),

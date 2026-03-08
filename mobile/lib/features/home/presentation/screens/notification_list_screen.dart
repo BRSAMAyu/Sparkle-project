@@ -13,7 +13,8 @@ class NotificationListScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final notificationsAsync = ref.watch(unreadNotificationsProvider);
 
-    return Scaffold(
+    return SparklePageScaffold(
+      role: SparklePageRole.content,
       appBar: AppBar(
         leading: SparkleIconButton(
           icon: const Icon(Icons.arrow_back),
@@ -23,13 +24,14 @@ class NotificationListScreen extends ConsumerWidget {
         ),
         title: const Text('Notifications'),
       ),
-      body: notificationsAsync.when(
+      child: notificationsAsync.when(
         data: (notifications) {
           if (notifications.isEmpty) {
             return const Center(child: Text('No new notifications'));
           }
           return ContentConstraint(
             child: ListView.builder(
+              padding: const EdgeInsets.all(DS.spacing16),
               itemCount: notifications.length,
               itemBuilder: (context, index) {
                 final notification = notifications[index];
@@ -50,26 +52,33 @@ class NotificationItem extends ConsumerWidget {
   final NotificationModel notification;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) => ListTile(
-        title: Text(
-          notification.title,
-          style: const TextStyle(fontWeight: FontWeight.bold),
+  Widget build(BuildContext context, WidgetRef ref) => Padding(
+        padding: const EdgeInsets.only(bottom: DS.spacing12),
+        child: GraphiteCardSurface(
+          surfaceRole: SparkleSurfaceRole.card,
+          padding: EdgeInsets.zero,
+          child: ListTile(
+            title: Text(
+              notification.title,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            subtitle: Text(notification.content),
+            trailing: !notification.isRead
+                ? Icon(Icons.circle, size: 12, color: DS.brandPrimary)
+                : null,
+            onTap: () {
+              ref
+                  .read(unreadNotificationsProvider.notifier)
+                  .markAsRead(notification.id);
+              if (notification.type == 'fragmented_time' &&
+                  notification.data != null) {
+                final taskId = notification.data!['task_id'];
+                if (taskId != null) {
+                  context.push('/tasks/$taskId');
+                }
+              }
+            },
+          ),
         ),
-        subtitle: Text(notification.content),
-        trailing: !notification.isRead
-            ? Icon(Icons.circle, size: 12, color: DS.brandPrimary)
-            : null,
-        onTap: () {
-          ref
-              .read(unreadNotificationsProvider.notifier)
-              .markAsRead(notification.id);
-          if (notification.type == 'fragmented_time' &&
-              notification.data != null) {
-            final taskId = notification.data!['task_id'];
-            if (taskId != null) {
-              context.push('/tasks/$taskId');
-            }
-          }
-        },
       );
 }

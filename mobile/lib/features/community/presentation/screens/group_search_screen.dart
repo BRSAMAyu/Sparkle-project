@@ -33,7 +33,8 @@ class _GroupSearchScreenState extends ConsumerState<GroupSearchScreen> {
   Widget build(BuildContext context) {
     final searchState = ref.watch(groupSearchProvider);
 
-    return Scaffold(
+    return SparklePageScaffold(
+      role: SparklePageRole.content,
       appBar: AppBar(
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
@@ -47,9 +48,9 @@ class _GroupSearchScreenState extends ConsumerState<GroupSearchScreen> {
           decoration: InputDecoration(
             hintText: 'Search groups...',
             border: InputBorder.none,
-            hintStyle: TextStyle(color: DS.brandPrimary70),
+            hintStyle: TextStyle(color: DS.textSecondary),
           ),
-          style: TextStyle(color: DS.brandPrimary),
+          style: TextStyle(color: DS.textPrimary),
           onSubmitted: (_) => _handleSearch(),
           textInputAction: TextInputAction.search,
         ),
@@ -62,7 +63,7 @@ class _GroupSearchScreenState extends ConsumerState<GroupSearchScreen> {
           ),
         ],
       ),
-      body: searchState.when(
+      child: searchState.when(
         data: (groups) {
           if (groups.isEmpty) {
             return const Center(
@@ -80,11 +81,13 @@ class _GroupSearchScreenState extends ConsumerState<GroupSearchScreen> {
                   const SizedBox(height: DS.md),
               itemBuilder: (context, index) {
                 final group = groups[index];
-                return Card(
-                  elevation: 2,
+                return GraphiteCardSurface(
+                  surfaceRole: SparkleSurfaceRole.card,
+                  padding: EdgeInsets.zero,
                   child: ListTile(
                     leading: CircleAvatar(
-                      backgroundColor: DS.brandPrimary.shade200,
+                      backgroundColor:
+                          DS.surfaceRoleColor(SparkleSurfaceRole.panel),
                       child: Icon(
                         group.type.name == 'sprint' ? Icons.timer : Icons.group,
                       ),
