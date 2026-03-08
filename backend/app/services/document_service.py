@@ -2,6 +2,7 @@ import asyncio
 import inspect
 import os
 import re
+import tempfile
 from dataclasses import dataclass, field
 from typing import Any
 from uuid import UUID
@@ -519,10 +520,13 @@ class DocumentService:
 
     async def update_progress(self, task_id: str, status: str, percent: int, result: Any = None):
         """Helper to update task status in Redis"""
-        if not task_id: return
+        if not task_id:
+            return
+
+        normalized_status = self._normalize_task_status(status, percent)
 
         data = {
-            "status": status,
+            "status": normalized_status,
             "percent": percent,
             "message": status, # redundancy for UI
             "result": result
@@ -531,6 +535,18 @@ class DocumentService:
         cache_result = cache_service.set(f"task:{task_id}", data, ttl=3600)
         if inspect.isawaitable(cache_result):
             await cache_result
+
+    def _normalize_task_status(self, status: str, percent: int) -> str:
+        normalized = (status or "").strip().lower()
+        if normalized in {"queued", "processing", "completed", "failed", "error"}:
+            return normalized
+        if "complete" in normalized or percent >= 100:
+            return "completed"
+        if "fail" in normalized or "error" in normalized:
+            return "failed"
+        if "queue" in normalized or percent <= 0:
+            return "queued"
+        return "processing"
 
     async def clean_and_summarize(self, file_path: str, task_id: str = None, options: dict[str, Any] = None) -> dict[str, Any]:
         """
@@ -541,8 +557,6 @@ class DocumentService:
         only compressed summaries are returned.
         """
         options = options or {}
-        options.get("enable_ocr", True)
-        # Note: IngestionService currently auto-detects OCR need. We could pass this flag down if we refactor IngestionService further.
 
         # 定义10MB大小限制（字节）
         MAX_CLEANED_SIZE = 10 * 1024 * 1024
@@ -703,7 +717,12 @@ def _resolve_allowed_path(file_path: str) -> str | None:
     # 5. 验证在允许的目录下
     allowed_roots = [
         os.path.abspath(settings.UPLOAD_DIR),
-        os.path.abspath(os.getenv("SPARKLE_UPLOAD_TEMP_DIR", "/tmp/sparkle_uploads")),
+        os.path.abspath(
+            os.path.join(
+                os.getenv("SPARKLE_UPLOAD_TEMP_DIR", tempfile.gettempdir()),
+                "sparkle_uploads",
+            )
+        ),
     ]
 
     for root in allowed_roots:

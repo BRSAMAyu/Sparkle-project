@@ -1,5 +1,4 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
@@ -177,6 +176,12 @@ class EnhancedGalaxyRepository {
     }
   }
 
+  Future<NetworkResult<void>> updateNodePosition(
+    String nodeId,
+    Offset position,
+  ) =>
+      updateNodePositions(<String, Offset>{nodeId: position});
+
   /// 激活节点
   Future<NetworkResult<void>> sparkNode(String id) async {
     if (DemoDataService.isDemoMode) {
@@ -254,7 +259,7 @@ class EnhancedGalaxyRepository {
           );
           if (response.data == null) return null;
           final payload = ApiResponseParser.unwrapMap(
-            response.data!,
+            response.data,
             action: 'predictNextNode',
           );
           return KnowledgeDetailResponse.fromJson(payload);
@@ -287,7 +292,7 @@ class EnhancedGalaxyRepository {
           );
           if (response.data == null) return [];
           final payload = ApiResponseParser.unwrapMap(
-            response.data!,
+            response.data,
             action: 'searchGalaxyNodes',
           );
           return GalaxySearchResponse.fromJson(payload).results;

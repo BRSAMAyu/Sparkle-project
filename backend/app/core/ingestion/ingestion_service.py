@@ -4,12 +4,12 @@ import os
 import re
 from typing import Any
 
-import httpx
 from fastapi import HTTPException
 from loguru import logger
 from pydantic import BaseModel
 
 from app.config import settings
+from app.services.ocr_service import ocr_service
 
 try:
     import pdfplumber
@@ -157,6 +157,7 @@ class IngestionService:
 
     def _process_pdf(self, path: str, options: dict[str, Any]) -> list[ExtractedChunk]:
         chunks = []
+        enable_ocr = bool(options.get("enable_ocr", True))
         # Use pdfplumber for better layout analysis
         with pdfplumber.open(path) as pdf:
             for i, page in enumerate(pdf.pages):
@@ -165,7 +166,7 @@ class IngestionService:
 
                 # --- OCR Fallback Strategy ---
                 # If text is empty or suspiciously short (scanned page), try OCR
-                if len(text.strip()) < 50:
+                if enable_ocr and len(text.strip()) < 50:
                     logger.info(f"Page {i+1} has low text content ({len(text.strip())} chars). Attempting OCR...")
                     ocr_text, ocr_confidence = self._attempt_ocr(page, options)
                     if ocr_text:
@@ -210,9 +211,12 @@ class IngestionService:
             # Use 300 DPI for better OCR
             im = page.to_image(resolution=300).original
 
-            ocr_engine = options.get("ocr_engine", "local") # 'local' or 'deepseek'
-
+            ocr_engine = (options.get("ocr_engine", "local") or "local").lower()
             if ocr_engine == "deepseek":
+                logger.warning("OCR engine 'deepseek' 已废弃，自动切换到 'zhipu'")
+                ocr_engine = "zhipu"
+
+            if ocr_engine == "zhipu":
                 return self._ocr_via_api(im, options), None
             if not HAS_TESSERACT:
                 logger.warning("Local OCR requested but pytesseract not installed.")
@@ -259,26 +263,12 @@ class IngestionService:
 
     def _ocr_via_api(self, image, options: dict[str, Any]) -> str:
         """
-        Run Remote DeepSeek OCR via SiliconFlow API with specialized prompts.
-        Modes: 'markdown' (default), 'ocr', 'figure', 'describe'
+        Run remote GLM OCR.
         """
-        if not settings.SILICONFLOW_API_KEY:
-            logger.warning("DeepSeek OCR requested but SILICONFLOW_API_KEY not set.")
+        del options
+        if not settings.ZHIPU_API_KEY:
+            logger.warning("GLM OCR requested but ZHIPU_API_KEY not set.")
             return ""
-
-        prompt_mode = options.get("ocr_prompt_mode", "markdown")
-
-        # Official Prompts mapping
-        prompts = {
-            "markdown": "<|grounding|>Convert the document to markdown.",
-            "ocr": "<|grounding|>OCR this image.",
-            "free_ocr": "Free OCR.",
-            "figure": "Parse the figure.",
-            "describe": "Describe this image in detail.",
-        }
-
-        # Fallback to markdown if mode not found
-        text_prompt = prompts.get(prompt_mode, prompts["markdown"])
 
         try:
             # Convert to base64
@@ -289,41 +279,10 @@ class IngestionService:
 
             image.save(buffered, format="JPEG", quality=95)
             img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
-
-            headers = {
-                "Authorization": f"Bearer {settings.SILICONFLOW_API_KEY}",
-                "Content-Type": "application/json"
-            }
-
-            data = {
-                "model": settings.SILICONFLOW_OCR_MODEL,
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "text", "text": text_prompt},
-                            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_str}"}}
-                        ]
-                    }
-                ],
-                "max_tokens": 4096,
-                "temperature": 0.0 # Low temperature for deterministic transcription
-            }
-
-            # Use synchronous calls since we are likely in a thread worker
-            with httpx.Client(base_url=settings.SILICONFLOW_BASE_URL, timeout=60.0) as client:
-                response = client.post("/chat/completions", json=data, headers=headers)
-
-                if response.status_code != 200:
-                    logger.error(f"DeepSeek OCR API Error: {response.status_code} - {response.text}")
-                    return ""
-
-                result = response.json()
-                content = result['choices'][0]['message']['content']
-                return content
+            return ocr_service.ocr_from_base64_sync(img_str)
 
         except Exception as e:
-            logger.error(f"DeepSeek OCR API Exception: {e}")
+            logger.error(f"GLM OCR API Exception: {e}")
             return ""
 
     def _process_docx(self, path: str) -> list[ExtractedChunk]:

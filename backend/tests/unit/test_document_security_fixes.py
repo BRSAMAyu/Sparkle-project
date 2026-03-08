@@ -4,11 +4,13 @@
 """
 import os
 import tempfile
+from unittest.mock import AsyncMock, Mock, patch
+
 import pytest
-from unittest.mock import Mock, patch, AsyncMock
-from app.services.document_service import DocumentService, _resolve_allowed_path
-from app.core.ingestion.ingestion_service import IngestionService
+
 from app.config import settings
+from app.core.ingestion.ingestion_service import IngestionService
+from app.services.document_service import DocumentService, _resolve_allowed_path
 
 
 class TestPathTraversalFix:
@@ -72,6 +74,22 @@ class TestPathTraversalFix:
                 result = _resolve_allowed_path(test_file)
                 assert result == test_file, "应该接受合法路径"
 
+    def test_accept_ingestion_temp_dir_paths(self):
+        """测试接受 documents/clean 写入的临时目录文件"""
+        with tempfile.TemporaryDirectory() as upload_dir:
+            with tempfile.TemporaryDirectory() as temp_root:
+                temp_upload_dir = os.path.join(temp_root, "sparkle_uploads")
+                os.makedirs(temp_upload_dir, exist_ok=True)
+                test_file = os.path.join(temp_upload_dir, "test.pdf")
+                with open(test_file, "wb") as f:
+                    f.write(b"%PDF-1.4\n")
+
+                with patch.object(settings, "UPLOAD_DIR", upload_dir):
+                    with patch.dict(os.environ, {"SPARKLE_UPLOAD_TEMP_DIR": temp_root}):
+                        result = _resolve_allowed_path(test_file)
+
+                assert result == os.path.abspath(test_file), "应该接受 ingestion 临时目录文件"
+
     def test_resolve_uses_abspath_not_realpath(self):
         """测试使用abspath而不是realpath（不跟随符号链接）"""
         # 这个测试验证即使有符号链接，也不会被跟随
@@ -79,9 +97,6 @@ class TestPathTraversalFix:
             test_file = os.path.join(tmpdir, "test.txt")
             with open(test_file, "w") as f:
                 f.write("content")
-
-            # 获取绝对路径
-            abs_path = os.path.abspath(test_file)
 
             with patch.object(settings, 'UPLOAD_DIR', tmpdir):
                 result = _resolve_allowed_path(test_file)
@@ -163,6 +178,41 @@ class TestMagicBytesValidation:
 
             os.unlink(f.name)
 
+    def test_skip_ocr_when_disabled(self):
+        """测试关闭 OCR 时不会触发扫描件 OCR fallback"""
+        page = Mock()
+        page.extract_text.return_value = ""
+        fake_pdf = Mock()
+        fake_pdf.pages = [page]
+
+        open_mock = Mock()
+        open_mock.__enter__ = Mock(return_value=fake_pdf)
+        open_mock.__exit__ = Mock(return_value=False)
+
+        with patch("app.core.ingestion.ingestion_service.pdfplumber.open", return_value=open_mock):
+            with patch.object(self.ingestion_service, "_attempt_ocr", return_value=("ocr text", None)) as mock_attempt:
+                chunks = self.ingestion_service._process_pdf("/tmp/fake.pdf", {"enable_ocr": False})
+
+        assert chunks == []
+        mock_attempt.assert_not_called()
+
+    def test_legacy_deepseek_engine_maps_to_zhipu(self):
+        """测试旧 deepseek 选项会自动映射到 zhipu"""
+        page = Mock()
+        page_image = Mock()
+        page_image.original = Mock()
+        page.to_image.return_value = page_image
+
+        with patch("app.core.ingestion.ingestion_service.HAS_PIL", True):
+            with patch.object(self.ingestion_service, "_ocr_via_api", return_value="ocr text") as mock_api:
+                with patch.object(self.ingestion_service, "_ocr_via_local", return_value=("local text", 0.9)) as mock_local:
+                    text, confidence = self.ingestion_service._attempt_ocr(page, {"ocr_engine": "deepseek"})
+
+        assert text == "ocr text"
+        assert confidence is None
+        mock_api.assert_called_once()
+        mock_local.assert_not_called()
+
 
 class Test10MBSizeLimit:
     """测试10MB清洗后大小限制"""
@@ -195,7 +245,7 @@ class Test10MBSizeLimit:
                         assert result["status"] == "completed"
                         assert result["mode"] == "full_text"
                         assert "full_text" in result
-                        assert result.get("truncated") == False
+                        assert not result.get("truncated")
 
     @pytest.mark.asyncio
     async def test_large_document_returns_compressed(self):
@@ -230,7 +280,7 @@ class Test10MBSizeLimit:
 
                         assert result["status"] == "completed"
                         assert result["mode"] == "compressed"
-                        assert result.get("truncated") == True
+                        assert result.get("truncated")
                         assert "summary" in result
                         assert "full_text" not in result or result.get("full_text_preview") is not None
 
@@ -282,6 +332,24 @@ class TestErrorHandling:
         assert result["status"] == "failed"
         assert "Invalid file path" in result.get("error", "")
 
+    @pytest.mark.asyncio
+    async def test_update_progress_normalizes_completed_status(self):
+        """测试进度状态会归一化为前端期望的小写 completed"""
+        document_service = DocumentService()
+
+        with patch("app.services.document_service.cache_service") as mock_cache:
+            mock_cache.set = AsyncMock()
+            await document_service.update_progress(
+                "task-1",
+                "Completed",
+                100,
+                {"status": "completed"},
+            )
+
+        payload = mock_cache.set.await_args.args[1]
+        assert payload["status"] == "completed"
+        assert payload["message"] == "Completed"
+
 
 class TestDiskSpaceCheck:
     """测试磁盘空间检查"""
@@ -297,7 +365,7 @@ class TestDiskSpaceCheck:
             # 总共约400KB可用
 
             result = check_disk_space(1024 * 1024 * 100)  # 需要100MB
-            assert result == False, "应该拒绝空间不足的请求"
+            assert not result, "应该拒绝空间不足的请求"
 
     def test_sufficient_disk_space(self):
         """测试磁盘空间充足"""
@@ -309,7 +377,7 @@ class TestDiskSpaceCheck:
             # 总共约400MB可用
 
             result = check_disk_space(1024 * 1024 * 100)  # 需要100MB
-            assert result == True, "应该接受空间充足的请求"
+            assert result, "应该接受空间充足的请求"
 
 
 class TestGoHandlerMagicBytes:

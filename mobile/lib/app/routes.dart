@@ -22,6 +22,7 @@ import 'package:sparkle/features/seed_library/seed_library_routes.dart';
 import 'package:sparkle/features/splash/splash.dart';
 import 'package:sparkle/features/task/task.dart';
 import 'package:sparkle/features/translation/translation.dart';
+import 'package:sparkle/features/tools/tools.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 import 'package:sparkle/features/user/user.dart';
 
@@ -178,6 +179,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ...PhotonRoutes.routes,
       ...TranslationRoutes.routes,
       ...SeedLibraryRoutes.routes,
+      ...ToolsRoutes.routes,
     ],
   );
 });

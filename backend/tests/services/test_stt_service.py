@@ -1,30 +1,29 @@
 """
 STT Service测试
 """
+
 import os
 import tempfile
+from unittest.mock import AsyncMock, Mock, patch
+
 import pytest
-from unittest.mock import AsyncMock, Mock, patch, MagicMock
+
 from app.services.stt_service import STTService
 
 
 @pytest.mark.asyncio
-async def test_stt_service_init_xunfei():
-    """测试STTService初始化（科大讯飞Provider）"""
+async def test_stt_service_init_zhipu():
+    """测试 STTService 初始化（智谱 Provider）"""
     with patch("app.services.stt_service.settings") as mock_settings:
-        mock_settings.STT_PROVIDER = "xunfei"
-        mock_settings.XUNFEI_API_KEY = "test_key"
-        mock_settings.XUNFEI_API_SECRET = "test_secret"
+        mock_settings.STT_PROVIDER = "zhipu"
         mock_settings.UPLOAD_DIR = "./uploads"
 
-        with patch("app.services.stt.providers.xunfei_provider.XunFeiProvider") as mock_xunfei:
+        with patch("app.services.stt.providers.zhipu_provider.ZhipuProvider") as mock_zhipu:
             mock_provider = Mock()
-            mock_xunfei.return_value = mock_provider
+            mock_zhipu.return_value = mock_provider
 
             service = STTService()
             assert service.provider == mock_provider
-
-
 
 
 @pytest.mark.asyncio
@@ -42,13 +41,13 @@ async def test_stt_service_init_unknown_provider():
 async def test_stt_service_transcribe_file_success():
     """测试STTService文件转写成功"""
     with patch("app.services.stt_service.settings") as mock_settings:
-        mock_settings.STT_PROVIDER = "xunfei"
+        mock_settings.STT_PROVIDER = "zhipu"
         mock_settings.UPLOAD_DIR = "./uploads"
 
-        with patch("app.services.stt.providers.xunfei_provider.XunFeiProvider") as mock_xunfei:
+        with patch("app.services.stt.providers.zhipu_provider.ZhipuProvider") as mock_zhipu:
             mock_provider = Mock()
             mock_provider.transcribe_file = AsyncMock(return_value="测试转写结果")
-            mock_xunfei.return_value = mock_provider
+            mock_zhipu.return_value = mock_provider
 
             service = STTService()
 
@@ -60,7 +59,7 @@ async def test_stt_service_transcribe_file_success():
             try:
                 result = await service.transcribe_file(temp_path, language="zh-CN")
                 assert result["text"] == "测试转写结果"
-                assert result["error"] == False
+                assert not result["error"]
             finally:
                 os.unlink(temp_path)
 
@@ -75,19 +74,19 @@ async def test_stt_service_transcribe_file_no_provider():
         service = STTService()
         result = await service.transcribe_file("test.wav")
         assert "Provider Not Initialized" in result["text"]
-        assert result["error"] == True
+        assert result["error"]
 
 
 @pytest.mark.asyncio
 async def test_stt_service_transcribe_file_not_found():
     """测试STTService文件不存在"""
     with patch("app.services.stt_service.settings") as mock_settings:
-        mock_settings.STT_PROVIDER = "xunfei"
+        mock_settings.STT_PROVIDER = "zhipu"
         mock_settings.UPLOAD_DIR = "./uploads"
 
-        with patch("app.services.stt.providers.xunfei_provider.XunFeiProvider") as mock_xunfei:
+        with patch("app.services.stt.providers.zhipu_provider.ZhipuProvider") as mock_zhipu:
             mock_provider = Mock()
-            mock_xunfei.return_value = mock_provider
+            mock_zhipu.return_value = mock_provider
 
             service = STTService()
             result = await service.transcribe_file("non_existent_file.wav")
@@ -99,14 +98,14 @@ async def test_stt_service_transcribe_file_not_found():
 async def test_stt_service_transcribe_file_error():
     """测试STTService转写错误"""
     with patch("app.services.stt_service.settings") as mock_settings:
-        mock_settings.STT_PROVIDER = "xunfei"
+        mock_settings.STT_PROVIDER = "zhipu"
         mock_settings.UPLOAD_DIR = "./uploads"
         mock_settings.DEMO_MODE = False
 
-        with patch("app.services.stt.providers.xunfei_provider.XunFeiProvider") as mock_xunfei:
+        with patch("app.services.stt.providers.zhipu_provider.ZhipuProvider") as mock_zhipu:
             mock_provider = Mock()
             mock_provider.transcribe_file = AsyncMock(side_effect=Exception("API Error"))
-            mock_xunfei.return_value = mock_provider
+            mock_zhipu.return_value = mock_provider
 
             service = STTService()
 
@@ -118,7 +117,7 @@ async def test_stt_service_transcribe_file_error():
             try:
                 result = await service.transcribe_file(temp_path)
                 assert "Transcription Error" in result["text"]
-                assert result["error"] == True
+                assert result["error"]
             finally:
                 os.unlink(temp_path)
 
@@ -127,14 +126,14 @@ async def test_stt_service_transcribe_file_error():
 async def test_stt_service_transcribe_file_demo_mode():
     """测试STTService转写错误（演示模式）"""
     with patch("app.services.stt_service.settings") as mock_settings:
-        mock_settings.STT_PROVIDER = "xunfei"
+        mock_settings.STT_PROVIDER = "zhipu"
         mock_settings.UPLOAD_DIR = "./uploads"
         mock_settings.DEMO_MODE = True
 
-        with patch("app.services.stt.providers.xunfei_provider.XunFeiProvider") as mock_xunfei:
+        with patch("app.services.stt.providers.zhipu_provider.ZhipuProvider") as mock_zhipu:
             mock_provider = Mock()
             mock_provider.transcribe_file = AsyncMock(side_effect=Exception("API Error"))
-            mock_xunfei.return_value = mock_provider
+            mock_zhipu.return_value = mock_provider
 
             service = STTService()
 
@@ -146,7 +145,7 @@ async def test_stt_service_transcribe_file_demo_mode():
             try:
                 result = await service.transcribe_file(temp_path)
                 assert "演示模式" in result["text"]
-                assert result["error"] == False
+                assert not result["error"]
             finally:
                 os.unlink(temp_path)
 
@@ -155,12 +154,12 @@ async def test_stt_service_transcribe_file_demo_mode():
 async def test_stt_service_enhance_transcript():
     """测试STTService转写增强"""
     with patch("app.services.stt_service.settings") as mock_settings:
-        mock_settings.STT_PROVIDER = "xunfei"
+        mock_settings.STT_PROVIDER = "zhipu"
         mock_settings.UPLOAD_DIR = "./uploads"
 
-        with patch("app.services.stt.providers.xunfei_provider.XunFeiProvider") as mock_xunfei:
+        with patch("app.services.stt.providers.zhipu_provider.ZhipuProvider") as mock_zhipu:
             mock_provider = Mock()
-            mock_xunfei.return_value = mock_provider
+            mock_zhipu.return_value = mock_provider
 
             service = STTService()
 
@@ -183,22 +182,24 @@ async def test_stt_service_enhance_transcript():
 async def test_stt_service_create_audio_stream_generator():
     """测试创建音频流生成器"""
     with patch("app.services.stt_service.settings") as mock_settings:
-        mock_settings.STT_PROVIDER = "xunfei"
+        mock_settings.STT_PROVIDER = "zhipu"
         mock_settings.UPLOAD_DIR = "./uploads"
 
-        with patch("app.services.stt.providers.xunfei_provider.XunFeiProvider") as mock_xunfei:
+        with patch("app.services.stt.providers.zhipu_provider.ZhipuProvider") as mock_zhipu:
             mock_provider = Mock()
-            mock_xunfei.return_value = mock_provider
+            mock_zhipu.return_value = mock_provider
 
             service = STTService()
 
             # Mock WebSocket
             mock_websocket = Mock()
-            mock_websocket.receive = AsyncMock(side_effect=[
-                {"bytes": b"chunk1"},
-                {"bytes": b"chunk2"},
-                {"text": "STOP"},
-            ])
+            mock_websocket.receive = AsyncMock(
+                side_effect=[
+                    {"bytes": b"chunk1"},
+                    {"bytes": b"chunk2"},
+                    {"text": "STOP"},
+                ]
+            )
 
             chunks = []
             async for chunk in service._create_audio_stream_generator(mock_websocket):
@@ -207,3 +208,18 @@ async def test_stt_service_create_audio_stream_generator():
             assert len(chunks) == 2
             assert chunks[0] == b"chunk1"
             assert chunks[1] == b"chunk2"
+
+
+@pytest.mark.asyncio
+async def test_stt_service_init_legacy_xunfei_env_uses_zhipu():
+    """测试旧的 xunfei 配置会自动迁移到 zhipu"""
+    with patch("app.services.stt_service.settings") as mock_settings:
+        mock_settings.STT_PROVIDER = "xunfei"
+        mock_settings.UPLOAD_DIR = "./uploads"
+
+        with patch("app.services.stt.providers.zhipu_provider.ZhipuProvider") as mock_zhipu:
+            mock_provider = Mock()
+            mock_zhipu.return_value = mock_provider
+
+            service = STTService()
+            assert service.provider == mock_provider

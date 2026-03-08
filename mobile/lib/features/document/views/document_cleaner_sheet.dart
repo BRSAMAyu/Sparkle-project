@@ -2,30 +2,50 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sparkle/core/design/design_system.dart'; // Assuming DS exists
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/document/controllers/document_controller.dart';
 import 'package:sparkle/features/document/models/document_cleaning_model.dart';
+import 'package:sparkle/features/tools/models/tool_definition.dart';
 
-class DocumentCleanerSheet extends ConsumerStatefulWidget {
+class DocumentCleanerSheet extends StatelessWidget {
   const DocumentCleanerSheet({required this.onResult, super.key});
+
   final ValueChanged<String> onResult;
 
   @override
-  ConsumerState<DocumentCleanerSheet> createState() =>
-      _DocumentCleanerSheetState();
+  Widget build(BuildContext context) => DocumentCleanerPanel(
+        onResult: onResult,
+        surface: ToolSurface.sheet,
+      );
 }
 
-class _DocumentCleanerSheetState extends ConsumerState<DocumentCleanerSheet> {
+class DocumentCleanerPanel extends ConsumerStatefulWidget {
+  const DocumentCleanerPanel({
+    super.key,
+    this.onResult,
+    this.surface = ToolSurface.page,
+  });
+
+  final ValueChanged<String>? onResult;
+  final ToolSurface surface;
+
+  @override
+  ConsumerState<DocumentCleanerPanel> createState() =>
+      _DocumentCleanerPanelState();
+}
+
+class _DocumentCleanerPanelState extends ConsumerState<DocumentCleanerPanel> {
   File? _selectedFile;
   bool _enableOcr = true;
-  String _ocrEngine = 'local';
+  String _ocrEngine = 'zhipu';
+
+  bool get _isSheet => widget.surface == ToolSurface.sheet;
 
   @override
   void dispose() {
-    // Reset controller when closing sheet
-    // ref.read(documentControllerProvider.notifier).reset();
-    // Wait, autoDispose handles it usually, but let's be safe if we want to clear state on exit
+    ref.read(documentControllerProvider.notifier).reset();
     super.dispose();
   }
 
@@ -35,26 +55,39 @@ class _DocumentCleanerSheetState extends ConsumerState<DocumentCleanerSheet> {
       allowedExtensions: ['pdf', 'docx', 'pptx'],
     );
 
-    if (result != null) {
-      setState(() {
-        _selectedFile = File(result.files.single.path!);
-      });
+    if (result == null || result.files.single.path == null) {
+      return;
     }
+
+    setState(() {
+      _selectedFile = File(result.files.single.path!);
+    });
   }
 
   Future<void> _startCleaning() async {
-    if (_selectedFile == null) return;
+    if (_selectedFile == null) {
+      return;
+    }
+
     await ref.read(documentControllerProvider.notifier).startCleaning(
           _selectedFile!,
           enableOcr: _enableOcr,
           ocrEngine: _ocrEngine,
         );
-    // Cleanup temporary files from file_picker cache
+
     try {
       await FilePicker.platform.clearTemporaryFiles();
     } catch (e) {
       debugPrint('Error clearing temp files: $e');
     }
+  }
+
+  Future<void> _copyResult(String text) async {
+    await Clipboard.setData(ClipboardData(text: text));
+    if (!mounted) {
+      return;
+    }
+    AppFeedback.success(context, '清洗结果已复制');
   }
 
   @override
@@ -65,58 +98,91 @@ class _DocumentCleanerSheetState extends ConsumerState<DocumentCleanerSheet> {
     return Container(
       padding: const EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
-        color: isDark ? DS.neutral900 : DS.brandPrimary,
-        borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(DS.borderRadiusXl),
+        color: isDark ? DS.neutral900 : DS.surfacePrimary,
+        borderRadius: BorderRadius.vertical(
+          top:
+              Radius.circular(_isSheet ? DS.borderRadiusXl : DS.borderRadiusLg),
+        ),
+        border: Border.all(
+          color: isDark ? DS.neutral800 : DS.borderSubtle,
         ),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Drag handle for better UX
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 20),
-              decoration: BoxDecoration(
-                color: isDark ? DS.neutral700 : DS.neutral300,
-                borderRadius: BorderRadius.circular(2),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (_isSheet)
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: isDark ? DS.neutral700 : DS.neutral300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '智能文档备考',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: DS.fontWeightBold,
+                          color: isDark ? DS.brandPrimary : DS.neutral900,
+                        ),
+                      ),
+                      const SizedBox(height: DS.spacing6),
+                      Text(
+                        '上传 PDF / Word / PPT，自动走当前已接通的文档清洗与 GLM OCR 链路。',
+                        style: TextStyle(
+                          color: isDark ? DS.neutral400 : DS.neutral600,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (_isSheet)
+                  SparkleIconButton(
+                    icon: const Icon(Icons.close_rounded),
+                    onPressed: () => Navigator.of(context).pop(),
+                    variant: ButtonVariant.ghost,
+                    size: DS.touchTargetMinSize,
+                  ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            state.when(
+              data: (taskStatus) {
+                if (taskStatus == null) {
+                  return _buildFilePicker(isDark);
+                }
+                if (taskStatus.status == 'queued' ||
+                    taskStatus.status == 'processing') {
+                  return _buildProgress(taskStatus, isDark);
+                }
+                if (taskStatus.status == 'completed' &&
+                    taskStatus.result != null) {
+                  return _buildSuccess(taskStatus.result!, isDark);
+                }
+                return _buildError(taskStatus.message, isDark);
+              },
+              error: (err, stack) => _buildError(err.toString(), isDark),
+              loading: () => const Padding(
+                padding: EdgeInsets.symmetric(vertical: 40),
+                child: Center(child: CircularProgressIndicator()),
               ),
             ),
-          ),
-          Text(
-            '智能文档备考',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: DS.fontWeightBold,
-              color: isDark ? DS.brandPrimary : DS.neutral900,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 20),
-          state.when(
-            data: (taskStatus) {
-              if (taskStatus == null) {
-                return _buildFilePicker(isDark);
-              } else if (taskStatus.status == 'queued' ||
-                  taskStatus.status == 'processing') {
-                return _buildProgress(taskStatus, isDark);
-              } else if (taskStatus.status == 'completed' &&
-                  taskStatus.result != null) {
-                return _buildSuccess(taskStatus.result!, isDark);
-              } else {
-                return _buildError(taskStatus.message, isDark);
-              }
-            },
-            error: (err, stack) => _buildError(err.toString(), isDark),
-            loading: () => const Padding(
-              padding: EdgeInsets.symmetric(vertical: 40),
-              child: Center(child: CircularProgressIndicator()),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -147,7 +213,7 @@ class _DocumentCleanerSheetState extends ConsumerState<DocumentCleanerSheet> {
                           ),
                           const SizedBox(height: 12),
                           Text(
-                            '点击选择 PDF/Word/PPT',
+                            '点击选择 PDF / Word / PPT',
                             style: TextStyle(
                               color: isDark ? DS.neutral400 : DS.neutral600,
                             ),
@@ -173,9 +239,7 @@ class _DocumentCleanerSheetState extends ConsumerState<DocumentCleanerSheet> {
                           SparkleButton(
                             label: '更换文件',
                             variant: ButtonVariant.ghost,
-                            onPressed: () {
-                              _pickFile();
-                            },
+                            onPressed: _pickFile,
                           ),
                         ],
                       ),
@@ -209,7 +273,7 @@ class _DocumentCleanerSheetState extends ConsumerState<DocumentCleanerSheet> {
                 const Spacer(),
                 _buildEngineChip('本地快速', 'local', isDark),
                 const SizedBox(width: 12),
-                _buildEngineChip('DeepSeek 高精', 'deepseek', isDark),
+                _buildEngineChip('GLM OCR 高精', 'zhipu', isDark),
               ],
             ),
           ],
@@ -217,11 +281,7 @@ class _DocumentCleanerSheetState extends ConsumerState<DocumentCleanerSheet> {
           SparkleButton(
             expand: true,
             label: '开始 AI 清洗',
-            onPressed: _selectedFile == null
-                ? null
-                : () {
-                    _startCleaning();
-                  },
+            onPressed: _selectedFile == null ? null : _startCleaning,
           ),
         ],
       );
@@ -307,7 +367,7 @@ class _DocumentCleanerSheetState extends ConsumerState<DocumentCleanerSheet> {
           ),
           const SizedBox(height: DS.xl),
           Text(
-            '文档分析成功！',
+            '文档分析成功',
             style: TextStyle(
               fontSize: 20,
               fontWeight: DS.fontWeightBold,
@@ -316,24 +376,52 @@ class _DocumentCleanerSheetState extends ConsumerState<DocumentCleanerSheet> {
           ),
           const SizedBox(height: 12),
           Text(
-            '已提取 ${result.charCount} 字符 \n分析模式: ${result.mode == "map_reduce" ? "深度摘要" : "全量清洗"}',
+            '已提取 ${result.charCount} 字符\n分析模式: ${result.mode == "map_reduce" ? "深度摘要" : "全量清洗"}',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: isDark ? DS.neutral400 : DS.neutral600,
               height: 1.5,
             ),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 24),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(DS.spacing16),
+            decoration: BoxDecoration(
+              color: isDark ? DS.neutral800 : DS.neutral50,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isDark ? DS.neutral700 : DS.neutral200,
+              ),
+            ),
+            child: Text(
+              result.summary,
+              maxLines: 8,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: isDark ? DS.neutral200 : DS.neutral800,
+                height: 1.5,
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
           SparkleButton(
             expand: true,
             onPressed: () {
-              widget.onResult(result.summary);
-              Navigator.pop(context);
+              widget.onResult?.call(result.summary);
+              if (_isSheet) {
+                Navigator.pop(context);
+              }
             },
-            icon: const Icon(Icons.send_rounded),
-            label: '将摘要发送到对话',
+            icon: Icon(_isSheet ? Icons.send_rounded : Icons.check_rounded),
+            label: _isSheet ? '将摘要发送到对话' : '使用清洗结果',
           ),
           const SizedBox(height: 12),
+          SparkleButton.ghost(
+            expand: true,
+            label: '复制摘要',
+            onPressed: () => _copyResult(result.summary),
+          ),
         ],
       );
 
