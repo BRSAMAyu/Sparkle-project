@@ -1,195 +1,199 @@
 import 'dart:math' as math;
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_camera.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_config.dart';
+import 'package:sparkle/shared/entities/galaxy_model.dart';
 
 class GalaxyMiniMap extends StatelessWidget {
   const GalaxyMiniMap({
-    required this.transformationController,
-    required this.canvasSize,
-    required this.screenSize,
+    required this.camera,
+    required this.positions,
+    required this.nodesById,
+    required this.worldBounds,
+    required this.isDarkMode,
+    required this.onNavigate,
+    required this.onViewportDragged,
     super.key,
-    this.minimapSize = 120.0,
+    this.size = 120,
   });
-  final TransformationController transformationController;
-  final double canvasSize;
-  final Size screenSize;
-  final double minimapSize;
+
+  final GalaxyCamera camera;
+  final Map<String, Offset> positions;
+  final Map<String, GalaxyNodeModel> nodesById;
+  final Rect worldBounds;
+  final bool isDarkMode;
+  final double size;
+  final ValueChanged<Offset> onNavigate;
+  final ValueChanged<Offset> onViewportDragged;
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      width: minimapSize,
-      height: minimapSize,
-      decoration: BoxDecoration(
-        color: isDark
-            ? DS.surfaceHigh.withValues(alpha: 0.7)
-            : DS.surfacePrimary.withValues(alpha: 0.8),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDark ? DS.neutral700 : DS.neutral300,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: DS.overlay30.withValues(alpha: 0.2),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+    final frameColor = isDarkMode
+        ? Colors.white.withValues(alpha: 0.14)
+        : Colors.black.withValues(alpha: 0.08);
+
+    return SizedBox(
+      width: size,
+      height: size,
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: CustomPaint(
-          painter: _MiniMapPainter(
-            listenable: transformationController,
-            canvasSize: canvasSize,
-            screenSize: screenSize,
+        borderRadius: BorderRadius.circular(18),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTapDown: (details) => onNavigate(
+              _localToWorld(details.localPosition, Size.square(size)),
+            ),
+            onPanStart: (details) => onViewportDragged(
+              _localToWorld(details.localPosition, Size.square(size)),
+            ),
+            onPanUpdate: (details) => onViewportDragged(
+              _localToWorld(details.localPosition, Size.square(size)),
+            ),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: isDarkMode
+                    ? const Color(0xAA101A2B)
+                    : Colors.white.withValues(alpha: 0.8),
+                border: Border.all(color: frameColor),
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(
+                    color:
+                        Colors.black.withValues(alpha: isDarkMode ? 0.22 : 0.1),
+                    blurRadius: 16,
+                    offset: const Offset(0, 12),
+                  ),
+                ],
+              ),
+              child: CustomPaint(
+                painter: _GalaxyMiniMapPainter(
+                  camera: camera,
+                  positions: positions,
+                  nodesById: nodesById,
+                  worldBounds: worldBounds,
+                  isDarkMode: isDarkMode,
+                ),
+                child: const SizedBox.expand(),
+              ),
+            ),
           ),
         ),
       ),
+    );
+  }
+
+  Offset _localToWorld(Offset local, Size size) {
+    final normalizedX = (local.dx / size.width).clamp(0.0, 1.0);
+    final normalizedY = (local.dy / size.height).clamp(0.0, 1.0);
+    return Offset(
+      lerpDouble(worldBounds.left, worldBounds.right, normalizedX)!,
+      lerpDouble(worldBounds.top, worldBounds.bottom, normalizedY)!,
     );
   }
 }
 
-class _MiniMapPainter extends CustomPainter {
-  _MiniMapPainter({
-    required this.listenable,
-    required this.canvasSize,
-    required this.screenSize,
-  }) : super(repaint: listenable);
-  final double canvasSize;
-  final Size screenSize;
-  final TransformationController listenable;
+class _GalaxyMiniMapPainter extends CustomPainter {
+  const _GalaxyMiniMapPainter({
+    required this.camera,
+    required this.positions,
+    required this.nodesById,
+    required this.worldBounds,
+    required this.isDarkMode,
+  });
+
+  final GalaxyCamera camera;
+  final Map<String, Offset> positions;
+  final Map<String, GalaxyNodeModel> nodesById;
+  final Rect worldBounds;
+  final bool isDarkMode;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final scale = size.width / canvasSize;
-    final center = Offset(size.width / 2, size.height / 2);
+    final paddedBounds = worldBounds.inflate(40);
+    final scaleX = size.width / math.max(1, paddedBounds.width);
+    final scaleY = size.height / math.max(1, paddedBounds.height);
+    final trackColor =
+        isDarkMode ? const Color(0xFF152238) : const Color(0xFFEFF3F8);
+    final viewportColor =
+        isDarkMode ? const Color(0xFF88B4FF) : const Color(0xFF3563DA);
 
-    // 1. Draw Sectors (Simplified)
-    _drawSectors(canvas, center, size.width / 2);
+    canvas.drawRect(Offset.zero & size, Paint()..color = trackColor);
 
-    // 2. Draw Viewport Rect
-    _drawViewport(canvas, size, scale);
-  }
+    for (final entry in positions.entries) {
+      final node = nodesById[entry.key];
+      if (node == null) {
+        continue;
+      }
 
-  void _drawSectors(Canvas canvas, Offset center, double radius) {
-    final paint = Paint()..style = PaintingStyle.fill;
-
-    for (final entry in SectorConfig.styles.entries) {
-      final style = entry.value;
-      paint.color = style.primaryColor.withValues(alpha: 0.3);
-
-      final startAngle = (style.baseAngle - 90) * 3.14159 / 180;
-      final sweepAngle = style.sweepAngle * 3.14159 / 180;
-
-      canvas.drawArc(
-        Rect.fromCircle(center: center, radius: radius),
-        startAngle,
-        sweepAngle,
-        true,
-        paint,
+      final point = _mapToMini(entry.value, paddedBounds, scaleX, scaleY);
+      final color = SectorConfig.getColor(node.sector, isDarkMode: isDarkMode);
+      canvas.drawCircle(
+        point,
+        node.importance >= 4 ? 2.1 : 1.4,
+        Paint()..color = color.withValues(alpha: node.isUnlocked ? 0.92 : 0.38),
       );
     }
-  }
 
-  void _drawViewport(Canvas canvas, Size size, double scale) {
-    final matrix = listenable.value;
-    final minimapScale = size.width / canvasSize; // e.g. 120 / 4000 = 0.03
+    final viewport = camera.viewportRect;
+    final rect = Rect.fromLTRB(
+      _mapToMini(
+        viewport.topLeft,
+        paddedBounds,
+        scaleX,
+        scaleY,
+      ).dx,
+      _mapToMini(
+        viewport.topLeft,
+        paddedBounds,
+        scaleX,
+        scaleY,
+      ).dy,
+      _mapToMini(
+        viewport.bottomRight,
+        paddedBounds,
+        scaleX,
+        scaleY,
+      ).dx,
+      _mapToMini(
+        viewport.bottomRight,
+        paddedBounds,
+        scaleX,
+        scaleY,
+      ).dy,
+    );
 
-    // Use the actual screen size passed from parent
-    final screenWidth = screenSize.width;
-    final screenHeight = screenSize.height;
-
-    // Handle edge case: if screen size is zero or invalid, use fallback
-    if (screenWidth <= 0 || screenHeight <= 0) {
-      // Fallback to minimap-based estimation (original logic)
-      final fallbackWidth = size.width * 2;
-      final fallbackHeight = size.height * 2;
-      _drawViewportWithSize(
-        canvas,
-        size,
-        minimapScale,
-        matrix,
-        fallbackWidth,
-        fallbackHeight,
+    canvas
+      ..drawRRect(
+        RRect.fromRectAndRadius(rect, const Radius.circular(10)),
+        Paint()..color = viewportColor.withValues(alpha: 0.12),
+      )
+      ..drawRRect(
+        RRect.fromRectAndRadius(rect, const Radius.circular(10)),
+        Paint()
+          ..color = viewportColor.withValues(alpha: 0.78)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.6,
       );
-      return;
-    }
-
-    _drawViewportWithSize(
-      canvas,
-      size,
-      minimapScale,
-      matrix,
-      screenWidth,
-      screenHeight,
-    );
   }
 
-  void _drawViewportWithSize(
-    Canvas canvas,
-    Size size,
-    double minimapScale,
-    Matrix4 matrix,
-    double screenWidth,
-    double screenHeight,
-  ) {
-    final inverseMatrix = matrix.clone()..invert();
-
-    final topLeft = MatrixUtils.transformPoint(inverseMatrix, Offset.zero);
-    final topRight =
-        MatrixUtils.transformPoint(inverseMatrix, Offset(screenWidth, 0));
-    final bottomLeft =
-        MatrixUtils.transformPoint(inverseMatrix, Offset(0, screenHeight));
-    final bottomRight = MatrixUtils.transformPoint(
-      inverseMatrix,
-      Offset(screenWidth, screenHeight),
-    );
-
-    // Compute bounding box
-    final minX = math.min(
-      math.min(topLeft.dx, topRight.dx),
-      math.min(bottomLeft.dx, bottomRight.dx),
-    );
-    final maxX = math.max(
-      math.max(topLeft.dx, topRight.dx),
-      math.max(bottomLeft.dx, bottomRight.dx),
-    );
-    final minY = math.min(
-      math.min(topLeft.dy, topRight.dy),
-      math.min(bottomLeft.dy, bottomRight.dy),
-    );
-    final maxY = math.max(
-      math.max(topLeft.dy, topRight.dy),
-      math.max(bottomLeft.dy, bottomRight.dy),
-    );
-
-    // Create rectangle in canvas coordinates
-    final rect = Rect.fromLTRB(minX, minY, maxX, maxY);
-
-    // Scale to minimap coordinates
-    var miniRect = Rect.fromLTRB(
-      rect.left * minimapScale,
-      rect.top * minimapScale,
-      rect.right * minimapScale,
-      rect.bottom * minimapScale,
-    );
-    miniRect = miniRect.inflate(-2);
-
-    // Draw viewport rectangle
-    final viewportPaint = Paint()
-      ..color = DS.brandPrimary.withValues(alpha: 0.8)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0;
-
-    canvas.drawRect(miniRect, viewportPaint);
-  }
+  Offset _mapToMini(
+    Offset world,
+    Rect bounds,
+    double scaleX,
+    double scaleY,
+  ) =>
+      Offset(
+        (world.dx - bounds.left) * scaleX,
+        (world.dy - bounds.top) * scaleY,
+      );
 
   @override
-  bool shouldRepaint(covariant _MiniMapPainter oldDelegate) =>
-      oldDelegate.listenable != listenable ||
-      oldDelegate.canvasSize != canvasSize ||
-      oldDelegate.screenSize != screenSize;
+  bool shouldRepaint(covariant _GalaxyMiniMapPainter oldDelegate) =>
+      oldDelegate.camera != camera ||
+      oldDelegate.positions != positions ||
+      oldDelegate.worldBounds != worldBounds ||
+      oldDelegate.isDarkMode != isDarkMode;
 }

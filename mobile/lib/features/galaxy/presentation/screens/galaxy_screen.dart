@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:math' as math;
+import 'dart:ui';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -7,12 +9,19 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/features/galaxy/data/repositories/enhanced_galaxy_repository.dart';
+import 'package:sparkle/features/galaxy/data/services/galaxy_accessibility_service.dart';
+import 'package:sparkle/features/galaxy/data/services/galaxy_force_engine.dart';
 import 'package:sparkle/features/galaxy/data/services/galaxy_layout_engine.dart';
 import 'package:sparkle/features/galaxy/data/services/galaxy_spatial_index.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_camera.dart';
+import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_controls.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_gesture_handler.dart';
+import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_mini_map.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_node_preview_card.dart';
+import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_search_panel.dart';
+import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_config.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/star_map_painter.dart';
+import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/star_success_animation.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
 
 class GalaxyScreen extends ConsumerStatefulWidget {
@@ -26,15 +35,28 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     with TickerProviderStateMixin {
   late final GalaxyGestureHandler _gestureHandler;
   late final Ticker _flingTicker;
+  late final Ticker _physicsTicker;
+  late final Ticker _ambientTicker;
   late final GalaxySpatialIndex _spatialIndex;
+  late final GalaxyForceEngine _forceEngine;
+  late final GalaxyAccessibilityService _accessibilityService;
   late final GalaxyLabelCache _labelCache;
   late final GalaxyEdgePictureCache _edgePictureCache;
+  late final TextEditingController _searchController;
   late final AnimationController _tapFeedbackController;
+  late final AnimationController _cameraAnimationController;
+  late final AnimationController _buildReplayController;
+  late final AnimationController _entranceController;
   late final Animation<double> _tapFeedbackAnimation;
 
   GalaxyGraphResponse? _graph;
   Map<String, Offset> _positions = const <String, Offset>{};
   Map<String, GalaxyNodeModel> _nodesById = const <String, GalaxyNodeModel>{};
+  Map<String, Set<String>> _adjacency = const <String, Set<String>>{};
+  Map<String, double> _edgeStrengths = const <String, double>{};
+  Map<String, Color> _darkBlendedColors = const <String, Color>{};
+  Map<String, Color> _lightBlendedColors = const <String, Color>{};
+  Map<String, int> _revealRanks = const <String, int>{};
   GalaxyCamera _camera = const GalaxyCamera(
     offset: Offset.zero,
     scale: 0.15,
@@ -42,34 +64,81 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   );
   FrictionSimulation? _flingX;
   FrictionSimulation? _flingY;
+  GalaxyCamera? _cameraAnimationStart;
+  GalaxyCamera? _cameraAnimationEnd;
+  Curve _cameraAnimationCurve = Curves.easeInOutCubic;
   Object? _loadError;
   String? _selectedNodeId;
   String? _draggingNodeId;
   String? _tapFeedbackNodeId;
   String? _pendingNavigationNodeId;
+  String? _pendingPersistNodeId;
   GalaxyNodeModel? _previewNode;
   Offset? _previewScreenPosition;
   Size _viewportSize = Size.zero;
   bool _isLoading = true;
   bool _didFitInitialCamera = false;
+  bool _didPlayEntranceAnimation = false;
+  bool _isBuildAnimating = false;
+  bool _isSearchOpen = false;
+  bool _performanceDegraded = false;
+  double _buildRevealProgress = 1;
+  double _entranceRevealProgress = 1;
+  double _ambientPhase = 0;
   int _sceneVersion = 0;
+  String _searchQuery = '';
+  List<GalaxyNodeModel> _searchResults = const <GalaxyNodeModel>[];
+  Set<String> _searchMatchedNodeIds = const <String>{};
+  Set<String> _focusNodeIds = const <String>{};
+  Map<String, Offset> _microDriftOffsets = const <String, Offset>{};
+  List<GalaxyEdgeParticle> _edgeParticles = const <GalaxyEdgeParticle>[];
+  List<_ReplayStage> _replayStages = const <_ReplayStage>[];
+  List<_CelebrationEntry> _celebrations = const <_CelebrationEntry>[];
+  Duration _ambientElapsed = Duration.zero;
+  Duration _lastInteractionElapsed = Duration.zero;
+  Duration _lastDriftShuffleElapsed = Duration.zero;
+  int _activeReplayStageIndex = -1;
+  int _consecutiveSlowFrames = 0;
+  int _consecutiveFastFrames = 0;
 
   @override
   void initState() {
     super.initState();
     _spatialIndex = GalaxySpatialIndex();
+    _forceEngine = GalaxyForceEngine();
+    _accessibilityService = GalaxyAccessibilityService();
     _labelCache = GalaxyLabelCache();
     _edgePictureCache = GalaxyEdgePictureCache();
+    _searchController = TextEditingController();
     _gestureHandler = GalaxyGestureHandler(
       screenToWorld: (screenPoint) => _camera.screenToWorld(screenPoint),
       hitTestNode: _hitTestNode,
       onCommand: _handleGestureCommand,
     );
     _flingTicker = createTicker(_handleFlingTick);
+    _physicsTicker = createTicker(_handlePhysicsTick);
+    _ambientTicker = createTicker(_handleAmbientTick);
     _tapFeedbackController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 200),
     );
+    _cameraAnimationController = AnimationController(vsync: this)
+      ..addListener(_handleCameraAnimationTick);
+    _buildReplayController = AnimationController(vsync: this)
+      ..addListener(_handleBuildReplayTick)
+      ..addStatusListener(_handleBuildReplayStatus);
+    _entranceController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 620),
+    )..addListener(() {
+        if (!mounted) {
+          return;
+        }
+        setState(() {
+          _entranceRevealProgress =
+              Curves.easeOutCubic.transform(_entranceController.value);
+        });
+      });
     _tapFeedbackAnimation = TweenSequence<double>([
       TweenSequenceItem<double>(
         tween: Tween<double>(
@@ -93,13 +162,21 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
         setState(() {});
       });
     _tapFeedbackController.addStatusListener(_handleTapFeedbackStatus);
+    SchedulerBinding.instance.addTimingsCallback(_handleFrameTimings);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) {
         return;
       }
+      unawaited(_ambientTicker.start());
       unawaited(_loadGraph());
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _accessibilityService.initialize(context);
   }
 
   @override
@@ -108,50 +185,165 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     _labelCache.clear();
     _edgePictureCache.clear();
     _flingTicker.dispose();
+    _physicsTicker.dispose();
+    _ambientTicker.dispose();
+    _searchController.dispose();
     _tapFeedbackController
       ..removeStatusListener(_handleTapFeedbackStatus)
       ..dispose();
+    _cameraAnimationController
+      ..removeListener(_handleCameraAnimationTick)
+      ..dispose();
+    _buildReplayController
+      ..removeListener(_handleBuildReplayTick)
+      ..removeStatusListener(_handleBuildReplayStatus)
+      ..dispose();
+    _entranceController.dispose();
+    SchedulerBinding.instance.removeTimingsCallback(_handleFrameTimings);
     super.dispose();
   }
 
-  Future<void> _loadGraph() async {
-    setState(() {
-      _isLoading = true;
-      _loadError = null;
-    });
+  Future<void> _loadGraph({
+    bool forceRefresh = false,
+    bool preserveCamera = false,
+  }) async {
+    _stopAllAutoMotion(commitPhysicsPosition: true);
+    if (!preserveCamera) {
+      setState(() {
+        _isLoading = true;
+        _loadError = null;
+      });
+    }
 
     final repository = ref.read(enhancedGalaxyRepositoryProvider);
-    final result = await repository.getGraph();
+    final result = await repository.getGraph(forceRefresh: forceRefresh);
 
     if (!mounted) {
       return;
     }
 
     if (result.isSuccess && result.data != null) {
-      final graph = result.data!;
-      final positions = _resolvePositions(graph);
-      final nodesById = {
-        for (final node in graph.nodes) node.id: node,
-      };
-      _spatialIndex.build(positions, graph.nodes);
-      _labelCache.clear();
-      _edgePictureCache.clear();
-      setState(() {
-        _graph = graph;
-        _positions = positions;
-        _nodesById = nodesById;
-        _isLoading = false;
-        _didFitInitialCamera = false;
-        _sceneVersion++;
-      });
-      _fitCameraIfPossible(force: true);
+      _applyGraphData(result.data!, preserveCamera: preserveCamera);
       return;
     }
 
+    if (!preserveCamera) {
+      setState(() {
+        _isLoading = false;
+        _loadError = result.error ?? '知识星图加载失败';
+      });
+    }
+  }
+
+  void _applyGraphData(
+    GalaxyGraphResponse graph, {
+    required bool preserveCamera,
+  }) {
+    final positions = _resolvePositions(graph);
+    final nodesById = {
+      for (final node in graph.nodes) node.id: node,
+    };
+    final adjacency = _buildAdjacency(graph.edges);
+    final edgeStrengths = _buildEdgeStrengths(graph.edges);
+    final revealRanks = _buildRevealRanks(graph.nodes);
+    final darkBlendedColors = _buildBlendedColors(
+      nodesById: nodesById,
+      adjacency: adjacency,
+      isDarkMode: true,
+    );
+    final lightBlendedColors = _buildBlendedColors(
+      nodesById: nodesById,
+      adjacency: adjacency,
+      isDarkMode: false,
+    );
+
+    _spatialIndex.build(positions, graph.nodes);
+    _labelCache.clear();
+    _edgePictureCache.clear();
     setState(() {
+      _graph = graph;
+      _positions = positions;
+      _nodesById = nodesById;
+      _adjacency = adjacency;
+      _edgeStrengths = edgeStrengths;
+      _revealRanks = revealRanks;
+      _darkBlendedColors = darkBlendedColors;
+      _lightBlendedColors = lightBlendedColors;
+      _pendingPersistNodeId = null;
       _isLoading = false;
-      _loadError = result.error ?? '知识星图加载失败';
+      _didFitInitialCamera = preserveCamera;
+      _replayStages = const <_ReplayStage>[];
+      _activeReplayStageIndex = -1;
+      _sceneVersion++;
     });
+
+    if (!preserveCamera) {
+      _startEntranceAnimationIfNeeded();
+    } else {
+      _refreshSearchState();
+      _syncPreviewPosition();
+    }
+  }
+
+  void _startEntranceAnimationIfNeeded() {
+    if (_viewportSize == Size.zero || _graph == null) {
+      return;
+    }
+
+    final overviewCamera = _fitOverviewCamera();
+    if (_didPlayEntranceAnimation) {
+      setState(() {
+        _camera = overviewCamera;
+        _didFitInitialCamera = true;
+        _entranceRevealProgress = 1;
+      });
+      return;
+    }
+
+    final worldCenter = _computeWorldBounds().center;
+    final introScale =
+        (overviewCamera.scale * 0.12).clamp(overviewCamera.minScale, 0.12);
+    final introCamera = overviewCamera
+        .copyWith(scale: introScale)
+        .centerOnWorldPoint(worldPoint: worldCenter);
+
+    setState(() {
+      _camera = introCamera;
+      _didFitInitialCamera = true;
+      _didPlayEntranceAnimation = true;
+      _entranceRevealProgress = 0;
+    });
+
+    _entranceController
+      ..stop()
+      ..reset();
+    _animateCameraTo(
+      overviewCamera,
+      duration: const Duration(milliseconds: 820),
+      curve: Curves.easeOutCubic,
+    );
+    unawaited(_entranceController.forward());
+  }
+
+  void _refreshSearchState() {
+    if (_searchQuery.trim().isEmpty) {
+      return;
+    }
+    _updateSearchQuery(_searchQuery, updateTextField: false);
+  }
+
+  void _syncPreviewPosition() {
+    final previewNode = _previewNode;
+    if (previewNode == null) {
+      return;
+    }
+    final anchor = _positions[previewNode.id];
+    if (anchor == null) {
+      return;
+    }
+    _previewScreenPosition = _computePreviewPosition(
+      anchor: _camera.worldToScreen(anchor),
+    );
   }
 
   Map<String, Offset> _resolvePositions(GalaxyGraphResponse graph) {
@@ -173,25 +365,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     );
   }
 
-  void _fitCameraIfPossible({bool force = false}) {
-    if (_viewportSize == Size.zero || _graph == null) {
-      return;
-    }
-
-    if (_didFitInitialCamera && !force) {
-      return;
-    }
-
-    final bounds = _computeWorldBounds();
-    setState(() {
-      _camera = GalaxyCamera.fitRect(
-        worldBounds: bounds,
-        viewportSize: _viewportSize,
-      );
-      _didFitInitialCamera = true;
-    });
-  }
-
   Rect _computeWorldBounds() {
     if (_positions.isEmpty) {
       return Rect.fromCircle(center: Offset.zero, radius: 240);
@@ -203,49 +376,70 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     var maxY = double.negativeInfinity;
 
     for (final position in _positions.values) {
-      minX = minDouble(minX, position.dx);
-      minY = minDouble(minY, position.dy);
-      maxX = maxDouble(maxX, position.dx);
-      maxY = maxDouble(maxY, position.dy);
+      minX = math.min(minX, position.dx);
+      minY = math.min(minY, position.dy);
+      maxX = math.max(maxX, position.dx);
+      maxY = math.max(maxY, position.dy);
     }
 
     return Rect.fromLTRB(minX, minY, maxX, maxY);
   }
+
+  GalaxyCamera _fitOverviewCamera() => GalaxyCamera.fitRect(
+        worldBounds: _computeWorldBounds(),
+        viewportSize: _viewportSize,
+      );
 
   GalaxyNodeHit? _hitTestNode(Offset worldPoint) {
     if (_graph == null || _positions.isEmpty || _spatialIndex.size == 0) {
       return null;
     }
 
-    final tapRadius = maxDouble(20 / _camera.scale, 16);
+    final tapRadius = math.max(20 / _camera.scale, 16.0);
     return _spatialIndex.queryNearest(worldPoint, tapRadius);
   }
 
   void _handleGestureCommand(GalaxyGestureCommand command) {
+    _noteInteraction();
+
     if (command is PanCommand) {
       _stopFling();
+      _stopBuildReplay();
+      _stopPhysicsSimulation(commitPendingNode: true);
       setState(() {
         _cancelTapFeedbackState();
         _clearPreviewState();
         _camera = _camera.applyPan(command.delta);
+        _microDriftOffsets = const <String, Offset>{};
       });
       return;
     }
 
     if (command is ZoomCommand) {
       _stopFling();
+      _stopBuildReplay();
+      _stopPhysicsSimulation(commitPendingNode: true);
       setState(() {
         _cancelTapFeedbackState();
         _clearPreviewState();
         _camera = _camera.applyZoom(command.scaleDelta, command.focalPoint);
+        _microDriftOffsets = const <String, Offset>{};
       });
       return;
     }
 
+    if (command is DoubleTapCommand) {
+      _handleDoubleTap(command);
+      return;
+    }
+
     if (command is TapCommand) {
+      _stopBuildReplay();
+      _stopPhysicsSimulation(commitPendingNode: true);
       if (command.hit == null) {
         setState(() {
           _selectedNodeId = null;
+          _focusNodeIds = const <String>{};
           _cancelTapFeedbackState();
           _clearPreviewState();
         });
@@ -257,6 +451,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     }
 
     if (command is LongPressCommand) {
+      _stopBuildReplay();
+      _stopPhysicsSimulation(commitPendingNode: true);
       if (command.hit == null) {
         setState(() {
           _selectedNodeId = null;
@@ -270,6 +466,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
         return;
       }
 
+      unawaited(_accessibilityService.mediumHaptic());
       setState(() {
         _cancelTapFeedbackState();
         _selectedNodeId = previewNode.id;
@@ -285,30 +482,76 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
     if (command is DragNodeCommand) {
       final currentPosition = _positions[command.nodeId];
-      if (currentPosition == null) {
+      if (currentPosition == null || _graph == null) {
         return;
+      }
+
+      _stopFling();
+      _stopBuildReplay();
+      if (_draggingNodeId != command.nodeId) {
+        _stopPhysicsSimulation(commitPendingNode: true);
+        _forceEngine.anchorNode(command.nodeId, _adjacency);
       }
 
       final worldDelta = Offset(
         command.screenDelta.dx / _camera.scale,
         command.screenDelta.dy / _camera.scale,
       );
+      final updatedPositions = Map<String, Offset>.from(_positions)
+        ..[command.nodeId] = currentPosition + worldDelta;
 
+      _spatialIndex.build(updatedPositions, _graph!.nodes);
+      _startPhysicsSimulation();
       setState(() {
         _cancelTapFeedbackState();
         _clearPreviewState();
         _selectedNodeId = command.nodeId;
         _draggingNodeId = command.nodeId;
-        _positions = Map<String, Offset>.from(_positions)
-          ..[command.nodeId] = currentPosition + worldDelta;
+        _positions = updatedPositions;
+        _microDriftOffsets = const <String, Offset>{};
         _edgePictureCache.clear();
       });
       return;
     }
 
     if (command is FlingCommand) {
+      _stopBuildReplay();
+      _stopPhysicsSimulation(commitPendingNode: true);
       _startFling(command.velocity);
     }
+  }
+
+  void _handleDoubleTap(DoubleTapCommand command) {
+    _stopFling();
+    _stopBuildReplay();
+    _stopPhysicsSimulation(commitPendingNode: true);
+    _cancelTapFeedbackState();
+    _clearPreviewState();
+
+    if (command.hit != null) {
+      final nodeId = command.hit!.nodeId;
+      _focusOnNode(nodeId);
+      return;
+    }
+
+    if (_camera.scale >= 0.72) {
+      setState(() {
+        _focusNodeIds = const <String>{};
+        _selectedNodeId = null;
+      });
+      _fitOverviewAnimated();
+      return;
+    }
+
+    final targetScale = 0.6.clamp(_camera.minScale, _camera.maxScale);
+    final targetCamera = _camera
+        .copyWith(scale: targetScale)
+        .centerOnWorldPoint(worldPoint: command.worldPosition);
+    _animateCameraTo(
+      targetCamera,
+      duration: const Duration(milliseconds: 360),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   void _handleTapFeedbackStatus(AnimationStatus status) {
@@ -324,22 +567,19 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     _tapFeedbackController.reset();
 
     if (nodeId != null) {
-      unawaited(
-        context.pushNamed(
-          'knowledgeDetail',
-          pathParameters: {'id': nodeId},
-        ),
-      );
+      unawaited(_openKnowledgeDetail(nodeId));
     }
   }
 
   void _startTapFeedback(String nodeId) {
+    unawaited(_accessibilityService.lightHaptic());
     setState(() {
       _clearPreviewState();
       _selectedNodeId = nodeId;
       _tapFeedbackNodeId = nodeId;
       _pendingNavigationNodeId = nodeId;
       _draggingNodeId = null;
+      _focusNodeIds = const <String>{};
     });
     _tapFeedbackController
       ..stop()
@@ -366,6 +606,15 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     _previewScreenPosition = null;
   }
 
+  void _noteInteraction() {
+    _lastInteractionElapsed = _ambientElapsed;
+    if (_microDriftOffsets.isNotEmpty && mounted) {
+      setState(() {
+        _microDriftOffsets = const <String, Offset>{};
+      });
+    }
+  }
+
   Offset _computePreviewPosition({required Offset anchor}) {
     const cardWidth = 220.0;
     const cardHeight = 132.0;
@@ -390,6 +639,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   }
 
   void _handlePointerDown(PointerDownEvent event) {
+    _noteInteraction();
     if (_tapFeedbackController.isAnimating ||
         _pendingNavigationNodeId != null) {
       setState(_cancelTapFeedbackState);
@@ -398,16 +648,19 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   }
 
   void _handlePointerUp(PointerUpEvent event) {
+    _noteInteraction();
     _gestureHandler.handlePointerUp(event);
     _finalizePointerSequence();
   }
 
   void _handlePointerCancel(PointerCancelEvent event) {
+    _noteInteraction();
     _gestureHandler.handlePointerCancel(event);
     _finalizePointerSequence();
   }
 
   void _handlePointerSignal(PointerSignalEvent event) {
+    _noteInteraction();
     if (_previewNode != null ||
         _tapFeedbackController.isAnimating ||
         _pendingNavigationNodeId != null) {
@@ -425,24 +678,20 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       return;
     }
 
-    final graph = _graph;
-    final dragPosition = dragNodeId == null ? null : _positions[dragNodeId];
     setState(() {
       _clearPreviewState();
       if (dragNodeId != null) {
         _draggingNodeId = null;
+        _pendingPersistNodeId = dragNodeId;
         _sceneVersion++;
       }
     });
 
-    if (dragNodeId != null && graph != null && dragPosition != null) {
-      _spatialIndex.build(_positions, graph.nodes);
+    if (dragNodeId != null && _graph != null) {
+      unawaited(_accessibilityService.selectionHaptic());
+      _forceEngine.releaseAnchor();
+      _startPhysicsSimulation();
       _edgePictureCache.clear();
-      unawaited(
-        ref
-            .read(enhancedGalaxyRepositoryProvider)
-            .updateNodePosition(dragNodeId, dragPosition),
-      );
     }
   }
 
@@ -495,6 +744,731 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     }
   }
 
+  void _startPhysicsSimulation() {
+    if (!_physicsTicker.isActive && _forceEngine.hasActiveSimulation) {
+      unawaited(_physicsTicker.start());
+    }
+  }
+
+  void _handlePhysicsTick(Duration elapsed) {
+    final graph = _graph;
+    if (graph == null || !_forceEngine.hasActiveSimulation) {
+      _stopPhysicsSimulation(commitPendingNode: true);
+      return;
+    }
+
+    final result = _forceEngine.tick(
+      positions: _positions,
+      adjacency: _adjacency,
+      edgeStrengths: _edgeStrengths,
+      spatialIndex: _spatialIndex,
+      viewport: _camera.viewportRect,
+    );
+
+    _spatialIndex.build(result.positions, graph.nodes);
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _positions = result.positions;
+      _sceneVersion++;
+      _edgePictureCache.clear();
+    });
+
+    if (result.isSettled) {
+      _stopPhysicsSimulation(commitPendingNode: true);
+    }
+  }
+
+  void _stopPhysicsSimulation({bool commitPendingNode = false}) {
+    if (_physicsTicker.isActive) {
+      _physicsTicker.stop();
+    }
+    _forceEngine.clear();
+    if (commitPendingNode) {
+      _commitPendingNodePositionIfNeeded();
+    }
+  }
+
+  void _commitPendingNodePositionIfNeeded() {
+    final nodeId = _pendingPersistNodeId;
+    final graph = _graph;
+    if (nodeId == null || graph == null) {
+      return;
+    }
+
+    final position = _positions[nodeId];
+    _pendingPersistNodeId = null;
+    if (position == null) {
+      return;
+    }
+
+    _spatialIndex.build(_positions, graph.nodes);
+    unawaited(
+      ref
+          .read(enhancedGalaxyRepositoryProvider)
+          .updateNodePosition(nodeId, position),
+    );
+  }
+
+  Future<void> _openKnowledgeDetail(String nodeId) async {
+    final previousNode = _nodesById[nodeId];
+    await context.pushNamed(
+      'knowledgeDetail',
+      pathParameters: {'id': nodeId},
+    );
+    if (!mounted) {
+      return;
+    }
+
+    final result = await ref
+        .read(enhancedGalaxyRepositoryProvider)
+        .getGraph(forceRefresh: true);
+    if (!mounted || !result.isSuccess || result.data == null) {
+      return;
+    }
+
+    final nextGraph = result.data!;
+    GalaxyNodeModel? nextNode;
+    for (final node in nextGraph.nodes) {
+      if (node.id == nodeId) {
+        nextNode = node;
+        break;
+      }
+    }
+    _applyGraphData(nextGraph, preserveCamera: true);
+    if (previousNode != null && nextNode != null) {
+      _triggerMasteryCelebrationIfNeeded(previousNode, nextNode);
+    }
+  }
+
+  void _triggerMasteryCelebrationIfNeeded(
+    GalaxyNodeModel previousNode,
+    GalaxyNodeModel nextNode,
+  ) {
+    const milestones = <int>[30, 60, 85, 100];
+    final crossed = milestones
+        .where(
+          (threshold) =>
+              previousNode.masteryScore < threshold &&
+              nextNode.masteryScore >= threshold,
+        )
+        .toList(growable: false);
+    if (crossed.isEmpty) {
+      return;
+    }
+
+    final color = SectorConfig.getGlowColor(
+      nextNode.sector,
+      isDarkMode: Theme.of(context).brightness == Brightness.dark,
+    );
+    final entry = _CelebrationEntry(
+      id: '${nextNode.id}:${DateTime.now().microsecondsSinceEpoch}',
+      nodeId: nextNode.id,
+      color: color,
+      emphasizeNeighbors: crossed.contains(100),
+    );
+    final emphasis = entry.emphasizeNeighbors
+        ? <String>{nextNode.id, ...?_adjacency[nextNode.id]}
+        : <String>{nextNode.id};
+
+    unawaited(
+      _accessibilityService.patternHaptic(
+        entry.emphasizeNeighbors ? HapticPattern.unlock : HapticPattern.success,
+      ),
+    );
+
+    setState(() {
+      _celebrations = [..._celebrations, entry];
+      _selectedNodeId = nextNode.id;
+      _focusNodeIds = emphasis;
+    });
+
+    if (entry.emphasizeNeighbors) {
+      unawaited(
+        Future<void>.delayed(const Duration(milliseconds: 1200), () {
+          if (!mounted) {
+            return;
+          }
+          setState(() {
+            _focusNodeIds = const <String>{};
+          });
+        }),
+      );
+    }
+  }
+
+  void _removeCelebration(String entryId) {
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _celebrations = _celebrations
+          .where((entry) => entry.id != entryId)
+          .toList(growable: false);
+    });
+  }
+
+  void _toggleSearchPanel() {
+    setState(() {
+      _isSearchOpen = !_isSearchOpen;
+      if (!_isSearchOpen) {
+        _searchQuery = '';
+        _searchResults = const <GalaxyNodeModel>[];
+        _searchMatchedNodeIds = const <String>{};
+        _searchController.clear();
+      }
+    });
+  }
+
+  void _updateSearchQuery(
+    String rawQuery, {
+    bool updateTextField = true,
+  }) {
+    final query = rawQuery.trim().toLowerCase();
+    final nodes = _nodesById.values.toList(growable: false);
+    if (query.isEmpty) {
+      setState(() {
+        _searchQuery = '';
+        _searchResults = const <GalaxyNodeModel>[];
+        _searchMatchedNodeIds = const <String>{};
+      });
+      if (updateTextField && _searchController.text.isNotEmpty) {
+        _searchController.clear();
+      }
+      return;
+    }
+
+    final ranked = [...nodes]..sort((a, b) {
+        final aScore = _searchScore(a, query);
+        final bScore = _searchScore(b, query);
+        if (aScore != bScore) {
+          return bScore.compareTo(aScore);
+        }
+        final importanceCompare = b.importance.compareTo(a.importance);
+        if (importanceCompare != 0) {
+          return importanceCompare;
+        }
+        return a.name.compareTo(b.name);
+      });
+    final filtered =
+        ranked.where((node) => _searchScore(node, query) > 0).toList();
+
+    setState(() {
+      _searchQuery = rawQuery;
+      _searchResults = filtered.take(12).toList(growable: false);
+      _searchMatchedNodeIds = filtered.take(24).map((node) => node.id).toSet();
+    });
+  }
+
+  int _searchScore(GalaxyNodeModel node, String query) {
+    final lowerName = node.name.toLowerCase();
+    final sectorName = SectorConfig.getStyle(node.sector).name.toLowerCase();
+    final tags = node.autoTags.map((tag) => tag.toLowerCase());
+    if (lowerName == query) {
+      return 100;
+    }
+    if (lowerName.startsWith(query)) {
+      return 72 + node.importance;
+    }
+    if (lowerName.contains(query)) {
+      return 56 + node.importance;
+    }
+    if (sectorName.contains(query)) {
+      return 34 + node.importance;
+    }
+    if (tags.any((tag) => tag.contains(query))) {
+      return 24 + node.importance;
+    }
+    return 0;
+  }
+
+  void _handleSearchNodeSelected(GalaxyNodeModel node) {
+    _searchController.clear();
+    setState(() {
+      _isSearchOpen = false;
+      _searchQuery = '';
+      _searchResults = const <GalaxyNodeModel>[];
+      _searchMatchedNodeIds = const <String>{};
+    });
+    _focusOnNode(node.id, targetScale: 0.84);
+  }
+
+  void _focusOnNode(
+    String nodeId, {
+    double targetScale = 0.82,
+    bool highlightNeighbors = true,
+  }) {
+    final position = _positions[nodeId];
+    if (position == null) {
+      return;
+    }
+
+    _stopFling();
+    _stopBuildReplay();
+    _stopPhysicsSimulation(commitPendingNode: true);
+    final emphasis = highlightNeighbors
+        ? <String>{nodeId, ...?_adjacency[nodeId]}
+        : <String>{nodeId};
+    final desiredScale =
+        math.max(_camera.scale, targetScale).clamp(_camera.minScale, 1.25);
+    final targetCamera =
+        _camera.copyWith(scale: desiredScale).centerOnWorldPoint(
+              worldPoint: position,
+            );
+
+    unawaited(_accessibilityService.lightHaptic());
+    setState(() {
+      _selectedNodeId = nodeId;
+      _focusNodeIds = emphasis;
+      _clearPreviewState();
+    });
+    _animateCameraTo(
+      targetCamera,
+      duration: const Duration(milliseconds: 420),
+    );
+  }
+
+  void _focusPreviewNode() {
+    final previewNode = _previewNode;
+    if (previewNode == null) {
+      return;
+    }
+    _focusOnNode(previewNode.id);
+  }
+
+  void _inspectPreviewConnections() {
+    final previewNode = _previewNode;
+    if (previewNode == null) {
+      return;
+    }
+    setState(() {
+      _selectedNodeId = previewNode.id;
+      _focusNodeIds = <String>{previewNode.id, ...?_adjacency[previewNode.id]};
+      _clearPreviewState();
+    });
+  }
+
+  void _handleMiniMapNavigate(Offset worldPoint) {
+    _noteInteraction();
+    final target = _camera.centerOnWorldPoint(worldPoint: worldPoint);
+    _animateCameraTo(
+      target,
+      duration: const Duration(milliseconds: 320),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  void _handleMiniMapDrag(Offset worldPoint) {
+    _noteInteraction();
+    _stopFling();
+    _stopBuildReplay();
+    _stopPhysicsSimulation(commitPendingNode: true);
+    setState(() {
+      _camera = _camera.centerOnWorldPoint(worldPoint: worldPoint);
+    });
+  }
+
+  List<_ReplayStage> _buildReplayStageSequence() {
+    if (_graph == null || _viewportSize == Size.zero) {
+      return const <_ReplayStage>[];
+    }
+
+    final sectors = <SectorEnum, List<String>>{};
+    for (final node in _nodesById.values) {
+      sectors.putIfAbsent(node.sector, () => <String>[]).add(node.id);
+    }
+
+    final orderedEntries = sectors.entries
+        .where((entry) => entry.value.isNotEmpty)
+        .toList(growable: false)
+      ..sort((a, b) {
+        final aImportance = a.value
+            .map((id) => _nodesById[id]?.importance ?? 0)
+            .fold<int>(0, math.max);
+        final bImportance = b.value
+            .map((id) => _nodesById[id]?.importance ?? 0)
+            .fold<int>(0, math.max);
+        return bImportance.compareTo(aImportance);
+      });
+
+    final list = <_ReplayStage>[];
+    final sectorEntries = orderedEntries;
+    for (var index = 0; index < sectorEntries.length; index++) {
+      final entry = sectorEntries[index];
+      final positions = entry.value
+          .map((id) => _positions[id])
+          .whereType<Offset>()
+          .toList(growable: false);
+      if (positions.isEmpty) {
+        continue;
+      }
+
+      var minX = double.infinity;
+      var minY = double.infinity;
+      var maxX = double.negativeInfinity;
+      var maxY = double.negativeInfinity;
+      for (final point in positions) {
+        minX = math.min(minX, point.dx);
+        minY = math.min(minY, point.dy);
+        maxX = math.max(maxX, point.dx);
+        maxY = math.max(maxY, point.dy);
+      }
+      final stageBounds = Rect.fromLTRB(minX, minY, maxX, maxY).inflate(120);
+      final camera = GalaxyCamera.fitRect(
+        worldBounds: stageBounds,
+        viewportSize: _viewportSize,
+        padding: 80,
+      );
+      final featuredNodeId = entry.value
+          .map((id) => _nodesById[id])
+          .whereType<GalaxyNodeModel>()
+          .toList()
+        ..sort((a, b) => b.importance.compareTo(a.importance));
+      list.add(
+        _ReplayStage(
+          sector: entry.key,
+          camera: camera,
+          focusNodeIds: entry.value.toSet(),
+          featuredNodeId:
+              featuredNodeId.isEmpty ? null : featuredNodeId.first.id,
+          startProgress: index / sectorEntries.length,
+          endProgress: (index + 1) / sectorEntries.length,
+        ),
+      );
+    }
+
+    return list;
+  }
+
+  void _activateReplayStage(int stageIndex) {
+    if (stageIndex < 0 || stageIndex >= _replayStages.length) {
+      return;
+    }
+
+    final stage = _replayStages[stageIndex];
+    if (_activeReplayStageIndex == stageIndex) {
+      return;
+    }
+
+    unawaited(_accessibilityService.lightHaptic());
+    setState(() {
+      _activeReplayStageIndex = stageIndex;
+      _focusNodeIds = stage.focusNodeIds;
+      _selectedNodeId = stage.featuredNodeId;
+      _edgePictureCache.clear();
+    });
+    _animateCameraTo(
+      stage.camera,
+      duration: const Duration(milliseconds: 620),
+    );
+  }
+
+  void _handleAmbientTick(Duration elapsed) {
+    _ambientElapsed = elapsed;
+    final nextPhase = elapsed.inMicroseconds / Duration.microsecondsPerSecond;
+    final shouldAnimateScene =
+        _isBuildAnimating || _camera.scale > 0.5 || _selectedNodeId != null;
+    final nextParticles = _buildEdgeParticles(nextPhase);
+    final nextDriftOffsets = _buildMicroDriftOffsets(nextPhase, elapsed);
+
+    if (!mounted) {
+      _ambientPhase = nextPhase;
+      return;
+    }
+
+    if (shouldAnimateScene ||
+        nextParticles != _edgeParticles ||
+        nextDriftOffsets != _microDriftOffsets) {
+      setState(() {
+        _ambientPhase = nextPhase;
+        _edgeParticles = nextParticles;
+        _microDriftOffsets = nextDriftOffsets;
+      });
+      return;
+    }
+
+    _ambientPhase = nextPhase;
+  }
+
+  List<GalaxyEdgeParticle> _buildEdgeParticles(double timeSeconds) {
+    final selectedNodeId = _selectedNodeId;
+    final graph = _graph;
+    if (_performanceDegraded ||
+        selectedNodeId == null ||
+        graph == null ||
+        _camera.scale < 0.5) {
+      return const <GalaxyEdgeParticle>[];
+    }
+
+    final particles = <GalaxyEdgeParticle>[];
+    final relevantEdges = graph.edges.where(
+      (edge) =>
+          edge.sourceId == selectedNodeId || edge.targetId == selectedNodeId,
+    );
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    for (final edge in relevantEdges) {
+      final node = _nodesById[edge.sourceId] ?? _nodesById[edge.targetId];
+      if (node == null) {
+        continue;
+      }
+      final color = SectorConfig.getGlowColor(
+        node.sector,
+        isDarkMode: isDarkMode,
+      );
+      final count = edge.strength > 0.8
+          ? 3
+          : edge.strength > 0.55
+              ? 2
+              : 1;
+      for (var index = 0; index < count; index++) {
+        if (particles.length >= 50) {
+          return particles;
+        }
+        particles.add(
+          GalaxyEdgeParticle(
+            sourceId: edge.sourceId,
+            targetId: edge.targetId,
+            relationType: edge.relationType,
+            strength: edge.strength,
+            progress:
+                (timeSeconds * (0.14 + edge.strength * 0.18) + index * 0.37) %
+                    1.0,
+            radius: 1.6 + edge.strength * 1.4,
+            alpha: 0.42 + edge.strength * 0.34,
+            color: color,
+          ),
+        );
+      }
+    }
+    return particles;
+  }
+
+  Map<String, Offset> _buildMicroDriftOffsets(
+    double timeSeconds,
+    Duration elapsed,
+  ) {
+    final idleFor = elapsed - _lastInteractionElapsed;
+    if (_performanceDegraded ||
+        idleFor < const Duration(seconds: 3) ||
+        _draggingNodeId != null ||
+        _previewNode != null ||
+        _isSearchOpen ||
+        _isBuildAnimating ||
+        _nodesById.isEmpty) {
+      return const <String, Offset>{};
+    }
+
+    if (elapsed - _lastDriftShuffleElapsed <
+            const Duration(milliseconds: 200) &&
+        _microDriftOffsets.isNotEmpty) {
+      return _microDriftOffsets;
+    }
+    _lastDriftShuffleElapsed = elapsed;
+
+    final sortedIds = _nodesById.keys.toList(growable: false)..sort();
+    final startIndex = (elapsed.inMilliseconds ~/ 200) % sortedIds.length;
+    final activeCount = math.min(8, sortedIds.length);
+    final offsets = <String, Offset>{};
+    for (var index = 0; index < activeCount; index++) {
+      final nodeId = sortedIds[(startIndex + index * 7) % sortedIds.length];
+      final seed = _nodeSeedValue(nodeId);
+      offsets[nodeId] = Offset(
+        math.sin(timeSeconds * 0.7 + seed) * 5,
+        math.cos(timeSeconds * 0.6 + seed * 1.3) * 4,
+      );
+    }
+    return offsets;
+  }
+
+  double _nodeSeedValue(String nodeId) =>
+      ((nodeId.hashCode & 0x7fffffff) % 1000) / 100.0;
+
+  void _handleFrameTimings(List<FrameTiming> timings) {
+    var nextSlow = _consecutiveSlowFrames;
+    var nextFast = _consecutiveFastFrames;
+    for (final timing in timings) {
+      final totalMs = timing.totalSpan.inMicroseconds / 1000;
+      if (totalMs > 16) {
+        nextSlow += 1;
+        nextFast = 0;
+      } else {
+        nextFast += 1;
+        nextSlow = 0;
+      }
+    }
+
+    final nextDegraded = nextSlow >= 5
+        ? true
+        : nextFast >= 30
+            ? false
+            : _performanceDegraded;
+
+    _consecutiveSlowFrames = nextSlow;
+    _consecutiveFastFrames = nextFast;
+
+    if (nextDegraded == _performanceDegraded || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _performanceDegraded = nextDegraded;
+      if (nextDegraded) {
+        _microDriftOffsets = const <String, Offset>{};
+        _edgeParticles = const <GalaxyEdgeParticle>[];
+      }
+    });
+  }
+
+  void _handleCameraAnimationTick() {
+    final start = _cameraAnimationStart;
+    final end = _cameraAnimationEnd;
+    if (start == null || end == null || !mounted) {
+      return;
+    }
+
+    final t = _cameraAnimationCurve.transform(
+      _cameraAnimationController.value.clamp(0.0, 1.0),
+    );
+    setState(() {
+      _camera = GalaxyCamera(
+        offset: Offset.lerp(start.offset, end.offset, t)!,
+        scale: lerpDouble(start.scale, end.scale, t)!,
+        viewportSize: end.viewportSize,
+        minScale: end.minScale,
+        maxScale: end.maxScale,
+      );
+    });
+  }
+
+  void _animateCameraTo(
+    GalaxyCamera target, {
+    Duration duration = const Duration(milliseconds: 400),
+    Curve curve = Curves.easeInOutCubic,
+  }) {
+    _cameraAnimationStart = _camera;
+    _cameraAnimationEnd = target;
+    _cameraAnimationCurve = curve;
+    _cameraAnimationController
+      ..duration = duration
+      ..stop()
+      ..reset();
+    unawaited(_cameraAnimationController.forward());
+  }
+
+  void _handleBuildReplayTick() {
+    if (!mounted) {
+      return;
+    }
+
+    final progress = _buildReplayController.value;
+    if (_replayStages.isNotEmpty) {
+      final stageIndex = _replayStages.indexWhere(
+        (stage) =>
+            progress >= stage.startProgress && progress < stage.endProgress,
+      );
+      if (stageIndex >= 0) {
+        _activateReplayStage(stageIndex);
+      } else if (progress >= 1 && _replayStages.isNotEmpty) {
+        _activateReplayStage(_replayStages.length - 1);
+      }
+    }
+
+    setState(() {
+      _buildRevealProgress = progress;
+      _ambientPhase = progress * math.pi * 2;
+    });
+  }
+
+  void _handleBuildReplayStatus(AnimationStatus status) {
+    if (!mounted || status != AnimationStatus.completed) {
+      return;
+    }
+
+    setState(() {
+      _isBuildAnimating = false;
+      _buildRevealProgress = 1;
+      _focusNodeIds = const <String>{};
+      _replayStages = const <_ReplayStage>[];
+      _activeReplayStageIndex = -1;
+    });
+    _animateCameraTo(
+      _fitOverviewCamera(),
+      duration: const Duration(milliseconds: 520),
+    );
+  }
+
+  void _toggleBuildReplay() {
+    if (_isBuildAnimating) {
+      _stopBuildReplay();
+      return;
+    }
+    _startBuildReplay();
+  }
+
+  void _startBuildReplay() {
+    if (_graph == null || _viewportSize == Size.zero) {
+      return;
+    }
+
+    _stopFling();
+    _stopPhysicsSimulation(commitPendingNode: true);
+    _clearPreviewState();
+    _cancelTapFeedbackState();
+    final replayStages = _buildReplayStageSequence();
+    if (replayStages.isEmpty) {
+      return;
+    }
+    final totalMs = math.max(1800, 420 + replayStages.length * 760);
+
+    setState(() {
+      _selectedNodeId = null;
+      _draggingNodeId = null;
+      _isBuildAnimating = true;
+      _buildRevealProgress = 0;
+      _focusNodeIds = const <String>{};
+      _replayStages = replayStages;
+      _activeReplayStageIndex = -1;
+      _sceneVersion++;
+      _edgePictureCache.clear();
+    });
+    _activateReplayStage(0);
+    _buildReplayController
+      ..duration = Duration(milliseconds: totalMs)
+      ..stop()
+      ..reset();
+    unawaited(_buildReplayController.forward());
+  }
+
+  void _stopBuildReplay() {
+    if (!_isBuildAnimating && !_buildReplayController.isAnimating) {
+      return;
+    }
+
+    _buildReplayController
+      ..stop()
+      ..reset();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _isBuildAnimating = false;
+      _buildRevealProgress = 1;
+      _focusNodeIds = const <String>{};
+      _replayStages = const <_ReplayStage>[];
+      _activeReplayStageIndex = -1;
+      _edgePictureCache.clear();
+    });
+  }
+
+  void _stopAllAutoMotion({required bool commitPhysicsPosition}) {
+    _stopFling();
+    _stopBuildReplay();
+    _stopPhysicsSimulation(commitPendingNode: commitPhysicsPosition);
+  }
+
   void _updateViewportSize(Size nextSize) {
     if (_viewportSize == nextSize || nextSize == Size.zero) {
       return;
@@ -513,12 +1487,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
       setState(() {
         _viewportSize = nextSize;
-        _camera = shouldFit
-            ? GalaxyCamera.fitRect(
-                worldBounds: _computeWorldBounds(),
-                viewportSize: nextSize,
-              )
-            : resizedCamera;
+        _camera = shouldFit ? _fitOverviewCamera() : resizedCamera;
         if (shouldFit) {
           _didFitInitialCamera = true;
         }
@@ -535,10 +1504,133 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     });
   }
 
+  void _zoomAroundCenter(double factor) {
+    if (_viewportSize == Size.zero) {
+      return;
+    }
+    _stopFling();
+    _stopBuildReplay();
+    _stopPhysicsSimulation(commitPendingNode: true);
+    final target = _camera.applyZoom(
+      factor,
+      Offset(_viewportSize.width / 2, _viewportSize.height / 2),
+    );
+    _animateCameraTo(
+      target,
+      duration: const Duration(milliseconds: 220),
+    );
+  }
+
+  void _fitOverviewAnimated() {
+    _stopFling();
+    _stopBuildReplay();
+    _stopPhysicsSimulation(commitPendingNode: true);
+    _animateCameraTo(_fitOverviewCamera());
+  }
+
+  Map<String, Set<String>> _buildAdjacency(List<GalaxyEdgeModel> edges) {
+    final adjacency = <String, Set<String>>{};
+    for (final edge in edges) {
+      adjacency.putIfAbsent(edge.sourceId, () => <String>{}).add(edge.targetId);
+      adjacency.putIfAbsent(edge.targetId, () => <String>{}).add(edge.sourceId);
+    }
+    return adjacency;
+  }
+
+  Map<String, double> _buildEdgeStrengths(List<GalaxyEdgeModel> edges) {
+    final strengths = <String, double>{};
+    for (final edge in edges) {
+      final key =
+          GalaxyForceEngine.edgeStrengthKey(edge.sourceId, edge.targetId);
+      final value = (0.75 + edge.strength * 0.65).clamp(0.5, 1.4);
+      final current = strengths[key];
+      if (current == null || value > current) {
+        strengths[key] = value;
+      }
+    }
+    return strengths;
+  }
+
+  Map<String, int> _buildRevealRanks(List<GalaxyNodeModel> nodes) {
+    final ordered = [...nodes]..sort((a, b) {
+        final importanceCompare = b.importance.compareTo(a.importance);
+        if (importanceCompare != 0) {
+          return importanceCompare;
+        }
+        final studyCompare = b.studyCount.compareTo(a.studyCount);
+        if (studyCompare != 0) {
+          return studyCompare;
+        }
+        return a.name.compareTo(b.name);
+      });
+
+    return {
+      for (var index = 0; index < ordered.length; index++)
+        ordered[index].id: index,
+    };
+  }
+
+  Map<String, Color> _buildBlendedColors({
+    required Map<String, GalaxyNodeModel> nodesById,
+    required Map<String, Set<String>> adjacency,
+    required bool isDarkMode,
+  }) =>
+      {
+        for (final node in nodesById.values)
+          node.id: SectorConfig.computeBlendedColor(
+            node: node,
+            neighbors: (adjacency[node.id] ?? const <String>{})
+                .map((neighborId) => nodesById[neighborId])
+                .whereType<GalaxyNodeModel>(),
+            isDarkMode: isDarkMode,
+          ),
+      };
+
+  SectorEnum? _currentSector() {
+    if (_viewportSize == Size.zero || _camera.scale < 0.5) {
+      return null;
+    }
+
+    final worldCenter = _camera.screenToWorld(
+      Offset(_viewportSize.width / 2, _viewportSize.height / 2),
+    );
+    if (worldCenter.distance < 140) {
+      return null;
+    }
+
+    return SectorConfig.getSectorForPosition(worldCenter);
+  }
+
+  _OverviewStatsData _buildOverviewStats(GalaxyGraphResponse graph) {
+    final totalNodes = graph.nodes.length;
+    final unlocked = graph.nodes.where((node) => node.isUnlocked).length;
+    final masteryAverage = totalNodes == 0
+        ? 0
+        : (graph.nodes
+                    .map((node) => node.masteryScore)
+                    .fold<int>(0, (sum, value) => sum + value) /
+                totalNodes)
+            .round();
+
+    return _OverviewStatsData(
+      totalNodes: totalNodes,
+      unlockedNodes: unlocked,
+      masteryAverage: masteryAverage,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor = isDarkMode ? Colors.black : Colors.white;
+    final backgroundColor =
+        isDarkMode ? const Color(0xFF060A12) : const Color(0xFFF5F6F8);
+    final graph = _graph;
+    final currentSector = _currentSector();
+    final blendedColors = isDarkMode ? _darkBlendedColors : _lightBlendedColors;
+    final sceneRevealProgress = _isBuildAnimating
+        ? _buildRevealProgress
+        : _entranceRevealProgress.clamp(0.0, 1.0);
+    final overviewStats = graph == null ? null : _buildOverviewStats(graph);
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -553,6 +1645,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
               backgroundColor: backgroundColor,
               foregroundColor: isDarkMode ? Colors.white : Colors.black,
               title: '知识星图加载中',
+              message: '正在生成你的学习星图骨架',
+              showLoader: true,
             );
           }
 
@@ -567,12 +1661,14 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
             );
           }
 
-          final graph = _graph;
           if (graph == null) {
             return _StatusPanel(
               backgroundColor: backgroundColor,
               foregroundColor: isDarkMode ? Colors.white : Colors.black,
               title: '暂无星图数据',
+              message: '开始你的第一次学习，点亮第一颗星。',
+              actionLabel: '重新加载',
+              onAction: _loadGraph,
             );
           }
 
@@ -583,35 +1679,178 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
             onPointerUp: _handlePointerUp,
             onPointerCancel: _handlePointerCancel,
             onPointerSignal: _handlePointerSignal,
-            child: Stack(
-              children: [
-                RepaintBoundary(
-                  child: CustomPaint(
-                    painter: StarMapPainter(
-                      camera: _camera,
-                      nodesById: _nodesById,
-                      edges: graph.edges,
-                      positions: _positions,
-                      spatialIndex: _spatialIndex,
-                      labelCache: _labelCache,
-                      edgePictureCache: _edgePictureCache,
-                      sceneVersion: _sceneVersion,
-                      selectedNodeId: _selectedNodeId,
-                      draggingNodeId: _draggingNodeId,
-                      tapFeedbackNodeId: _tapFeedbackNodeId,
-                      tapFeedbackProgress: _tapFeedbackAnimation.value,
-                      isDarkMode: isDarkMode,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              switchInCurve: Curves.easeOut,
+              switchOutCurve: Curves.easeIn,
+              child: Stack(
+                key: ValueKey<bool>(isDarkMode),
+                children: [
+                  RepaintBoundary(
+                    child: CustomPaint(
+                      painter: StarMapPainter(
+                        camera: _camera,
+                        nodesById: _nodesById,
+                        edges: graph.edges,
+                        positions: _positions,
+                        spatialIndex: _spatialIndex,
+                        labelCache: _labelCache,
+                        edgePictureCache: _edgePictureCache,
+                        sceneVersion: _sceneVersion,
+                        selectedNodeId: _selectedNodeId,
+                        draggingNodeId: _draggingNodeId,
+                        tapFeedbackNodeId: _tapFeedbackNodeId,
+                        tapFeedbackProgress: _tapFeedbackAnimation.value,
+                        isDarkMode: isDarkMode,
+                        worldBounds: _computeWorldBounds(),
+                        blendedColors: blendedColors,
+                        revealRanks: _revealRanks,
+                        ambientPhase: _ambientPhase,
+                        buildRevealProgress: sceneRevealProgress,
+                        isBuildAnimating: _isBuildAnimating,
+                        focusNodeIds: _focusNodeIds,
+                        searchMatchedNodeIds: _searchMatchedNodeIds,
+                        driftOffsets: _microDriftOffsets,
+                        edgeParticles: _edgeParticles,
+                        celebrationNodeIds:
+                            _celebrations.map((entry) => entry.nodeId).toSet(),
+                        performanceDegraded: _performanceDegraded,
+                      ),
+                      child: const SizedBox.expand(),
                     ),
-                    child: const SizedBox.expand(),
                   ),
-                ),
-                if (_previewNode != null && _previewScreenPosition != null)
-                  Positioned(
-                    left: _previewScreenPosition!.dx,
-                    top: _previewScreenPosition!.dy,
-                    child: GalaxyNodePreviewCard(node: _previewNode!),
+                  ..._celebrations.map((entry) {
+                    final worldPosition = _positions[entry.nodeId];
+                    if (worldPosition == null) {
+                      return const SizedBox.shrink();
+                    }
+                    return Positioned.fill(
+                      child: IgnorePointer(
+                        child: StarSuccessAnimation(
+                          key: ValueKey(entry.id),
+                          position: _camera.worldToScreen(worldPosition),
+                          color: entry.color,
+                          onComplete: () => _removeCelebration(entry.id),
+                        ),
+                      ),
+                    );
+                  }),
+                  if (_previewNode != null && _previewScreenPosition != null)
+                    Positioned(
+                      left: _previewScreenPosition!.dx,
+                      top: _previewScreenPosition!.dy,
+                      child: AnimatedScale(
+                        scale: 1,
+                        duration: const Duration(milliseconds: 180),
+                        curve: Curves.easeOutBack,
+                        child: AnimatedOpacity(
+                          opacity: 1,
+                          duration: const Duration(milliseconds: 160),
+                          child: GalaxyNodePreviewCard(
+                            node: _previewNode!,
+                            onFocus: _focusPreviewNode,
+                            onInspectConnections: _inspectPreviewConnections,
+                          ),
+                        ),
+                      ),
+                    ),
+                  SafeArea(
+                    child: Stack(
+                      children: [
+                        Positioned(
+                          top: 12,
+                          left: 16,
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 150),
+                            child: currentSector == null
+                                ? const SizedBox.shrink()
+                                : GalaxySectorIndicator(
+                                    key: ValueKey(currentSector.name),
+                                    label: SectorConfig.getStyle(currentSector)
+                                        .name,
+                                    color: SectorConfig.getColor(
+                                      currentSector,
+                                      isDarkMode: isDarkMode,
+                                    ),
+                                    isDarkMode: isDarkMode,
+                                  ),
+                          ),
+                        ),
+                        if (overviewStats != null && _camera.scale < 0.32)
+                          Positioned(
+                            top: 14,
+                            right: 16,
+                            child: _GalaxyOverviewStats(
+                              stats: overviewStats,
+                              isDarkMode: isDarkMode,
+                            ),
+                          ),
+                        Positioned(
+                          left: 16,
+                          bottom: 16,
+                          child: AnimatedOpacity(
+                            opacity: _camera.scale >= 0.3 ? 1 : 0,
+                            duration: const Duration(milliseconds: 180),
+                            child: IgnorePointer(
+                              ignoring: _camera.scale < 0.3,
+                              child: GalaxyMiniMap(
+                                camera: _camera,
+                                positions: _positions,
+                                nodesById: _nodesById,
+                                worldBounds: _computeWorldBounds(),
+                                isDarkMode: isDarkMode,
+                                onNavigate: _handleMiniMapNavigate,
+                                onViewportDragged: _handleMiniMapDrag,
+                              ),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          right: 16,
+                          bottom: 16,
+                          child: GalaxyControls(
+                            onZoomIn: () => _zoomAroundCenter(1.5),
+                            onFitToOverview: _fitOverviewAnimated,
+                            onZoomOut: () => _zoomAroundCenter(1 / 1.5),
+                            onReplay: _toggleBuildReplay,
+                            onSearch: _toggleSearchPanel,
+                            isDarkMode: isDarkMode,
+                            isReplaying: _isBuildAnimating,
+                            isSearchOpen: _isSearchOpen,
+                          ),
+                        ),
+                        Positioned(
+                          top: 58,
+                          right: 16,
+                          child: AnimatedSlide(
+                            offset: _isSearchOpen
+                                ? Offset.zero
+                                : const Offset(0, -0.08),
+                            duration: const Duration(milliseconds: 220),
+                            curve: Curves.easeOutCubic,
+                            child: AnimatedOpacity(
+                              opacity: _isSearchOpen ? 1 : 0,
+                              duration: const Duration(milliseconds: 180),
+                              child: IgnorePointer(
+                                ignoring: !_isSearchOpen,
+                                child: GalaxySearchPanel(
+                                  controller: _searchController,
+                                  query: _searchQuery,
+                                  results: _searchResults,
+                                  isDarkMode: isDarkMode,
+                                  onQueryChanged: _updateSearchQuery,
+                                  onClose: _toggleSearchPanel,
+                                  onNodeSelected: _handleSearchNodeSelected,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-              ],
+                ],
+              ),
             ),
           );
         },
@@ -625,6 +1864,7 @@ class _StatusPanel extends StatelessWidget {
     required this.backgroundColor,
     required this.foregroundColor,
     required this.title,
+    this.showLoader = false,
     this.message,
     this.actionLabel,
     this.onAction,
@@ -633,53 +1873,321 @@ class _StatusPanel extends StatelessWidget {
   final Color backgroundColor;
   final Color foregroundColor;
   final String title;
+  final bool showLoader;
   final String? message;
   final String? actionLabel;
   final Future<void> Function()? onAction;
 
   @override
-  Widget build(BuildContext context) => ColoredBox(
-        color: backgroundColor,
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    color: foregroundColor,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                  ),
-                  textAlign: TextAlign.center,
+  Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    return ColoredBox(
+      color: backgroundColor,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 380),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: (isDarkMode ? Colors.white : Colors.black)
+                    .withValues(alpha: isDarkMode ? 0.04 : 0.03),
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(
+                  color: (isDarkMode ? Colors.white : Colors.black)
+                      .withValues(alpha: 0.08),
                 ),
-                if (message != null) ...[
-                  const SizedBox(height: 12),
-                  Text(
-                    message!,
-                    style: TextStyle(
-                      color: foregroundColor.withValues(alpha: 0.72),
-                      fontSize: 14,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 28,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TweenAnimationBuilder<double>(
+                      tween: Tween<double>(begin: 0.2, end: 1),
+                      duration: const Duration(milliseconds: 1200),
+                      curve: Curves.easeInOut,
+                      builder: (context, value, _) => SizedBox(
+                        width: 76,
+                        height: 76,
+                        child: CustomPaint(
+                          painter: _StatusOrbPainter(
+                            progress: value,
+                            isDarkMode: isDarkMode,
+                          ),
+                        ),
+                      ),
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-                if (actionLabel != null && onAction != null) ...[
-                  const SizedBox(height: 16),
-                  FilledButton(
-                    onPressed: () => unawaited(onAction!()),
-                    child: Text(actionLabel!),
-                  ),
-                ],
-              ],
+                    const SizedBox(height: 18),
+                    Text(
+                      title,
+                      style: TextStyle(
+                        color: foregroundColor,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.2,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    if (message != null) ...[
+                      const SizedBox(height: 10),
+                      Text(
+                        message!,
+                        style: TextStyle(
+                          color: foregroundColor.withValues(alpha: 0.72),
+                          fontSize: 14,
+                          height: 1.5,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                    if (showLoader) ...[
+                      const SizedBox(height: 18),
+                      const _StatusLoader(),
+                    ],
+                    if (actionLabel != null && onAction != null) ...[
+                      const SizedBox(height: 18),
+                      FilledButton(
+                        onPressed: () => unawaited(onAction!()),
+                        child: Text(actionLabel!),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GalaxyOverviewStats extends StatelessWidget {
+  const _GalaxyOverviewStats({
+    required this.stats,
+    required this.isDarkMode,
+  });
+
+  final _OverviewStatsData stats;
+  final bool isDarkMode;
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+        decoration: BoxDecoration(
+          color: (isDarkMode ? const Color(0xCC101929) : Colors.white)
+              .withValues(alpha: 0.88),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: (isDarkMode ? Colors.white : Colors.black)
+                .withValues(alpha: 0.08),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDarkMode ? 0.18 : 0.08),
+              blurRadius: 20,
+              offset: const Offset(0, 12),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _OverviewMetric(
+                label: '节点',
+                value: stats.totalNodes.toDouble(),
+                suffix: '',
+                isDarkMode: isDarkMode,
+              ),
+              const SizedBox(width: 14),
+              _OverviewMetric(
+                label: '解锁',
+                value: stats.unlockRatio * 100,
+                suffix: '%',
+                isDarkMode: isDarkMode,
+              ),
+              const SizedBox(width: 14),
+              _OverviewMetric(
+                label: '掌握',
+                value: stats.masteryAverage.toDouble(),
+                suffix: '%',
+                isDarkMode: isDarkMode,
+              ),
+            ],
           ),
         ),
       );
 }
 
-double minDouble(double a, double b) => a < b ? a : b;
+class _OverviewMetric extends StatelessWidget {
+  const _OverviewMetric({
+    required this.label,
+    required this.value,
+    required this.suffix,
+    required this.isDarkMode,
+  });
 
-double maxDouble(double a, double b) => a > b ? a : b;
+  final String label;
+  final double value;
+  final String suffix;
+  final bool isDarkMode;
+
+  @override
+  Widget build(BuildContext context) {
+    final foreground = isDarkMode ? Colors.white : const Color(0xFF101828);
+    final secondary = isDarkMode
+        ? Colors.white.withValues(alpha: 0.62)
+        : Colors.black.withValues(alpha: 0.54);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: secondary,
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 2),
+        TweenAnimationBuilder<double>(
+          tween: Tween<double>(begin: 0, end: value),
+          duration: const Duration(milliseconds: 720),
+          curve: Curves.easeOutCubic,
+          builder: (context, animatedValue, _) => Text(
+            '${animatedValue.round()}$suffix',
+            style: TextStyle(
+              color: foreground,
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StatusLoader extends StatelessWidget {
+  const _StatusLoader();
+
+  @override
+  Widget build(BuildContext context) => TweenAnimationBuilder<double>(
+        tween: Tween<double>(begin: 0, end: 1),
+        duration: const Duration(milliseconds: 1000),
+        curve: Curves.easeInOut,
+        builder: (context, value, _) => Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List<Widget>.generate(3, (index) {
+            final phase = (value + index * 0.18) % 1.0;
+            final opacity = 0.25 + math.sin(phase * math.pi) * 0.55;
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .withValues(alpha: opacity.clamp(0.15, 0.9)),
+                ),
+              ),
+            );
+          }),
+        ),
+      );
+}
+
+class _StatusOrbPainter extends CustomPainter {
+  const _StatusOrbPainter({
+    required this.progress,
+    required this.isDarkMode,
+  });
+
+  final double progress;
+  final bool isDarkMode;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    final baseColor =
+        isDarkMode ? const Color(0xFF7CA9FF) : const Color(0xFF3A67DA);
+    canvas
+      ..drawCircle(
+        center,
+        22 + progress * 6,
+        Paint()
+          ..color = baseColor.withValues(alpha: 0.12)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14),
+      )
+      ..drawCircle(
+        center,
+        16,
+        Paint()
+          ..shader = RadialGradient(
+            colors: [
+              Colors.white.withValues(alpha: 0.92),
+              baseColor,
+              baseColor.withValues(alpha: 0.18),
+            ],
+          ).createShader(Rect.fromCircle(center: center, radius: 16)),
+      );
+  }
+
+  @override
+  bool shouldRepaint(covariant _StatusOrbPainter oldDelegate) =>
+      oldDelegate.progress != progress || oldDelegate.isDarkMode != isDarkMode;
+}
+
+class _OverviewStatsData {
+  const _OverviewStatsData({
+    required this.totalNodes,
+    required this.unlockedNodes,
+    required this.masteryAverage,
+  });
+
+  final int totalNodes;
+  final int unlockedNodes;
+  final int masteryAverage;
+
+  double get unlockRatio => totalNodes == 0 ? 0 : unlockedNodes / totalNodes;
+}
+
+class _CelebrationEntry {
+  const _CelebrationEntry({
+    required this.id,
+    required this.nodeId,
+    required this.color,
+    required this.emphasizeNeighbors,
+  });
+
+  final String id;
+  final String nodeId;
+  final Color color;
+  final bool emphasizeNeighbors;
+}
+
+class _ReplayStage {
+  const _ReplayStage({
+    required this.sector,
+    required this.camera,
+    required this.focusNodeIds,
+    required this.startProgress,
+    required this.endProgress,
+    this.featuredNodeId,
+  });
+
+  final SectorEnum sector;
+  final GalaxyCamera camera;
+  final Set<String> focusNodeIds;
+  final double startProgress;
+  final double endProgress;
+  final String? featuredNodeId;
+}

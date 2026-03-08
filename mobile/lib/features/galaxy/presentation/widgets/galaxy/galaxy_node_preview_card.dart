@@ -5,22 +5,29 @@ import 'package:sparkle/shared/entities/galaxy_model.dart';
 class GalaxyNodePreviewCard extends StatelessWidget {
   const GalaxyNodePreviewCard({
     required this.node,
+    required this.onFocus,
+    required this.onInspectConnections,
     super.key,
   });
 
   final GalaxyNodeModel node;
+  final VoidCallback onFocus;
+  final VoidCallback onInspectConnections;
 
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final sectorStyle = SectorConfig.getStyle(node.sector);
+    final sectorColor = sectorStyle.primaryColorFor(isDarkMode: isDarkMode);
+    final glowColor = sectorStyle.glowColorFor(isDarkMode: isDarkMode);
     final backgroundColor = isDarkMode
-        ? Colors.black.withValues(alpha: 0.82)
-        : Colors.white.withValues(alpha: 0.9);
+        ? const Color(0xE6151D30)
+        : Colors.white.withValues(alpha: 0.92);
     final borderColor = isDarkMode
         ? Colors.white.withValues(alpha: 0.12)
         : Colors.black.withValues(alpha: 0.08);
     final secondaryColor = isDarkMode ? Colors.white70 : Colors.black54;
+    final masteryProgress = (node.masteryScore / 100).clamp(0.0, 1.0);
 
     return Material(
       color: Colors.transparent,
@@ -29,13 +36,13 @@ class GalaxyNodePreviewCard extends StatelessWidget {
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: backgroundColor,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(18),
             border: Border.all(color: borderColor),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.22),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
+                blurRadius: 24,
+                offset: const Offset(0, 12),
               ),
             ],
           ),
@@ -45,32 +52,87 @@ class GalaxyNodePreviewCard extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: sectorColor,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            node.name,
+                            style: TextStyle(
+                              color: isDarkMode ? Colors.white : Colors.black87,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            '${sectorStyle.name} · 重要度 ${node.importance}',
+                            style: TextStyle(
+                              color: secondaryColor,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    SizedBox(
+                      width: 46,
+                      height: 46,
+                      child: CustomPaint(
+                        painter: _MasteryRingPainter(
+                          color: sectorColor,
+                          glowColor: glowColor,
+                          progress: masteryProgress,
+                          isDarkMode: isDarkMode,
+                        ),
+                        child: Center(
+                          child: Text(
+                            '${node.masteryScore}',
+                            style: TextStyle(
+                              color: isDarkMode ? Colors.white : Colors.black87,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
                 Text(
-                  node.name,
+                  node.isUnlocked ? '已解锁' : '待探索',
                   style: TextStyle(
-                    color: isDarkMode ? Colors.white : Colors.black87,
-                    fontSize: 16,
+                    color: sectorColor,
+                    fontSize: 12,
                     fontWeight: FontWeight.w700,
                   ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  '扇区: ${sectorStyle.name}  重要度: ${node.importance}',
-                  style: TextStyle(
-                    color: secondaryColor,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '掌握度: ${node.masteryScore}%',
-                  style: TextStyle(
-                    color: secondaryColor,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
+                const SizedBox(height: 10),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(999),
+                  child: LinearProgressIndicator(
+                    value: masteryProgress,
+                    minHeight: 6,
+                    backgroundColor: (isDarkMode ? Colors.white : Colors.black)
+                        .withValues(alpha: 0.08),
+                    valueColor: AlwaysStoppedAnimation<Color>(sectorColor),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -81,14 +143,40 @@ class GalaxyNodePreviewCard extends StatelessWidget {
                       : Colors.black.withValues(alpha: 0.08),
                 ),
                 const SizedBox(height: 10),
-                Text(
-                  '单击查看详情 →',
-                  style: TextStyle(
-                    color: sectorStyle.primaryColor,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _CardActionButton(
+                        label: '聚焦查看',
+                        icon: Icons.center_focus_strong_rounded,
+                        color: sectorColor,
+                        onPressed: onFocus,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _CardActionButton(
+                        label: '查看关联',
+                        icon: Icons.hub_rounded,
+                        color: glowColor,
+                        onPressed: onInspectConnections,
+                      ),
+                    ),
+                  ],
                 ),
+                if ((node.description ?? '').trim().isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    node.description!,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: secondaryColor,
+                      fontSize: 12,
+                      height: 1.35,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -96,4 +184,104 @@ class GalaxyNodePreviewCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _CardActionButton extends StatelessWidget {
+  const _CardActionButton({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.onPressed,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) => FilledButton.tonal(
+        onPressed: onPressed,
+        style: FilledButton.styleFrom(
+          backgroundColor: color.withValues(alpha: 0.12),
+          foregroundColor: color,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 14),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+}
+
+class _MasteryRingPainter extends CustomPainter {
+  const _MasteryRingPainter({
+    required this.color,
+    required this.glowColor,
+    required this.progress,
+    required this.isDarkMode,
+  });
+
+  final Color color;
+  final Color glowColor;
+  final double progress;
+  final bool isDarkMode;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    final radius = size.shortestSide / 2 - 4;
+    canvas
+      ..drawCircle(
+        center,
+        radius + 1.5,
+        Paint()
+          ..color = glowColor.withValues(alpha: isDarkMode ? 0.16 : 0.08)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
+      )
+      ..drawCircle(
+        center,
+        radius,
+        Paint()
+          ..color = (isDarkMode ? Colors.white : Colors.black)
+              .withValues(alpha: isDarkMode ? 0.08 : 0.05)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 4,
+      )
+      ..drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        -1.5708,
+        6.28318 * progress,
+        false,
+        Paint()
+          ..color = color
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 4
+          ..strokeCap = StrokeCap.round,
+      );
+  }
+
+  @override
+  bool shouldRepaint(covariant _MasteryRingPainter oldDelegate) =>
+      oldDelegate.color != color ||
+      oldDelegate.glowColor != glowColor ||
+      oldDelegate.progress != progress ||
+      oldDelegate.isDarkMode != isDarkMode;
 }

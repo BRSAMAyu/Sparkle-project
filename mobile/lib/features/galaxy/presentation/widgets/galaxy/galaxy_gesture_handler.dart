@@ -36,6 +36,18 @@ class TapCommand extends GalaxyGestureCommand {
   final GalaxyNodeHit? hit;
 }
 
+class DoubleTapCommand extends GalaxyGestureCommand {
+  const DoubleTapCommand({
+    required this.screenPosition,
+    required this.worldPosition,
+    this.hit,
+  });
+
+  final Offset screenPosition;
+  final Offset worldPosition;
+  final GalaxyNodeHit? hit;
+}
+
 class LongPressCommand extends GalaxyGestureCommand {
   const LongPressCommand({
     required this.screenPosition,
@@ -85,6 +97,7 @@ class GalaxyGestureHandler {
     this.dragCommitWindow = const Duration(milliseconds: 150),
     this.longPressDelay = const Duration(milliseconds: 500),
     this.longPressDragWindow = const Duration(milliseconds: 200),
+    this.doubleTapTimeout = const Duration(milliseconds: 300),
     this.dragSlop = 12,
     this.minFlingVelocity = 450,
   })  : _screenToWorld = screenToWorld,
@@ -98,6 +111,7 @@ class GalaxyGestureHandler {
   final Duration dragCommitWindow;
   final Duration longPressDelay;
   final Duration longPressDragWindow;
+  final Duration doubleTapTimeout;
   final double dragSlop;
   final double minFlingVelocity;
 
@@ -110,11 +124,17 @@ class GalaxyGestureHandler {
   Duration? _longPressActivatedAt;
   VelocityTracker? _velocityTracker;
   Timer? _longPressTimer;
+  Timer? _pendingTapTimer;
+  Offset? _pendingTapPosition;
+  Offset? _pendingTapWorldPosition;
+  Duration? _pendingTapUpTime;
+  GalaxyNodeHit? _pendingTapHit;
   GalaxyNodeHit? _longPressHit;
   bool _isDraggingNode = false;
 
   void dispose() {
-    _cancelTimers();
+    _cancelLongPressTimer();
+    _cancelPendingTap();
     _pointerPositions.clear();
   }
 
@@ -134,7 +154,7 @@ class GalaxyGestureHandler {
     }
 
     if (_pointerPositions.length == 2) {
-      _cancelTimers();
+      _cancelLongPressTimer();
       _mode = _GestureMode.pinching;
       _longPressHit = null;
       _isDraggingNode = false;
@@ -224,7 +244,7 @@ class GalaxyGestureHandler {
     }
 
     if (elapsed <= dragCommitWindow || totalDistance > tapSlop) {
-      _cancelTimers();
+      _cancelLongPressTimer();
       _mode = _GestureMode.panning;
 
       final delta = event.localPosition - lastPosition;
@@ -349,13 +369,29 @@ class GalaxyGestureHandler {
     final elapsed = upTime - downTime;
     if (totalDistance < tapSlop && elapsed < longPressDelay) {
       final worldPoint = _screenToWorld(upPosition);
-      _onCommand(
-        TapCommand(
+      final hit = _hitTestNode(worldPoint);
+      final pendingTapPosition = _pendingTapPosition;
+      final pendingTapTime = _pendingTapUpTime;
+      if (pendingTapPosition != null &&
+          pendingTapTime != null &&
+          upTime - pendingTapTime <= doubleTapTimeout &&
+          (upPosition - pendingTapPosition).distance <= tapSlop * 2.5) {
+        _cancelPendingTap();
+        _onCommand(
+          DoubleTapCommand(
+            screenPosition: upPosition,
+            worldPosition: worldPoint,
+            hit: hit,
+          ),
+        );
+      } else {
+        _scheduleTapDispatch(
+          upTime: upTime,
           screenPosition: upPosition,
           worldPosition: worldPoint,
-          hit: _hitTestNode(worldPoint),
-        ),
-      );
+          hit: hit,
+        );
+      }
     }
 
     _reset();
@@ -398,13 +434,52 @@ class GalaxyGestureHandler {
     });
   }
 
-  void _cancelTimers() {
+  void _scheduleTapDispatch({
+    required Duration upTime,
+    required Offset screenPosition,
+    required Offset worldPosition,
+    required GalaxyNodeHit? hit,
+  }) {
+    _cancelPendingTap();
+    _pendingTapPosition = screenPosition;
+    _pendingTapWorldPosition = worldPosition;
+    _pendingTapUpTime = upTime;
+    _pendingTapHit = hit;
+    _pendingTapTimer = Timer(doubleTapTimeout, () {
+      final pendingScreenPosition = _pendingTapPosition;
+      final pendingWorldPosition = _pendingTapWorldPosition;
+      if (pendingScreenPosition == null || pendingWorldPosition == null) {
+        _cancelPendingTap();
+        return;
+      }
+
+      _onCommand(
+        TapCommand(
+          screenPosition: pendingScreenPosition,
+          worldPosition: pendingWorldPosition,
+          hit: _pendingTapHit,
+        ),
+      );
+      _cancelPendingTap();
+    });
+  }
+
+  void _cancelLongPressTimer() {
     _longPressTimer?.cancel();
     _longPressTimer = null;
   }
 
+  void _cancelPendingTap() {
+    _pendingTapTimer?.cancel();
+    _pendingTapTimer = null;
+    _pendingTapPosition = null;
+    _pendingTapWorldPosition = null;
+    _pendingTapUpTime = null;
+    _pendingTapHit = null;
+  }
+
   void _reset() {
-    _cancelTimers();
+    _cancelLongPressTimer();
     _mode = _GestureMode.idle;
     _primaryPointer = null;
     _primaryDownPosition = null;
