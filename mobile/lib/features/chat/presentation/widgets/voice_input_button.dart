@@ -166,7 +166,7 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
             widget.onRecordingStopped?.call();
           }
         },
-        maxDuration: const Duration(seconds: 60), // 最长录制60秒
+        maxDuration: const Duration(seconds: 30), // 智谱 ASR 单次最长 30 秒
       );
 
       widget.onRecordingStarted?.call();

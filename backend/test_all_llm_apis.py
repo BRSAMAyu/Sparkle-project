@@ -315,40 +315,42 @@ class APIValidator:
         self.print_section("4. 文档清洗 OCR 服务验证")
 
         # 检查配置
-        if not settings.SILICONFLOW_API_KEY:
-            self.skip_test("DeepSeek OCR 文档清洗", "OCR", "未配置 SILICONFLOW_API_KEY")
+        if not settings.ZHIPU_API_KEY:
+            self.skip_test("GLM OCR 文档清洗", "OCR", "未配置 ZHIPU_API_KEY")
             return
 
-        # 测试 DeepSeek OCR (使用文本描述代替实际图片，因为测试环境没有图片)
+        # 测试 GLM OCR（生成一张简单图片进行真实识别）
         async def test_ocr_via_api():
-            # 这里我们只测试API连通性，不做实际OCR
-            # 实际OCR需要图片文件
-            from app.core.ingestion.ingestion_service import ingestion_service
+            import base64
+            import io
 
-            # 检查服务是否初始化
-            if not settings.SILICONFLOW_API_KEY:
-                raise ValueError("SiliconFlow API Key 未配置")
+            from PIL import Image, ImageDraw
 
-            # 测试 _ocr_via_api 方法需要图片，这里做简化测试
-            # 只验证配置和导入是否正确
-            model = settings.SILICONFLOW_OCR_MODEL
-            base_url = settings.SILICONFLOW_BASE_URL
+            from app.services.ocr_service import ocr_service
 
-            if not model:
-                raise ValueError("SILICONFLOW_OCR_MODEL 未配置")
+            image = Image.new("RGB", (960, 240), color="white")
+            draw = ImageDraw.Draw(image)
+            draw.text((40, 90), "GLM OCR connectivity test 123", fill="black")
+
+            buffer = io.BytesIO()
+            image.save(buffer, format="PNG")
+            image_b64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
+
+            text = await ocr_service.ocr_from_base64(image_b64)
+            if not text.strip():
+                raise ValueError("GLM OCR 返回空结果")
 
             return {
-                "ocr_model": model,
-                "base_url": base_url,
-                "status": "配置验证通过",
-                "note": "完整OCR测试需要实际图片文件"
+                "ocr_model": settings.ZHIPU_OCR_MODEL,
+                "base_url": settings.ZHIPU_OCR_BASE_URL,
+                "preview": text[:100],
             }
 
         await self.test_api(
-            "DeepSeek OCR 配置验证",
+            "GLM OCR 实际识别",
             test_ocr_via_api,
             "OCR",
-            "验证 SiliconFlow DeepSeek-OCR 配置"
+            "验证智谱 GLM OCR 真实可调用"
         )
 
         # 测试本地文本清洗
@@ -417,42 +419,41 @@ class APIValidator:
 
     async def validate_asr_service(self):
         """验证 ASR 语音转文字服务"""
-        self.print_section("6. ASR 语音转文字服务验证 (XunFei)")
+        self.print_section("6. ASR 语音转文字服务验证 (Zhipu)")
 
         # 检查配置
-        if not settings.XUNFEI_API_KEY or not settings.XUNFEI_API_SECRET:
-            self.skip_test("讯飞 STT 服务", "ASR", "未配置 XUNFEI_API_KEY 或 XUNFEI_API_SECRET")
+        if not settings.ZHIPU_API_KEY:
+            self.skip_test("智谱 ASR 服务", "ASR", "未配置 ZHIPU_API_KEY")
             return
 
-        # 测试讯飞 STT 配置
-        async def test_xunfei_config():
-            from app.services.stt.providers.xunfei_provider import XunFeiProvider
+        # 测试智谱 ASR 配置
+        async def test_zhipu_asr_config():
+            from app.services.stt.providers.zhipu_provider import ZhipuProvider
 
             try:
-                provider = XunFeiProvider()
+                provider = ZhipuProvider()
 
                 # 验证配置
-                if not settings.XUNFEI_API_KEY:
-                    raise ValueError("XUNFEI_API_KEY 未配置")
-                if not settings.XUNFEI_API_SECRET:
-                    raise ValueError("XUNFEI_API_SECRET 未配置")
+                if not settings.ZHIPU_API_KEY:
+                    raise ValueError("ZHIPU_API_KEY 未配置")
 
                 return {
-                    "domain": settings.XUNFEI_STT_DOMAIN,
-                    "language": settings.XUNFEI_STT_LANGUAGE,
-                    "sample_rate": settings.XUNFEI_STT_SAMPLE_RATE,
+                    "endpoint": provider.endpoint,
+                    "model": settings.ZHIPU_ASR_MODEL,
+                    "sample_rate": settings.ZHIPU_ASR_SAMPLE_RATE,
+                    "max_audio_seconds": settings.ZHIPU_ASR_MAX_AUDIO_SECONDS,
                     "status": "配置验证通过",
                     "note": "完整STT测试需要实际音频文件"
                 }
 
             except Exception as e:
-                raise ValueError(f"讯飞STT初始化失败: {e}")
+                raise ValueError(f"智谱 ASR 初始化失败: {e}")
 
         await self.test_api(
-            "讯飞 STT 配置验证",
-            test_xunfei_config,
+            "智谱 ASR 配置验证",
+            test_zhipu_asr_config,
             "ASR",
-            "验证科大讯飞语音识别配置"
+            "验证智谱语音识别配置"
         )
 
         # 测试 STT 文本增强功能
@@ -560,8 +561,9 @@ class APIValidator:
         self.print_section("API 配置状态")
 
         config_checks = [
+            ("Zhipu (Chat/OCR/ASR)", bool(settings.ZHIPU_API_KEY)),
             ("DashScope (LLM/Embedding/Rerank)", settings.DASHSCOPE_API_KEY and settings.DASHSCOPE_API_KEY != "placeholder"),
-            ("SiliconFlow (OCR/Embedding/Rerank)", bool(settings.SILICONFLOW_API_KEY)),
+            ("SiliconFlow (Embedding/Rerank)", bool(settings.SILICONFLOW_API_KEY)),
             ("Hunyuan (Translation)", bool(settings.HUNYUAN_API_KEY)),
             ("XunFei (ASR/STT)", bool(settings.XUNFEI_API_KEY) and bool(settings.XUNFEI_API_SECRET)),
         ]

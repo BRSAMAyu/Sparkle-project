@@ -1,778 +1,1014 @@
+import 'dart:collection';
+import 'dart:developer' as developer;
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/theme/performance_tier.dart';
-import 'package:sparkle/core/services/smart_cache.dart';
-import 'package:sparkle/core/services/text_cache.dart';
-import 'package:sparkle/features/galaxy/presentation/providers/galaxy_provider.dart';
+import 'package:sparkle/features/galaxy/data/services/galaxy_spatial_index.dart';
+import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_camera.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_config.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
-import 'package:sparkle/shared/models/compact_knowledge_node.dart';
 
-/// Pre-processed node data for efficient painting
-class ProcessedNode {
-  ProcessedNode({
-    required this.node,
-    required this.color,
-    required this.radius,
-    required this.position,
-  });
-  final CompactKnowledgeNode node;
-  final Color color;
-  final double radius;
-  final Offset position;
-}
+class GalaxyLabelCache {
+  GalaxyLabelCache({this.maxEntries = 600});
 
-/// Pre-processed edge data for efficient painting
-class ProcessedEdge {
-  ProcessedEdge({
-    required this.edge,
-    required this.start,
-    required this.end,
-    required this.startColor,
-    required this.endColor,
-    required this.distance,
-    required this.strokeWidth,
-  });
-  final GalaxyEdgeModel edge;
-  final Offset start;
-  final Offset end;
-  final Color startColor;
-  final Color endColor;
-  final double distance;
-  final double strokeWidth;
-}
+  final int maxEntries;
+  final LinkedHashMap<String, TextPainter> _cache =
+      LinkedHashMap<String, TextPainter>();
 
-/// Relation style configuration
-class _RelationStyle {
-  const _RelationStyle({
-    required this.color,
-    this.dashLength = 0,
-    this.isDashed = false,
-    this.baseWidth = 1.5,
-  });
-  final Color color;
-  final double dashLength;
-  final bool isDashed;
-  final double baseWidth;
+  void clear() => _cache.clear();
 
-  static _RelationStyle forType(EdgeRelationType type) {
-    switch (type) {
-      case EdgeRelationType.prerequisite:
-        return _RelationStyle(color: DS.info, baseWidth: 2.0);
-      case EdgeRelationType.derived:
-        return _RelationStyle(color: DS.success, baseWidth: 1.8);
-      case EdgeRelationType.related:
-        return _RelationStyle(
-          color: DS.warning,
-          isDashed: true,
-          dashLength: 8,
-          baseWidth: 1.2,
-        );
-      case EdgeRelationType.similar:
-        return _RelationStyle(
-          color: DS.taskReflection,
-          isDashed: true,
-          dashLength: 4,
-          baseWidth: 1.0,
-        );
-      case EdgeRelationType.contrast:
-        return _RelationStyle(color: DS.error, isDashed: true, dashLength: 12);
-      case EdgeRelationType.application:
-        return _RelationStyle(color: DS.taskPlanning);
-      case EdgeRelationType.example:
-        return _RelationStyle(
-          color: DS.textSecondary,
-          isDashed: true,
-          dashLength: 6,
-          baseWidth: 1.0,
-        );
-      case EdgeRelationType.parentChild:
-        return _RelationStyle(color: DS.brandPrimaryConst, baseWidth: 1.8);
+  TextPainter obtain({
+    required String cacheKey,
+    required String text,
+    required double fontSize,
+    required FontWeight fontWeight,
+    required Color color,
+    double maxWidth = 160,
+  }) {
+    final cached = _cache.remove(cacheKey);
+    if (cached != null) {
+      _cache[cacheKey] = cached;
+      return cached;
     }
+
+    final painter = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: TextStyle(
+          color: color,
+          fontSize: fontSize,
+          fontWeight: fontWeight,
+        ),
+      ),
+      maxLines: 1,
+      ellipsis: '…',
+      textDirection: TextDirection.ltr,
+    )..layout(maxWidth: maxWidth);
+
+    _cache[cacheKey] = painter;
+    while (_cache.length > maxEntries) {
+      _cache.remove(_cache.keys.first);
+    }
+
+    return painter;
+  }
+}
+
+class GalaxyEdgePictureCache {
+  GalaxyEdgePictureCache({
+    this.panThresholdPx = 50,
+    this.scaleThreshold = 0.05,
+  });
+
+  final double panThresholdPx;
+  final double scaleThreshold;
+
+  ui.Picture? _picture;
+  Offset? _offset;
+  double? _scale;
+  int? _sceneSignature;
+  GalaxyLod? _lod;
+
+  void clear() {
+    _picture?.dispose();
+    _picture = null;
+    _offset = null;
+    _scale = null;
+    _sceneSignature = null;
+    _lod = null;
+  }
+
+  bool canReuse({
+    required GalaxyCamera camera,
+    required int sceneSignature,
+    required GalaxyLod lod,
+  }) {
+    if (_picture == null ||
+        _offset == null ||
+        _scale == null ||
+        _sceneSignature != sceneSignature ||
+        _lod != lod) {
+      return false;
+    }
+
+    final panDelta = (camera.offset - _offset!).distance;
+    final scaleDelta = ((camera.scale - _scale!) / _scale!).abs();
+    return panDelta <= panThresholdPx && scaleDelta <= scaleThreshold;
+  }
+
+  void draw(Canvas canvas, GalaxyCamera camera) {
+    final picture = _picture;
+    final offset = _offset;
+    final scale = _scale;
+    if (picture == null || offset == null || scale == null) {
+      return;
+    }
+
+    final scaleRatio = camera.scale / scale;
+    final translatedOffset = Offset(
+      camera.offset.dx - offset.dx * scaleRatio,
+      camera.offset.dy - offset.dy * scaleRatio,
+    );
+
+    canvas
+      ..save()
+      ..translate(translatedOffset.dx, translatedOffset.dy)
+      ..scale(scaleRatio)
+      ..drawPicture(picture)
+      ..restore();
+  }
+
+  void store({
+    required ui.Picture picture,
+    required GalaxyCamera camera,
+    required int sceneSignature,
+    required GalaxyLod lod,
+  }) {
+    clear();
+    _picture = picture;
+    _offset = camera.offset;
+    _scale = camera.scale;
+    _sceneSignature = sceneSignature;
+    _lod = lod;
   }
 }
 
 class StarMapPainter extends CustomPainter {
   StarMapPainter({
-    required this.nodes,
-    this.edges = const [],
-    required this.viewMatrix,
-    this.maxEdges = 320,
-    this.maxLabels = 80,
-    this.showLabels = true,
-    this.showTags = true,
-    this.showEdgeGlow = true,
-    this.scale = 1.0,
-    this.performanceTier = PerformanceTier.high,
-    this.currentDpr = 3.0, // Default to high if not provided
-    this.aggregationLevel = AggregationLevel.full,
-    this.clusters = const {},
-    this.viewport,
-    this.center = Offset.zero,
-    this.selectedNodeIdHash,
-    this.highlightedNodeIdHashes = const {},
-    this.highlightRevision = 0,
-    this.expandedEdgeNodeIdHashes = const {},
-    this.nodeAnimationProgress = const {},
-    this.selectionPulse = 0.0,
-    this.isDarkMode = true,
-  }) {
-    _preprocessData();
-  }
+    required this.camera,
+    required this.nodesById,
+    required this.edges,
+    required this.positions,
+    required this.spatialIndex,
+    required this.labelCache,
+    required this.edgePictureCache,
+    required this.sceneVersion,
+    required this.isDarkMode,
+    this.selectedNodeId,
+    this.draggingNodeId,
+    this.tapFeedbackNodeId,
+    this.tapFeedbackProgress = 0,
+  });
 
-  final List<CompactKnowledgeNode> nodes;
+  final GalaxyCamera camera;
+  final Map<String, GalaxyNodeModel> nodesById;
   final List<GalaxyEdgeModel> edges;
-  final Matrix4 viewMatrix;
-  final int maxEdges;
-  final int maxLabels;
-  final bool showLabels;
-  final bool showTags;
-  final bool showEdgeGlow;
-  final double scale;
-  final PerformanceTier performanceTier;
-  final double currentDpr;
-  final AggregationLevel aggregationLevel;
-  final Map<String, ClusterInfo> clusters;
-  final Rect? viewport;
-  final Offset center;
-  final int? selectedNodeIdHash;
-  final Set<int> highlightedNodeIdHashes;
-  final int highlightRevision;
-  final Set<int> expandedEdgeNodeIdHashes;
-  final Map<int, double> nodeAnimationProgress;
-  final double selectionPulse;
+  final Map<String, Offset> positions;
+  final GalaxySpatialIndex spatialIndex;
+  final GalaxyLabelCache labelCache;
+  final GalaxyEdgePictureCache edgePictureCache;
+  final int sceneVersion;
   final bool isDarkMode;
+  final String? selectedNodeId;
+  final String? draggingNodeId;
+  final String? tapFeedbackNodeId;
+  final double tapFeedbackProgress;
 
-  // LOD Thresholds - Clear scale boundaries
-  // L0: <0.2 - Sector view (centroids only)
-  // L1: 0.2-0.4 - Large nodes + key labels (imp>=4)
-  // L2: 0.4-0.6 - All nodes + parent-child edges + standard labels (imp>=3)
-  // L3: 0.6-0.8 - All edges + more labels (imp>=2) + glow
-  // L4: >=0.8 - Full detail + all labels (imp>=1)
-  static const double _lod0Limit = GalaxyLodThresholds.universeMax;
-  static const double _lod1Limit = GalaxyLodThresholds.galaxyMax;
-  static const double _lod2Limit = GalaxyLodThresholds.clusterMax;
-  static const double _lod3Limit = GalaxyLodThresholds.nebulaMax;
-
-  static final SmartCache<int, List<ProcessedNode>> _nodeCache =
-      SmartCache(maxSize: 10);
-  static final SmartCache<int, List<ProcessedEdge>> _edgeCache =
-      SmartCache(maxSize: 10);
-  static final SmartCache<int, Map<int, Color>> _colorCacheStorage =
-      SmartCache(maxSize: 10);
-  static final SmartCache<int, Map<int, Offset>> _positionCacheStorage =
-      SmartCache(maxSize: 10);
-  static final BatchTextRenderer _textRenderer = BatchTextRenderer();
-
-  late final List<ProcessedNode> _processedNodes;
-  late final List<ProcessedEdge> _processedEdges;
-  late final Map<int, Color> _colorCache;
-  late final Map<int, Offset> _positionCache;
-
-  int _generateCacheKey() => Object.hash(
-        nodes.length,
-        edges.length,
-        Object.hashAll(
-          nodes.take(12).map(
-                (node) =>
-                    Object.hash(node.idHash, node.x.round(), node.y.round()),
-              ),
-        ),
-        Object.hashAll(
-          edges.take(12).map(
-                (edge) => Object.hash(
-                    edge.sourceId, edge.targetId, edge.relationType),
-              ),
-        ),
-        isDarkMode,
-      );
-
-  void _preprocessData() {
-    final cacheKey = _generateCacheKey();
-
-    final cachedNodes = _nodeCache.get(cacheKey);
-    final cachedEdges = _edgeCache.get(cacheKey);
-    final cachedColors = _colorCacheStorage.get(cacheKey);
-    final cachedPositions = _positionCacheStorage.get(cacheKey);
-
-    if (cachedNodes != null &&
-        cachedEdges != null &&
-        cachedColors != null &&
-        cachedPositions != null) {
-      _processedNodes = cachedNodes;
-      _processedEdges = cachedEdges;
-      _colorCache = cachedColors;
-      _positionCache = cachedPositions;
-      return;
-    }
-
-    _colorCache = {};
-    _positionCache = {};
-
-    for (final node in nodes) {
-      _colorCache[node.idHash] = SectorConfig.getNodeColor(
-        sector: SectorEnum.values[node.sectorIndex],
-        importance: node.importance,
-        masteryScore: node.mastery,
-      );
-      _positionCache[node.idHash] = Offset(node.x, node.y);
-    }
-
-    _processedNodes = [];
-    for (final node in nodes) {
-      final pos = _positionCache[node.idHash]!; // 安全使用!，因为已经在第187行添加
-      final color = _colorCache[node.idHash] ?? DS.brandPrimary;
-      final radius = 3.0 + node.importance * 2.0;
-
-      _processedNodes.add(
-        ProcessedNode(
-          node: node,
-          color: color,
-          radius: radius,
-          position: pos,
-        ),
-      );
-    }
-
-    _processedEdges = [];
-    for (final edge in edges) {
-      final sourceHash = edge.sourceId.hashCode;
-      final targetHash = edge.targetId.hashCode;
-
-      final start = _positionCache[sourceHash];
-      final end = _positionCache[targetHash];
-
-      if (start == null || end == null) continue;
-
-      final sourceColor = _colorCache[sourceHash] ?? DS.brandPrimary;
-      final targetColor = _colorCache[targetHash] ?? DS.brandPrimary;
-      final style = _RelationStyle.forType(edge.relationType);
-      final strokeWidth = style.baseWidth * (0.5 + edge.strength * 0.5);
-
-      _processedEdges.add(
-        ProcessedEdge(
-          edge: edge,
-          start: start,
-          end: end,
-          startColor: sourceColor,
-          endColor: targetColor,
-          distance: (end - start).distance,
-          strokeWidth: strokeWidth,
-        ),
-      );
-    }
-
-    // Parent-child connections
-    for (final node in nodes) {
-      if (node.parentIdHash != null) {
-        final start = _positionCache[node.parentIdHash!];
-        final end = _positionCache[node.idHash];
-
-        if (start == null || end == null) continue;
-
-        final parentColor = _colorCache[node.parentIdHash!] ?? DS.brandPrimary;
-        final childColor = _colorCache[node.idHash] ?? DS.brandPrimary;
-
-        _processedEdges.add(
-          ProcessedEdge(
-            edge: GalaxyEdgeModel(
-              id: 'p_${node.idHash}',
-              sourceId: '',
-              targetId: '',
-              relationType: EdgeRelationType.parentChild,
-              strength: 0.7,
-            ),
-            start: start,
-            end: end,
-            startColor: parentColor,
-            endColor: childColor,
-            distance: (end - start).distance,
-            strokeWidth: 1.5,
-          ),
-        );
-      }
-    }
-
-    _nodeCache.set(cacheKey, _processedNodes);
-    _edgeCache.set(cacheKey, _processedEdges);
-    _colorCacheStorage.set(cacheKey, _colorCache);
-    _positionCacheStorage.set(cacheKey, _positionCache);
-  }
+  static const int _nodeBudget = 500;
+  static const int _edgeBudget = 800;
+  static const Color _darkBackground = Color(0xFF0A0E17);
+  static const Color _darkRadial = Color(0xFF0D1525);
+  static const Color _lightBackground = Color(0xFFF5F6F8);
+  static const Color _lightRadial = Color(0xFFEBEDF2);
 
   @override
   void paint(Canvas canvas, Size size) {
-    canvas.save();
-    canvas.transform(viewMatrix.storage);
+    developer.Timeline.startSync('GalaxyPaint');
+    try {
+      _drawBackground(canvas, size);
 
-    // L0 (<0.2): Sector view - centroids only, no nodes/edges
-    if (scale < _lod0Limit) {
-      _drawSectorView(canvas);
-      canvas.restore();
-      return;
-    }
-
-    // L1+ (>=0.2): Draw nodes
-    // L1 (0.2-0.4): Large nodes only (imp>=4)
-    // L2+ (>=0.4): All nodes
-    _drawNodes(canvas, onlyLarge: scale < _lod1Limit);
-
-    // L2+ (>=0.4): Draw edges
-    // L2 (0.4-0.6): Parent-child edges only
-    // L3+ (>=0.6): All edges
-    if (scale >= _lod1Limit) {
-      _drawEdges(canvas, parentChildOnly: scale < _lod2Limit);
-    }
-
-    // Selection Highlight (always visible if selected)
-    if (showEdgeGlow &&
-        selectionPulse > 0 &&
-        selectedNodeIdHash != null &&
-        _positionCache.containsKey(selectedNodeIdHash)) {
-      _drawSelectionHighlight(canvas, _positionCache[selectedNodeIdHash]!);
-    }
-
-    if (showEdgeGlow &&
-        selectionPulse > 0 &&
-        highlightedNodeIdHashes.isNotEmpty) {
-      _drawEvidenceHighlights(canvas);
-    }
-
-    canvas.restore();
-  }
-
-  void _drawSelectionHighlight(Canvas canvas, Offset pos) {
-    final radius = 40.0 + (selectionPulse * 8.0);
-    final opacity = 0.3 + (selectionPulse * 0.2);
-
-    final paint = Paint()
-      ..color = DS.brandPrimary.withValues(alpha: opacity)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0 + (selectionPulse * 1.0);
-
-    canvas.drawCircle(pos, radius, paint);
-
-    // Fill only if high tier
-    if (performanceTier == PerformanceTier.ultra ||
-        performanceTier == PerformanceTier.high) {
-      paint.color =
-          DS.brandPrimary.withValues(alpha: 0.1 + (selectionPulse * 0.05));
-      paint.style = PaintingStyle.fill;
-      canvas.drawCircle(pos, 40, paint);
-    }
-  }
-
-  void _drawEvidenceHighlights(Canvas canvas) {
-    const baseRadius = 24.0;
-    final pulseRadius = baseRadius + (selectionPulse * 4.0);
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5
-      ..color = DS.info.withValues(alpha: 0.55);
-
-    for (final nodeHash in highlightedNodeIdHashes) {
-      if (nodeHash == selectedNodeIdHash) {
-        continue;
-      }
-      final pos = _positionCache[nodeHash];
-      if (pos == null) {
-        continue;
-      }
-      canvas.drawCircle(pos, pulseRadius, paint);
-    }
-  }
-
-  void _drawEdges(Canvas canvas, {required bool parentChildOnly}) {
-    // Optimization: If DPR is very low, skip thin lines or use simpler drawing
-    final lowRes = currentDpr < 1.5;
-    final selectedHash = selectedNodeIdHash;
-    final dynamicBudget = switch (performanceTier) {
-      PerformanceTier.ultra => scale >= _lod3Limit ? 720 : 420,
-      PerformanceTier.high => scale >= _lod3Limit ? 520 : 320,
-      PerformanceTier.medium => scale >= _lod3Limit ? 320 : 180,
-      PerformanceTier.low => scale >= _lod3Limit ? 180 : 96,
-    };
-    final maxRenderedEdges = math.min(dynamicBudget, maxEdges);
-    var renderedEdges = 0;
-
-    for (final edge in _processedEdges) {
-      if (renderedEdges >= maxRenderedEdges) {
-        break;
-      }
-
-      // Culling
-      if (viewport != null) {
-        final cRect = viewport!.inflate(50);
-        if (!cRect.contains(edge.start) && !cRect.contains(edge.end)) {
-          continue;
-        }
-      }
-
-      if (parentChildOnly &&
-          edge.edge.relationType != EdgeRelationType.parentChild) {
-        continue;
-      }
-
-      // Skip weak non-structural edges on low res
-      if (lowRes &&
-          edge.edge.strength < 0.5 &&
-          edge.edge.relationType != EdgeRelationType.parentChild) {
-        continue;
-      }
-
-      final style = _RelationStyle.forType(edge.edge.relationType);
-      final edgeAlpha = _edgeAlphaMultiplier(edge, selectedHash);
-
-      // Tier Check: Low tier = no dashed lines, simple lines
-      if (performanceTier == PerformanceTier.low || lowRes) {
-        final paint = Paint()
-          ..color = style.color.withValues(alpha: 0.28 * edgeAlpha)
-          ..strokeWidth = edge.strokeWidth * (0.9 + edgeAlpha * 0.35);
-        canvas.drawLine(edge.start, edge.end, paint);
-        renderedEdges++;
-        continue;
-      }
-
-      if (style.isDashed) {
-        _drawDashedEdge(canvas, edge, style, edgeAlpha);
-      } else {
-        _drawSolidEdge(canvas, edge, style, edgeAlpha);
-      }
-
-      // Arrows only on L4+ (>=0.8)
-      if (scale >= _lod3Limit &&
-          (edge.edge.relationType == EdgeRelationType.prerequisite ||
-              edge.edge.relationType == EdgeRelationType.derived)) {
-        _drawArrow(canvas, edge.start, edge.end, style.color, edge.strokeWidth);
-      }
-      renderedEdges++;
-    }
-  }
-
-  double _edgeAlphaMultiplier(ProcessedEdge edge, int? selectedHash) {
-    if (selectedHash == null) {
-      return edge.edge.relationType == EdgeRelationType.parentChild
-          ? 0.92
-          : 0.72;
-    }
-
-    final sourceHash = edge.edge.sourceId.hashCode;
-    final targetHash = edge.edge.targetId.hashCode;
-    final touchesSelection =
-        sourceHash == selectedHash || targetHash == selectedHash;
-    final touchesEvidence = highlightedNodeIdHashes.contains(sourceHash) ||
-        highlightedNodeIdHashes.contains(targetHash);
-
-    if (touchesSelection) {
-      return 1.15;
-    }
-    if (touchesEvidence) {
-      return 0.96;
-    }
-    return edge.edge.relationType == EdgeRelationType.parentChild ? 0.52 : 0.34;
-  }
-
-  void _drawSolidEdge(
-    Canvas canvas,
-    ProcessedEdge edge,
-    _RelationStyle style,
-    double edgeAlpha,
-  ) {
-    final paint = Paint()
-      ..strokeWidth = edge.strokeWidth * (0.9 + edgeAlpha * 0.3)
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-
-    // Gradient only on Medium+
-    if (performanceTier != PerformanceTier.low) {
-      paint.shader = ui.Gradient.linear(edge.start, edge.end, [
-        Color.lerp(edge.startColor, style.color, 0.5)!
-            .withValues(alpha: 0.52 * edge.edge.strength * edgeAlpha),
-        Color.lerp(edge.endColor, style.color, 0.5)!
-            .withValues(alpha: 0.22 * edge.edge.strength * edgeAlpha),
-      ]);
-    } else {
-      paint.color = style.color.withValues(alpha: 0.35 * edgeAlpha);
-    }
-
-    canvas.drawLine(edge.start, edge.end, paint);
-  }
-
-  void _drawDashedEdge(
-    Canvas canvas,
-    ProcessedEdge edge,
-    _RelationStyle style,
-    double edgeAlpha,
-  ) {
-    final paint = Paint()
-      ..color = Color.lerp(edge.startColor, style.color, 0.5)!
-          .withValues(alpha: 0.4 * edge.edge.strength * edgeAlpha)
-      ..strokeWidth = edge.strokeWidth * (0.85 + edgeAlpha * 0.2)
-      ..style = PaintingStyle.stroke;
-
-    final length = (edge.end - edge.start).distance;
-    final unit = (edge.end - edge.start) / length;
-    final dash = style.dashLength;
-    final gap = dash * 0.6;
-
-    double curr = 0;
-    while (curr < length) {
-      final seg = math.min(dash, length - curr);
-      canvas.drawLine(
-        edge.start + unit * curr,
-        edge.start + unit * (curr + seg),
-        paint,
+      final lod = _currentLod(camera.scale);
+      final viewport = camera.viewportRect.inflate(_viewportPaddingFor(lod));
+      final viewportCenter = viewport.center;
+      final candidateNodeIds = spatialIndex.queryRect(viewport);
+      final visibleNodes = _selectVisibleNodes(
+        candidateNodeIds: candidateNodeIds,
+        lod: lod,
+        viewportCenter: viewportCenter,
       );
-      curr += dash + gap;
-    }
-  }
+      final visibleNodeIds = {
+        for (final node in visibleNodes) node.node.id,
+      };
 
-  void _drawArrow(
-    Canvas canvas,
-    Offset start,
-    Offset end,
-    Color color,
-    double width,
-  ) {
-    final dir = end - start;
-    final len = dir.distance;
-    if (len < 30) return;
-    final unit = dir / len;
-    final perp = Offset(-unit.dy, unit.dx);
-    final size = width * 4;
-    final tip = end - unit * 15;
-    final path = Path()
-      ..moveTo(tip.dx, tip.dy)
-      ..lineTo(
-        tip.dx - unit.dx * size + perp.dx * size * 0.5,
-        tip.dy - unit.dy * size + perp.dy * size * 0.5,
-      )
-      ..lineTo(
-        tip.dx - unit.dx * size - perp.dx * size * 0.5,
-        tip.dy - unit.dy * size - perp.dy * size * 0.5,
-      )
-      ..close();
-    canvas.drawPath(path, Paint()..color = color.withValues(alpha: 0.7));
-  }
-
-  void _drawSectorView(Canvas canvas) {
-    // L0 Representation
-    for (final cluster in clusters.values) {
-      final pos = cluster.position;
-      final color = SectorConfig.getColor(cluster.sector);
-      // Simple Halo
-      canvas.drawCircle(
-        pos,
-        40.0,
-        Paint()..color = color.withValues(alpha: 0.2),
-      );
-
-      // L0 Labels (Cluster Names)
-      _drawClusterLabel(canvas, cluster.name, pos, 40.0, color);
-    }
-  }
-
-  void _drawClusterLabel(
-    Canvas canvas,
-    String name,
-    Offset pos,
-    double r,
-    Color c,
-  ) {
-    // Only draw in L0 (<0.2)
-    if (scale >= _lod0Limit) return;
-
-    _textRenderer.drawText(
-      canvas,
-      name,
-      pos + Offset(0, r + 8),
-      TextStyle(color: DS.brandPrimaryConst, fontSize: 12),
-    );
-  }
-
-  void _drawNodes(Canvas canvas, {required bool onlyLarge}) {
-    final nodePaint = Paint()..style = PaintingStyle.fill;
-    final glowPaint = Paint()
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8.0);
-
-    final denseNodeField = _processedNodes.length > 260;
-    final ultraDenseNodeField = _processedNodes.length > 420;
-    var labelsDrawn = 0;
-
-    for (final p in _processedNodes) {
-      // Culling
-      if (viewport != null) {
-        if (!viewport!.inflate(p.radius * 3).contains(p.position)) {
-          continue;
-        }
-      }
-
-      // LOD Filtering is now handled by the provider's _computeVisibleNodes()
-      // This painter receives already-filtered nodes, so we only do minimal filtering here
-      // to handle edge cases during scale transitions
-
-      final progress = nodeAnimationProgress[p.node.idHash] ?? 1.0;
-      final r = p.radius * (0.3 + progress * 0.7);
-
-      // For very zoomed out views, render smaller/dimmer nodes
-      final isLowDetailView = scale < 0.3;
-      final effectiveRadius =
-          isLowDetailView && p.node.importance < 3 ? r * 0.6 : r;
-      final effectiveAlpha =
-          isLowDetailView && p.node.importance < 3 ? 0.6 * progress : progress;
-
-      if (p.node.isUnlocked) {
-        // Glow: L3+ (>=0.6) AND (Ultra or High Tier)
-        if (showEdgeGlow &&
-            scale >= _lod2Limit &&
-            (performanceTier == PerformanceTier.ultra ||
-                performanceTier == PerformanceTier.high)) {
-          final m = p.node.mastery / 100.0;
-          glowPaint.color =
-              p.color.withValues(alpha: (0.3 + m * 0.5) * 0.4 * effectiveAlpha);
-          canvas.drawCircle(p.position, effectiveRadius * 3.0, glowPaint);
-        }
-
-        // Main Node
-        // Disable fancy shader gradient on low tier OR low DPR
-        if (performanceTier != PerformanceTier.low && currentDpr >= 1.5) {
-          nodePaint.shader = ui.Gradient.radial(p.position, effectiveRadius, [
-            DS.brandPrimary.withValues(alpha: 0.9 * effectiveAlpha),
-            p.color.withValues(alpha: effectiveAlpha),
-          ]);
-        } else {
-          nodePaint.color = p.color.withValues(alpha: effectiveAlpha);
-          nodePaint.shader = null;
-        }
-
-        canvas.drawCircle(p.position, effectiveRadius, nodePaint);
-        nodePaint.shader = null;
-
-        if (p.node.studyCount >= 2 && effectiveAlpha > 0.7) {
-          canvas.drawCircle(
-            p.position,
-            effectiveRadius * 1.6,
-            Paint()
-              ..color = p.color.withValues(alpha: 0.5)
-              ..style = PaintingStyle.stroke,
-          );
-        }
-      } else {
-        canvas.drawCircle(
-          p.position,
-          effectiveRadius * 0.8,
-          Paint()
-            ..color = DS.brandPrimary.withValues(alpha: 0.2 * effectiveAlpha),
+      developer.Timeline.startSync('GalaxyPaintEdges');
+      try {
+        _drawEdges(
+          canvas: canvas,
+          lod: lod,
+          viewport: viewport,
+          viewportCenter: viewportCenter,
+          visibleNodeIds: visibleNodeIds,
         );
+      } finally {
+        developer.Timeline.finishSync();
       }
 
-      // Labels Logic - aligned with LOD levels
-      // L1 (0.2-0.4): Key labels (imp >= 4)
-      // L2 (0.4-0.6): Standard labels (imp >= 3)
-      // L3 (0.6-0.8): More labels (imp >= 2)
-      // L4 (>=0.8): All labels (imp >= 1)
-
-      final isSelected = selectedNodeIdHash == p.node.idHash;
-      final isHighlighted = highlightedNodeIdHashes.contains(p.node.idHash);
-      var showLabel = false;
-      if (scale >= _lod3Limit) {
-        // L4+: All labels
-        showLabel = true;
-      } else if (scale >= _lod2Limit) {
-        // L3: imp >= 2
-        if (p.node.importance >= 2) showLabel = true;
-      } else if (scale >= _lod1Limit) {
-        // L2: imp >= 3
-        if (p.node.importance >= 3) showLabel = true;
-      } else if (scale >= _lod0Limit) {
-        // L1: imp >= 4
-        if (p.node.importance >= 4) showLabel = true;
+      developer.Timeline.startSync('GalaxyPaintNodes');
+      try {
+        _drawNodes(canvas, lod, visibleNodes);
+      } finally {
+        developer.Timeline.finishSync();
       }
 
-      if (denseNodeField && !isSelected && !isHighlighted) {
-        showLabel = showLabel && p.node.importance >= 4 && scale >= _lod2Limit;
+      developer.Timeline.startSync('GalaxyPaintLabels');
+      try {
+        _drawLabels(canvas, lod, visibleNodes);
+      } finally {
+        developer.Timeline.finishSync();
       }
-      if (ultraDenseNodeField && !isSelected && !isHighlighted) {
-        showLabel = showLabel && p.node.importance >= 5 && scale >= _lod3Limit;
-      }
-
-      if (showLabels && showLabel && labelsDrawn < maxLabels) {
-        _drawNodeLabel(canvas, p.node, p.position, p.color);
-        labelsDrawn++;
-        if (showTags &&
-            labelsDrawn < maxLabels &&
-            (!denseNodeField || isSelected || isHighlighted)) {
-          _drawNodeTag(canvas, p.node, p.position, p.color);
-          labelsDrawn++;
-        }
-      }
+    } finally {
+      developer.Timeline.finishSync();
     }
-  }
-
-  void _drawNodeLabel(
-    Canvas canvas,
-    CompactKnowledgeNode node,
-    Offset pos,
-    Color color,
-  ) {
-    final fontSize = scale >= _lod3Limit ? 11.0 : 10.0;
-    _textRenderer.drawText(
-      canvas,
-      node.name,
-      pos + Offset(0, (3.0 + node.importance * 2.0) + 8),
-      TextStyle(
-        color: isDarkMode
-            ? DS.brandPrimary.withValues(alpha: node.isUnlocked ? 0.9 : 0.5)
-            : Color.lerp(const Color(0xFF23384E), DS.brandPrimary, 0.28)!
-                .withValues(alpha: node.isUnlocked ? 0.94 : 0.62),
-        fontSize: fontSize,
-        fontWeight: node.importance >= 4 ? FontWeight.w700 : FontWeight.w600,
-      ),
-    );
-  }
-
-  void _drawNodeTag(
-    Canvas canvas,
-    CompactKnowledgeNode node,
-    Offset pos,
-    Color color,
-  ) {
-    final tag = node.primaryTag;
-    if (tag == null ||
-        tag.isEmpty ||
-        scale < _lod2Limit ||
-        node.importance < 2) {
-      return;
-    }
-
-    _textRenderer.drawText(
-      canvas,
-      '#$tag',
-      pos + Offset(0, (3.0 + node.importance * 2.0) + 24),
-      TextStyle(
-        color: color.withValues(alpha: node.isUnlocked ? 0.74 : 0.38),
-        fontSize: scale >= _lod3Limit ? 9 : 8,
-        fontWeight: FontWeight.w600,
-      ),
-    );
   }
 
   @override
-  bool shouldRepaint(covariant StarMapPainter old) =>
-      old.scale != scale ||
-      old.performanceTier != performanceTier ||
-      old.currentDpr != currentDpr ||
-      old.viewport != viewport ||
-      !identical(old.nodes, nodes) ||
-      old.maxEdges != maxEdges ||
-      old.maxLabels != maxLabels ||
-      old.showLabels != showLabels ||
-      old.showTags != showTags ||
-      old.showEdgeGlow != showEdgeGlow ||
-      old.selectionPulse != selectionPulse ||
-      old.isDarkMode != isDarkMode ||
-      old.selectedNodeIdHash != selectedNodeIdHash ||
-      old.highlightRevision != highlightRevision;
+  bool shouldRepaint(covariant StarMapPainter oldDelegate) =>
+      oldDelegate.camera.offset != camera.offset ||
+      oldDelegate.camera.scale != camera.scale ||
+      oldDelegate.camera.viewportSize != camera.viewportSize ||
+      oldDelegate.positions != positions ||
+      oldDelegate.sceneVersion != sceneVersion ||
+      oldDelegate.selectedNodeId != selectedNodeId ||
+      oldDelegate.draggingNodeId != draggingNodeId ||
+      oldDelegate.tapFeedbackNodeId != tapFeedbackNodeId ||
+      oldDelegate.tapFeedbackProgress != tapFeedbackProgress ||
+      oldDelegate.isDarkMode != isDarkMode;
+
+  void _drawBackground(Canvas canvas, Size size) {
+    final baseColor = isDarkMode ? _darkBackground : _lightBackground;
+    final radialColor = isDarkMode ? _darkRadial : _lightRadial;
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.shortestSide * 0.72;
+    final radialPaint = Paint()
+      ..shader = ui.Gradient.radial(
+        center,
+        radius,
+        [
+          radialColor.withValues(alpha: isDarkMode ? 0.34 : 0.26),
+          radialColor.withValues(alpha: isDarkMode ? 0.08 : 0.05),
+          Colors.transparent,
+        ],
+        const [0.0, 0.68, 1.0],
+      );
+
+    canvas
+      ..drawRect(Offset.zero & size, Paint()..color = baseColor)
+      ..drawCircle(center, radius, radialPaint);
+  }
+
+  List<_PaintNode> _selectVisibleNodes({
+    required List<String> candidateNodeIds,
+    required GalaxyLod lod,
+    required Offset viewportCenter,
+  }) {
+    final nodes = <_PaintNode>[];
+
+    for (final nodeId in candidateNodeIds) {
+      final node = nodesById[nodeId];
+      final position = positions[nodeId];
+      if (node == null || position == null) {
+        continue;
+      }
+
+      final alpha = _nodeAlpha(node, lod);
+      if (alpha <= 0) {
+        continue;
+      }
+
+      nodes.add(
+        _PaintNode(
+          node: node,
+          worldPosition: position,
+          screenPosition: camera.worldToScreen(position),
+          distanceToViewportCenter: (position - viewportCenter).distanceSquared,
+          alpha: alpha,
+        ),
+      );
+    }
+
+    nodes.sort(
+      (a, b) =>
+          a.distanceToViewportCenter.compareTo(b.distanceToViewportCenter),
+    );
+
+    final budget = _nodeBudgetFor(lod);
+    if (nodes.length > budget) {
+      nodes.removeRange(budget, nodes.length);
+    }
+
+    return nodes;
+  }
+
+  void _drawEdges({
+    required Canvas canvas,
+    required GalaxyLod lod,
+    required Rect viewport,
+    required Offset viewportCenter,
+    required Set<String> visibleNodeIds,
+  }) {
+    if (lod == GalaxyLod.l0 || edges.isEmpty) {
+      return;
+    }
+
+    final edgesToDraw = _selectVisibleEdges(
+      lod: lod,
+      viewport: viewport,
+      viewportCenter: viewportCenter,
+      visibleNodeIds: visibleNodeIds,
+    );
+    if (edgesToDraw.isEmpty) {
+      edgePictureCache.clear();
+      return;
+    }
+
+    if (draggingNodeId != null) {
+      _drawEdgeList(canvas, edgesToDraw);
+      return;
+    }
+
+    final sceneSignature = Object.hash(
+      sceneVersion,
+      selectedNodeId,
+      lod,
+      isDarkMode,
+      visibleNodeIds.length,
+    );
+
+    if (edgePictureCache.canReuse(
+      camera: camera,
+      sceneSignature: sceneSignature,
+      lod: lod,
+    )) {
+      edgePictureCache.draw(canvas, camera);
+      return;
+    }
+
+    final recorder = ui.PictureRecorder();
+    final pictureCanvas = Canvas(recorder);
+    _drawEdgeList(pictureCanvas, edgesToDraw);
+    edgePictureCache
+      ..store(
+        picture: recorder.endRecording(),
+        camera: camera,
+        sceneSignature: sceneSignature,
+        lod: lod,
+      )
+      ..draw(canvas, camera);
+  }
+
+  List<_PaintEdge> _selectVisibleEdges({
+    required GalaxyLod lod,
+    required Rect viewport,
+    required Offset viewportCenter,
+    required Set<String> visibleNodeIds,
+  }) {
+    final bothVisible = <_PaintEdge>[];
+    final partiallyVisible = <_PaintEdge>[];
+
+    for (final edge in edges) {
+      if (!_edgeVisibleAtLod(edge, lod)) {
+        continue;
+      }
+
+      final source = positions[edge.sourceId];
+      final target = positions[edge.targetId];
+      final sourceNode = nodesById[edge.sourceId];
+      if (source == null || target == null || sourceNode == null) {
+        continue;
+      }
+
+      final sourceVisible = visibleNodeIds.contains(edge.sourceId);
+      final targetVisible = visibleNodeIds.contains(edge.targetId);
+      final intersectsViewport =
+          _segmentIntersectsRect(source, target, viewport);
+      if (!sourceVisible && !targetVisible && !intersectsViewport) {
+        continue;
+      }
+
+      final edgeStyle = _edgeStyle(edge, sourceNode.sector);
+      final alpha = edgeStyle.alpha * _edgeAlpha(edge, lod);
+      if (alpha <= 0) {
+        continue;
+      }
+
+      final midX = (source.dx + target.dx) / 2;
+      final midY = (source.dy + target.dy) / 2;
+      final paintEdge = _PaintEdge(
+        start: source,
+        end: target,
+        distanceToViewportCenter:
+            (midX - viewportCenter.dx) * (midX - viewportCenter.dx) +
+                (midY - viewportCenter.dy) * (midY - viewportCenter.dy),
+        color: edgeStyle.color.withValues(alpha: alpha),
+        strokeWidth: edgeStyle.strokeWidth,
+        dashLength: edgeStyle.dashLength,
+        gapLength: edgeStyle.gapLength,
+      );
+
+      if (sourceVisible && targetVisible) {
+        bothVisible.add(paintEdge);
+      } else {
+        partiallyVisible.add(paintEdge);
+      }
+    }
+
+    bothVisible.sort(
+      (a, b) =>
+          a.distanceToViewportCenter.compareTo(b.distanceToViewportCenter),
+    );
+    partiallyVisible.sort(
+      (a, b) =>
+          a.distanceToViewportCenter.compareTo(b.distanceToViewportCenter),
+    );
+
+    final result = <_PaintEdge>[...bothVisible, ...partiallyVisible];
+    final budget = _edgeBudgetFor(lod);
+    if (result.length > budget) {
+      result.removeRange(budget, result.length);
+    }
+
+    return result;
+  }
+
+  void _drawEdgeList(Canvas canvas, List<_PaintEdge> edgesToDraw) {
+    final paintCache = <int, Paint>{};
+
+    for (final edge in edgesToDraw) {
+      final paintKey = Object.hash(edge.color.toARGB32(), edge.strokeWidth);
+      final paint = paintCache[paintKey] ??
+          (paintCache[paintKey] = Paint()
+            ..color = edge.color
+            ..strokeWidth = edge.strokeWidth
+            ..style = PaintingStyle.stroke
+            ..strokeCap = StrokeCap.round);
+
+      final start = camera.worldToScreen(edge.start);
+      final end = camera.worldToScreen(edge.end);
+      if (edge.isDashed) {
+        _drawDashedLine(
+          canvas: canvas,
+          start: start,
+          end: end,
+          paint: paint,
+          dashLength: edge.dashLength,
+          gapLength: edge.gapLength,
+        );
+      } else {
+        canvas.drawLine(start, end, paint);
+      }
+    }
+  }
+
+  void _drawNodes(Canvas canvas, GalaxyLod lod, List<_PaintNode> nodes) {
+    for (final item in nodes) {
+      final node = item.node;
+      final isDragging = draggingNodeId == node.id;
+      final radius = _effectiveNodeRadius(node, lod, isDragging);
+      final style = _nodeStyle(node, lod, isDragging);
+      final nodeAlpha = item.alpha.clamp(0.0, 1.0);
+
+      if (style.glowAlpha > 0 &&
+          nodeAlpha > 0 &&
+          lod.index >= GalaxyLod.l2.index) {
+        canvas.drawCircle(
+          item.screenPosition,
+          radius + 3,
+          Paint()
+            ..color = style.baseColor.withValues(
+              alpha: style.glowAlpha * nodeAlpha,
+            )
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+        );
+      }
+
+      if (style.fillAlpha > 0 && nodeAlpha > 0) {
+        canvas.drawCircle(
+          item.screenPosition,
+          radius,
+          Paint()
+            ..color = style.baseColor.withValues(
+              alpha: style.fillAlpha * nodeAlpha,
+            ),
+        );
+      }
+
+      if (style.masteryRingAlpha > 0 && nodeAlpha > 0) {
+        canvas.drawCircle(
+          item.screenPosition,
+          radius + 1.5,
+          Paint()
+            ..color = style.baseColor.withValues(
+              alpha: style.masteryRingAlpha * nodeAlpha,
+            )
+            ..strokeWidth = 1.5
+            ..style = PaintingStyle.stroke,
+        );
+      }
+
+      if (!node.isUnlocked) {
+        _drawDashedCircle(
+          canvas: canvas,
+          center: item.screenPosition,
+          radius: radius + 1,
+          color: style.baseColor.withValues(alpha: 0.25 * nodeAlpha),
+        );
+      }
+
+      if (selectedNodeId == node.id) {
+        final selectedPaint = Paint()
+          ..color = (isDarkMode ? Colors.white : Colors.black).withValues(
+            alpha: nodeAlpha,
+          )
+          ..strokeWidth = 2
+          ..style = PaintingStyle.stroke;
+        canvas.drawCircle(
+          item.screenPosition,
+          radius + 4,
+          selectedPaint,
+        );
+      }
+    }
+  }
+
+  void _drawLabels(Canvas canvas, GalaxyLod lod, List<_PaintNode> nodes) {
+    for (final item in nodes) {
+      final node = item.node;
+      final labelAlpha = _labelAlpha(node, lod);
+      if (labelAlpha <= 0) {
+        continue;
+      }
+
+      final isSelected = selectedNodeId == node.id;
+      final fontSize = lod.index >= GalaxyLod.l3.index && node.importance >= 4
+          ? 13.0
+          : camera.scale > 1.0
+              ? 12.0
+              : 10.0;
+      final fontWeight = isSelected ? FontWeight.w700 : FontWeight.w600;
+      final labelColor = (isDarkMode ? Colors.white : Colors.black87)
+          .withValues(alpha: labelAlpha);
+      final cacheKey =
+          '${node.id}:$fontSize:${fontWeight.value}:${labelColor.toARGB32()}';
+      final labelPainter = labelCache.obtain(
+        cacheKey: cacheKey,
+        text: node.name,
+        fontSize: fontSize,
+        fontWeight: fontWeight,
+        color: labelColor,
+      );
+      final radius = _effectiveNodeRadius(node, lod, draggingNodeId == node.id);
+      final labelOffset = Offset(
+        item.screenPosition.dx + radius + 6,
+        item.screenPosition.dy - labelPainter.height / 2,
+      );
+
+      if (isSelected) {
+        final backgroundRect = RRect.fromRectAndRadius(
+          Rect.fromLTWH(
+            labelOffset.dx - 6,
+            labelOffset.dy - 3,
+            labelPainter.width + 12,
+            labelPainter.height + 6,
+          ),
+          const Radius.circular(6),
+        );
+        canvas.drawRRect(
+          backgroundRect,
+          Paint()
+            ..color = (isDarkMode ? _darkBackground : Colors.white)
+                .withValues(alpha: 0.72 * labelAlpha),
+        );
+      }
+
+      labelPainter.paint(canvas, labelOffset);
+
+      if (lod == GalaxyLod.l4) {
+        final barColor =
+            SectorConfig.getColor(node.sector).withValues(alpha: 0.9);
+        final barTrackColor = (isDarkMode ? Colors.white24 : Colors.black12);
+        final barOffset = Offset(
+          labelOffset.dx,
+          labelOffset.dy + labelPainter.height + 4,
+        );
+        const barWidth = 40.0;
+        final progressRatio = (node.masteryScore / 100).clamp(0.0, 1.0);
+        final progressWidth = barWidth * progressRatio;
+
+        canvas
+          ..drawRRect(
+            RRect.fromRectAndRadius(
+              Rect.fromLTWH(barOffset.dx, barOffset.dy, barWidth, 3),
+              const Radius.circular(999),
+            ),
+            Paint()..color = barTrackColor,
+          )
+          ..drawRRect(
+            RRect.fromRectAndRadius(
+              Rect.fromLTWH(barOffset.dx, barOffset.dy, progressWidth, 3),
+              const Radius.circular(999),
+            ),
+            Paint()..color = barColor,
+          );
+      }
+    }
+  }
+
+  GalaxyLod _currentLod(double scale) {
+    if (scale < 0.12) {
+      return GalaxyLod.l0;
+    }
+    if (scale < 0.25) {
+      return GalaxyLod.l1;
+    }
+    if (scale < 0.5) {
+      return GalaxyLod.l2;
+    }
+    if (scale <= 1.0) {
+      return GalaxyLod.l3;
+    }
+    return GalaxyLod.l4;
+  }
+
+  int _nodeBudgetFor(GalaxyLod lod) {
+    switch (lod) {
+      case GalaxyLod.l0:
+        return 24;
+      case GalaxyLod.l1:
+        return 48;
+      case GalaxyLod.l2:
+      case GalaxyLod.l3:
+      case GalaxyLod.l4:
+        return _nodeBudget;
+    }
+  }
+
+  int _edgeBudgetFor(GalaxyLod lod) {
+    switch (lod) {
+      case GalaxyLod.l0:
+        return 0;
+      case GalaxyLod.l1:
+        return 180;
+      case GalaxyLod.l2:
+        return 420;
+      case GalaxyLod.l3:
+      case GalaxyLod.l4:
+        return _edgeBudget;
+    }
+  }
+
+  double _viewportPaddingFor(GalaxyLod lod) {
+    switch (lod) {
+      case GalaxyLod.l0:
+      case GalaxyLod.l1:
+        return 240 / camera.scale;
+      case GalaxyLod.l2:
+      case GalaxyLod.l3:
+      case GalaxyLod.l4:
+        return 180 / camera.scale;
+    }
+  }
+
+  double _nodeAlpha(GalaxyNodeModel node, GalaxyLod lod) {
+    switch (lod) {
+      case GalaxyLod.l0:
+        return node.importance >= 5 ? 1 : 0;
+      case GalaxyLod.l1:
+        if (node.importance >= 5) {
+          return 1;
+        }
+        if (node.importance >= 3) {
+          return _fade(camera.scale, 0.12, 0.25);
+        }
+        return 0;
+      case GalaxyLod.l2:
+        if (node.importance >= 3) {
+          return 1;
+        }
+        return _fade(camera.scale, 0.25, 0.5);
+      case GalaxyLod.l3:
+      case GalaxyLod.l4:
+        return 1;
+    }
+  }
+
+  double _labelAlpha(GalaxyNodeModel node, GalaxyLod lod) {
+    switch (lod) {
+      case GalaxyLod.l0:
+        return 0;
+      case GalaxyLod.l1:
+        return node.importance >= 5 ? _fade(camera.scale, 0.12, 0.2) : 0;
+      case GalaxyLod.l2:
+        if (node.importance >= 5) {
+          return 1;
+        }
+        if (node.importance >= 3) {
+          return _fade(camera.scale, 0.25, 0.5);
+        }
+        return 0;
+      case GalaxyLod.l3:
+      case GalaxyLod.l4:
+        return 1;
+    }
+  }
+
+  double _edgeAlpha(GalaxyEdgeModel edge, GalaxyLod lod) {
+    switch (lod) {
+      case GalaxyLod.l0:
+        return 0;
+      case GalaxyLod.l1:
+        return edge.relationType == EdgeRelationType.parentChild
+            ? _fade(camera.scale, 0.12, 0.25)
+            : 0;
+      case GalaxyLod.l2:
+        if (edge.relationType == EdgeRelationType.parentChild) {
+          return 1;
+        }
+        if (edge.relationType == EdgeRelationType.prerequisite) {
+          return _fade(camera.scale, 0.25, 0.5);
+        }
+        return 0;
+      case GalaxyLod.l3:
+      case GalaxyLod.l4:
+        return 1;
+    }
+  }
+
+  bool _edgeVisibleAtLod(GalaxyEdgeModel edge, GalaxyLod lod) {
+    switch (lod) {
+      case GalaxyLod.l0:
+        return false;
+      case GalaxyLod.l1:
+        return edge.relationType == EdgeRelationType.parentChild;
+      case GalaxyLod.l2:
+        return edge.relationType == EdgeRelationType.parentChild ||
+            edge.relationType == EdgeRelationType.prerequisite;
+      case GalaxyLod.l3:
+      case GalaxyLod.l4:
+        return true;
+    }
+  }
+
+  _PaintEdgeStyle _edgeStyle(GalaxyEdgeModel edge, SectorEnum sourceSector) {
+    switch (edge.relationType) {
+      case EdgeRelationType.parentChild:
+        return _PaintEdgeStyle(
+          color: SectorConfig.getColor(sourceSector),
+          strokeWidth: 1.2,
+          alpha: 0.45,
+        );
+      case EdgeRelationType.prerequisite:
+        return _PaintEdgeStyle(
+          color: isDarkMode ? const Color(0xFF64B5F6) : const Color(0xFF1565C0),
+          strokeWidth: 1.0,
+          alpha: 0.4,
+        );
+      case EdgeRelationType.derived:
+        return _PaintEdgeStyle(
+          color: isDarkMode ? const Color(0xFF81C784) : const Color(0xFF2E7D32),
+          strokeWidth: 1.0,
+          alpha: 0.35,
+        );
+      case EdgeRelationType.related:
+        return _PaintEdgeStyle(
+          color: isDarkMode ? const Color(0xFFFFB74D) : const Color(0xFFE65100),
+          strokeWidth: 0.8,
+          alpha: 0.3,
+          dashLength: 8,
+          gapLength: 4,
+        );
+      case EdgeRelationType.similar:
+        return _PaintEdgeStyle(
+          color: isDarkMode ? const Color(0xFFCE93D8) : const Color(0xFF6A1B9A),
+          strokeWidth: 0.8,
+          alpha: 0.25,
+          dashLength: 4,
+          gapLength: 4,
+        );
+      default:
+        return _PaintEdgeStyle(
+          color: isDarkMode ? Colors.white38 : Colors.black26,
+          strokeWidth: 0.6,
+          alpha: 0.2,
+          dashLength: 4,
+          gapLength: 6,
+        );
+    }
+  }
+
+  _PaintNodeStyle _nodeStyle(
+    GalaxyNodeModel node,
+    GalaxyLod lod,
+    bool isDragging,
+  ) {
+    final baseColor = SectorConfig.getColor(node.sector);
+    final mastery = node.masteryScore;
+    if (!node.isUnlocked) {
+      return _PaintNodeStyle(
+        baseColor: baseColor,
+        fillAlpha: 0,
+        masteryRingAlpha: 0,
+        glowAlpha: 0,
+      );
+    }
+
+    double fillAlpha;
+    double masteryRingAlpha;
+    double glowAlpha = 0;
+
+    if (mastery < 30) {
+      fillAlpha = 0.35;
+      masteryRingAlpha = 0;
+    } else if (mastery < 60) {
+      fillAlpha = 0.6;
+      masteryRingAlpha = 0;
+    } else if (mastery < 85) {
+      fillAlpha = 0.85;
+      masteryRingAlpha = 0.4;
+    } else {
+      fillAlpha = 0.95;
+      masteryRingAlpha = 0.7;
+      glowAlpha = lod.index >= GalaxyLod.l2.index ? 0.15 : 0;
+    }
+
+    if (isDragging) {
+      fillAlpha = 0.85;
+      masteryRingAlpha = math.max(masteryRingAlpha, 0.45);
+    }
+
+    return _PaintNodeStyle(
+      baseColor: baseColor,
+      fillAlpha: fillAlpha,
+      masteryRingAlpha: masteryRingAlpha,
+      glowAlpha: glowAlpha,
+    );
+  }
+
+  double _effectiveNodeRadius(
+    GalaxyNodeModel node,
+    GalaxyLod lod,
+    bool isDragging,
+  ) {
+    var radius = _nodeRadius(node, lod);
+    if (tapFeedbackNodeId == node.id) {
+      radius *= 1 + 0.3 * tapFeedbackProgress;
+    }
+    if (isDragging) {
+      radius *= 1.2;
+    }
+    return radius;
+  }
+
+  double _nodeRadius(GalaxyNodeModel node, GalaxyLod lod) {
+    final base = math.max(4.0, node.radius * camera.scale.clamp(0.75, 1.5));
+    switch (lod) {
+      case GalaxyLod.l0:
+        return base + node.importance;
+      case GalaxyLod.l1:
+      case GalaxyLod.l2:
+      case GalaxyLod.l3:
+      case GalaxyLod.l4:
+        return base;
+    }
+  }
+
+  void _drawDashedLine({
+    required Canvas canvas,
+    required Offset start,
+    required Offset end,
+    required Paint paint,
+    required double dashLength,
+    required double gapLength,
+  }) {
+    final path = Path()
+      ..moveTo(start.dx, start.dy)
+      ..lineTo(end.dx, end.dy);
+
+    for (final metric in path.computeMetrics()) {
+      double distance = 0;
+      while (distance < metric.length) {
+        final next = math.min(distance + dashLength, metric.length);
+        final extract = metric.extractPath(distance, next);
+        canvas.drawPath(extract, paint);
+        distance += dashLength + gapLength;
+      }
+    }
+  }
+
+  void _drawDashedCircle({
+    required Canvas canvas,
+    required Offset center,
+    required double radius,
+    required Color color,
+  }) {
+    final path = Path()
+      ..addOval(Rect.fromCircle(center: center, radius: radius));
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1
+      ..style = PaintingStyle.stroke;
+
+    for (final metric in path.computeMetrics()) {
+      double distance = 0;
+      while (distance < metric.length) {
+        final next = math.min(distance + 5, metric.length);
+        canvas.drawPath(metric.extractPath(distance, next), paint);
+        distance += 8;
+      }
+    }
+  }
+
+  double _fade(double value, double start, double end) {
+    if (value <= start) {
+      return 0;
+    }
+    if (value >= end) {
+      return 1;
+    }
+    return ((value - start) / (end - start)).clamp(0, 1);
+  }
+
+  bool _segmentIntersectsRect(Offset a, Offset b, Rect rect) {
+    if (rect.contains(a) || rect.contains(b)) {
+      return true;
+    }
+
+    return Rect.fromPoints(a, b).overlaps(rect);
+  }
+}
+
+enum GalaxyLod {
+  l0,
+  l1,
+  l2,
+  l3,
+  l4,
+}
+
+class _PaintNode {
+  const _PaintNode({
+    required this.node,
+    required this.worldPosition,
+    required this.screenPosition,
+    required this.distanceToViewportCenter,
+    required this.alpha,
+  });
+
+  final GalaxyNodeModel node;
+  final Offset worldPosition;
+  final Offset screenPosition;
+  final double distanceToViewportCenter;
+  final double alpha;
+}
+
+class _PaintEdge {
+  const _PaintEdge({
+    required this.start,
+    required this.end,
+    required this.distanceToViewportCenter,
+    required this.color,
+    required this.strokeWidth,
+    required this.dashLength,
+    required this.gapLength,
+  });
+
+  final Offset start;
+  final Offset end;
+  final double distanceToViewportCenter;
+  final Color color;
+  final double strokeWidth;
+  final double dashLength;
+  final double gapLength;
+
+  bool get isDashed => dashLength > 0;
+}
+
+class _PaintEdgeStyle {
+  const _PaintEdgeStyle({
+    required this.color,
+    required this.strokeWidth,
+    required this.alpha,
+    this.dashLength = 0,
+    this.gapLength = 0,
+  });
+
+  final Color color;
+  final double strokeWidth;
+  final double alpha;
+  final double dashLength;
+  final double gapLength;
+}
+
+class _PaintNodeStyle {
+  const _PaintNodeStyle({
+    required this.baseColor,
+    required this.fillAlpha,
+    required this.masteryRingAlpha,
+    required this.glowAlpha,
+  });
+
+  final Color baseColor;
+  final double fillAlpha;
+  final double masteryRingAlpha;
+  final double glowAlpha;
 }

@@ -210,14 +210,14 @@ class LLMRouter:
                 avg_latency_ms=2000,
             ),
 
-            # ===== SiliconFlow (专家模型：OCR、翻译等) =====
-            # DeepSeek OCR - 文档识别与清洗
+            # ===== Specialist Models (OCR、翻译等) =====
+            # 兼容旧 key：siliconflow_ocr 实际已切换到智谱 GLM OCR
             "siliconflow_ocr": ModelConfig(
-                provider=ModelProvider.SILICONFLOW,
-                model_name=settings.SILICONFLOW_OCR_MODEL,
-                base_url=settings.SILICONFLOW_BASE_URL,
-                api_key=settings.SILICONFLOW_API_KEY,
-                temperature=0.3,
+                provider=ModelProvider.ZHIPU,
+                model_name=settings.ZHIPU_OCR_MODEL,
+                base_url=settings.ZHIPU_OCR_BASE_URL,
+                api_key=settings.ZHIPU_API_KEY,
+                temperature=0.0,
                 tier=ModelTier.SPECIALIST,
                 cost_per_1k_tokens=0.001,
                 avg_latency_ms=2000,

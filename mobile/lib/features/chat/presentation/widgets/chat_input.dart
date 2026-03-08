@@ -5,9 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/chat/presentation/widgets/voice_input_button.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
-import 'package:sparkle/features/document/document.dart';
 import 'package:sparkle/features/file/file.dart';
 import 'package:sparkle/features/file/presentation/widgets/file_picker_with_presigned.dart';
+import 'package:sparkle/features/tools/tools.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 
 class ChatInput extends ConsumerStatefulWidget {
@@ -65,30 +65,29 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     }
 
     unawaited(
-      showModalBottomSheet<void>(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
-        builder: (context) => DocumentCleanerSheet(
-          onResult: (result) {
-            // 🔧 修复：检查widget是否仍然挂载
-            if (mounted) {
-              setState(() {
-                _controller.text = result;
-              });
-              // 🔧 Android输入法修复：延迟焦点请求
-              if (!_isFocusChanging) {
-                _isFocusChanging = true;
-                Future.delayed(const Duration(milliseconds: 150), () {
-                  if (mounted && _focusNode.canRequestFocus) {
-                    _focusNode.requestFocus();
-                  }
-                  _isFocusChanging = false;
-                });
+      launchTool(
+        context,
+        ref,
+        'document_cleaner',
+        launchContext: ToolLaunchContext.chatInput,
+        preference: ToolOpenPreference.sheet,
+        onTextResult: (result) {
+          if (!mounted) {
+            return;
+          }
+          setState(() {
+            _controller.text = result;
+          });
+          if (!_isFocusChanging) {
+            _isFocusChanging = true;
+            Future.delayed(const Duration(milliseconds: 150), () {
+              if (mounted && _focusNode.canRequestFocus) {
+                _focusNode.requestFocus();
               }
-            }
-          },
-        ),
+              _isFocusChanging = false;
+            });
+          }
+        },
       ),
     );
   }

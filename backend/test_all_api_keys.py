@@ -31,6 +31,8 @@ def test_api_keys():
     print(f"  - Chat Model: {settings.ZHIPU_CHAT_MODEL}")
     print(f"  - Flash Model: {settings.ZHIPU_FLASH_MODEL}")
     print(f"  - GLM-4.7-Flash: {settings.GLM_4_7_FLASH_MODEL}")
+    print(f"  - OCR Base URL: {settings.ZHIPU_OCR_BASE_URL}")
+    print(f"  - OCR Model: {settings.ZHIPU_OCR_MODEL}")
 
     # DashScope
     print(f"\n✓ DashScope (阿里云):")
@@ -51,7 +53,6 @@ def test_api_keys():
     print(f"\n✓ SiliconFlow:")
     print(f"  - API Key: {'已配置' if settings.SILICONFLOW_API_KEY and settings.SILICONFLOW_API_KEY != 'your_siliconflow_api_key' else '未配置'}")
     print(f"  - Base URL: {settings.SILICONFLOW_BASE_URL}")
-    print(f"  - OCR Model: {settings.SILICONFLOW_OCR_MODEL}")
     print(f"  - Embedding Model: {settings.SILICONFLOW_EMBEDDING_MODEL}")
     print(f"  - Rerank Model: {settings.SILICONFLOW_RERANK_MODEL}")
 
@@ -61,12 +62,13 @@ def test_api_keys():
     print(f"  - Base URL: {settings.HUNYUAN_BASE_URL}")
     print(f"  - Translate Model: {settings.HUNYUAN_TRANSLATE_MODEL}")
 
-    # XunFei STT
-    print(f"\n✓ XunFei STT (科大讯飞):")
-    print(f"  - API Key: {'已配置' if settings.XUNFEI_API_KEY and settings.XUNFEI_API_KEY != 'your_xunfei_api_key_here' else '未配置'}")
-    print(f"  - API Secret: {'已配置' if settings.XUNFEI_API_SECRET and settings.XUNFEI_API_SECRET != 'your_xunfei_api_secret_here' else '未配置'}")
-    print(f"  - Domain: {settings.XUNFEI_STT_DOMAIN}")
-    print(f"  - Language: {settings.XUNFEI_STT_LANGUAGE}")
+    # Zhipu ASR
+    print(f"\n✓ Zhipu ASR:")
+    print(f"  - API Key: {'已配置' if settings.ZHIPU_API_KEY and settings.ZHIPU_API_KEY != 'your_zhipu_api_key' else '未配置'}")
+    print(f"  - Base URL: {settings.ZHIPU_ASR_BASE_URL}")
+    print(f"  - Model: {settings.ZHIPU_ASR_MODEL}")
+    print(f"  - Sample Rate: {settings.ZHIPU_ASR_SAMPLE_RATE}")
+    print(f"  - Max Audio Seconds: {settings.ZHIPU_ASR_MAX_AUDIO_SECONDS}")
 
     # Embedding & Rerank
     print(f"\n✓ Embedding & Rerank:")
@@ -110,10 +112,6 @@ def verify_api_keys_format():
     # SiliconFlow
     if not settings.SILICONFLOW_API_KEY.startswith("sk-"):
         issues.append("SILICONFLOW_API_KEY 格式不正确，应以 'sk-' 开头")
-
-    # XunFei
-    if len(settings.XUNFEI_API_SECRET) < 10:
-        issues.append("XUNFEI_API_SECRET 长度不足")
 
     if issues:
         print(f"\n❌ 发现问题:")

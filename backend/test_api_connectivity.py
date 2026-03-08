@@ -217,30 +217,48 @@ class APIConnectivityTest:
             print(f"❌ DashScope Rerank API 测试失败: {e}")
             return {"status": "error", "error": str(e)}
 
-    async def test_siliconflow_ocr(self) -> Dict[str, Any]:
-        """测试 SiliconFlow OCR API (仅验证配置，不实际调用)"""
+    async def test_zhipu_ocr(self) -> Dict[str, Any]:
+        """测试智谱 GLM OCR API（实际调用）"""
         print("\n" + "=" * 60)
-        print("测试 SiliconFlow OCR API 配置")
+        print("测试 Zhipu GLM OCR API")
         print("=" * 60)
 
         try:
-            # OCR 需要图片，这里只验证配置
-            if settings.SILICONFLOW_API_KEY and settings.SILICONFLOW_API_KEY != 'your_siliconflow_api_key':
-                print(f"✅ SiliconFlow OCR API 配置验证成功")
-                print(f"   API Key: {settings.SILICONFLOW_API_KEY[:20]}...")
-                print(f"   Base URL: {settings.SILICONFLOW_BASE_URL}")
-                print(f"   Model: {settings.SILICONFLOW_OCR_MODEL}")
-                print(f"   ⚠️  注意: OCR 需要图片数据，未进行实际调用")
-
-                return {
-                    "status": "success",
-                    "model": settings.SILICONFLOW_OCR_MODEL
-                }
-            else:
+            if not settings.ZHIPU_API_KEY or settings.ZHIPU_API_KEY == 'your_zhipu_api_key':
                 raise ValueError("API Key 未配置")
 
+            import base64
+            import io
+
+            from PIL import Image, ImageDraw
+
+            from app.services.ocr_service import ocr_service
+
+            image = Image.new("RGB", (900, 220), color="white")
+            draw = ImageDraw.Draw(image)
+            draw.text((40, 90), "Zhipu OCR test ABC 123", fill="black")
+
+            buffer = io.BytesIO()
+            image.save(buffer, format="PNG")
+            image_b64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
+
+            text = await ocr_service.ocr_from_base64(image_b64)
+            if not text.strip():
+                raise ValueError("OCR 返回空结果")
+
+            print(f"✅ Zhipu GLM OCR API 测试成功")
+            print(f"   Base URL: {settings.ZHIPU_OCR_BASE_URL}")
+            print(f"   Model: {settings.ZHIPU_OCR_MODEL}")
+            print(f"   识别结果: {text[:50]}...")
+
+            return {
+                "status": "success",
+                "model": settings.ZHIPU_OCR_MODEL,
+                "preview": text[:100],
+            }
+
         except Exception as e:
-            print(f"❌ SiliconFlow OCR API 配置验证失败: {e}")
+            print(f"❌ Zhipu GLM OCR API 测试失败: {e}")
             return {"status": "error", "error": str(e)}
 
     async def test_hunyuan_translation(self) -> Dict[str, Any]:
@@ -356,7 +374,7 @@ class APIConnectivityTest:
             ("DashScope Embedding", self.test_dashscope_embedding()),
             ("DashScope Rerank", self.test_dashscope_rerank()),
             ("Hunyuan Translation", self.test_hunyuan_translation()),
-            ("SiliconFlow OCR", self.test_siliconflow_ocr()),
+            ("Zhipu GLM OCR", self.test_zhipu_ocr()),
             ("XunFei STT", self.test_xunfei_stt()),
         ]
 

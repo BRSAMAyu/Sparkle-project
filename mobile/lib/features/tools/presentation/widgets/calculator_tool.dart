@@ -110,7 +110,9 @@ class _CalculatorToolState extends State<CalculatorTool> {
                   Text(
                     _result.isEmpty ? '0' : _result,
                     style: const TextStyle(
-                        fontSize: 32, fontWeight: FontWeight.bold,),
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),
@@ -123,9 +125,11 @@ class _CalculatorToolState extends State<CalculatorTool> {
                   Expanded(
                     child: Row(
                       children: [
-                        _buildButton('C',
-                            color: DS.error.withValues(alpha: 0.1),
-                            textColor: DS.error,),
+                        _buildButton(
+                          'C',
+                          color: DS.error.withValues(alpha: 0.1),
+                          textColor: DS.error,
+                        ),
                         _buildButton('(', color: DS.neutral200),
                         _buildButton(')', color: DS.neutral200),
                         _buildButton('DEL', color: DS.neutral200),
@@ -138,9 +142,11 @@ class _CalculatorToolState extends State<CalculatorTool> {
                         _buildButton('7'),
                         _buildButton('8'),
                         _buildButton('9'),
-                        _buildButton('/',
-                            color: DS.primaryBase.withValues(alpha: 0.1),
-                            textColor: DS.primaryBase,),
+                        _buildButton(
+                          '/',
+                          color: DS.primaryBase.withValues(alpha: 0.1),
+                          textColor: DS.primaryBase,
+                        ),
                       ],
                     ),
                   ),
@@ -150,9 +156,11 @@ class _CalculatorToolState extends State<CalculatorTool> {
                         _buildButton('4'),
                         _buildButton('5'),
                         _buildButton('6'),
-                        _buildButton('x',
-                            color: DS.primaryBase.withValues(alpha: 0.1),
-                            textColor: DS.primaryBase,),
+                        _buildButton(
+                          'x',
+                          color: DS.primaryBase.withValues(alpha: 0.1),
+                          textColor: DS.primaryBase,
+                        ),
                       ],
                     ),
                   ),
@@ -162,9 +170,11 @@ class _CalculatorToolState extends State<CalculatorTool> {
                         _buildButton('1'),
                         _buildButton('2'),
                         _buildButton('3'),
-                        _buildButton('-',
-                            color: DS.primaryBase.withValues(alpha: 0.1),
-                            textColor: DS.primaryBase,),
+                        _buildButton(
+                          '-',
+                          color: DS.primaryBase.withValues(alpha: 0.1),
+                          textColor: DS.primaryBase,
+                        ),
                       ],
                     ),
                   ),
@@ -173,11 +183,16 @@ class _CalculatorToolState extends State<CalculatorTool> {
                       children: [
                         _buildButton('0'),
                         _buildButton('.'),
-                        _buildButton('=',
-                            color: DS.primaryBase, textColor: DS.brandPrimary,),
-                        _buildButton('+',
-                            color: DS.primaryBase.withValues(alpha: 0.1),
-                            textColor: DS.primaryBase,),
+                        _buildButton(
+                          '=',
+                          color: DS.primaryBase,
+                          textColor: DS.brandPrimary,
+                        ),
+                        _buildButton(
+                          '+',
+                          color: DS.primaryBase.withValues(alpha: 0.1),
+                          textColor: DS.primaryBase,
+                        ),
                       ],
                     ),
                   ),

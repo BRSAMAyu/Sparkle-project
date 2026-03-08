@@ -218,6 +218,9 @@ class Settings(BaseSettings):
     ZHIPU_FLASH_MODEL: str = "glm-4.7-flashx"  # 快速响应模型 (FlashX)
     GLM_4_7_FLASH_MODEL: str = "glm-4.7-flash"  # GLM-4.7-Flash 模型（支持思考模式）
     ZHIPU_TEMPERATURE: float = 0.3
+    ZHIPU_OCR_BASE_URL: str = "https://open.bigmodel.cn/api/paas/v4"
+    ZHIPU_OCR_MODEL: str = "glm-ocr"
+    ZHIPU_OCR_TIMEOUT_SECONDS: int = 120
 
     # SiliconFlow API
     SILICONFLOW_API_KEY: str = ""
@@ -253,8 +256,17 @@ class Settings(BaseSettings):
     SILICONFLOW_RERANK_MODEL: str = "Qwen/Qwen3-Reranker-4B"
 
     # STT (Speech to Text) Service
-    STT_PROVIDER: str = "xunfei"  # 仅支持 'xunfei'
+    STT_PROVIDER: str = "zhipu"  # zhipu
     STT_ENHANCE_ENABLED: bool = True  # 是否启用LLM后处理增强
+
+    # Zhipu ASR Configuration
+    ZHIPU_ASR_BASE_URL: str = "https://open.bigmodel.cn/api/paas/v4"
+    ZHIPU_ASR_MODEL: str = "glm-asr-2512"
+    ZHIPU_ASR_SAMPLE_RATE: int = 16000
+    ZHIPU_ASR_STREAM_SEGMENT_SECONDS: int = 4
+    ZHIPU_ASR_MAX_AUDIO_SECONDS: int = 30
+    ZHIPU_ASR_MAX_FILE_SIZE_BYTES: int = 26214400  # 25MB
+    ZHIPU_ASR_REQUEST_TIMEOUT_SECONDS: int = 90
 
     # XunFei (科大讯飞) STT Configuration
     XUNFEI_APP_ID: str = ""

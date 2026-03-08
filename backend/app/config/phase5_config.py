@@ -115,7 +115,7 @@ class Phase5Config(BaseSettings):
     # ==========================================
 
     # OCR 提供商
-    OCR_PROVIDER: str = "deepseek"  # "deepseek" | "tesseract" | "paddle"
+    OCR_PROVIDER: str = "zhipu"  # "zhipu" | "tesseract" | "paddle"
 
     # OCR API 超时（秒）
     OCR_TIMEOUT: int = 30

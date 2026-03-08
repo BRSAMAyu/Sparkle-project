@@ -9,8 +9,8 @@ import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/intent_prediction_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/calendar_heatmap_card.dart';
+import 'package:sparkle/features/home/presentation/widgets/cognitive_tool_hub_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_curiosity_card.dart';
-import 'package:sparkle/features/home/presentation/widgets/expanded_toolbar_section.dart';
 import 'package:sparkle/features/home/presentation/widgets/focus_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/home_notification_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/intent_prediction_bar.dart';
@@ -18,7 +18,6 @@ import 'package:sparkle/features/home/presentation/widgets/long_term_plan_card.d
 import 'package:sparkle/features/home/presentation/widgets/multi_agent_bar.dart';
 import 'package:sparkle/features/home/presentation/widgets/next_actions_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/omnibar.dart';
-import 'package:sparkle/features/home/presentation/widgets/prism_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/task_board/task_board_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/weather_header.dart';
 import 'package:sparkle/features/reviews/presentation/widgets/nightly_review_panel.dart';
@@ -132,12 +131,6 @@ class DashboardScreen extends ConsumerWidget {
                     child: SizedBox(height: DS.spacing16),
                   ),
                   const SliverToBoxAdapter(child: TaskBoardCard()),
-
-                  // Expanded Toolbar Section
-                  const SliverToBoxAdapter(
-                    child: SizedBox(height: DS.spacing16),
-                  ),
-                  const SliverToBoxAdapter(child: ExpandedToolbarSection()),
 
                   // Dynamic bottom spacing for floating components
                   SliverToBoxAdapter(
@@ -323,11 +316,10 @@ class DashboardScreen extends ConsumerWidget {
               crossAxisCellCount: 1,
               child: CalendarHeatmapCard(),
             ),
-            // Card B: Cognitive Prism (1x1)
-            const StaggeredGridTile.count(
+            // Card B: Cognitive Tool Hub
+            const StaggeredGridTile.fit(
               crossAxisCellCount: 1,
-              mainAxisCellCount: 1,
-              child: PrismCard(),
+              child: CognitiveToolHubCard(),
             ),
             // Card H: Streak Indicator (1x1) - Achievement Integration
             StaggeredGridTile.count(

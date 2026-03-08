@@ -2,6 +2,7 @@
 STT (Speech to Text) API
 语音转文字服务
 """
+
 import os
 import uuid
 
@@ -15,11 +16,17 @@ from app.utils.helpers import save_upload_file
 
 router = APIRouter()
 
+
+def _stt_max_upload_size() -> int:
+    provider_name = (settings.STT_PROVIDER or "zhipu").lower()
+    if provider_name in {"zhipu", "xunfei"}:
+        return min(settings.MAX_UPLOAD_SIZE, settings.ZHIPU_ASR_MAX_FILE_SIZE_BYTES)
+    return settings.MAX_UPLOAD_SIZE
+
+
 @router.post("/transcribe")
 async def transcribe_audio(
-    file: UploadFile = File(...),
-    language: str = Form(None),
-    current_user: object = Depends(get_current_user)
+    file: UploadFile = File(...), language: str = Form(None), current_user: object = Depends(get_current_user)
 ):
     """
     Upload audio file for transcription.
@@ -33,7 +40,7 @@ async def transcribe_audio(
         await save_upload_file(
             file,
             temp_path,
-            max_size=settings.MAX_UPLOAD_SIZE,
+            max_size=_stt_max_upload_size(),
             allowed_extensions={".wav", ".mp3", ".m4a", ".mp4", ".webm", ".ogg"},
             allowed_content_types={
                 "audio/wav",
@@ -60,6 +67,7 @@ async def transcribe_audio(
         # Cleanup
         if os.path.exists(temp_path):
             os.remove(temp_path)
+
 
 @router.websocket("/stream")
 async def websocket_endpoint(websocket: WebSocket):

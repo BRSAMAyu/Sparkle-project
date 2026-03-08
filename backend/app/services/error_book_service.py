@@ -244,7 +244,7 @@ class ErrorBookService:
             await self.db.rollback()
 
     async def _run_ocr(self, image_url: str) -> str:
-        """使用DeepSeek OCR进行图片文字识别"""
+        """使用 GLM OCR 进行图片文字识别。"""
         try:
             text = await ocr_service.ocr_for_math(image_url)
             return text

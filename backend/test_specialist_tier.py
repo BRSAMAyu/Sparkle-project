@@ -1,7 +1,7 @@
 """
 测试 SPECIALIST 层级配置
 
-验证硅基流动 API 的专家模型（OCR、翻译）是否正确配置
+验证专家模型（OCR、翻译）是否正确配置
 """
 import asyncio
 import sys
@@ -65,7 +65,7 @@ async def test_model_selection():
         "siliconflow_ocr",
         agent_role=AgentRole.GENERATION
     )
-    print(f"\n✓ OCR 模型选择:")
+    print(f"\n✓ OCR 模型选择（兼容 key: siliconflow_ocr）:")
     print(f"  - Model: {ocr_selection.config.model_name}")
     print(f"  - Tier: {ocr_selection.config.tier.value}")
     print(f"  - Provider: {ocr_selection.config.provider.value}")
@@ -91,10 +91,10 @@ async def test_env_config():
 
     from app.config import settings
 
-    print(f"\n✓ SiliconFlow 配置:")
-    print(f"  - SILICONFLOW_API_KEY: {'已设置' if settings.SILICONFLOW_API_KEY else '未设置'}")
-    print(f"  - SILICONFLOW_BASE_URL: {settings.SILICONFLOW_BASE_URL}")
-    print(f"  - SILICONFLOW_OCR_MODEL: {settings.SILICONFLOW_OCR_MODEL}")
+    print(f"\n✓ Zhipu OCR 配置:")
+    print(f"  - ZHIPU_API_KEY: {'已设置' if settings.ZHIPU_API_KEY else '未设置'}")
+    print(f"  - ZHIPU_OCR_BASE_URL: {settings.ZHIPU_OCR_BASE_URL}")
+    print(f"  - ZHIPU_OCR_MODEL: {settings.ZHIPU_OCR_MODEL}")
 
     print(f"\n✓ Hunyuan 翻译配置:")
     print(f"  - HUNYUAN_API_KEY: {'已设置' if settings.HUNYUAN_API_KEY else '未设置'}")
@@ -147,7 +147,7 @@ async def main():
         print("✅ 所有测试通过")
         print("=" * 60)
         print("\n📋 SPECIALIST Tier 总结:")
-        print("  - siliconflow_ocr: DeepSeek OCR (文档识别)")
+        print("  - siliconflow_ocr: GLM OCR (兼容旧 key，文档识别)")
         print("  - siliconflow_translate: Hunyuan MT (机器翻译)")
         print("\n💡 使用方法:")
         print("  selection = llm_router.select_specific_model('siliconflow_ocr')")

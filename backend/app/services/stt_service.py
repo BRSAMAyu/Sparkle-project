@@ -22,18 +22,23 @@ class STTService:
 
     def _init_provider(self):
         """根据配置初始化STT Provider"""
-        provider_name = (settings.STT_PROVIDER or "xunfei").lower()
-        if provider_name != "xunfei":
+        provider_name = (settings.STT_PROVIDER or "zhipu").lower()
+        if provider_name == "xunfei":
+            logger.warning("STT_PROVIDER=xunfei 已废弃，自动切换到 zhipu")
+            provider_name = "zhipu"
+
+        if provider_name != "zhipu":
             logger.warning(f"STT Provider not supported: {provider_name}")
             self.provider = None
             return
 
         try:
-            from app.services.stt.providers.xunfei_provider import XunFeiProvider
-            self.provider = XunFeiProvider()
-            logger.info("STT Provider initialized: xunfei")
+            from app.services.stt.providers.zhipu_provider import ZhipuProvider
+
+            self.provider = ZhipuProvider()
+            logger.info("STT Provider initialized: zhipu")
         except Exception as e:
-            logger.error(f"Failed to initialize XunFeiProvider: {e}")
+            logger.error(f"Failed to initialize ZhipuProvider: {e}")
             self.provider = None
 
     async def transcribe_file(self, file_path: str, language: str | None = None) -> dict[str, Any]:
@@ -81,10 +86,7 @@ class STTService:
         5. Output ONLY the corrected text.
         """
 
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": text}
-        ]
+        messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": text}]
 
         try:
             enhanced_text = await llm_service.chat(messages, temperature=0.3)
@@ -106,10 +108,9 @@ class STTService:
         logger.info(f"WebSocket STT stream started: {session_id}")
 
         if not self.provider:
-            await websocket.send_json({
-                "type": "error",
-                "content": "STT Service Unavailable (Provider Not Initialized)"
-            })
+            await websocket.send_json(
+                {"type": "error", "content": "STT Service Unavailable (Provider Not Initialized)"}
+            )
             await websocket.close()
             return
 
@@ -119,17 +120,10 @@ class STTService:
 
             # Transcribe using the provider
             async for text in self.provider.transcribe_stream(audio_stream):
-                await websocket.send_json({
-                    "type": "transcription",
-                    "text": text,
-                    "is_final": False
-                })
+                await websocket.send_json({"type": "transcription", "text": text, "is_final": False})
 
             # Send completion signal
-            await websocket.send_json({
-                "type": "status",
-                "content": "completed"
-            })
+            await websocket.send_json({"type": "status", "content": "completed"})
 
         except WebSocketDisconnect:
             logger.info(f"WebSocket disconnected: {session_id}")
