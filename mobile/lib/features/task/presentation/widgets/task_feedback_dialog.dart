@@ -203,11 +203,13 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
 
     return Dialog(
       shape: const RoundedRectangleBorder(borderRadius: DS.borderRadius20),
-      backgroundColor: DS.brandPrimary,
+      backgroundColor: Colors.transparent,
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 480, maxHeight: 600),
-        child: Padding(
-          padding: const EdgeInsets.all(DS.spacing20),
+        child: GraphiteModalSurface(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+          child: Padding(
+            padding: const EdgeInsets.only(top: DS.spacing4),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -218,12 +220,13 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
                   Container(
                     padding: const EdgeInsets.all(DS.sm),
                     decoration: BoxDecoration(
-                      gradient: DS.primaryGradient,
+                      color: DS.surfaceSecondary,
                       shape: BoxShape.circle,
+                      border: Border.all(color: DS.borderSubtle),
                     ),
                     child: Icon(
                       Icons.auto_awesome,
-                      color: DS.textOnPrimary,
+                      color: DS.primaryBase,
                       size: 24,
                     ),
                   ),
@@ -398,6 +401,7 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
                 ],
               ),
             ],
+          ),
           ),
         ),
       ),

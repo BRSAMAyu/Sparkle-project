@@ -1,16 +1,19 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 
 class ZoomControls extends StatefulWidget {
   const ZoomControls({
     required this.transformationController,
+    required this.viewportSize,
     super.key,
     this.minScale = 0.1,
     this.maxScale = 5.0,
     this.sliderHeight = 150,
   });
   final TransformationController transformationController;
+  final Size viewportSize;
   final double minScale;
   final double maxScale;
   final double sliderHeight;
@@ -51,23 +54,35 @@ class _ZoomControlsState extends State<ZoomControls>
   }
 
   void _onSliderChanged(double value) {
-    // Update the scale value for visual feedback, but don't animate during drag
     setState(() {
-      _currentScale = value.clamp(widget.minScale, widget.maxScale);
+      _currentScale = _sliderValueToScale(value);
     });
   }
 
   void _onSliderChangeEnd(double value) {
-    // Only animate when slider interaction ends
-    final scale = value.clamp(widget.minScale, widget.maxScale);
+    final scale = _sliderValueToScale(value);
     _zoomToCenter(scale);
   }
 
+  double _scaleToSliderValue(double scale) {
+    final minLog = math.log(widget.minScale);
+    final maxLog = math.log(widget.maxScale);
+    final currentLog = math.log(scale.clamp(widget.minScale, widget.maxScale));
+    return ((currentLog - minLog) / (maxLog - minLog)).clamp(0.0, 1.0);
+  }
+
+  double _sliderValueToScale(double sliderValue) {
+    final minLog = math.log(widget.minScale);
+    final maxLog = math.log(widget.maxScale);
+    final nextLog = minLog + (maxLog - minLog) * sliderValue.clamp(0.0, 1.0);
+    return math.exp(nextLog);
+  }
+
   void _zoomToCenter(double targetScale) {
-    // This requires knowing the screen size to find the center.
-    // Since we are in a small widget, we can use MediaQuery.
-    final screenSize = MediaQuery.of(context).size;
-    final center = Offset(screenSize.width / 2, screenSize.height / 2);
+    final center = Offset(
+      widget.viewportSize.width / 2,
+      widget.viewportSize.height / 2,
+    );
 
     final currentMatrix = widget.transformationController.value;
     final currentScale = currentMatrix.getMaxScaleOnAxis();
@@ -88,7 +103,7 @@ class _ZoomControlsState extends State<ZoomControls>
 
     // Use smooth animation with AnimationController
     final animationController = AnimationController(
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 220),
       vsync: this,
     );
 
@@ -166,12 +181,22 @@ class _ZoomControlsState extends State<ZoomControls>
                       const RoundSliderOverlayShape(overlayRadius: 12),
                 ),
                 child: Slider(
-                  value: _currentScale.clamp(widget.minScale, widget.maxScale),
-                  min: widget.minScale,
-                  max: widget.maxScale,
+                  value: _scaleToSliderValue(_currentScale),
+                  min: 0,
+                  max: 1,
                   onChanged: _onSliderChanged,
                   onChangeEnd: _onSliderChangeEnd,
                 ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Text(
+              '${(_currentScale * 100).round()}%',
+              style: DS.bodySmall.copyWith(
+                color: DS.textSecondary,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),

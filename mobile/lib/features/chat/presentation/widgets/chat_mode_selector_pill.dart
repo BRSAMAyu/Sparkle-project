@@ -131,6 +131,13 @@ class _SelectedPill extends StatelessWidget {
   final ChatMode mode;
   final VoidCallback onTap;
 
+  String get _displayLabel {
+    if (mode.apiValue.startsWith(expertChatModePrefix)) {
+      return '专家直达';
+    }
+    return mode.label;
+  }
+
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
@@ -160,15 +167,22 @@ class _SelectedPill extends StatelessWidget {
                   color: mode.color,
                 ),
                 const SizedBox(width: DS.spacing6),
-                Text(
-                  mode.label,
-                  style: TextStyle(
-                    color: DS.textPrimary,
-                    fontSize: DS.fontSizeSm,
-                    fontWeight: DS.fontWeightMedium,
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: mode.apiValue.startsWith(expertChatModePrefix)
+                        ? 84
+                        : 120,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  child: Text(
+                    _displayLabel,
+                    style: TextStyle(
+                      color: DS.textPrimary,
+                      fontSize: DS.fontSizeSm,
+                      fontWeight: DS.fontWeightMedium,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
                 const SizedBox(width: DS.spacing4),
                 Icon(

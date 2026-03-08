@@ -10,6 +10,7 @@ import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/features/chat/chat.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
+import 'package:sparkle/features/community/data/repositories/mock_community_repository.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
 import 'package:uuid/uuid.dart';
 
@@ -79,18 +80,21 @@ class FriendsNotifier extends StateNotifier<AsyncValue<List<FriendshipInfo>>> {
   final CommunityRepository _repository;
 
   void _handleEvent(dynamic data) {
-    if (data is String) {
-      try {
-        final json = jsonDecode(data);
-        if (json['type'] == 'status_update') {
-          _updateFriendStatus(
-            json['user_id'] as String,
-            json['status'] as String,
-          );
-        }
-      } catch (e) {
-        debugPrint('Event Error: $e');
+    try {
+      final json = data is String
+          ? jsonDecode(data) as Map<String, dynamic>
+          : data is Map
+              ? Map<String, dynamic>.from(data as Map)
+              : null;
+      if (json == null) return;
+      if (json['type'] == 'status_update') {
+        _updateFriendStatus(
+          json['user_id'] as String,
+          json['status'] as String,
+        );
       }
+    } catch (e) {
+      debugPrint('Event Error: $e');
     }
   }
 
@@ -130,9 +134,19 @@ class FriendsNotifier extends StateNotifier<AsyncValue<List<FriendshipInfo>>> {
   Future<void> loadFriends() async {
     state = const AsyncValue.loading();
     try {
-      final friends = await _repository.getFriends();
+      var friends = await _repository.getFriends();
+      if (friends.isEmpty && kDebugMode && !DemoDataService.isDemoMode) {
+        friends = await MockCommunityRepository.instance().getFriends();
+      }
       state = AsyncValue.data(friends);
     } catch (e, st) {
+      if (kDebugMode) {
+        try {
+          final fallback = await MockCommunityRepository.instance().getFriends();
+          state = AsyncValue.data(fallback);
+          return;
+        } catch (_) {}
+      }
       state = AsyncValue.error(e, st);
     }
   }
@@ -302,9 +316,20 @@ class MyGroupsNotifier extends StateNotifier<AsyncValue<List<GroupListItem>>> {
   Future<void> loadGroups() async {
     state = const AsyncValue.loading();
     try {
-      final groups = await _repository.getMyGroups();
+      var groups = await _repository.getMyGroups();
+      if (groups.isEmpty && kDebugMode && !DemoDataService.isDemoMode) {
+        groups = await MockCommunityRepository.instance().getMyGroups();
+      }
       state = AsyncValue.data(groups);
     } catch (e, st) {
+      if (kDebugMode) {
+        try {
+          final fallback =
+              await MockCommunityRepository.instance().getMyGroups();
+          state = AsyncValue.data(fallback);
+          return;
+        } catch (_) {}
+      }
       state = AsyncValue.error(e, st);
     }
   }

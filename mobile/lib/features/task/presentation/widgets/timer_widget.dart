@@ -141,8 +141,15 @@ class _TimerWidgetState extends State<TimerWidget>
             size: const Size(220, 220),
             painter: _CircularTimerPainter(
               progress: progress,
-              gradient: DS.primaryGradient,
-              backgroundColor: DS.neutral200,
+              gradient: LinearGradient(
+                colors: [
+                  DS.primaryBase.withValues(alpha: 0.92),
+                  DS.textSecondary.withValues(alpha: 0.72),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              backgroundColor: DS.surfaceSecondary,
             ),
             child: SizedBox(
               width: 220,

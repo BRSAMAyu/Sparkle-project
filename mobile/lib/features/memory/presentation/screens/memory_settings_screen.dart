@@ -199,96 +199,150 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
         child: ListView(
           padding: const EdgeInsets.all(DS.lg),
           children: [
-            _buildSectionTitle('总开关'),
-            SwitchListTile(
-              value: _enabled,
-              onChanged: (value) => setState(() => _enabled = value),
-              title: const Text('启用长期记忆'),
-              subtitle: const Text('关闭后将暂停所有记忆写入'),
-            ),
-            const SizedBox(height: DS.lg),
-            _buildSectionTitle('记忆类型'),
-            SwitchListTile(
-              value: _allowPreferences,
-              onChanged: _enabled
-                  ? (value) => setState(() => _allowPreferences = value)
-                  : null,
-              title: const Text('偏好'),
-            ),
-            SwitchListTile(
-              value: _allowGoals,
-              onChanged: _enabled
-                  ? (value) => setState(() => _allowGoals = value)
-                  : null,
-              title: const Text('目标'),
-            ),
-            SwitchListTile(
-              value: _allowEpisodic,
-              onChanged: _enabled
-                  ? (value) => setState(() => _allowEpisodic = value)
-                  : null,
-              title: const Text('经历'),
-            ),
-            const SizedBox(height: DS.lg),
-            _buildSectionTitle('捕获强度'),
-            SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'low', label: Text('低')),
-                ButtonSegment(value: 'medium', label: Text('中')),
-                ButtonSegment(value: 'high', label: Text('高')),
-              ],
-              selected: {_captureLevel},
-              onSelectionChanged: _enabled
-                  ? (selection) {
-                      setState(() => _captureLevel = selection.first);
-                    }
-                  : null,
-              style: ButtonStyle(
-                visualDensity: VisualDensity.compact,
-                backgroundColor: WidgetStateProperty.resolveWith<Color>(
-                  (states) {
-                    if (states.contains(WidgetState.selected)) {
-                      return DS.primaryBase;
-                    }
-                    return DS.brandPrimary10;
-                  },
-                ),
-                foregroundColor: WidgetStateProperty.all(DS.brandPrimary),
+            GraphiteCardSurface(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '记忆控制',
+                    style: DS.titleLarge.copyWith(
+                      color: DS.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: DS.spacing8),
+                  Text(
+                    '控制系统长期记忆如何学习你的偏好、目标与经历。默认更克制，只有对后续决策真正有价值的信息才应保留。',
+                    style: DS.bodyMedium.copyWith(color: DS.textSecondary),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: DS.lg),
-            _buildSectionTitle('屏蔽偏好'),
-            Wrap(
-              spacing: DS.sm,
-              runSpacing: DS.sm,
-              children: _prefKeyOptions
-                  .map(
-                    (key) => FilterChip(
-                      label: Text(key),
-                      selected: _blockedPrefKeys.contains(key),
-                      onSelected: _enabled && _allowPreferences
-                          ? (selected) => _togglePrefKey(key, selected)
-                          : null,
-                    ),
-                  )
-                  .toList(),
+            GraphiteCardSurface(
+              child: Column(
+                children: [
+                  _buildToggleRow(
+                    title: '启用长期记忆',
+                    description: '关闭后会暂停新的记忆写入，但不会删除历史记录。',
+                    value: _enabled,
+                    onChanged: (value) => setState(() => _enabled = value),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: DS.lg),
-            _buildSectionTitle('屏蔽来源'),
-            Wrap(
-              spacing: DS.sm,
-              runSpacing: DS.sm,
-              children: _sourceOptions
-                  .map(
-                    (source) => FilterChip(
-                      label: Text(source),
-                      selected: _blockedSources.contains(source),
-                      onSelected: _enabled
-                          ? (selected) => _toggleSource(source, selected)
-                          : null,
-                    ),
-                  )
-                  .toList(),
+            GraphiteCardSurface(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildSectionTitle('记忆类型'),
+                  _buildToggleRow(
+                    title: '偏好',
+                    description: '记录回答风格、学习节奏和常见偏好。',
+                    value: _allowPreferences,
+                    enabled: _enabled,
+                    onChanged: (value) =>
+                        setState(() => _allowPreferences = value),
+                  ),
+                  _buildToggleRow(
+                    title: '目标',
+                    description: '记录已确认的长期目标和阶段意图。',
+                    value: _allowGoals,
+                    enabled: _enabled,
+                    onChanged: (value) => setState(() => _allowGoals = value),
+                  ),
+                  _buildToggleRow(
+                    title: '经历',
+                    description: '记录对后续决策有帮助的关键事件与反馈。',
+                    value: _allowEpisodic,
+                    enabled: _enabled,
+                    isLast: true,
+                    onChanged: (value) =>
+                        setState(() => _allowEpisodic = value),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: DS.lg),
+            GraphiteCardSurface(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildSectionTitle('捕获强度'),
+                  Wrap(
+                    spacing: DS.spacing8,
+                    runSpacing: DS.spacing8,
+                    children: const [
+                      ('low', '低'),
+                      ('medium', '中'),
+                      ('high', '高'),
+                    ].map((entry) {
+                      final value = entry.$1;
+                      final label = entry.$2;
+                      return _MemoryChoiceChip(
+                        value: value,
+                        label: label,
+                        selected: _captureLevel == value,
+                        enabled: _enabled,
+                        onSelected: () {
+                          setState(() {
+                            _captureLevel = value;
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: DS.lg),
+            GraphiteCardSurface(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildSectionTitle('屏蔽偏好'),
+                  Wrap(
+                    spacing: DS.sm,
+                    runSpacing: DS.sm,
+                    children: _prefKeyOptions
+                        .map(
+                          (key) => _MemoryFilterChip(
+                            label: key,
+                            selected: _blockedPrefKeys.contains(key),
+                            enabled: _enabled && _allowPreferences,
+                            onSelected: (selected) =>
+                                _togglePrefKey(key, selected),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: DS.lg),
+            GraphiteCardSurface(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildSectionTitle('屏蔽来源'),
+                  Wrap(
+                    spacing: DS.sm,
+                    runSpacing: DS.sm,
+                    children: _sourceOptions
+                        .map(
+                          (source) => _MemoryFilterChip(
+                            label: source,
+                            selected: _blockedSources.contains(source),
+                            enabled: _enabled,
+                            onSelected: (selected) =>
+                                _toggleSource(source, selected),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: DS.xl),
             SparkleButton.primary(
@@ -303,12 +357,63 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
         padding: const EdgeInsets.only(bottom: DS.sm),
         child: Text(
           title,
-          style: Theme.of(context)
-              .textTheme
-              .titleMedium
-              ?.copyWith(color: DS.brandPrimary),
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: DS.textPrimary,
+                fontWeight: FontWeight.w700,
+              ),
         ),
       );
+
+  Widget _buildToggleRow({
+    required String title,
+    required String description,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+    bool enabled = true,
+    bool isLast = false,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: DS.spacing8),
+      decoration: BoxDecoration(
+        border: isLast
+            ? null
+            : Border(bottom: BorderSide(color: DS.borderSubtle)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: DS.bodyLarge.copyWith(
+                    color: enabled ? DS.textPrimary : DS.textDisabled,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: DS.spacing4),
+                Text(
+                  description,
+                  style: DS.bodySmall.copyWith(
+                    color: enabled ? DS.textSecondary : DS.textDisabled,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: DS.spacing12),
+          Switch.adaptive(
+            value: value,
+            onChanged: enabled ? onChanged : null,
+            activeThumbColor: DS.primaryBase,
+            activeTrackColor: DS.primaryBase.withValues(alpha: 0.28),
+          ),
+        ],
+      ),
+    );
+  }
 
   void _togglePrefKey(String key, bool selected) {
     setState(() {
@@ -328,5 +433,76 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
         _blockedSources.remove(source);
       }
     });
+  }
+}
+
+class _MemoryChoiceChip extends StatelessWidget {
+  const _MemoryChoiceChip({
+    required this.value,
+    required this.label,
+    required this.selected,
+    required this.enabled,
+    required this.onSelected,
+  });
+
+  final String value;
+  final String label;
+  final bool selected;
+  final bool enabled;
+  final VoidCallback onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return ChoiceChip(
+      label: Text(label),
+      selected: selected,
+      onSelected: enabled ? (_) => onSelected() : null,
+      selectedColor: DS.primaryBase.withValues(alpha: 0.14),
+      backgroundColor: DS.surfaceSecondary,
+      side: BorderSide(
+        color:
+            selected ? DS.primaryBase.withValues(alpha: 0.28) : DS.borderSubtle,
+      ),
+      labelStyle: DS.bodySmall.copyWith(
+        color: selected ? DS.primaryBase : DS.textSecondary,
+        fontWeight: FontWeight.w600,
+      ),
+    );
+  }
+}
+
+class _MemoryFilterChip extends StatelessWidget {
+  const _MemoryFilterChip({
+    required this.label,
+    required this.selected,
+    required this.enabled,
+    required this.onSelected,
+  });
+
+  final String label;
+  final bool selected;
+  final bool enabled;
+  final ValueChanged<bool> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return FilterChip(
+      label: Text(label),
+      selected: selected,
+      onSelected: enabled ? onSelected : null,
+      selectedColor: DS.primaryBase.withValues(alpha: 0.12),
+      backgroundColor: DS.surfaceSecondary,
+      disabledColor: DS.surfaceSecondary.withValues(alpha: 0.8),
+      side: BorderSide(
+        color: selected ? DS.primaryBase.withValues(alpha: 0.22) : DS.borderSubtle,
+      ),
+      labelStyle: DS.bodySmall.copyWith(
+        color: enabled
+            ? (selected ? DS.primaryBase : DS.textSecondary)
+            : DS.textDisabled,
+        fontWeight: FontWeight.w600,
+      ),
+      checkmarkColor: DS.primaryBase,
+    );
   }
 }

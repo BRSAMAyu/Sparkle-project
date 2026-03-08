@@ -37,13 +37,8 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
     final messages = chatState.messages;
     final lastMessage = messages.isNotEmpty ? messages.last : null;
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: DS.brandPrimaryConst,
-        borderRadius: DS.borderRadius16,
-        boxShadow: DS.shadowMd,
-        border: Border.all(color: DS.neutral200),
-      ),
+    return GraphiteCardSurface(
+      padding: EdgeInsets.zero,
       child: Column(
         children: [
           // Header
@@ -57,12 +52,13 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
                   Container(
                     padding: const EdgeInsets.all(DS.sm),
                     decoration: BoxDecoration(
-                      gradient: DS.secondaryGradient,
+                      color: DS.surfaceSecondary,
                       shape: BoxShape.circle,
+                      border: Border.all(color: DS.borderSubtle),
                     ),
                     child: Icon(
                       Icons.auto_awesome,
-                      color: DS.brandPrimaryConst,
+                      color: DS.primaryBase,
                       size: 18,
                     ),
                   ),
@@ -99,7 +95,7 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
             const Divider(height: 1),
             Container(
               height: 300,
-              color: DS.neutral50,
+              color: DS.surfaceSecondary,
               child: messages.isEmpty
                   ? Center(
                       child: Text(
