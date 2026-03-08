@@ -1,426 +1,451 @@
-# 知识星图对齐文档
+# 知识星图全局对齐文档
 
-更新时间：2026-03-08
+更新时间：2026-03-09
 
 ## 1. 文档目的
-这份文档用于你后续重做知识星图时快速接手当前实现，明确：
+这份文档对齐当前仓库里“知识星图”已经落地的真实状态，用于后续继续迭代时快速接手。
 
-- 当前前后端真实结构
-- 这几轮改动过什么
-- 现存问题和失败点
-- 必须保留的业务能力
-- 可以直接推倒重做的部分
+它回答 4 个问题：
 
-这不是概念文档，是基于当前仓库代码的工程对齐文档。
+1. 当前星图到底已经完成到什么程度
+2. 现在真正生效的架构骨架是什么
+3. 哪些旧文件已经废弃或被替换
+4. 后续再做增强时，哪些约束不能破
 
----
-
-## 2. 当前结论
-
-### 2.1 当前状态
-知识星图现在不是“功能不存在”，而是“架构混合且体验不达标”。
-
-核心问题：
-
-1. 交互层、渲染层、状态层没有彻底解耦
-2. Provider 仍承担了过多视图态和渲染态职责
-3. 画布缩放/拖拽虽然做过缓存，但相机同步与命中逻辑仍然互相牵扯
-4. 页面视觉层被多轮改动污染，背景、控件、动画都不够稳定
-5. 当前星图离 Obsidian 的工作台式流畅交互仍有明显差距
-
-### 2.2 你的重做判断
-你完全可以大刀阔斧重构。  
-建议保留业务协议、节点详情链路和已有数据模型，不保留当前前端星图实现的多数视图组织方式。
+这不是规划稿，是基于当前代码的工程现状文档。
 
 ---
 
-## 3. 当前前后端结构
+## 2. 当前总状态
 
-## 3.1 后端 API 入口
-文件：
+### 2.1 结论
+知识星图已经从“需要推倒重做的原型”进入“可持续迭代的产品骨架”。
 
-- [/Users/brsama/code/GitHub/Sparkle-project/backend/app/api/v1/galaxy.py](/Users/brsama/code/GitHub/Sparkle-project/backend/app/api/v1/galaxy.py)
+当前核心能力已经具备：
 
-当前主要接口：
+- 自定义相机，零漂移缩放
+- 原始指针手势状态机
+- 空间索引与视口裁剪
+- 5 级 LOD
+- 节点点击、长按预览、拖拽与坐标持久化
+- 搜索定位
+- 小地图导航
+- 入场动画
+- Build replay 相机巡航
+- 边线粒子流动
+- 节点成就反馈
+- 玻璃质感控件栏
+- 概览统计条
+- 深浅色模式
+- 性能降级安全阀
 
-1. `GET /api/v1/galaxy/graph`
-- 获取完整图
-- 支持 `zoom_level`
-- 支持 `sector_code`
-- 支持 `include_locked`
+### 2.2 现在的主设计原则
 
-2. `POST /api/v1/galaxy/nodes/viewport`
-- 获取 viewport 子图
-- 当前前端高性能路径主要依赖这个接口
-
-3. `GET /api/v1/galaxy/node/{node_id}`
-- 获取知识节点详情
-- 当前点击节点进入详情页依赖这个接口
-
-4. `POST /api/v1/galaxy/node/{node_id}/spark`
-- 点亮节点/提升掌握度
-
-5. `POST /api/v1/galaxy/search`
-- 星图搜索
-
-6. `GET /api/v1/galaxy/review/suggestions`
-- 复习建议
-
-## 3.2 后端服务分层
-文件：
-
-- [/Users/brsama/code/GitHub/Sparkle-project/backend/app/services/galaxy_service.py](/Users/brsama/code/GitHub/Sparkle-project/backend/app/services/galaxy_service.py)
-- [/Users/brsama/code/GitHub/Sparkle-project/backend/app/services/galaxy/structure_service.py](/Users/brsama/code/GitHub/Sparkle-project/backend/app/services/galaxy/structure_service.py)
-
-当前实际职责：
-
-### `GalaxyService`
-Facade 层，负责：
-- 图获取
-- 视口图获取
-- 语义搜索
-- spark 行为
-- 节点创建/边创建
-- 对外聚合 `structure/retrieval/stats`
-
-### `GraphStructureService`
-负责：
-- 节点/边 CRUD
-- 视口节点查询
-- 完整图查询
-- 节点位置更新
-
-### 当前后端已经具备的能力
-- 节点有稳定持久化坐标 `position_x / position_y`
-- viewport 查询已经存在
-- 节点详情接口存在
-- 节点位置回写存在
-
-这意味着你重做前端时，不需要再自己在前端做完整布局求解。
+1. `GalaxyCamera` 是唯一坐标转换真源
+2. `GalaxyGestureHandler` 只发命令，不改任何 UI 状态
+3. `GalaxyScreen` 负责状态编排、动画时序、缓存持有
+4. `StarMapPainter` 只做纯渲染，不持有业务状态
+5. 所有新增视觉效果都必须接受性能降级开关
 
 ---
 
-## 4. 当前移动端结构
+## 3. 阶段完成情况
 
-## 4.1 页面入口
+| 阶段 | 状态 | 结果 |
+|---|---|---|
+| Phase 1 骨骼层 | 已完成 | 自定义相机、原始指针手势、单一 painter |
+| Phase 2 性能层 | 已完成 | Grid 空间索引、LOD、预算制、边缓存、标签缓存 |
+| Phase 3 交互层 | 已完成 | tap 进详情、long press 预览、节点拖拽、坐标持久化 |
+| Phase 4 视觉层 | 已完成 | 背景、扇区雾气、节点分级、关系边样式、标签精修 |
+| Phase A 视觉品质升级 | 已完成 | 三层星空、扇区氛围、节点恒星质感、边线渐变与箭头 |
+| Phase B 交互完整性 | 已完成 | 双击聚焦、搜索、mini-map、入场动画、增强预览卡 |
+| Phase C 动效升级 | 已完成 | replay 相机跟踪、边粒子、成就动画、空闲微漂移 |
+| Phase D UI 打磨 | 已完成 | 控件栏重设计、状态页升级、主题切换淡入、统计条、触觉反馈 |
+| Phase E 清理与保障 | 已完成 | 死文件清理、性能监控、关键单测补齐 |
+
+---
+
+## 4. 当前生效架构
+
+### 4.1 主页面
 文件：
 
-- [/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/presentation/screens/galaxy_screen.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/presentation/screens/galaxy_screen.dart)
+- [galaxy_screen.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/presentation/screens/galaxy_screen.dart)
 
-这是当前星图主页面，职责过重，实际同时做了：
+当前职责：
 
-- 相机控制
-- 手势处理
-- viewport 计算
-- 中心定位
-- 选中态/拖拽态
-- painter 缓存
-- 动画控制
-- overlay 控件
-- 节点详情跳转
+- 图数据加载与刷新
+- 相机动画、回放动画、入场动画
+- 触觉反馈
+- 搜索、小地图、预览卡、统计条等 overlay 编排
+- 物理引擎驱动与拖拽释放收尾
+- 性能降级监控
+- painter 需要的全部纯渲染参数组装
 
-这是当前最大结构问题之一。
+说明：
 
-## 4.2 Provider
+- 当前 `GalaxyScreen` 仍然偏重，但状态边界已经清楚。
+- `galaxy_provider.dart` 不再是当前主渲染链路的一部分；它仍保留给旧导出和旧测试，不参与这条新骨架。
+
+### 4.2 相机
 文件：
 
-- [/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/presentation/providers/galaxy_provider.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/presentation/providers/galaxy_provider.dart)
+- [galaxy_camera.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/presentation/widgets/galaxy/galaxy_camera.dart)
 
-当前 `GalaxyState` 很重，包含：
+当前职责：
 
-- 全量 nodes / edges
-- visibleNodes / visibleEdges
-- visibleCompactNodes
-- viewport
-- scale
-- aggregationLevel
-- clusters
-- interaction state
-- focus/highlight state
-- animation progress
-- optimization config
+- `screenToWorld`
+- `worldToScreen`
+- `applyPan`
+- `applyZoom`
+- `centerOnWorldPoint`
+- `fitRect`
 
-问题：
+说明：
 
-1. 数据态和视图态混在一起
-2. 可见性裁剪和交互状态都挂在 provider 上
-3. 即使做了预计算，也仍容易让 rebuild 范围扩大
+- 缩放锚点公式仍是零漂移数学公式。
+- 所有命中测试和绘制转换都统一走这层。
 
-## 4.3 Repository
+### 4.3 手势层
 文件：
 
-- [/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/data/repositories/enhanced_galaxy_repository.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/data/repositories/enhanced_galaxy_repository.dart)
+- [galaxy_gesture_handler.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/presentation/widgets/galaxy/galaxy_gesture_handler.dart)
+
+当前命令：
+
+- `PanCommand`
+- `ZoomCommand`
+- `TapCommand`
+- `DoubleTapCommand`
+- `LongPressCommand`
+- `DragNodeCommand`
+- `FlingCommand`
+
+说明：
+
+- tap 与 double tap 已做延迟互斥
+- long press 与 drag 已做消岐
+- `DragNodeCommand` 仍只传屏幕 delta，世界坐标换算在 `GalaxyScreen`
+
+### 4.4 渲染层
+文件：
+
+- [star_map_painter.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/presentation/widgets/galaxy/star_map_painter.dart)
+
+当前职责：
+
+- 背景、扇区、边、节点、标签统一绘制
+- LOD 切换
+- 节点/边预算制
+- 关系聚焦与搜索 dimming
+- 边缓存、标签缓存接入
+- 粒子、庆祝态、空闲微漂移等状态的纯渲染消费
+
+关键缓存：
+
+- `GalaxyEdgePictureCache`
+- `GalaxyLabelCache`
+
+当前没有在 painter 内持有动画状态。
+
+### 4.5 空间索引
+文件：
+
+- [galaxy_spatial_index.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/data/services/galaxy_spatial_index.dart)
+
+当前实现：
+
+- Grid 索引
+- `cellSize = 200`
+- 支持 `queryRect`
+- 支持 `queryNearest`
+
+### 4.6 物理与回弹
+文件：
+
+- [galaxy_force_engine.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/data/services/galaxy_force_engine.dart)
 
 当前能力：
 
-- 完整图获取
-- viewport 图获取
-- 节点位置更新
-- 节点详情获取
-- spark
-- 缓存与重试
+- 拖拽时 anchor neighborhood
+- 松手后 release + settle
+- 邻域弹簧与排斥
+- 视口外减弱
 
-这层整体可以保留，不是主要问题点。
+### 4.7 业务数据层
+文件：
 
-## 4.4 渲染组件
-关键文件：
+- [enhanced_galaxy_repository.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/data/repositories/enhanced_galaxy_repository.dart)
+- [galaxy_model.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/shared/entities/galaxy_model.dart)
 
-- [/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/presentation/widgets/galaxy/star_map_painter.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/presentation/widgets/galaxy/star_map_painter.dart)
-- [/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/presentation/widgets/galaxy/node_preview_card.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/presentation/widgets/galaxy/node_preview_card.dart)
-- [/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/presentation/widgets/galaxy/zoom_controls.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/presentation/widgets/galaxy/zoom_controls.dart)
+保留原因：
 
-当前问题：
-
-1. Painter 仍承担过多内容绘制
-2. 控件层和画布层视觉语言不统一
-3. 缩放倍率映射、拖拽命中阈值、点击与长按判定仍然不够稳
+- 图数据获取稳定
+- 节点详情链路稳定
+- 节点坐标回写稳定
+- Demo 模式已打通
 
 ---
 
-## 5. 这几轮已经改过的内容
+## 5. 当前交互能力
 
-下面是我已经动过的点，你重做时需要知道，避免踩旧路。
+### 5.1 基础导航
 
-## 5.1 做过的正确方向
+- 单指拖拽平移
+- 双指缩放
+- fling 惯性减速
+- 双击空白快速聚焦 / 全景切换
+- 双击节点聚焦该节点
 
-### 1. 引入 viewport 子图思路
-不是全量图每次都重算，而是：
-- 先拿 viewport 图
-- 用局部子图渲染
+### 5.2 节点交互
 
-### 2. 尝试做缓存
-做过这些缓存：
-- painter signature 缓存
-- viewport 计算缓存
-- scene snapshot 缓存
+- 单击节点：tap 回弹后进入详情页
+- 单击空白：取消选中和关系聚焦
+- 长按节点：弹预览卡
+- 长按后移动：进入节点拖拽
+- 拖拽结束：异步回写坐标
 
-### 3. 把部分动画从主图层拆出来
-做过：
-- 选中态覆盖层
-- 关系高亮层
-- 轻量 preview card
+### 5.3 搜索
+文件：
 
-### 4. 节点详情链路已打通
-目标交互现在是：
-- 单击节点 -> 进入知识详情页
-- 长按节点 -> 显示预览卡
+- [galaxy_search_panel.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/presentation/widgets/galaxy/galaxy_search_panel.dart)
 
-### 5. 节点位置持久化已打通
-拖拽后位置可以回写后端，不是纯前端假交互。
+当前行为：
 
-## 5.2 做过但不成功的方向
+- 非全屏浮层搜索面板
+- 本地名称 / 标签 / 扇区实时过滤
+- 点击结果后相机飞行定位
+- 搜索过程中非匹配节点 dimming
 
-### 1. 在现有页面里持续做小修补
-结果：
-- 缓存越来越多
-- 状态越来越混
-- 体感改善有限
+### 5.4 小地图
+文件：
 
-### 2. 重背景/重装饰 + 继续追求品牌氛围
-结果：
-- 更容易掉帧
-- 用户更在意卡顿而不是氛围
+- [galaxy_mini_map.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/presentation/widgets/galaxy/galaxy_mini_map.dart)
 
-### 3. 把视觉问题和性能问题一起修
-结果：
-- 两边都不彻底
-- 星图既不够快，也不够稳
+当前行为：
 
----
+- 左下角小地图
+- 显示所有节点与当前 viewport
+- 点击小地图跳转
+- 拖拽小地图 viewport 做主画布导航
 
-## 6. 当前必须保留的业务能力
+### 5.5 预览卡
+文件：
 
-你重做时，下面这些能力不能丢：
+- [galaxy_node_preview_card.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/presentation/widgets/galaxy/galaxy_node_preview_card.dart)
 
-1. 点击节点进入知识详情页
-- 详情页入口仍是：
-  - [/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/knowledge/presentation/screens/knowledge_detail_screen.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/knowledge/presentation/screens/knowledge_detail_screen.dart)
+当前行为：
 
-2. 节点详情数据获取
-- 通过 `/api/v1/galaxy/node/{node_id}`
-
-3. spark/点亮节点能力
-- 通过 `/api/v1/galaxy/node/{node_id}/spark`
-
-4. 节点位置可持久化
-- 拖拽后需要能保存坐标
-
-5. 星图搜索
-- 搜索知识节点并定位
-
-6. 节点关系展示
-- 但不要求主图一次展开全部关系
-
-7. 与任务/知识模块联动
-- 任务完成可能点亮节点
-- 详情页应能展示相关任务/前置关系/群组学习入口
-
-8. 深浅色模式都必须可见
-- 当前浅色模式已经出过严重不可见问题，重做时必须作为强约束
+- 显示扇区、掌握度、重要度
+- 显示掌握环与进度条
+- 支持“聚焦查看”
+- 支持“查看关联”
 
 ---
 
-## 7. 当前明确存在的问题
+## 6. 当前视觉与动效能力
 
-这些问题是已经确认存在的，不需要再重新判断：
+### 6.1 背景
 
-1. 缩放时存在漂移和抽动
-2. 拖动时存在漂移和手感不稳
-3. 缩放倍率组件逻辑不自然
-4. 背景视觉不稳定，且你不满意
-5. 右下角控件尺寸不一致
-6. 初始进入动画/过渡动画会拖累体验
-7. 页面内部状态过多，难以继续维护
+- 深色主背景：深海蓝黑
+- 浅色背景：冷灰白
+- 三层星空
+- 低频星云色块
+- 相机平移视差
 
----
+### 6.2 节点
 
-## 8. 建议的重做边界
+- 5-stop 恒星渐变
+- mastery 对亮度、外环、光晕生效
+- 未解锁节点虚线与轻脉冲
+- importance 5 节点可见微射线
+- 选中 glow
+- tap ripple
+- celebration glow
 
-## 8.1 建议保留
-- 后端接口
-- Repository 层
-- 节点详情页链路
-- 持久化坐标
-- 节点模型与基础字段
+### 6.3 边
 
-## 8.2 建议直接重写
-- `GalaxyScreen`
-- `GalaxyProvider` 的状态结构
-- `StarMapPainter` 的职责边界
-- 缩放/拖拽/点击/长按的交互系统
-- 右下角控件组
-- 背景系统
-- 进入动画与选中动画
+- source -> target 渐变
+- `parentChild / prerequisite / derived` 轻微弧线
+- `prerequisite` 箭头
+- 关系型虚线
+- 选中关联边提亮，其他边压暗
+- 选中节点直接关联边粒子流动
 
----
+### 6.4 回放
 
-## 9. 我建议你重做时采用的目标架构
+- Build replay 不再只做 reveal
+- 相机会按星域阶段巡航
+- 阶段切换伴随轻触觉反馈
+- 用户触摸会中断 replay
 
-## 9.1 Data Layer
-职责：
-- 拉取 viewport 子图
-- 拉取节点详情
-- 更新节点位置
-- 做缓存
+### 6.5 入场与主题切换
 
-建议状态对象：
-- `GalaxySceneSnapshot`
-- `GalaxyViewportQuery`
-- `GalaxyNodeDetailCache`
-
-## 9.2 Camera / Interaction Layer
-职责：
-- 只处理相机矩阵
-- 只处理 pan/zoom/inertia
-- 只处理命中测试
-- 只处理点击/长按/拖拽冲突
-
-不要让它知道业务节点详情内容。
-
-## 9.3 Render Layer
-拆成 4 层：
-
-1. `BackgroundLayer`
-2. `EdgeLayer`
-3. `NodeLayer`
-4. `OverlayLayer`
-
-要求：
-- 背景静态或近静态
-- 节点选中与脉冲只能画在 overlay
-- 拖拽中不重算整层内容
-
-## 9.4 Detail / Preview Layer
-职责：
-- 轻量预览
-- 详情跳转
-- 相关节点扩展
-
-不要把这层继续塞回画布 render path。
+- 首次进入有相机缩放入场
+- 页面整体做主题切换淡入
+- 返回详情页不会重复播放入场动画
 
 ---
 
-## 10. 你重做时的交互合同
+## 7. UI 组件状态
 
-建议固定为：
+### 7.1 控件栏
+文件：
 
-1. 单击节点
-- 打开知识详情页
+- [galaxy_controls.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/presentation/widgets/galaxy/galaxy_controls.dart)
 
-2. 长按节点
-- 显示轻量 preview
+当前能力：
 
-3. 拖拽节点
-- 只有在达到拖拽阈值后才生效
-- 一旦进入拖拽，不再触发点击
+- 毛玻璃质感
+- 缩放组 / 工具组分组
+- 搜索按钮
+- 回放激活态 glow
 
-4. 缩放
-- 必须以手势焦点为中心
-- 不允许明显漂移
+### 7.2 状态页
+文件：
 
-5. 返回
-- 恢复相机位置、缩放和选中态
+- [galaxy_screen.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/presentation/screens/galaxy_screen.dart)
 
-6. 任务完成
-- 不再自动跳转知识星图
+当前状态：
 
----
+- 加载态：星点 orb + 点状 loader
+- 错误态：文案 + 重试按钮
+- 空态：引导文案 + CTA
 
-## 11. 重做时的性能上线门槛
+### 7.3 概览统计条
 
-这是我建议你直接采用的门槛：
-
-1. 首屏可交互时间
-- Android 模拟器 `<= 400ms`
-
-2. 连续拖拽/缩放
-- P95 `<= 16ms`
-
-3. 节点/边预算
-- 300 可见节点
-- 500 可见边
-- 不出现持续卡顿
-
-4. 动画
-- 全部可中断
-- 用户手势优先级高于动画
+- 仅在全景 / 远景出现
+- 显示总节点数、解锁率、平均掌握度
+- 数字 count-up 动画
 
 ---
 
-## 12. 当前相关文件清单
+## 8. 性能保障现状
 
-### 后端
-- [/Users/brsama/code/GitHub/Sparkle-project/backend/app/api/v1/galaxy.py](/Users/brsama/code/GitHub/Sparkle-project/backend/app/api/v1/galaxy.py)
-- [/Users/brsama/code/GitHub/Sparkle-project/backend/app/services/galaxy_service.py](/Users/brsama/code/GitHub/Sparkle-project/backend/app/services/galaxy_service.py)
-- [/Users/brsama/code/GitHub/Sparkle-project/backend/app/services/galaxy/structure_service.py](/Users/brsama/code/GitHub/Sparkle-project/backend/app/services/galaxy/structure_service.py)
-- [/Users/brsama/code/GitHub/Sparkle-project/backend/app/schemas/galaxy.py](/Users/brsama/code/GitHub/Sparkle-project/backend/app/schemas/galaxy.py)
+### 8.1 已启用
 
-### 移动端主链
-- [/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/presentation/screens/galaxy_screen.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/presentation/screens/galaxy_screen.dart)
-- [/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/presentation/providers/galaxy_provider.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/presentation/providers/galaxy_provider.dart)
-- [/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/presentation/widgets/galaxy/star_map_painter.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/presentation/widgets/galaxy/star_map_painter.dart)
-- [/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/presentation/widgets/galaxy/node_preview_card.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/presentation/widgets/galaxy/node_preview_card.dart)
-- [/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/presentation/widgets/galaxy/zoom_controls.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/presentation/widgets/galaxy/zoom_controls.dart)
-- [/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/data/repositories/enhanced_galaxy_repository.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/data/repositories/enhanced_galaxy_repository.dart)
-- [/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/shared/entities/galaxy_model.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/shared/entities/galaxy_model.dart)
+- Grid 空间索引
+- 视口裁剪
+- 节点 / 边预算
+- 边 Picture 缓存
+- 标签 LRU 缓存
+- 帧时监控
+- 连续慢帧自动降级
 
-### 详情页链路
-- [/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/knowledge/presentation/screens/knowledge_detail_screen.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/knowledge/presentation/screens/knowledge_detail_screen.dart)
-- [/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/knowledge/presentation/providers/knowledge_detail_provider.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/knowledge/presentation/providers/knowledge_detail_provider.dart)
+### 8.2 当前降级策略
+
+- 关闭边粒子
+- 关闭空闲微漂移
+- 收紧节点 / 边预算
+- 背景星点数量降低
+
+### 8.3 当前监控点
+
+`StarMapPainter` Timeline 标签：
+
+- `GalaxyPaint`
+- `GalaxyPaintEdges`
+- `GalaxyPaintNodes`
+- `GalaxyPaintLabels`
+
+同时带节点数、匹配数、粒子数等基础参数。
 
 ---
 
-## 13. 最终建议
+## 9. 已清理的遗留文件
 
-如果你要自己重新做，我的建议很明确：
+以下文件已删除，因为当前新骨架中无引用：
 
-1. 不要继续在当前 `GalaxyScreen + GalaxyProvider + StarMapPainter` 上修补
-2. 保留后端协议和数据模型
-3. 先做一版纯性能优先、极简背景、稳定点击详情的版本
-4. 体感稳定以后，再逐步加回品牌意象
+- [galaxy_search_dialog.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/presentation/widgets/galaxy/galaxy_search_dialog.dart)
+- [node_preview_card.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/presentation/widgets/galaxy/node_preview_card.dart)
+- [zoom_controls.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/presentation/widgets/galaxy/zoom_controls.dart)
+- [parallax_star_background.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/presentation/widgets/galaxy/parallax_star_background.dart)
+- [central_flame.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/presentation/widgets/galaxy/central_flame.dart)
+- [galaxy_entrance_animation.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/presentation/widgets/galaxy/galaxy_entrance_animation.dart)
 
-正确顺序应该是：
+说明：
 
-`稳定交互 -> 正确详情链路 -> 视图层级清晰 -> 再加美术表达`
+- `star_success_animation.dart` 没删，因为现在已重新接入并生效。
+- `galaxy_provider.dart` 没删，因为仓库里仍有导出和旧测试引用，但它不是当前主星图运行链路。
 
-不要反过来。
+---
+
+## 10. 当前仍需注意的约束
+
+### 10.1 `GalaxyScreen` 仍然较重
+虽然状态边界已经清楚，但它仍是 orchestrator。
+
+后续如果继续复杂化，建议把以下内容继续拆出去：
+
+- 搜索态管理
+- replay stage 生成
+- celebration / haptic 协调
+- stats / status panel 局部组件
+
+### 10.2 空闲微漂移是“渲染态漂移”，不是业务坐标漂移
+
+- 它不会改后端坐标
+- 命中测试仍以真实位置为准
+- 当前偏移量很小，因此不会造成体感错位
+
+### 10.3 主题切换使用页面级淡入
+这是轻量方案，不是所有 painter 颜色逐帧 lerp。
+
+优点：
+
+- 风险低
+- 不破坏现有 painter 纯渲染结构
+
+代价：
+
+- 严格意义上不是每个像素的连续色彩插值
+
+### 10.4 背景与扇区层尚未做独立 Picture 缓存
+当前性能仍在预算内，但如果未来继续叠粒子或 shader，优先考虑把背景层再缓存化。
+
+---
+
+## 11. 回归验证结果
+
+### 11.1 静态检查
+
+- `flutter analyze` 已通过：
+  - [galaxy_screen.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/presentation/screens/galaxy_screen.dart)
+  - [star_map_painter.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/presentation/widgets/galaxy/star_map_painter.dart)
+  - [galaxy_controls.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/presentation/widgets/galaxy/galaxy_controls.dart)
+  - [galaxy_mini_map.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/presentation/widgets/galaxy/galaxy_mini_map.dart)
+  - [galaxy_search_panel.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/presentation/widgets/galaxy/galaxy_search_panel.dart)
+  - [galaxy_node_preview_card.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/lib/features/galaxy/presentation/widgets/galaxy/galaxy_node_preview_card.dart)
+
+### 11.2 新增单测
+
+新增文件：
+
+- [galaxy_camera_test.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/galaxy/unit/galaxy_camera_test.dart)
+- [galaxy_force_engine_test.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/galaxy/unit/galaxy_force_engine_test.dart)
+- [galaxy_gesture_handler_test.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/galaxy/unit/galaxy_gesture_handler_test.dart)
+- [galaxy_lod_test.dart](/Users/brsama/code/GitHub/Sparkle-project/mobile/test/features/galaxy/unit/galaxy_lod_test.dart)
+
+覆盖内容：
+
+- 相机零漂移缩放
+- 力学释放后收敛
+- tap / double tap / long press -> drag 状态转换
+- LOD 边界与 fade 边界
+
+`flutter test` 已通过以上 4 个测试文件。
+
+---
+
+## 12. 后续如果继续增强，建议顺序
+
+1. 把 `GalaxyScreen` 的 replay / celebration / search 状态再拆成 coordinator
+2. 如果追求更高上限，再把背景层和扇区层做 Picture 缓存
+3. 如果要继续冲击“艺术品级”，再考虑 shader 背景和更精细的边动画
+4. 在做第 3 步前，先用真机 DevTools 重新量一轮帧时
+
+---
+
+## 13. 现阶段一句话判断
+
+知识星图已经不再是“需要重做的模块”，而是“可以继续精修和扩展的稳定底座”。
