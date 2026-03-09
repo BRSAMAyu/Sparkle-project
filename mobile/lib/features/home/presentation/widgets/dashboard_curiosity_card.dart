@@ -5,26 +5,33 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 
 class DashboardCuriosityCard extends ConsumerWidget {
-  const DashboardCuriosityCard({super.key});
+  const DashboardCuriosityCard({
+    super.key,
+    this.compact = false,
+  });
+
+  final bool compact;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final dashboardState = ref.watch(dashboardProvider);
     final cognitive = dashboardState.cognitive;
+    final padding = compact ? DS.spacing12 : DS.lg;
+    final iconSize = compact ? 18.0 : 20.0;
 
     return GestureDetector(
       onTap: () => context.push('/curiosity-capsule'),
       child: MaterialStyler(
         material: AppMaterials.ceramic,
         borderRadius: DS.borderRadius20,
-        padding: const EdgeInsets.all(DS.lg),
+        padding: EdgeInsets.all(padding),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Icon(Icons.lightbulb_outline, color: DS.accent, size: 20),
+                Icon(Icons.lightbulb_outline, color: DS.accent, size: iconSize),
                 if (cognitive.hasNewInsight)
                   Container(
                     width: 8,
@@ -43,7 +50,7 @@ class DashboardCuriosityCard extends ConsumerWidget {
                 fontWeight: FontWeight.bold,
                 color: DS.textPrimary,
               ),
-              maxLines: 2,
+              maxLines: compact ? 3 : 2,
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: DS.xs),

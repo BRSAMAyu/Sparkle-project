@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sparkle/features/chat/presentation/widgets/action_card.dart';
+import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/features/home/presentation/widgets/dashboard_motion.dart';
 import 'package:sparkle/features/reviews/presentation/providers/nightly_review_provider.dart';
 
 class NightlyReviewPanel extends ConsumerWidget {
@@ -11,31 +13,86 @@ class NightlyReviewPanel extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final reviewAsync = ref.watch(nightlyReviewProvider);
-    final actions = ref.watch(nightlyReviewActionsProvider);
 
     return reviewAsync.when(
       data: (review) {
-        final payload = review?.widgetPayload;
-        if (review == null || payload == null) {
+        if (review == null || review.widgetPayload == null) {
           return const SizedBox.shrink();
         }
         if (review.status == 'reviewed') {
           return const SizedBox.shrink();
         }
 
-        final content = ActionCard(
-          action: payload,
-          onConfirm: () async {
-            await actions.markReviewed(review.id);
-          },
-        );
-
         return Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: compact ? 6 : 8,
+          padding: EdgeInsets.fromLTRB(
+            DS.spacing16,
+            0,
+            DS.spacing16,
+            compact ? DS.spacing8 : DS.spacing12,
           ),
-          child: content,
+          child: DashboardEntrance(
+            index: 6,
+            slideOffset: const Offset(0, -0.06),
+            duration: DS.durationFast,
+            child: DashboardPressable(
+              onTap: () => context.push('/review?mode=today'),
+              borderRadius: DS.borderRadius16,
+              child: MaterialStyler(
+                material: AppMaterials.ceramic.copyWith(shadows: const []),
+                borderRadius: DS.borderRadius16,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: DS.spacing12,
+                  vertical: DS.spacing10,
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 22,
+                      height: 22,
+                      decoration: BoxDecoration(
+                        color: DS.surfaceOverlay,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.dark_mode_outlined,
+                        color: DS.brandSecondary,
+                        size: 14,
+                      ),
+                    ),
+                    const SizedBox(width: DS.spacing10),
+                    Expanded(
+                      child: Text(
+                        '今日复盘待完成',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.sparkleTypography.labelLarge.copyWith(
+                          color: DS.textPrimary,
+                          fontWeight: DS.fontWeightSemiBold,
+                        ),
+                      ),
+                    ),
+                    InkWell(
+                      onTap: () => context.push('/review?mode=today'),
+                      borderRadius: BorderRadius.circular(999),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: DS.spacing4,
+                          vertical: 2,
+                        ),
+                        child: Text(
+                          '开始 →',
+                          style: context.sparkleTypography.labelLarge.copyWith(
+                            color: DS.brandPrimary,
+                            fontWeight: DS.fontWeightBold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         );
       },
       loading: () => const SizedBox.shrink(),

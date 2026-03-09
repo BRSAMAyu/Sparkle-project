@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
+import 'package:sparkle/features/home/presentation/widgets/dashboard_motion.dart';
 import 'package:sparkle/features/task/task.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
@@ -33,34 +34,49 @@ class MetricsRow extends ConsumerWidget {
             child: Row(
               children: [
                 Expanded(
-                  child: _MetricCell(
-                    value: _formatFocusTime(
-                      dashboardState.flame.todayFocusMinutes,
+                  child: DashboardEntrance(
+                    index: 1,
+                    stagger: const Duration(milliseconds: 80),
+                    slideOffset: const Offset(0, 0.05),
+                    child: _MetricCell(
+                      value: _formatFocusTime(
+                        dashboardState.flame.todayFocusMinutes,
+                      ),
+                      label: '今日专注',
+                      icon: Icons.center_focus_strong_rounded,
+                      color: DS.brandPrimary,
+                      onTap: () => context.push('/focus'),
                     ),
-                    label: '今日专注',
-                    icon: Icons.center_focus_strong_rounded,
-                    color: DS.brandPrimary,
-                    onTap: () => context.push('/focus'),
                   ),
                 ),
                 const _MetricDivider(),
                 Expanded(
-                  child: _MetricCell(
-                    value: taskMetric.primary,
-                    label: '今日任务',
-                    icon: Icons.task_alt_rounded,
-                    color: DS.success,
-                    onTap: () => context.push('/tasks'),
+                  child: DashboardEntrance(
+                    index: 2,
+                    stagger: const Duration(milliseconds: 80),
+                    slideOffset: const Offset(0, 0.05),
+                    child: _MetricCell(
+                      value: taskMetric.primary,
+                      label: '今日任务',
+                      icon: Icons.task_alt_rounded,
+                      color: DS.success,
+                      onTap: () => context.push('/tasks'),
+                    ),
                   ),
                 ),
                 const _MetricDivider(),
                 Expanded(
-                  child: _MetricCell(
-                    value: '${streakStats.currentStreak}天',
-                    label: '连胜',
-                    icon: Icons.local_fire_department_rounded,
-                    color: DS.warning,
-                    onTap: () => context.push('/achievements'),
+                  child: DashboardEntrance(
+                    index: 3,
+                    stagger: const Duration(milliseconds: 80),
+                    slideOffset: const Offset(0, 0.05),
+                    child: _MetricCell(
+                      value: '${streakStats.currentStreak}天',
+                      label: '连胜',
+                      icon: Icons.local_fire_department_rounded,
+                      color: DS.warning,
+                      onTap: () => context.push('/achievements'),
+                    ),
                   ),
                 ),
               ],
@@ -132,10 +148,18 @@ class _MetricCell extends StatelessWidget {
   final Color color;
   final VoidCallback onTap;
 
+  Color _backgroundColor() {
+    if (color == DS.brandPrimary) return DS.brandPrimary10;
+    if (color == DS.success) return DS.success100;
+    if (color == DS.warning) return DS.warning100;
+    return DS.surfacePanel;
+  }
+
   @override
-  Widget build(BuildContext context) => InkWell(
+  Widget build(BuildContext context) => DashboardPressable(
         onTap: onTap,
         borderRadius: DS.borderRadius16,
+        pressedScale: 0.97,
         child: Padding(
           padding: const EdgeInsets.symmetric(
             horizontal: DS.spacing8,
@@ -147,8 +171,8 @@ class _MetricCell extends StatelessWidget {
                 width: 28,
                 height: 28,
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
+                  color: _backgroundColor(),
+                  borderRadius: DS.borderRadius12,
                 ),
                 child: Icon(icon, size: 16, color: color),
               ),
@@ -158,13 +182,23 @@ class _MetricCell extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      value,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: context.sparkleTypography.titleLarge.copyWith(
-                        color: DS.textPrimary,
-                        fontWeight: DS.fontWeightBold,
+                    AnimatedSwitcher(
+                      duration: DS.durationFast,
+                      switchInCurve: DS.motionCurve(SparkleMotionToken.micro),
+                      switchOutCurve: DS.motionCurve(SparkleMotionToken.micro),
+                      transitionBuilder: (child, animation) => FadeTransition(
+                        opacity: animation,
+                        child: child,
+                      ),
+                      child: Text(
+                        value,
+                        key: ValueKey(value),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.sparkleTypography.titleLarge.copyWith(
+                          color: DS.textPrimary,
+                          fontWeight: DS.fontWeightBold,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 2),

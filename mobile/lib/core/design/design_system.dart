@@ -664,6 +664,8 @@ class DS {
 
   static Color get success50 => success.withValues(alpha: 0.05);
   static Color get success100 => success.withValues(alpha: 0.1);
+  static Color get warning100 => warning.withValues(alpha: 0.1);
+  static Color get warning200 => warning.withValues(alpha: 0.2);
   static Color get success200 => success.withValues(alpha: 0.2);
   static Color get success300 => success.withValues(alpha: 0.3);
   static Color get success400 => success.withValues(alpha: 0.4);

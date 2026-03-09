@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -24,20 +25,63 @@ class _HeatmapColor {
 }
 
 class CalendarHeatmapCard extends ConsumerWidget {
-  const CalendarHeatmapCard({super.key});
+  const CalendarHeatmapCard({
+    super.key,
+    this.compact = false,
+    this.dense = false,
+  });
+
+  final bool compact;
+  final bool dense;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final previewState = ref.watch(calendarPreviewProvider);
-    final isExpanded = previewState.isExpanded;
-
     // Load task data for current month
     final now = DateTime.now();
     final calendarState = ref.watch(taskCalendarProvider);
     final monthKey = '${now.year}-${now.month.toString().padLeft(2, '0')}';
     if (!calendarState.loadedMonths.contains(monthKey)) {
-      ref.read(taskCalendarProvider.notifier).loadTasksForMonth(now);
+      unawaited(ref.read(taskCalendarProvider.notifier).loadTasksForMonth(now));
     }
+
+    if (compact) {
+      final showLegend = !dense;
+      final contentPadding = dense ? DS.spacing10 : DS.spacing12;
+      final headerSpacing = dense ? DS.spacing8 : DS.spacing10;
+
+      return GestureDetector(
+        onTap: () => context.push('/calendar-stats'),
+        child: MaterialStyler(
+          material: AppMaterials.ceramic,
+          borderRadius: DS.borderRadius20,
+          padding: EdgeInsets.all(contentPadding),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(context, dense: dense),
+              SizedBox(height: headerSpacing),
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) => _buildMonthGrid(
+                    context,
+                    ref,
+                    constraints,
+                    calendarState,
+                  ),
+                ),
+              ),
+              if (showLegend) ...[
+                const SizedBox(height: DS.spacing8),
+                _buildLegend(context),
+              ],
+            ],
+          ),
+        ),
+      );
+    }
+
+    final previewState = ref.watch(calendarPreviewProvider);
+    final isExpanded = previewState.isExpanded;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -57,7 +101,11 @@ class CalendarHeatmapCard extends ConsumerWidget {
                 Flexible(
                   child: LayoutBuilder(
                     builder: (context, constraints) => _buildMonthGrid(
-                        context, ref, constraints, calendarState),
+                      context,
+                      ref,
+                      constraints,
+                      calendarState,
+                    ),
                   ),
                 ),
                 const SizedBox(height: DS.sm),
@@ -71,14 +119,18 @@ class CalendarHeatmapCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context) => Row(
+  Widget _buildHeader(
+    BuildContext context, {
+    bool dense = false,
+  }) =>
+      Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Flexible(
             child: Text(
               DateFormat('MMMM yyyy', 'zh_CN').format(DateTime.now()),
               style: TextStyle(
-                fontSize: 13,
+                fontSize: dense ? 12 : 13,
                 fontWeight: FontWeight.w600,
                 color: DS.textPrimary,
               ),
@@ -87,7 +139,7 @@ class CalendarHeatmapCard extends ConsumerWidget {
           ),
           Icon(
             Icons.calendar_month_rounded,
-            size: 16,
+            size: dense ? 14 : 16,
             color: DS.textSecondary,
           ),
         ],

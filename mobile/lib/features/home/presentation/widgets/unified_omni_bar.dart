@@ -71,12 +71,12 @@ class _UnifiedOmniBarState extends ConsumerState<UnifiedOmniBar>
     );
     _panelController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 220),
+      duration: DS.durationNormal,
     );
     final panelCurve = CurvedAnimation(
       parent: _panelController,
-      curve: Curves.easeOutCubic,
-      reverseCurve: Curves.easeInCubic,
+      curve: DS.motionCurve(SparkleMotionToken.standard),
+      reverseCurve: DS.motionCurve(SparkleMotionToken.standard),
     );
     _panelSizeFactor = Tween<double>(begin: 0, end: 1).animate(panelCurve);
     _panelSlideAnimation = Tween<Offset>(
@@ -235,13 +235,8 @@ class _UnifiedOmniBarState extends ConsumerState<UnifiedOmniBar>
           axisAlignment: -1,
           child: SlideTransition(
             position: _panelSlideAnimation,
-            child: Container(
+            child: SizedBox(
               height: _kUnifiedAgentPanelHeight,
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(color: DS.borderSubtle),
-                ),
-              ),
               child: ListView.separated(
                 padding: const EdgeInsets.symmetric(
                   horizontal: DS.spacing10,
@@ -272,14 +267,9 @@ class _UnifiedOmniBarState extends ConsumerState<UnifiedOmniBar>
         duration: DS.durationFast,
         switchInCurve: DS.curveEaseOut,
         switchOutCurve: DS.curveEaseOut,
-        child: Container(
+        child: SizedBox(
           key: ValueKey('prediction_section_${predictions.length}'),
           height: _kUnifiedPredictionHeight,
-          decoration: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(color: DS.borderSubtle),
-            ),
-          ),
           child: ListView.separated(
             padding: const EdgeInsets.symmetric(
               horizontal: DS.spacing10,
@@ -689,7 +679,9 @@ class _AgentToggleButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final isStandard = !currentMode.isMultiAgent;
     final accentColor = isStandard ? DS.textSecondary : currentMode.color;
-    final icon = isStandard ? Icons.person_outline_rounded : currentMode.icon;
+    final icon = expanded
+        ? Icons.dashboard_customize_rounded
+        : Icons.dashboard_customize_outlined;
 
     return Semantics(
       button: true,
@@ -732,8 +724,7 @@ class _AgentModeChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final foregroundColor = isDark ? const Color(0xFFF1E7DA) : DS.neutral900;
+    final foregroundColor = DS.textPrimary;
 
     return InkWell(
       onTap: onTap,

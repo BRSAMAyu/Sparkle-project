@@ -5,7 +5,12 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 
 class LongTermPlanCard extends ConsumerWidget {
-  const LongTermPlanCard({super.key});
+  const LongTermPlanCard({
+    super.key,
+    this.compact = false,
+  });
+
+  final bool compact;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -17,7 +22,7 @@ class LongTermPlanCard extends ConsumerWidget {
       child: MaterialStyler(
         material: AppMaterials.ceramic,
         borderRadius: DS.borderRadius20,
-        padding: const EdgeInsets.all(DS.lg),
+        padding: EdgeInsets.all(compact ? DS.spacing12 : DS.lg),
         child: growth != null
             ? _buildContent(context, growth)
             : _buildEmptyState(context),
@@ -29,90 +34,91 @@ class LongTermPlanCard extends ConsumerWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              '长期计划',
+              style: TextStyle(
+                fontSize: compact ? 11 : 12,
+                fontWeight: FontWeight.w500,
+                color: DS.textSecondary,
+              ),
+            ),
+            Icon(Icons.spa_rounded, color: DS.success, size: compact ? 15 : 16),
+          ],
+        ),
+        const Spacer(),
+        Center(
+          child: Column(
             children: [
               Text(
-                '长期计划',
+                '${(growth.progress * 100).toInt()}%',
                 style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: DS.textSecondary,
+                  fontSize: compact ? 18 : 20,
+                  fontWeight: FontWeight.bold,
+                  color: DS.success,
                 ),
               ),
-              Icon(Icons.spa_rounded, color: DS.success, size: 16),
+              const SizedBox(height: DS.xs),
+              SizedBox(
+                height: 4,
+                width: compact ? 52 : 60,
+                child: LinearProgressIndicator(
+                  value: growth.progress,
+                  backgroundColor: isDark ? DS.neutral800 : DS.neutral200,
+                  valueColor: AlwaysStoppedAnimation<Color>(DS.success),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
             ],
           ),
-          const Spacer(),
-          Center(
-            child: Column(
-              children: [
-                Text(
-                  '${(growth.progress * 100).toInt()}%',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: DS.success,
-                  ),
-                ),
-                const SizedBox(height: DS.xs),
-                SizedBox(
-                  height: 4,
-                  width: 60,
-                  child: LinearProgressIndicator(
-                    value: growth.progress,
-                    backgroundColor: isDark
-                        ? DS.neutral800
-                        : DS.neutral200,
-                    valueColor: AlwaysStoppedAnimation<Color>(DS.success),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ],
-            ),
+        ),
+        const Spacer(),
+        Text(
+          growth.name,
+          style: TextStyle(
+            fontSize: compact ? 11 : 12,
+            fontWeight: FontWeight.w600,
+            color: DS.textPrimary,
           ),
-          const Spacer(),
-          Text(
-            growth.name,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: DS.textPrimary,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        const SizedBox(height: 2),
+        Text(
+          'Mastery: ${(growth.masteryLevel * 100).toInt()}%',
+          style: TextStyle(
+            fontSize: compact ? 9 : 10,
+            color: DS.textSecondary,
           ),
-          const SizedBox(height: 2),
-          Text(
-            'Mastery: ${(growth.masteryLevel * 100).toInt()}%',
-            style: TextStyle(
-              fontSize: 10,
-              color: DS.textSecondary,
-            ),
-          ),
-        ],
-      );
+        ),
+      ],
+    );
   }
 
   Widget _buildEmptyState(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.add_circle_outline,
-            color: isDark ? DS.neutral500 : DS.neutral400,
-            size: 32,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(
+          Icons.add_circle_outline,
+          color: isDark ? DS.neutral500 : DS.neutral400,
+          size: 32,
+        ),
+        const SizedBox(height: DS.smConst),
+        Text(
+          '创建长期计划',
+          style: TextStyle(
+            fontSize: compact ? 11 : 12,
+            color: DS.textSecondary,
           ),
-          const SizedBox(height: DS.smConst),
-          Text(
-            '创建长期计划',
-            style: TextStyle(fontSize: 12, color: DS.textSecondary),
-          ),
-        ],
-      );
+        ),
+      ],
+    );
   }
 }

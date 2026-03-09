@@ -4,32 +4,33 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/chat/chat.dart';
 import 'package:sparkle/features/home/presentation/providers/notification_provider.dart';
+import 'package:sparkle/features/home/presentation/widgets/dashboard_motion.dart';
 
 class HomeNotificationCard extends ConsumerWidget {
   const HomeNotificationCard({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardMaterial = AppMaterials.ceramic.copyWith(
-      backgroundColor: isDark
-          ? DS.surfaceTertiary.withValues(alpha: 0.94)
-          : DS.surfacePrimaryElevated,
-      borderColor:
-          isDark ? DS.borderStrong.withValues(alpha: 0.55) : DS.borderSubtle,
-      rimLightColor: isDark ? Colors.white.withValues(alpha: 0.06) : null,
-    );
     final notificationsAsync = ref.watch(unreadNotificationsProvider);
     final unreadMessageCount = ref.watch(unreadMessageCountProvider);
 
-    // Show community messages notification if there are unread messages
     if (unreadMessageCount > 0) {
       return Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing16,
-          vertical: DS.spacing8,
+        padding: const EdgeInsets.fromLTRB(
+          DS.spacing16,
+          0,
+          DS.spacing16,
+          DS.spacing8,
         ),
-        child: _buildCommunityNotificationCard(context, unreadMessageCount),
+        child: _NotificationBanner(
+          icon: Icons.forum_outlined,
+          iconColor: DS.capsuleAccent,
+          summary: unreadMessageCount > 99
+              ? '99+ 条未读消息'
+              : '$unreadMessageCount 条未读消息',
+          actionLabel: '查看',
+          onTap: () => context.push('/community'),
+        ),
       );
     }
 
@@ -39,93 +40,21 @@ class HomeNotificationCard extends ConsumerWidget {
           return const SizedBox.shrink();
         }
 
-        final latest = notifications.first;
-
         return Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: DS.spacing16,
-            vertical: DS.spacing8,
+          padding: const EdgeInsets.fromLTRB(
+            DS.spacing16,
+            0,
+            DS.spacing16,
+            DS.spacing8,
           ),
-          child: GestureDetector(
+          child: _NotificationBanner(
+            icon: _getIcon(notifications.first.type),
+            iconColor: _getIconColor(notifications.first.type),
+            summary: notifications.length == 1
+                ? '1 条未读通知'
+                : '${notifications.length} 条未读通知',
+            actionLabel: '查看',
             onTap: () => context.push('/notifications'),
-            child: MaterialStyler(
-              material: cardMaterial,
-              borderRadius: BorderRadius.circular(16),
-              padding: const EdgeInsets.symmetric(
-                horizontal: DS.spacing16,
-                vertical: DS.spacing12,
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(DS.sm),
-                    decoration: BoxDecoration(
-                      color: _getIconColor(latest.type).withValues(alpha: 0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      _getIcon(latest.type),
-                      color: _getIconColor(latest.type),
-                      size: 16,
-                    ),
-                  ),
-                  const SizedBox(width: DS.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          latest.title,
-                          style: TextStyle(
-                            color: DS.textPrimary,
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          latest.content,
-                          style: TextStyle(
-                            color: DS.textSecondary,
-                            fontSize: 11,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (notifications.length > 1)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: DS.error,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        '+${notifications.length - 1}',
-                        style: TextStyle(
-                          color: DS.textOnPrimary,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  const SizedBox(width: DS.sm),
-                  Icon(
-                    Icons.chevron_right_rounded,
-                    color: DS.textSecondary,
-                    size: 18,
-                  ),
-                ],
-              ),
-            ),
           ),
         );
       },
@@ -159,95 +88,85 @@ class HomeNotificationCard extends ConsumerWidget {
         return DS.info;
     }
   }
+}
 
-  Widget _buildCommunityNotificationCard(
-    BuildContext context,
-    int unreadCount,
-  ) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardMaterial = AppMaterials.ceramic.copyWith(
-      backgroundColor: isDark
-          ? DS.surfaceTertiary.withValues(alpha: 0.94)
-          : DS.surfacePrimaryElevated,
-      borderColor:
-          isDark ? DS.borderStrong.withValues(alpha: 0.55) : DS.borderSubtle,
-      rimLightColor: isDark ? Colors.white.withValues(alpha: 0.06) : null,
-    );
-    return GestureDetector(
-      onTap: () => context.push('/community'),
-      child: MaterialStyler(
-        material: cardMaterial,
-        borderRadius: BorderRadius.circular(16),
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing16,
-          vertical: DS.spacing12,
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(DS.sm),
-              decoration: BoxDecoration(
-                color: DS.capsuleAccent.withValues(alpha: 0.2),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.forum_outlined,
-                color: DS.capsuleAccent,
-                size: 16,
-              ),
+class _NotificationBanner extends StatelessWidget {
+  const _NotificationBanner({
+    required this.icon,
+    required this.iconColor,
+    required this.summary,
+    required this.actionLabel,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final String summary;
+  final String actionLabel;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => DashboardEntrance(
+        index: 5,
+        slideOffset: const Offset(0, -0.06),
+        duration: DS.durationFast,
+        child: DashboardPressable(
+          onTap: onTap,
+          borderRadius: DS.borderRadius16,
+          child: MaterialStyler(
+            material: AppMaterials.ceramic.copyWith(shadows: const []),
+            borderRadius: DS.borderRadius16,
+            padding: const EdgeInsets.symmetric(
+              horizontal: DS.spacing12,
+              vertical: DS.spacing10,
             ),
-            const SizedBox(width: DS.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '社交消息',
-                    style: TextStyle(
-                      color: DS.textPrimary,
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                    ),
+            child: Row(
+              children: [
+                Container(
+                  width: 22,
+                  height: 22,
+                  decoration: BoxDecoration(
+                    color: DS.surfaceOverlay,
+                    shape: BoxShape.circle,
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '你有 $unreadCount 条未读消息',
-                    style: TextStyle(
-                      color: DS.textSecondary,
-                      fontSize: 11,
-                    ),
+                  child: Icon(
+                    icon,
+                    color: iconColor,
+                    size: 14,
                   ),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: DS.spacing8,
-                vertical: DS.spacing4,
-              ),
-              decoration: BoxDecoration(
-                color: DS.error,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                unreadCount > 99 ? '99+' : '$unreadCount',
-                style: TextStyle(
-                  color: DS.textOnPrimary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
                 ),
-              ),
+                const SizedBox(width: DS.spacing10),
+                Expanded(
+                  child: Text(
+                    summary,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.sparkleTypography.labelLarge.copyWith(
+                      color: DS.textPrimary,
+                      fontWeight: DS.fontWeightSemiBold,
+                    ),
+                  ),
+                ),
+                InkWell(
+                  onTap: onTap,
+                  borderRadius: BorderRadius.circular(999),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: DS.spacing4,
+                      vertical: 2,
+                    ),
+                    child: Text(
+                      '$actionLabel →',
+                      style: context.sparkleTypography.labelLarge.copyWith(
+                        color: DS.brandPrimary,
+                        fontWeight: DS.fontWeightBold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: DS.sm),
-            Icon(
-              Icons.chevron_right_rounded,
-              color: DS.textSecondary,
-              size: 18,
-            ),
-          ],
+          ),
         ),
-      ),
-    );
-  }
+      );
 }

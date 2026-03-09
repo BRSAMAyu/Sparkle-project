@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
+import 'package:sparkle/features/home/presentation/widgets/dashboard_motion.dart';
 import 'package:sparkle/features/task/task.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
@@ -120,48 +121,57 @@ class _CompactNextActions extends ConsumerWidget {
           DS.spacing16,
           DS.spacing8,
           DS.spacing16,
-          DS.spacing6,
+          DS.spacing8,
         ),
-        child: visibleActions.isEmpty
-            ? Text(
-                '今天没有待推进的行动',
-                style: context.sparkleTypography.labelLarge.copyWith(
-                  color: DS.textSecondary,
-                ),
-              )
-            : Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ...visibleActions.map(
-                    (task) => Padding(
-                      padding: const EdgeInsets.only(bottom: DS.spacing8),
-                      child: _CompactNextActionRow(task: task),
+        child: DashboardEntrance(
+          index: 4,
+          slideOffset: const Offset(0, 0.06),
+          child: MaterialStyler(
+            material: AppMaterials.ceramic,
+            borderRadius: DS.borderRadius20,
+            padding: const EdgeInsets.all(DS.spacing12),
+            child: visibleActions.isEmpty
+                ? Text(
+                    '今天没有待推进的行动',
+                    style: context.sparkleTypography.labelLarge.copyWith(
+                      color: DS.textSecondary,
                     ),
-                  ),
-                  if (actions.length > 2)
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: InkWell(
-                        onTap: onViewAll,
-                        borderRadius: BorderRadius.circular(999),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: DS.spacing4,
-                            vertical: 2,
-                          ),
-                          child: Text(
-                            '查看全部 →',
-                            style:
-                                context.sparkleTypography.labelLarge.copyWith(
-                              color: DS.brandPrimary,
-                              fontWeight: DS.fontWeightBold,
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ...visibleActions.map(
+                        (task) => Padding(
+                          padding: const EdgeInsets.only(bottom: DS.spacing8),
+                          child: _CompactNextActionRow(task: task),
+                        ),
+                      ),
+                      if (actions.length > 2)
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: InkWell(
+                            onTap: onViewAll,
+                            borderRadius: BorderRadius.circular(999),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: DS.spacing4,
+                                vertical: 2,
+                              ),
+                              child: Text(
+                                '查看全部 →',
+                                style: context.sparkleTypography.labelLarge
+                                    .copyWith(
+                                  color: DS.brandPrimary,
+                                  fontWeight: DS.fontWeightBold,
+                                ),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ),
-                ],
-              ),
+                    ],
+                  ),
+          ),
+        ),
       ),
     );
   }
