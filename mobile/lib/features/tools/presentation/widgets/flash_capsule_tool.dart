@@ -4,10 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/features/error_book/error_book.dart';
+import 'package:sparkle/features/tools/models/tool_definition.dart';
+import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
 
-/// 错误类型选项
 const List<String> _errorTypes = [
   '概念混淆',
   '计算错误',
@@ -17,15 +17,17 @@ const List<String> _errorTypes = [
   '其他',
 ];
 
-/// 闪念胶囊 - 快速错题记录
 class FlashCapsuleTool extends ConsumerStatefulWidget {
   const FlashCapsuleTool({
     super.key,
     this.taskId,
     this.initialSubject,
+    this.surface = ToolSurface.page,
   });
+
   final String? taskId;
   final String? initialSubject;
+  final ToolSurface surface;
 
   @override
   ConsumerState<FlashCapsuleTool> createState() => _FlashCapsuleToolState();
@@ -55,18 +57,21 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
   }
 
   Future<void> _loadSubjects() async {
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
     setState(() => _isLoading = true);
     try {
       final subjects = await ref.read(errorRepositoryProvider).getSubjects();
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _subjects = subjects;
         if (subjects.isNotEmpty) {
-          // 尝试匹配初始科目
           if (widget.initialSubject != null) {
             final match = subjects.firstWhere(
-              (s) => s['name'] == widget.initialSubject,
+              (subject) => subject['name'] == widget.initialSubject,
               orElse: () => subjects.first,
             );
             _selectedSubjectId = match['id'] as int?;
@@ -76,8 +81,10 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
         }
         _isLoading = false;
       });
-    } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -88,18 +95,15 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
     }
 
     final topic = _topicController.text.trim();
-    if (topic.isEmpty) {
-      AppFeedback.info(context, '请输入知识点');
-      return;
-    }
-
     final description = _descriptionController.text.trim();
-    if (description.isEmpty) {
-      AppFeedback.info(context, '请输入错误描述');
+    if (topic.isEmpty || description.isEmpty) {
+      AppFeedback.info(context, '请补全知识点和错误描述');
       return;
     }
 
-    if (mounted) setState(() => _isSubmitting = true);
+    if (mounted) {
+      setState(() => _isSubmitting = true);
+    }
 
     try {
       await ref.read(errorRepositoryProvider).createError(
@@ -110,257 +114,180 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
           );
 
       HapticFeedback.mediumImpact();
-
       if (mounted) {
         Navigator.pop(context);
         AppFeedback.success(context, '已记录错题');
       }
     } catch (e) {
-      if (mounted) setState(() => _isSubmitting = false);
       if (mounted) {
+        setState(() => _isSubmitting = false);
         AppFeedback.error(context, '记录失败: $e');
       }
     }
   }
 
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(DS.xl),
-        height: 600,
-        decoration: BoxDecoration(
-          color: DS.brandPrimaryConst,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(24),
-            topRight: Radius.circular(24),
-          ),
+  Widget build(BuildContext context) {
+    final accent = DS.warning;
+    return ToolShell(
+      surface: widget.surface,
+      icon: Icons.lightbulb_outline_rounded,
+      title: '闪念胶囊',
+      subtitle: '把一闪而过的疑点及时落地成错题线索，减少“知道有问题但没记住”的损耗。',
+      accentColor: accent,
+      fillHeight: true,
+      heroChips: [
+        ToolHeroChip(
+          label: _subjects.isEmpty ? '等待科目加载' : '${_subjects.length} 个科目',
+          accentColor: accent,
+          icon: Icons.category_rounded,
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Drag Handle
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: DS.neutral300,
-                  borderRadius: BorderRadius.circular(2),
-                ),
+        ToolHeroChip(
+          label: _selectedErrorType,
+          accentColor: accent,
+          icon: Icons.label_rounded,
+        ),
+      ],
+      body: Column(
+        children: [
+          Wrap(
+            spacing: DS.spacing12,
+            runSpacing: DS.spacing12,
+            children: [
+              ToolMetricCard(
+                label: '知识点长度',
+                value: '${_topicController.text.trim().length}',
+                accentColor: accent,
+                icon: Icons.topic_rounded,
               ),
-            ),
-            const SizedBox(height: DS.spacing20),
-
-            // Header
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(DS.sm),
-                  decoration: BoxDecoration(
-                    color: DS.warning.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    Icons.lightbulb_outlined,
-                    color: DS.warning,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: DS.md),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '闪念胶囊',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: DS.fontWeightBold,
-                          ),
-                    ),
-                    Text(
-                      '快速记录学习中遇到的问题',
-                      style: TextStyle(
-                        color: DS.neutral500,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: DS.xl),
-
-            // Scrollable Content
-            Expanded(
+              ToolMetricCard(
+                label: '描述长度',
+                value: '${_descriptionController.text.trim().length}',
+                accentColor: accent,
+                icon: Icons.notes_rounded,
+              ),
+            ],
+          ),
+          const SizedBox(height: DS.spacing16),
+          Expanded(
+            child: ToolSectionCard(
+              accentColor: accent,
+              fillHeight: true,
+              title: '记录内容',
+              subtitle: '选择科目、错误类型，再补充知识点和描述。',
               child: SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Subject Dropdown
-                    Text(
-                      '科目',
-                      style: TextStyle(
-                        fontWeight: DS.fontWeightMedium,
-                        color: DS.neutral700,
-                      ),
-                    ),
-                    const SizedBox(height: DS.sm),
                     if (_isLoading)
-                      const Center(
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                      Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(DS.spacing24),
+                          child: CircularProgressIndicator(color: accent),
+                        ),
                       )
                     else
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: DS.spacing16),
-                        decoration: BoxDecoration(
-                          color: DS.neutral50,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: DS.neutral200),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<int>(
-                            value: _selectedSubjectId,
-                            isExpanded: true,
-                            hint: const Text('选择科目'),
-                            items: _subjects
-                                .map(
-                                  (subject) => DropdownMenuItem<int>(
-                                    value: subject['id'] as int,
-                                    child:
-                                        Text(subject['name'] as String? ?? ''),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: (value) {
-                              setState(() => _selectedSubjectId = value);
-                            },
-                          ),
-                        ),
+                      _SubjectDropdown(
+                        value: _selectedSubjectId,
+                        subjects: _subjects,
+                        onChanged: (value) {
+                          setState(() => _selectedSubjectId = value);
+                        },
                       ),
-                    const SizedBox(height: DS.spacing20),
-
-                    // Topic Input
-                    Text(
-                      '知识点',
-                      style: TextStyle(
-                        fontWeight: DS.fontWeightMedium,
-                        color: DS.neutral700,
-                      ),
-                    ),
-                    const SizedBox(height: DS.sm),
+                    const SizedBox(height: DS.spacing16),
                     TextField(
                       controller: _topicController,
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
+                        labelText: '知识点',
                         hintText: '例如：三角函数求导、牛顿第二定律...',
-                        filled: true,
-                        fillColor: DS.neutral50,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: DS.warning, width: 2),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: DS.spacing16,
-                          vertical: DS.spacing12,
-                        ),
+                      ),
+                      onChanged: (_) => setState(() {}),
+                    ),
+                    const SizedBox(height: DS.spacing16),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Wrap(
+                        spacing: DS.spacing10,
+                        runSpacing: DS.spacing10,
+                        children: _errorTypes
+                            .map(
+                              (type) => ToolChoiceChip(
+                                label: type,
+                                selected: _selectedErrorType == type,
+                                onTap: () => setState(() {
+                                  _selectedErrorType = type;
+                                }),
+                                accentColor: accent,
+                              ),
+                            )
+                            .toList(),
                       ),
                     ),
-                    const SizedBox(height: DS.spacing20),
-
-                    // Error Type Chips
-                    Text(
-                      '错误类型',
-                      style: TextStyle(
-                        fontWeight: DS.fontWeightMedium,
-                        color: DS.neutral700,
+                    const SizedBox(height: DS.spacing16),
+                    TextField(
+                      controller: _descriptionController,
+                      maxLines: 8,
+                      decoration: const InputDecoration(
+                        labelText: '错误描述',
+                        hintText: '记录你是怎么错的、卡在什么地方、下次要如何避免。',
+                        alignLabelWithHint: true,
                       ),
-                    ),
-                    const SizedBox(height: DS.sm),
-                    Wrap(
-                      spacing: DS.spacing8,
-                      runSpacing: DS.spacing8,
-                      children: _errorTypes.map((type) {
-                        final isSelected = type == _selectedErrorType;
-                        return ChoiceChip(
-                          label: Text(type),
-                          selected: isSelected,
-                          onSelected: (selected) {
-                            if (selected) {
-                              setState(() => _selectedErrorType = type);
-                            }
-                          },
-                          selectedColor: DS.warning.withValues(alpha: 0.2),
-                          backgroundColor: DS.neutral100,
-                          labelStyle: TextStyle(
-                            color: isSelected
-                                ? DS.warning.shade800
-                                : DS.neutral600,
-                            fontWeight: isSelected
-                                ? FontWeight.w600
-                                : FontWeight.normal,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                            side: BorderSide(
-                              color: isSelected
-                                  ? DS.warning
-                                  : DS.surfacePrimary.withValues(alpha: 0),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: DS.spacing20),
-
-                    // Description
-                    Text(
-                      '描述',
-                      style: TextStyle(
-                        fontWeight: DS.fontWeightMedium,
-                        color: DS.neutral700,
-                      ),
-                    ),
-                    const SizedBox(height: DS.sm),
-                    Container(
-                      height: 120,
-                      padding: const EdgeInsets.all(DS.xs),
-                      decoration: BoxDecoration(
-                        color: DS.warning.withValues(alpha: 0.05),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: DS.warning.withValues(alpha: 0.3),
-                        ),
-                      ),
-                      child: TextField(
-                        controller: _descriptionController,
-                        maxLines: null,
-                        expands: true,
-                        decoration: const InputDecoration(
-                          hintText: '简单描述错误情况和原因分析...',
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.all(DS.md),
-                        ),
-                        style: const TextStyle(fontSize: 14, height: 1.5),
-                      ),
+                      onChanged: (_) => setState(() {}),
                     ),
                   ],
                 ),
               ),
             ),
-            const SizedBox(height: DS.lg),
+          ),
+        ],
+      ),
+      footer: SparkleButton(
+        label: _isSubmitting ? '记录中...' : '保存胶囊',
+        onPressed: _isSubmitting ? null : _submit,
+        icon: const Icon(Icons.check_rounded),
+        loading: _isSubmitting,
+        expand: true,
+      ),
+    );
+  }
+}
 
-            // Submit Button
-            CustomButton.primary(
-              text: '快速保存',
-              icon: Icons.flash_on_rounded,
-              onPressed: _isSubmitting ? null : _submit,
-              customGradient: LinearGradient(
-                colors: [DS.warning, DS.warning.shade700],
-              ),
+class _SubjectDropdown extends StatelessWidget {
+  const _SubjectDropdown({
+    required this.value,
+    required this.subjects,
+    required this.onChanged,
+  });
+
+  final int? value;
+  final List<Map<String, dynamic>> subjects;
+  final ValueChanged<int?> onChanged;
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+        decoration: BoxDecoration(
+          color: DS.surfacePrimary,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: DS.borderSubtle),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: DS.spacing12),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<int>(
+              value: value,
+              isExpanded: true,
+              hint: const Text('选择科目'),
+              items: subjects
+                  .map(
+                    (subject) => DropdownMenuItem<int>(
+                      value: subject['id'] as int,
+                      child: Text(subject['name'] as String? ?? ''),
+                    ),
+                  )
+                  .toList(),
+              onChanged: onChanged,
             ),
-          ],
+          ),
         ),
       );
 }

@@ -1,6 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/task/presentation/widgets/timer_widget.dart';
+import 'package:sparkle/features/tools/models/tool_definition.dart';
+import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
 
 enum FocusTimerPreset {
   stopwatch,
@@ -11,19 +16,24 @@ class FocusTimerTool extends StatefulWidget {
   const FocusTimerTool({
     required this.preset,
     super.key,
+    this.surface = ToolSurface.page,
   });
 
   final FocusTimerPreset preset;
+  final ToolSurface surface;
 
   @override
   State<FocusTimerTool> createState() => _FocusTimerToolState();
 }
 
 class _FocusTimerToolState extends State<FocusTimerTool> {
-  static const List<int> _countdownOptions = [15, 25, 45, 60];
+  static const List<int> _countdownOptions = [10, 15, 25, 45, 60, 90];
+  static const List<int> _pomodoroOptions = [25, 50, 90];
 
   late TimerMode _mode;
   late int _selectedMinutes;
+  int _sessionSeed = 0;
+  bool _isRunning = false;
 
   @override
   void initState() {
@@ -32,172 +42,208 @@ class _FocusTimerToolState extends State<FocusTimerTool> {
         ? TimerMode.countDown
         : TimerMode.countUp;
     _selectedMinutes =
-        widget.preset == FocusTimerPreset.pomodoro ? 25 : _countdownOptions[0];
+        widget.preset == FocusTimerPreset.pomodoro ? 25 : _countdownOptions[1];
+  }
+
+  void _resetTimer() {
+    setState(() {
+      _sessionSeed++;
+      _isRunning = false;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final title = widget.preset == FocusTimerPreset.pomodoro ? '番茄钟' : '专注计时';
-    final subtitle = widget.preset == FocusTimerPreset.pomodoro
-        ? '默认 25 分钟工作周期，可一键重置。'
-        : '正计时与倒计时都可直接开始。';
+    final isPomodoro = widget.preset == FocusTimerPreset.pomodoro;
+    final accent = isPomodoro ? DS.warning : DS.brandPrimary;
+    final title = isPomodoro ? '番茄钟' : '专注计时';
+    final subtitle = isPomodoro
+        ? '把单次专注收束成稳定节奏。适合复习块、冲刺块和长时深潜。'
+        : '正计时和倒计时同台使用，适合任务推进、自由练习和时间校准。';
     final initialSeconds =
         _mode == TimerMode.countDown ? _selectedMinutes * 60 : 0;
     final maxSeconds =
-        _mode == TimerMode.countDown ? _selectedMinutes * 60 : 60 * 60;
+        _mode == TimerMode.countDown ? _selectedMinutes * 60 : 2 * 60 * 60;
+    final estimatedEnd = _mode == TimerMode.countDown
+        ? DateTime.now().add(Duration(minutes: _selectedMinutes))
+        : null;
 
-    return Container(
-      padding: const EdgeInsets.all(DS.spacing24),
-      decoration: BoxDecoration(
-        color: DS.surfacePrimary,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        border: Border(
-          top: BorderSide(color: DS.borderSubtle),
+    return ToolShell(
+      surface: widget.surface,
+      icon: isPomodoro ? Icons.timer_rounded : Icons.hourglass_bottom_rounded,
+      title: title,
+      subtitle: subtitle,
+      accentColor: accent,
+      heroChips: [
+        ToolHeroChip(
+          label: _mode == TimerMode.countDown ? '倒计时模式' : '正计时模式',
+          accentColor: accent,
+          icon:
+              _mode == TimerMode.countDown ? Icons.timelapse : Icons.schedule,
+        ),
+        ToolHeroChip(
+          label: _isRunning ? '进行中' : '待开始',
+          accentColor: accent,
+          icon: _isRunning ? Icons.play_circle_fill_rounded : Icons.pause,
+        ),
+      ],
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Wrap(
+              spacing: DS.spacing12,
+              runSpacing: DS.spacing12,
+              children: [
+                ToolMetricCard(
+                  label: '当前时长',
+                  value: _mode == TimerMode.countDown
+                      ? '$_selectedMinutes 分'
+                      : '开放',
+                  accentColor: accent,
+                  icon: Icons.flag_rounded,
+                  caption: _mode == TimerMode.countDown ? '单次目标时长' : '适合追踪投入长度',
+                ),
+                ToolMetricCard(
+                  label: '预计结束',
+                  value: estimatedEnd == null
+                      ? '不限'
+                      : '${estimatedEnd.hour.toString().padLeft(2, '0')}:${estimatedEnd.minute.toString().padLeft(2, '0')}',
+                  accentColor: accent,
+                  icon: Icons.event_available_rounded,
+                  caption: estimatedEnd == null ? '由你主动暂停' : '方便衔接下一段计划',
+                ),
+              ],
+            ),
+            const SizedBox(height: DS.spacing16),
+            ToolSectionCard(
+              accentColor: accent,
+              title: '计时设置',
+              subtitle: '选中的选项会用低饱和高对比的强调色呈现，深浅色模式都保持清晰。',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (!isPomodoro) ...[
+                    Wrap(
+                      spacing: DS.spacing10,
+                      runSpacing: DS.spacing10,
+                      children: [
+                        ToolChoiceChip(
+                          label: '正计时',
+                          selected: _mode == TimerMode.countUp,
+                          onTap: () => setState(() => _mode = TimerMode.countUp),
+                          accentColor: accent,
+                          icon: Icons.schedule_rounded,
+                        ),
+                        ToolChoiceChip(
+                          label: '倒计时',
+                          selected: _mode == TimerMode.countDown,
+                          onTap: () =>
+                              setState(() => _mode = TimerMode.countDown),
+                          accentColor: accent,
+                          icon: Icons.timelapse_rounded,
+                        ),
+                      ],
+                    ),
+                    if (_mode == TimerMode.countDown) ...[
+                      const SizedBox(height: DS.spacing16),
+                      Wrap(
+                        spacing: DS.spacing10,
+                        runSpacing: DS.spacing10,
+                        children: _countdownOptions
+                            .map(
+                              (minutes) => ToolChoiceChip(
+                                label: '$minutes 分钟',
+                                selected: _selectedMinutes == minutes,
+                                onTap: () =>
+                                    setState(() => _selectedMinutes = minutes),
+                                accentColor: accent,
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    ],
+                  ] else
+                    Wrap(
+                      spacing: DS.spacing10,
+                      runSpacing: DS.spacing10,
+                      children: _pomodoroOptions
+                          .map(
+                            (minutes) => ToolChoiceChip(
+                              label: '$minutes 分钟',
+                              selected: _selectedMinutes == minutes,
+                              onTap: () =>
+                                  setState(() => _selectedMinutes = minutes),
+                              accentColor: accent,
+                              icon: minutes == 25
+                                  ? Icons.local_fire_department_rounded
+                                  : Icons.bolt_rounded,
+                            ),
+                          )
+                          .toList(),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: DS.spacing16),
+            ToolSectionCard(
+              accentColor: accent,
+              title: '主计时盘',
+              subtitle: '直接开始、暂停或重置。计时完成后会给出本地提示。',
+              child: Center(
+                child: TimerWidget(
+                  key: ValueKey(
+                    '${widget.preset.name}_${_mode.name}_$initialSeconds$_sessionSeed',
+                  ),
+                  mode: _mode,
+                  initialSeconds: initialSeconds,
+                  maxSeconds: maxSeconds,
+                  onStateChange: (isRunning) {
+                    setState(() {
+                      _isRunning = isRunning;
+                    });
+                  },
+                  onComplete: () {
+                    unawaited(HapticFeedback.heavyImpact());
+                    AppFeedback.success(
+                      context,
+                      isPomodoro ? '番茄时段已完成' : '倒计时已结束',
+                    );
+                    setState(() {
+                      _isRunning = false;
+                    });
+                  },
+                ),
+              ),
+            ),
+          ],
         ),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      footer: Row(
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(DS.spacing10),
-                decoration: BoxDecoration(
-                  color: DS.primaryBase.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  widget.preset == FocusTimerPreset.pomodoro
-                      ? Icons.timer_rounded
-                      : Icons.hourglass_bottom_rounded,
-                  color: DS.primaryBase,
-                ),
-              ),
-              const SizedBox(width: DS.spacing12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: DS.fontWeightBold,
-                          ),
-                    ),
-                    const SizedBox(height: DS.spacing4),
-                    Text(
-                      subtitle,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: DS.textSecondary,
-                          ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          Expanded(
+            child: SparkleButton(
+              label: '重置',
+              variant: ButtonVariant.ghost,
+              onPressed: _resetTimer,
+              icon: const Icon(Icons.refresh_rounded),
+            ),
           ),
-          const SizedBox(height: DS.spacing20),
-          if (widget.preset == FocusTimerPreset.stopwatch) ...[
-            Wrap(
-              spacing: DS.spacing8,
-              runSpacing: DS.spacing8,
-              children: [
-                _buildModeChip(
-                  label: '正计时',
-                  selected: _mode == TimerMode.countUp,
-                  onTap: () => setState(() => _mode = TimerMode.countUp),
-                ),
-                _buildModeChip(
-                  label: '倒计时',
-                  selected: _mode == TimerMode.countDown,
-                  onTap: () => setState(() => _mode = TimerMode.countDown),
-                ),
-              ],
-            ),
-            if (_mode == TimerMode.countDown) ...[
-              const SizedBox(height: DS.spacing12),
-              Wrap(
-                spacing: DS.spacing8,
-                runSpacing: DS.spacing8,
-                children: _countdownOptions
-                    .map(
-                      (minutes) => _buildModeChip(
-                        label: '$minutes 分钟',
-                        selected: _selectedMinutes == minutes,
-                        onTap: () => setState(() => _selectedMinutes = minutes),
-                      ),
-                    )
-                    .toList(),
-              ),
-            ],
-            const SizedBox(height: DS.spacing24),
-          ] else ...[
-            Row(
-              children: [
-                Text(
-                  '工作时长',
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: DS.textSecondary,
-                      ),
-                ),
-                const SizedBox(width: DS.spacing12),
-                _buildModeChip(
-                  label: '25 分钟',
-                  selected: _selectedMinutes == 25,
-                  onTap: () => setState(() => _selectedMinutes = 25),
-                ),
-                const SizedBox(width: DS.spacing8),
-                _buildModeChip(
-                  label: '50 分钟',
-                  selected: _selectedMinutes == 50,
-                  onTap: () => setState(() => _selectedMinutes = 50),
-                ),
-              ],
-            ),
-            const SizedBox(height: DS.spacing24),
-          ],
-          Center(
-            child: TimerWidget(
-              key: ValueKey(
-                  '${widget.preset.name}_${_mode.name}_$initialSeconds'),
-              mode: _mode,
-              initialSeconds: initialSeconds,
-              maxSeconds: maxSeconds,
+          const SizedBox(width: DS.spacing12),
+          Expanded(
+            child: SparkleButton(
+              label: _mode == TimerMode.countUp ? '切到倒计时' : '切到正计时',
+              onPressed: () => setState(() {
+                _mode = _mode == TimerMode.countUp
+                    ? TimerMode.countDown
+                    : TimerMode.countUp;
+                _sessionSeed++;
+              }),
+              icon: const Icon(Icons.swap_horiz_rounded),
             ),
           ),
         ],
       ),
     );
   }
-
-  Widget _buildModeChip({
-    required String label,
-    required bool selected,
-    required VoidCallback onTap,
-  }) =>
-      InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(999),
-        child: AnimatedContainer(
-          duration: DS.durationFast,
-          padding: const EdgeInsets.symmetric(
-            horizontal: DS.spacing12,
-            vertical: DS.spacing8,
-          ),
-          decoration: BoxDecoration(
-            color: selected
-                ? DS.primaryBase
-                : DS.primaryBase.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(999),
-          ),
-          child: Text(
-            label,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: selected ? DS.brandPrimaryConst : DS.textPrimary,
-                  fontWeight: DS.fontWeightSemiBold,
-                ),
-          ),
-        ),
-      );
 }

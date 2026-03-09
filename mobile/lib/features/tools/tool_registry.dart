@@ -37,7 +37,10 @@ class ToolRegistry {
         ToolLaunchContext.home,
         ToolLaunchContext.toolLibrary,
       },
-      embeddedBuilder: (_) => const SpeechToTextTool(),
+      embeddedBuilder: (request) => SpeechToTextTool(
+        surface: request.surface,
+        onTextResult: request.onTextResult,
+      ),
     ),
     ToolDefinition(
       id: 'document_cleaner',
@@ -87,8 +90,10 @@ class ToolRegistry {
         ToolLaunchContext.taskExecution,
         ToolLaunchContext.toolLibrary,
       },
-      embeddedBuilder: (_) =>
-          const FocusTimerTool(preset: FocusTimerPreset.stopwatch),
+      embeddedBuilder: (request) => FocusTimerTool(
+        preset: FocusTimerPreset.stopwatch,
+        surface: request.surface,
+      ),
     ),
     ToolDefinition(
       id: 'pomodoro',
@@ -105,8 +110,10 @@ class ToolRegistry {
         ToolLaunchContext.taskExecution,
         ToolLaunchContext.toolLibrary,
       },
-      embeddedBuilder: (_) =>
-          const FocusTimerTool(preset: FocusTimerPreset.pomodoro),
+      embeddedBuilder: (request) => FocusTimerTool(
+        preset: FocusTimerPreset.pomodoro,
+        surface: request.surface,
+      ),
     ),
     ToolDefinition(
       id: 'calculator',
@@ -123,7 +130,7 @@ class ToolRegistry {
         ToolLaunchContext.taskExecution,
         ToolLaunchContext.toolLibrary,
       },
-      embeddedBuilder: (_) => const CalculatorTool(),
+      embeddedBuilder: (request) => CalculatorTool(surface: request.surface),
     ),
     ToolDefinition(
       id: 'notes',
@@ -140,7 +147,7 @@ class ToolRegistry {
         ToolLaunchContext.taskExecution,
         ToolLaunchContext.toolLibrary,
       },
-      embeddedBuilder: (_) => const NotesTool(),
+      embeddedBuilder: (request) => NotesTool(surface: request.surface),
     ),
     ToolDefinition(
       id: 'breathing',
@@ -156,7 +163,7 @@ class ToolRegistry {
         ToolLaunchContext.taskExecution,
         ToolLaunchContext.toolLibrary,
       },
-      embeddedBuilder: (_) => const BreathingTool(),
+      embeddedBuilder: (request) => BreathingTool(surface: request.surface),
     ),
     ToolDefinition(
       id: 'focus_stats',
@@ -172,7 +179,7 @@ class ToolRegistry {
         ToolLaunchContext.taskExecution,
         ToolLaunchContext.toolLibrary,
       },
-      embeddedBuilder: (_) => const FocusStatsTool(),
+      embeddedBuilder: (request) => FocusStatsTool(surface: request.surface),
     ),
     ToolDefinition(
       id: 'translator',
@@ -189,7 +196,7 @@ class ToolRegistry {
         ToolLaunchContext.taskExecution,
         ToolLaunchContext.toolLibrary,
       },
-      embeddedBuilder: (_) => const TranslatorTool(),
+      embeddedBuilder: (request) => TranslatorTool(surface: request.surface),
     ),
     ToolDefinition(
       id: 'vocabulary_lookup',
@@ -206,8 +213,10 @@ class ToolRegistry {
         ToolLaunchContext.taskExecution,
         ToolLaunchContext.toolLibrary,
       },
-      embeddedBuilder: (request) =>
-          VocabularyLookupTool(taskId: request.taskId),
+      embeddedBuilder: (request) => VocabularyLookupTool(
+        taskId: request.taskId,
+        surface: request.surface,
+      ),
     ),
     ToolDefinition(
       id: 'wordbook',
@@ -223,7 +232,7 @@ class ToolRegistry {
         ToolLaunchContext.taskExecution,
         ToolLaunchContext.toolLibrary,
       },
-      embeddedBuilder: (_) => const WordbookTool(),
+      embeddedBuilder: (request) => WordbookTool(surface: request.surface),
     ),
     ToolDefinition(
       id: 'error_book',
@@ -281,7 +290,10 @@ class ToolRegistry {
         ToolLaunchContext.taskExecution,
         ToolLaunchContext.toolLibrary,
       },
-      embeddedBuilder: (request) => FlashCapsuleTool(taskId: request.taskId),
+      embeddedBuilder: (request) => FlashCapsuleTool(
+        taskId: request.taskId,
+        surface: request.surface,
+      ),
     ),
     ToolDefinition(
       id: 'cognitive_patterns',

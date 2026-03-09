@@ -1,33 +1,50 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/custom_button.dart';
+import 'package:sparkle/features/tools/models/tool_definition.dart';
+import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
 
 class NotesTool extends StatefulWidget {
-  const NotesTool({super.key});
+  const NotesTool({
+    super.key,
+    this.surface = ToolSurface.page,
+  });
+
+  final ToolSurface surface;
 
   @override
   State<NotesTool> createState() => _NotesToolState();
 }
 
 class _NotesToolState extends State<NotesTool> {
-  final TextEditingController _controller = TextEditingController();
-  bool _isLoading = true;
   static const String _notesKey = 'quick_notes_content';
   static const String _notesTimestampKey = 'quick_notes_timestamp';
+
+  final TextEditingController _controller = TextEditingController();
+  bool _isLoading = true;
+  DateTime? _savedAt;
+
+  int get _charCount => _controller.text.trim().length;
+  int get _lineCount =>
+      _controller.text.trim().isEmpty ? 0 : '\n'.allMatches(_controller.text).length + 1;
 
   @override
   void initState() {
     super.initState();
-    _loadNotes();
+    unawaited(_loadNotes());
   }
 
   Future<void> _loadNotes() async {
     final prefs = await SharedPreferences.getInstance();
     final notes = prefs.getString(_notesKey) ?? '';
+    final timestamp = prefs.getString(_notesTimestampKey);
     if (mounted) {
       setState(() {
         _controller.text = notes;
+        _savedAt = timestamp == null ? null : DateTime.tryParse(timestamp);
         _isLoading = false;
       });
     }
@@ -35,8 +52,14 @@ class _NotesToolState extends State<NotesTool> {
 
   Future<void> _saveNotes() async {
     final prefs = await SharedPreferences.getInstance();
+    final now = DateTime.now();
     await prefs.setString(_notesKey, _controller.text);
-    await prefs.setString(_notesTimestampKey, DateTime.now().toIso8601String());
+    await prefs.setString(_notesTimestampKey, now.toIso8601String());
+    if (mounted) {
+      setState(() {
+        _savedAt = now;
+      });
+    }
   }
 
   Future<void> _clearNotes() async {
@@ -44,16 +67,28 @@ class _NotesToolState extends State<NotesTool> {
     await prefs.remove(_notesKey);
     await prefs.remove(_notesTimestampKey);
     if (mounted) {
-      setState(_controller.clear);
+      setState(() {
+        _controller.clear();
+        _savedAt = null;
+      });
       AppFeedback.info(context, '笔记已清空');
+    }
+  }
+
+  Future<void> _copyNotes() async {
+    if (_controller.text.trim().isEmpty) {
+      return;
+    }
+    await Clipboard.setData(ClipboardData(text: _controller.text.trim()));
+    if (mounted) {
+      AppFeedback.success(context, '笔记已复制');
     }
   }
 
   @override
   void dispose() {
-    // Auto-save on dispose
     if (_controller.text.isNotEmpty) {
-      _saveNotes();
+      unawaited(_saveNotes());
     }
     _controller.dispose();
     super.dispose();
@@ -61,110 +96,101 @@ class _NotesToolState extends State<NotesTool> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      padding: const EdgeInsets.all(DS.xl),
-      height: 600,
-      decoration: BoxDecoration(
-        color: isDark ? DS.neutral900 : DS.surfacePrimaryElevated,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(24),
-          topRight: Radius.circular(24),
+    final accent = DS.prismBlue;
+    return ToolShell(
+      surface: widget.surface,
+      icon: Icons.edit_note_rounded,
+      title: '闪念笔记',
+      subtitle: '用于快速承接灵感、会议碎片和任务切片。内容会自动保存，适合做短时外脑。',
+      accentColor: accent,
+      fillHeight: true,
+      heroChips: [
+        ToolHeroChip(
+          label: _savedAt == null
+              ? '自动保存'
+              : '已保存 ${_savedAt!.hour.toString().padLeft(2, '0')}:${_savedAt!.minute.toString().padLeft(2, '0')}',
+          accentColor: accent,
+          icon: Icons.cloud_done_rounded,
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Drag Handle
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: DS.neutral300,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: DS.xl),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.note_alt_outlined, color: DS.brandPrimary),
-                  const SizedBox(width: DS.sm),
-                  Text(
-                    '随手记',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleLarge
-                        ?.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-              SparkleButton.ghost(
-                label: '清空',
-                onPressed: _clearNotes,
-              ),
-            ],
-          ),
-          const SizedBox(height: DS.lg),
-
-          // Last saved indicator
-          if (!_isLoading && _controller.text.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: DS.sm),
-              child: Text(
-                '内容会自动保存',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: isDark ? DS.neutral400 : DS.neutral500,
-                ),
-              ),
-            ),
-
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : Container(
-                    padding: const EdgeInsets.all(DS.lg),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? DS.neutral800
-                          : DS.warning.withValues(alpha: 0.05),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isDark
-                            ? DS.neutral700
-                            : DS.brandPrimary.withValues(alpha: 0.2),
-                      ),
+        ToolHeroChip(
+          label: _charCount == 0 ? '等待记录' : '$_charCount 字',
+          accentColor: accent,
+          icon: Icons.notes_rounded,
+        ),
+      ],
+      body: _isLoading
+          ? Center(child: CircularProgressIndicator(color: accent))
+          : Column(
+              children: [
+                Wrap(
+                  spacing: DS.spacing12,
+                  runSpacing: DS.spacing12,
+                  children: [
+                    ToolMetricCard(
+                      label: '字数',
+                      value: '$_charCount',
+                      accentColor: accent,
+                      icon: Icons.text_fields_rounded,
                     ),
+                    ToolMetricCard(
+                      label: '行数',
+                      value: '$_lineCount',
+                      accentColor: accent,
+                      icon: Icons.subject_rounded,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: DS.spacing16),
+                Expanded(
+                  child: ToolSectionCard(
+                    accentColor: accent,
+                    fillHeight: true,
+                    title: '笔记内容',
+                    subtitle: '输入时会自动保存，不需要手动提交。',
                     child: TextField(
                       controller: _controller,
                       maxLines: null,
                       expands: true,
                       decoration: const InputDecoration(
-                        hintText: '在这里记录想法...',
+                        hintText: '把刚刚闪过的想法先放进来...',
                         border: InputBorder.none,
                       ),
-                      style: TextStyle(
-                        fontSize: 16,
-                        height: 1.5,
-                        color: isDark ? DS.neutral100 : DS.neutral900,
-                      ),
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            color: DS.textPrimary,
+                            height: 1.65,
+                          ),
                       onChanged: (_) => _saveNotes(),
                     ),
                   ),
+                ),
+              ],
+            ),
+      footer: Row(
+        children: [
+          Expanded(
+            child: SparkleButton(
+              label: '清空',
+              variant: ButtonVariant.ghost,
+              onPressed: _clearNotes,
+              icon: const Icon(Icons.delete_outline_rounded),
+            ),
           ),
-          const SizedBox(height: DS.lg),
-          CustomButton.primary(
-            text: '完成',
-            onPressed: () {
-              Navigator.pop(context);
-              AppFeedback.success(context, '笔记已保存');
-            },
+          const SizedBox(width: DS.spacing12),
+          Expanded(
+            child: SparkleButton(
+              label: '复制内容',
+              variant: ButtonVariant.ghost,
+              onPressed: _copyNotes,
+              icon: const Icon(Icons.copy_rounded),
+            ),
+          ),
+          const SizedBox(width: DS.spacing12),
+          Expanded(
+            child: SparkleButton(
+              label: '立即保存',
+              onPressed: _saveNotes,
+              icon: const Icon(Icons.check_rounded),
+            ),
           ),
         ],
       ),

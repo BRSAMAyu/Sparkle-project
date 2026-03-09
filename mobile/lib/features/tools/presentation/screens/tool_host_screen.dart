@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
 import 'package:sparkle/features/tools/tool_registry.dart';
@@ -26,21 +27,35 @@ class ToolHostScreen extends StatelessWidget {
 
     return SparklePageScaffold(
       role: SparklePageRole.content,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: Text(tool.title),
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        title: const SizedBox.shrink(),
+        actions: [
+          IconButton(
+            tooltip: '工具库',
+            onPressed: () => context.push('/tools/library'),
+            icon: const Icon(Icons.grid_view_rounded),
+          ),
+        ],
       ),
       child: SafeArea(
         child: LayoutBuilder(
-          builder: (context, constraints) => SingleChildScrollView(
-            padding: const EdgeInsets.all(DS.spacing16),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                minHeight: constraints.maxHeight - DS.spacing32,
-              ),
+          builder: (context, constraints) => Padding(
+            padding: const EdgeInsets.fromLTRB(
+              DS.spacing16,
+              DS.spacing8,
+              DS.spacing16,
+              DS.spacing24,
+            ),
+            child: SizedBox(
+              height: constraints.maxHeight,
               child: tool.embeddedBuilder?.call(request) ??
                   Center(
                     child: Text(
-                      '工具暂不可用',
+                      '${tool.title}暂不可用',
                       style: Theme.of(context).textTheme.bodyLarge,
                     ),
                   ),

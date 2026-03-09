@@ -2,9 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/chat/presentation/widgets/voice_input_button.dart';
+import 'package:sparkle/features/tools/models/tool_definition.dart';
+import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
 
 class SpeechToTextTool extends StatefulWidget {
-  const SpeechToTextTool({super.key});
+  const SpeechToTextTool({
+    super.key,
+    this.surface = ToolSurface.page,
+    this.onTextResult,
+  });
+
+  final ToolSurface surface;
+  final ValueChanged<String>? onTextResult;
 
   @override
   State<SpeechToTextTool> createState() => _SpeechToTextToolState();
@@ -12,6 +21,11 @@ class SpeechToTextTool extends StatefulWidget {
 
 class _SpeechToTextToolState extends State<SpeechToTextTool> {
   String _transcript = '';
+  DateTime? _lastCapturedAt;
+
+  int get _charCount => _transcript.trim().length;
+  int get _wordCount =>
+      _transcript.trim().isEmpty ? 0 : _transcript.trim().split(RegExp(r'\s+')).length;
 
   Future<void> _copyTranscript() async {
     if (_transcript.trim().isEmpty) {
@@ -25,57 +39,64 @@ class _SpeechToTextToolState extends State<SpeechToTextTool> {
   }
 
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(DS.spacing24),
-        decoration: BoxDecoration(
-          color: DS.surfacePrimary,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          border: Border(
-            top: BorderSide(color: DS.borderSubtle),
-          ),
+  Widget build(BuildContext context) {
+    final accent = DS.info;
+    final hasText = _transcript.trim().isNotEmpty;
+
+    return ToolShell(
+      surface: widget.surface,
+      icon: Icons.mic_rounded,
+      title: '语音转文字',
+      subtitle: '面向真实记录场景的轻量转写台。单次录音最长 30 秒，直接调用当前已接通的 GLM ASR 链路。',
+      accentColor: accent,
+      fillHeight: true,
+      heroChips: [
+        ToolHeroChip(
+          label: hasText ? '已捕获 $_charCount 字' : '30 秒单次录音',
+          accentColor: accent,
+          icon: Icons.graphic_eq_rounded,
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(DS.spacing10),
-                  decoration: BoxDecoration(
-                    color: DS.info.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(Icons.mic_rounded, color: DS.info),
-                ),
-                const SizedBox(width: DS.spacing12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '语音转文字',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: DS.fontWeightBold,
-                            ),
-                      ),
-                      const SizedBox(height: DS.spacing4),
-                      Text(
-                        '单次录音最长 30 秒，直接走当前已接通的 GLM ASR 实时链路。',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: DS.textSecondary,
-                            ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: DS.spacing20),
-            Center(
+        ToolHeroChip(
+          label: _lastCapturedAt == null
+              ? '实时转写'
+              : '${_lastCapturedAt!.hour.toString().padLeft(2, '0')}:${_lastCapturedAt!.minute.toString().padLeft(2, '0')} 更新',
+          accentColor: accent,
+          icon: Icons.bolt_rounded,
+        ),
+      ],
+      body: Column(
+        children: [
+          Wrap(
+            spacing: DS.spacing12,
+            runSpacing: DS.spacing12,
+            children: [
+              ToolMetricCard(
+                label: '字数',
+                value: '$_charCount',
+                accentColor: accent,
+                icon: Icons.notes_rounded,
+                caption: '适合直接发送或整理',
+              ),
+              ToolMetricCard(
+                label: '词数',
+                value: '$_wordCount',
+                accentColor: accent,
+                icon: Icons.subject_rounded,
+                caption: '便于快速判断长度',
+              ),
+            ],
+          ),
+          const SizedBox(height: DS.spacing16),
+          ToolSectionCard(
+            accentColor: accent,
+            title: '录音控制',
+            subtitle: '点击麦克风开始录音，再次点击结束转写。',
+            child: Center(
               child: VoiceInputButton(
                 onTranscription: (text) {
                   setState(() {
                     _transcript = text;
+                    _lastCapturedAt = DateTime.now();
                   });
                 },
                 onError: (error) {
@@ -83,48 +104,63 @@ class _SpeechToTextToolState extends State<SpeechToTextTool> {
                 },
               ),
             ),
-            const SizedBox(height: DS.spacing20),
-            Container(
-              padding: const EdgeInsets.all(DS.spacing16),
-              constraints: const BoxConstraints(minHeight: 220),
-              decoration: BoxDecoration(
-                color: DS.surfaceSecondary,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: DS.borderSubtle),
-              ),
-              child: Text(
-                _transcript.isEmpty ? '点击麦克风开始转写，结果会实时显示在这里。' : _transcript,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: _transcript.isEmpty
-                          ? DS.textSecondary
-                          : DS.textPrimary,
-                      height: 1.5,
+          ),
+          const SizedBox(height: DS.spacing16),
+          Expanded(
+            child: ToolSectionCard(
+              accentColor: accent,
+              title: '转写结果',
+              subtitle: '结果区支持直接复制，可作为后续写作和总结的原文底稿。',
+              child: hasText
+                  ? SelectableText(
+                      _transcript,
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            color: DS.textPrimary,
+                            height: 1.65,
+                          ),
+                    )
+                  : ToolEmptyState(
+                      icon: Icons.hearing_rounded,
+                      title: '还没有转写内容',
+                      description: '开始一次录音后，文本会实时显示在这里。适合课堂摘录、灵感捕捉和会议补记。',
+                      accentColor: accent,
                     ),
-              ),
             ),
-            const SizedBox(height: DS.spacing16),
-            Row(
-              children: [
-                Expanded(
-                  child: SparkleButton(
-                    label: '清空',
-                    variant: ButtonVariant.ghost,
-                    onPressed: _transcript.isEmpty
-                        ? null
-                        : () => setState(() => _transcript = ''),
-                  ),
-                ),
-                const SizedBox(width: DS.spacing12),
-                Expanded(
-                  child: SparkleButton(
-                    label: '复制文本',
-                    onPressed: _transcript.isEmpty ? null : _copyTranscript,
-                    icon: const Icon(Icons.copy_rounded),
-                  ),
-                ),
-              ],
+          ),
+        ],
+      ),
+      footer: Row(
+        children: [
+          Expanded(
+            child: SparkleButton(
+              label: '清空',
+              variant: ButtonVariant.ghost,
+              onPressed:
+                  hasText ? () => setState(() => _transcript = '') : null,
+            ),
+          ),
+          const SizedBox(width: DS.spacing12),
+          Expanded(
+            child: SparkleButton(
+              label: '复制文本',
+              onPressed: hasText ? _copyTranscript : null,
+              icon: const Icon(Icons.copy_rounded),
+            ),
+          ),
+          if (widget.onTextResult != null) ...[
+            const SizedBox(width: DS.spacing12),
+            Expanded(
+              child: SparkleButton(
+                label: '插入内容',
+                onPressed: hasText
+                    ? () => widget.onTextResult!.call(_transcript.trim())
+                    : null,
+                icon: const Icon(Icons.arrow_forward_rounded),
+              ),
             ),
           ],
-        ),
-      );
+        ],
+      ),
+    );
+  }
 }

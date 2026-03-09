@@ -8,6 +8,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/document/controllers/document_controller.dart';
 import 'package:sparkle/features/document/models/document_cleaning_model.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
+import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
 
 class DocumentCleanerSheet extends StatelessWidget {
   const DocumentCleanerSheet({required this.onResult, super.key});
@@ -66,6 +67,7 @@ class _DocumentCleanerPanelState extends ConsumerState<DocumentCleanerPanel> {
 
   Future<void> _startCleaning() async {
     if (_selectedFile == null) {
+      AppFeedback.info(context, '请先选择一个文件');
       return;
     }
 
@@ -93,151 +95,191 @@ class _DocumentCleanerPanelState extends ConsumerState<DocumentCleanerPanel> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(documentControllerProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final accent = DS.brandPrimary;
+    final fileName = _selectedFile?.path.split('/').last;
+    final extension = fileName?.split('.').last.toUpperCase();
+    final fileSize = _selectedFile == null
+        ? null
+        : '${(_selectedFile!.lengthSync() / (1024 * 1024)).toStringAsFixed(1)} MB';
 
-    return Container(
-      padding: const EdgeInsets.all(DS.lg),
-      decoration: BoxDecoration(
-        color: isDark ? DS.neutral900 : DS.surfacePrimary,
-        borderRadius: BorderRadius.vertical(
-          top:
-              Radius.circular(_isSheet ? DS.borderRadiusXl : DS.borderRadiusLg),
+    return ToolShell(
+      surface: widget.surface,
+      icon: Icons.auto_awesome_motion_rounded,
+      title: '文档清洗',
+      subtitle: '把扫描件、讲义和课件整理成可读文本。支持真实 GLM OCR 链路，适合笔记沉淀和资料预处理。',
+      accentColor: accent,
+      headerAction: _isSheet
+          ? SparkleIconButton(
+              icon: const Icon(Icons.close_rounded),
+              onPressed: () => Navigator.of(context).pop(),
+              variant: ButtonVariant.ghost,
+            )
+          : null,
+      heroChips: [
+        ToolHeroChip(
+          label: _enableOcr ? 'OCR 已开启' : '纯文本清洗',
+          accentColor: accent,
+          icon: _enableOcr ? Icons.visibility_rounded : Icons.notes_rounded,
         ),
-        border: Border.all(
-          color: isDark ? DS.neutral800 : DS.borderSubtle,
+        ToolHeroChip(
+          label: fileName == null ? '支持 PDF / DOCX / PPTX' : extension ?? '文件已选',
+          accentColor: accent,
+          icon: Icons.insert_drive_file_rounded,
         ),
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (_isSheet)
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 20),
-                  decoration: BoxDecoration(
-                    color: isDark ? DS.neutral700 : DS.neutral300,
-                    borderRadius: BorderRadius.circular(2),
+      ],
+      body: state.when(
+        data: (taskStatus) => SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Wrap(
+                spacing: DS.spacing12,
+                runSpacing: DS.spacing12,
+                children: [
+                  ToolMetricCard(
+                    label: '引擎',
+                    value: _enableOcr
+                        ? (_ocrEngine == 'zhipu' ? 'GLM OCR' : '本地 OCR')
+                        : '跳过 OCR',
+                    accentColor: accent,
+                    icon: Icons.tune_rounded,
+                    caption: '扫描件建议启用 GLM OCR',
                   ),
-                ),
+                  ToolMetricCard(
+                    label: '文件体积',
+                    value: fileSize ?? '--',
+                    accentColor: accent,
+                    icon: Icons.sd_storage_rounded,
+                    caption: fileName == null ? '未选择文件' : '当前待处理文件',
+                  ),
+                ],
               ),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '智能文档备考',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: DS.fontWeightBold,
-                          color: isDark ? DS.brandPrimary : DS.neutral900,
-                        ),
-                      ),
-                      const SizedBox(height: DS.spacing6),
-                      Text(
-                        '上传 PDF / Word / PPT，自动走当前已接通的文档清洗与 GLM OCR 链路。',
-                        style: TextStyle(
-                          color: isDark ? DS.neutral400 : DS.neutral600,
-                          height: 1.4,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (_isSheet)
-                  SparkleIconButton(
-                    icon: const Icon(Icons.close_rounded),
-                    onPressed: () => Navigator.of(context).pop(),
-                    variant: ButtonVariant.ghost,
-                    size: DS.touchTargetMinSize,
-                  ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            state.when(
-              data: (taskStatus) {
-                if (taskStatus == null) {
-                  return _buildFilePicker(isDark);
-                }
-                if (taskStatus.status == 'queued' ||
-                    taskStatus.status == 'processing') {
-                  return _buildProgress(taskStatus, isDark);
-                }
-                if (taskStatus.status == 'completed' &&
-                    taskStatus.result != null) {
-                  return _buildSuccess(taskStatus.result!, isDark);
-                }
-                return _buildError(taskStatus.message, isDark);
-              },
-              error: (err, stack) => _buildError(err.toString(), isDark),
-              loading: () => const Padding(
-                padding: EdgeInsets.symmetric(vertical: 40),
-                child: Center(child: CircularProgressIndicator()),
-              ),
-            ),
-          ],
+              const SizedBox(height: DS.spacing16),
+              if (taskStatus == null) _buildSetupCard(accent, fileName, extension),
+              if (taskStatus != null &&
+                  (taskStatus.status == 'queued' ||
+                      taskStatus.status == 'processing'))
+                _buildProgress(taskStatus, accent),
+              if (taskStatus != null &&
+                  taskStatus.status == 'completed' &&
+                  taskStatus.result != null)
+                _buildSuccess(taskStatus.result!, accent),
+              if (taskStatus != null &&
+                  taskStatus.status != 'queued' &&
+                  taskStatus.status != 'processing' &&
+                  !(taskStatus.status == 'completed' &&
+                      taskStatus.result != null))
+                _buildError(taskStatus.message, accent),
+            ],
+          ),
+        ),
+        error: (err, stack) => _buildError(err.toString(), accent),
+        loading: () => Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: DS.spacing32),
+            child: CircularProgressIndicator(color: accent),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildFilePicker(bool isDark) => Column(
+  Widget _buildSetupCard(Color accent, String? fileName, String? extension) =>
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          GestureDetector(
-            onTap: _pickFile,
-            child: Container(
-              height: 150,
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: isDark ? DS.neutral700 : DS.neutral300,
-                  width: 1.5,
+          ToolSectionCard(
+            accentColor: accent,
+            title: '文件选择',
+            subtitle: '先选文件，再决定是否启用 OCR。识别结果会自动回流到文档清洗任务。',
+            child: InkWell(
+              onTap: _pickFile,
+              borderRadius: BorderRadius.circular(24),
+              child: Ink(
+                padding: const EdgeInsets.all(DS.spacing20),
+                decoration: BoxDecoration(
+                  color: DS.surfacePrimary,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: DS.borderSubtle),
                 ),
-                borderRadius: BorderRadius.circular(DS.borderRadiusLg),
-                color: isDark ? DS.neutral800 : DS.neutral50,
-              ),
-              child: Center(
-                child: _selectedFile == null
+                child: fileName == null
                     ? Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
-                            Icons.cloud_upload_outlined,
-                            size: 48,
-                            color: DS.primaryBase,
+                            Icons.cloud_upload_rounded,
+                            size: 44,
+                            color: accent,
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: DS.spacing12),
                           Text(
-                            '点击选择 PDF / Word / PPT',
-                            style: TextStyle(
-                              color: isDark ? DS.neutral400 : DS.neutral600,
-                            ),
+                            '点击选择文件',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(
+                                  color: DS.textPrimary,
+                                  fontWeight: DS.fontWeightBold,
+                                ),
+                          ),
+                          const SizedBox(height: DS.spacing6),
+                          Text(
+                            '支持 PDF、DOCX、PPTX；扫描件推荐开启 OCR。',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(
+                                  color: DS.textSecondary,
+                                  height: 1.5,
+                                ),
                           ),
                         ],
                       )
-                    : Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                    : Row(
                         children: [
-                          Icon(
-                            Icons.insert_drive_file,
-                            size: 48,
-                            color: DS.primaryBase,
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            _selectedFile!.path.split('/').last,
-                            style: TextStyle(
-                              fontWeight: DS.fontWeightSemiBold,
-                              color: isDark ? DS.brandPrimary : DS.neutral900,
+                          Container(
+                            width: 52,
+                            height: 52,
+                            decoration: BoxDecoration(
+                              color: accent.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Icon(
+                              Icons.insert_drive_file_rounded,
+                              color: accent,
                             ),
                           ),
+                          const SizedBox(width: DS.spacing16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  fileName,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium
+                                      ?.copyWith(
+                                        color: DS.textPrimary,
+                                        fontWeight: DS.fontWeightBold,
+                                      ),
+                                ),
+                                const SizedBox(height: DS.spacing4),
+                                Text(
+                                  extension ?? '文档文件',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(color: DS.textSecondary),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: DS.spacing12),
                           SparkleButton(
-                            label: '更换文件',
+                            label: '更换',
                             variant: ButtonVariant.ghost,
                             onPressed: _pickFile,
                           ),
@@ -246,210 +288,228 @@ class _DocumentCleanerPanelState extends ConsumerState<DocumentCleanerPanel> {
               ),
             ),
           ),
-          const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '启用 OCR 识别 (扫描件必备)',
-                style: TextStyle(color: isDark ? DS.neutral300 : DS.neutral700),
-              ),
-              Switch(
-                value: _enableOcr,
-                activeThumbColor: DS.primaryBase,
-                onChanged: (val) => setState(() => _enableOcr = val),
-              ),
-            ],
-          ),
-          if (_enableOcr) ...[
-            const SizedBox(height: 16),
-            Row(
+          const SizedBox(height: DS.spacing16),
+          ToolSectionCard(
+            accentColor: accent,
+            title: '处理策略',
+            subtitle: '扫描件建议开启 OCR；源文件已有文字层时可关闭 OCR 提升速度。',
+            child: Column(
               children: [
-                Text(
-                  'OCR 引擎',
-                  style:
-                      TextStyle(color: isDark ? DS.neutral300 : DS.neutral700),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '启用 OCR 识别',
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              color: DS.textPrimary,
+                              fontWeight: DS.fontWeightSemiBold,
+                            ),
+                      ),
+                    ),
+                    Switch(
+                      value: _enableOcr,
+                      onChanged: (value) => setState(() => _enableOcr = value),
+                    ),
+                  ],
                 ),
-                const Spacer(),
-                _buildEngineChip('本地快速', 'local', isDark),
-                const SizedBox(width: 12),
-                _buildEngineChip('GLM OCR 高精', 'zhipu', isDark),
+                if (_enableOcr) ...[
+                  const SizedBox(height: DS.spacing16),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Wrap(
+                      spacing: DS.spacing10,
+                      runSpacing: DS.spacing10,
+                      children: [
+                        ToolChoiceChip(
+                          label: '本地快速',
+                          selected: _ocrEngine == 'local',
+                          onTap: () => setState(() => _ocrEngine = 'local'),
+                          accentColor: accent,
+                          icon: Icons.speed_rounded,
+                        ),
+                        ToolChoiceChip(
+                          label: 'GLM OCR 高精',
+                          selected: _ocrEngine == 'zhipu',
+                          onTap: () => setState(() => _ocrEngine = 'zhipu'),
+                          accentColor: accent,
+                          icon: Icons.auto_awesome_rounded,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
-          ],
-          const SizedBox(height: DS.xl),
+          ),
+          const SizedBox(height: DS.spacing20),
           SparkleButton(
             expand: true,
             label: '开始 AI 清洗',
             onPressed: _selectedFile == null ? null : _startCleaning,
+            icon: const Icon(Icons.auto_fix_high_rounded),
           ),
         ],
       );
 
-  Widget _buildEngineChip(String label, String value, bool isDark) {
-    final isSelected = _ocrEngine == value;
-    final color =
-        isSelected ? DS.primaryBase : (isDark ? DS.neutral700 : DS.neutral200);
-    final textColor = isSelected
-        ? DS.brandPrimaryConst
-        : (isDark ? DS.neutral300 : DS.neutral700);
-
-    return GestureDetector(
-      onTap: () => setState(() => _ocrEngine = value),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? color : DS.surfacePrimary.withValues(alpha: 0),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color, width: 1.5),
+  Widget _buildProgress(CleaningTaskStatus status, Color accent) =>
+      ToolSectionCard(
+        accentColor: accent,
+        title: '处理中',
+        subtitle: '正在上传、解析和清洗文档，进度会实时更新。',
+        child: Column(
+          children: [
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                SizedBox(
+                  width: 104,
+                  height: 104,
+                  child: CircularProgressIndicator(
+                    value: status.percent / 100,
+                    strokeWidth: 10,
+                    backgroundColor: DS.surfaceTertiary,
+                    valueColor: AlwaysStoppedAnimation<Color>(accent),
+                  ),
+                ),
+                Text(
+                  '${status.percent}%',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        color: DS.textPrimary,
+                        fontWeight: DS.fontWeightBold,
+                      ),
+                ),
+              ],
+            ),
+            const SizedBox(height: DS.spacing20),
+            Text(
+              status.message,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: DS.textPrimary,
+                    fontWeight: DS.fontWeightSemiBold,
+                  ),
+            ),
+          ],
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: textColor,
-            fontSize: 13,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
-      ),
-    );
-  }
+      );
 
-  Widget _buildProgress(CleaningTaskStatus status, bool isDark) => Column(
+  Widget _buildSuccess(CleaningResult result, Color accent) => Column(
         children: [
-          const SizedBox(height: 40),
-          Stack(
-            alignment: Alignment.center,
+          ToolSectionCard(
+            accentColor: accent,
+            title: '清洗成功',
+            subtitle: '结果已经整理完毕，你可以复制、发送或继续做下一轮处理。',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Wrap(
+                  spacing: DS.spacing12,
+                  runSpacing: DS.spacing12,
+                  children: [
+                    ToolMetricCard(
+                      label: '字符数',
+                      value: '${result.charCount ?? 0}',
+                      accentColor: accent,
+                      icon: Icons.text_fields_rounded,
+                    ),
+                    ToolMetricCard(
+                      label: '模式',
+                      value: result.mode == 'map_reduce' ? '深度摘要' : '全量清洗',
+                      accentColor: accent,
+                      icon: Icons.layers_rounded,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: DS.spacing16),
+                Container(
+                  padding: const EdgeInsets.all(DS.spacing18),
+                  decoration: BoxDecoration(
+                    color: DS.surfacePrimary,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: DS.borderSubtle),
+                  ),
+                  child: Text(
+                    result.summary,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: DS.textPrimary,
+                          height: 1.65,
+                        ),
+                  ),
+                ),
+                if ((result.fullTextPreview ?? '').isNotEmpty) ...[
+                  const SizedBox(height: DS.spacing16),
+                  Text(
+                    '全文预览',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          color: DS.textPrimary,
+                          fontWeight: DS.fontWeightBold,
+                        ),
+                  ),
+                  const SizedBox(height: DS.spacing8),
+                  Text(
+                    result.fullTextPreview!,
+                    maxLines: 8,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: DS.textSecondary,
+                          height: 1.6,
+                        ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: DS.spacing16),
+          Row(
             children: [
-              SizedBox(
-                width: 80,
-                height: 80,
-                child: CircularProgressIndicator(
-                  value: status.percent / 100,
-                  strokeWidth: 8,
-                  backgroundColor: isDark ? DS.neutral800 : DS.neutral100,
-                  valueColor: AlwaysStoppedAnimation<Color>(DS.primaryBase),
+              Expanded(
+                child: SparkleButton(
+                  label: _isSheet ? '发送到对话' : '使用结果',
+                  onPressed: () {
+                    widget.onResult?.call(result.summary);
+                    if (_isSheet) {
+                      Navigator.pop(context);
+                    }
+                  },
+                  icon: Icon(
+                    _isSheet ? Icons.send_rounded : Icons.arrow_forward_rounded,
+                  ),
                 ),
               ),
-              Text(
-                '${status.percent}%',
-                style: TextStyle(
-                  fontWeight: DS.fontWeightBold,
-                  fontSize: 18,
-                  color: isDark ? DS.brandPrimary : DS.neutral900,
+              const SizedBox(width: DS.spacing12),
+              Expanded(
+                child: SparkleButton(
+                  label: '复制摘要',
+                  variant: ButtonVariant.ghost,
+                  onPressed: () => _copyResult(result.summary),
+                  icon: const Icon(Icons.copy_rounded),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 32),
-          Text(
-            status.message,
-            style: TextStyle(
-              fontSize: 16,
-              color: isDark ? DS.neutral300 : DS.neutral700,
-              fontWeight: DS.fontWeightMedium,
-            ),
-          ),
-          const SizedBox(height: 60),
         ],
       );
 
-  Widget _buildSuccess(CleaningResult result, bool isDark) => Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(DS.lg),
-            decoration: BoxDecoration(
-              color: DS.success.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
+  Widget _buildError(String message, Color accent) => ToolSectionCard(
+        accentColor: DS.error,
+        title: '清洗失败',
+        subtitle: '链路已经返回错误信息，可以直接重试或更换文件。',
+        child: Column(
+          children: [
+            ToolEmptyState(
+              icon: Icons.error_outline_rounded,
+              title: '当前任务未完成',
+              description: message,
+              accentColor: DS.error,
             ),
-            child:
-                Icon(Icons.check_circle_rounded, color: DS.success, size: 64),
-          ),
-          const SizedBox(height: DS.xl),
-          Text(
-            '文档分析成功',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: DS.fontWeightBold,
-              color: isDark ? DS.brandPrimary : DS.neutral900,
+            const SizedBox(height: DS.spacing16),
+            SparkleButton(
+              label: '重新尝试',
+              variant: ButtonVariant.ghost,
+              onPressed: () => ref.read(documentControllerProvider.notifier).reset(),
+              icon: const Icon(Icons.refresh_rounded),
             ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            '已提取 ${result.charCount} 字符\n分析模式: ${result.mode == "map_reduce" ? "深度摘要" : "全量清洗"}',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: isDark ? DS.neutral400 : DS.neutral600,
-              height: 1.5,
-            ),
-          ),
-          const SizedBox(height: 24),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(DS.spacing16),
-            decoration: BoxDecoration(
-              color: isDark ? DS.neutral800 : DS.neutral50,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: isDark ? DS.neutral700 : DS.neutral200,
-              ),
-            ),
-            child: Text(
-              result.summary,
-              maxLines: 8,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: isDark ? DS.neutral200 : DS.neutral800,
-                height: 1.5,
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-          SparkleButton(
-            expand: true,
-            onPressed: () {
-              widget.onResult?.call(result.summary);
-              if (_isSheet) {
-                Navigator.pop(context);
-              }
-            },
-            icon: Icon(_isSheet ? Icons.send_rounded : Icons.check_rounded),
-            label: _isSheet ? '将摘要发送到对话' : '使用清洗结果',
-          ),
-          const SizedBox(height: 12),
-          SparkleButton.ghost(
-            expand: true,
-            label: '复制摘要',
-            onPressed: () => _copyResult(result.summary),
-          ),
-        ],
-      );
-
-  Widget _buildError(String message, bool isDark) => Column(
-        children: [
-          Icon(Icons.error_outline_rounded, color: DS.error, size: 64),
-          const SizedBox(height: DS.xl),
-          Text(
-            '清洗处理失败',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: DS.fontWeightBold,
-              color: isDark ? DS.brandPrimary : DS.neutral900,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            message,
-            textAlign: TextAlign.center,
-            style: TextStyle(color: DS.error),
-          ),
-          const SizedBox(height: 32),
-          SparkleButton(
-            label: '重新尝试',
-            variant: ButtonVariant.ghost,
-            onPressed: () =>
-                ref.read(documentControllerProvider.notifier).reset(),
-          ),
-        ],
+          ],
+        ),
       );
 }
