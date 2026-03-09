@@ -11,6 +11,19 @@ enum TaskViewMode { schedule, priority, plan, sprint }
 /// Sprint task filter options
 enum SprintTaskFilter { all, todo, inProgress, done }
 
+class TaskBoardTodaySummary {
+  const TaskBoardTodaySummary({
+    required this.totalCount,
+    required this.completedCount,
+  });
+
+  final int totalCount;
+  final int completedCount;
+
+  String get label =>
+      totalCount == 0 ? '今日无任务' : '今日$totalCount项·已完成$completedCount';
+}
+
 /// Task board state
 class TaskBoardState {
   TaskBoardState({
@@ -27,11 +40,11 @@ class TaskBoardState {
 
   /// Serialize state to JSON for persistence
   Map<String, dynamic> toJson() => {
-      'currentView': currentView.name,
-      'expandedTaskIds': expandedTaskIds.toList(),
-      'selectedPlanId': selectedPlanId,
-      'sprintFilter': sprintFilter.name,
-    };
+        'currentView': currentView.name,
+        'expandedTaskIds': expandedTaskIds.toList(),
+        'selectedPlanId': selectedPlanId,
+        'sprintFilter': sprintFilter.name,
+      };
 
   /// Create state from JSON (for persistence)
   static TaskBoardState? fromJson(Map<String, dynamic> json) {
@@ -94,7 +107,8 @@ class TaskBoardNotifier extends PersistentStateNotifier<TaskBoardState> {
         ? TaskViewMode.sprint
         : TaskViewMode.schedule;
     // Only update if state is still default (schedule view)
-    if (state.currentView == TaskViewMode.schedule && defaultView == TaskViewMode.sprint) {
+    if (state.currentView == TaskViewMode.schedule &&
+        defaultView == TaskViewMode.sprint) {
       state = state.copyWith(currentView: defaultView);
     }
   }
@@ -115,16 +129,15 @@ class TaskBoardNotifier extends PersistentStateNotifier<TaskBoardState> {
 
   void expandTask(String taskId) {
     if (!state.expandedTaskIds.contains(taskId)) {
-      final newExpanded = Set<String>.from(state.expandedTaskIds);
-      newExpanded.add(taskId);
+      final newExpanded = Set<String>.from(state.expandedTaskIds)..add(taskId);
       state = state.copyWith(expandedTaskIds: newExpanded);
     }
   }
 
   void collapseTask(String taskId) {
     if (state.expandedTaskIds.contains(taskId)) {
-      final newExpanded = Set<String>.from(state.expandedTaskIds);
-      newExpanded.remove(taskId);
+      final newExpanded = Set<String>.from(state.expandedTaskIds)
+        ..remove(taskId);
       state = state.copyWith(expandedTaskIds: newExpanded);
     }
   }
@@ -152,6 +165,34 @@ final taskBoardProvider =
   TaskBoardNotifier.new,
 );
 
+final taskBoardTodaySummaryProvider = Provider<TaskBoardTodaySummary>((ref) {
+  final taskState = ref.watch(taskListProvider);
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+
+  bool isSameDay(DateTime? value) =>
+      value != null &&
+      value.year == today.year &&
+      value.month == today.month &&
+      value.day == today.day;
+
+  final todayTasks = taskState.tasks
+      .where((task) => isSameDay(task.dueDate) || isSameDay(task.completedAt))
+      .toList();
+
+  final completedToday = todayTasks
+      .where(
+        (task) =>
+            task.status == TaskStatus.completed && isSameDay(task.completedAt),
+      )
+      .length;
+
+  return TaskBoardTodaySummary(
+    totalCount: todayTasks.length,
+    completedCount: completedToday,
+  );
+});
+
 /// Grouped tasks for schedule view
 class ScheduleGroup {
   ScheduleGroup({
@@ -169,7 +210,11 @@ class ScheduleGroup {
 final scheduleGroupsProvider = Provider<List<ScheduleGroup>>((ref) {
   final taskState = ref.watch(taskListProvider);
   final tasks = taskState.tasks
-      .where((t) => t.status != TaskStatus.completed && t.status != TaskStatus.abandoned)
+      .where(
+        (t) =>
+            t.status != TaskStatus.completed &&
+            t.status != TaskStatus.abandoned,
+      )
       .toList();
 
   final now = DateTime.now();
@@ -221,12 +266,12 @@ final scheduleGroupsProvider = Provider<List<ScheduleGroup>>((ref) {
   return [
     if (overDue.isNotEmpty) ScheduleGroup(title: '已逾期', tasks: overDue),
     if (todayTasks.isNotEmpty) ScheduleGroup(title: '今天', tasks: todayTasks),
-    if (tomorrowTasks.isNotEmpty) ScheduleGroup(title: '明天', tasks: tomorrowTasks),
+    if (tomorrowTasks.isNotEmpty)
+      ScheduleGroup(title: '明天', tasks: tomorrowTasks),
     if (thisWeek.isNotEmpty) ScheduleGroup(title: '本周', tasks: thisWeek),
     if (later.isNotEmpty) ScheduleGroup(title: '更晚', tasks: later),
     if (noDate.isNotEmpty) ScheduleGroup(title: '无日期', tasks: noDate),
-    if (tasks.isEmpty)
-      ScheduleGroup(title: '', tasks: [], isEmpty: true),
+    if (tasks.isEmpty) ScheduleGroup(title: '', tasks: [], isEmpty: true),
   ];
 });
 
@@ -234,7 +279,11 @@ final scheduleGroupsProvider = Provider<List<ScheduleGroup>>((ref) {
 final priorityTasksProvider = Provider<List<TaskModel>>((ref) {
   final taskState = ref.watch(taskListProvider);
   final tasks = taskState.tasks
-      .where((t) => t.status != TaskStatus.completed && t.status != TaskStatus.abandoned)
+      .where(
+        (t) =>
+            t.status != TaskStatus.completed &&
+            t.status != TaskStatus.abandoned,
+      )
       .toList()
     ..sort((a, b) => b.priority.compareTo(a.priority));
   return tasks;
@@ -248,7 +297,11 @@ final planGroupsProvider = Provider<Map<String?, List<TaskModel>>>((ref) {
   ref.watch(planNameMapProvider);
 
   final tasks = taskState.tasks
-      .where((t) => t.status != TaskStatus.completed && t.status != TaskStatus.abandoned)
+      .where(
+        (t) =>
+            t.status != TaskStatus.completed &&
+            t.status != TaskStatus.abandoned,
+      )
       .toList();
 
   final groups = <String?, List<TaskModel>>{};
@@ -281,9 +334,7 @@ final sprintTasksProvider = Provider<List<TaskModel>>((ref) {
   final sprintPlanId = dashboardState.sprint!.id;
 
   // 筛选属于当前冲刺的任务
-  var tasks = taskState.tasks
-      .where((t) => t.planId == sprintPlanId)
-      .toList();
+  var tasks = taskState.tasks.where((t) => t.planId == sprintPlanId).toList();
 
   // 根据过滤器进一步筛选
   switch (boardState.sprintFilter) {
@@ -313,22 +364,17 @@ final sprintTaskCountsProvider = Provider<Map<SprintTaskFilter, int>>((ref) {
   }
 
   final sprintPlanId = dashboardState.sprint!.id;
-  final sprintTasks = taskState.tasks
-      .where((t) => t.planId == sprintPlanId)
-      .toList();
+  final sprintTasks =
+      taskState.tasks.where((t) => t.planId == sprintPlanId).toList();
 
   return {
-    SprintTaskFilter.all: sprintTasks
-        .where((t) => t.status != TaskStatus.abandoned)
-        .length,
-    SprintTaskFilter.todo: sprintTasks
-        .where((t) => t.status == TaskStatus.pending)
-        .length,
-    SprintTaskFilter.inProgress: sprintTasks
-        .where((t) => t.status == TaskStatus.inProgress)
-        .length,
-    SprintTaskFilter.done: sprintTasks
-        .where((t) => t.status == TaskStatus.completed)
-        .length,
+    SprintTaskFilter.all:
+        sprintTasks.where((t) => t.status != TaskStatus.abandoned).length,
+    SprintTaskFilter.todo:
+        sprintTasks.where((t) => t.status == TaskStatus.pending).length,
+    SprintTaskFilter.inProgress:
+        sprintTasks.where((t) => t.status == TaskStatus.inProgress).length,
+    SprintTaskFilter.done:
+        sprintTasks.where((t) => t.status == TaskStatus.completed).length,
   };
 });

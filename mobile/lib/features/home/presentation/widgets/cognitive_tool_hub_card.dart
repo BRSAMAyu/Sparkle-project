@@ -11,7 +11,14 @@ import 'package:sparkle/features/tools/tool_launcher.dart';
 import 'package:sparkle/features/tools/tool_registry.dart';
 
 class CognitiveToolHubCard extends ConsumerStatefulWidget {
-  const CognitiveToolHubCard({super.key});
+  const CognitiveToolHubCard({
+    super.key,
+    this.compact = false,
+    this.dense = false,
+  });
+
+  final bool compact;
+  final bool dense;
 
   @override
   ConsumerState<CognitiveToolHubCard> createState() =>
@@ -51,6 +58,77 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
       _isExpanded ? 8 : 4,
     );
     final weeklyPattern = cognitive.weeklyPattern;
+
+    if (widget.compact) {
+      final contentPadding = widget.dense ? DS.spacing10 : DS.spacing12;
+      final topSpacing = widget.dense ? DS.spacing8 : DS.spacing12;
+      final gridSpacing = widget.dense ? DS.spacing6 : DS.spacing8;
+      final title = widget.dense ? '工具快捷' : (weeklyPattern ?? '工具快捷');
+
+      return ClipRRect(
+        borderRadius: DS.borderRadius20,
+        child: MaterialStyler(
+          material: AppMaterials.ceramic.copyWith(
+            backgroundGradient: LinearGradient(
+              colors: [
+                DS.prismPurple.withValues(alpha: 0.08),
+                DS.surfaceSecondary,
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderColor: DS.prismPurple.withValues(alpha: 0.22),
+            borderWidth: 1,
+          ),
+          borderRadius: DS.borderRadius20,
+          padding: EdgeInsets.all(contentPadding),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.diamond_outlined,
+                    color: DS.prismPurple,
+                    size: 18,
+                  ),
+                  const SizedBox(width: DS.spacing8),
+                  Expanded(
+                    child: Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.sparkleTypography.labelLarge.copyWith(
+                        fontWeight: DS.fontWeightBold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: topSpacing),
+              Expanded(
+                child: pinnedTools.isEmpty
+                    ? _buildEmptyToolsState(context)
+                    : GridView.builder(
+                        itemCount: pinnedTools.take(4).length,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          mainAxisSpacing: gridSpacing,
+                          crossAxisSpacing: gridSpacing,
+                          childAspectRatio: 1.85,
+                        ),
+                        itemBuilder: (context, index) => _ToolShortcutChip(
+                          tool: pinnedTools[index],
+                        ),
+                      ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return ClipRRect(
       borderRadius: DS.borderRadius20,
@@ -417,7 +495,7 @@ class _ToolShortcutChip extends ConsumerWidget {
                   ),
                   child: Icon(
                     tool.icon,
-                    size: 18,
+                    size: 16,
                     color: DS.brandPrimaryConst,
                   ),
                 ),
