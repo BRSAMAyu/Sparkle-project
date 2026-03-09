@@ -293,62 +293,110 @@ class _LibraryToolCard extends StatelessWidget {
   final VoidCallback onTogglePin;
 
   @override
-  Widget build(BuildContext context) => SizedBox(
-        width: 168,
-        child: Material(
-          color: DS.surfacePrimary,
+  Widget build(BuildContext context) {
+    final accent = _accentForCategory(tool.category);
+    final background = Color.lerp(
+          DS.surfacePrimary,
+          accent,
+          Theme.of(context).brightness == Brightness.dark ? 0.12 : 0.05,
+        ) ??
+        DS.surfacePrimary;
+    return SizedBox(
+      width: 168,
+      child: Material(
+        color: background,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
           borderRadius: BorderRadius.circular(20),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(20),
-            onTap: onOpen,
-            child: Padding(
-              padding: const EdgeInsets.all(DS.spacing16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(DS.spacing10),
-                        decoration: BoxDecoration(
-                          color: DS.brandPrimary.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(tool.icon, color: DS.brandPrimaryConst),
+          onTap: onOpen,
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: accent.withValues(alpha: 0.18)),
+            ),
+            padding: const EdgeInsets.all(DS.spacing16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(DS.spacing10),
+                      decoration: BoxDecoration(
+                        color: accent.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      const Spacer(),
-                      IconButton(
-                        onPressed: onTogglePin,
-                        icon: Icon(
-                          pinned ? Icons.push_pin : Icons.push_pin_outlined,
-                          size: 18,
-                          color: pinned ? DS.warning : DS.textSecondary,
-                        ),
+                      child: Icon(tool.icon, color: accent),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      onPressed: onTogglePin,
+                      icon: Icon(
+                        pinned ? Icons.push_pin : Icons.push_pin_outlined,
+                        size: 18,
+                        color: pinned ? DS.warning : DS.textSecondary,
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: DS.spacing12),
-                  Text(
-                    tool.title,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: DS.fontWeightBold,
-                        ),
-                  ),
-                  if (tool.description != null) ...[
-                    const SizedBox(height: DS.spacing8),
-                    Text(
-                      tool.description!,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: DS.textSecondary,
-                          ),
                     ),
                   ],
+                ),
+                const SizedBox(height: DS.spacing12),
+                Text(
+                  tool.title,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: DS.fontWeightBold,
+                      ),
+                ),
+                const SizedBox(height: DS.spacing8),
+                Text(
+                  _categoryLabel(tool.category),
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: accent,
+                        fontWeight: DS.fontWeightBold,
+                      ),
+                ),
+                if (tool.description != null) ...[
+                  const SizedBox(height: DS.spacing8),
+                  Text(
+                    tool.description!,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: DS.textSecondary,
+                          height: 1.45,
+                        ),
+                  ),
                 ],
-              ),
+              ],
             ),
           ),
         ),
-      );
+      ),
+    );
+  }
+}
+
+String _categoryLabel(ToolCategory category) {
+  switch (category) {
+    case ToolCategory.input:
+      return '输入处理';
+    case ToolCategory.study:
+      return '学习辅助';
+    case ToolCategory.efficiency:
+      return '效率辅助';
+    case ToolCategory.cognition:
+      return '认知洞察';
+  }
+}
+
+Color _accentForCategory(ToolCategory category) {
+  switch (category) {
+    case ToolCategory.input:
+      return DS.info;
+    case ToolCategory.study:
+      return DS.prismPurple;
+    case ToolCategory.efficiency:
+      return DS.brandPrimary;
+    case ToolCategory.cognition:
+      return DS.capsuleAccent;
+  }
 }

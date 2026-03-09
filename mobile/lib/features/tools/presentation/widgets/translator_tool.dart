@@ -1,5 +1,7 @@
 // ignore_for_file: inference_failure_on_instance_creation
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,10 +10,11 @@ import 'package:isar/isar.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
-import 'package:sparkle/features/translation/translation_routes.dart';
+import 'package:sparkle/features/tools/models/tool_definition.dart';
+import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
 import 'package:sparkle/features/translation/presentation/providers/translation_history_provider.dart';
+import 'package:sparkle/features/translation/translation_routes.dart';
 
-/// 支持的语言
 class Language {
   const Language({
     required this.code,
@@ -27,7 +30,6 @@ class Language {
   String toString() => flag != null ? '$flag $name' : name;
 }
 
-/// 支持的语言列表
 const supportedLanguages = [
   Language(code: 'auto', name: '自动检测', flag: '🔍'),
   Language(code: 'zh', name: '中文', flag: '🇨🇳'),
@@ -41,7 +43,12 @@ const supportedLanguages = [
 ];
 
 class TranslatorTool extends ConsumerStatefulWidget {
-  const TranslatorTool({super.key});
+  const TranslatorTool({
+    super.key,
+    this.surface = ToolSurface.page,
+  });
+
+  final ToolSurface surface;
 
   @override
   ConsumerState<TranslatorTool> createState() => _TranslatorToolState();
@@ -56,12 +63,20 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
   int _currentRating = 3;
   bool _isFavorited = false;
 
-  // 默认：自动检测 -> 英语
-  Language _sourceLanguage = supportedLanguages[0]; // auto
-  Language _targetLanguage = supportedLanguages[2]; // English
+  Language _sourceLanguage = supportedLanguages[0];
+  Language _targetLanguage = supportedLanguages[2];
+
+  @override
+  void dispose() {
+    _inputController.dispose();
+    super.dispose();
+  }
 
   Future<void> _translate() async {
-    if (_inputController.text.isEmpty) return;
+    if (_inputController.text.trim().isEmpty) {
+      AppFeedback.info(context, '请输入要翻译的文本');
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -71,7 +86,6 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
 
     try {
       final apiClient = ref.read(apiClientProvider);
-
       final response = await apiClient.post<Map<String, dynamic>>(
         ApiEndpoints.translationTranslate,
         data: {
@@ -86,7 +100,6 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
         final success = data['success'] as bool? ?? false;
 
         if (success) {
-          // Backend returns `translation` (not `translated_text`).
           final translatedText =
               (data['translation'] ?? data['translated_text']) as String? ?? '';
           setState(() {
@@ -94,13 +107,10 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
             _currentRating = 3;
             _isFavorited = false;
           });
-
-          // Auto-save translation
-          _saveTranslation(translatedText);
+          await _saveTranslation(translatedText);
         } else {
+          final meta = data['meta'] as Map<String, dynamic>?;
           setState(() {
-            // Backend error is usually nested under `meta.error`.
-            final meta = data['meta'] as Map<String, dynamic>?;
             _errorMessage =
                 (meta?['error'] ?? data['error_message']) as String? ?? '翻译失败';
           });
@@ -115,37 +125,34 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
         _errorMessage = '翻译出错: $e';
       });
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
   void _swapLanguages() {
     if (_sourceLanguage.code == 'auto') {
-      // 自动检测不能交换，只切换目标语言
       setState(() {
-        // 将目标语言设为中文
         _targetLanguage = supportedLanguages[1];
       });
-    } else {
-      setState(() {
-        final temp = _sourceLanguage;
-        _sourceLanguage = _targetLanguage;
-        _targetLanguage = temp;
-
-        // 同时交换输入输出的文本
-        if (_output.isNotEmpty) {
-          _inputController.text = _output;
-          _output = '';
-        }
-      });
+      return;
     }
+    setState(() {
+      final temp = _sourceLanguage;
+      _sourceLanguage = _targetLanguage;
+      _targetLanguage = temp;
+      if (_output.isNotEmpty) {
+        _inputController.text = _output;
+        _output = '';
+      }
+    });
   }
 
   Future<void> _saveTranslation(String translatedText) async {
     try {
-      // Check for similar existing translation
       final similar =
           await ref.read(translationHistoryProvider.notifier).findSimilar(
                 originalText: _inputController.text,
@@ -161,25 +168,24 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
             _isFavorited = similar.isFavorited;
           });
         }
-      } else {
-        final id =
-            await ref.read(translationHistoryProvider.notifier).saveTranslation(
-                  originalText: _inputController.text,
-                  translatedText: translatedText,
-                  sourceLanguage: _sourceLanguage.code,
-                  targetLanguage: _targetLanguage.code,
-                  rating: _currentRating,
-                  isFavorited: _isFavorited,
-                );
-        if (mounted) {
-          setState(() {
-            _currentTranslationId = id;
-          });
-        }
+        return;
+      }
+
+      final id = await ref.read(translationHistoryProvider.notifier).saveTranslation(
+            originalText: _inputController.text,
+            translatedText: translatedText,
+            sourceLanguage: _sourceLanguage.code,
+            targetLanguage: _targetLanguage.code,
+            rating: _currentRating,
+            isFavorited: _isFavorited,
+          );
+      if (mounted) {
+        setState(() {
+          _currentTranslationId = id;
+        });
       }
     } catch (e) {
       debugPrint('Error auto-saving translation: $e');
-      // Non-critical error, suppressing UI alert to avoid interrupting user flow
     }
   }
 
@@ -188,9 +194,11 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
       _currentRating = rating;
     });
     if (_currentTranslationId != null) {
-      ref
-          .read(translationHistoryProvider.notifier)
-          .updateRating(_currentTranslationId!, rating);
+      unawaited(
+        ref
+            .read(translationHistoryProvider.notifier)
+            .updateRating(_currentTranslationId!, rating),
+      );
     }
   }
 
@@ -207,300 +215,227 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
   }
 
   void _copyToClipboard() {
-    Clipboard.setData(ClipboardData(text: _output));
+    unawaited(Clipboard.setData(ClipboardData(text: _output)));
     AppFeedback.info(context, '已复制到剪贴板');
   }
 
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(DS.xl),
-        height: 580,
-        decoration: BoxDecoration(
-          color: DS.surfacePrimary,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(24),
-            topRight: Radius.circular(24),
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // 拖动条
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: DS.neutral300,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: DS.lg),
+  Widget build(BuildContext context) {
+    final accent = DS.prismPurple;
+    final inputLength = _inputController.text.trim().length;
+    final outputLength = _output.trim().length;
 
-            // 标题
-            Row(
+    return ToolShell(
+      surface: widget.surface,
+      icon: Icons.translate_rounded,
+      title: '翻译',
+      subtitle: '面向学习和任务场景的双栏翻译器，支持自动存档、评分和收藏，便于后续回看。',
+      accentColor: accent,
+      fillHeight: true,
+      headerAction: SparkleIconButton(
+        onPressed: () => unawaited(context.push(TranslationRoutes.history)),
+        icon: const Icon(Icons.history_rounded),
+        variant: ButtonVariant.ghost,
+      ),
+      heroChips: [
+        ToolHeroChip(
+          label: '${_sourceLanguage.name} → ${_targetLanguage.name}',
+          accentColor: accent,
+          icon: Icons.swap_horiz_rounded,
+        ),
+        ToolHeroChip(
+          label: _isFavorited ? '已收藏' : '自动保存历史',
+          accentColor: accent,
+          icon: _isFavorited ? Icons.favorite_rounded : Icons.archive_rounded,
+        ),
+      ],
+      body: Column(
+        children: [
+          Wrap(
+            spacing: DS.spacing12,
+            runSpacing: DS.spacing12,
+            children: [
+              ToolMetricCard(
+                label: '输入长度',
+                value: '$inputLength',
+                accentColor: accent,
+                icon: Icons.edit_note_rounded,
+                caption: '建议控制在可读段落内',
+              ),
+              ToolMetricCard(
+                label: '输出长度',
+                value: '$outputLength',
+                accentColor: accent,
+                icon: Icons.auto_fix_high_rounded,
+                caption: _isLoading ? '翻译生成中' : '翻译完成后可复制',
+              ),
+            ],
+          ),
+          const SizedBox(height: DS.spacing16),
+          ToolSectionCard(
+            accentColor: accent,
+            title: '语言方向',
+            subtitle: '自动检测用于快速起步，也可以切成手动源语言。',
+            trailing: SparkleButton(
+              label: '交换',
+              variant: ButtonVariant.ghost,
+              onPressed: _swapLanguages,
+              icon: const Icon(Icons.swap_horiz_rounded),
+            ),
+            child: Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(DS.spacing8),
-                  decoration: BoxDecoration(
-                    color: DS.prismPurple.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(DS.spacing8),
+                Expanded(
+                  child: _LanguageDropdown(
+                    value: _sourceLanguage,
+                    items: supportedLanguages,
+                    onChanged: (lang) => setState(() => _sourceLanguage = lang),
                   ),
-                  child: Icon(Icons.translate, color: DS.prismPurple),
                 ),
-                const SizedBox(width: DS.sm),
-                Text(
-                  '快速翻译',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleLarge
-                      ?.copyWith(fontWeight: FontWeight.bold),
-                ),
-                const Spacer(),
-                // 关闭按钮
-                SparkleIconButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.close),
-                  variant: ButtonVariant.ghost,
-                  size: DS.touchTargetMinSize,
+                const SizedBox(width: DS.spacing12),
+                Expanded(
+                  child: _LanguageDropdown(
+                    value: _targetLanguage,
+                    items: supportedLanguages
+                        .where((language) => language.code != 'auto')
+                        .toList(),
+                    onChanged: (lang) => setState(() => _targetLanguage = lang),
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: DS.lg),
-
-            // 语言选择器
-            Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: DS.md, vertical: DS.sm),
-              decoration: BoxDecoration(
-                color: DS.neutral50,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: DS.neutral200),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _LanguageDropdown(
-                      value: _sourceLanguage,
-                      items: supportedLanguages,
-                      onChanged: (lang) =>
-                          setState(() => _sourceLanguage = lang),
-                    ),
-                  ),
-                  // 交换按钮
-                  SparkleIconButton(
-                    onPressed: _swapLanguages,
-                    icon: const Icon(Icons.swap_horiz),
-                    semanticLabel: '交换语言',
-                    variant: ButtonVariant.ghost,
-                    size: DS.touchTargetMinSize,
-                  ),
-                  Expanded(
-                    child: _LanguageDropdown(
-                      value: _targetLanguage,
-                      items: supportedLanguages
-                          .where((l) => l.code != 'auto')
-                          .toList(),
-                      onChanged: (lang) =>
-                          setState(() => _targetLanguage = lang),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: DS.lg),
-
-            // 输入框
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.all(DS.md),
-                decoration: BoxDecoration(
-                  color: DS.neutral50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: _errorMessage != null ? DS.error : DS.neutral200,
-                  ),
-                ),
-                child: TextField(
-                  controller: _inputController,
-                  maxLines: null,
-                  expands: true,
-                  decoration: const InputDecoration(
-                    hintText: '输入要翻译的文本...',
-                    border: InputBorder.none,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: DS.md),
-
-            // 翻译按钮
-            SizedBox(
-              height: 48,
-              child: SparkleButton(
-                label: _isLoading ? '翻译中...' : '翻译',
-                onPressed: _translate,
-                icon: const Icon(Icons.translate),
-                variant: ButtonVariant.primary,
-                loading: _isLoading,
-                disabled: _isLoading,
-                expand: true,
-              ),
-            ),
-            const SizedBox(height: DS.md),
-
-            // 错误提示
-            if (_errorMessage != null)
-              Container(
-                padding: const EdgeInsets.all(DS.md),
-                decoration: BoxDecoration(
-                  color: DS.error.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: DS.error.withValues(alpha: 0.3)),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.error_outline, color: DS.error, size: 20),
-                    const SizedBox(width: DS.sm),
-                    Expanded(
-                      child: Text(
-                        _errorMessage!,
-                        style: TextStyle(color: DS.error, fontSize: 12),
-                      ),
-                    ),
-                    InkWell(
-                      borderRadius: DS.borderRadiusFull,
-                      onTap: () => setState(() => _errorMessage = null),
-                      child: const Padding(
-                        padding: EdgeInsets.all(DS.spacing4),
-                        child: Icon(Icons.close, size: 16),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-            // 输出区域
-            if (_output.isNotEmpty || !_isLoading)
-              Container(
-                padding: const EdgeInsets.all(DS.md),
-                height: 120,
-                decoration: BoxDecoration(
-                  color: DS.prismPurple.withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(12),
-                  border:
-                      Border.all(color: DS.prismPurple.withValues(alpha: 0.2)),
-                ),
-                child: _isLoading
-                    ? Center(
-                        child: CircularProgressIndicator(color: DS.prismPurple),
-                      )
-                    : SingleChildScrollView(
-                        child: Text(
-                          _output.isEmpty ? '翻译结果将显示在这里' : _output,
-                          style: TextStyle(
-                            color:
-                                _output.isEmpty ? DS.neutral400 : DS.neutral900,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-              ),
-
-            // 复制按钮
-            if (_output.isNotEmpty && !_isLoading)
-              Padding(
-                padding: const EdgeInsets.only(top: DS.sm),
-                child: SparkleButton.ghost(
-                  label: '复制结果',
-                  onPressed: _copyToClipboard,
-                  icon: const Icon(Icons.copy, size: 16),
-                ),
-              ),
-
-            // Rating and Favorite buttons
-            if (_output.isNotEmpty && !_isLoading)
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: DS.md, vertical: DS.sm),
-                decoration: BoxDecoration(
-                  color: DS.neutral50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: DS.neutral200),
-                ),
-                child: Row(
-                  children: [
-                    // Rating label
-                    Text(
-                      '重要程度',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: DS.neutral600,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(width: DS.sm),
-
-                    // Star rating
-                    ...List.generate(5, (index) {
-                      final starValue = index + 1;
-                      return GestureDetector(
-                        onTap: () => _updateRating(starValue),
-                        child: Icon(
-                          Icons.star,
-                          size: 24,
-                          color: _currentRating >= starValue
-                              ? DS.warning
-                              : DS.neutral300,
-                        ),
-                      );
-                    }),
-
-                    const Spacer(),
-
-                    // Favorite button
-                    Tooltip(
-                      message: _isFavorited ? '取消收藏' : '收藏',
-                      child: InkWell(
-                        borderRadius: DS.borderRadiusFull,
-                        onTap: _toggleFavorite,
-                        child: Padding(
-                          padding: const EdgeInsets.all(DS.spacing4),
-                          child: Icon(
-                            _isFavorited ? Icons.star : Icons.star_border,
-                            color: _isFavorited ? DS.warning : DS.neutral500,
-                            size: 20,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(width: DS.sm),
-
-                    // History button
-                    SparkleButton.ghost(
-                      label: '历史',
+          ),
+          const SizedBox(height: DS.spacing16),
+          Expanded(
+            child: Row(
+              children: [
+                Expanded(
+                  child: ToolSectionCard(
+                    accentColor: accent,
+                    fillHeight: true,
+                    title: '原文',
+                    subtitle: '支持多行粘贴，适合段落翻译。',
+                    trailing: IconButton(
                       onPressed: () {
-                        context.push(TranslationRoutes.history);
+                        setState(() {
+                          _inputController.clear();
+                          _output = '';
+                        });
                       },
-                      icon: const Icon(Icons.history, size: 16),
+                      icon: const Icon(Icons.close_rounded),
                     ),
-                  ],
+                    child: TextField(
+                      controller: _inputController,
+                      maxLines: null,
+                      expands: true,
+                      decoration: const InputDecoration(
+                        hintText: '输入要翻译的文本...',
+                        border: InputBorder.none,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-          ],
-        ),
-      );
-
-  @override
-  void dispose() {
-    _inputController.dispose();
-    super.dispose();
+                const SizedBox(width: DS.spacing16),
+                Expanded(
+                  child: ToolSectionCard(
+                    accentColor: accent,
+                    fillHeight: true,
+                    title: '译文',
+                    subtitle: '翻译完成后可复制、收藏和打分。',
+                    trailing: _output.isEmpty
+                        ? null
+                        : IconButton(
+                            onPressed: _toggleFavorite,
+                            icon: Icon(
+                              _isFavorited
+                                  ? Icons.favorite_rounded
+                                  : Icons.favorite_border_rounded,
+                              color: _isFavorited ? DS.error : DS.textSecondary,
+                            ),
+                          ),
+                    child: _isLoading
+                        ? Center(
+                            child: CircularProgressIndicator(color: accent),
+                          )
+                        : _errorMessage != null
+                            ? ToolEmptyState(
+                                icon: Icons.error_outline_rounded,
+                                title: '翻译未完成',
+                                description: _errorMessage!,
+                                accentColor: DS.error,
+                              )
+                            : _output.isEmpty
+                                ? ToolEmptyState(
+                                    icon: Icons.translate_rounded,
+                                    title: '等待翻译结果',
+                                    description: '点击下方翻译按钮后，结果会显示在这里。',
+                                    accentColor: accent,
+                                  )
+                                : Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Expanded(
+                                        child: SingleChildScrollView(
+                                          child: SelectableText(
+                                            _output,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodyLarge
+                                                ?.copyWith(
+                                                  color: DS.textPrimary,
+                                                  height: 1.6,
+                                                ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: DS.spacing16),
+                                      Wrap(
+                                        spacing: DS.spacing10,
+                                        runSpacing: DS.spacing10,
+                                        children: List.generate(
+                                          5,
+                                          (index) => ToolChoiceChip(
+                                            label: '${index + 1} 星',
+                                            selected: _currentRating == index + 1,
+                                            onTap: () => _updateRating(index + 1),
+                                            accentColor: accent,
+                                            icon: Icons.star_rounded,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+      footer: Row(
+        children: [
+          Expanded(
+            child: SparkleButton(
+              label: '复制译文',
+              variant: ButtonVariant.ghost,
+              onPressed: _output.isEmpty ? null : _copyToClipboard,
+              icon: const Icon(Icons.copy_rounded),
+            ),
+          ),
+          const SizedBox(width: DS.spacing12),
+          Expanded(
+            child: SparkleButton(
+              label: _isLoading ? '翻译中...' : '开始翻译',
+              onPressed: _isLoading ? null : _translate,
+              icon: const Icon(Icons.auto_fix_high_rounded),
+              loading: _isLoading,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
-/// 语言选择下拉框
 class _LanguageDropdown extends StatelessWidget {
   const _LanguageDropdown({
     required this.value,
@@ -513,31 +448,33 @@ class _LanguageDropdown extends StatelessWidget {
   final ValueChanged<Language> onChanged;
 
   @override
-  Widget build(BuildContext context) => DropdownButtonHideUnderline(
-        child: DropdownButtonFormField<Language>(
-          initialValue: value,
-          items: items
-              .map(
-                (lang) => DropdownMenuItem(
-                  value: lang,
-                  child: Text(
-                    lang.toString(),
-                    style: const TextStyle(fontSize: 13),
-                  ),
-                ),
-              )
-              .toList(),
-          onChanged: (lang) {
-            if (lang != null) onChanged(lang);
-          },
-          decoration: const InputDecoration(
-            border: InputBorder.none,
-            contentPadding: EdgeInsets.symmetric(horizontal: DS.sm),
-            isDense: true,
+  Widget build(BuildContext context) => DecoratedBox(
+        decoration: BoxDecoration(
+          color: DS.surfacePrimary,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: DS.borderSubtle),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: DS.spacing12),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<Language>(
+              isExpanded: true,
+              value: value,
+              items: items
+                  .map(
+                    (language) => DropdownMenuItem<Language>(
+                      value: language,
+                      child: Text(language.toString()),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (language) {
+                if (language != null) {
+                  onChanged(language);
+                }
+              },
+            ),
           ),
-          icon: const Icon(Icons.arrow_drop_down, size: 20),
-          style: TextStyle(color: DS.neutral900, fontSize: 13),
-          borderRadius: BorderRadius.circular(8),
         ),
       );
 }

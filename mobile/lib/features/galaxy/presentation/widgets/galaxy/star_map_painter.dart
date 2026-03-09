@@ -82,77 +82,12 @@ class GalaxyLabelCache {
   }
 }
 
-class GalaxyEdgePictureCache {
-  GalaxyEdgePictureCache({
-    this.panThresholdPx = 100,
-    this.scaleThreshold = 0.015,
-  });
-
-  final double panThresholdPx;
-  final double scaleThreshold;
-
-  ui.Picture? _picture;
-  Offset? _offset;
-  double? _scale;
-  int? _sceneSignature;
-  GalaxyLod? _lod;
-
-  void clear() {
-    _picture?.dispose();
-    _picture = null;
-    _offset = null;
-    _scale = null;
-    _sceneSignature = null;
-    _lod = null;
-  }
-
-  bool canReuse({
-    required GalaxyCamera camera,
-    required int sceneSignature,
-    required GalaxyLod lod,
-  }) {
-    if (_picture == null ||
-        _offset == null ||
-        _scale == null ||
-        _sceneSignature != sceneSignature ||
-        _lod != lod) {
-      return false;
-    }
-
-    final panDelta = (camera.offset - _offset!).distance;
-    final scaleDelta = ((camera.scale - _scale!) / _scale!).abs();
-    return panDelta <= panThresholdPx && scaleDelta <= scaleThreshold;
-  }
-
-  void draw(Canvas canvas, GalaxyCamera camera) {
-    final picture = _picture;
-    final offset = _offset;
-    if (picture == null || offset == null) {
-      return;
-    }
-    final translatedOffset = camera.offset - offset;
-
-    canvas
-      ..save()
-      ..translate(translatedOffset.dx, translatedOffset.dy)
-      ..drawPicture(picture)
-      ..restore();
-  }
-
-  void store({
-    required ui.Picture picture,
-    required GalaxyCamera camera,
-    required int sceneSignature,
-    required GalaxyLod lod,
-  }) {
-    clear();
-    _picture = picture;
-    _offset = camera.offset;
-    _scale = camera.scale;
-    _sceneSignature = sceneSignature;
-    _lod = lod;
-  }
-}
+/// Edge picture caching has been intentionally removed.
+///
+/// Drawing ≤800 simple paths per frame is trivially fast on modern GPUs.
+/// The previous Picture-based cache introduced visual artefacts (arc flicker
+/// during zoom/pan) because Bezier control points are computed in screen-space
+/// and cannot be correctly replayed after a camera transform change.
 
 class GalaxyBackdropPictureCache {
   ui.Picture? _picture;
@@ -287,7 +222,6 @@ class StarMapPainter extends CustomPainter {
     required this.positions,
     required this.spatialIndex,
     required this.labelCache,
-    required this.edgePictureCache,
     required this.backdropPictureCache,
     required this.parallaxStarLayerCache,
     required this.sceneVersion,
@@ -319,7 +253,6 @@ class StarMapPainter extends CustomPainter {
   final Map<String, Offset> positions;
   final GalaxySpatialIndex spatialIndex;
   final GalaxyLabelCache labelCache;
-  final GalaxyEdgePictureCache edgePictureCache;
   final GalaxyBackdropPictureCache backdropPictureCache;
   final GalaxyParallaxStarLayerCache parallaxStarLayerCache;
   final int sceneVersion;
@@ -561,7 +494,7 @@ class StarMapPainter extends CustomPainter {
           Colors.transparent,
           Colors.transparent,
           (isDarkMode ? Colors.black : const Color(0xFFCBD2DD)).withValues(
-            alpha: isDarkMode ? 0.12 : 0.03,
+            alpha: isDarkMode ? 0.12 : 0.06,
           ),
         ],
         const [0.0, 0.72, 1.0],
@@ -939,47 +872,9 @@ class StarMapPainter extends CustomPainter {
       viewportCenter: viewportCenter,
       visibleNodeIds: visibleNodeIds,
     );
-    if (edgesToDraw.isEmpty) {
-      edgePictureCache.clear();
-      return;
-    }
-
-    if (draggingNodeId != null || isBuildAnimating) {
-      edgePictureCache.clear();
+    if (edgesToDraw.isNotEmpty) {
       _drawEdgeList(canvas, edgesToDraw);
-      return;
     }
-
-    final sceneSignature = Object.hash(
-      sceneVersion,
-      selectedNodeId,
-      lod,
-      isDarkMode,
-      visibleNodeIds.length,
-      Object.hashAll(focusNodeIds),
-      Object.hashAll(searchMatchedNodeIds),
-    );
-
-    if (edgePictureCache.canReuse(
-      camera: camera,
-      sceneSignature: sceneSignature,
-      lod: lod,
-    )) {
-      edgePictureCache.draw(canvas, camera);
-      return;
-    }
-
-    final recorder = ui.PictureRecorder();
-    final pictureCanvas = Canvas(recorder);
-    _drawEdgeList(pictureCanvas, edgesToDraw);
-    edgePictureCache
-      ..store(
-        picture: recorder.endRecording(),
-        camera: camera,
-        sceneSignature: sceneSignature,
-        lod: lod,
-      )
-      ..draw(canvas, camera);
   }
 
   List<_PaintEdge> _selectVisibleEdges({
@@ -1237,6 +1132,7 @@ class StarMapPainter extends CustomPainter {
         );
     }
   }
+
 
   void _drawNodes(Canvas canvas, GalaxyLod lod, List<_PaintNode> nodes) {
     final allowPulse = lod.index >= GalaxyLod.l3.index &&

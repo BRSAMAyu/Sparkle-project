@@ -41,7 +41,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   late final GalaxyForceEngine _forceEngine;
   late final GalaxyAccessibilityService _accessibilityService;
   late final GalaxyLabelCache _labelCache;
-  late final GalaxyEdgePictureCache _edgePictureCache;
   late final GalaxyBackdropPictureCache _backdropPictureCache;
   late final GalaxyParallaxStarLayerCache _parallaxStarLayerCache;
   late final TextEditingController _searchController;
@@ -113,8 +112,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     _forceEngine = GalaxyForceEngine();
     _accessibilityService = GalaxyAccessibilityService();
     _labelCache = GalaxyLabelCache();
-    _edgePictureCache = GalaxyEdgePictureCache();
     _backdropPictureCache = GalaxyBackdropPictureCache();
+
     _parallaxStarLayerCache = GalaxyParallaxStarLayerCache();
     _searchController = TextEditingController();
     _gestureHandler = GalaxyGestureHandler(
@@ -192,7 +191,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   void dispose() {
     _gestureHandler.dispose();
     _labelCache.clear();
-    _edgePictureCache.clear();
     _backdropPictureCache.clear();
     _parallaxStarLayerCache.clear();
     _flingTicker.dispose();
@@ -273,7 +271,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
     _spatialIndex.build(positions, graph.nodes);
     _labelCache.clear();
-    _edgePictureCache.clear();
     setState(() {
       _graph = graph;
       _positions = positions;
@@ -490,8 +487,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
         _previewScreenPosition = _computePreviewPosition(
           anchor: _camera.worldToScreen(command.hit!.worldPosition),
         );
-        _edgePictureCache.clear();
-      });
+          });
       return;
     }
 
@@ -524,8 +520,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
         _draggingNodeId = command.nodeId;
         _positions = updatedPositions;
         _microDriftOffsets = const <String, Offset>{};
-        _edgePictureCache.clear();
-      });
+          });
       return;
     }
 
@@ -707,8 +702,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       unawaited(_accessibilityService.selectionHaptic());
       _forceEngine.releaseAnchor();
       _startPhysicsSimulation();
-      _edgePictureCache.clear();
-    }
+      }
   }
 
   void _startFling(Velocity velocity) {
@@ -789,8 +783,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     setState(() {
       _positions = result.positions;
       _sceneVersion++;
-      _edgePictureCache.clear();
-    });
+      });
 
     if (result.isSettled) {
       _stopPhysicsSimulation(commitPendingNode: true);
@@ -1176,8 +1169,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       _activeReplayStageIndex = stageIndex;
       _focusNodeIds = stage.focusNodeIds;
       _selectedNodeId = stage.featuredNodeId;
-      _edgePictureCache.clear();
-    });
+      });
     _animateCameraTo(
       stage.camera,
       duration: const Duration(milliseconds: 620),
@@ -1505,8 +1497,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       _replayStages = replayStages;
       _activeReplayStageIndex = -1;
       _sceneVersion++;
-      _edgePictureCache.clear();
-    });
+      });
     _activateReplayStage(0);
     _buildReplayController
       ..duration = Duration(milliseconds: totalMs)
@@ -1532,8 +1523,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       _focusNodeIds = const <String>{};
       _replayStages = const <_ReplayStage>[];
       _activeReplayStageIndex = -1;
-      _edgePictureCache.clear();
-    });
+      });
   }
 
   void _stopAllAutoMotion({required bool commitPhysicsPosition}) {
@@ -1768,7 +1758,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                         positions: _positions,
                         spatialIndex: _spatialIndex,
                         labelCache: _labelCache,
-                        edgePictureCache: _edgePictureCache,
                         backdropPictureCache: _backdropPictureCache,
                         parallaxStarLayerCache: _parallaxStarLayerCache,
                         sceneVersion: _sceneVersion,

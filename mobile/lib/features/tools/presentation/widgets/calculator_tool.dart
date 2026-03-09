@@ -1,205 +1,340 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:math_expressions/math_expressions.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/features/tools/models/tool_definition.dart';
+import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
 
 class CalculatorTool extends StatefulWidget {
-  const CalculatorTool({super.key});
+  const CalculatorTool({
+    super.key,
+    this.surface = ToolSurface.page,
+  });
+
+  final ToolSurface surface;
 
   @override
   State<CalculatorTool> createState() => _CalculatorToolState();
 }
 
 class _CalculatorToolState extends State<CalculatorTool> {
+  static const List<String> _keyRows = [
+    'C DEL ( )',
+    '7 8 9 /',
+    '4 5 6 x',
+    '1 2 3 -',
+    '0 . ANS +',
+  ];
+
   String _expression = '';
   String _result = '';
+  final List<String> _history = <String>[];
 
   void _onPressed(String text) {
     setState(() {
-      if (text == 'C') {
-        _expression = '';
-        _result = '';
-      } else if (text == '=') {
-        try {
-          final p = GrammarParser();
-          final exp = p.parse(_expression.replaceAll('x', '*'));
-          final cm = ContextModel();
-          final evaluator = RealEvaluator(cm);
-          _result = '${evaluator.evaluate(exp)}';
-          // Remove .0 if integer
-          if (_result.endsWith('.0')) {
-            _result = _result.substring(0, _result.length - 2);
+      switch (text) {
+        case 'C':
+          _expression = '';
+          _result = '';
+          return;
+        case 'DEL':
+          if (_expression.isNotEmpty) {
+            _expression = _expression.substring(0, _expression.length - 1);
           }
-        } catch (e) {
-          _result = 'Error';
-        }
-      } else if (text == 'DEL') {
-        if (_expression.isNotEmpty) {
-          _expression = _expression.substring(0, _expression.length - 1);
-        }
-      } else {
-        _expression += text;
+          return;
+        case 'ANS':
+          if (_result.isNotEmpty && _result != 'Error') {
+            _expression += _result;
+          }
+          return;
+        default:
+          _expression += text;
       }
     });
   }
 
-  Widget _buildButton(String text, {Color? color, Color? textColor}) =>
-      Expanded(
-        child: InkWell(
-          onTap: () => _onPressed(text),
-          child: Container(
-            margin: const EdgeInsets.all(DS.xs),
-            decoration: BoxDecoration(
-              color: color ?? DS.neutral100,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Center(
-              child: Text(
-                text,
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: textColor ?? DS.neutral900,
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
+  void _evaluate() {
+    if (_expression.trim().isEmpty) {
+      return;
+    }
+
+    setState(() {
+      try {
+        final parser = GrammarParser();
+        final sanitized = _expression
+            .replaceAll('x', '*')
+            .replaceAll('÷', '/')
+            .replaceAll('ANS', _result.isEmpty ? '0' : _result);
+        final exp = parser.parse(sanitized);
+        final evaluator = RealEvaluator(ContextModel());
+        final nextResult = '${evaluator.evaluate(exp)}';
+        _result = nextResult.endsWith('.0')
+            ? nextResult.substring(0, nextResult.length - 2)
+            : nextResult;
+        _history.insert(0, '$_expression = $_result');
+        if (_history.length > 6) {
+          _history.removeLast();
+        }
+      } catch (_) {
+        _result = 'Error';
+      }
+    });
+  }
+
+  Future<void> _copyResult() async {
+    if (_result.isEmpty || _result == 'Error') {
+      return;
+    }
+    await Clipboard.setData(ClipboardData(text: _result));
+    if (!mounted) {
+      return;
+    }
+    AppFeedback.success(context, '结果已复制');
+  }
 
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(DS.lg),
-        height: 500,
-        decoration: BoxDecoration(
-          color: DS.brandPrimaryConst,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(24),
-            topRight: Radius.circular(24),
-          ),
+  Widget build(BuildContext context) {
+    final accent = DS.brandPrimary;
+    return ToolShell(
+      surface: widget.surface,
+      icon: Icons.calculate_outlined,
+      title: '计算器',
+      subtitle: '适合任务执行中的快算、表达式验算和连贯多步推导，结果会保留最近记录。',
+      accentColor: accent,
+      heroChips: [
+        ToolHeroChip(
+          label: _history.isEmpty ? '无历史' : '${_history.length} 条历史',
+          accentColor: accent,
+          icon: Icons.history_rounded,
         ),
+        ToolHeroChip(
+          label: _result.isEmpty ? '等待计算' : '结果已就绪',
+          accentColor: accent,
+          icon: Icons.auto_graph_rounded,
+        ),
+      ],
+      body: SingleChildScrollView(
         child: Column(
           children: [
-            // Drag handle
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: DS.neutral300,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: DS.lg),
-            // Display
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(DS.lg),
-              alignment: Alignment.bottomRight,
-              decoration: BoxDecoration(
-                color: DS.neutral50,
-                borderRadius: BorderRadius.circular(16),
-              ),
+            ToolSectionCard(
+              accentColor: accent,
+              title: '表达式',
+              subtitle: '支持括号和连续输入，`ANS` 会回填上一轮计算结果。',
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    _expression,
-                    style: TextStyle(fontSize: 24, color: DS.neutral500),
-                  ),
-                  const SizedBox(height: DS.sm),
-                  Text(
-                    _result.isEmpty ? '0' : _result,
-                    style: const TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(DS.spacing18),
+                    decoration: BoxDecoration(
+                      color: DS.surfacePrimary,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: DS.borderSubtle),
                     ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          _expression.isEmpty ? '0' : _expression,
+                          textAlign: TextAlign.right,
+                          style:
+                              Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                    color: _expression.isEmpty
+                                        ? DS.textSecondary
+                                        : DS.textPrimary,
+                                    fontWeight: DS.fontWeightSemiBold,
+                                  ),
+                        ),
+                        const SizedBox(height: DS.spacing12),
+                        Text(
+                          _result.isEmpty ? '准备计算' : _result,
+                          textAlign: TextAlign.right,
+                          style:
+                              Theme.of(context).textTheme.displaySmall?.copyWith(
+                                    color: _result == 'Error'
+                                        ? DS.error
+                                        : DS.textPrimary,
+                                    fontWeight: DS.fontWeightBold,
+                                  ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: DS.spacing16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SparkleButton(
+                          label: '复制结果',
+                          variant: ButtonVariant.ghost,
+                          onPressed: _copyResult,
+                          icon: const Icon(Icons.copy_rounded),
+                        ),
+                      ),
+                      const SizedBox(width: DS.spacing12),
+                      Expanded(
+                        child: SparkleButton(
+                          label: '计算',
+                          onPressed: _evaluate,
+                          icon: const Icon(Icons.play_arrow_rounded),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: DS.lg),
-            // Buttons
-            Expanded(
+            const SizedBox(height: DS.spacing16),
+            ToolSectionCard(
+              accentColor: accent,
+              title: '键盘',
+              subtitle: '数字键和运算键分层展示，减少高频误触。',
               child: Column(
                 children: [
-                  Expanded(
-                    child: Row(
-                      children: [
-                        _buildButton(
-                          'C',
-                          color: DS.error.withValues(alpha: 0.1),
-                          textColor: DS.error,
-                        ),
-                        _buildButton('(', color: DS.neutral200),
-                        _buildButton(')', color: DS.neutral200),
-                        _buildButton('DEL', color: DS.neutral200),
-                      ],
+                  for (final row in _keyRows) ...[
+                    Row(
+                      children: row.split(' ').map((key) {
+                        final isOperator = const ['/', 'x', '-', '+'].contains(key);
+                        final isDanger = const ['C', 'DEL'].contains(key);
+                        return Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.all(DS.spacing4),
+                            child: _CalculatorKey(
+                              label: key,
+                              accentColor: accent,
+                              isOperator: isOperator,
+                              isDanger: isDanger,
+                              onTap: () => _onPressed(key),
+                            ),
+                          ),
+                        );
+                      }).toList(),
                     ),
-                  ),
-                  Expanded(
-                    child: Row(
-                      children: [
-                        _buildButton('7'),
-                        _buildButton('8'),
-                        _buildButton('9'),
-                        _buildButton(
-                          '/',
-                          color: DS.primaryBase.withValues(alpha: 0.1),
-                          textColor: DS.primaryBase,
+                  ],
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.all(DS.spacing4),
+                          child: _CalculatorKey(
+                            label: '=',
+                            accentColor: accent,
+                            isPrimary: true,
+                            onTap: _evaluate,
+                          ),
                         ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: Row(
-                      children: [
-                        _buildButton('4'),
-                        _buildButton('5'),
-                        _buildButton('6'),
-                        _buildButton(
-                          'x',
-                          color: DS.primaryBase.withValues(alpha: 0.1),
-                          textColor: DS.primaryBase,
-                        ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: Row(
-                      children: [
-                        _buildButton('1'),
-                        _buildButton('2'),
-                        _buildButton('3'),
-                        _buildButton(
-                          '-',
-                          color: DS.primaryBase.withValues(alpha: 0.1),
-                          textColor: DS.primaryBase,
-                        ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: Row(
-                      children: [
-                        _buildButton('0'),
-                        _buildButton('.'),
-                        _buildButton(
-                          '=',
-                          color: DS.primaryBase,
-                          textColor: DS.brandPrimary,
-                        ),
-                        _buildButton(
-                          '+',
-                          color: DS.primaryBase.withValues(alpha: 0.1),
-                          textColor: DS.primaryBase,
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ],
               ),
+            ),
+            const SizedBox(height: DS.spacing16),
+            ToolSectionCard(
+              accentColor: accent,
+              title: '最近记录',
+              subtitle: '轻量保留最近 6 次，方便回填和核对。',
+              child: _history.isEmpty
+                  ? ToolEmptyState(
+                      icon: Icons.receipt_long_rounded,
+                      title: '还没有计算历史',
+                      description: '完成一次表达式计算后，最近记录会显示在这里。',
+                      accentColor: accent,
+                    )
+                  : Column(
+                      children: _history
+                          .map(
+                            (entry) => ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: Icon(
+                                Icons.subdirectory_arrow_right_rounded,
+                                color: accent,
+                              ),
+                              title: Text(
+                                entry,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      color: DS.textPrimary,
+                                      fontWeight: DS.fontWeightMedium,
+                                    ),
+                              ),
+                              trailing: IconButton(
+                                onPressed: () => setState(() {
+                                  _expression = entry.split(' = ').first;
+                                }),
+                                icon: const Icon(Icons.undo_rounded),
+                              ),
+                            ),
+                          )
+                          .toList(),
+                    ),
             ),
           ],
         ),
-      );
+      ),
+    );
+  }
+}
+
+class _CalculatorKey extends StatelessWidget {
+  const _CalculatorKey({
+    required this.label,
+    required this.accentColor,
+    required this.onTap,
+    this.isOperator = false,
+    this.isPrimary = false,
+    this.isDanger = false,
+  });
+
+  final String label;
+  final Color accentColor;
+  final VoidCallback onTap;
+  final bool isOperator;
+  final bool isPrimary;
+  final bool isDanger;
+
+  @override
+  Widget build(BuildContext context) {
+    final background = isPrimary
+        ? accentColor
+        : isDanger
+            ? DS.error.withValues(alpha: 0.10)
+            : isOperator
+                ? accentColor.withValues(alpha: 0.12)
+                : DS.surfacePrimary;
+    final foreground = isPrimary
+        ? DS.textOnPrimary
+        : isDanger
+            ? DS.error
+            : isOperator
+                ? accentColor
+                : DS.textPrimary;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: Ink(
+        height: 58,
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: isPrimary
+                ? accentColor.withValues(alpha: 0.72)
+                : DS.borderSubtle,
+          ),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: foreground,
+                  fontWeight: DS.fontWeightBold,
+                ),
+          ),
+        ),
+      ),
+    );
+  }
 }

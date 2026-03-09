@@ -4,16 +4,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/features/knowledge/presentation/providers/vocabulary_provider.dart';
+import 'package:sparkle/features/tools/models/tool_definition.dart';
+import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
 import 'package:sparkle/features/vocabulary/presentation/providers/local_vocabulary_provider.dart';
 
-/// 查词工具 - 快速词典查询
 class VocabularyLookupTool extends ConsumerStatefulWidget {
-  // 当前任务ID，用于关联生词
+  const VocabularyLookupTool({
+    super.key,
+    this.taskId,
+    this.surface = ToolSurface.page,
+  });
 
-  const VocabularyLookupTool({super.key, this.taskId});
   final String? taskId;
+  final ToolSurface surface;
 
   @override
   ConsumerState<VocabularyLookupTool> createState() =>
@@ -28,7 +32,6 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
   @override
   void initState() {
     super.initState();
-    // 自动聚焦输入框
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusNode.requestFocus();
     });
@@ -43,24 +46,35 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
 
   Future<void> _lookup() async {
     final word = _controller.text.trim();
-    if (word.isNotEmpty) {
-      // Check if word is already in local wordbook
-      final localWord =
-          await ref.read(localVocabularyProvider.notifier).getByWord(word);
-      setState(() {
-        _isInLocalWordbook = localWord != null;
-      });
-
-      ref.read(vocabularyProvider.notifier).lookup(word);
-      // 同时获取关联词
-      ref.read(vocabularyProvider.notifier).fetchAssociations(word);
+    if (word.isEmpty) {
+      AppFeedback.info(context, '请输入要查询的单词');
+      return;
     }
+
+    final localWord =
+        await ref.read(localVocabularyProvider.notifier).getByWord(word);
+    setState(() {
+      _isInLocalWordbook = localWord != null;
+    });
+
+    ref.read(vocabularyProvider.notifier).lookup(word);
+    ref.read(vocabularyProvider.notifier).fetchAssociations(word);
+  }
+
+  Future<void> _generateSentence() async {
+    final word = _controller.text.trim();
+    if (word.isEmpty) {
+      return;
+    }
+    await ref.read(vocabularyProvider.notifier).generateSentence(word);
   }
 
   Future<void> _addToWordbook() async {
     final state = ref.read(vocabularyProvider);
     final result = state.lookupResult;
-    if (result == null) return;
+    if (result == null) {
+      return;
+    }
 
     final word = result['word'] as String? ?? _controller.text;
     final definitions = result['definitions'];
@@ -72,11 +86,11 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
       definition = definitions;
     }
 
-    // Add to local wordbook
     await ref.read(localVocabularyProvider.notifier).addWord(
           word: word,
           definition: definition,
           phonetic: result['phonetic'] as String?,
+          exampleSentence: state.exampleSentence,
           taskId: widget.taskId,
         );
 
@@ -93,7 +107,9 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
   Future<void> _removeFromWordbook() async {
     final state = ref.read(vocabularyProvider);
     final result = state.lookupResult;
-    if (result == null) return;
+    if (result == null) {
+      return;
+    }
 
     final word = result['word'] as String? ?? _controller.text;
     final localWord =
@@ -101,11 +117,9 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
 
     if (localWord != null) {
       await ref.read(localVocabularyProvider.notifier).delete(localWord.id);
-
       setState(() {
         _isInLocalWordbook = false;
       });
-
       if (mounted) {
         HapticFeedback.lightImpact();
         AppFeedback.info(context, '已从生词本移除 "$word"');
@@ -116,307 +130,247 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(vocabularyProvider);
+    final accent = DS.prismBlue;
+    final result = state.lookupResult;
+    final definitions = result?['definitions'];
+    final examples = result?['examples'];
 
-    return Container(
-      padding: const EdgeInsets.all(DS.xl),
-      height: 550,
-      decoration: BoxDecoration(
-        color: DS.brandPrimaryConst,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(24),
-          topRight: Radius.circular(24),
+    return ToolShell(
+      surface: widget.surface,
+      icon: Icons.search_rounded,
+      title: '查词',
+      subtitle: '用来做快速词义确认、例句生成和关联词扩展，查询结果可以直接收进本地生词本。',
+      accentColor: accent,
+      fillHeight: true,
+      heroChips: [
+        ToolHeroChip(
+          label: _isInLocalWordbook ? '已在生词本中' : '可加入生词本',
+          accentColor: accent,
+          icon: _isInLocalWordbook
+              ? Icons.bookmark_added_rounded
+              : Icons.bookmark_border_rounded,
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        ToolHeroChip(
+          label: state.associations.isEmpty
+              ? '等待关联词'
+              : '${state.associations.length} 个关联词',
+          accentColor: accent,
+          icon: Icons.hub_rounded,
+        ),
+      ],
+      body: Column(
         children: [
-          // Drag Handle
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: DS.neutral300,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: DS.spacing20),
-
-          // Header
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(DS.sm),
-                decoration: BoxDecoration(
-                  color: DS.prismBlue.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  Icons.search_rounded,
-                  color: DS.prismBlue,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: DS.md),
-              Text(
-                '查词',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: DS.fontWeightBold,
+          ToolSectionCard(
+            accentColor: accent,
+            title: '查询输入',
+            subtitle: '输入英文单词后回车或点击查询。',
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    focusNode: _focusNode,
+                    decoration: const InputDecoration(
+                      hintText: '输入英文单词...',
+                      prefixIcon: Icon(Icons.menu_book_rounded),
                     ),
-              ),
-            ],
-          ),
-          const SizedBox(height: DS.spacing20),
-
-          // Search Input
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _controller,
-                  focusNode: _focusNode,
-                  decoration: InputDecoration(
-                    hintText: '输入英文单词...',
-                    filled: true,
-                    fillColor: DS.neutral50,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: DS.prismBlue, width: 2),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: DS.spacing16,
-                      vertical: DS.spacing12,
-                    ),
-                    prefixIcon:
-                        Icon(Icons.translate_rounded, color: DS.neutral400),
+                    textInputAction: TextInputAction.search,
+                    onSubmitted: (_) => _lookup(),
                   ),
-                  textInputAction: TextInputAction.search,
-                  onSubmitted: (_) => _lookup(),
                 ),
-              ),
-              const SizedBox(width: DS.md),
-              SizedBox(
-                height: 52,
-                child: SparkleButton.primary(
+                const SizedBox(width: DS.spacing12),
+                SparkleButton(
                   label: '查询',
                   onPressed: _lookup,
                   icon: const Icon(Icons.search_rounded),
                   loading: state.isLookingUp,
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: DS.lg),
-
-          // Result Area
-          Expanded(
-            child: _buildResultArea(state),
-          ),
-
-          // Add to Wordbook Button
-          if (state.lookupResult != null)
-            Padding(
-              padding: const EdgeInsets.only(top: DS.spacing16),
-              child: _isInLocalWordbook
-                  ? CustomButton.secondary(
-                      text: '已在生词本中',
-                      icon: Icons.check_rounded,
-                      onPressed: state.isLoading ? null : _removeFromWordbook,
-                    )
-                  : CustomButton.primary(
-                      text: '加入生词本',
-                      icon: Icons.add_rounded,
-                      onPressed: state.isLoading ? null : _addToWordbook,
-                      customGradient: LinearGradient(
-                        colors: [DS.prismBlue, DS.info],
-                      ),
-                    ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildResultArea(VocabularyState state) {
-    if (state.error != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.search_off_rounded,
-              size: 48,
-              color: DS.neutral300,
-            ),
-            const SizedBox(height: DS.md),
-            Text(
-              state.error!,
-              style: TextStyle(color: DS.neutral500),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (state.lookupResult == null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.menu_book_rounded,
-              size: 48,
-              color: DS.neutral200,
-            ),
-            const SizedBox(height: DS.md),
-            Text(
-              '输入单词开始查询',
-              style: TextStyle(color: DS.neutral400),
-            ),
-          ],
-        ),
-      );
-    }
-
-    final result = state.lookupResult;
-    final word = result?['word'] as String? ?? '';
-    final phonetic = result?['phonetic'] as String?;
-    final pos = result?['pos'] as String?;
-    final definitions = result?['definitions'];
-    final examples = result?['examples'];
-
-    return SingleChildScrollView(
-      child: Container(
-        padding: const EdgeInsets.all(DS.lg),
-        decoration: BoxDecoration(
-          color: DS.prismBlue.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: DS.prismBlue.withValues(alpha: 0.2)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Word & Phonetic
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              children: [
-                Text(
-                  word,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: DS.fontWeightBold,
-                        color: DS.neutral900,
-                      ),
-                ),
-                if (phonetic != null) ...[
-                  const SizedBox(width: DS.md),
-                  Text(
-                    phonetic,
-                    style: TextStyle(
-                      color: DS.neutral500,
-                      fontSize: 16,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                ],
               ],
             ),
-
-            // Part of Speech
-            if (pos != null) ...[
-              const SizedBox(height: DS.sm),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: DS.spacing8,
-                  vertical: DS.spacing4,
-                ),
-                decoration: BoxDecoration(
-                  color: DS.prismBlue.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  pos,
-                  style: TextStyle(
-                    color: DS.prismBlue,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ],
-            const SizedBox(height: DS.lg),
-
-            // Definitions
-            if (definitions != null) ...[
-              Text(
-                '释义',
-                style: TextStyle(
-                  fontWeight: DS.fontWeightBold,
-                  color: DS.neutral700,
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(height: DS.sm),
-              ..._buildDefinitions(definitions),
-            ],
-
-            // Examples
-            if (examples != null &&
-                (examples is List && examples.isNotEmpty)) ...[
-              const SizedBox(height: DS.lg),
-              Text(
-                '例句',
-                style: TextStyle(
-                  fontWeight: DS.fontWeightBold,
-                  color: DS.neutral700,
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(height: DS.sm),
-              ..._buildExamples(examples),
-            ],
-
-            // Associations
-            if (state.associations.isNotEmpty) ...[
-              const SizedBox(height: DS.lg),
-              Text(
-                '相关词汇',
-                style: TextStyle(
-                  fontWeight: DS.fontWeightBold,
-                  color: DS.neutral700,
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(height: DS.sm),
-              Wrap(
-                spacing: DS.spacing8,
-                runSpacing: DS.spacing8,
-                children: state.associations
-                    .map(
-                      (assoc) => ActionChip(
-                        label: Text(assoc),
-                        onPressed: () {
-                          _controller.text = assoc;
-                          _lookup();
-                        },
-                        backgroundColor: DS.neutral100,
-                        labelStyle: TextStyle(
-                          color: DS.neutral700,
-                          fontSize: 12,
-                        ),
-                      ),
+          ),
+          const SizedBox(height: DS.spacing16),
+          Expanded(
+            child: ToolSectionCard(
+              accentColor: accent,
+              fillHeight: true,
+              title: '查询结果',
+              subtitle: '词义、例句、关联词和模型生成句都在这里。',
+              child: result == null
+                  ? ToolEmptyState(
+                      icon: Icons.travel_explore_rounded,
+                      title: '输入单词开始查询',
+                      description: '查询完成后可以直接收藏到生词本，并继续生成例句。',
+                      accentColor: accent,
                     )
-                    .toList(),
-              ),
-            ],
-          ],
-        ),
+                  : SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            result['word'] as String? ?? '',
+                            style: Theme.of(context)
+                                .textTheme
+                                .headlineMedium
+                                ?.copyWith(
+                                  color: DS.textPrimary,
+                                  fontWeight: DS.fontWeightBold,
+                                ),
+                          ),
+                          if ((result['phonetic'] as String?) != null) ...[
+                            const SizedBox(height: DS.spacing6),
+                            Text(
+                              result['phonetic'] as String,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyLarge
+                                  ?.copyWith(
+                                    color: DS.textSecondary,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                            ),
+                          ],
+                          if ((result['pos'] as String?) != null) ...[
+                            const SizedBox(height: DS.spacing8),
+                            ToolHeroChip(
+                              label: result['pos'] as String,
+                              accentColor: accent,
+                              icon: Icons.sell_rounded,
+                            ),
+                          ],
+                          const SizedBox(height: DS.spacing16),
+                          if (definitions != null) ...[
+                            Text(
+                              '释义',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleSmall
+                                  ?.copyWith(
+                                    color: DS.textPrimary,
+                                    fontWeight: DS.fontWeightBold,
+                                  ),
+                            ),
+                            const SizedBox(height: DS.spacing8),
+                            ..._buildDefinitions(definitions),
+                          ],
+                          if (examples is List && examples.isNotEmpty) ...[
+                            const SizedBox(height: DS.spacing16),
+                            Text(
+                              '词典例句',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleSmall
+                                  ?.copyWith(
+                                    color: DS.textPrimary,
+                                    fontWeight: DS.fontWeightBold,
+                                  ),
+                            ),
+                            const SizedBox(height: DS.spacing8),
+                            ...examples.take(3).map(
+                                  (example) => Padding(
+                                    padding: const EdgeInsets.only(
+                                      bottom: DS.spacing8,
+                                    ),
+                                    child: Text(
+                                      '• $example',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.copyWith(
+                                            color: DS.textSecondary,
+                                            height: 1.55,
+                                          ),
+                                    ),
+                                  ),
+                                ),
+                          ],
+                          if (state.exampleSentence != null) ...[
+                            const SizedBox(height: DS.spacing16),
+                            Text(
+                              '模型生成例句',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleSmall
+                                  ?.copyWith(
+                                    color: DS.textPrimary,
+                                    fontWeight: DS.fontWeightBold,
+                                  ),
+                            ),
+                            const SizedBox(height: DS.spacing8),
+                            Text(
+                              state.exampleSentence!,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                    color: DS.textSecondary,
+                                    height: 1.6,
+                                  ),
+                            ),
+                          ],
+                          if (state.associations.isNotEmpty) ...[
+                            const SizedBox(height: DS.spacing16),
+                            Text(
+                              '关联词汇',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleSmall
+                                  ?.copyWith(
+                                    color: DS.textPrimary,
+                                    fontWeight: DS.fontWeightBold,
+                                  ),
+                            ),
+                            const SizedBox(height: DS.spacing8),
+                            Wrap(
+                              spacing: DS.spacing10,
+                              runSpacing: DS.spacing10,
+                              children: state.associations
+                                  .map(
+                                    (association) => ToolChoiceChip(
+                                      label: association,
+                                      selected: false,
+                                      onTap: () {
+                                        _controller.text = association;
+                                        _lookup();
+                                      },
+                                      accentColor: accent,
+                                    ),
+                                  )
+                                  .toList(),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+            ),
+          ),
+        ],
+      ),
+      footer: Row(
+        children: [
+          Expanded(
+            child: SparkleButton(
+              label: '生成例句',
+              variant: ButtonVariant.ghost,
+              onPressed: result == null ? null : _generateSentence,
+              icon: const Icon(Icons.auto_awesome_rounded),
+            ),
+          ),
+          const SizedBox(width: DS.spacing12),
+          Expanded(
+            child: _isInLocalWordbook
+                ? SparkleButton(
+                    label: '移出生词本',
+                    variant: ButtonVariant.ghost,
+                    onPressed: _removeFromWordbook,
+                    icon: const Icon(Icons.remove_circle_outline_rounded),
+                  )
+                : SparkleButton(
+                    label: '加入生词本',
+                    onPressed: result == null ? null : _addToWordbook,
+                    icon: const Icon(Icons.bookmark_add_rounded),
+                  ),
+          ),
+        ],
       ),
     );
   }
@@ -428,76 +382,27 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
           .entries
           .map(
             (entry) => Padding(
-              padding: const EdgeInsets.only(bottom: DS.spacing4),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${entry.key + 1}. ',
-                    style: TextStyle(
-                      color: DS.neutral500,
-                      fontWeight: FontWeight.w500,
+              padding: const EdgeInsets.only(bottom: DS.spacing6),
+              child: Text(
+                '${entry.key + 1}. ${entry.value}',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: DS.textSecondary,
+                      height: 1.55,
                     ),
-                  ),
-                  Expanded(
-                    child: Text(
-                      entry.value.toString(),
-                      style: TextStyle(
-                        color: DS.neutral700,
-                        height: 1.4,
-                      ),
-                    ),
-                  ),
-                ],
               ),
             ),
           )
           .toList();
-    } else {
-      return [
-        Text(
-          definitions.toString(),
-          style: TextStyle(
-            color: DS.neutral700,
-            height: 1.4,
-          ),
-        ),
-      ];
     }
-  }
 
-  List<Widget> _buildExamples(dynamic examples) {
-    if (examples is List) {
-      return examples
-          .take(3)
-          .map(
-            (example) => Padding(
-              padding: const EdgeInsets.only(bottom: DS.spacing8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(
-                    Icons.format_quote_rounded,
-                    size: 16,
-                    color: DS.neutral400,
-                  ),
-                  const SizedBox(width: DS.sm),
-                  Expanded(
-                    child: Text(
-                      example.toString(),
-                      style: TextStyle(
-                        color: DS.neutral600,
-                        fontStyle: FontStyle.italic,
-                        height: 1.4,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+    return [
+      Text(
+        definitions.toString(),
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: DS.textSecondary,
+              height: 1.55,
             ),
-          )
-          .toList();
-    }
-    return [];
+      ),
+    ];
   }
 }

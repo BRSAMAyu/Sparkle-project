@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -5,11 +7,16 @@ import 'package:sparkle/features/focus/presentation/providers/focus_statistics_p
     as feature;
 import 'package:sparkle/features/focus/presentation/widgets/focus_stats_chart.dart';
 import 'package:sparkle/features/focus/presentation/widgets/focus_stats_session_list.dart';
+import 'package:sparkle/features/tools/models/tool_definition.dart';
+import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
 
-/// Focus statistics tool widget - shows real-time focus statistics
-/// Can be used as a bottom sheet or standalone widget
 class FocusStatsTool extends ConsumerStatefulWidget {
-  const FocusStatsTool({super.key});
+  const FocusStatsTool({
+    super.key,
+    this.surface = ToolSurface.page,
+  });
+
+  final ToolSurface surface;
 
   @override
   ConsumerState<FocusStatsTool> createState() => _FocusStatsToolState();
@@ -19,232 +26,120 @@ class _FocusStatsToolState extends ConsumerState<FocusStatsTool> {
   @override
   void initState() {
     super.initState();
-    // Load data on init
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(feature.focusStatisticsProvider.notifier).loadTodayStats();
-      ref.read(feature.focusStatisticsProvider.notifier).loadWeeklyStats();
+      _refresh();
+    });
+  }
+
+  void _refresh() {
+    unawaited(
+      ref.read(feature.focusStatisticsProvider.notifier).loadTodayStats(),
+    );
+    unawaited(
+      ref.read(feature.focusStatisticsProvider.notifier).loadWeeklyStats(),
+    );
+    unawaited(
       ref
           .read(feature.focusStatisticsProvider.notifier)
-          .loadSessionHistory(limit: 5);
-    });
+          .loadSessionHistory(limit: 5),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(feature.focusStatisticsProvider);
+    final accent = DS.prismBlue;
+    final totalSessions = state.sessionHistory.length;
+    final averageDaily = state.dailyBreakdown.isEmpty
+        ? 0
+        : (state.dailyBreakdown.values.reduce((a, b) => a + b) /
+                state.dailyBreakdown.length)
+            .round();
 
-    return Container(
-      padding: const EdgeInsets.all(DS.spacing24),
-      decoration: BoxDecoration(
-        color: DS.surfaceSecondary,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        border: Border(
-          top: BorderSide(color: DS.border, width: 0.5),
+    return ToolShell(
+      surface: widget.surface,
+      icon: Icons.bar_chart_rounded,
+      title: '专注统计',
+      subtitle: '把计时和专注行为沉淀成结构化洞察，方便你判断节奏是否稳定、是否需要调整工作块长度。',
+      accentColor: accent,
+      headerAction: SparkleIconButton(
+        icon: const Icon(Icons.refresh_rounded),
+        onPressed: _refresh,
+        variant: ButtonVariant.ghost,
+      ),
+      heroChips: [
+        ToolHeroChip(
+          label: '${state.streakDays} 天连续专注',
+          accentColor: accent,
+          icon: Icons.local_fire_department_rounded,
         ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Header
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(DS.sm),
-                decoration: BoxDecoration(
-                  color: DS.primaryBase.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Center(
-                  child: Icon(
-                    Icons.bar_chart,
-                    color: DS.primaryBase,
-                    size: 24,
+        ToolHeroChip(
+          label: totalSessions == 0 ? '等待数据' : '$totalSessions 条最近记录',
+          accentColor: accent,
+          icon: Icons.history_rounded,
+        ),
+      ],
+      body: state.isLoading
+          ? Center(child: CircularProgressIndicator(color: accent))
+          : SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Wrap(
+                    spacing: DS.spacing12,
+                    runSpacing: DS.spacing12,
+                    children: [
+                      ToolMetricCard(
+                        label: '今日专注',
+                        value: state.todayFormatted,
+                        accentColor: accent,
+                        icon: Icons.today_rounded,
+                      ),
+                      ToolMetricCard(
+                        label: '本周累计',
+                        value: state.weekTotalFormatted,
+                        accentColor: accent,
+                        icon: Icons.calendar_view_week_rounded,
+                      ),
+                      ToolMetricCard(
+                        label: '日均专注',
+                        value: '$averageDaily 分',
+                        accentColor: accent,
+                        icon: Icons.stacked_line_chart_rounded,
+                      ),
+                    ],
                   ),
-                ),
-              ),
-              const SizedBox(width: DS.md),
-              Text(
-                '专注统计',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: DS.textPrimary,
-                ),
-              ),
-              const Spacer(),
-              SparkleIconButton(
-                icon: const Icon(Icons.close),
-                onPressed: () => Navigator.of(context).pop(),
-                variant: ButtonVariant.ghost,
-                size: DS.touchTargetMinSize,
-              ),
-            ],
-          ),
-          const SizedBox(height: DS.xl),
-
-          // Loading indicator
-          if (state.isLoading)
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.all(DS.xl),
-                child: CircularProgressIndicator(
-                  color: DS.primaryBase,
-                ),
+                  const SizedBox(height: DS.spacing16),
+                  ToolSectionCard(
+                    accentColor: accent,
+                    title: '本周趋势',
+                    subtitle: '最近 7 天的专注时长分布。',
+                    child: state.dailyBreakdown.isEmpty
+                        ? ToolEmptyState(
+                            icon: Icons.insights_rounded,
+                            title: '还没有趋势数据',
+                            description: '完成几次专注会话后，这里会形成有参考价值的趋势图。',
+                            accentColor: accent,
+                          )
+                        : SizedBox(
+                            height: 180,
+                            child: FocusStatsChart(
+                              dailyData: state.dailyBreakdown,
+                            ),
+                          ),
+                  ),
+                  const SizedBox(height: DS.spacing16),
+                  ToolSectionCard(
+                    accentColor: accent,
+                    title: '最近会话',
+                    subtitle: '帮助你回看最近的专注节奏和时长结构。',
+                    child: FocusStatsSessionList(
+                      sessions: state.sessionHistory.take(5).toList(),
+                    ),
+                  ),
+                ],
               ),
             ),
-
-          // Overview Cards
-          if (!state.isLoading)
-            Row(
-              children: [
-                Expanded(
-                  child: _buildStatCard(
-                    '今日专注',
-                    state.todayFormatted,
-                    DS.info,
-                  ),
-                ),
-                const SizedBox(width: DS.md),
-                Expanded(
-                  child: _buildStatCard(
-                    '本周累计',
-                    state.weekTotalFormatted,
-                    DS.primaryBase,
-                  ),
-                ),
-                const SizedBox(width: DS.md),
-                Expanded(
-                  child: _buildStatCard(
-                    '连续天数',
-                    '${state.streakDays}天',
-                    DS.warning,
-                  ),
-                ),
-              ],
-            ),
-
-          const SizedBox(height: DS.xxl),
-
-          // Weekly Trend Chart
-          if (!state.isLoading && state.dailyBreakdown.isNotEmpty)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '本周趋势',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: DS.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: DS.lg),
-                Container(
-                  decoration: BoxDecoration(
-                    color: DS.surfacePrimaryElevated,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: DS.border, width: 0.5),
-                  ),
-                  padding: const EdgeInsets.all(DS.md),
-                  child: FocusStatsChart(
-                    dailyData: state.dailyBreakdown,
-                  ),
-                ),
-              ],
-            ),
-
-          if (!state.isLoading && state.dailyBreakdown.isEmpty)
-            _buildEmptyState('暂无本周数据'),
-
-          const SizedBox(height: DS.xxl),
-
-          // Recent Sessions
-          if (!state.isLoading && state.sessionHistory.isNotEmpty)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '最近会话',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: DS.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: DS.md),
-                Container(
-                  constraints: const BoxConstraints(maxHeight: 200),
-                  child: FocusStatsSessionList(
-                    sessions: state.sessionHistory.take(5).toList(),
-                  ),
-                ),
-              ],
-            ),
-
-          if (!state.isLoading && state.sessionHistory.isEmpty)
-            _buildEmptyState('暂无会话记录'),
-
-          const SizedBox(height: DS.md),
-        ],
-      ),
     );
   }
-
-  Widget _buildStatCard(String label, String value, Color color) => Container(
-        padding: const EdgeInsets.all(DS.lg),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withValues(alpha: 0.2)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                color: DS.textSecondary,
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: DS.xs),
-            Text(
-              value,
-              style: TextStyle(
-                color: color,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      );
-
-  Widget _buildEmptyState(String message) => Container(
-        padding: const EdgeInsets.all(DS.xl),
-        decoration: BoxDecoration(
-          color: DS.surfacePrimaryElevated,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: DS.border, width: 0.5),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.info_outline,
-              color: DS.textSecondary,
-            ),
-            const SizedBox(width: DS.sm),
-            Text(
-              message,
-              style: TextStyle(
-                color: DS.textSecondary,
-                fontSize: 14,
-              ),
-            ),
-          ],
-        ),
-      );
 }
