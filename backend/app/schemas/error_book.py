@@ -129,6 +129,24 @@ class ErrorAnalysisResult(BaseModel):
     study_suggestion: str = Field(..., description="学习建议")
     ocr_text: str | None = Field(None, description="OCR识别的文本（如果是图片题）")
 
+    @field_validator("error_type_label", "root_cause", "correct_approach", "study_suggestion", "ocr_text", mode="before")
+    @classmethod
+    def normalize_text_fields(cls, value):
+        if value is None:
+            return value
+        if isinstance(value, list):
+            return "\n".join(str(item) for item in value if item is not None)
+        return str(value)
+
+    @field_validator("similar_traps", "recommended_knowledge", mode="before")
+    @classmethod
+    def normalize_list_fields(cls, value):
+        if value is None:
+            return []
+        if isinstance(value, list):
+            return [str(item) for item in value if item is not None]
+        return [str(value)]
+
 
 # ============================================
 # 错题响应 Schema

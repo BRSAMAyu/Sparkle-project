@@ -21,7 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.agent_profiles import TaskType
 from app.models.capsule_generation_job import CapsuleGenerationJob, JobStatus
 from app.models.curiosity_capsule import CuriosityCapsule, DepthLevel
-from app.models.task import Task
+from app.models.task import Task, TaskStatus
 from app.models.user import User
 from app.services.llm_service import get_llm_service_for_task, llm_service
 
@@ -389,20 +389,39 @@ class CapsuleGenerationService:
         # 获取最近完成的任务
         result = await db.execute(
             select(Task)
-            .where(Task.user_id == user_id, Task.status == "completed")
+            .where(Task.user_id == user_id, Task.status == TaskStatus.COMPLETED)
             .order_by(desc(Task.completed_at))
             .limit(5)
         )
         recent_tasks = result.scalars().all()
 
+        def _task_subject(task: Task) -> str | None:
+            tags = task.tags if isinstance(task.tags, list) else []
+            for tag in tags:
+                if isinstance(tag, str) and tag.strip():
+                    return tag.strip()
+            return None
+
         return {
             "user_id": str(user_id),
             "nickname": user.nickname or "学习者",
             "recent_tasks": [
-                {"id": t.id, "title": t.title, "subject": t.subject, "type": t.type}
+                {
+                    "id": t.id,
+                    "title": t.title,
+                    "subject": _task_subject(t),
+                    "type": t.type.value if hasattr(t.type, "value") else str(t.type),
+                }
                 for t in recent_tasks
             ],
-            "subjects": list({t.subject for t in recent_tasks if t.subject}),
+            "subjects": list(
+                {
+                    subject
+                    for t in recent_tasks
+                    for subject in [_task_subject(t)]
+                    if subject
+                }
+            ),
         }
 
     @staticmethod

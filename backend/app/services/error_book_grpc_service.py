@@ -207,6 +207,22 @@ class ErrorBookGrpcServiceImpl(error_book_pb2_grpc.ErrorBookServiceServicer):
                 has_next=(params.page * params.page_size) < total
             )
 
+    @staticmethod
+    def _stringify(value) -> str:
+        if value is None:
+            return ""
+        if isinstance(value, list):
+            return "\n".join(str(item) for item in value if item is not None)
+        return str(value)
+
+    @staticmethod
+    def _string_list(value) -> list[str]:
+        if value is None:
+            return []
+        if isinstance(value, list):
+            return [str(item) for item in value if item is not None]
+        return [str(value)]
+
     def _map_to_proto(self, error) -> error_book_pb2.ErrorRecord:
         proto = error_book_pb2.ErrorRecord(
             id=str(error.id),
@@ -234,14 +250,14 @@ class ErrorBookGrpcServiceImpl(error_book_pb2_grpc.ErrorBookServiceServicer):
             # error.latest_analysis is dict (from JSONB)
             la = error.latest_analysis
             proto.latest_analysis.CopyFrom(error_book_pb2.ErrorAnalysisResult(
-                error_type=la.get('error_type', ''),
-                error_type_label=la.get('error_type_label', ''),
-                root_cause=la.get('root_cause', ''),
-                correct_approach=la.get('correct_approach', ''),
-                similar_traps=la.get('similar_traps', []),
-                recommended_knowledge=la.get('recommended_knowledge', []),
-                study_suggestion=la.get('study_suggestion', ''),
-                ocr_text=la.get('ocr_text', '')
+                error_type=self._stringify(la.get('error_type', '')),
+                error_type_label=self._stringify(la.get('error_type_label', '')),
+                root_cause=self._stringify(la.get('root_cause', '')),
+                correct_approach=self._stringify(la.get('correct_approach', '')),
+                similar_traps=self._string_list(la.get('similar_traps', [])),
+                recommended_knowledge=self._string_list(la.get('recommended_knowledge', [])),
+                study_suggestion=self._stringify(la.get('study_suggestion', '')),
+                ocr_text=self._stringify(la.get('ocr_text', '')),
             ))
 
         # Mapping transient knowledge links if available

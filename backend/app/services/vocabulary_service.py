@@ -13,6 +13,7 @@ Vocabulary & Dictionary Service
 import csv
 import io
 import json
+import re
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
@@ -130,6 +131,76 @@ class VocabularyService:
         return result.scalar_one_or_none()
 
     @staticmethod
+    def _extract_json_object(content: str) -> dict[str, Any] | None:
+        """Extract the first JSON object from a model response."""
+        text = content.strip()
+        if text.startswith("```"):
+            text = re.sub(r"^```(?:json)?\s*", "", text)
+            text = re.sub(r"\s*```$", "", text)
+
+        try:
+            data = json.loads(text)
+            return data if isinstance(data, dict) else None
+        except json.JSONDecodeError:
+            pass
+
+        match = re.search(r"\{.*\}", text, re.DOTALL)
+        if not match:
+            return None
+
+        try:
+            data = json.loads(match.group(0))
+        except json.JSONDecodeError:
+            return None
+        return data if isinstance(data, dict) else None
+
+    @staticmethod
+    async def synthesize_lookup(word: str) -> dict[str, Any]:
+        """
+        Generate a lightweight dictionary result via LLM fallback.
+
+        This keeps the lookup tool usable even when the local dictionary or MDX
+        assets are not populated in a fresh environment.
+        """
+        prompt = (
+            "You are a compact English dictionary service. "
+            "Return strict JSON with keys: word, phonetic, pos, definitions, examples. "
+            "definitions and examples must be arrays of short strings. "
+            "If unsure, keep phonetic or pos null instead of inventing details.\n"
+            f"word: {word}"
+        )
+        response = await llm_service.chat(
+            [
+                {
+                    "role": "system",
+                    "content": (
+                        "Return only valid JSON. Do not add markdown, explanation, or extra keys."
+                    ),
+                },
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.2,
+        )
+        data = VocabularyService._extract_json_object(response) or {}
+
+        definitions = data.get("definitions")
+        examples = data.get("examples")
+
+        normalized = {
+            "word": str(data.get("word") or word).strip().lower(),
+            "phonetic": data.get("phonetic") if isinstance(data.get("phonetic"), str) else None,
+            "pos": data.get("pos") if isinstance(data.get("pos"), str) else None,
+            "definitions": [str(item).strip() for item in definitions] if isinstance(definitions, list) else [],
+            "examples": [str(item).strip() for item in examples] if isinstance(examples, list) else [],
+            "source": "llm_fallback",
+        }
+
+        if not normalized["definitions"]:
+            normalized["definitions"] = [f"{word}: definition unavailable"]
+
+        return normalized
+
+    @staticmethod
     async def add_to_wordbook(
         db: AsyncSession,
         user_id: UUID,
@@ -209,6 +280,26 @@ class VocabularyService:
         return result.scalars().all()
 
     @staticmethod
+    async def get_wordbook(
+        db: AsyncSession,
+        user_id: UUID,
+        search: str | None = None,
+    ) -> list[WordBook]:
+        """Get the user's full wordbook, optionally filtered by search text."""
+        stmt = select(WordBook).where(WordBook.user_id == user_id)
+
+        if search:
+            term = f"%{search.strip().lower()}%"
+            stmt = stmt.where(
+                func.lower(WordBook.word).like(term) |
+                func.lower(WordBook.definition).like(term)
+            )
+
+        stmt = stmt.order_by(WordBook.next_review_at.asc(), WordBook.created_at.desc())
+        result = await db.execute(stmt)
+        return result.scalars().all()
+
+    @staticmethod
     async def get_today_creation_count(db: AsyncSession, user_id: UUID) -> int:
         """Get number of words added today (UTC)"""
         today_start = _utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
@@ -262,6 +353,25 @@ class VocabularyService:
         await db.commit()
         await db.refresh(word_book)
         return word_book
+
+    @staticmethod
+    async def delete_wordbook_entry(
+        db: AsyncSession,
+        user_id: UUID,
+        word_id: UUID,
+    ) -> bool:
+        """Delete a wordbook entry owned by the current user."""
+        stmt = select(WordBook).where(
+            and_(WordBook.id == word_id, WordBook.user_id == user_id)
+        )
+        result = await db.execute(stmt)
+        word_book = result.scalar_one_or_none()
+        if not word_book:
+            return False
+
+        await db.delete(word_book)
+        await db.commit()
+        return True
 
     @staticmethod
     async def update_importance(

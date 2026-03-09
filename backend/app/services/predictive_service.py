@@ -18,8 +18,8 @@ from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
-from app.models.study_records import StudyRecord
-from app.models.tasks import Task
+from app.models.galaxy import StudyRecord
+from app.models.task import Task, TaskStatus
 
 
 class EngagementForecast:
@@ -86,6 +86,10 @@ class PredictiveService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
+    @staticmethod
+    def _get_current_time() -> datetime:
+        return datetime.now(UTC)
+
     async def predict_engagement(self, user_id: UUID) -> EngagementForecast:
         """
         预测用户下次参与时间
@@ -99,7 +103,7 @@ class PredictiveService:
         简化版本：基于历史平均间隔 + 时间模式
         """
         try:
-            now = datetime.now(UTC)
+            now = self._get_current_time()
 
             # 1. 获取最近30天的学习记录
             query = (
@@ -326,7 +330,7 @@ class PredictiveService:
         基于历史学习效果（掌握度提升最快的时间段）
         """
         try:
-            now = datetime.now(UTC)
+            now = self._get_current_time()
 
             # 获取最近30天的学习记录
             query = (
@@ -343,8 +347,10 @@ class PredictiveService:
 
             if not records:
                 return {
-                    "recommended_hours": [9, 14, 19],  # 默认：早中晚
-                    "recommended_weekdays": [1, 2, 3, 4],  # 周二到周五
+                    "best_hours": [9, 14, 19],  # 默认：早中晚
+                    "best_weekdays": [1, 2, 3, 4],  # 周二到周五
+                    "performance_by_hour": {str(hour): 0.0 for hour in range(24)},
+                    "performance_by_weekday": {str(day): 0.0 for day in range(7)},
                     "reason": "默认推荐（数据不足）"
                 }
 
@@ -385,18 +391,20 @@ class PredictiveService:
             )[:4]
 
             return {
-                "recommended_hours": best_hours,
-                "recommended_weekdays": best_weekdays,
-                "hour_performance": avg_hour_performance,
-                "weekday_performance": avg_weekday_performance,
+                "best_hours": best_hours,
+                "best_weekdays": best_weekdays,
+                "performance_by_hour": avg_hour_performance,
+                "performance_by_weekday": avg_weekday_performance,
                 "reason": "基于最近30天的学习效果分析"
             }
 
         except Exception as e:
             logger.error(f"最佳时间推荐失败: {e}")
             return {
-                "recommended_hours": [9, 14, 19],
-                "recommended_weekdays": [1, 2, 3, 4],
+                "best_hours": [9, 14, 19],
+                "best_weekdays": [1, 2, 3, 4],
+                "performance_by_hour": {str(hour): 0.0 for hour in range(24)},
+                "performance_by_weekday": {str(day): 0.0 for day in range(7)},
                 "reason": f"推荐失败: {str(e)}"
             }
 
@@ -411,7 +419,7 @@ class PredictiveService:
         4. 掌握度增长缓慢
         """
         try:
-            now = datetime.now(UTC)
+            now = self._get_current_time()
 
             # 1. 最近活跃度
             recent_7d_query = select(func.count(StudyRecord.id)).where(
@@ -443,7 +451,7 @@ class PredictiveService:
             incomplete_tasks_query = select(func.count(Task.id)).where(
                 and_(
                     Task.user_id == user_id,
-                    Task.status != "completed",
+                    Task.status != TaskStatus.COMPLETED,
                     Task.created_at >= now - timedelta(days=14)
                 )
             )

@@ -20,7 +20,7 @@ class DocumentController extends _$DocumentController {
   Future<void> startCleaning(
     File file, {
     bool enableOcr = true,
-    String ocrEngine = 'local',
+    String ocrEngine = 'zhipu',
     String ocrPromptMode = 'markdown',
   }) async {
     state = const AsyncValue.loading();

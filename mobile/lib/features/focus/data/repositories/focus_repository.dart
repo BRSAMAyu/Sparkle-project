@@ -105,16 +105,18 @@ class FocusRepository {
     }
 
     try {
+      final taskContext = taskTitle.trim().isEmpty ? context : taskTitle;
+      final userInput = context.trim().isEmpty ? taskTitle : context;
       final response = await _apiClient.post<dynamic>(
         ApiEndpoints.focusLlmGuide,
         data: {
-          'task_title': taskTitle,
-          'context': context,
+          'task_context': taskContext,
+          'user_input': userInput,
         },
       );
 
       final payload = ApiResponseParser.unwrapMap(response.data, action: 'getLLMGuidance');
-      return payload['guidance'] as String;
+      return (payload['content'] ?? payload['guidance']) as String;
     } on DioException catch (e) {
       debugPrint('❌ Failed to get LLM guidance: ${e.message}');
       rethrow;
@@ -135,14 +137,17 @@ class FocusRepository {
         ApiEndpoints.focusLlmBreakdown,
         data: {
           'task_title': taskTitle,
-          'task_type': taskType,
+          'task_description': taskType,
         },
       );
 
       final payload = ApiResponseParser.unwrapMap(response.data, action: 'breakdownTask');
-      return (payload['subtasks'] as List<dynamic>)
-          .map((e) => e.toString())
-          .toList();
+      return (payload['subtasks'] as List<dynamic>).map((item) {
+        if (item is Map<String, dynamic>) {
+          return (item['title'] ?? item['name'] ?? item['description'] ?? item.toString()).toString();
+        }
+        return item.toString();
+      }).toList();
     } on DioException catch (e) {
       debugPrint('❌ Failed to breakdown task: ${e.message}');
       rethrow;

@@ -336,7 +336,7 @@ class ErrorBookService:
             and_(
                 ErrorRecord.id == error_id,
                 ErrorRecord.user_id == user_id,
-                not ErrorRecord.is_deleted
+                ErrorRecord.is_deleted.is_(False)
             )
         )
         result = await self.db.execute(stmt)
@@ -365,7 +365,7 @@ class ErrorBookService:
         query = select(ErrorRecord).where(
             and_(
                 ErrorRecord.user_id == user_id,
-                not ErrorRecord.is_deleted
+                ErrorRecord.is_deleted.is_(False)
             )
         )
 
@@ -474,7 +474,10 @@ class ErrorBookService:
 
     async def get_review_stats(self, user_id: UUID) -> dict:
         # Base query
-        base_filter = and_(ErrorRecord.user_id == user_id, not ErrorRecord.is_deleted)
+        base_filter = and_(
+            ErrorRecord.user_id == user_id,
+            ErrorRecord.is_deleted.is_(False),
+        )
 
         total = await self.db.scalar(
             select(func.count()).select_from(ErrorRecord).where(base_filter)

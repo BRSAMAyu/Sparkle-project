@@ -81,7 +81,9 @@ _$ErrorAnalysisImpl _$$ErrorAnalysisImplFromJson(Map<String, dynamic> json) =>
       rootCause: json['root_cause'] as String,
       correctApproach: json['correct_approach'] as String,
       studySuggestion: json['study_suggestion'] as String,
-      analyzedAt: DateTime.parse(json['analyzed_at'] as String),
+      analyzedAt: json['analyzed_at'] == null
+          ? null
+          : DateTime.parse(json['analyzed_at'] as String),
       similarTraps: (json['similar_traps'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
@@ -99,23 +101,23 @@ Map<String, dynamic> _$$ErrorAnalysisImplToJson(_$ErrorAnalysisImpl instance) =>
       'root_cause': instance.rootCause,
       'correct_approach': instance.correctApproach,
       'study_suggestion': instance.studySuggestion,
-      'analyzed_at': instance.analyzedAt.toIso8601String(),
+      'analyzed_at': instance.analyzedAt?.toIso8601String(),
       'similar_traps': instance.similarTraps,
       'recommended_knowledge': instance.recommendedKnowledge,
     };
 
 _$KnowledgeLinkImpl _$$KnowledgeLinkImplFromJson(Map<String, dynamic> json) =>
     _$KnowledgeLinkImpl(
-      nodeId: json['knowledge_node_id'] as String,
-      nodeName: json['node_name'] as String,
-      relevance: (json['relevance'] as num).toDouble(),
-      isPrimary: json['is_primary'] as bool,
+      nodeId: json['id'] as String,
+      nodeName: json['name'] as String,
+      relevance: (json['relevance'] as num?)?.toDouble() ?? 1.0,
+      isPrimary: json['is_primary'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$$KnowledgeLinkImplToJson(_$KnowledgeLinkImpl instance) =>
     <String, dynamic>{
-      'knowledge_node_id': instance.nodeId,
-      'node_name': instance.nodeName,
+      'id': instance.nodeId,
+      'name': instance.nodeName,
       'relevance': instance.relevance,
       'is_primary': instance.isPrimary,
     };
@@ -126,7 +128,7 @@ _$ErrorListResponseImpl _$$ErrorListResponseImplFromJson(
       items: (json['items'] as List<dynamic>)
           .map((e) => ErrorRecord.fromJson(e as Map<String, dynamic>))
           .toList(),
-      total: (json['total'] as num).toInt(),
+      total: _intFromJson(json['total']),
       page: (json['page'] as num).toInt(),
       pageSize: (json['page_size'] as num).toInt(),
       hasNext: json['has_next'] as bool,
@@ -144,12 +146,11 @@ Map<String, dynamic> _$$ErrorListResponseImplToJson(
 
 _$ReviewStatsImpl _$$ReviewStatsImplFromJson(Map<String, dynamic> json) =>
     _$ReviewStatsImpl(
-      totalErrors: (json['total_errors'] as num).toInt(),
-      masteredCount: (json['mastered_count'] as num).toInt(),
-      needReviewCount: (json['need_review_count'] as num).toInt(),
+      totalErrors: _intFromJson(json['total_errors']),
+      masteredCount: _intFromJson(json['mastered_count']),
+      needReviewCount: _intFromJson(json['need_review_count']),
       reviewStreakDays: (json['review_streak_days'] as num).toInt(),
-      subjectDistribution:
-          Map<String, int>.from(json['subject_distribution'] as Map),
+      subjectDistribution: _intMapFromJson(json['subject_distribution']),
     );
 
 Map<String, dynamic> _$$ReviewStatsImplToJson(_$ReviewStatsImpl instance) =>

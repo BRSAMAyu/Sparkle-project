@@ -627,7 +627,7 @@ mixin _$ErrorAnalysis {
   @JsonKey(name: 'study_suggestion')
   String get studySuggestion => throw _privateConstructorUsedError;
   @JsonKey(name: 'analyzed_at')
-  DateTime get analyzedAt => throw _privateConstructorUsedError;
+  DateTime? get analyzedAt => throw _privateConstructorUsedError;
   @JsonKey(name: 'similar_traps')
   List<String> get similarTraps => throw _privateConstructorUsedError;
   @JsonKey(name: 'recommended_knowledge')
@@ -651,7 +651,7 @@ abstract class $ErrorAnalysisCopyWith<$Res> {
       @JsonKey(name: 'root_cause') String rootCause,
       @JsonKey(name: 'correct_approach') String correctApproach,
       @JsonKey(name: 'study_suggestion') String studySuggestion,
-      @JsonKey(name: 'analyzed_at') DateTime analyzedAt,
+      @JsonKey(name: 'analyzed_at') DateTime? analyzedAt,
       @JsonKey(name: 'similar_traps') List<String> similarTraps,
       @JsonKey(name: 'recommended_knowledge')
       List<String> recommendedKnowledge});
@@ -675,7 +675,7 @@ class _$ErrorAnalysisCopyWithImpl<$Res, $Val extends ErrorAnalysis>
     Object? rootCause = null,
     Object? correctApproach = null,
     Object? studySuggestion = null,
-    Object? analyzedAt = null,
+    Object? analyzedAt = freezed,
     Object? similarTraps = null,
     Object? recommendedKnowledge = null,
   }) {
@@ -700,10 +700,10 @@ class _$ErrorAnalysisCopyWithImpl<$Res, $Val extends ErrorAnalysis>
           ? _value.studySuggestion
           : studySuggestion // ignore: cast_nullable_to_non_nullable
               as String,
-      analyzedAt: null == analyzedAt
+      analyzedAt: freezed == analyzedAt
           ? _value.analyzedAt
           : analyzedAt // ignore: cast_nullable_to_non_nullable
-              as DateTime,
+              as DateTime?,
       similarTraps: null == similarTraps
           ? _value.similarTraps
           : similarTraps // ignore: cast_nullable_to_non_nullable
@@ -730,7 +730,7 @@ abstract class _$$ErrorAnalysisImplCopyWith<$Res>
       @JsonKey(name: 'root_cause') String rootCause,
       @JsonKey(name: 'correct_approach') String correctApproach,
       @JsonKey(name: 'study_suggestion') String studySuggestion,
-      @JsonKey(name: 'analyzed_at') DateTime analyzedAt,
+      @JsonKey(name: 'analyzed_at') DateTime? analyzedAt,
       @JsonKey(name: 'similar_traps') List<String> similarTraps,
       @JsonKey(name: 'recommended_knowledge')
       List<String> recommendedKnowledge});
@@ -752,7 +752,7 @@ class __$$ErrorAnalysisImplCopyWithImpl<$Res>
     Object? rootCause = null,
     Object? correctApproach = null,
     Object? studySuggestion = null,
-    Object? analyzedAt = null,
+    Object? analyzedAt = freezed,
     Object? similarTraps = null,
     Object? recommendedKnowledge = null,
   }) {
@@ -777,10 +777,10 @@ class __$$ErrorAnalysisImplCopyWithImpl<$Res>
           ? _value.studySuggestion
           : studySuggestion // ignore: cast_nullable_to_non_nullable
               as String,
-      analyzedAt: null == analyzedAt
+      analyzedAt: freezed == analyzedAt
           ? _value.analyzedAt
           : analyzedAt // ignore: cast_nullable_to_non_nullable
-              as DateTime,
+              as DateTime?,
       similarTraps: null == similarTraps
           ? _value._similarTraps
           : similarTraps // ignore: cast_nullable_to_non_nullable
@@ -802,7 +802,7 @@ class _$ErrorAnalysisImpl implements _ErrorAnalysis {
       @JsonKey(name: 'root_cause') required this.rootCause,
       @JsonKey(name: 'correct_approach') required this.correctApproach,
       @JsonKey(name: 'study_suggestion') required this.studySuggestion,
-      @JsonKey(name: 'analyzed_at') required this.analyzedAt,
+      @JsonKey(name: 'analyzed_at') this.analyzedAt,
       @JsonKey(name: 'similar_traps')
       final List<String> similarTraps = const [],
       @JsonKey(name: 'recommended_knowledge')
@@ -830,7 +830,7 @@ class _$ErrorAnalysisImpl implements _ErrorAnalysis {
   final String studySuggestion;
   @override
   @JsonKey(name: 'analyzed_at')
-  final DateTime analyzedAt;
+  final DateTime? analyzedAt;
   final List<String> _similarTraps;
   @override
   @JsonKey(name: 'similar_traps')
@@ -912,7 +912,7 @@ abstract class _ErrorAnalysis implements ErrorAnalysis {
       @JsonKey(name: 'root_cause') required final String rootCause,
       @JsonKey(name: 'correct_approach') required final String correctApproach,
       @JsonKey(name: 'study_suggestion') required final String studySuggestion,
-      @JsonKey(name: 'analyzed_at') required final DateTime analyzedAt,
+      @JsonKey(name: 'analyzed_at') final DateTime? analyzedAt,
       @JsonKey(name: 'similar_traps') final List<String> similarTraps,
       @JsonKey(name: 'recommended_knowledge')
       final List<String> recommendedKnowledge}) = _$ErrorAnalysisImpl;
@@ -937,7 +937,7 @@ abstract class _ErrorAnalysis implements ErrorAnalysis {
   String get studySuggestion;
   @override
   @JsonKey(name: 'analyzed_at')
-  DateTime get analyzedAt;
+  DateTime? get analyzedAt;
   @override
   @JsonKey(name: 'similar_traps')
   List<String> get similarTraps;
@@ -956,9 +956,9 @@ KnowledgeLink _$KnowledgeLinkFromJson(Map<String, dynamic> json) {
 
 /// @nodoc
 mixin _$KnowledgeLink {
-  @JsonKey(name: 'knowledge_node_id')
+  @JsonKey(name: 'id')
   String get nodeId => throw _privateConstructorUsedError;
-  @JsonKey(name: 'node_name')
+  @JsonKey(name: 'name')
   String get nodeName => throw _privateConstructorUsedError;
   double get relevance => throw _privateConstructorUsedError;
   @JsonKey(name: 'is_primary')
@@ -977,8 +977,8 @@ abstract class $KnowledgeLinkCopyWith<$Res> {
       _$KnowledgeLinkCopyWithImpl<$Res, KnowledgeLink>;
   @useResult
   $Res call(
-      {@JsonKey(name: 'knowledge_node_id') String nodeId,
-      @JsonKey(name: 'node_name') String nodeName,
+      {@JsonKey(name: 'id') String nodeId,
+      @JsonKey(name: 'name') String nodeName,
       double relevance,
       @JsonKey(name: 'is_primary') bool isPrimary});
 }
@@ -1031,8 +1031,8 @@ abstract class _$$KnowledgeLinkImplCopyWith<$Res>
   @override
   @useResult
   $Res call(
-      {@JsonKey(name: 'knowledge_node_id') String nodeId,
-      @JsonKey(name: 'node_name') String nodeName,
+      {@JsonKey(name: 'id') String nodeId,
+      @JsonKey(name: 'name') String nodeName,
       double relevance,
       @JsonKey(name: 'is_primary') bool isPrimary});
 }
@@ -1078,21 +1078,22 @@ class __$$KnowledgeLinkImplCopyWithImpl<$Res>
 @JsonSerializable()
 class _$KnowledgeLinkImpl implements _KnowledgeLink {
   const _$KnowledgeLinkImpl(
-      {@JsonKey(name: 'knowledge_node_id') required this.nodeId,
-      @JsonKey(name: 'node_name') required this.nodeName,
-      required this.relevance,
-      @JsonKey(name: 'is_primary') required this.isPrimary});
+      {@JsonKey(name: 'id') required this.nodeId,
+      @JsonKey(name: 'name') required this.nodeName,
+      this.relevance = 1.0,
+      @JsonKey(name: 'is_primary') this.isPrimary = false});
 
   factory _$KnowledgeLinkImpl.fromJson(Map<String, dynamic> json) =>
       _$$KnowledgeLinkImplFromJson(json);
 
   @override
-  @JsonKey(name: 'knowledge_node_id')
+  @JsonKey(name: 'id')
   final String nodeId;
   @override
-  @JsonKey(name: 'node_name')
+  @JsonKey(name: 'name')
   final String nodeName;
   @override
+  @JsonKey()
   final double relevance;
   @override
   @JsonKey(name: 'is_primary')
@@ -1138,20 +1139,19 @@ class _$KnowledgeLinkImpl implements _KnowledgeLink {
 
 abstract class _KnowledgeLink implements KnowledgeLink {
   const factory _KnowledgeLink(
-          {@JsonKey(name: 'knowledge_node_id') required final String nodeId,
-          @JsonKey(name: 'node_name') required final String nodeName,
-          required final double relevance,
-          @JsonKey(name: 'is_primary') required final bool isPrimary}) =
-      _$KnowledgeLinkImpl;
+      {@JsonKey(name: 'id') required final String nodeId,
+      @JsonKey(name: 'name') required final String nodeName,
+      final double relevance,
+      @JsonKey(name: 'is_primary') final bool isPrimary}) = _$KnowledgeLinkImpl;
 
   factory _KnowledgeLink.fromJson(Map<String, dynamic> json) =
       _$KnowledgeLinkImpl.fromJson;
 
   @override
-  @JsonKey(name: 'knowledge_node_id')
+  @JsonKey(name: 'id')
   String get nodeId;
   @override
-  @JsonKey(name: 'node_name')
+  @JsonKey(name: 'name')
   String get nodeName;
   @override
   double get relevance;
@@ -1171,6 +1171,7 @@ ErrorListResponse _$ErrorListResponseFromJson(Map<String, dynamic> json) {
 /// @nodoc
 mixin _$ErrorListResponse {
   List<ErrorRecord> get items => throw _privateConstructorUsedError;
+  @JsonKey(fromJson: _intFromJson)
   int get total => throw _privateConstructorUsedError;
   int get page => throw _privateConstructorUsedError;
   @JsonKey(name: 'page_size')
@@ -1192,7 +1193,7 @@ abstract class $ErrorListResponseCopyWith<$Res> {
   @useResult
   $Res call(
       {List<ErrorRecord> items,
-      int total,
+      @JsonKey(fromJson: _intFromJson) int total,
       int page,
       @JsonKey(name: 'page_size') int pageSize,
       @JsonKey(name: 'has_next') bool hasNext});
@@ -1252,7 +1253,7 @@ abstract class _$$ErrorListResponseImplCopyWith<$Res>
   @useResult
   $Res call(
       {List<ErrorRecord> items,
-      int total,
+      @JsonKey(fromJson: _intFromJson) int total,
       int page,
       @JsonKey(name: 'page_size') int pageSize,
       @JsonKey(name: 'has_next') bool hasNext});
@@ -1305,7 +1306,7 @@ class __$$ErrorListResponseImplCopyWithImpl<$Res>
 class _$ErrorListResponseImpl implements _ErrorListResponse {
   const _$ErrorListResponseImpl(
       {required final List<ErrorRecord> items,
-      required this.total,
+      @JsonKey(fromJson: _intFromJson) required this.total,
       required this.page,
       @JsonKey(name: 'page_size') required this.pageSize,
       @JsonKey(name: 'has_next') required this.hasNext})
@@ -1323,6 +1324,7 @@ class _$ErrorListResponseImpl implements _ErrorListResponse {
   }
 
   @override
+  @JsonKey(fromJson: _intFromJson)
   final int total;
   @override
   final int page;
@@ -1379,7 +1381,7 @@ class _$ErrorListResponseImpl implements _ErrorListResponse {
 abstract class _ErrorListResponse implements ErrorListResponse {
   const factory _ErrorListResponse(
           {required final List<ErrorRecord> items,
-          required final int total,
+          @JsonKey(fromJson: _intFromJson) required final int total,
           required final int page,
           @JsonKey(name: 'page_size') required final int pageSize,
           @JsonKey(name: 'has_next') required final bool hasNext}) =
@@ -1391,6 +1393,7 @@ abstract class _ErrorListResponse implements ErrorListResponse {
   @override
   List<ErrorRecord> get items;
   @override
+  @JsonKey(fromJson: _intFromJson)
   int get total;
   @override
   int get page;
@@ -1412,15 +1415,15 @@ ReviewStats _$ReviewStatsFromJson(Map<String, dynamic> json) {
 
 /// @nodoc
 mixin _$ReviewStats {
-  @JsonKey(name: 'total_errors')
+  @JsonKey(name: 'total_errors', fromJson: _intFromJson)
   int get totalErrors => throw _privateConstructorUsedError;
-  @JsonKey(name: 'mastered_count')
+  @JsonKey(name: 'mastered_count', fromJson: _intFromJson)
   int get masteredCount => throw _privateConstructorUsedError;
-  @JsonKey(name: 'need_review_count')
+  @JsonKey(name: 'need_review_count', fromJson: _intFromJson)
   int get needReviewCount => throw _privateConstructorUsedError;
   @JsonKey(name: 'review_streak_days')
   int get reviewStreakDays => throw _privateConstructorUsedError;
-  @JsonKey(name: 'subject_distribution')
+  @JsonKey(name: 'subject_distribution', fromJson: _intMapFromJson)
   Map<String, int> get subjectDistribution =>
       throw _privateConstructorUsedError;
 
@@ -1437,11 +1440,13 @@ abstract class $ReviewStatsCopyWith<$Res> {
       _$ReviewStatsCopyWithImpl<$Res, ReviewStats>;
   @useResult
   $Res call(
-      {@JsonKey(name: 'total_errors') int totalErrors,
-      @JsonKey(name: 'mastered_count') int masteredCount,
-      @JsonKey(name: 'need_review_count') int needReviewCount,
+      {@JsonKey(name: 'total_errors', fromJson: _intFromJson) int totalErrors,
+      @JsonKey(name: 'mastered_count', fromJson: _intFromJson)
+      int masteredCount,
+      @JsonKey(name: 'need_review_count', fromJson: _intFromJson)
+      int needReviewCount,
       @JsonKey(name: 'review_streak_days') int reviewStreakDays,
-      @JsonKey(name: 'subject_distribution')
+      @JsonKey(name: 'subject_distribution', fromJson: _intMapFromJson)
       Map<String, int> subjectDistribution});
 }
 
@@ -1498,11 +1503,13 @@ abstract class _$$ReviewStatsImplCopyWith<$Res>
   @override
   @useResult
   $Res call(
-      {@JsonKey(name: 'total_errors') int totalErrors,
-      @JsonKey(name: 'mastered_count') int masteredCount,
-      @JsonKey(name: 'need_review_count') int needReviewCount,
+      {@JsonKey(name: 'total_errors', fromJson: _intFromJson) int totalErrors,
+      @JsonKey(name: 'mastered_count', fromJson: _intFromJson)
+      int masteredCount,
+      @JsonKey(name: 'need_review_count', fromJson: _intFromJson)
+      int needReviewCount,
       @JsonKey(name: 'review_streak_days') int reviewStreakDays,
-      @JsonKey(name: 'subject_distribution')
+      @JsonKey(name: 'subject_distribution', fromJson: _intMapFromJson)
       Map<String, int> subjectDistribution});
 }
 
@@ -1552,11 +1559,14 @@ class __$$ReviewStatsImplCopyWithImpl<$Res>
 @JsonSerializable()
 class _$ReviewStatsImpl implements _ReviewStats {
   const _$ReviewStatsImpl(
-      {@JsonKey(name: 'total_errors') required this.totalErrors,
-      @JsonKey(name: 'mastered_count') required this.masteredCount,
-      @JsonKey(name: 'need_review_count') required this.needReviewCount,
+      {@JsonKey(name: 'total_errors', fromJson: _intFromJson)
+      required this.totalErrors,
+      @JsonKey(name: 'mastered_count', fromJson: _intFromJson)
+      required this.masteredCount,
+      @JsonKey(name: 'need_review_count', fromJson: _intFromJson)
+      required this.needReviewCount,
       @JsonKey(name: 'review_streak_days') required this.reviewStreakDays,
-      @JsonKey(name: 'subject_distribution')
+      @JsonKey(name: 'subject_distribution', fromJson: _intMapFromJson)
       required final Map<String, int> subjectDistribution})
       : _subjectDistribution = subjectDistribution;
 
@@ -1564,20 +1574,20 @@ class _$ReviewStatsImpl implements _ReviewStats {
       _$$ReviewStatsImplFromJson(json);
 
   @override
-  @JsonKey(name: 'total_errors')
+  @JsonKey(name: 'total_errors', fromJson: _intFromJson)
   final int totalErrors;
   @override
-  @JsonKey(name: 'mastered_count')
+  @JsonKey(name: 'mastered_count', fromJson: _intFromJson)
   final int masteredCount;
   @override
-  @JsonKey(name: 'need_review_count')
+  @JsonKey(name: 'need_review_count', fromJson: _intFromJson)
   final int needReviewCount;
   @override
   @JsonKey(name: 'review_streak_days')
   final int reviewStreakDays;
   final Map<String, int> _subjectDistribution;
   @override
-  @JsonKey(name: 'subject_distribution')
+  @JsonKey(name: 'subject_distribution', fromJson: _intMapFromJson)
   Map<String, int> get subjectDistribution {
     if (_subjectDistribution is EqualUnmodifiableMapView)
       return _subjectDistribution;
@@ -1633,30 +1643,33 @@ class _$ReviewStatsImpl implements _ReviewStats {
 
 abstract class _ReviewStats implements ReviewStats {
   const factory _ReviewStats(
-      {@JsonKey(name: 'total_errors') required final int totalErrors,
-      @JsonKey(name: 'mastered_count') required final int masteredCount,
-      @JsonKey(name: 'need_review_count') required final int needReviewCount,
+      {@JsonKey(name: 'total_errors', fromJson: _intFromJson)
+      required final int totalErrors,
+      @JsonKey(name: 'mastered_count', fromJson: _intFromJson)
+      required final int masteredCount,
+      @JsonKey(name: 'need_review_count', fromJson: _intFromJson)
+      required final int needReviewCount,
       @JsonKey(name: 'review_streak_days') required final int reviewStreakDays,
-      @JsonKey(name: 'subject_distribution')
+      @JsonKey(name: 'subject_distribution', fromJson: _intMapFromJson)
       required final Map<String, int> subjectDistribution}) = _$ReviewStatsImpl;
 
   factory _ReviewStats.fromJson(Map<String, dynamic> json) =
       _$ReviewStatsImpl.fromJson;
 
   @override
-  @JsonKey(name: 'total_errors')
+  @JsonKey(name: 'total_errors', fromJson: _intFromJson)
   int get totalErrors;
   @override
-  @JsonKey(name: 'mastered_count')
+  @JsonKey(name: 'mastered_count', fromJson: _intFromJson)
   int get masteredCount;
   @override
-  @JsonKey(name: 'need_review_count')
+  @JsonKey(name: 'need_review_count', fromJson: _intFromJson)
   int get needReviewCount;
   @override
   @JsonKey(name: 'review_streak_days')
   int get reviewStreakDays;
   @override
-  @JsonKey(name: 'subject_distribution')
+  @JsonKey(name: 'subject_distribution', fromJson: _intMapFromJson)
   Map<String, int> get subjectDistribution;
   @override
   @JsonKey(ignore: true)

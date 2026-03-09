@@ -21,7 +21,7 @@ class DocumentRepository {
   Future<String> uploadAndClean(
     File file, {
     bool enableOcr = true,
-    String ocrEngine = 'local',
+    String ocrEngine = 'zhipu',
     String ocrPromptMode = 'markdown',
   }) async {
     final formData = FormData.fromMap({

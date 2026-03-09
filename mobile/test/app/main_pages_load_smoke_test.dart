@@ -12,7 +12,7 @@ import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart'
 import 'package:sparkle/features/community/presentation/screens/community_main_screen.dart';
 import 'package:sparkle/features/home/presentation/screens/dashboard_screen.dart';
 import 'package:sparkle/features/home/presentation/widgets/home_notification_card.dart';
-import 'package:sparkle/features/home/presentation/widgets/omnibar.dart';
+import 'package:sparkle/features/home/presentation/widgets/unified_omni_bar.dart';
 import 'package:sparkle/features/user/presentation/screens/profile_screen.dart';
 import 'package:sparkle/features/user/presentation/widgets/statistics_card.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
@@ -43,7 +43,7 @@ void main() {
 
       expect(find.byType(DashboardScreen), findsOneWidget);
       expect(find.byType(HomeNotificationCard), findsOneWidget);
-      expect(find.byType(OmniBar), findsOneWidget);
+      expect(find.byType(UnifiedOmniBar), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 
