@@ -85,7 +85,7 @@ class GalaxyLabelCache {
 class GalaxyEdgePictureCache {
   GalaxyEdgePictureCache({
     this.panThresholdPx = 100,
-    this.scaleThreshold = 0.05,
+    this.scaleThreshold = 0.015,
   });
 
   final double panThresholdPx;
@@ -127,21 +127,14 @@ class GalaxyEdgePictureCache {
   void draw(Canvas canvas, GalaxyCamera camera) {
     final picture = _picture;
     final offset = _offset;
-    final scale = _scale;
-    if (picture == null || offset == null || scale == null) {
+    if (picture == null || offset == null) {
       return;
     }
-
-    final scaleRatio = camera.scale / scale;
-    final translatedOffset = Offset(
-      camera.offset.dx - offset.dx * scaleRatio,
-      camera.offset.dy - offset.dy * scaleRatio,
-    );
+    final translatedOffset = camera.offset - offset;
 
     canvas
       ..save()
       ..translate(translatedOffset.dx, translatedOffset.dy)
-      ..scale(scaleRatio)
       ..drawPicture(picture)
       ..restore();
   }
@@ -161,6 +154,131 @@ class GalaxyEdgePictureCache {
   }
 }
 
+class GalaxyBackdropPictureCache {
+  ui.Picture? _picture;
+  Size? _size;
+  bool? _isDarkMode;
+  bool? _performanceDegraded;
+
+  void clear() {
+    _picture?.dispose();
+    _picture = null;
+    _size = null;
+    _isDarkMode = null;
+    _performanceDegraded = null;
+  }
+
+  bool canReuse({
+    required Size size,
+    required bool isDarkMode,
+    required bool performanceDegraded,
+  }) =>
+      _picture != null &&
+      _size == size &&
+      _isDarkMode == isDarkMode &&
+      _performanceDegraded == performanceDegraded;
+
+  void draw(Canvas canvas) {
+    final picture = _picture;
+    if (picture == null) {
+      return;
+    }
+    canvas.drawPicture(picture);
+  }
+
+  void store({
+    required ui.Picture picture,
+    required Size size,
+    required bool isDarkMode,
+    required bool performanceDegraded,
+  }) {
+    clear();
+    _picture = picture;
+    _size = size;
+    _isDarkMode = isDarkMode;
+    _performanceDegraded = performanceDegraded;
+  }
+}
+
+class GalaxyParallaxStarLayerCache {
+  GalaxyParallaxStarLayerCache({this.panThresholdPx = 90});
+
+  final double panThresholdPx;
+
+  ui.Picture? _picture;
+  Size? _size;
+  bool? _isDarkMode;
+  bool? _performanceDegraded;
+  Offset? _cameraOffset;
+  double? _parallaxFactor;
+
+  void clear() {
+    _picture?.dispose();
+    _picture = null;
+    _size = null;
+    _isDarkMode = null;
+    _performanceDegraded = null;
+    _cameraOffset = null;
+    _parallaxFactor = null;
+  }
+
+  bool canReuse({
+    required Size size,
+    required bool isDarkMode,
+    required bool performanceDegraded,
+    required Offset cameraOffset,
+    required double parallaxFactor,
+  }) {
+    if (_picture == null ||
+        _size != size ||
+        _isDarkMode != isDarkMode ||
+        _performanceDegraded != performanceDegraded ||
+        _cameraOffset == null ||
+        _parallaxFactor != parallaxFactor) {
+      return false;
+    }
+
+    final translatedPan =
+        (cameraOffset - _cameraOffset!).distance * parallaxFactor;
+    return translatedPan <= panThresholdPx;
+  }
+
+  void draw(Canvas canvas, Offset cameraOffset) {
+    final picture = _picture;
+    final cachedCameraOffset = _cameraOffset;
+    final parallaxFactor = _parallaxFactor;
+    if (picture == null ||
+        cachedCameraOffset == null ||
+        parallaxFactor == null) {
+      return;
+    }
+
+    final delta = cameraOffset - cachedCameraOffset;
+    canvas
+      ..save()
+      ..translate(-delta.dx * parallaxFactor, -delta.dy * parallaxFactor)
+      ..drawPicture(picture)
+      ..restore();
+  }
+
+  void store({
+    required ui.Picture picture,
+    required Size size,
+    required bool isDarkMode,
+    required bool performanceDegraded,
+    required Offset cameraOffset,
+    required double parallaxFactor,
+  }) {
+    clear();
+    _picture = picture;
+    _size = size;
+    _isDarkMode = isDarkMode;
+    _performanceDegraded = performanceDegraded;
+    _cameraOffset = cameraOffset;
+    _parallaxFactor = parallaxFactor;
+  }
+}
+
 class StarMapPainter extends CustomPainter {
   StarMapPainter({
     required this.camera,
@@ -170,11 +288,14 @@ class StarMapPainter extends CustomPainter {
     required this.spatialIndex,
     required this.labelCache,
     required this.edgePictureCache,
+    required this.backdropPictureCache,
+    required this.parallaxStarLayerCache,
     required this.sceneVersion,
     required this.isDarkMode,
     required this.worldBounds,
     required this.blendedColors,
     required this.revealRanks,
+    required this.nodeConnectionCounts,
     this.focusNodeIds = const <String>{},
     this.searchMatchedNodeIds = const <String>{},
     this.driftOffsets = const <String, Offset>{},
@@ -182,9 +303,11 @@ class StarMapPainter extends CustomPainter {
     this.celebrationNodeIds = const <String>{},
     this.performanceDegraded = false,
     this.selectedNodeId,
+    this.previewNodeId,
     this.draggingNodeId,
     this.tapFeedbackNodeId,
     this.tapFeedbackProgress = 0,
+    this.tapFeedbackPhase = 0,
     this.ambientPhase = 0,
     this.buildRevealProgress = 1,
     this.isBuildAnimating = false,
@@ -197,11 +320,14 @@ class StarMapPainter extends CustomPainter {
   final GalaxySpatialIndex spatialIndex;
   final GalaxyLabelCache labelCache;
   final GalaxyEdgePictureCache edgePictureCache;
+  final GalaxyBackdropPictureCache backdropPictureCache;
+  final GalaxyParallaxStarLayerCache parallaxStarLayerCache;
   final int sceneVersion;
   final bool isDarkMode;
   final Rect worldBounds;
   final Map<String, Color> blendedColors;
   final Map<String, int> revealRanks;
+  final Map<String, int> nodeConnectionCounts;
   final Set<String> focusNodeIds;
   final Set<String> searchMatchedNodeIds;
   final Map<String, Offset> driftOffsets;
@@ -209,9 +335,11 @@ class StarMapPainter extends CustomPainter {
   final Set<String> celebrationNodeIds;
   final bool performanceDegraded;
   final String? selectedNodeId;
+  final String? previewNodeId;
   final String? draggingNodeId;
   final String? tapFeedbackNodeId;
   final double tapFeedbackProgress;
+  final double tapFeedbackPhase;
   final double ambientPhase;
   final double buildRevealProgress;
   final bool isBuildAnimating;
@@ -301,13 +429,16 @@ class StarMapPainter extends CustomPainter {
       oldDelegate.positions != positions ||
       oldDelegate.sceneVersion != sceneVersion ||
       oldDelegate.selectedNodeId != selectedNodeId ||
+      oldDelegate.previewNodeId != previewNodeId ||
       oldDelegate.draggingNodeId != draggingNodeId ||
       oldDelegate.tapFeedbackNodeId != tapFeedbackNodeId ||
       oldDelegate.tapFeedbackProgress != tapFeedbackProgress ||
+      oldDelegate.tapFeedbackPhase != tapFeedbackPhase ||
       oldDelegate.isDarkMode != isDarkMode ||
       oldDelegate.worldBounds != worldBounds ||
       oldDelegate.blendedColors != blendedColors ||
       oldDelegate.revealRanks != revealRanks ||
+      oldDelegate.nodeConnectionCounts != nodeConnectionCounts ||
       oldDelegate.focusNodeIds != focusNodeIds ||
       oldDelegate.searchMatchedNodeIds != searchMatchedNodeIds ||
       oldDelegate.driftOffsets != driftOffsets ||
@@ -319,37 +450,61 @@ class StarMapPainter extends CustomPainter {
       oldDelegate.isBuildAnimating != isBuildAnimating;
 
   void _drawBackground(Canvas canvas, Size size) {
-    final baseColor = isDarkMode ? _darkBackground : _lightBackground;
-    final radialColor = isDarkMode ? _darkRadial : _lightRadial;
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.shortestSide * 0.74;
-    final radialPaint = Paint()
-      ..shader = ui.Gradient.radial(
-        center,
-        radius,
-        [
-          radialColor.withValues(alpha: isDarkMode ? 0.34 : 0.26),
-          radialColor.withValues(alpha: isDarkMode ? 0.08 : 0.05),
-          Colors.transparent,
-        ],
-        const [0.0, 0.68, 1.0],
-      );
+    if (backdropPictureCache.canReuse(
+      size: size,
+      isDarkMode: isDarkMode,
+      performanceDegraded: performanceDegraded,
+    )) {
+      backdropPictureCache.draw(canvas);
+    } else {
+      final recorder = ui.PictureRecorder();
+      final pictureCanvas = Canvas(recorder);
+      _drawBackdropContents(pictureCanvas, size);
+      backdropPictureCache
+        ..store(
+          picture: recorder.endRecording(),
+          size: size,
+          isDarkMode: isDarkMode,
+          performanceDegraded: performanceDegraded,
+        )
+        ..draw(canvas);
+    }
 
-    canvas
-      ..drawRect(Offset.zero & size, Paint()..color = baseColor)
-      ..drawCircle(center, radius, radialPaint);
-    _drawNebulaClouds(canvas, size);
-    _drawStarLayer(
-      canvas,
-      size,
-      seed: 17,
-      count: isDarkMode ? 180 : 120,
-      parallaxFactor: 0.10,
-      minRadius: 0.45,
-      maxRadius: 1.2,
-      minAlpha: isDarkMode ? 0.05 : 0.025,
-      maxAlpha: isDarkMode ? 0.14 : 0.055,
-    );
+    const farLayerParallax = 0.10;
+    if (parallaxStarLayerCache.canReuse(
+      size: size,
+      isDarkMode: isDarkMode,
+      performanceDegraded: performanceDegraded,
+      cameraOffset: camera.offset,
+      parallaxFactor: farLayerParallax,
+    )) {
+      parallaxStarLayerCache.draw(canvas, camera.offset);
+    } else {
+      final recorder = ui.PictureRecorder();
+      final pictureCanvas = Canvas(recorder);
+      _drawStarLayer(
+        pictureCanvas,
+        size,
+        seed: 17,
+        count: isDarkMode ? 180 : 120,
+        parallaxFactor: farLayerParallax,
+        minRadius: 0.45,
+        maxRadius: 1.2,
+        minAlpha: isDarkMode ? 0.05 : 0.025,
+        maxAlpha: isDarkMode ? 0.14 : 0.055,
+      );
+      parallaxStarLayerCache
+        ..store(
+          picture: recorder.endRecording(),
+          size: size,
+          isDarkMode: isDarkMode,
+          performanceDegraded: performanceDegraded,
+          cameraOffset: camera.offset,
+          parallaxFactor: farLayerParallax,
+        )
+        ..draw(canvas, camera.offset);
+    }
+
     _drawStarLayer(
       canvas,
       size,
@@ -377,6 +532,43 @@ class StarMapPainter extends CustomPainter {
     );
   }
 
+  void _drawBackdropContents(Canvas canvas, Size size) {
+    final baseColor = isDarkMode ? _darkBackground : _lightBackground;
+    final radialColor = isDarkMode ? _darkRadial : _lightRadial;
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.shortestSide * 0.74;
+    final radialPaint = Paint()
+      ..shader = ui.Gradient.radial(
+        center,
+        radius,
+        [
+          radialColor.withValues(alpha: isDarkMode ? 0.34 : 0.26),
+          radialColor.withValues(alpha: isDarkMode ? 0.08 : 0.05),
+          Colors.transparent,
+        ],
+        const [0.0, 0.68, 1.0],
+      );
+
+    canvas
+      ..drawRect(Offset.zero & size, Paint()..color = baseColor)
+      ..drawCircle(center, radius, radialPaint);
+    _drawNebulaClouds(canvas, size);
+    final vignettePaint = Paint()
+      ..shader = ui.Gradient.radial(
+        center,
+        size.longestSide * 0.82,
+        [
+          Colors.transparent,
+          Colors.transparent,
+          (isDarkMode ? Colors.black : const Color(0xFFCBD2DD)).withValues(
+            alpha: isDarkMode ? 0.12 : 0.03,
+          ),
+        ],
+        const [0.0, 0.72, 1.0],
+      );
+    canvas.drawRect(Offset.zero & size, vignettePaint);
+  }
+
   void _drawSectorAtmosphere(Canvas canvas, Size size, GalaxyLod lod) {
     if (lod.index > GalaxyLod.l1.index) {
       return;
@@ -392,7 +584,7 @@ class StarMapPainter extends CustomPainter {
     final innerRadiusPx = math.max(20.0, 120 * camera.scale);
     final outerRadiusPx =
         math.max(innerRadiusPx + 24, outerRadiusWorld * camera.scale);
-    final labelAlpha = visibility * (isDarkMode ? 0.82 : 0.6);
+    final labelAlpha = visibility * (isDarkMode ? 0.88 : 0.66);
 
     for (final entry in SectorConfig.styles.entries) {
       final style = entry.value;
@@ -408,7 +600,8 @@ class StarMapPainter extends CustomPainter {
       final startRadians = (style.baseAngle - 90) * math.pi / 180;
       final endRadians =
           (style.baseAngle + style.sweepAngle - 90) * math.pi / 180;
-      final atmosphereAlpha = visibility * (isDarkMode ? 0.12 : 0.07);
+      final pulse = math.sin(ambientPhase * 0.3 + style.baseAngle / 72) * 0.015;
+      final atmosphereAlpha = visibility * (isDarkMode ? 0.12 : 0.07) + pulse;
       final boundaryAlpha = visibility * (isDarkMode ? 0.09 : 0.055);
       final outerRect = Rect.fromCircle(center: origin, radius: outerRadiusPx);
       final innerStart = Offset(
@@ -451,6 +644,15 @@ class StarMapPainter extends CustomPainter {
       final atmosphereLiftPaint = Paint()
         ..color = glow.withValues(alpha: atmosphereAlpha * 0.22)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 18);
+      final blendBandPaint = Paint()
+        ..color = SectorConfig.lerpInHsl(
+          glow,
+          primary,
+          0.5,
+        ).withValues(alpha: atmosphereAlpha * 0.16)
+        ..strokeWidth = isDarkMode ? 10 : 8
+        ..style = PaintingStyle.stroke
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
       final boundaryPaint = Paint()
         ..color = glow.withValues(alpha: boundaryAlpha)
         ..strokeWidth = isDarkMode ? 1.1 : 0.9
@@ -458,6 +660,13 @@ class StarMapPainter extends CustomPainter {
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5);
       canvas
         ..drawPath(wedge, atmosphereLiftPaint)
+        ..drawArc(
+          outerRect,
+          startRadians,
+          style.sweepAngle * math.pi / 180,
+          false,
+          blendBandPaint,
+        )
         ..drawArc(
           outerRect,
           startRadians,
@@ -482,13 +691,17 @@ class StarMapPainter extends CustomPainter {
           text: style.name,
           style: TextStyle(
             color: glow.withValues(alpha: labelAlpha * 0.8),
-            fontSize: isDarkMode ? 13 : 12,
+            fontSize: lod == GalaxyLod.l0 ? (isDarkMode ? 16 : 15) : 13,
             fontWeight: FontWeight.w700,
             letterSpacing: 1.2,
             shadows: [
               Shadow(
-                color: glow.withValues(alpha: labelAlpha * 0.35),
-                blurRadius: 12,
+                color: glow.withValues(alpha: labelAlpha * 0.58),
+                blurRadius: 4,
+              ),
+              Shadow(
+                color: glow.withValues(alpha: labelAlpha * 0.22),
+                blurRadius: 16,
               ),
             ],
           ),
@@ -508,10 +721,13 @@ class StarMapPainter extends CustomPainter {
 
   void _drawNebulaClouds(Canvas canvas, Size size) {
     final nebulaPaint = Paint();
-    final anchors = <(double, double, SectorEnum, double)>[
-      (0.22, 0.18, SectorEnum.tech, 0.18),
-      (0.78, 0.28, SectorEnum.art, 0.16),
-      (0.34, 0.72, SectorEnum.life, 0.14),
+    final anchors = <(double, double, SectorEnum, double, double)>[
+      (0.18, 0.16, SectorEnum.tech, 0.34, 0.045),
+      (0.74, 0.22, SectorEnum.art, 0.3, 0.042),
+      (0.3, 0.72, SectorEnum.life, 0.28, 0.04),
+      (0.62, 0.66, SectorEnum.civilization, 0.15, 0.095),
+      (0.46, 0.34, SectorEnum.wisdom, 0.12, 0.088),
+      (0.84, 0.78, SectorEnum.cosmos, 0.11, 0.082),
     ];
 
     for (final anchor in anchors) {
@@ -525,11 +741,13 @@ class StarMapPainter extends CustomPainter {
         center,
         radius,
         [
-          color.withValues(alpha: isDarkMode ? 0.08 : 0.035),
-          color.withValues(alpha: isDarkMode ? 0.03 : 0.014),
+          color.withValues(alpha: isDarkMode ? anchor.$5 : anchor.$5 * 0.48),
+          color.withValues(
+            alpha: isDarkMode ? anchor.$5 * 0.42 : anchor.$5 * 0.2,
+          ),
           Colors.transparent,
         ],
-        const [0.0, 0.58, 1.0],
+        const [0.0, 0.52, 1.0],
       );
       canvas.drawCircle(center, radius, nebulaPaint);
     }
@@ -558,8 +776,10 @@ class StarMapPainter extends CustomPainter {
       -camera.offset.dy * parallaxFactor,
     );
     final starPaint = Paint()..style = PaintingStyle.fill;
-    final baseColor =
-        isDarkMode ? const Color(0xFFF5F7FF) : const Color(0xFF526173);
+    final warmBase =
+        isDarkMode ? const Color(0xFFFFF4E6) : const Color(0xFF6E6354);
+    final coolBase =
+        isDarkMode ? const Color(0xFFE6F0FF) : const Color(0xFF526173);
 
     for (var index = 0; index < effectiveCount; index++) {
       final rawX = random.nextDouble() * width;
@@ -567,9 +787,13 @@ class StarMapPainter extends CustomPainter {
       final dx = ((rawX + shift.dx) % width + width) % width - overscan;
       final dy = ((rawY + shift.dy) % height + height) % height - overscan;
       final phase = random.nextDouble() * math.pi * 2;
+      final frequencyJitter = 0.82 + random.nextDouble() * 0.46;
       final twinkle = twinkleStrength == 0
           ? 0.0
-          : math.sin(ambientPhase * (0.6 + parallaxFactor * 3) + phase) *
+          : math.sin(
+                ambientPhase * (0.6 + parallaxFactor * 3) * frequencyJitter +
+                    phase,
+              ) *
               twinkleStrength;
       final radius = ui.lerpDouble(
             minRadius,
@@ -585,8 +809,10 @@ class StarMapPainter extends CustomPainter {
               twinkle * 0.06)
           .clamp(0.01, isDarkMode ? 0.42 : 0.16);
       final position = Offset(dx, dy);
+      final colorMix = ((dx + overscan) / width).clamp(0.0, 1.0);
+      final starColor = Color.lerp(warmBase, coolBase, colorMix)!;
 
-      starPaint.color = baseColor.withValues(alpha: alpha);
+      starPaint.color = starColor.withValues(alpha: alpha);
       canvas.drawCircle(position, radius, starPaint);
 
       final drawGlint =
@@ -596,7 +822,7 @@ class StarMapPainter extends CustomPainter {
           canvas,
           position,
           radius: radius * 1.7,
-          color: baseColor.withValues(alpha: alpha * 0.8),
+          color: starColor.withValues(alpha: alpha * 0.8),
         );
       }
     }
@@ -831,6 +1057,8 @@ class StarMapPainter extends CustomPainter {
       final midX = (source.dx + target.dx) / 2;
       final midY = (source.dy + target.dy) / 2;
       final paintEdge = _PaintEdge(
+        sourceId: edge.sourceId,
+        targetId: edge.targetId,
         start: source,
         end: target,
         distanceToViewportCenter:
@@ -844,6 +1072,9 @@ class StarMapPainter extends CustomPainter {
         gapLength: edgeStyle.gapLength,
         relationType: edge.relationType,
         strength: edge.strength,
+        curveDirection: _stableCurveDirection(edge.sourceId, edge.targetId),
+        sourceConnections: nodeConnectionCounts[edge.sourceId] ?? 0,
+        targetConnections: nodeConnectionCounts[edge.targetId] ?? 0,
       );
 
       if (sourceVisible && targetVisible) {
@@ -873,6 +1104,7 @@ class StarMapPainter extends CustomPainter {
 
   void _drawEdgeList(Canvas canvas, List<_PaintEdge> edgesToDraw) {
     final paintCache = <int, Paint>{};
+    final glowPaintCache = <int, Paint>{};
 
     for (final edge in edgesToDraw) {
       final paintKey = Object.hash(
@@ -889,16 +1121,35 @@ class StarMapPainter extends CustomPainter {
       final start = camera.worldToScreen(edge.start);
       final end = camera.worldToScreen(edge.end);
       final path = _edgePath(
-        start,
-        end,
+        screenStart: start,
+        screenEnd: end,
+        worldStart: edge.start,
+        worldEnd: edge.end,
         relationType: edge.relationType,
         strength: edge.strength,
+        curveDirection: edge.curveDirection,
       );
+      final hasHubGlow =
+          edge.sourceConnections >= 5 || edge.targetConnections >= 5;
       paint.shader = ui.Gradient.linear(
         start,
         end,
         [edge.sourceColor, edge.targetColor],
       );
+      if (hasHubGlow && !performanceDegraded) {
+        final glowKey = Object.hash(
+          edge.color.toARGB32(),
+          edge.strokeWidth,
+        );
+        final glowPaint = glowPaintCache[glowKey] ??
+            (glowPaintCache[glowKey] = Paint()
+              ..strokeWidth = edge.strokeWidth + 0.6
+              ..style = PaintingStyle.stroke
+              ..strokeCap = StrokeCap.round
+              ..color = edge.color.withValues(alpha: edge.color.a * 0.32)
+              ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2));
+        canvas.drawPath(path, glowPaint);
+      }
       if (edge.isDashed) {
         _drawDashedPath(
           canvas: canvas,
@@ -906,6 +1157,16 @@ class StarMapPainter extends CustomPainter {
           paint: paint,
           dashLength: edge.dashLength,
           gapLength: edge.gapLength,
+        );
+      } else if (edge.relationType == EdgeRelationType.parentChild ||
+          edge.relationType == EdgeRelationType.prerequisite) {
+        _drawTaperedEdge(
+          canvas: canvas,
+          path: path,
+          startColor: edge.sourceColor,
+          endColor: edge.targetColor,
+          startWidth: edge.strokeWidth,
+          endWidth: edge.strokeWidth * 0.6,
         );
       } else {
         canvas.drawPath(path, paint);
@@ -917,6 +1178,12 @@ class StarMapPainter extends CustomPainter {
           path,
           edge.targetColor,
           edge.strokeWidth,
+        );
+        _drawPathTailDashes(
+          canvas: canvas,
+          path: path,
+          color: edge.targetColor,
+          strokeWidth: edge.strokeWidth * 0.86,
         );
       }
     }
@@ -931,10 +1198,16 @@ class StarMapPainter extends CustomPainter {
       }
 
       final path = _edgePath(
-        camera.worldToScreen(source),
-        camera.worldToScreen(target),
+        screenStart: camera.worldToScreen(source),
+        screenEnd: camera.worldToScreen(target),
+        worldStart: source,
+        worldEnd: target,
         relationType: particle.relationType,
         strength: particle.strength,
+        curveDirection: _stableCurveDirection(
+          particle.sourceId,
+          particle.targetId,
+        ),
       );
       final metrics = path.computeMetrics().toList(growable: false);
       if (metrics.isEmpty) {
@@ -973,6 +1246,7 @@ class StarMapPainter extends CustomPainter {
     for (final item in nodes) {
       final node = item.node;
       final isDragging = draggingNodeId == node.id;
+      final isPreviewed = previewNodeId == node.id;
       final revealCurve =
           isBuildAnimating ? Curves.easeOutBack.transform(item.reveal) : 1.0;
       final radius = _effectiveNodeRadius(
@@ -987,6 +1261,18 @@ class StarMapPainter extends CustomPainter {
       final selectionPulse = selectedNodeId == node.id
           ? 0.5 + 0.5 * math.sin(ambientPhase * 3.2 + _nodeSeed(node.id))
           : 0.0;
+      final previewLift = isPreviewed ? -2.0 : 0.0;
+      final nodeCenter = item.screenPosition.translate(0, previewLift);
+
+      if (isPreviewed) {
+        canvas.drawCircle(
+          nodeCenter.translate(0, 1.5),
+          radius * 1.12,
+          Paint()
+            ..color = style.baseColor.withValues(alpha: 0.14 * nodeAlpha)
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14),
+        );
+      }
 
       if (!performanceDegraded &&
           style.glowAlpha > 0 &&
@@ -994,22 +1280,22 @@ class StarMapPainter extends CustomPainter {
           lod.index >= GalaxyLod.l2.index) {
         canvas
           ..drawCircle(
-            item.screenPosition,
-            radius * 1.45,
+            nodeCenter,
+            radius * 1.62,
             Paint()
               ..color = style.baseColor.withValues(
                 alpha: style.glowAlpha * nodeAlpha * 0.78,
               )
-              ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10),
+              ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12),
           )
           ..drawCircle(
-            item.screenPosition,
-            radius * 1.8,
+            nodeCenter,
+            radius * 2.08,
             Paint()
               ..color = style.baseColor.withValues(
                 alpha: style.glowAlpha * nodeAlpha * 0.34,
               )
-              ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14),
+              ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 20),
           );
       }
 
@@ -1025,11 +1311,11 @@ class StarMapPainter extends CustomPainter {
           lightnessDelta: isDarkMode ? -0.12 : -0.08,
         );
         canvas.drawCircle(
-          item.screenPosition,
+          nodeCenter,
           radius,
           Paint()
             ..shader = ui.Gradient.radial(
-              item.screenPosition,
+              nodeCenter,
               radius,
               [
                 Colors.white.withValues(alpha: nodeAlpha * 0.2),
@@ -1051,7 +1337,7 @@ class StarMapPainter extends CustomPainter {
 
       if (style.coreAlpha > 0 && nodeAlpha > 0) {
         canvas.drawCircle(
-          item.screenPosition,
+          nodeCenter,
           math.max(1.1, radius * 0.28),
           Paint()
             ..color =
@@ -1061,7 +1347,7 @@ class StarMapPainter extends CustomPainter {
 
       if (style.masteryRingAlpha > 0 && nodeAlpha > 0) {
         canvas.drawCircle(
-          item.screenPosition,
+          nodeCenter,
           radius + 1.6,
           Paint()
             ..color = style.baseColor.withValues(
@@ -1073,20 +1359,29 @@ class StarMapPainter extends CustomPainter {
       }
 
       if (!node.isUnlocked) {
-        final pulseAlpha =
-            (0.08 + 0.04 * math.sin(ambientPhase * 1.6 + _nodeSeed(node.id)))
-                .clamp(0.04, 0.14);
-        canvas.drawCircle(
-          item.screenPosition,
-          radius * 1.08,
-          Paint()
-            ..color = style.baseColor.withValues(alpha: pulseAlpha * nodeAlpha),
-        );
         _drawDashedCircle(
           canvas: canvas,
-          center: item.screenPosition,
+          center: nodeCenter,
           radius: radius + 1,
-          color: style.baseColor.withValues(alpha: 0.36 * nodeAlpha),
+          color: style.baseColor.withValues(alpha: 0.28 * nodeAlpha),
+        );
+        final questionPainter = TextPainter(
+          text: TextSpan(
+            text: '?',
+            style: TextStyle(
+              color: style.baseColor.withValues(alpha: 0.42 * nodeAlpha),
+              fontSize: math.max(10, radius * 1.05),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          textDirection: TextDirection.ltr,
+        )..layout();
+        questionPainter.paint(
+          canvas,
+          Offset(
+            nodeCenter.dx - questionPainter.width / 2,
+            nodeCenter.dy - questionPainter.height / 2,
+          ),
         );
       }
 
@@ -1094,11 +1389,21 @@ class StarMapPainter extends CustomPainter {
           node.masteryScore >= 85 &&
           lod.index >= GalaxyLod.l2.index) {
         canvas.drawCircle(
-          item.screenPosition,
-          radius * 1.85,
+          nodeCenter,
+          radius * 2.2,
           Paint()
             ..color = style.baseColor.withValues(alpha: 0.08 * nodeAlpha)
-            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 18),
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 22),
+        );
+      }
+
+      if (node.importance >= 3 && lod.index >= GalaxyLod.l3.index) {
+        _drawOrbitRing(
+          canvas: canvas,
+          center: nodeCenter,
+          radius: radius * 1.42,
+          color: style.baseColor.withValues(alpha: 0.18 * nodeAlpha),
+          dashed: node.importance < 5,
         );
       }
 
@@ -1107,23 +1412,21 @@ class StarMapPainter extends CustomPainter {
           lod.index >= GalaxyLod.l3.index) {
         _drawNodeRays(
           canvas,
-          item.screenPosition,
+          nodeCenter,
           radius: radius,
           color: style.baseColor.withValues(alpha: 0.08 * nodeAlpha),
           seed: _nodeSeed(node.id),
+          rotation: ambientPhase * (math.pi / 360),
         );
       }
 
       if (tapFeedbackNodeId == node.id) {
-        final rippleRadius = radius * (1.1 + tapFeedbackProgress * 1.5);
-        final rippleAlpha = (1 - tapFeedbackProgress).clamp(0.0, 1.0) * 0.42;
-        canvas.drawCircle(
-          item.screenPosition,
-          rippleRadius,
-          Paint()
-            ..color = style.baseColor.withValues(alpha: rippleAlpha)
-            ..strokeWidth = 1.8
-            ..style = PaintingStyle.stroke,
+        _drawTapRipples(
+          canvas: canvas,
+          center: nodeCenter,
+          radius: radius,
+          color: style.baseColor.withValues(alpha: nodeAlpha),
+          phase: tapFeedbackPhase,
         );
       }
 
@@ -1135,7 +1438,7 @@ class StarMapPainter extends CustomPainter {
         )!;
         canvas
           ..drawCircle(
-            item.screenPosition,
+            nodeCenter,
             radius * (1.45 + selectionPulse * 0.14),
             Paint()
               ..color = selectedColor.withValues(
@@ -1144,18 +1447,28 @@ class StarMapPainter extends CustomPainter {
               ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 16),
           )
           ..drawCircle(
-            item.screenPosition,
+            nodeCenter,
             radius + 4 + selectionPulse * 1.4,
             Paint()
               ..color = selectedColor.withValues(alpha: 0.85 * nodeAlpha)
               ..strokeWidth = 1.6
+              ..style = PaintingStyle.stroke,
+          )
+          ..drawCircle(
+            nodeCenter,
+            ui.lerpDouble(radius * 1.0, radius * 3.0, selectionPulse)!,
+            Paint()
+              ..color = selectedColor.withValues(
+                alpha: (0.4 * (1 - selectionPulse)).clamp(0.0, 0.4),
+              )
+              ..strokeWidth = 1.1
               ..style = PaintingStyle.stroke,
           );
       }
 
       if (celebrationNodeIds.contains(node.id)) {
         canvas.drawCircle(
-          item.screenPosition,
+          nodeCenter,
           radius * 2.1,
           Paint()
             ..color = style.baseColor.withValues(alpha: 0.12 * nodeAlpha)
@@ -1265,9 +1578,7 @@ class StarMapPainter extends CustomPainter {
     }
   }
 
-  GalaxyLod _currentLod(double scale) {
-    return resolveGalaxyLod(scale);
-  }
+  GalaxyLod _currentLod(double scale) => resolveGalaxyLod(scale);
 
   int _nodeBudgetFor(GalaxyLod lod) {
     if (performanceDegraded) {
@@ -1434,29 +1745,29 @@ class StarMapPainter extends CustomPainter {
             lightnessDelta: isDarkMode ? 0.08 : -0.04,
           ),
           strokeWidth: 1.0,
-          alpha: 0.44,
+          alpha: 0.48,
         );
       case EdgeRelationType.derived:
         return _PaintEdgeStyle(
           color: _toneColor(bridgeColor, saturationMultiplier: 0.92),
-          strokeWidth: 0.95,
-          alpha: 0.36,
+          strokeWidth: 0.9,
+          alpha: 0.34,
+          dashLength: 6,
+          gapLength: 4,
         );
       case EdgeRelationType.related:
         return _PaintEdgeStyle(
           color: bridgeColor,
-          strokeWidth: 0.9,
+          strokeWidth: 0.6,
           alpha: 0.32,
-          dashLength: 10,
-          gapLength: 4,
         );
       case EdgeRelationType.similar:
         return _PaintEdgeStyle(
           color: _toneColor(bridgeColor, saturationMultiplier: 0.82),
-          strokeWidth: 0.85,
+          strokeWidth: 0.78,
           alpha: 0.28,
-          dashLength: 4,
-          gapLength: 4,
+          dashLength: 2,
+          gapLength: 3,
         );
       case EdgeRelationType.contrast:
         return _PaintEdgeStyle(
@@ -1464,17 +1775,17 @@ class StarMapPainter extends CustomPainter {
             bridgeColor,
             lightnessDelta: isDarkMode ? 0.04 : -0.03,
           ),
-          strokeWidth: 0.8,
-          alpha: 0.24,
-          dashLength: 12,
+          strokeWidth: 0.5,
+          alpha: 0.21,
+          dashLength: 4,
           gapLength: 6,
         );
       case EdgeRelationType.application:
         return _PaintEdgeStyle(
           color: _toneColor(bridgeColor, saturationMultiplier: 0.95),
-          strokeWidth: 0.82,
-          alpha: 0.24,
-          dashLength: 2,
+          strokeWidth: 0.5,
+          alpha: 0.21,
+          dashLength: 4,
           gapLength: 6,
         );
       case EdgeRelationType.example:
@@ -1493,7 +1804,10 @@ class StarMapPainter extends CustomPainter {
     GalaxyLod lod,
     bool isDragging,
   ) {
-    final baseColor = _nodeCanvasColor(node);
+    final baseColor = _masteryTemperatureColor(
+      _nodeCanvasColor(node),
+      masteryScore: node.masteryScore,
+    );
     final mastery = node.masteryScore;
     if (!node.isUnlocked) {
       return _PaintNodeStyle(
@@ -1594,45 +1908,110 @@ class StarMapPainter extends CustomPainter {
     }
   }
 
-  Path _edgePath(
-    Offset start,
-    Offset end, {
+  Path _edgePath({
+    required Offset screenStart,
+    required Offset screenEnd,
+    required Offset worldStart,
+    required Offset worldEnd,
     required EdgeRelationType relationType,
     required double strength,
+    required double curveDirection,
   }) {
-    final delta = end - start;
-    final length = delta.distance;
+    final screenDelta = screenEnd - screenStart;
+    final length = screenDelta.distance;
     if (length < 18) {
       return Path()
-        ..moveTo(start.dx, start.dy)
-        ..lineTo(end.dx, end.dy);
+        ..moveTo(screenStart.dx, screenStart.dy)
+        ..lineTo(screenEnd.dx, screenEnd.dy);
     }
 
     if (relationType != EdgeRelationType.parentChild &&
         relationType != EdgeRelationType.prerequisite &&
         relationType != EdgeRelationType.derived) {
       return Path()
-        ..moveTo(start.dx, start.dy)
-        ..lineTo(end.dx, end.dy);
+        ..moveTo(screenStart.dx, screenStart.dy)
+        ..lineTo(screenEnd.dx, screenEnd.dy);
     }
 
-    final normal = Offset(-delta.dy / length, delta.dx / length);
-    final midpoint = Offset((start.dx + end.dx) / 2, (start.dy + end.dy) / 2);
-    final direction = math
-            .sin(
-              start.dx + end.dx + start.dy * 0.5 + end.dy * 0.25,
-            )
-            .isNegative
-        ? -1.0
-        : 1.0;
+    final normal = Offset(-screenDelta.dy / length, screenDelta.dx / length);
+    final midpoint = Offset(
+      (screenStart.dx + screenEnd.dx) / 2,
+      (screenStart.dy + screenEnd.dy) / 2,
+    );
+    final worldLength = (worldEnd - worldStart).distance;
     final bendScale =
         relationType == EdgeRelationType.parentChild ? 0.12 : 0.08;
     final bend =
-        (length * bendScale * (0.85 + strength * 0.35)).clamp(10.0, 34.0);
-    final control = midpoint + normal * bend * direction;
+        (worldLength * camera.scale * bendScale * (0.85 + strength * 0.35))
+            .clamp(10.0, 34.0);
+    final control = midpoint + normal * bend * curveDirection;
     return Path()
-      ..moveTo(start.dx, start.dy)
-      ..quadraticBezierTo(control.dx, control.dy, end.dx, end.dy);
+      ..moveTo(screenStart.dx, screenStart.dy)
+      ..quadraticBezierTo(control.dx, control.dy, screenEnd.dx, screenEnd.dy);
+  }
+
+  void _drawTaperedEdge({
+    required Canvas canvas,
+    required Path path,
+    required Color startColor,
+    required Color endColor,
+    required double startWidth,
+    required double endWidth,
+    int segments = 10,
+  }) {
+    final metrics = path.computeMetrics().toList(growable: false);
+    if (metrics.isEmpty) {
+      return;
+    }
+    final metric = metrics.first;
+    if (metric.length <= 0) {
+      return;
+    }
+    final segmentLength = metric.length / segments;
+    for (var index = 0; index < segments; index++) {
+      final t0 = index / segments;
+      final t1 = (index + 1) / segments;
+      final extract = metric.extractPath(
+        segmentLength * index,
+        math.min(metric.length, segmentLength * (index + 1)),
+      );
+      final color = Color.lerp(startColor, endColor, (t0 + t1) / 2)!;
+      final width = ui.lerpDouble(startWidth, endWidth, (t0 + t1) / 2)!;
+      canvas.drawPath(
+        extract,
+        Paint()
+          ..color = color
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+          ..strokeWidth = width,
+      );
+    }
+  }
+
+  void _drawPathTailDashes({
+    required Canvas canvas,
+    required Path path,
+    required Color color,
+    required double strokeWidth,
+  }) {
+    final metrics = path.computeMetrics().toList(growable: false);
+    if (metrics.isEmpty) {
+      return;
+    }
+    final metric = metrics.first;
+    final tailStart = metric.length * 0.8;
+    final tailPath = metric.extractPath(tailStart, metric.length);
+    _drawDashedPath(
+      canvas: canvas,
+      path: tailPath,
+      paint: Paint()
+        ..color = color.withValues(alpha: color.a * 0.78)
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..strokeWidth = strokeWidth,
+      dashLength: 5,
+      gapLength: 4,
+    );
   }
 
   void _drawArrowHead(
@@ -1701,6 +2080,7 @@ class StarMapPainter extends CustomPainter {
     required double radius,
     required Color color,
     required double seed,
+    required double rotation,
   }) {
     final rayPaint = Paint()
       ..color = color
@@ -1708,7 +2088,7 @@ class StarMapPainter extends CustomPainter {
       ..strokeWidth = 1.0;
     final rayCount = 4 + (seed * 10).round() % 3;
     for (var index = 0; index < rayCount; index++) {
-      final angle = seed + (math.pi * 2 * index / rayCount);
+      final angle = seed + rotation + (math.pi * 2 * index / rayCount);
       final inner = radius * 1.15;
       final outer = radius * (1.65 + 0.12 * math.sin(seed + index));
       canvas.drawLine(
@@ -1725,9 +2105,62 @@ class StarMapPainter extends CustomPainter {
     }
   }
 
-  double _fade(double value, double start, double end) {
-    return galaxyLodFade(value, start, end);
+  void _drawOrbitRing({
+    required Canvas canvas,
+    required Offset center,
+    required double radius,
+    required Color color,
+    required bool dashed,
+  }) {
+    if (dashed) {
+      _drawDashedCircle(
+        canvas: canvas,
+        center: center,
+        radius: radius,
+        color: color,
+      );
+      return;
+    }
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()
+        ..color = color
+        ..strokeWidth = 1
+        ..style = PaintingStyle.stroke,
+    );
   }
+
+  void _drawTapRipples({
+    required Canvas canvas,
+    required Offset center,
+    required double radius,
+    required Color color,
+    required double phase,
+  }) {
+    final ripples = <(double, double, double, double, double)>[
+      (0.0, 1.2, 2.0, 0.35, 1.8),
+      (0.33, 1.5, 2.5, 0.22, 1.4),
+      (0.66, 1.8, 3.0, 0.12, 1.1),
+    ];
+    for (final ripple in ripples) {
+      final progress = ((phase - ripple.$1) / (1 - ripple.$1)).clamp(0.0, 1.0);
+      if (progress <= 0) {
+        continue;
+      }
+      canvas.drawCircle(
+        center,
+        ui.lerpDouble(radius * ripple.$2, radius * ripple.$3, progress)!,
+        Paint()
+          ..color = color.withValues(alpha: ripple.$4 * (1 - progress))
+          ..strokeWidth = ripple.$5
+          ..style = PaintingStyle.stroke,
+      );
+    }
+  }
+
+  double _fade(double value, double start, double end) =>
+      galaxyLodFade(value, start, end);
 
   bool _segmentIntersectsRect(Offset a, Offset b, Rect rect) {
     if (rect.contains(a) || rect.contains(b)) {
@@ -1822,6 +2255,19 @@ class StarMapPainter extends CustomPainter {
         .toColor();
   }
 
+  Color _masteryTemperatureColor(Color color, {required int masteryScore}) {
+    if (masteryScore >= 85) {
+      return Color.lerp(color, const Color(0xFFFFD700), 0.05)!;
+    }
+    if (masteryScore < 30) {
+      return Color.lerp(color, const Color(0xFF88B4FF), 0.05)!;
+    }
+    return color;
+  }
+
+  double _stableCurveDirection(String sourceId, String targetId) =>
+      ((sourceId.hashCode ^ targetId.hashCode) & 1) == 0 ? 1.0 : -1.0;
+
   double _nodeSeed(String value) {
     var hash = 0;
     for (final codeUnit in value.codeUnits) {
@@ -1881,6 +2327,8 @@ class _PaintNode {
 
 class _PaintEdge {
   const _PaintEdge({
+    required this.sourceId,
+    required this.targetId,
     required this.start,
     required this.end,
     required this.distanceToViewportCenter,
@@ -1892,8 +2340,13 @@ class _PaintEdge {
     required this.gapLength,
     required this.relationType,
     required this.strength,
+    required this.curveDirection,
+    required this.sourceConnections,
+    required this.targetConnections,
   });
 
+  final String sourceId;
+  final String targetId;
   final Offset start;
   final Offset end;
   final double distanceToViewportCenter;
@@ -1905,6 +2358,9 @@ class _PaintEdge {
   final double gapLength;
   final EdgeRelationType relationType;
   final double strength;
+  final double curveDirection;
+  final int sourceConnections;
+  final int targetConnections;
 
   bool get isDashed => dashLength > 0;
 }

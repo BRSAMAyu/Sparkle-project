@@ -13,6 +13,7 @@ class GalaxyMiniMap extends StatelessWidget {
     required this.nodesById,
     required this.worldBounds,
     required this.isDarkMode,
+    required this.sceneVersion,
     required this.onNavigate,
     required this.onViewportDragged,
     super.key,
@@ -24,6 +25,7 @@ class GalaxyMiniMap extends StatelessWidget {
   final Map<String, GalaxyNodeModel> nodesById;
   final Rect worldBounds;
   final bool isDarkMode;
+  final int sceneVersion;
   final double size;
   final ValueChanged<Offset> onNavigate;
   final ValueChanged<Offset> onViewportDragged;
@@ -75,6 +77,7 @@ class GalaxyMiniMap extends StatelessWidget {
                   nodesById: nodesById,
                   worldBounds: worldBounds,
                   isDarkMode: isDarkMode,
+                  sceneVersion: sceneVersion,
                 ),
                 child: const SizedBox.expand(),
               ),
@@ -102,6 +105,7 @@ class _GalaxyMiniMapPainter extends CustomPainter {
     required this.nodesById,
     required this.worldBounds,
     required this.isDarkMode,
+    required this.sceneVersion,
   });
 
   final GalaxyCamera camera;
@@ -109,6 +113,7 @@ class _GalaxyMiniMapPainter extends CustomPainter {
   final Map<String, GalaxyNodeModel> nodesById;
   final Rect worldBounds;
   final bool isDarkMode;
+  final int sceneVersion;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -193,7 +198,7 @@ class _GalaxyMiniMapPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _GalaxyMiniMapPainter oldDelegate) =>
       oldDelegate.camera != camera ||
-      oldDelegate.positions != positions ||
+      oldDelegate.sceneVersion != sceneVersion ||
       oldDelegate.worldBounds != worldBounds ||
       oldDelegate.isDarkMode != isDarkMode;
 }

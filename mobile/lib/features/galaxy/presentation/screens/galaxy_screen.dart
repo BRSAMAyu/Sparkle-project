@@ -42,6 +42,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   late final GalaxyAccessibilityService _accessibilityService;
   late final GalaxyLabelCache _labelCache;
   late final GalaxyEdgePictureCache _edgePictureCache;
+  late final GalaxyBackdropPictureCache _backdropPictureCache;
+  late final GalaxyParallaxStarLayerCache _parallaxStarLayerCache;
   late final TextEditingController _searchController;
   late final AnimationController _tapFeedbackController;
   late final AnimationController _cameraAnimationController;
@@ -53,6 +55,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   Map<String, Offset> _positions = const <String, Offset>{};
   Map<String, GalaxyNodeModel> _nodesById = const <String, GalaxyNodeModel>{};
   Map<String, Set<String>> _adjacency = const <String, Set<String>>{};
+  Map<String, int> _nodeConnectionCounts = const <String, int>{};
   Map<String, double> _edgeStrengths = const <String, double>{};
   Map<String, Color> _darkBlendedColors = const <String, Color>{};
   Map<String, Color> _lightBlendedColors = const <String, Color>{};
@@ -67,6 +70,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   GalaxyCamera? _cameraAnimationStart;
   GalaxyCamera? _cameraAnimationEnd;
   Curve _cameraAnimationCurve = Curves.easeInOutCubic;
+  double _cameraAnimationArcScaleOutFactor = 1.0;
   Object? _loadError;
   String? _selectedNodeId;
   String? _draggingNodeId;
@@ -100,6 +104,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   int _activeReplayStageIndex = -1;
   int _consecutiveSlowFrames = 0;
   int _consecutiveFastFrames = 0;
+  double _frameBudgetMs = 16;
 
   @override
   void initState() {
@@ -109,6 +114,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     _accessibilityService = GalaxyAccessibilityService();
     _labelCache = GalaxyLabelCache();
     _edgePictureCache = GalaxyEdgePictureCache();
+    _backdropPictureCache = GalaxyBackdropPictureCache();
+    _parallaxStarLayerCache = GalaxyParallaxStarLayerCache();
     _searchController = TextEditingController();
     _gestureHandler = GalaxyGestureHandler(
       screenToWorld: (screenPoint) => _camera.screenToWorld(screenPoint),
@@ -120,7 +127,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     _ambientTicker = createTicker(_handleAmbientTick);
     _tapFeedbackController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 200),
+      duration: const Duration(milliseconds: 420),
     );
     _cameraAnimationController = AnimationController(vsync: this)
       ..addListener(_handleCameraAnimationTick);
@@ -177,6 +184,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   void didChangeDependencies() {
     super.didChangeDependencies();
     _accessibilityService.initialize(context);
+    final refreshRate = View.maybeOf(context)?.display.refreshRate ?? 60;
+    _frameBudgetMs = 1000 / (refreshRate <= 0 ? 60 : refreshRate);
   }
 
   @override
@@ -184,6 +193,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     _gestureHandler.dispose();
     _labelCache.clear();
     _edgePictureCache.clear();
+    _backdropPictureCache.clear();
+    _parallaxStarLayerCache.clear();
     _flingTicker.dispose();
     _physicsTicker.dispose();
     _ambientTicker.dispose();
@@ -244,6 +255,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       for (final node in graph.nodes) node.id: node,
     };
     final adjacency = _buildAdjacency(graph.edges);
+    final nodeConnectionCounts = {
+      for (final entry in adjacency.entries) entry.key: entry.value.length,
+    };
     final edgeStrengths = _buildEdgeStrengths(graph.edges);
     final revealRanks = _buildRevealRanks(graph.nodes);
     final darkBlendedColors = _buildBlendedColors(
@@ -265,6 +279,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       _positions = positions;
       _nodesById = nodesById;
       _adjacency = adjacency;
+      _nodeConnectionCounts = nodeConnectionCounts;
       _edgeStrengths = edgeStrengths;
       _revealRanks = revealRanks;
       _darkBlendedColors = darkBlendedColors;
@@ -551,6 +566,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       targetCamera,
       duration: const Duration(milliseconds: 360),
       curve: Curves.easeOutCubic,
+      arcScaleOutFactor: 1.03,
     );
   }
 
@@ -1026,7 +1042,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     });
     _animateCameraTo(
       targetCamera,
-      duration: const Duration(milliseconds: 420),
+      duration: const Duration(milliseconds: 520),
+      curve: Curves.easeInOutCubicEmphasized,
+      arcScaleOutFactor: 1.05,
     );
   }
 
@@ -1057,6 +1075,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       target,
       duration: const Duration(milliseconds: 320),
       curve: Curves.easeOutCubic,
+      arcScaleOutFactor: 1.02,
     );
   }
 
@@ -1180,7 +1199,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
     if (shouldAnimateScene ||
         nextParticles != _edgeParticles ||
-        nextDriftOffsets != _microDriftOffsets) {
+        !_driftOffsetsEqual(nextDriftOffsets, _microDriftOffsets)) {
       setState(() {
         _ambientPhase = nextPhase;
         _edgeParticles = nextParticles;
@@ -1286,12 +1305,30 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   double _nodeSeedValue(String nodeId) =>
       ((nodeId.hashCode & 0x7fffffff) % 1000) / 100.0;
 
+  bool _driftOffsetsEqual(
+    Map<String, Offset> left,
+    Map<String, Offset> right,
+  ) {
+    if (identical(left, right)) {
+      return true;
+    }
+    if (left.length != right.length) {
+      return false;
+    }
+    for (final entry in left.entries) {
+      if (right[entry.key] != entry.value) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   void _handleFrameTimings(List<FrameTiming> timings) {
     var nextSlow = _consecutiveSlowFrames;
     var nextFast = _consecutiveFastFrames;
     for (final timing in timings) {
       final totalMs = timing.totalSpan.inMicroseconds / 1000;
-      if (totalMs > 16) {
+      if (totalMs > _frameBudgetMs) {
         nextSlow += 1;
         nextFast = 0;
       } else {
@@ -1332,10 +1369,19 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     final t = _cameraAnimationCurve.transform(
       _cameraAnimationController.value.clamp(0.0, 1.0),
     );
+    final arcFactor = _cameraAnimationArcScaleOutFactor;
+    final scale = arcFactor <= 1.0
+        ? lerpDouble(start.scale, end.scale, t)!
+        : _arcInterpolatedScale(
+            start.scale,
+            end.scale,
+            t,
+            arcFactor: arcFactor,
+          );
     setState(() {
       _camera = GalaxyCamera(
         offset: Offset.lerp(start.offset, end.offset, t)!,
-        scale: lerpDouble(start.scale, end.scale, t)!,
+        scale: scale,
         viewportSize: end.viewportSize,
         minScale: end.minScale,
         maxScale: end.maxScale,
@@ -1347,15 +1393,42 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     GalaxyCamera target, {
     Duration duration = const Duration(milliseconds: 400),
     Curve curve = Curves.easeInOutCubic,
+    double arcScaleOutFactor = 1.0,
   }) {
     _cameraAnimationStart = _camera;
     _cameraAnimationEnd = target;
     _cameraAnimationCurve = curve;
+    _cameraAnimationArcScaleOutFactor = arcScaleOutFactor;
     _cameraAnimationController
       ..duration = duration
       ..stop()
       ..reset();
     unawaited(_cameraAnimationController.forward());
+  }
+
+  double _arcInterpolatedScale(
+    double startScale,
+    double endScale,
+    double t, {
+    required double arcFactor,
+  }) {
+    const pivot = 0.6;
+    final peakScale =
+        math.max(startScale, endScale).clamp(0.0, _camera.maxScale) * arcFactor;
+    if (t <= pivot) {
+      return lerpDouble(
+        startScale,
+        peakScale.clamp(startScale, _camera.maxScale),
+        Curves.easeOutCubic.transform((t / pivot).clamp(0.0, 1.0)),
+      )!;
+    }
+    return lerpDouble(
+      peakScale.clamp(endScale, _camera.maxScale),
+      endScale,
+      Curves.easeInOutCubic.transform(
+        ((t - pivot) / (1 - pivot)).clamp(0.0, 1.0),
+      ),
+    )!;
   }
 
   void _handleBuildReplayTick() {
@@ -1696,15 +1769,20 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                         spatialIndex: _spatialIndex,
                         labelCache: _labelCache,
                         edgePictureCache: _edgePictureCache,
+                        backdropPictureCache: _backdropPictureCache,
+                        parallaxStarLayerCache: _parallaxStarLayerCache,
                         sceneVersion: _sceneVersion,
                         selectedNodeId: _selectedNodeId,
+                        previewNodeId: _previewNode?.id,
                         draggingNodeId: _draggingNodeId,
                         tapFeedbackNodeId: _tapFeedbackNodeId,
                         tapFeedbackProgress: _tapFeedbackAnimation.value,
+                        tapFeedbackPhase: _tapFeedbackController.value,
                         isDarkMode: isDarkMode,
                         worldBounds: _computeWorldBounds(),
                         blendedColors: blendedColors,
                         revealRanks: _revealRanks,
+                        nodeConnectionCounts: _nodeConnectionCounts,
                         ambientPhase: _ambientPhase,
                         buildRevealProgress: sceneRevealProgress,
                         isBuildAnimating: _isBuildAnimating,
@@ -1799,6 +1877,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                                 nodesById: _nodesById,
                                 worldBounds: _computeWorldBounds(),
                                 isDarkMode: isDarkMode,
+                                sceneVersion: _sceneVersion,
                                 onNavigate: _handleMiniMapNavigate,
                                 onViewportDragged: _handleMiniMapDrag,
                               ),
