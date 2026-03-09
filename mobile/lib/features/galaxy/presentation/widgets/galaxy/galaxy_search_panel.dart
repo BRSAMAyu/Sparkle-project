@@ -30,6 +30,9 @@ class GalaxySearchPanel extends StatelessWidget {
     final secondary = isDarkMode
         ? Colors.white.withValues(alpha: 0.64)
         : Colors.black.withValues(alpha: 0.56);
+    final responsiveMaxHeight = MediaQuery.sizeOf(context).height * 0.44;
+    final panelMaxHeight =
+        responsiveMaxHeight < 360 ? responsiveMaxHeight : 360.0;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(24),
@@ -55,7 +58,8 @@ class GalaxySearchPanel extends StatelessWidget {
             ],
           ),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 360, maxHeight: 360),
+            constraints:
+                BoxConstraints(maxWidth: 360, maxHeight: panelMaxHeight),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
               child: Column(

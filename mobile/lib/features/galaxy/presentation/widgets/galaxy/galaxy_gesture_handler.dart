@@ -96,10 +96,10 @@ class GalaxyGestureHandler {
     this.tapSlop = 8,
     this.dragCommitWindow = const Duration(milliseconds: 150),
     this.longPressDelay = const Duration(milliseconds: 500),
-    this.longPressDragWindow = const Duration(milliseconds: 200),
+    this.longPressDragWindow = const Duration(milliseconds: 300),
     this.doubleTapTimeout = const Duration(milliseconds: 300),
     this.dragSlop = 12,
-    this.minFlingVelocity = 450,
+    this.minFlingVelocity = 420,
   })  : _screenToWorld = screenToWorld,
         _hitTestNode = hitTestNode,
         _onCommand = onCommand;
