@@ -147,7 +147,10 @@ class CuriosityCapsuleService:
         """
         result = await db.execute(
             select(CuriosityCapsule)
-            .where(CuriosityCapsule.user_id == user_id, not CuriosityCapsule.is_read)
+            .where(
+                CuriosityCapsule.user_id == user_id,
+                CuriosityCapsule.is_read.is_(False),
+            )
             .order_by(desc(CuriosityCapsule.created_at))
         )
         return result.scalars().all()

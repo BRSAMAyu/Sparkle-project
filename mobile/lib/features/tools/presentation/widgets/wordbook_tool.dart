@@ -4,10 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/features/knowledge/presentation/providers/vocabulary_provider.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
-import 'package:sparkle/features/vocabulary/data/repositories/local_vocabulary_repository.dart';
-import 'package:sparkle/features/vocabulary/presentation/providers/local_vocabulary_provider.dart';
 
 class WordbookTool extends ConsumerStatefulWidget {
   const WordbookTool({
@@ -29,17 +28,29 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
   bool _isReviewMode = false;
   int _currentReviewIndex = 0;
   bool _showAnswer = false;
-  List<VocabWordItem> _sessionWords = [];
+  List<Map<String, dynamic>> _sessionWords = [];
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _reloadVocabularyData();
+    });
     _searchController.addListener(() {
       if (mounted) {
         setState(() {});
       }
     });
+  }
+
+  Future<void> _reloadVocabularyData({String? search}) async {
+    final notifier = ref.read(vocabularyProvider.notifier);
+    await Future.wait([
+      notifier.fetchWordbook(search: search),
+      notifier.fetchReviewList(),
+      notifier.fetchStats(),
+    ]);
   }
 
   @override
@@ -50,13 +61,16 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
   }
 
   void _startReview() {
-    final dueWords = ref.read(localVocabularyProvider).dueWords;
+    final dueWords = ref.read(vocabularyProvider).reviewList;
     if (dueWords.isEmpty) {
       return;
     }
 
     setState(() {
-      _sessionWords = List.from(dueWords);
+      _sessionWords = dueWords
+          .whereType<Map<String, dynamic>>()
+          .map((item) => Map<String, dynamic>.from(item))
+          .toList();
       _isReviewMode = true;
       _currentReviewIndex = 0;
       _showAnswer = false;
@@ -66,12 +80,9 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
   Future<void> _handleReview(bool remembered) async {
     if (_currentReviewIndex < _sessionWords.length) {
       final word = _sessionWords[_currentReviewIndex];
-      final startTime = DateTime.now();
-      await ref.read(localVocabularyProvider.notifier).recordReview(
-            word.id,
-            remembered,
-            responseTimeMs: DateTime.now().difference(startTime).inMilliseconds,
-          );
+      await ref
+          .read(vocabularyProvider.notifier)
+          .recordReview(word['id'] as String, remembered);
       if (!mounted) {
         return;
       }
@@ -93,8 +104,8 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
     });
   }
 
-  void _showImportanceDialog(VocabWordItem word) {
-    var selectedImportance = word.importance;
+  void _showImportanceDialog(Map<String, dynamic> word) {
+    var selectedImportance = (word['importance'] as int?) ?? 3;
 
     showDialog<void>(
       context: context,
@@ -105,7 +116,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                word.word,
+                word['word'] as String? ?? '',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: DS.fontWeightBold,
                     ),
@@ -142,8 +153,8 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
               label: '保存',
               onPressed: () async {
                 await ref
-                    .read(localVocabularyProvider.notifier)
-                    .updateImportance(word.id, selectedImportance);
+                    .read(vocabularyProvider.notifier)
+                    .updateImportance(word['id'] as String, selectedImportance);
                 if (context.mounted) {
                   Navigator.of(context).pop();
                 }
@@ -157,7 +168,24 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(localVocabularyProvider);
+    final state = ref.watch(vocabularyProvider);
+    final stats = state.stats;
+    final allWords = state.wordbook
+        .whereType<Map<String, dynamic>>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
+    final dueWords = state.reviewList
+        .whereType<Map<String, dynamic>>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
+    final filteredAllWords = _filterWords(allWords);
+    final filteredDueWords = _filterWords(dueWords);
+    final dueCount = stats['due_for_review'] as int? ?? dueWords.length;
+    final totalCount = stats['total_words'] as int? ?? allWords.length;
+    final byImportance =
+        (stats['by_importance'] as Map<String, dynamic>?) ?? const {};
+    final highImportance =
+        (byImportance['4'] as int? ?? 0) + (byImportance['5'] as int? ?? 0);
     return _isReviewMode
         ? _buildReviewMode()
         : ToolShell(
@@ -169,12 +197,12 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
             fillHeight: true,
             heroChips: [
               ToolHeroChip(
-                label: '${state.totalCount} 个词条',
+                label: '$totalCount 个词条',
                 accentColor: DS.success,
                 icon: Icons.bookmarks_rounded,
               ),
               ToolHeroChip(
-                label: '${state.dueCount} 个待复习',
+                label: '$dueCount 个待复习',
                 accentColor: DS.success,
                 icon: Icons.schedule_rounded,
               ),
@@ -187,19 +215,19 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                   children: [
                     ToolMetricCard(
                       label: '总词条',
-                      value: '${state.totalCount}',
+                      value: '$totalCount',
                       accentColor: DS.success,
                       icon: Icons.library_books_rounded,
                     ),
                     ToolMetricCard(
                       label: '待复习',
-                      value: '${state.dueCount}',
+                      value: '$dueCount',
                       accentColor: DS.warning,
                       icon: Icons.pending_actions_rounded,
                     ),
                     ToolMetricCard(
                       label: '高重要度',
-                      value: '${state.statistics['highImportance'] as int? ?? 0}',
+                      value: '$highImportance',
                       accentColor: DS.warning,
                       icon: Icons.star_rounded,
                     ),
@@ -222,54 +250,15 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                               : IconButton(
                                   onPressed: () {
                                     _searchController.clear();
-                                    ref
-                                        .read(localVocabularyProvider.notifier)
-                                        .clearSearch();
+                                    _reloadVocabularyData();
                                     setState(() {});
                                   },
                                   icon: const Icon(Icons.close_rounded),
                                 ),
                         ),
-                        onChanged:
-                            ref.read(localVocabularyProvider.notifier).search,
-                      ),
-                      const SizedBox(height: DS.spacing16),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Wrap(
-                          spacing: DS.spacing10,
-                          runSpacing: DS.spacing10,
-                          children: [
-                            ToolChoiceChip(
-                              label: '全部',
-                              selected: state.filter == VocabFilter.all,
-                              onTap: () => ref
-                                  .read(localVocabularyProvider.notifier)
-                                  .setFilter(VocabFilter.all),
-                              accentColor: DS.success,
-                            ),
-                            ToolChoiceChip(
-                              label: '待复习',
-                              selected:
-                                  state.filter == VocabFilter.dueForReview,
-                              onTap: () => ref
-                                  .read(localVocabularyProvider.notifier)
-                                  .setFilter(VocabFilter.dueForReview),
-                              accentColor: DS.warning,
-                              icon: Icons.schedule_rounded,
-                            ),
-                            ToolChoiceChip(
-                              label: '重要词',
-                              selected:
-                                  state.filter == VocabFilter.highImportance,
-                              onTap: () => ref
-                                  .read(localVocabularyProvider.notifier)
-                                  .setFilter(VocabFilter.highImportance),
-                              accentColor: DS.warning,
-                              icon: Icons.star_rounded,
-                            ),
-                          ],
-                        ),
+                        onChanged: (value) {
+                          _reloadVocabularyData(search: value);
+                        },
                       ),
                     ],
                   ),
@@ -294,8 +283,8 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                     unselectedLabelColor: DS.textSecondary,
                     dividerColor: Colors.transparent,
                     tabs: [
-                      Tab(text: '待复习 (${state.dueCount})'),
-                      Tab(text: '全部 (${state.totalCount})'),
+                      Tab(text: '待复习 ($dueCount)'),
+                      Tab(text: '全部 ($totalCount)'),
                     ],
                   ),
                 ),
@@ -304,14 +293,14 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                   child: TabBarView(
                     controller: _tabController,
                     children: [
-                      _buildWordList(state.dueWords, isReviewList: true),
-                      _buildWordList(state.words, isReviewList: false),
+                      _buildWordList(filteredDueWords, isReviewList: true),
+                      _buildWordList(filteredAllWords, isReviewList: false),
                     ],
                   ),
                 ),
               ],
             ),
-            footer: state.dueCount == 0
+            footer: dueCount == 0
                 ? null
                 : SparkleButton(
                     label: '开始复习',
@@ -322,7 +311,25 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
           );
   }
 
-  Widget _buildWordList(List<VocabWordItem> words, {required bool isReviewList}) {
+  List<Map<String, dynamic>> _filterWords(List<Map<String, dynamic>> words) {
+    final query = _searchController.text.trim().toLowerCase();
+    if (query.isEmpty) {
+      return words;
+    }
+    return words.where((word) {
+      final text = [
+        word['word'],
+        word['definition'],
+        word['phonetic'],
+      ].whereType<String>().join(' ').toLowerCase();
+      return text.contains(query);
+    }).toList();
+  }
+
+  Widget _buildWordList(
+    List<Map<String, dynamic>> words, {
+    required bool isReviewList,
+  }) {
     if (words.isEmpty) {
       return ToolSectionCard(
         accentColor: isReviewList ? DS.warning : DS.success,
@@ -331,9 +338,8 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
               ? Icons.check_circle_outline_rounded
               : Icons.library_books_outlined,
           title: isReviewList ? '当前没有待复习单词' : '生词本还是空的',
-          description: isReviewList
-              ? '继续通过查词工具积累新词，或者稍后再来复习。'
-              : '先去查词，把值得反复看的词条收进来。',
+          description:
+              isReviewList ? '继续通过查词工具积累新词，或者稍后再来复习。' : '先去查词，把值得反复看的词条收进来。',
           accentColor: isReviewList ? DS.warning : DS.success,
         ),
       );
@@ -352,7 +358,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
               context: context,
               builder: (context) => AlertDialog(
                 title: const Text('删除单词'),
-                content: Text('确定要从生词本中删除 "${word.word}" 吗？'),
+                content: Text('确定要从生词本中删除 "${word['word']}" 吗？'),
                 actions: [
                   SparkleButton.ghost(
                     label: '取消',
@@ -366,7 +372,9 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
               ),
             );
             if ((confirmed ?? false) && mounted) {
-              await ref.read(localVocabularyProvider.notifier).delete(word.id);
+              await ref
+                  .read(vocabularyProvider.notifier)
+                  .deleteWordbookEntry(word['id'] as String);
             }
           },
         );
@@ -376,6 +384,9 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
 
   Widget _buildReviewMode() {
     final word = _sessionWords[_currentReviewIndex];
+    final phonetic = word['phonetic'] as String?;
+    final definition = word['definition'] as String?;
+    final exampleSentence = word['context_sentence'] as String?;
 
     return ToolShell(
       surface: widget.surface,
@@ -401,8 +412,8 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
             child: ToolSectionCard(
               accentColor: _showAnswer ? DS.success : DS.warning,
               fillHeight: true,
-              title: word.word,
-              subtitle: word.phonetic,
+              title: word['word'] as String? ?? '',
+              subtitle: phonetic,
               child: InkWell(
                 onTap: () => setState(() => _showAnswer = true),
                 borderRadius: BorderRadius.circular(24),
@@ -428,19 +439,21 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            _showAnswer ? word.definition ?? '暂无释义' : '点击显示释义',
+                            _showAnswer ? (definition ?? '暂无释义') : '点击显示释义',
                             textAlign: TextAlign.center,
-                            style:
-                                Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                      color: DS.textPrimary,
-                                      fontWeight: DS.fontWeightBold,
-                                      height: 1.35,
-                                    ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .headlineSmall
+                                ?.copyWith(
+                                  color: DS.textPrimary,
+                                  fontWeight: DS.fontWeightBold,
+                                  height: 1.35,
+                                ),
                           ),
-                          if (_showAnswer && word.exampleSentence != null) ...[
+                          if (_showAnswer && exampleSentence != null) ...[
                             const SizedBox(height: DS.spacing16),
                             Text(
-                              word.exampleSentence!,
+                              exampleSentence,
                               textAlign: TextAlign.center,
                               style: Theme.of(context)
                                   .textTheme
@@ -512,13 +525,37 @@ class _WordCard extends StatelessWidget {
     required this.onDelete,
   });
 
-  final VocabWordItem word;
+  final Map<String, dynamic> word;
   final VoidCallback onTap;
   final VoidCallback onDelete;
 
+  bool get _isDueForReview {
+    final raw = word['next_review_at'] as String?;
+    if (raw == null) {
+      return true;
+    }
+    final date = DateTime.tryParse(raw);
+    if (date == null) {
+      return true;
+    }
+    return !date.isAfter(DateTime.now());
+  }
+
+  int? get _daysUntilReview {
+    final raw = word['next_review_at'] as String?;
+    if (raw == null) {
+      return null;
+    }
+    final date = DateTime.tryParse(raw);
+    if (date == null) {
+      return null;
+    }
+    return date.difference(DateTime.now()).inDays;
+  }
+
   @override
   Widget build(BuildContext context) => ToolSectionCard(
-        accentColor: word.isDueForReview ? DS.warning : DS.success,
+        accentColor: _isDueForReview ? DS.warning : DS.success,
         child: Row(
           children: [
             Expanded(
@@ -531,25 +568,26 @@ class _WordCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        word.word,
+                        word['word'] as String? ?? '',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                               color: DS.textPrimary,
                               fontWeight: DS.fontWeightBold,
                             ),
                       ),
-                      if (word.phonetic != null) ...[
+                      if ((word['phonetic'] as String?) != null) ...[
                         const SizedBox(height: DS.spacing4),
                         Text(
-                          word.phonetic!,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: DS.textSecondary,
-                                fontStyle: FontStyle.italic,
-                              ),
+                          word['phonetic'] as String,
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: DS.textSecondary,
+                                    fontStyle: FontStyle.italic,
+                                  ),
                         ),
                       ],
                       const SizedBox(height: DS.spacing8),
                       Text(
-                        word.definition ?? '暂无释义',
+                        word['definition'] as String? ?? '暂无释义',
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -563,15 +601,15 @@ class _WordCard extends StatelessWidget {
                         runSpacing: DS.spacing8,
                         children: [
                           ToolHeroChip(
-                            label: word.isDueForReview
+                            label: _isDueForReview
                                 ? '今天到期'
-                                : '还有 ${word.daysUntilReview ?? 0} 天',
+                                : '还有 ${_daysUntilReview ?? 0} 天',
                             accentColor:
-                                word.isDueForReview ? DS.warning : DS.success,
+                                _isDueForReview ? DS.warning : DS.success,
                             icon: Icons.schedule_rounded,
                           ),
                           ToolHeroChip(
-                            label: '重要度 ${word.importance}',
+                            label: '重要度 ${word['importance'] ?? 3}',
                             accentColor: DS.warning,
                             icon: Icons.star_rounded,
                           ),

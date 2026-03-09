@@ -13,44 +13,72 @@ class PredictiveService {
 
   /// 获取学习预测数据
   Future<Map<String, dynamic>> getLearningForecast() async {
-    try {
-      // 尝试调用真实API
-      final response = await _apiClient
-          .get<Map<String, dynamic>>('/predictive/learning-forecast');
-      return response.data ?? _getMockLearningForecast();
-    } catch (e) {
-      log('API调用失败，使用模拟数据: $e', name: 'PredictiveService');
-
-      // 降级到模拟数据
+    if (DemoDataService.isDemoMode) {
       return _getMockLearningForecast();
+    }
+
+    try {
+      final response =
+          await _apiClient.get<Map<String, dynamic>>('/predictive/engagement');
+      return _unwrapPayload(
+        response.data,
+        action: 'getLearningForecast',
+      );
+    } catch (e) {
+      log('学习预测接口调用失败: $e', name: 'PredictiveService');
+      rethrow;
     }
   }
 
   /// 获取仪表板数据
   Future<Map<String, dynamic>> getDashboardData() async {
-    try {
-      final response = await _apiClient.get<Map<String, dynamic>>('/dashboard');
-      return response.data ?? _getMockDashboardData();
-    } catch (e) {
-      log('API调用失败，使用模拟数据: $e', name: 'PredictiveService');
-
-      // 降级到模拟数据
+    if (DemoDataService.isDemoMode) {
       return _getMockDashboardData();
+    }
+
+    try {
+      final response =
+          await _apiClient.get<Map<String, dynamic>>('/predictive/dashboard');
+      return _unwrapPayload(
+        response.data,
+        action: 'getDashboardData',
+      );
+    } catch (e) {
+      log('预测仪表板接口调用失败: $e', name: 'PredictiveService');
+      rethrow;
     }
   }
 
   /// 获取用户洞察数据
   Future<Map<String, dynamic>> getUserInsights() async {
+    if (DemoDataService.isDemoMode) {
+      return _getMockUserInsights();
+    }
+
     try {
       final response =
           await _apiClient.get<Map<String, dynamic>>('/insights/user');
-      return response.data ?? _getMockUserInsights();
+      return _unwrapPayload(response.data, action: 'getUserInsights');
     } catch (e) {
-      log('API调用失败，使用模拟数据: $e', name: 'PredictiveService');
-
-      // 降级到模拟数据
-      return _getMockUserInsights();
+      log('用户洞察接口调用失败: $e', name: 'PredictiveService');
+      rethrow;
     }
+  }
+
+  Map<String, dynamic> _unwrapPayload(
+    Map<String, dynamic>? data, {
+    required String action,
+  }) {
+    if (data == null) {
+      throw StateError('PredictiveService $action returned null data');
+    }
+
+    final payload = data['data'];
+    if (payload is Map<String, dynamic>) {
+      return payload;
+    }
+
+    return data;
   }
 
   /// 模拟学习预测数据

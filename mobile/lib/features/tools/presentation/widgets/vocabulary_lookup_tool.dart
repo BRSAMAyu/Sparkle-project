@@ -7,7 +7,6 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/knowledge/presentation/providers/vocabulary_provider.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
-import 'package:sparkle/features/vocabulary/presentation/providers/local_vocabulary_provider.dart';
 
 class VocabularyLookupTool extends ConsumerStatefulWidget {
   const VocabularyLookupTool({
@@ -51,13 +50,14 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
       return;
     }
 
-    final localWord =
-        await ref.read(localVocabularyProvider.notifier).getByWord(word);
+    await ref.read(vocabularyProvider.notifier).fetchWordbook();
+    final remoteWord =
+        ref.read(vocabularyProvider.notifier).getWordbookEntryByWord(word);
     setState(() {
-      _isInLocalWordbook = localWord != null;
+      _isInLocalWordbook = remoteWord != null;
     });
 
-    ref.read(vocabularyProvider.notifier).lookup(word);
+    await ref.read(vocabularyProvider.notifier).lookup(word);
     ref.read(vocabularyProvider.notifier).fetchAssociations(word);
   }
 
@@ -86,13 +86,18 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
       definition = definitions;
     }
 
-    await ref.read(localVocabularyProvider.notifier).addWord(
+    final success = await ref.read(vocabularyProvider.notifier).addToWordbook(
           word: word,
           definition: definition,
           phonetic: result['phonetic'] as String?,
-          exampleSentence: state.exampleSentence,
+          contextSentence: state.exampleSentence,
           taskId: widget.taskId,
+          partOfSpeech: result['pos'] as String?,
         );
+
+    if (!success) {
+      return;
+    }
 
     setState(() {
       _isInLocalWordbook = true;
@@ -105,25 +110,24 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
   }
 
   Future<void> _removeFromWordbook() async {
-    final state = ref.read(vocabularyProvider);
-    final result = state.lookupResult;
-    if (result == null) {
+    final word = (_controller.text.trim()).toLowerCase();
+    if (word.isEmpty) {
       return;
     }
+    await ref.read(vocabularyProvider.notifier).fetchWordbook();
+    final remoteWord =
+        ref.read(vocabularyProvider.notifier).getWordbookEntryByWord(word);
 
-    final word = result['word'] as String? ?? _controller.text;
-    final localWord =
-        await ref.read(localVocabularyProvider.notifier).getByWord(word);
-
-    if (localWord != null) {
-      await ref.read(localVocabularyProvider.notifier).delete(localWord.id);
-      setState(() {
-        _isInLocalWordbook = false;
-      });
-      if (mounted) {
-        HapticFeedback.lightImpact();
-        AppFeedback.info(context, '已从生词本移除 "$word"');
+    if (remoteWord != null && remoteWord['id'] != null) {
+      await ref
+          .read(vocabularyProvider.notifier)
+          .deleteWordbookEntry(remoteWord['id'] as String);
+      setState(() => _isInLocalWordbook = false);
+      if (!mounted) {
+        return;
       }
+      HapticFeedback.lightImpact();
+      AppFeedback.info(context, '已从生词本移除 "$word"');
     }
   }
 
@@ -134,6 +138,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
     final result = state.lookupResult;
     final definitions = result?['definitions'];
     final examples = result?['examples'];
+    final error = state.error;
 
     return ToolShell(
       surface: widget.surface,
@@ -198,8 +203,8 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
               child: result == null
                   ? ToolEmptyState(
                       icon: Icons.travel_explore_rounded,
-                      title: '输入单词开始查询',
-                      description: '查询完成后可以直接收藏到生词本，并继续生成例句。',
+                      title: error == null ? '输入单词开始查询' : '查询暂时失败',
+                      description: error ?? '查询完成后可以直接收藏到生词本，并继续生成例句。',
                       accentColor: accent,
                     )
                   : SingleChildScrollView(

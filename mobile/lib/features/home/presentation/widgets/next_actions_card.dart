@@ -8,15 +8,27 @@ import 'package:sparkle/features/home/presentation/providers/dashboard_provider.
 import 'package:sparkle/features/task/task.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
-/// NextActionsCard - Next Actions Card (1x2 tall)
 class NextActionsCard extends ConsumerWidget {
-  const NextActionsCard({super.key, this.onViewAll});
+  const NextActionsCard({
+    super.key,
+    this.onViewAll,
+    this.compact = false,
+  });
+
   final VoidCallback? onViewAll;
+  final bool compact;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final dashboardState = ref.watch(dashboardProvider);
     final nextActions = dashboardState.nextActions;
+
+    if (compact) {
+      return _CompactNextActions(
+        actions: nextActions,
+        onViewAll: onViewAll,
+      );
+    }
 
     return MaterialStyler(
       material: AppMaterials.ceramic,
@@ -43,8 +55,11 @@ class NextActionsCard extends ConsumerWidget {
               if (onViewAll != null)
                 GestureDetector(
                   onTap: onViewAll,
-                  child: Icon(Icons.more_horiz_rounded,
-                      color: DS.textSecondary, size: 16,),
+                  child: Icon(
+                    Icons.more_horiz_rounded,
+                    color: DS.textSecondary,
+                    size: 16,
+                  ),
                 ),
             ],
           ),
@@ -57,8 +72,9 @@ class NextActionsCard extends ConsumerWidget {
                     itemCount: nextActions.length.clamp(0, 1),
                     separatorBuilder: (context, index) =>
                         const SizedBox(height: DS.sm),
-                    itemBuilder: (context, index) =>
-                        _NextActionItem(task: nextActions[index]),
+                    itemBuilder: (context, index) => _DefaultNextActionItem(
+                      task: nextActions[index],
+                    ),
                   ),
           ),
         ],
@@ -70,40 +86,173 @@ class NextActionsCard extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.done_all_rounded,
-                color: DS.textSecondary.withValues(alpha: 0.5), size: 24,),
+            Icon(
+              Icons.done_all_rounded,
+              color: DS.textSecondary.withValues(alpha: 0.5),
+              size: 24,
+            ),
             const SizedBox(height: DS.xs),
             Text(
               '清空啦',
-              style: TextStyle(
-                  fontSize: 10, color: DS.textSecondary,),
+              style: TextStyle(fontSize: 10, color: DS.textSecondary),
             ),
           ],
         ),
       );
 }
 
-class _NextActionItem extends ConsumerWidget {
-  const _NextActionItem({required this.task});
+class _CompactNextActions extends ConsumerWidget {
+  const _CompactNextActions({
+    required this.actions,
+    this.onViewAll,
+  });
+
+  final List<TaskData> actions;
+  final VoidCallback? onViewAll;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final visibleActions = actions.take(2).toList();
+
+    return ContentConstraint(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          DS.spacing16,
+          DS.spacing8,
+          DS.spacing16,
+          DS.spacing6,
+        ),
+        child: visibleActions.isEmpty
+            ? Text(
+                '今天没有待推进的行动',
+                style: context.sparkleTypography.labelLarge.copyWith(
+                  color: DS.textSecondary,
+                ),
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ...visibleActions.map(
+                    (task) => Padding(
+                      padding: const EdgeInsets.only(bottom: DS.spacing8),
+                      child: _CompactNextActionRow(task: task),
+                    ),
+                  ),
+                  if (actions.length > 2)
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: InkWell(
+                        onTap: onViewAll,
+                        borderRadius: BorderRadius.circular(999),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: DS.spacing4,
+                            vertical: 2,
+                          ),
+                          child: Text(
+                            '查看全部 →',
+                            style:
+                                context.sparkleTypography.labelLarge.copyWith(
+                              color: DS.brandPrimary,
+                              fontWeight: DS.fontWeightBold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+      ),
+    );
+  }
+}
+
+class _CompactNextActionRow extends ConsumerWidget {
+  const _CompactNextActionRow({required this.task});
+
+  final TaskData task;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final taskModel = _toTaskModel(task);
+
+    return InkWell(
+      onTap: () => _openTaskExecution(context, ref, taskModel),
+      borderRadius: DS.borderRadius12,
+      child: Container(
+        height: 36,
+        padding: const EdgeInsets.symmetric(horizontal: DS.spacing8),
+        decoration: BoxDecoration(
+          color: _itemColor(context),
+          borderRadius: DS.borderRadius12,
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: _getTypeColor(task.type),
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: DS.spacing8),
+            Expanded(
+              child: Text(
+                task.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: context.sparkleTypography.labelLarge.copyWith(
+                  color: DS.textPrimary,
+                  fontWeight: DS.fontWeightSemiBold,
+                ),
+              ),
+            ),
+            const SizedBox(width: DS.spacing8),
+            InkWell(
+              onTap: () => _openTaskExecution(context, ref, taskModel),
+              borderRadius: BorderRadius.circular(999),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: DS.spacing10,
+                  vertical: DS.spacing4,
+                ),
+                decoration: BoxDecoration(
+                  color: DS.brandPrimary.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  '开始',
+                  style: context.sparkleTypography.labelSmall.copyWith(
+                    color: DS.brandPrimary,
+                    fontWeight: DS.fontWeightBold,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DefaultNextActionItem extends ConsumerWidget {
+  const _DefaultNextActionItem({required this.task});
+
   final TaskData task;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    // 深色模式背景已暗，用低透明度；浅色模式背景已亮，用高透明度
     final itemColor = isDark
         ? DS.brandPrimary.withValues(alpha: 0.08)
         : DS.brandPrimary.withValues(alpha: 0.15);
+    final taskModel = _toTaskModel(task);
 
-    return Consumer(
-      builder: (context, ref, child) => GestureDetector(
-        onTap: () {
-          final taskModel = _toTaskModel(task);
-          // 🔧 修复：设置activeTaskProvider以便TaskExecutionScreen能读取
-          ref.read(activeTaskProvider.notifier).state = taskModel;
-          context.push('/tasks/${taskModel.id}/execute');
-        },
-        child: Container(
+    return GestureDetector(
+      onTap: () => _openTaskExecution(context, ref, taskModel),
+      child: Container(
         padding: const EdgeInsets.all(DS.sm),
         decoration: BoxDecoration(
           color: itemColor,
@@ -112,107 +261,123 @@ class _NextActionItem extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-              Text(
-                task.title,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  color: DS.textPrimary,
+            Text(
+              task.title,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: DS.textPrimary,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: DS.xs),
+            Row(
+              children: [
+                Container(
+                  width: 4,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: _getTypeColor(task.type),
+                    shape: BoxShape.circle,
+                  ),
                 ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: DS.xs),
-              Row(
-                children: [
-                  Container(
-                    width: 4,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: _getTypeColor(task.type),
-                      shape: BoxShape.circle,
-                    ),
+                const SizedBox(width: DS.xs),
+                Expanded(
+                  child: Text(
+                    '${task.estimatedMinutes}m',
+                    style: TextStyle(fontSize: 9, color: DS.textSecondary),
                   ),
-                  const SizedBox(width: DS.xs),
-                  Expanded(
-                    child: Text(
-                      '${task.estimatedMinutes}m',
-                      style: TextStyle(
-                          fontSize: 9, color: DS.textSecondary,),
-                    ),
+                ),
+                GestureDetector(
+                  onTap: () => _completeTask(ref, task),
+                  child: Icon(
+                    Icons.check_circle_outline_rounded,
+                    color: isDark
+                        ? DS.brandPrimary.withValues(alpha: 0.7)
+                        : DS.brandPrimary.withValues(alpha: 0.85),
+                    size: 14,
                   ),
-                  GestureDetector(
-                    onTap: () {
-                      unawaited(
-                        ref
-                            .read(taskListProvider.notifier)
-                            .completeTask(task.id, task.estimatedMinutes, null)
-                            .then((_) {
-                          ref.read(dashboardProvider.notifier).refresh();
-                        }),
-                      );
-                    },
-                    child: Icon(Icons.check_circle_outline_rounded,
-                        color: isDark
-                            ? DS.brandPrimary.withValues(alpha: 0.7)
-                            : DS.brandPrimary.withValues(alpha: 0.85),
-                        size: 14),
-                  ),
-                ],
-              ),
-            ],
-          ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
-      );
-    }
-
-  Color _getTypeColor(String type) {
-    switch (type) {
-      case 'learning':
-        return DS.brandPrimary;
-      case 'training':
-        return DS.success;
-      case 'error_fix':
-        return DS.error;
-      case 'reflection':
-        return DS.prismPurple;
-      default:
-        return DS.brandPrimary;
-    }
+    );
   }
+}
 
-  TaskModel _toTaskModel(TaskData data) => TaskModel(
-        id: data.id,
-        userId: '',
-        title: data.title,
-        type: _parseTaskType(data.type),
-        tags: [],
-        estimatedMinutes: data.estimatedMinutes,
-        difficulty: 1,
-        energyCost: 1,
-        status: TaskStatus.pending,
-        priority: data.priority,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
+void _openTaskExecution(
+  BuildContext context,
+  WidgetRef ref,
+  TaskModel taskModel,
+) {
+  ref.read(activeTaskProvider.notifier).state = taskModel;
+  unawaited(context.push('/tasks/${taskModel.id}/execute'));
+}
 
-  TaskType _parseTaskType(String type) {
-    switch (type) {
-      case 'learning':
-        return TaskType.learning;
-      case 'training':
-        return TaskType.training;
-      case 'error_fix':
-        return TaskType.errorFix;
-      case 'reflection':
-        return TaskType.reflection;
-      case 'social':
-        return TaskType.social;
-      case 'planning':
-        return TaskType.planning;
-      default:
-        return TaskType.learning;
-    }
+void _completeTask(WidgetRef ref, TaskData task) {
+  unawaited(
+    ref
+        .read(taskListProvider.notifier)
+        .completeTask(task.id, task.estimatedMinutes, null)
+        .then((_) => ref.read(dashboardProvider.notifier).refresh()),
+  );
+}
+
+Color _itemColor(BuildContext context) {
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  return isDark
+      ? DS.brandPrimary.withValues(alpha: 0.08)
+      : DS.brandPrimary.withValues(alpha: 0.12);
+}
+
+Color _getTypeColor(String type) {
+  switch (type) {
+    case 'learning':
+      return DS.brandPrimary;
+    case 'training':
+      return DS.success;
+    case 'error_fix':
+      return DS.error;
+    case 'reflection':
+      return DS.prismPurple;
+    default:
+      return DS.brandPrimary;
+  }
+}
+
+TaskModel _toTaskModel(TaskData data) => TaskModel(
+      id: data.id,
+      userId: '',
+      title: data.title,
+      type: _parseTaskType(data.type),
+      tags: const [],
+      estimatedMinutes: data.estimatedMinutes,
+      difficulty: 1,
+      energyCost: 1,
+      status: TaskStatus.pending,
+      priority: data.priority,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+
+TaskType _parseTaskType(String type) {
+  switch (type) {
+    case 'learning':
+      return TaskType.learning;
+    case 'training':
+      return TaskType.training;
+    case 'error_fix':
+      return TaskType.errorFix;
+    case 'reflection':
+      return TaskType.reflection;
+    case 'social':
+      return TaskType.social;
+    case 'planning':
+      return TaskType.planning;
+    default:
+      return TaskType.learning;
   }
 }

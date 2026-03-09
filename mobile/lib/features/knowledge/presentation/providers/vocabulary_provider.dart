@@ -8,6 +8,7 @@ class VocabularyState {
     this.wordbook = const [],
     this.reviewList = const [],
     this.associations = const [],
+    this.stats = const {},
     this.exampleSentence,
     this.isLoading = false,
     this.isLookingUp = false,
@@ -17,6 +18,7 @@ class VocabularyState {
   final List<dynamic> wordbook;
   final List<dynamic> reviewList;
   final List<String> associations;
+  final Map<String, dynamic> stats;
   final String? exampleSentence;
   final bool isLoading;
   final bool isLookingUp;
@@ -27,6 +29,7 @@ class VocabularyState {
     List<dynamic>? wordbook,
     List<dynamic>? reviewList,
     List<String>? associations,
+    Map<String, dynamic>? stats,
     String? exampleSentence,
     bool? isLoading,
     bool? isLookingUp,
@@ -39,6 +42,7 @@ class VocabularyState {
         wordbook: wordbook ?? this.wordbook,
         reviewList: reviewList ?? this.reviewList,
         associations: associations ?? this.associations,
+        stats: stats ?? this.stats,
         exampleSentence: exampleSentence ?? this.exampleSentence,
         isLoading: isLoading ?? this.isLoading,
         isLookingUp: isLookingUp ?? this.isLookingUp,
@@ -83,6 +87,9 @@ class VocabularyNotifier extends StateNotifier<VocabularyState> {
     String? phonetic,
     String? contextSentence,
     String? taskId,
+    int importance = 3,
+    String? partOfSpeech,
+    String? sourceTranslationId,
   }) async {
     state = state.copyWith(isLoading: true, clearError: true);
 
@@ -93,7 +100,11 @@ class VocabularyNotifier extends StateNotifier<VocabularyState> {
         phonetic: phonetic,
         contextSentence: contextSentence,
         taskId: taskId,
+        importance: importance,
+        partOfSpeech: partOfSpeech,
+        sourceTranslationId: sourceTranslationId,
       );
+      await Future.wait([fetchWordbook(), fetchReviewList(), fetchStats()]);
       state = state.copyWith(isLoading: false);
       return true;
     } catch (e) {
@@ -102,6 +113,23 @@ class VocabularyNotifier extends StateNotifier<VocabularyState> {
         error: '添加失败: $e',
       );
       return false;
+    }
+  }
+
+  Future<void> fetchWordbook({String? search}) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+
+    try {
+      final list = await _repository.getWordbook(search: search);
+      state = state.copyWith(
+        wordbook: list,
+        isLoading: false,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: '获取生词本失败: $e',
+      );
     }
   }
 
@@ -123,17 +151,52 @@ class VocabularyNotifier extends StateNotifier<VocabularyState> {
     }
   }
 
+  Future<void> fetchStats() async {
+    try {
+      final stats = await _repository.getStats();
+      state = state.copyWith(stats: stats);
+    } catch (e) {
+      state = state.copyWith(error: '获取词汇统计失败: $e');
+    }
+  }
+
   /// 记录复习结果
   Future<void> recordReview(String wordId, bool success) async {
     try {
       await _repository.recordReview(wordId, success);
-      // 乐观更新：从复习列表中移除已复习的单词
-      state = state.copyWith(
-        reviewList: state.reviewList.where((w) => w['id'] != wordId).toList(),
-      );
+      await Future.wait([fetchWordbook(), fetchReviewList(), fetchStats()]);
     } catch (e) {
       state = state.copyWith(error: '记录失败: $e');
     }
+  }
+
+  Future<void> updateImportance(String wordId, int importance) async {
+    try {
+      await _repository.updateImportance(wordId, importance);
+      await Future.wait([fetchWordbook(), fetchReviewList(), fetchStats()]);
+    } catch (e) {
+      state = state.copyWith(error: '更新重要度失败: $e');
+    }
+  }
+
+  Future<void> deleteWordbookEntry(String wordId) async {
+    try {
+      await _repository.deleteWordbook(wordId);
+      await Future.wait([fetchWordbook(), fetchReviewList(), fetchStats()]);
+    } catch (e) {
+      state = state.copyWith(error: '删除失败: $e');
+    }
+  }
+
+  Map<String, dynamic>? getWordbookEntryByWord(String word) {
+    final normalized = word.trim().toLowerCase();
+    for (final entry in state.wordbook) {
+      if (entry is Map<String, dynamic> &&
+          (entry['word'] as String?)?.toLowerCase() == normalized) {
+        return entry;
+      }
+    }
+    return null;
   }
 
   /// 获取关联词汇 (LLM)
@@ -179,4 +242,5 @@ class VocabularyNotifier extends StateNotifier<VocabularyState> {
 /// 生词本 Provider
 final vocabularyProvider =
     StateNotifierProvider<VocabularyNotifier, VocabularyState>(
-        (ref) => VocabularyNotifier(ref.watch(vocabularyRepositoryProvider)),);
+  (ref) => VocabularyNotifier(ref.watch(vocabularyRepositoryProvider)),
+);

@@ -598,12 +598,13 @@ class ErrorDetailScreen extends ConsumerWidget {
                       ),
                 ),
                 const Spacer(),
-                Text(
-                  _formatDateTime(error.latestAnalysis!.analyzedAt),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                ),
+                if (error.latestAnalysis?.analyzedAt != null)
+                  Text(
+                    _formatDateTime(error.latestAnalysis!.analyzedAt!),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                  ),
               ],
             ),
             const SizedBox(height: DS.spacing16),

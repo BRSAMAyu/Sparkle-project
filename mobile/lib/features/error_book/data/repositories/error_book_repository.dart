@@ -13,7 +13,7 @@ import 'package:sparkle/shared/entities/cognitive_analysis.dart';
 class ErrorBookRepository {
   ErrorBookRepository(this._dio);
   final Dio _dio;
-  static const String _basePath = '/api/v1/errors';
+  static const String _basePath = '/errors';
 
   /// 创建错题
   ///
@@ -41,7 +41,7 @@ class ErrorBookRepository {
           'question_text': questionText,
           'user_answer': userAnswer,
           'correct_answer': correctAnswer,
-          'subject_code': subject,
+          'subject': subject,
           if (chapter != null) 'chapter': chapter,
           if (questionImageUrl != null) 'question_image_url': questionImageUrl,
         },
@@ -77,7 +77,7 @@ class ErrorBookRepository {
       final queryParams = <String, dynamic>{
         'page': page,
         'page_size': pageSize,
-        if (subject != null) 'subject_code': subject,
+        if (subject != null) 'subject': subject,
         if (chapter != null) 'chapter': chapter,
         if (needReview != null) 'need_review': needReview,
         if (keyword != null) 'keyword': keyword,
@@ -124,12 +124,12 @@ class ErrorBookRepository {
     String? chapter,
   }) async {
     try {
-      final data = <String, dynamic>{
-        if (questionText != null) 'question_text': questionText,
-        if (userAnswer != null) 'user_answer': userAnswer,
-        if (correctAnswer != null) 'correct_answer': correctAnswer,
-        if (subject != null) 'subject_code': subject,
-        if (chapter != null) 'chapter': chapter,
+        final data = <String, dynamic>{
+          if (questionText != null) 'question_text': questionText,
+          if (userAnswer != null) 'user_answer': userAnswer,
+          if (correctAnswer != null) 'correct_answer': correctAnswer,
+          if (subject != null) 'subject': subject,
+          if (chapter != null) 'chapter': chapter,
       };
 
       final response = await _dio.patch<Map<String, dynamic>>(
@@ -183,16 +183,13 @@ class ErrorBookRepository {
     required String errorId,
     required String performance,
     int? timeSpentSeconds,
-    String reviewType = 'active',
   }) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
-        '$_basePath/review',
+        '$_basePath/$errorId/review',
         data: {
-          'error_id': errorId,
           'performance': performance,
           if (timeSpentSeconds != null) 'time_spent_seconds': timeSpentSeconds,
-          'review_type': reviewType,
         },
       );
 
@@ -212,7 +209,7 @@ class ErrorBookRepository {
   }) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
-        '$_basePath/today/review',
+        '$_basePath/today-review',
         queryParameters: {
           'page': page,
           'page_size': pageSize,

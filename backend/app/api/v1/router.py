@@ -47,6 +47,7 @@ from app.api.v1 import (
     photons,
     plans,
     prediction,
+    predictive_analytics,
     preferences,
     profile_transparency,
     recommendations,
@@ -106,6 +107,7 @@ api_router.include_router(experiments.router, prefix="/experiments", tags=["expe
 api_router.include_router(achievements.router, prefix="/achievements", tags=["achievements"])
 api_router.include_router(multi_intent.router, prefix="/multi-intent", tags=["multi-intent"])
 api_router.include_router(prediction.router, prefix="/prediction", tags=["prediction"])
+api_router.include_router(predictive_analytics.router, prefix="/predictive", tags=["predictive"])
 api_router.include_router(recommendations.router, prefix="/recommendations", tags=["recommendations"])
 api_router.include_router(leaderboards.router, prefix="/leaderboards", tags=["leaderboards"])
 api_router.include_router(profile_transparency.router)
@@ -147,6 +149,7 @@ async def api_root():
             "/dashboard",
             "/multi-intent",
             "/prediction",
+            "/predictive",
             "/recommendations",
             "/leaderboards",
             "/shop",

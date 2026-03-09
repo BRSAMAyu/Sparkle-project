@@ -61,7 +61,7 @@ class TranslationService:
 
     VERSION = "v2"
     SEGMENTER_VERSION = "seg_v2"
-    PROMPT_VERSION = "focus_translate_v2"
+    PROMPT_VERSION = "focus_translate_v3"
 
     def __init__(self):
         self.segmenter_version = self.SEGMENTER_VERSION
@@ -283,13 +283,18 @@ class TranslationService:
                 [f"- {t['source']}: {t['target']}" for t in glossary_terms[:10]]
             )
 
-        prompt = f"""Translate the following text from {source_name} to {target_name}.
-Domain: {domain}
-Style: {style}{glossary_text}
-
-Text: {segment.text}
-
-Output ONLY the translation, no explanations."""
+        system_prompt = (
+            "You are a professional translation engine. "
+            "Return only the translated text. "
+            "Do not add labels, markdown headings, notes, or explanations."
+        )
+        user_prompt = (
+            f"Source language: {source_name}\n"
+            f"Target language: {target_name}\n"
+            f"Domain: {domain}\n"
+            f"Style: {style}{glossary_text}\n\n"
+            f"Text:\n{segment.text}"
+        )
 
         used_provider = "llm"
         used_model = llm_service.chat_model
@@ -314,20 +319,30 @@ Output ONLY the translation, no explanations."""
             )
             response = await translate_client.chat.completions.create(
                 model=settings.HUNYUAN_TRANSLATE_MODEL,
-                messages=[{"role": "user", "content": prompt}],
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
                 temperature=0.3,
             )
             translation = response.choices[0].message.content.strip()
+            if not self._is_valid_translation_output(translation, segment.text):
+                raise ValueError("translation model returned prompt echo instead of translated text")
             used_provider = provider_label
             used_model = settings.HUNYUAN_TRANSLATE_MODEL
         except Exception as e:
             logger.warning(f"Translation model failed, using fallback LLM: {e}")
             # Fallback 到通用 LLM
             response = await llm_service.chat(
-                messages=[{"role": "user", "content": prompt}],
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
                 model=llm_service.chat_model
             )
             translation = response.strip()
+            if not self._is_valid_translation_output(translation, segment.text):
+                raise ValueError("fallback translation returned prompt echo instead of translated text")
             used_provider = "llm"
             used_model = llm_service.chat_model
 
@@ -347,6 +362,29 @@ Output ONLY the translation, no explanations."""
             "provider": used_provider,
             "model": used_model
         }
+
+    @staticmethod
+    def _is_valid_translation_output(translation: str, source_text: str) -> bool:
+        """Reject prompt echoes and instruction leakage from model output."""
+        normalized = translation.strip().lower()
+        if not normalized:
+            return False
+
+        invalid_markers = (
+            "translate the following text",
+            "output only the translation",
+            "source language:",
+            "target language:",
+            "domain:",
+            "style:",
+            "**领域",
+            "**风格",
+            "仅输出翻译结果",
+        )
+        if any(marker in normalized for marker in invalid_markers):
+            return False
+
+        return normalized != source_text.strip().lower()
 
     def _generate_cache_key(
         self,

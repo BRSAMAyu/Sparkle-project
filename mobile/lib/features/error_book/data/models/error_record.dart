@@ -4,6 +4,28 @@ import 'package:sparkle/shared/entities/cognitive_analysis.dart';
 part 'error_record.freezed.dart';
 part 'error_record.g.dart';
 
+int _intFromJson(Object? value) {
+  if (value is int) {
+    return value;
+  }
+  if (value is num) {
+    return value.toInt();
+  }
+  if (value is String) {
+    return int.tryParse(value) ?? 0;
+  }
+  return 0;
+}
+
+Map<String, int> _intMapFromJson(Object? value) {
+  if (value is! Map) {
+    return const <String, int>{};
+  }
+  return value.map(
+    (key, dynamic item) => MapEntry(key.toString(), _intFromJson(item)),
+  );
+}
+
 /// 错题记录模型
 @freezed
 class ErrorRecord with _$ErrorRecord {
@@ -45,7 +67,7 @@ class ErrorAnalysis with _$ErrorAnalysis {
     @JsonKey(name: 'root_cause') required String rootCause,
     @JsonKey(name: 'correct_approach') required String correctApproach,
     @JsonKey(name: 'study_suggestion') required String studySuggestion,
-    @JsonKey(name: 'analyzed_at') required DateTime analyzedAt,
+    @JsonKey(name: 'analyzed_at') DateTime? analyzedAt,
     @JsonKey(name: 'similar_traps') @Default([]) List<String> similarTraps,
     @JsonKey(name: 'recommended_knowledge')
     @Default([])
@@ -60,10 +82,10 @@ class ErrorAnalysis with _$ErrorAnalysis {
 @freezed
 class KnowledgeLink with _$KnowledgeLink {
   const factory KnowledgeLink({
-    @JsonKey(name: 'knowledge_node_id') required String nodeId,
-    @JsonKey(name: 'node_name') required String nodeName,
-    required double relevance,
-    @JsonKey(name: 'is_primary') required bool isPrimary,
+    @JsonKey(name: 'id') required String nodeId,
+    @JsonKey(name: 'name') required String nodeName,
+    @Default(1.0) double relevance,
+    @JsonKey(name: 'is_primary') @Default(false) bool isPrimary,
   }) = _KnowledgeLink;
 
   factory KnowledgeLink.fromJson(Map<String, dynamic> json) =>
@@ -75,7 +97,7 @@ class KnowledgeLink with _$KnowledgeLink {
 class ErrorListResponse with _$ErrorListResponse {
   const factory ErrorListResponse({
     required List<ErrorRecord> items,
-    required int total,
+    @JsonKey(fromJson: _intFromJson) required int total,
     required int page,
     @JsonKey(name: 'page_size') required int pageSize,
     @JsonKey(name: 'has_next') required bool hasNext,
@@ -89,11 +111,14 @@ class ErrorListResponse with _$ErrorListResponse {
 @freezed
 class ReviewStats with _$ReviewStats {
   const factory ReviewStats({
-    @JsonKey(name: 'total_errors') required int totalErrors,
-    @JsonKey(name: 'mastered_count') required int masteredCount,
-    @JsonKey(name: 'need_review_count') required int needReviewCount,
+    @JsonKey(name: 'total_errors', fromJson: _intFromJson)
+    required int totalErrors,
+    @JsonKey(name: 'mastered_count', fromJson: _intFromJson)
+    required int masteredCount,
+    @JsonKey(name: 'need_review_count', fromJson: _intFromJson)
+    required int needReviewCount,
     @JsonKey(name: 'review_streak_days') required int reviewStreakDays,
-    @JsonKey(name: 'subject_distribution')
+    @JsonKey(name: 'subject_distribution', fromJson: _intMapFromJson)
     required Map<String, int> subjectDistribution,
   }) = _ReviewStats;
 

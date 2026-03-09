@@ -35,14 +35,17 @@ import 'package:sparkle/features/community/presentation/screens/group_files_scre
 import 'package:sparkle/features/community/presentation/screens/group_members_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/group_search_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/user_search_screen.dart';
+import 'package:sparkle/features/cognitive/presentation/screens/curiosity_capsule_screen.dart';
 import 'package:sparkle/features/error_book/presentation/screens/add_error_screen.dart';
 import 'package:sparkle/features/error_book/presentation/screens/error_detail_screen.dart';
 import 'package:sparkle/features/error_book/presentation/screens/error_list_screen.dart';
+import 'package:sparkle/features/error_book/presentation/screens/review_screen.dart';
 import 'package:sparkle/features/focus/presentation/screens/focus_main_screen.dart';
 import 'package:sparkle/features/galaxy/data/repositories/enhanced_galaxy_repository.dart';
 import 'package:sparkle/features/galaxy/presentation/screens/galaxy_screen.dart';
 import 'package:sparkle/features/home/presentation/screens/dashboard_screen.dart';
 import 'package:sparkle/features/home/presentation/screens/notification_list_screen.dart';
+import 'package:sparkle/features/insights/presentation/screens/learning_forecast_screen.dart';
 import 'package:sparkle/features/memory/presentation/screens/memory_panel_screen.dart';
 import 'package:sparkle/features/memory/presentation/screens/memory_settings_screen.dart';
 import 'package:sparkle/features/plan/presentation/screens/growth_screen.dart';
@@ -52,6 +55,8 @@ import 'package:sparkle/features/seed_library/presentation/screens/create_librar
 import 'package:sparkle/features/seed_library/presentation/screens/seed_library_detail_screen.dart';
 import 'package:sparkle/features/seed_library/presentation/screens/seed_library_list_screen.dart';
 import 'package:sparkle/features/task/presentation/screens/task_list_screen.dart';
+import 'package:sparkle/features/tools/presentation/screens/tool_host_screen.dart';
+import 'package:sparkle/features/tools/presentation/screens/tool_library_screen.dart';
 import 'package:sparkle/features/translation/presentation/screens/translation_history_screen.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 import 'package:sparkle/features/user/presentation/screens/edit_profile_screen.dart';
@@ -254,7 +259,12 @@ void main() {
       await expectRoute('/errors', ErrorListScreen);
       await expectRoute('/errors/new', AddErrorScreen);
       await expectRoute('/errors/error-router-smoke', ErrorDetailScreen);
+      await expectRoute('/review?mode=today', ReviewScreen);
+      await expectRoute('/learning/forecast', LearningForecastScreen);
+      await expectRoute('/curiosity-capsule', CuriosityCapsuleScreen);
       await expectRoute('/translations/history', TranslationHistoryScreen);
+      await expectRoute('/tools/library', ToolLibraryScreen);
+      await expectRoute('/tools/translator?context=home', ToolHostScreen);
       await expectRoute('/photon/history', TransactionHistoryScreen);
       await expectRoute('/seed-libraries', SeedLibraryListScreen);
       await expectRoute('/seed-libraries/new', CreateLibraryScreen);
@@ -262,6 +272,41 @@ void main() {
         '/seed-libraries/library-router-smoke',
         SeedLibraryDetailScreen,
       );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      harness.container.dispose();
+    });
+
+    testWidgets('redirects route-based tools to their canonical screens',
+        (tester) async {
+      final harness = await _pumpRouter(
+        tester,
+        authState: AuthState(
+          isLoading: false,
+          isAuthenticated: true,
+          user: _buildUser(),
+        ),
+        onboardingCompleted: true,
+      );
+
+      harness.router.go('/tools/review_plan?context=home');
+      await _pumpFrames(tester);
+
+      expect(
+        harness.router.routeInformationProvider.value.uri.toString(),
+        '/review?mode=today',
+      );
+      expect(find.byType(ReviewScreen), findsOneWidget);
+
+      harness.router.go('/tools/learning_forecast?context=home');
+      await _pumpFrames(tester);
+
+      expect(
+        harness.router.routeInformationProvider.value.uri.toString(),
+        '/learning/forecast',
+      );
+      expect(find.byType(LearningForecastScreen), findsOneWidget);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
@@ -275,6 +320,13 @@ Future<_RouterHarness> _pumpRouter(
   required AuthState authState,
   required bool onboardingCompleted,
 }) async {
+  tester.view.devicePixelRatio = 2.0;
+  tester.view.physicalSize = const Size(1440, 2960);
+  addTearDown(() {
+    tester.view.resetPhysicalSize();
+    tester.view.resetDevicePixelRatio();
+  });
+
   SharedPreferences.setMockInitialValues({
     kOnboardingCompletedKey: onboardingCompleted,
   });

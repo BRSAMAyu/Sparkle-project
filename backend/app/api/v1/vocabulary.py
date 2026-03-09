@@ -130,7 +130,7 @@ async def lookup_word(
         if mdx_result:
             return mdx_result
 
-    raise HTTPException(status_code=404, detail="Word not found in dictionary")
+    return await vocabulary_service.synthesize_lookup(word)
 
 
 @router.post("/wordbook", summary="添加到生词本", response_model=WordBookResponse)
@@ -176,6 +176,42 @@ async def add_to_wordbook(
         source_translation_id=word_entry.source_translation_id,
         context_sentence=word_entry.context_sentence,
     )
+
+
+@router.get("/wordbook", summary="获取生词本列表", response_model=list[WordBookResponse])
+async def get_wordbook(
+    search: str | None = Query(None, max_length=100),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """获取当前用户的完整生词本列表。"""
+    words = await vocabulary_service.get_wordbook(db, current_user.id, search=search)
+
+    result = []
+    for word_entry in words:
+        accuracy_rate = (
+            word_entry.correct_review_count / word_entry.review_count
+            if word_entry.review_count > 0
+            else 0.0
+        )
+        result.append(WordBookResponse(
+            id=word_entry.id,
+            word=word_entry.word,
+            phonetic=word_entry.phonetic,
+            definition=word_entry.definition,
+            importance=word_entry.importance,
+            consecutive_correct=word_entry.consecutive_correct,
+            correct_review_count=word_entry.correct_review_count,
+            review_count=word_entry.review_count,
+            next_review_at=word_entry.next_review_at,
+            last_review_at=word_entry.last_review_at,
+            accuracy_rate=accuracy_rate,
+            part_of_speech=word_entry.part_of_speech,
+            source_translation_id=word_entry.source_translation_id,
+            context_sentence=word_entry.context_sentence,
+        ))
+
+    return result
 
 
 @router.get("/wordbook/review", summary="获取复习列表", response_model=list[WordBookResponse])
@@ -249,6 +285,23 @@ async def record_review(
         source_translation_id=word_entry.source_translation_id,
         context_sentence=word_entry.context_sentence,
     )
+
+
+@router.delete("/wordbook/{word_id}", summary="删除生词本条目")
+async def delete_wordbook_entry(
+    word_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """删除当前用户的某个生词本条目。"""
+    deleted = await vocabulary_service.delete_wordbook_entry(
+        db,
+        current_user.id,
+        word_id,
+    )
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Word not found")
+    return {"deleted": True}
 
 
 @router.patch("/wordbook/{word_id}/importance", summary="更新单词重要度", response_model=WordBookResponse)

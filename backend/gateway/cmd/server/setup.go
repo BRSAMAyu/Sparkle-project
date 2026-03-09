@@ -81,6 +81,7 @@ type handlerBundle struct {
 	interventionPushHandler  *handler.InterventionPushHandler
 	interventionProxyHandler *handler.InterventionProxyHandler
 	dashboardProxyHandler    *handler.DashboardProxyHandler
+	predictiveProxyHandler   *handler.PredictiveProxyHandler
 	dataConsistencyHandler   *handler.DataConsistencyHandler
 	sttHandler               *handler.STTHandler
 	wsProxy                  *handler.WebSocketProxy
@@ -230,6 +231,7 @@ func initHandlers(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client,
 	interventionPushHandler := handler.NewInterventionPushHandler(chatOrchestrator)
 	interventionProxyHandler := handler.NewInterventionProxyHandler(cfg.BackendURL)
 	dashboardProxyHandler := handler.NewDashboardProxyHandler(cfg.BackendURL)
+	predictiveProxyHandler := handler.NewPredictiveProxyHandler(cfg.BackendURL)
 	dataConsistencyHandler := handler.NewDataConsistencyHandler(services.chatHistory, dbh.queries, rdb)
 
 	sttURL := strings.Replace(cfg.BackendURL, "http://", "ws://", 1)
@@ -258,6 +260,7 @@ func initHandlers(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client,
 		interventionPushHandler:  interventionPushHandler,
 		interventionProxyHandler: interventionProxyHandler,
 		dashboardProxyHandler:    dashboardProxyHandler,
+		predictiveProxyHandler:   predictiveProxyHandler,
 		dataConsistencyHandler:   dataConsistencyHandler,
 		sttHandler:               sttHandler,
 		wsProxy:                  wsProxy,
@@ -464,6 +467,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 		handlers.dataConsistencyHandler.RegisterRoutes(api)
 		api.Any("/interventions/*path", authMiddleware, handlers.interventionProxyHandler.Proxy)
 		api.Any("/dashboard/*path", authMiddleware, handlers.dashboardProxyHandler.Proxy)
+		api.Any("/predictive/*path", authMiddleware, handlers.predictiveProxyHandler.Proxy)
 	}
 
 	internal := r.Group("/internal", middleware.InternalAPIKeyMiddleware(cfg))

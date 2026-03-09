@@ -46,10 +46,11 @@ async def get_engagement_forecast(
             "data": {
                 "next_active_time": forecast.next_active_time.isoformat() if forecast.next_active_time else None,
                 "confidence": forecast.confidence,
-                "dropout_risk": forecast.dropout_risk,
-                "typical_weekdays": forecast.typical_weekdays,
-                "typical_hours": forecast.typical_hours,
-                "prediction_factors": forecast.prediction_factors,
+                "dropout_risk": forecast.risk_level,
+                "typical_weekdays": [],
+                "typical_hours": [],
+                "prediction_factors": [],
+                "recommended_intervention": forecast.recommended_intervention,
             }
         }
 
@@ -84,17 +85,16 @@ async def get_difficulty_prediction(
         return {
             "status": "success",
             "data": {
-                "difficulty_score": prediction.difficulty_score,
+                "difficulty_score": prediction.predicted_difficulty,
                 "estimated_time_hours": prediction.estimated_time_hours,
-                "prerequisites_ready": prediction.prerequisites_ready,
+                "prerequisites_ready": len(prediction.suggested_prerequisites) == 0,
                 "missing_prerequisites": [
                     {
-                        "node_id": str(node_id),
-                        "current_mastery": mastery
+                        "name": prerequisite,
                     }
-                    for node_id, mastery in prediction.missing_prerequisites.items()
+                    for prerequisite in prediction.suggested_prerequisites
                 ],
-                "difficulty_factors": prediction.difficulty_factors,
+                "difficulty_factors": [],
             }
         }
 
@@ -159,8 +159,21 @@ async def get_dropout_risk_assessment(
             "data": {
                 "risk_score": assessment["risk_score"],
                 "risk_level": assessment["risk_level"],
-                "intervention_suggestions": assessment["intervention_suggestions"],
-                "risk_factors": assessment["risk_factors"],
+                "intervention_suggestions": [assessment["recommendation"]],
+                "risk_factors": [
+                    {
+                        "name": "activity_change",
+                        "value": assessment["activity_change"],
+                    },
+                    {
+                        "name": "completion_rate",
+                        "value": assessment["completion_rate"],
+                    },
+                    {
+                        "name": "recent_7d_count",
+                        "value": assessment["recent_7d_count"],
+                    },
+                ],
             }
         }
 
@@ -197,12 +210,13 @@ async def get_predictive_dashboard(
                 "engagement_forecast": {
                     "next_active_time": engagement.next_active_time.isoformat() if engagement.next_active_time else None,
                     "confidence": engagement.confidence,
-                    "dropout_risk": engagement.dropout_risk,
+                    "dropout_risk": engagement.risk_level,
+                    "recommended_intervention": engagement.recommended_intervention,
                 },
                 "dropout_risk": {
                     "risk_score": dropout["risk_score"],
                     "risk_level": dropout["risk_level"],
-                    "intervention_suggestions": dropout["intervention_suggestions"][:3],  # Top 3
+                    "intervention_suggestions": [dropout["recommendation"]],
                 },
                 "optimal_time": {
                     "best_hours": optimal["best_hours"],

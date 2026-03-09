@@ -81,6 +81,8 @@ GalaxyNodeModel _$GalaxyNodeModelFromJson(Map<String, dynamic> json) =>
       incomingEdgeIds: (json['incoming_edge_ids'] as List<dynamic>?)
           ?.map((e) => e as String)
           .toList(),
+      positionX: (json['position_x'] as num?)?.toDouble(),
+      positionY: (json['position_y'] as num?)?.toDouble(),
     );
 
 Map<String, dynamic> _$GalaxyNodeModelToJson(GalaxyNodeModel instance) =>
@@ -99,6 +101,8 @@ Map<String, dynamic> _$GalaxyNodeModelToJson(GalaxyNodeModel instance) =>
       'position_hint': instance.positionHint,
       'outgoing_edge_ids': instance.outgoingEdgeIds,
       'incoming_edge_ids': instance.incomingEdgeIds,
+      'position_x': instance.positionX,
+      'position_y': instance.positionY,
     };
 
 const _$SectorEnumEnumMap = {

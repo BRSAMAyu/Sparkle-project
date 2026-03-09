@@ -8,7 +8,11 @@ import (
     "github.com/gin-gonic/gin"
     errorbookv1 "github.com/sparkle/gateway/gen/proto/error_book"
     "github.com/sparkle/gateway/internal/error_book"
+    "google.golang.org/grpc/codes"
     "google.golang.org/grpc/metadata"
+    grpcstatus "google.golang.org/grpc/status"
+    "google.golang.org/protobuf/encoding/protojson"
+    "google.golang.org/protobuf/proto"
 )
 
 type ErrorBookHandler struct {
@@ -26,6 +30,41 @@ func injectAuthContext(c *gin.Context) {
     }
     ctx := metadata.NewOutgoingContext(c.Request.Context(), metadata.Pairs("authorization", "Bearer "+token))
     c.Request = c.Request.WithContext(ctx)
+}
+
+func writeProtoJSON(c *gin.Context, statusCode int, message proto.Message) {
+    marshaler := protojson.MarshalOptions{
+        UseProtoNames:   true,
+        EmitUnpopulated: true,
+    }
+    payload, err := marshaler.Marshal(message)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
+    }
+    c.Data(statusCode, "application/json; charset=utf-8", payload)
+}
+
+func writeGRPCError(c *gin.Context, err error) {
+    status, ok := grpcstatus.FromError(err)
+    if !ok {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
+    }
+
+    httpStatus := http.StatusInternalServerError
+    switch status.Code() {
+    case codes.InvalidArgument:
+        httpStatus = http.StatusBadRequest
+    case codes.NotFound:
+        httpStatus = http.StatusNotFound
+    case codes.Unauthenticated:
+        httpStatus = http.StatusUnauthorized
+    case codes.PermissionDenied:
+        httpStatus = http.StatusForbidden
+    }
+
+    c.JSON(httpStatus, gin.H{"error": status.Message()})
 }
 
 func (h *ErrorBookHandler) RegisterRoutes(r *gin.RouterGroup, authMiddleware gin.HandlerFunc) {
@@ -75,11 +114,11 @@ func (h *ErrorBookHandler) CreateError(c *gin.Context) {
     
     resp, err := h.client.CreateError(c.Request.Context(), &req)
     if err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        writeGRPCError(c, err)
         return
     }
-    
-    c.JSON(http.StatusCreated, resp)
+
+    writeProtoJSON(c, http.StatusCreated, resp)
 }
 
 func (h *ErrorBookHandler) ListErrors(c *gin.Context) {
@@ -119,11 +158,11 @@ func (h *ErrorBookHandler) ListErrors(c *gin.Context) {
     
     resp, err := h.client.ListErrors(c.Request.Context(), req)
     if err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        writeGRPCError(c, err)
         return
     }
-    
-    c.JSON(http.StatusOK, resp)
+
+    writeProtoJSON(c, http.StatusOK, resp)
 }
 
 func (h *ErrorBookHandler) GetError(c *gin.Context) {
@@ -138,11 +177,11 @@ func (h *ErrorBookHandler) GetError(c *gin.Context) {
     
     resp, err := h.client.GetError(c.Request.Context(), req)
     if err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        writeGRPCError(c, err)
         return
     }
-    
-    c.JSON(http.StatusOK, resp)
+
+    writeProtoJSON(c, http.StatusOK, resp)
 }
 
 func (h *ErrorBookHandler) UpdateError(c *gin.Context) {
@@ -161,11 +200,11 @@ func (h *ErrorBookHandler) UpdateError(c *gin.Context) {
     
     resp, err := h.client.UpdateError(c.Request.Context(), &req)
     if err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        writeGRPCError(c, err)
         return
     }
-    
-    c.JSON(http.StatusOK, resp)
+
+    writeProtoJSON(c, http.StatusOK, resp)
 }
 
 func (h *ErrorBookHandler) DeleteError(c *gin.Context) {
@@ -180,7 +219,7 @@ func (h *ErrorBookHandler) DeleteError(c *gin.Context) {
     
     _, err := h.client.DeleteError(c.Request.Context(), req)
     if err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        writeGRPCError(c, err)
         return
     }
     
@@ -199,11 +238,11 @@ func (h *ErrorBookHandler) AnalyzeError(c *gin.Context) {
     
     resp, err := h.client.AnalyzeError(c.Request.Context(), req)
     if err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        writeGRPCError(c, err)
         return
     }
-    
-    c.JSON(http.StatusOK, resp)
+
+    writeProtoJSON(c, http.StatusOK, resp)
 }
 
 func (h *ErrorBookHandler) SubmitReview(c *gin.Context) {
@@ -222,11 +261,11 @@ func (h *ErrorBookHandler) SubmitReview(c *gin.Context) {
     
     resp, err := h.client.SubmitReview(c.Request.Context(), &req)
     if err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        writeGRPCError(c, err)
         return
     }
-    
-    c.JSON(http.StatusOK, resp)
+
+    writeProtoJSON(c, http.StatusOK, resp)
 }
 
 func (h *ErrorBookHandler) GetStats(c *gin.Context) {
@@ -239,11 +278,11 @@ func (h *ErrorBookHandler) GetStats(c *gin.Context) {
     
     resp, err := h.client.GetReviewStats(c.Request.Context(), req)
     if err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        writeGRPCError(c, err)
         return
     }
-    
-    c.JSON(http.StatusOK, resp)
+
+    writeProtoJSON(c, http.StatusOK, resp)
 }
 
 func (h *ErrorBookHandler) GetTodayReviews(c *gin.Context) {
@@ -261,9 +300,9 @@ func (h *ErrorBookHandler) GetTodayReviews(c *gin.Context) {
     
     resp, err := h.client.GetTodayReviews(c.Request.Context(), req)
     if err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        writeGRPCError(c, err)
         return
     }
-    
-    c.JSON(http.StatusOK, resp)
+
+    writeProtoJSON(c, http.StatusOK, resp)
 }
