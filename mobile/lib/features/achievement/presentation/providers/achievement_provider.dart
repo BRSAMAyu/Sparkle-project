@@ -1,10 +1,10 @@
 import 'dart:async';
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
-import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sparkle/features/achievement/data/repositories/achievement_repository.dart';
+import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 
 // ========== Achievement State ==========
@@ -336,6 +336,16 @@ class AchievementNotifier extends StateNotifier<AchievementState> {
       await refreshAchievements();
     } catch (e) {
       debugPrint('Error pinning achievement: $e');
+    }
+  }
+
+  /// Generate achievement share card metadata
+  Future<AchievementShareCard?> shareAchievement(String achievementId) async {
+    try {
+      return await _repository.shareAchievement(achievementId);
+    } catch (e) {
+      debugPrint('Error sharing achievement: $e');
+      return null;
     }
   }
 

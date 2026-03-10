@@ -115,7 +115,11 @@ class AchievementStatsPanel extends StatelessWidget {
       );
 
   Widget _buildStatCard(
-          String label, String value, IconData icon, Color color) =>
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) =>
       Container(
         padding: const EdgeInsets.all(DS.spacing12),
         decoration: BoxDecoration(
@@ -168,12 +172,6 @@ class AchievementStatsPanel extends StatelessWidget {
             ),
           ),
         ],
-      );
-
-  Widget _buildVerticalDivider() => Container(
-        width: 1,
-        height: 24,
-        color: DS.border,
       );
 
   Widget _buildOverallProgressBar({bool compact = false}) {

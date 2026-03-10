@@ -13,8 +13,14 @@ class AchievementRepository {
 
   /// Handle Dio exceptions
   T _handleDioError<T>(DioException e, String functionName) {
-    final errorMessage = e.response?.data?['detail'] ??
-        'An unknown error occurred in $functionName';
+    final responseData = e.response?.data;
+    final detail = switch (responseData) {
+      final Map<String, dynamic> map => map['detail'] as String?,
+      final Map<dynamic, dynamic> map => map['detail'] as String?,
+      _ => null,
+    };
+    final errorMessage =
+        detail ?? 'An unknown error occurred in $functionName';
     throw Exception(errorMessage);
   }
 
@@ -57,15 +63,19 @@ class AchievementRepository {
       }
 
       final achievements = dataList
-          .map((json) => AchievementWithProgress.fromJson(
-              json as Map<String, dynamic>,),)
+          .map(
+            (json) => AchievementWithProgress.fromJson(
+              json as Map<String, dynamic>,
+            ),
+          )
           .toList();
 
       final meta = payload['meta'] as Map<String, dynamic>? ?? {};
 
       return AchievementListResponse(
         achievements: achievements,
-        totalAchievements: (meta['total_achievements'] as int?) ?? achievements.length,
+        totalAchievements:
+            (meta['total_achievements'] as int?) ?? achievements.length,
         totalUnlocked: (meta['total_unlocked'] as int?) ?? 0,
         categories: Map<String, dynamic>.from(
           meta['categories'] as Map? ?? {},
@@ -98,7 +108,10 @@ class AchievementRepository {
         ApiEndpoints.achievementsStats,
       );
 
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'getAchievementStats');
+      final payload = ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'getAchievementStats',
+      );
       return AchievementStats.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'getAchievementStats');
@@ -116,7 +129,10 @@ class AchievementRepository {
         ApiEndpoints.achievementsMap,
       );
 
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'getAchievementMap');
+      final payload = ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'getAchievementMap',
+      );
       return AchievementMapData.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'getAchievementMap');
@@ -144,7 +160,8 @@ class AchievementRepository {
         ApiEndpoints.achievementsStreak,
       );
 
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'getStreakStats');
+      final payload =
+          ApiResponseParser.unwrapMap(response.data, action: 'getStreakStats');
       return StreakStats.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'getStreakStats');
@@ -162,7 +179,10 @@ class AchievementRepository {
         ApiEndpoints.contractsStatus,
       );
 
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'getContractStatus');
+      final payload = ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'getContractStatus',
+      );
       if (payload['has_active_contract'] == false) {
         return null;
       }
@@ -192,7 +212,8 @@ class AchievementRepository {
         },
       );
 
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'createContract');
+      final payload =
+          ApiResponseParser.unwrapMap(response.data, action: 'createContract');
       final contractData = payload['data'] as Map<String, dynamic>?;
       if (contractData == null) {
         throw Exception('createContract: data is null');
@@ -227,12 +248,18 @@ class AchievementRepository {
         ApiEndpoints.galaxySkins,
       );
 
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'getGalaxySkins');
+      final payload =
+          ApiResponseParser.unwrapMap(response.data, action: 'getGalaxySkins');
       final dataList = payload['data'] as List<dynamic>?;
 
-      final skins = dataList?.map((json) => GalaxySkin.fromJson(
-        json as Map<String, dynamic>,
-      ),).toList() ?? [];
+      final skins = dataList
+              ?.map(
+                (json) => GalaxySkin.fromJson(
+                  json as Map<String, dynamic>,
+                ),
+              )
+              .toList() ??
+          [];
 
       return GalaxySkinListResponse(
         skins: skins,
@@ -266,12 +293,18 @@ class AchievementRepository {
         ApiEndpoints.titles,
       );
 
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'getTitles');
+      final payload =
+          ApiResponseParser.unwrapMap(response.data, action: 'getTitles');
       final dataList = payload['data'] as List<dynamic>?;
 
-      return dataList?.map((json) => UserTitle.fromJson(
-        json as Map<String, dynamic>,
-      ),).toList() ?? [];
+      return dataList
+              ?.map(
+                (json) => UserTitle.fromJson(
+                  json as Map<String, dynamic>,
+                ),
+              )
+              .toList() ??
+          [];
     } on DioException catch (e) {
       return _handleDioError(e, 'getTitles');
     }
@@ -302,6 +335,38 @@ class AchievementRepository {
     }
   }
 
+  /// Generate achievement share card
+  Future<AchievementShareCard> shareAchievement(String achievementId) async {
+    if (DemoDataService.isDemoMode) {
+      final achievement = _getDemoAchievements()
+          .achievements
+          .firstWhere((item) => item.achievement.id == achievementId)
+          .achievement;
+      return AchievementShareCard(
+        cardUrl: '',
+        mimeType: 'image/png',
+        width: 1080,
+        height: 1440,
+        generatedAt: DateTime.now(),
+        achievement: achievement,
+      );
+    }
+
+    try {
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        ApiEndpoints.achievementShare(achievementId),
+      );
+
+      final payload = ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'shareAchievement',
+      );
+      return AchievementShareCard.fromJson(payload);
+    } on DioException catch (e) {
+      return _handleDioError(e, 'shareAchievement');
+    }
+  }
+
   /// Process achievement event (internal)
   Future<List<AchievementUnlockEvent>> processEvent({
     required String eventType,
@@ -314,12 +379,18 @@ class AchievementRepository {
         data: eventData,
       );
 
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'processEvent');
+      final payload =
+          ApiResponseParser.unwrapMap(response.data, action: 'processEvent');
       final unlockedList = payload['unlocked'] as List<dynamic>?;
 
-      return unlockedList?.map((json) => AchievementUnlockEvent.fromJson(
-        json as Map<String, dynamic>,
-      ),).toList() ?? [];
+      return unlockedList
+              ?.map(
+                (json) => AchievementUnlockEvent.fromJson(
+                  json as Map<String, dynamic>,
+                ),
+              )
+              .toList() ??
+          [];
     } on DioException catch (e) {
       return _handleDioError(e, 'processEvent');
     }
@@ -347,12 +418,20 @@ class AchievementRepository {
         queryParameters: queryParams,
       );
 
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'getCloseToUnlockAchievements');
+      final payload = ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'getCloseToUnlockAchievements',
+      );
       final dataList = payload['data'] as List<dynamic>?;
 
-      return dataList?.map((json) => AchievementWithProgress.fromJson(
-        json as Map<String, dynamic>,
-      ),).toList() ?? [];
+      return dataList
+              ?.map(
+                (json) => AchievementWithProgress.fromJson(
+                  json as Map<String, dynamic>,
+                ),
+              )
+              .toList() ??
+          [];
     } on DioException catch (e) {
       return _handleDioError(e, 'getCloseToUnlockAchievements');
     }
@@ -361,31 +440,183 @@ class AchievementRepository {
   // ========== Demo Data ==========
 
   AchievementListResponse _getDemoAchievements() => AchievementListResponse(
-      achievements: [
-        AchievementWithProgress(
-          achievement: AchievementModel(
+        achievements: [
+          AchievementWithProgress(
+            achievement: AchievementModel(
+              id: 'streak_7',
+              name: '一周坚持',
+              description: '连续学习7天',
+              iconUrl: '/icons/streak_7.png',
+              type: AchievementType.streak,
+              rarity: AchievementRarity.common,
+              category: 'streak',
+              triggerCode: 'STREAK_DAYS',
+              triggerConfig: {'days': 7},
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+            ),
+            isUnlocked: true,
+            progressPercentage: 100,
+            userProgress: UserAchievementProgress(
+              achievementId: 'streak_7',
+              progress: 1.0,
+              progressValue: 7,
+              progressTarget: 7,
+              unlockedAt: DateTime.now().subtract(const Duration(days: 1)),
+            ),
+          ),
+          AchievementWithProgress(
+            achievement: AchievementModel(
+              id: 'streak_30',
+              name: '月度冠军',
+              description: '连续学习30天',
+              iconUrl: '/icons/streak_30.png',
+              type: AchievementType.streak,
+              rarity: AchievementRarity.rare,
+              category: 'streak',
+              triggerCode: 'STREAK_DAYS',
+              triggerConfig: {'days': 30},
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+            ),
+            isUnlocked: false,
+            progressPercentage: 23,
+            userProgress: UserAchievementProgress(
+              achievementId: 'streak_30',
+              progress: 0.23,
+              progressValue: 7,
+              progressTarget: 30,
+            ),
+          ),
+          AchievementWithProgress(
+            achievement: AchievementModel(
+              id: 'nodes_100',
+              name: '星图探索者',
+              description: '解锁100个知识点',
+              iconUrl: '/icons/nodes_100.png',
+              type: AchievementType.nodeExplore,
+              rarity: AchievementRarity.rare,
+              category: 'exploration',
+              triggerCode: 'NODES_UNLOCKED',
+              triggerConfig: {'count': 100},
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+            ),
+            isUnlocked: false,
+            progressPercentage: 45,
+            userProgress: UserAchievementProgress(
+              achievementId: 'nodes_100',
+              progress: 0.45,
+              progressValue: 45,
+              progressTarget: 100,
+            ),
+          ),
+        ],
+        totalAchievements: 50,
+        totalUnlocked: 12,
+        categories: {
+          'streak': {'total': 5, 'unlocked': 2},
+          'exploration': {'total': 10, 'unlocked': 3},
+          'mastery': {'total': 15, 'unlocked': 4},
+          'hidden': {'total': 5, 'unlocked': 1},
+        },
+      );
+
+  AchievementMapData _getDemoAchievementMap() => AchievementMapData(
+        nodes: [
+          AchievementMapNode(
             id: 'streak_7',
             name: '一周坚持',
-            description: '连续学习7天',
-            iconUrl: '/icons/streak_7.png',
-            type: AchievementType.streak,
             rarity: AchievementRarity.common,
             category: 'streak',
-            triggerCode: 'STREAK_DAYS',
-            triggerConfig: {'days': 7},
+            position: {'x': 100, 'y': 100},
+            isUnlocked: true,
+            prerequisites: [],
+          ),
+          AchievementMapNode(
+            id: 'streak_30',
+            name: '月度冠军',
+            rarity: AchievementRarity.rare,
+            category: 'streak',
+            position: {'x': 100, 'y': 200},
+            isUnlocked: false,
+            prerequisites: ['streak_7'],
+            parentId: 'streak_7',
+          ),
+          AchievementMapNode(
+            id: 'night_owl',
+            name: '深夜学者',
+            rarity: AchievementRarity.epic,
+            category: 'hidden',
+            position: {'x': 300, 'y': 100},
+            isUnlocked: false,
+            isHidden: true,
+            prerequisites: [],
+          ),
+        ],
+        connections: [
+          {'from': 'streak_7', 'to': 'streak_30', 'type': 'parent'},
+        ],
+        categories: [
+          {'id': 'streak', 'name': 'streak', 'count': 5},
+          {'id': 'hidden', 'name': 'hidden', 'count': 3},
+        ],
+      );
+
+  GalaxySkinListResponse _getDemoGalaxySkins() => GalaxySkinListResponse(
+        skins: [
+          GalaxySkin(
+            id: 'default',
+            name: '经典星系',
+            description: '默认的星系主题',
+            rarity: AchievementRarity.common,
+            sortOrder: 0,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+            isUnlocked: true,
+            isEquipped: true,
+          ),
+          GalaxySkin(
+            id: 'nebula_purple',
+            name: '紫色星云',
+            description: '神秘的紫色星云主题',
+            rarity: AchievementRarity.rare,
+            sortOrder: 1,
             createdAt: DateTime.now(),
             updatedAt: DateTime.now(),
           ),
-          isUnlocked: true,
-          progressPercentage: 100,
-          userProgress: UserAchievementProgress(
-            achievementId: 'streak_7',
-            progress: 1.0,
-            progressValue: 7,
-            progressTarget: 7,
-            unlockedAt: DateTime.now().subtract(const Duration(days: 1)),
+          GalaxySkin(
+            id: 'cyberpunk',
+            name: '赛博朋克',
+            description: '霓虹闪烁的赛博朋克风格',
+            rarity: AchievementRarity.legendary,
+            sortOrder: 2,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
           ),
+        ],
+        equippedSkinId: 'default',
+      );
+
+  List<UserTitle> _getDemoTitles() => [
+        UserTitle(
+          userId: 'demo_user',
+          titleId: 'early_explorer',
+          titleName: '星际探索者',
+          titleDisplay: '星际探索者',
+          unlockedAt: DateTime.now().subtract(const Duration(days: 7)),
+          isEquipped: true,
         ),
+        UserTitle(
+          userId: 'demo_user',
+          titleId: 'week_warrior',
+          titleName: '周常战士',
+          titleDisplay: '周常战士',
+          unlockedAt: DateTime.now().subtract(const Duration(days: 1)),
+        ),
+      ];
+
+  List<AchievementWithProgress> _getDemoCloseToUnlockAchievements() => [
         AchievementWithProgress(
           achievement: AchievementModel(
             id: 'streak_30',
@@ -401,11 +632,11 @@ class AchievementRepository {
             updatedAt: DateTime.now(),
           ),
           isUnlocked: false,
-          progressPercentage: 23,
+          progressPercentage: 90,
           userProgress: UserAchievementProgress(
             achievementId: 'streak_30',
-            progress: 0.23,
-            progressValue: 7,
+            progress: 0.9,
+            progressValue: 27,
             progressTarget: 30,
           ),
         ),
@@ -424,167 +655,15 @@ class AchievementRepository {
             updatedAt: DateTime.now(),
           ),
           isUnlocked: false,
-          progressPercentage: 45,
+          progressPercentage: 85,
           userProgress: UserAchievementProgress(
             achievementId: 'nodes_100',
-            progress: 0.45,
-            progressValue: 45,
+            progress: 0.85,
+            progressValue: 85,
             progressTarget: 100,
           ),
         ),
-      ],
-      totalAchievements: 50,
-      totalUnlocked: 12,
-      categories: {
-        'streak': {'total': 5, 'unlocked': 2},
-        'exploration': {'total': 10, 'unlocked': 3},
-        'mastery': {'total': 15, 'unlocked': 4},
-        'hidden': {'total': 5, 'unlocked': 1},
-      },
-    );
-
-  AchievementMapData _getDemoAchievementMap() => AchievementMapData(
-      nodes: [
-        AchievementMapNode(
-          id: 'streak_7',
-          name: '一周坚持',
-          rarity: AchievementRarity.common,
-          category: 'streak',
-          position: {'x': 100, 'y': 100},
-          isUnlocked: true,
-          prerequisites: [],
-        ),
-        AchievementMapNode(
-          id: 'streak_30',
-          name: '月度冠军',
-          rarity: AchievementRarity.rare,
-          category: 'streak',
-          position: {'x': 100, 'y': 200},
-          isUnlocked: false,
-          prerequisites: ['streak_7'],
-          parentId: 'streak_7',
-        ),
-        AchievementMapNode(
-          id: 'night_owl',
-          name: '深夜学者',
-          rarity: AchievementRarity.epic,
-          category: 'hidden',
-          position: {'x': 300, 'y': 100},
-          isUnlocked: false,
-          isHidden: true,
-          prerequisites: [],
-        ),
-      ],
-      connections: [
-        {'from': 'streak_7', 'to': 'streak_30', 'type': 'parent'},
-      ],
-      categories: [
-        {'id': 'streak', 'name': 'streak', 'count': 5},
-        {'id': 'hidden', 'name': 'hidden', 'count': 3},
-      ],
-    );
-
-  GalaxySkinListResponse _getDemoGalaxySkins() => GalaxySkinListResponse(
-      skins: [
-        GalaxySkin(
-          id: 'default',
-          name: '经典星系',
-          description: '默认的星系主题',
-          rarity: AchievementRarity.common,
-          sortOrder: 0,
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-          isUnlocked: true,
-          isEquipped: true,
-        ),
-        GalaxySkin(
-          id: 'nebula_purple',
-          name: '紫色星云',
-          description: '神秘的紫色星云主题',
-          rarity: AchievementRarity.rare,
-          sortOrder: 1,
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        ),
-        GalaxySkin(
-          id: 'cyberpunk',
-          name: '赛博朋克',
-          description: '霓虹闪烁的赛博朋克风格',
-          rarity: AchievementRarity.legendary,
-          sortOrder: 2,
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        ),
-      ],
-      equippedSkinId: 'default',
-    );
-
-  List<UserTitle> _getDemoTitles() => [
-      UserTitle(
-        userId: 'demo_user',
-        titleId: 'early_explorer',
-        titleName: '星际探索者',
-        titleDisplay: '星际探索者',
-        unlockedAt: DateTime.now().subtract(const Duration(days: 7)),
-        isEquipped: true,
-      ),
-      UserTitle(
-        userId: 'demo_user',
-        titleId: 'week_warrior',
-        titleName: '周常战士',
-        titleDisplay: '周常战士',
-        unlockedAt: DateTime.now().subtract(const Duration(days: 1)),
-      ),
-    ];
-
-  List<AchievementWithProgress> _getDemoCloseToUnlockAchievements() => [
-      AchievementWithProgress(
-        achievement: AchievementModel(
-          id: 'streak_30',
-          name: '月度冠军',
-          description: '连续学习30天',
-          iconUrl: '/icons/streak_30.png',
-          type: AchievementType.streak,
-          rarity: AchievementRarity.rare,
-          category: 'streak',
-          triggerCode: 'STREAK_DAYS',
-          triggerConfig: {'days': 30},
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        ),
-        isUnlocked: false,
-        progressPercentage: 90,
-        userProgress: UserAchievementProgress(
-          achievementId: 'streak_30',
-          progress: 0.9,
-          progressValue: 27,
-          progressTarget: 30,
-        ),
-      ),
-      AchievementWithProgress(
-        achievement: AchievementModel(
-          id: 'nodes_100',
-          name: '星图探索者',
-          description: '解锁100个知识点',
-          iconUrl: '/icons/nodes_100.png',
-          type: AchievementType.nodeExplore,
-          rarity: AchievementRarity.rare,
-          category: 'exploration',
-          triggerCode: 'NODES_UNLOCKED',
-          triggerConfig: {'count': 100},
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        ),
-        isUnlocked: false,
-        progressPercentage: 85,
-        userProgress: UserAchievementProgress(
-          achievementId: 'nodes_100',
-          progress: 0.85,
-          progressValue: 85,
-          progressTarget: 100,
-        ),
-      ),
-    ];
+      ];
 }
 
 // ========== Response Models ==========

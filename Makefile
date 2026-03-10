@@ -1,4 +1,4 @@
-.PHONY: dev-up sync-db proto-gen proto-lint proto-breaking proto-check-generated proto-deprecation-check proto-tools-build db-migrate db-dump db-sqlc db-validate env-check smoke quality-baseline quality-baseline-full quality-budget-check openapi-contract-check flutter-analyze-gate mobile-design-lint fixture-init local-config-check local-ai-check local-backend-smoke local-mobile-smoke local-acceptance auth-test community-test file-pipeline-test worker-test
+.PHONY: dev-up sync-db sync-equipment proto-gen proto-lint proto-breaking proto-check-generated proto-deprecation-check proto-tools-build db-migrate db-dump db-sqlc db-validate env-check smoke quality-baseline quality-baseline-full quality-budget-check openapi-contract-check flutter-analyze-gate mobile-design-lint fixture-init local-config-check local-ai-check local-backend-smoke local-mobile-smoke local-acceptance auth-test community-test file-pipeline-test worker-test
 
 DB_CONTAINER=sparkle_db
 DB_USER?=$(if $(POSTGRES_USER),$(POSTGRES_USER),postgres)
@@ -39,6 +39,11 @@ dev-preflight:
 # 核心同步流：Python 迁移 -> 导出结构 -> 生成 Go 代码
 sync-db: db-migrate db-dump db-sqlc
 	@echo "✅ Database Schema & Go Code Synced Successfully!"
+
+sync-equipment:
+	@echo "🔄 Backfilling user equipment state..."
+	cd backend && ../$(BACKEND_PYTHON) -m app.data.migrate_equipment_state
+	@echo "✅ Equipment state synced."
 
 db-migrate:
 	@echo "🔄 Running Python Alembic Migrations..."

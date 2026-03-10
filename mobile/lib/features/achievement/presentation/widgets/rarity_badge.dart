@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 
 /// 稀有度徽章组件
@@ -20,7 +21,7 @@ class RarityBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = _getRarityColors();
-    final name = _getRarityName();
+    final name = _getRarityName(context);
     final icon = _getRarityIcon();
 
     return LayoutBuilder(
@@ -125,16 +126,17 @@ class RarityBadge extends StatelessWidget {
     }
   }
 
-  String _getRarityName() {
+  String _getRarityName(BuildContext context) {
+    final l10n = context.l10n;
     switch (rarity) {
       case AchievementRarity.common:
-        return '普通';
+        return l10n.achievementRarityCommon;
       case AchievementRarity.rare:
-        return '稀有';
+        return l10n.achievementRarityRare;
       case AchievementRarity.epic:
-        return '史诗';
+        return l10n.achievementRarityEpic;
       case AchievementRarity.legendary:
-        return '传说';
+        return l10n.achievementRarityLegendary;
     }
   }
 

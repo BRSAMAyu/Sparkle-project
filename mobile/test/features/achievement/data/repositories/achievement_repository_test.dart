@@ -10,6 +10,11 @@ class TestApiClient implements ApiClient {
     String path,
     Map<String, dynamic>? queryParameters,
   )? getHandler;
+  Future<Response<dynamic>> Function(
+    String path,
+    Object? data,
+    Map<String, dynamic>? queryParameters,
+  )? postHandler;
 
   @override
   Dio get dio => throw UnimplementedError();
@@ -42,8 +47,23 @@ class TestApiClient implements ApiClient {
     String path, {
     Object? data,
     Map<String, dynamic>? queryParameters,
-  }) {
-    throw UnimplementedError();
+  }) async {
+    final handler = postHandler;
+    if (handler == null) {
+      throw UnimplementedError('No post handler configured');
+    }
+
+    final response = await handler(path, data, queryParameters);
+    return Response<T>(
+      data: response.data as T,
+      requestOptions: response.requestOptions,
+      statusCode: response.statusCode,
+      statusMessage: response.statusMessage,
+      isRedirect: response.isRedirect,
+      redirects: response.redirects,
+      extra: response.extra,
+      headers: response.headers,
+    );
   }
 
   @override
@@ -127,13 +147,13 @@ void main() {
                 'visual_effect_type': 'supernova',
                 'visual_config': {
                   'particle_count': 100,
-                  'expansion_speed': 2.0
+                  'expansion_speed': 2.0,
                 },
                 'reward_config': [
                   {
                     'type': 'title',
                     'value': 'speed_learner',
-                    'display': '速通大师'
+                    'display': '速通大师',
                   },
                 ],
                 'total_unlocked': 0,
@@ -162,7 +182,6 @@ void main() {
 
     final result = await repository.getCloseToUnlockAchievements(
       category: 'sprint',
-      threshold: 0.8,
     );
 
     expect(result.length, 1);
@@ -170,5 +189,62 @@ void main() {
     expect(result.first.userProgress?.progressValue, 16);
     expect(result.first.progressPercentage, 80);
     expect(result.first.isUnlocked, isFalse);
+  });
+
+  test('shareAchievement parses canonical share card payload', () async {
+    apiClient.postHandler = (path, data, queryParameters) async {
+      expect(path, ApiEndpoints.achievementShare('speed_learner'));
+      expect(queryParameters, isNull);
+      expect(data, isNull);
+
+      return Response(
+        requestOptions: RequestOptions(
+          path: ApiEndpoints.achievementShare('speed_learner'),
+        ),
+        data: {
+          'card_url': '/uploads/achievement-cards/user-1/speed_learner_v1.png',
+          'mime_type': 'image/png',
+          'width': 1080,
+          'height': 1440,
+          'generated_at': '2026-03-10T10:00:00Z',
+          'achievement': {
+            'id': 'speed_learner',
+            'name': '速通大师',
+            'description': '24小时内解锁20个新知识点',
+            'type': 'hidden',
+            'rarity': 'epic',
+            'category': 'hidden',
+            'is_hidden': true,
+            'sort_order': 103,
+            'trigger_code': 'SPEED_UNLOCK',
+            'trigger_config': {'count': 20, 'hours': 24},
+            'visual_effect_type': 'supernova',
+            'visual_config': {'particle_count': 100},
+            'reward_config': [
+              {
+                'type': 'title',
+                'value': 'speed_learner',
+                'display': '速通大师',
+              },
+            ],
+            'total_unlocked': 0,
+            'created_at': '2026-03-10T00:00:00Z',
+            'updated_at': '2026-03-10T00:00:00Z',
+          },
+        },
+      );
+    };
+
+    final result = await repository.shareAchievement('speed_learner');
+
+    expect(
+      result.cardUrl,
+      '/uploads/achievement-cards/user-1/speed_learner_v1.png',
+    );
+    expect(result.mimeType, 'image/png');
+    expect(result.width, 1080);
+    expect(result.height, 1440);
+    expect(result.achievement.id, 'speed_learner');
+    expect(result.achievement.name, '速通大师');
   });
 }

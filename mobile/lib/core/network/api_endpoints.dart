@@ -233,12 +233,9 @@ class ApiEndpoints {
   static const String achievementsStats = '/achievements/stats';
   static const String achievementsMap = '/achievements/map';
   static const String achievementsStreak = '/achievements/streak';
-  static String achievementDetail(String id) =>
-      '/achievements/achievements/$id';
-  static String achievementShare(String id) =>
-      '/achievements/achievements/$id/share';
-  static String achievementPin(String id) =>
-      '/achievements/achievements/$id/pin';
+  static String achievementDetail(String id) => '/achievements/$id';
+  static String achievementShare(String id) => '/achievements/$id/share';
+  static String achievementPin(String id) => '/achievements/$id/pin';
 
   // Contracts
   static const String contracts = '/achievements/contracts';

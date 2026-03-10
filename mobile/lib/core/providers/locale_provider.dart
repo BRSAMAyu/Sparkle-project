@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../services/i18n_service.dart';
+import '../../l10n/app_localizations.dart';
+
 /// Key for storing language preference in SharedPreferences
 const String kLocaleKey = 'app_locale';
 
@@ -22,10 +25,19 @@ class LocaleNotifier extends StateNotifier<Locale> {
       if (localeCode != null) {
         state = Locale(localeCode);
       }
+      // Sync with I18nService
+      _syncI18nService();
     } catch (e) {
       // Default to zh if error occurs
       state = const Locale('zh');
+      _syncI18nService();
     }
+  }
+
+  /// Sync the current locale with I18nService
+  void _syncI18nService() {
+    final l10n = lookupAppLocalizations(state);
+    I18nService.instance.updateLocale(state, l10n);
   }
 
   /// Change and persist the locale
@@ -33,6 +45,8 @@ class LocaleNotifier extends StateNotifier<Locale> {
     if (state == locale) return;
 
     state = locale;
+    // Sync with I18nService
+    _syncI18nService();
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(kLocaleKey, locale.languageCode);

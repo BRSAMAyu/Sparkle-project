@@ -137,7 +137,6 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen> {
                         icon: const Icon(Icons.arrow_back),
                         onPressed: () => context.pop(),
                         variant: ButtonVariant.ghost,
-                        size: DS.touchTargetMinSize,
                       ),
                       const SizedBox(width: DS.spacing8),
                       Expanded(
@@ -360,7 +359,8 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen> {
 
           return Padding(
             padding: EdgeInsets.only(
-                right: index == categories.length - 1 ? 0 : DS.spacing12),
+              right: index == categories.length - 1 ? 0 : DS.spacing12,
+            ),
             child: _buildCategoryChip(category, isSelected),
           );
         },
@@ -452,9 +452,10 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen> {
             final achievement = filteredAchievements[index];
             return Padding(
               padding: EdgeInsets.only(
-                  bottom: index < filteredAchievements.length - 1
-                      ? DS.spacing12
-                      : 0),
+                bottom: index < filteredAchievements.length - 1
+                    ? DS.spacing12
+                    : 0,
+              ),
               child: AchievementListCard(
                 achievement: achievement,
                 onTap: () => _openAchievementDetail(achievement),
@@ -828,8 +829,11 @@ class _AchievementFilterSheet extends StatelessWidget {
         ],
       );
 
-  Widget _buildFilterChip(String label, bool isSelected,
-          {VoidCallback? onTap}) =>
+  Widget _buildFilterChip(
+    String label,
+    bool isSelected, {
+    VoidCallback? onTap,
+  }) =>
       GestureDetector(
         onTap: onTap,
         child: Container(
