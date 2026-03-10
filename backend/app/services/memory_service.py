@@ -79,6 +79,7 @@ class MemoryService:
                 MemoryPreference.user_id == user_id,
                 MemoryPreference.pref_key == pref_key,
                 MemoryPreference.deleted_at.is_(None),
+                MemoryPreference.archived_at.is_(None),
                 MemoryPreference.retracted_at.is_(None),
             )
             .order_by(MemoryPreference.version.desc())
@@ -358,6 +359,7 @@ class MemoryService:
             select(MemoryGoal).where(
                 MemoryGoal.user_id == user_id,
                 MemoryGoal.deleted_at.is_(None),
+                MemoryGoal.archived_at.is_(None),
                 MemoryGoal.retracted_at.is_(None),
                 ~MemoryGoal.status.in_(INACTIVE_GOAL_STATUSES),
                 (MemoryGoal.expires_at.is_(None) | (MemoryGoal.expires_at > now)),
@@ -382,6 +384,7 @@ class MemoryService:
                 MemoryPreference.user_id == user_id,
                 MemoryPreference.id == preference_id,
                 MemoryPreference.deleted_at.is_(None),
+                MemoryPreference.archived_at.is_(None),
                 MemoryPreference.retracted_at.is_(None),
             )
         )
@@ -398,6 +401,7 @@ class MemoryService:
                 MemoryPreference.user_id == user_id,
                 MemoryPreference.pref_key == pref_key,
                 MemoryPreference.deleted_at.is_(None),
+                MemoryPreference.archived_at.is_(None),
                 MemoryPreference.retracted_at.is_(None),
             )
             .order_by(MemoryPreference.version.desc())
@@ -456,6 +460,7 @@ class MemoryService:
             .where(
                 MemoryPreference.user_id == user_id,
                 MemoryPreference.deleted_at.is_(None),
+                MemoryPreference.archived_at.is_(None),
                 MemoryPreference.retracted_at.is_(None),
             )
             .order_by(MemoryPreference.pref_key.asc(), MemoryPreference.version.desc())
@@ -472,6 +477,7 @@ class MemoryService:
             .where(
                 MemoryPreference.user_id == user_id,
                 MemoryPreference.deleted_at.is_(None),
+                MemoryPreference.archived_at.is_(None),
                 MemoryPreference.retracted_at.is_(None),
             )
             .order_by(MemoryPreference.pref_key.asc(), MemoryPreference.version.desc())
@@ -489,6 +495,7 @@ class MemoryService:
         stmt = select(MemoryGoal).where(
             MemoryGoal.user_id == user_id,
             MemoryGoal.deleted_at.is_(None),
+            MemoryGoal.archived_at.is_(None),
             MemoryGoal.retracted_at.is_(None),
         )
         if status_filter:
@@ -511,6 +518,7 @@ class MemoryService:
         stmt = select(EpisodicMemory).where(
             EpisodicMemory.user_id == user_id,
             EpisodicMemory.deleted_at.is_(None),
+            EpisodicMemory.archived_at.is_(None),
             EpisodicMemory.retracted_at.is_(None),
         )
         if start:

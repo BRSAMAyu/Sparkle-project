@@ -43,7 +43,7 @@ from app.core.pending_actions import pending_actions_store
 from app.core.task_manager import task_manager
 from app.core.unified_intent_router import UnifiedIntentRouter, UnifiedIntentType
 from app.gen.agent.v1 import agent_service_pb2
-from app.models.chat import ChatMessage, MessageRole
+from app.models.chat import ChatMessage, ChatSession, MessageRole
 from app.models.plan import Plan
 from app.models.cognitive import CognitiveFragment
 from app.models.galaxy import KnowledgeNode
@@ -81,7 +81,9 @@ from app.orchestration.session_feedback import (
     SESSION_FEEDBACK_TTL_SECONDS,
     SessionAdaptationContext,
     SessionFeedbackSignal,
+    analyze_conversation_rhythm,
     apply_session_feedback_visible_prefix,
+    build_conversation_rhythm_instruction,
     build_session_adaptation_context,
     build_session_feedback_instruction,
     detect_session_feedback_signal,
@@ -118,6 +120,7 @@ from app.services.perceptible_intelligence_service import (
     PerceptibleInsightService,
     ProgressComparisonService,
 )
+from app.services.self_evolution_service import UnderstandingDepthService
 from app.services.shadow_prediction_service import shadow_prediction_service
 from app.services.system_update_service import SystemUpdateService, build_system_update
 from app.services.user_service import UserService
@@ -365,13 +368,21 @@ class ChatOrchestrator:
     async def _drain_system_updates(
         self,
         user_id: str,
-    ) -> tuple[list[agent_service_pb2.ChatResponse], list[dict[str, Any]], list[dict[str, Any]], list[str], dict[str, Any] | None]:
+    ) -> tuple[
+        list[agent_service_pb2.ChatResponse],
+        list[dict[str, Any]],
+        list[dict[str, Any]],
+        list[str],
+        dict[str, Any] | None,
+        dict[str, Any] | None,
+    ]:
         updates = await SystemUpdateService(getattr(self, "redis", None)).drain(user_id, limit=20)
         responses: list[agent_service_pb2.ChatResponse] = []
         adaptation_records: list[dict[str, Any]] = []
         preference_learnings: list[dict[str, Any]] = []
         evolution_highlights: list[str] = []
         progress_snapshot: dict[str, Any] | None = None
+        understanding_depth_update: dict[str, Any] | None = None
         for update in updates:
             metadata = update.get("metadata") if isinstance(update, dict) else None
             if isinstance(metadata, dict):
@@ -393,6 +404,14 @@ class ChatOrchestrator:
                         evolution_highlights.append(str(comparison["delta_text"]).strip())
                 if metadata.get("evolution_kind") == "plan_reasoning" and metadata.get("reasoning_summary"):
                     evolution_highlights.append(str(metadata["reasoning_summary"]).strip())
+                if metadata.get("evolution_kind") == "understanding_depth":
+                    understanding_depth_update = {
+                        **metadata,
+                        "description": str(update.get("description") or "").strip(),
+                    }
+                    depth_payload = metadata.get("understanding_depth")
+                    if isinstance(depth_payload, dict) and depth_payload.get("level"):
+                        evolution_highlights.append(f"我对你的理解已提升到 {depth_payload['level']} 阶段。")
             widget_struct = struct_pb2.Struct()
             widget_struct.update(update)
             responses.append(
@@ -408,7 +427,14 @@ class ChatOrchestrator:
             )
         if progress_snapshot:
             evolution_highlights = [*evolution_highlights[:2], *(progress_snapshot.get("highlights") or [])[:1]]
-        return responses, adaptation_records[:3], preference_learnings[:3], evolution_highlights[:3], progress_snapshot
+        return (
+            responses,
+            adaptation_records[:3],
+            preference_learnings[:3],
+            evolution_highlights[:3],
+            progress_snapshot,
+            understanding_depth_update,
+        )
 
     @staticmethod
     def _session_feedback_key(session_id: str) -> str:
@@ -495,22 +521,50 @@ class ChatOrchestrator:
         except Exception as exc:
             logger.warning(f"Failed to enqueue perceptible insight: {exc}")
 
+    async def _maybe_enqueue_understanding_depth(
+        self,
+        *,
+        active_db: AsyncSession | None,
+        user_id: str,
+    ) -> None:
+        if not active_db or not settings.ENABLE_PERCEPTIBLE_INTELLIGENCE:
+            return
+        try:
+            service = UnderstandingDepthService(active_db, getattr(self, "redis", None))
+            await service.maybe_enqueue_upgrade(user_id=uuid.UUID(str(user_id)))
+        except Exception as exc:
+            logger.warning(f"Failed to enqueue understanding depth update: {exc}")
+
     async def _detect_session_feedback(
         self,
         *,
         session_id: str,
         user_message: str,
         conversation_context: dict[str, Any] | None,
-    ) -> tuple[SessionFeedbackSignal | None, SessionAdaptationContext | None]:
+    ) -> tuple[SessionFeedbackSignal | None, SessionAdaptationContext | None, dict[str, Any] | None]:
         if not settings.ENABLE_SESSION_FEEDBACK_ADAPTATION:
-            return None, None
+            return None, None, None
         if not str(user_message or "").strip():
-            return None, None
+            return None, None, None
+
+        rhythm = analyze_conversation_rhythm(
+            user_message=user_message,
+            conversation_messages=(conversation_context or {}).get("messages"),
+        )
 
         previous_assistant = self._extract_previous_message(conversation_context, role="assistant")
         if not previous_assistant:
             SESSION_FEEDBACK_IGNORED_TOTAL.labels(reason="no_previous_assistant").inc()
-            return None, None
+            if rhythm is None:
+                return None, None, None
+            existing_context = await self._load_session_adaptation_context(session_id)
+            adaptation_context = build_session_adaptation_context(
+                signal=None,
+                existing_context=existing_context,
+                conversation_rhythm=rhythm,
+            )
+            await self._save_session_adaptation_context(session_id, adaptation_context)
+            return None, adaptation_context, rhythm
 
         previous_user = self._extract_previous_message(conversation_context, role="user")
         signal = detect_session_feedback_signal(
@@ -519,7 +573,16 @@ class ChatOrchestrator:
             previous_user_message=previous_user,
         )
         if signal is None:
-            return None, None
+            if rhythm is None:
+                return None, None, None
+            existing_context = await self._load_session_adaptation_context(session_id)
+            adaptation_context = build_session_adaptation_context(
+                signal=None,
+                existing_context=existing_context,
+                conversation_rhythm=rhythm,
+            )
+            await self._save_session_adaptation_context(session_id, adaptation_context)
+            return None, adaptation_context, rhythm
 
         SESSION_FEEDBACK_DETECTED_TOTAL.labels(signal_type=signal.signal_type).inc()
         SESSION_FEEDBACK_CONFIDENCE_BUCKET.labels(
@@ -537,9 +600,10 @@ class ChatOrchestrator:
         adaptation_context = build_session_adaptation_context(
             signal=signal,
             existing_context=existing_context,
+            conversation_rhythm=rhythm,
         )
         await self._save_session_adaptation_context(session_id, adaptation_context)
-        return signal, adaptation_context
+        return signal, adaptation_context, rhythm
 
     async def _apply_context_focus_overlay(
         self,
@@ -577,8 +641,16 @@ class ChatOrchestrator:
         merged_context = dict(user_context_payload)
         merged_context["current_query"] = user_message
         merged_context["context_focus"] = focus_decision.to_dict()
+        returning_context = merged_context.get("returning_context") if isinstance(merged_context, dict) else None
         if briefing_note:
-            merged_context["context_briefing_note"] = briefing_note
+            if isinstance(returning_context, dict) and returning_context.get("briefing_text"):
+                merged_context["context_briefing_note"] = (
+                    f"{str(returning_context.get('briefing_text') or '').strip()} {briefing_note}"
+                ).strip()
+            else:
+                merged_context["context_briefing_note"] = briefing_note
+        elif isinstance(returning_context, dict) and returning_context.get("briefing_text"):
+            merged_context["context_briefing_note"] = str(returning_context.get("briefing_text") or "").strip()
         if focused_memory:
             merged_context["preferences"] = focused_memory.get("preferences", merged_context.get("preferences", {}))
             merged_context["active_goals"] = focused_memory.get("active_goals", [])
@@ -597,8 +669,8 @@ class ChatOrchestrator:
             state.context_data["user_context"] = merged_context
             state.context_data["context_focus"] = focus_decision.to_dict()
             state.context_data["focused_memory"] = focused_memory
-            if briefing_note:
-                state.context_data["context_briefing_note"] = briefing_note
+            if merged_context.get("context_briefing_note"):
+                state.context_data["context_briefing_note"] = merged_context.get("context_briefing_note")
         return merged_context
 
     def _chain_event_handlers(self, *handlers):
@@ -1167,7 +1239,7 @@ class ChatOrchestrator:
             "experiment_cohort": experiment_cohort,
         }
 
-    async def _build_user_context(self, user_id: str, db_session: AsyncSession) -> dict[str, Any]:
+    async def _build_user_context(self, user_id: str, db_session: AsyncSession, session_id: str | None = None) -> dict[str, Any]:
         """
         Build comprehensive user context from UserService
 
@@ -1180,6 +1252,16 @@ class ChatOrchestrator:
             base_user_context = await user_service.get_context(uuid.UUID(user_id))
             base_user_context_data = base_user_context.model_dump() if base_user_context else None
             experiment_cohort = self._experiment_cohort_for_user(user_id)
+            returning_context = await self._build_returning_context(
+                user_id=user_id,
+                session_id=session_id,
+                db_session=db_session,
+            )
+            understanding_depth = None
+            if settings.ENABLE_PERCEPTIBLE_INTELLIGENCE:
+                with contextlib.suppress(Exception):
+                    depth_service = UnderstandingDepthService(db_session, self.redis)
+                    understanding_depth = (await depth_service.evaluate(user_id=uuid.UUID(user_id))).__dict__
 
             # P1: Task Status Summary
             task_status_summary = await self._get_task_status_summary(user_id, db_session)
@@ -1271,6 +1353,8 @@ class ChatOrchestrator:
                     "llm_profile": llm_profile_data,
                     "experiment_cohort": experiment_cohort,
                     "task_status_summary": task_status_summary,
+                    "returning_context": returning_context,
+                    "understanding_depth": understanding_depth,
                     "profile": profile_payload,
 
                     # New field for full context injection
@@ -1384,6 +1468,8 @@ class ChatOrchestrator:
                     "llm_profile": llm_profile_data,
                     "experiment_cohort": experiment_cohort,
                     "task_status_summary": task_status_summary,
+                    "returning_context": returning_context,
+                    "understanding_depth": understanding_depth,
                     "profile": profile_payload,
                 }
             else:
@@ -1407,6 +1493,8 @@ class ChatOrchestrator:
                     "llm_profile": llm_profile_data,
                     "experiment_cohort": experiment_cohort,
                     "task_status_summary": task_status_summary,
+                    "returning_context": returning_context,
+                    "understanding_depth": understanding_depth,
                     "profile": profile_payload,
                 }
 
@@ -1419,6 +1507,8 @@ class ChatOrchestrator:
                 "preferences": {"depth_preference": 0.5, "curiosity_preference": 0.5},
                 "preference_version": 0,
                 "llm_profile": None,
+                "returning_context": None,
+                "understanding_depth": None,
                 "profile": self._build_profile_payload(
                     user_context_data=None,
                     preferences={"depth_preference": 0.5, "curiosity_preference": 0.5},
@@ -1428,6 +1518,93 @@ class ChatOrchestrator:
                 ),
                 "experiment_cohort": self._experiment_cohort_for_user(user_id),
             }
+
+    async def _build_returning_context(
+        self,
+        *,
+        user_id: str,
+        session_id: str | None,
+        db_session: AsyncSession,
+    ) -> dict[str, Any] | None:
+        if not session_id or not self.redis:
+            return None
+        try:
+            redis_key = f"returning-context:{session_id}"
+            if await self.redis.exists(redis_key):
+                return None
+
+            user_uuid = uuid.UUID(user_id)
+            result = await db_session.execute(
+                select(ChatSession.last_message_at)
+                .where(ChatSession.user_id == user_uuid, ChatSession.last_message_at.is_not(None))
+                .order_by(ChatSession.last_message_at.desc())
+                .limit(1)
+            )
+            last_message_at = result.scalar_one_or_none()
+            if last_message_at is None:
+                return None
+
+            silence_gap = _utcnow() - last_message_at
+            if silence_gap < timedelta(days=3):
+                return None
+
+            task_result = await db_session.execute(
+                select(Task.title, Task.completed_at)
+                .where(
+                    Task.user_id == user_uuid,
+                    Task.status == ModelTaskStatus.COMPLETED,
+                    Task.completed_at.is_not(None),
+                    Task.completed_at <= last_message_at,
+                )
+                .order_by(Task.completed_at.desc())
+                .limit(1)
+            )
+            latest_completed = task_result.first()
+
+            overdue_result = await db_session.execute(
+                select(func.count(Task.id)).where(
+                    Task.user_id == user_uuid,
+                    Task.status.in_([ModelTaskStatus.PENDING, ModelTaskStatus.IN_PROGRESS]),
+                    Task.due_date.is_not(None),
+                    Task.due_date >= last_message_at.date(),
+                    Task.due_date <= _utcnow().date(),
+                )
+            )
+            overdue_count = int(overdue_result.scalar() or 0)
+
+            upcoming_result = await db_session.execute(
+                select(Task.title, Task.due_date)
+                .where(
+                    Task.user_id == user_uuid,
+                    Task.status.in_([ModelTaskStatus.PENDING, ModelTaskStatus.IN_PROGRESS]),
+                    Task.due_date.is_not(None),
+                )
+                .order_by(Task.due_date.asc())
+                .limit(1)
+            )
+            next_due = upcoming_result.first()
+
+            progress_text = "你上次离开前还没有留下明确的完成记录。"
+            if latest_completed:
+                progress_text = f"你上次推进到「{str(latest_completed[0])}」这一步。"
+            due_text = f"离开期间有 {overdue_count} 个任务进入截止窗口。"
+            if next_due:
+                due_text = f"离开期间有 {overdue_count} 个任务进入截止窗口，最近的是「{str(next_due[0])}」。"
+
+            payload = {
+                "days_away": max(int(silence_gap.days), 3),
+                "last_active_at": last_message_at.isoformat(),
+                "last_progress": progress_text,
+                "overdue_task_count": overdue_count,
+                "next_due_task_title": str(next_due[0]) if next_due else "",
+                "welcome_back_message": f"{progress_text}{due_text} 欢迎回来，我们可以从这里继续。",
+                "briefing_text": f"{progress_text}{due_text}",
+            }
+            await self.redis.setex(redis_key, 24 * 60 * 60, "1")
+            return payload
+        except Exception as exc:
+            logger.warning(f"Failed to build returning context: {exc}")
+            return None
 
     async def _build_conversation_context(self, session_id: str, user_id: str) -> dict[str, Any]:
         """
@@ -2480,6 +2657,11 @@ class ChatOrchestrator:
                 final_state.context_data["session_adaptation"],
                 ensure_ascii=False,
             )
+        if final_state.context_data.get("conversation_rhythm"):
+            response_metadata["conversation_rhythm"] = json.dumps(
+                final_state.context_data["conversation_rhythm"],
+                ensure_ascii=False,
+            )
         response_metadata["session_adaptation_visible"] = "true" if session_adaptation_visible else "false"
         if settings.ENABLE_CONTEXT_FOCUS_METADATA:
             context_focus = final_state.context_data.get("context_focus")
@@ -2502,8 +2684,14 @@ class ChatOrchestrator:
                 response_metadata["focused_memory_summary"] = json.dumps(summary, ensure_ascii=False)
                 context_pack_meta = ((focused_memory.get("context_pack") or {}).get("metadata") or {})
                 semantic_meta = context_pack_meta.get("semantic_gating")
-                if semantic_meta:
-                    response_metadata["context_semantic_gating"] = json.dumps(semantic_meta, ensure_ascii=False)
+            if semantic_meta:
+                response_metadata["context_semantic_gating"] = json.dumps(semantic_meta, ensure_ascii=False)
+        understanding_depth = (user_context_payload or {}).get("understanding_depth") if isinstance(user_context_payload, dict) else None
+        if isinstance(understanding_depth, dict):
+            response_metadata["understanding_depth"] = json.dumps(understanding_depth, ensure_ascii=False)
+        returning_context = (user_context_payload or {}).get("returning_context") if isinstance(user_context_payload, dict) else None
+        if isinstance(returning_context, dict):
+            response_metadata["returning_after_silence"] = json.dumps(returning_context, ensure_ascii=False)
 
         execution_validation = await self._validate_plan_execution(
             executable_plan=executable_plan,
@@ -2880,7 +3068,7 @@ class ChatOrchestrator:
             "metadata": response_metadata,
         }
         await self._cache_response(session_id, request_id, final_response_data)
-        update_responses, _, _, _, _ = await self._drain_system_updates(user_id)
+        update_responses, _, _, _, _, _ = await self._drain_system_updates(user_id)
         for update_resp in update_responses:
             yield update_resp
 
@@ -3057,6 +3245,11 @@ class ChatOrchestrator:
                         session_adaptation_context,
                         ensure_ascii=False,
                     )
+                if isinstance(result_holder.get("conversation_rhythm"), dict):
+                    response_metadata["conversation_rhythm"] = json.dumps(
+                        result_holder["conversation_rhythm"],
+                        ensure_ascii=False,
+                    )
                 if settings.ENABLE_CONTEXT_FOCUS_METADATA:
                     context_focus = None
                     briefing_note = ""
@@ -3083,6 +3276,12 @@ class ChatOrchestrator:
                         semantic_meta = (((focused_memory.get("context_pack") or {}).get("metadata") or {}).get("semantic_gating"))
                         if semantic_meta:
                             response_metadata["context_semantic_gating"] = json.dumps(semantic_meta, ensure_ascii=False)
+                understanding_depth = (user_context_payload or {}).get("understanding_depth") if isinstance(user_context_payload, dict) else None
+                if isinstance(understanding_depth, dict):
+                    response_metadata["understanding_depth"] = json.dumps(understanding_depth, ensure_ascii=False)
+                returning_context = (user_context_payload or {}).get("returning_context") if isinstance(user_context_payload, dict) else None
+                if isinstance(returning_context, dict):
+                    response_metadata["returning_after_silence"] = json.dumps(returning_context, ensure_ascii=False)
                 result_holder["final_response_data"] = {
                     "message": final_text,
                     "full_text": final_text,
@@ -3633,7 +3832,7 @@ class ChatOrchestrator:
         plan_context = None
         with tracer.start_as_current_span("db.build_context"):
             if active_db and user_id:
-                local_context = await self._build_user_context(user_id, active_db)
+                local_context = await self._build_user_context(user_id, active_db, session_id=session_id)
                 user_context_payload = self._merge_user_contexts(local_context, grpc_context)
                 logger.info(f"Merged user context: {user_context_payload is not None}")
 
@@ -3783,8 +3982,9 @@ class ChatOrchestrator:
 
                 session_feedback_signal = None
                 session_adaptation_context = None
+                conversation_rhythm = None
                 if not request.HasField("tool_result"):
-                    session_feedback_signal, session_adaptation_context = await self._detect_session_feedback(
+                    session_feedback_signal, session_adaptation_context, conversation_rhythm = await self._detect_session_feedback(
                         session_id=session_id,
                         user_message=user_message,
                         conversation_context=conversation_context,
@@ -3832,10 +4032,20 @@ class ChatOrchestrator:
                 if session_feedback_signal is not None:
                     state.context_data["session_feedback_signal"] = session_feedback_signal.to_dict()
                     session_feedback_instruction = build_session_feedback_instruction(session_feedback_signal)
-                    if session_feedback_instruction:
-                        state.context_data["session_feedback_instruction"] = session_feedback_instruction
+                    rhythm_instruction = build_conversation_rhythm_instruction(conversation_rhythm)
+                    combined_instruction = "\n\n".join(
+                        part for part in (session_feedback_instruction, rhythm_instruction) if part
+                    )
+                    if combined_instruction:
+                        state.context_data["session_feedback_instruction"] = combined_instruction
+                elif conversation_rhythm is not None:
+                    rhythm_instruction = build_conversation_rhythm_instruction(conversation_rhythm)
+                    if rhythm_instruction:
+                        state.context_data["session_feedback_instruction"] = rhythm_instruction
                 if session_adaptation_context is not None:
                     state.context_data["session_adaptation"] = session_adaptation_context.to_dict()
+                if conversation_rhythm is not None:
+                    state.context_data["conversation_rhythm"] = conversation_rhythm
                 queue: asyncio.Queue = asyncio.Queue()
 
                 async def stream_callback(resp: agent_service_pb2.ChatResponse):
@@ -3857,7 +4067,18 @@ class ChatOrchestrator:
                     session_feedback_signal=session_feedback_signal.to_dict() if session_feedback_signal else None,
                     session_id=session_id,
                 )
-                update_responses, adaptation_records, preference_learnings, evolution_highlights, progress_snapshot = await self._drain_system_updates(user_id)
+                await self._maybe_enqueue_understanding_depth(
+                    active_db=active_db,
+                    user_id=user_id,
+                )
+                (
+                    update_responses,
+                    adaptation_records,
+                    preference_learnings,
+                    evolution_highlights,
+                    progress_snapshot,
+                    understanding_depth_update,
+                ) = await self._drain_system_updates(user_id)
                 if adaptation_records:
                     state.context_data["adaptation_records"] = adaptation_records
                 if preference_learnings:
@@ -3866,6 +4087,18 @@ class ChatOrchestrator:
                     state.context_data["evolution_highlights"] = evolution_highlights
                 if progress_snapshot:
                     state.context_data["progress_snapshot"] = progress_snapshot
+                if isinstance(understanding_depth_update, dict):
+                    state.context_data["understanding_depth_update"] = understanding_depth_update
+                    if isinstance(user_context_payload, dict):
+                        user_context_payload["understanding_depth_hint"] = {
+                            "natural_hint": str(understanding_depth_update.get("natural_hint") or "").strip(),
+                            "description": str(understanding_depth_update.get("description") or "").strip(),
+                            "level": (
+                                (understanding_depth_update.get("understanding_depth") or {}).get("level")
+                                if isinstance(understanding_depth_update.get("understanding_depth"), dict)
+                                else None
+                            ),
+                        }
                 for update_resp in update_responses:
                     yield update_resp
 
@@ -3988,7 +4221,7 @@ class ChatOrchestrator:
                     if isinstance(final_response_data, dict):
                         with tracer.start_as_current_span("orchestrator.cache_mode_response"):
                             await self._cache_response(session_id, request_id, final_response_data)
-                        followup_updates, _, _, _, _ = await self._drain_system_updates(user_id)
+                        followup_updates, _, _, _, _, _ = await self._drain_system_updates(user_id)
                         for update_resp in followup_updates:
                             yield update_resp
                     return
@@ -4096,7 +4329,7 @@ class ChatOrchestrator:
                         )
                     if transparency_generator is not None and emit_transparency_event is not None:
                         await emit_transparency_event(transparency_generator.get_complete_event())
-                    followup_updates, _, _, _, _ = await self._drain_system_updates(user_id)
+                    followup_updates, _, _, _, _, _ = await self._drain_system_updates(user_id)
                     for update_resp in followup_updates:
                         yield update_resp
                     yield final_response

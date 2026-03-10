@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
+from uuid import UUID
 
 from loguru import logger
 
@@ -27,6 +28,7 @@ from app.core.event_bus import event_bus
 from app.core.pending_actions import pending_actions_store
 from app.orchestration.schemas import ExecutablePlan
 from app.services.llm_service import llm_service
+from app.services.self_evolution_service import StrategyCalibrationService
 
 
 def _utcnow() -> datetime:
@@ -198,11 +200,24 @@ class PlanReviewService:
                 auto_approved=True,
                 auto_approve_reason=rule_result,
             )
+            calibration_service = StrategyCalibrationService(redis=self.redis)
+            user_uuid = self._extract_user_id(user_context)
             persona_strategy_mapping = self._build_persona_strategy_mapping(user_context)
-            alignment_score, alignment_summary = self._score_plan_alignment(
+            persona_strategy_mapping, _ = await calibration_service.apply_rule_calibration(
+                user_id=user_uuid,
+                mappings=persona_strategy_mapping,
+            )
+            alignment_score, alignment_summary, matched_rule_keys = self._score_plan_alignment(
                 plan=plan,
                 mappings=persona_strategy_mapping,
             )
+            if user_uuid:
+                await calibration_service.record_mapping_alignment(
+                    user_id=user_uuid,
+                    mappings=persona_strategy_mapping,
+                    matched_rule_keys=matched_rule_keys,
+                )
+                await calibration_service.record_alignment_score(user_id=user_uuid, score=alignment_score)
             comments: list[ReviewComment] = []
             if alignment_score is not None and alignment_score < 0.55:
                 comments.append(
@@ -248,11 +263,24 @@ class PlanReviewService:
             decision=decision,
             auto_approved=False,
         )
+        calibration_service = StrategyCalibrationService(redis=self.redis)
+        user_uuid = self._extract_user_id(user_context)
         persona_strategy_mapping = self._build_persona_strategy_mapping(user_context)
-        alignment_score, alignment_summary = self._score_plan_alignment(
+        persona_strategy_mapping, _ = await calibration_service.apply_rule_calibration(
+            user_id=user_uuid,
+            mappings=persona_strategy_mapping,
+        )
+        alignment_score, alignment_summary, matched_rule_keys = self._score_plan_alignment(
             plan=plan,
             mappings=persona_strategy_mapping,
         )
+        if user_uuid:
+            await calibration_service.record_mapping_alignment(
+                user_id=user_uuid,
+                mappings=persona_strategy_mapping,
+                matched_rule_keys=matched_rule_keys,
+            )
+            await calibration_service.record_alignment_score(user_id=user_uuid, score=alignment_score)
         comments = [
             ReviewComment(
                 category=c.get("category", ReviewCategory.SUGGESTION.value),
@@ -778,6 +806,7 @@ Please review this plan and provide your assessment."""
         ) -> None:
             mappings.append(
                 {
+                    "rule_key": signal_key,
                     "signal_key": signal_key,
                     "signal_label": signal_label,
                     "evidence": evidence,
@@ -896,9 +925,9 @@ Please review this plan and provide your assessment."""
         *,
         plan: ExecutablePlan,
         mappings: list[dict[str, Any]] | None,
-    ) -> tuple[float | None, str | None]:
+    ) -> tuple[float | None, str | None, list[str]]:
         if not mappings:
-            return None, None
+            return None, None, []
 
         tool_count = len(plan.tool_calls or [])
         risk_count = len(plan.risk_flags or [])
@@ -918,10 +947,12 @@ Please review this plan and provide your assessment."""
             "explicit": 1.0,
             "implicit": 0.8,
             "inferred": 0.6,
+            "weak": 0.3,
         }
         achieved_weight = 0.0
         total_weight = 0.0
         matched_labels: list[str] = []
+        matched_rule_keys: list[str] = []
 
         for item in mappings:
             constraint = str(item.get("recommended_constraint") or "").strip().lower()
@@ -943,9 +974,10 @@ Please review this plan and provide your assessment."""
             if satisfied:
                 achieved_weight += weight
                 matched_labels.append(str(item.get("signal_label") or item.get("signal_key") or ""))
+                matched_rule_keys.append(str(item.get("rule_key") or item.get("signal_key") or ""))
 
         if total_weight <= 0:
-            return None, None
+            return None, None, []
         score = round(achieved_weight / total_weight, 2)
         if score >= 0.8:
             summary = "这次计划和你最近的执行画像基本一致，关键建议大多被实际吸收进了方案里。"
@@ -955,7 +987,22 @@ Please review this plan and provide your assessment."""
             summary = "这次计划和你的近期画像对齐度偏低，建议再检查难度、颗粒度或并行负载是否收得够紧。"
         if matched_labels:
             summary = f"{summary} 已命中的画像建议包括：{'、'.join(label for label in matched_labels if label)[:60]}。"
-        return score, summary
+        return score, summary, matched_rule_keys
+
+    @staticmethod
+    def _extract_user_id(user_context: dict[str, Any]) -> UUID | None:
+        candidates = [
+            ((user_context or {}).get("user_context") or {}).get("user_id"),
+            ((user_context or {}).get("profile") or {}).get("identity", {}).get("user_id"),
+            (user_context or {}).get("user_id"),
+        ]
+        for candidate in candidates:
+            try:
+                if candidate:
+                    return UUID(str(candidate))
+            except Exception:
+                continue
+        return None
 
     def _get_review_description(self, review: PlanReviewResult) -> str:
         """Get user-friendly description of review"""

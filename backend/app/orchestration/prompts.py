@@ -166,6 +166,10 @@ AGENT_SYSTEM_PROMPT = """你是 Sparkle（星火），一个智能学习助手�
 
 
 
+{understanding_depth_section}
+
+
+
 ## 当前用户上下文
 
 {user_context}
@@ -231,6 +235,10 @@ MODE_SYSTEM_PROMPTS = {
 
 
 {dual_core_section}
+
+
+
+{understanding_depth_section}
 
 
 
@@ -316,6 +324,10 @@ MODE_SYSTEM_PROMPTS = {
 
 
 
+{understanding_depth_section}
+
+
+
 ## 当前用户上下文
 
 {user_context}
@@ -395,6 +407,10 @@ MODE_SYSTEM_PROMPTS = {
 
 
 {dual_core_section}
+
+
+
+{understanding_depth_section}
 
 
 
@@ -586,6 +602,11 @@ def build_system_prompt(
 
 
     llm_profile = _extract_llm_profile(user_context)
+    understanding_depth_hint = None
+    if isinstance(user_context, dict):
+        raw_depth_hint = user_context.get("understanding_depth_hint")
+        if isinstance(raw_depth_hint, dict):
+            understanding_depth_hint = raw_depth_hint
 
     preference_instructions = _resolve_preference_instructions(
         user_context=user_context,
@@ -639,6 +660,20 @@ def build_system_prompt(
             "请先遵循这组路径与约束，再结合用户一般偏好组织回答。"
         )
 
+    understanding_depth_section = ""
+    if isinstance(understanding_depth_hint, dict):
+        natural_hint = str(understanding_depth_hint.get("natural_hint") or "").strip()
+        if natural_hint:
+            level = str(understanding_depth_hint.get("level") or "").strip()
+            description = str(understanding_depth_hint.get("description") or "").strip()
+            understanding_depth_section = (
+                "\n## 理解深度升级提示 [L2 引导]\n"
+                "仅当本轮表达自然且不打断当前任务时，用一句话轻带过，不要像系统通知。\n"
+                f"{natural_hint}\n"
+                + (f"当前升级: {level}\n" if level else "")
+                + (f"提示背景: {description}\n" if description else "")
+            )
+
 
     # 2.7 格式化认知棱镜指令
     cognitive_prism_section = _format_cognitive_prism_section(user_context, context_focus=context_focus)
@@ -687,6 +722,7 @@ def build_system_prompt(
         "preference_instructions": f"[优先级：L3 背景]\n{preference_instructions}".strip(),
         "plan_context_section": plan_context_section,
         "dual_core_section": dual_core_section,
+        "understanding_depth_section": understanding_depth_section,
         "cognitive_prism_section": cognitive_prism_section,
         "conversation_history_section": f"[优先级：L3 背景]\n{conversation_history_section}".strip() if conversation_history_section else "",
         "task_awareness_section": f"[优先级：L3 背景]\n{TASK_AWARENESS_SECTION}".strip(),
@@ -698,6 +734,7 @@ def build_system_prompt(
             "preference_instructions": 3,
             "plan_context_section": 2,
             "dual_core_section": 2,
+            "understanding_depth_section": 2,
             "cognitive_prism_section": cognitive_priority,
             "conversation_history_section": 3,
             "task_awareness_section": 3,
@@ -707,6 +744,7 @@ def build_system_prompt(
     preference_instructions = section_map["preference_instructions"]
     plan_context_section = section_map["plan_context_section"]
     dual_core_section = section_map["dual_core_section"]
+    understanding_depth_section = section_map["understanding_depth_section"]
     cognitive_prism_section = section_map["cognitive_prism_section"]
     conversation_history_section = section_map["conversation_history_section"]
     task_awareness_section = section_map["task_awareness_section"]
@@ -724,6 +762,7 @@ def build_system_prompt(
                 intent_section=intent_section,
                 session_feedback_section=session_feedback_section,
                 dual_core_section=dual_core_section,
+                understanding_depth_section=understanding_depth_section,
                 context_briefing_section=context_briefing_section,
                 task_awareness_section=task_awareness_section,
                 cognitive_prism_section=cognitive_prism_section,
@@ -752,6 +791,8 @@ def build_system_prompt(
              prompt += f"\n\n## 会话内反馈适配 [L1 强制]\n{session_feedback_instruction}"
         if dual_core_instruction:
              prompt += f"\n\n## 双核心路由指令 [L2 引导]\n{dual_core_instruction}"
+        if understanding_depth_section:
+             prompt += f"\n\n{understanding_depth_section}"
 
 
 
@@ -1162,6 +1203,11 @@ def format_user_context(
         lines.append(f"- 今日专注: {stats.get('total_minutes', 0)} 分钟")
         lines.append(f"- 番茄钟次数: {stats.get('pomodoro_count', 0)}")
 
+    understanding_depth = normalized.get("understanding_depth")
+    if isinstance(understanding_depth, dict) and understanding_depth.get("level"):
+        lines.append("【理解深度】")
+        lines.append(f"- 当前等级: {understanding_depth.get('level')}")
+
     # 活跃计划
     active_plans = normalized.get("active_plans") or []
     if active_plans and section_weights.get("plan_context", "medium") != "off":
@@ -1294,6 +1340,9 @@ def _normalize_user_context(context: dict) -> dict:
 
     if context.get("episodic_memories"):
         normalized["episodic_memories"] = context["episodic_memories"]
+
+    if isinstance(context.get("understanding_depth"), dict):
+        normalized["understanding_depth"] = context["understanding_depth"]
 
     return normalized
 

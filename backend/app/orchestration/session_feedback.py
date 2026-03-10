@@ -183,6 +183,7 @@ class SessionAdaptationContext:
     recent_signals: list[dict[str, Any]] = field(default_factory=list)
     applied_strategy: str | None = None
     expires_at: str | None = None
+    conversation_rhythm: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -190,6 +191,7 @@ class SessionAdaptationContext:
             "recent_signals": list(self.recent_signals),
             "applied_strategy": self.applied_strategy,
             "expires_at": self.expires_at,
+            "conversation_rhythm": self.conversation_rhythm,
         }
 
     @classmethod
@@ -202,6 +204,7 @@ class SessionAdaptationContext:
             recent_signals=list(recent_signals) if isinstance(recent_signals, list) else [],
             applied_strategy=str(payload.get("applied_strategy") or "") or None,
             expires_at=str(payload.get("expires_at") or "") or None,
+            conversation_rhythm=payload.get("conversation_rhythm") if isinstance(payload.get("conversation_rhythm"), dict) else None,
         )
 
 
@@ -283,6 +286,83 @@ def _build_signal(signal_type: str, confidence: float, trigger_text: str) -> Ses
     )
 
 
+def _extract_user_messages(conversation_messages: list[dict[str, Any]] | None) -> list[str]:
+    items = conversation_messages if isinstance(conversation_messages, list) else []
+    results: list[str] = []
+    for message in items:
+        if not isinstance(message, dict):
+            continue
+        if str(message.get("role") or "").lower() != "user":
+            continue
+        content = str(message.get("content") or "").strip()
+        if content:
+            results.append(content)
+    return results
+
+
+def _keyword_set(text: str) -> set[str]:
+    normalized = _normalize(text)
+    return {
+        token
+        for token in normalized.replace("？", " ").replace("?", " ").replace("，", " ").replace(",", " ").split()
+        if len(token) >= 2
+    }
+
+
+def _question_like(text: str) -> bool:
+    normalized = str(text or "").strip()
+    if not normalized:
+        return False
+    if "？" in normalized or "?" in normalized:
+        return True
+    return any(normalized.startswith(prefix) for prefix in _QUESTION_STARTERS)
+
+
+def analyze_conversation_rhythm(
+    *,
+    user_message: str,
+    conversation_messages: list[dict[str, Any]] | None,
+) -> dict[str, Any] | None:
+    history = _extract_user_messages(conversation_messages)
+    series = [*history[-4:], str(user_message or "").strip()]
+    series = [item for item in series if item]
+    if len(series) < 3:
+        return None
+
+    lengths = [len(item.strip()) for item in series[-3:]]
+    trend = "stable"
+    signal_type = ""
+    guidance = ""
+    if lengths[0] > lengths[1] > lengths[2]:
+        trend = "shrinking"
+        signal_type = "patience_drop"
+        guidance = "用户最近几轮消息越来越短，可能正在失去耐心；这轮请主动收敛，先给结论，减少枝节。"
+    elif lengths[0] < lengths[1] < lengths[2]:
+        trend = "expanding"
+        signal_type = "deepening_focus"
+        guidance = "用户最近几轮消息越来越长，说明正在主动深入；这轮可以更展开，但保持结构化。"
+
+    recent_three = series[-3:]
+    keyword_overlap = set.intersection(*[_keyword_set(item) or {"__empty__"} for item in recent_three])
+    if (
+        len(recent_three) == 3
+        and all(_question_like(item) for item in recent_three)
+        and keyword_overlap
+        and keyword_overlap != {"__empty__"}
+    ):
+        signal_type = "stalled_followup"
+        guidance = "用户已经连续多轮围绕同一个点追问，前面的回答没有真正解决问题；这轮请换一种讲法或换一个例子。"
+
+    if not signal_type:
+        return None
+    return {
+        "signal_type": signal_type,
+        "trend": trend,
+        "recent_lengths": lengths,
+        "guidance": guidance,
+    }
+
+
 def build_session_feedback_instruction(signal: SessionFeedbackSignal | dict[str, Any] | None) -> str:
     parsed = signal if isinstance(signal, SessionFeedbackSignal) else SessionFeedbackSignal.from_dict(signal)
     if not parsed or not parsed.applies_adaptation:
@@ -355,23 +435,42 @@ def apply_session_feedback_visible_prefix(
     return f"{prefix}\n{response}", True
 
 
+def build_conversation_rhythm_instruction(rhythm: dict[str, Any] | None) -> str:
+    if not isinstance(rhythm, dict):
+        return ""
+    guidance = str(rhythm.get("guidance") or "").strip()
+    signal_type = str(rhythm.get("signal_type") or "").strip()
+    if not guidance or not signal_type:
+        return ""
+    return (
+        f"会话节奏信号：{signal_type}\n"
+        f"{guidance}"
+    )
+
+
 def build_session_adaptation_context(
     *,
-    signal: SessionFeedbackSignal,
+    signal: SessionFeedbackSignal | None,
     existing_context: SessionAdaptationContext | None = None,
+    conversation_rhythm: dict[str, Any] | None = None,
 ) -> SessionAdaptationContext:
     existing = existing_context or SessionAdaptationContext()
-    recent_signals = [signal.to_dict()]
-    for entry in existing.recent_signals:
-        if isinstance(entry, dict) and entry != signal.to_dict():
-            recent_signals.append(entry)
-        if len(recent_signals) >= 3:
-            break
+    recent_signals: list[dict[str, Any]] = []
+    if signal is not None:
+        recent_signals.append(signal.to_dict())
+        for entry in existing.recent_signals:
+            if isinstance(entry, dict) and entry != signal.to_dict():
+                recent_signals.append(entry)
+            if len(recent_signals) >= 3:
+                break
+    else:
+        recent_signals = list(existing.recent_signals)[:3]
 
     expires_at = (_utcnow() + timedelta(seconds=SESSION_FEEDBACK_TTL_SECONDS)).isoformat()
     return SessionAdaptationContext(
-        active_signal=signal.to_dict() if signal.applies_adaptation else None,
+        active_signal=signal.to_dict() if signal and signal.applies_adaptation else None,
         recent_signals=recent_signals[:3],
-        applied_strategy=signal.signal_type if signal.applies_adaptation else None,
+        applied_strategy=signal.signal_type if signal and signal.applies_adaptation else existing.applied_strategy,
         expires_at=expires_at,
+        conversation_rhythm=conversation_rhythm or existing.conversation_rhythm,
     )

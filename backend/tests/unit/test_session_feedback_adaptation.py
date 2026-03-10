@@ -1,7 +1,9 @@
 from app.orchestration.prompts import build_system_prompt
 from app.orchestration.session_feedback import (
     SessionAdaptationContext,
+    analyze_conversation_rhythm,
     apply_session_feedback_visible_prefix,
+    build_conversation_rhythm_instruction,
     build_session_adaptation_context,
     build_session_feedback_instruction,
     detect_session_feedback_signal,
@@ -132,3 +134,42 @@ def test_build_system_prompt_places_session_feedback_before_dual_core() -> None:
     assert feedback_pos != -1
     assert dual_core_pos != -1
     assert intent_pos < feedback_pos < dual_core_pos
+
+
+def test_analyze_conversation_rhythm_detects_patience_drop() -> None:
+    rhythm = analyze_conversation_rhythm(
+        previous_user_messages=[
+            "我想详细了解一下整个执行逻辑是怎么安排的",
+            "那下一步怎么做更好一些",
+            "然后呢",
+        ],
+        current_user_message="然后？",
+        previous_signal_type=None,
+    )
+
+    assert rhythm is not None
+    assert rhythm["mode"] == "patience_drop"
+    assert "失去耐心" in rhythm["reason"]
+
+
+def test_analyze_conversation_rhythm_detects_stalled_followup() -> None:
+    rhythm = analyze_conversation_rhythm(
+        previous_user_messages=[
+            "所以这个矩阵乘法为什么要这样算？",
+            "还是不明白矩阵乘法为什么要这样算？",
+            "那矩阵乘法为什么还要这样算？",
+        ],
+        current_user_message="所以到底为什么这样算？",
+        previous_signal_type="expand",
+    )
+
+    assert rhythm is not None
+    assert rhythm["mode"] == "stalled_followup"
+
+
+def test_build_conversation_rhythm_instruction_adds_strategy_hint() -> None:
+    instruction = build_conversation_rhythm_instruction(
+        {"mode": "deepening_focus", "reason": "用户消息连续变长"}
+    )
+
+    assert "允许更展开" in instruction

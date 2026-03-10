@@ -812,6 +812,18 @@ celery_app.conf.beat_schedule = {
         "options": {"queue": "default"}
     },
 
+    "ai-metric-baseline-daily": {
+        "task": "app.core.celery_tasks.capture_ai_metric_baseline",
+        "schedule": crontab(hour=3, minute=15),
+        "options": {"queue": "low_priority"}
+    },
+
+    "perceptible-cohort-promotion-biweekly": {
+        "task": "app.core.celery_tasks.promote_perceptible_cohort",
+        "schedule": crontab(day_of_week="mon", hour=10, minute=0),
+        "options": {"queue": "low_priority"}
+    },
+
     # ========== P1: 知识星图自动更新 ==========
 
     # 注意: update_knowledge_galaxy 任务由 PlanService 在计划完成/里程碑达成时触发

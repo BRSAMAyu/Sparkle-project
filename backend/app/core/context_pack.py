@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import json
+import uuid
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from functools import lru_cache
 from typing import Any
 from uuid import UUID
 
 from loguru import logger
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 try:
@@ -38,6 +41,10 @@ from app.services.ltm_rollout_service import LtmRolloutService
 from app.services.memory_conflict_resolver import MemoryConflictResolver
 from app.services.memory_rank_policy_service import MemoryRankPolicyService
 from app.services.memory_service import MemoryService
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 @lru_cache(maxsize=1)
@@ -602,6 +609,15 @@ class ContextPackBuilder:
             trimmed_episodic = _trim_list(episodic_payloads, episodic_budget)
             trimmed_pref_scores = {}
 
+        await self._mark_consumed_memory_records(
+            ranked_preferences=ranked_preferences,
+            ranked_goals=ranked_goals,
+            ranked_episodic=ranked_episodic,
+            trimmed_preferences=trimmed_preferences,
+            trimmed_goals=trimmed_goals,
+            trimmed_episodic=trimmed_episodic,
+        )
+
         token_usage = {
             "preferences": estimate_tokens(_serialize(trimmed_preferences)),
             "goals": estimate_tokens(_serialize(trimmed_goals)),
@@ -762,3 +778,75 @@ class ContextPackBuilder:
             context_focus=focus_decision.to_dict() if focus_decision else None,
             context_briefing_note=context_briefing_note or None,
         )
+
+    async def _mark_consumed_memory_records(
+        self,
+        *,
+        ranked_preferences: list[RankedItem[Any]],
+        ranked_goals: list[RankedItem[Any]],
+        ranked_episodic: list[RankedItem[Any]],
+        trimmed_preferences: dict[str, Any],
+        trimmed_goals: list[dict[str, Any]],
+        trimmed_episodic: list[dict[str, Any]],
+    ) -> None:
+        if not settings.ENABLE_MEMORY_GOVERNANCE:
+            return
+
+        touched = False
+        consumed_at = _utcnow()
+
+        preference_ids = [
+            entry.item.id
+            for entry in ranked_preferences
+            if getattr(entry.item, "pref_key", None) in trimmed_preferences
+        ]
+        if preference_ids:
+            from app.models.memory import MemoryPreference
+
+            await self.db.execute(
+                update(MemoryPreference)
+                .where(MemoryPreference.id.in_(preference_ids))
+                .values(last_consumed_at=consumed_at)
+            )
+            touched = True
+
+        goal_ids = []
+        for payload in trimmed_goals:
+            raw_id = payload.get("id")
+            if not raw_id:
+                continue
+            try:
+                goal_ids.append(uuid.UUID(str(raw_id)))
+            except Exception:
+                continue
+        if goal_ids:
+            from app.models.memory import MemoryGoal
+
+            await self.db.execute(
+                update(MemoryGoal)
+                .where(MemoryGoal.id.in_(goal_ids))
+                .values(last_consumed_at=consumed_at)
+            )
+            touched = True
+
+        episodic_ids = []
+        for payload in trimmed_episodic:
+            raw_id = payload.get("id")
+            if not raw_id:
+                continue
+            try:
+                episodic_ids.append(uuid.UUID(str(raw_id)))
+            except Exception:
+                continue
+        if episodic_ids:
+            from app.models.memory import EpisodicMemory
+
+            await self.db.execute(
+                update(EpisodicMemory)
+                .where(EpisodicMemory.id.in_(episodic_ids))
+                .values(last_consumed_at=consumed_at)
+            )
+            touched = True
+
+        if touched:
+            await self.db.commit()

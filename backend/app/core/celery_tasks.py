@@ -415,6 +415,48 @@ def generate_weekly_learning_reports(self, limit: int = 200):
         raise self.retry(exc=exc, countdown=60)
 
 
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.capture_ai_metric_baseline")
+def capture_ai_metric_baseline(self):
+    """Capture AI metric baseline snapshots into Redis."""
+    import asyncio
+
+    from app.core.cache import cache_service
+    from app.services.self_evolution_service import MetricBaselineService
+
+    async def _run():
+        service = MetricBaselineService(cache_service.redis)
+        return await service.capture_snapshot()
+
+    try:
+        result = asyncio.run(_run())
+        logger.info(f"✅ AI metric baseline snapshot captured: {result}")
+        return result
+    except Exception as exc:
+        logger.error(f"❌ Failed to capture AI metric baseline: {exc}")
+        raise self.retry(exc=exc, countdown=60)
+
+
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.promote_perceptible_cohort")
+def promote_perceptible_cohort(self):
+    """Evaluate perceptible cohorts and promote baseline strategy when ready."""
+    import asyncio
+
+    from app.core.cache import cache_service
+    from app.services.self_evolution_service import CohortPromotionService
+
+    async def _run():
+        service = CohortPromotionService(cache_service.redis)
+        return await service.evaluate_and_promote()
+
+    try:
+        result = asyncio.run(_run())
+        logger.info(f"✅ Perceptible cohort evaluation completed: {result}")
+        return result
+    except Exception as exc:
+        logger.error(f"❌ Failed to promote perceptible cohort: {exc}")
+        raise self.retry(exc=exc, countdown=120)
+
+
 # =============================================================================
 # 任务监控装饰器
 # =============================================================================
