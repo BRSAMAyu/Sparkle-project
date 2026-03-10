@@ -26,6 +26,8 @@ class MemoryPreference(BaseModel):
     evidence_refs = Column(JSONBCompat, nullable=False, default=list)
     evidence_missing = Column(Boolean, default=False, nullable=False)
     evidence_checked_at = Column(DateTime, nullable=True)
+    last_consumed_at = Column(DateTime, nullable=True)
+    archived_at = Column(DateTime, nullable=True)
     retracted_at = Column(DateTime, nullable=True)
 
     user = relationship("User", backref="memory_preferences")
@@ -35,6 +37,8 @@ Index("idx_memory_preferences_user_pref", MemoryPreference.user_id, MemoryPrefer
 Index("uq_memory_preferences_version", MemoryPreference.user_id, MemoryPreference.pref_key, MemoryPreference.version, unique=True)
 Index("idx_memory_preferences_evidence_missing", MemoryPreference.evidence_missing)
 Index("idx_memory_preferences_evidence_score", MemoryPreference.evidence_score)
+Index("idx_memory_preferences_last_consumed_at", MemoryPreference.last_consumed_at)
+Index("idx_memory_preferences_archived_at", MemoryPreference.archived_at)
 
 
 class MemoryGoal(BaseModel):
@@ -53,6 +57,8 @@ class MemoryGoal(BaseModel):
     metadata_payload = Column("metadata", JSONBCompat, nullable=True)
     evidence_missing = Column(Boolean, default=False, nullable=False)
     evidence_checked_at = Column(DateTime, nullable=True)
+    last_consumed_at = Column(DateTime, nullable=True)
+    archived_at = Column(DateTime, nullable=True)
     retracted_at = Column(DateTime, nullable=True)
 
     user = relationship("User", backref="memory_goals")
@@ -64,6 +70,8 @@ Index("idx_memory_goals_user_status_target", MemoryGoal.user_id, MemoryGoal.stat
 Index("idx_memory_goals_expires_at", MemoryGoal.expires_at)
 Index("idx_memory_goals_evidence_missing", MemoryGoal.evidence_missing)
 Index("idx_memory_goals_evidence_score", MemoryGoal.evidence_score)
+Index("idx_memory_goals_last_consumed_at", MemoryGoal.last_consumed_at)
+Index("idx_memory_goals_archived_at", MemoryGoal.archived_at)
 
 
 class EpisodicMemory(BaseModel):
@@ -82,6 +90,8 @@ class EpisodicMemory(BaseModel):
     evidence_missing = Column(Boolean, default=False, nullable=False)
     evidence_checked_at = Column(DateTime, nullable=True)
     evidence_snapshot = Column(JSONBCompat, nullable=True)
+    last_consumed_at = Column(DateTime, nullable=True)
+    archived_at = Column(DateTime, nullable=True)
     retracted_at = Column(DateTime, nullable=True)
     embedding = Column(VectorCompat, nullable=True)
 
@@ -91,6 +101,8 @@ class EpisodicMemory(BaseModel):
 Index("idx_episodic_memories_user_occurred", EpisodicMemory.user_id, EpisodicMemory.occurred_at)
 Index("idx_episodic_memories_evidence_missing", EpisodicMemory.evidence_missing)
 Index("idx_episodic_memories_evidence_score", EpisodicMemory.evidence_score)
+Index("idx_episodic_memories_last_consumed_at", EpisodicMemory.last_consumed_at)
+Index("idx_episodic_memories_archived_at", EpisodicMemory.archived_at)
 
 
 class MemoryCorrection(BaseModel):

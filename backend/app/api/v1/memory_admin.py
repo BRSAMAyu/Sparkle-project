@@ -1,3 +1,4 @@
+import contextlib
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
@@ -36,6 +37,7 @@ from app.services.ltm_rollout_service import LtmRolloutService
 from app.services.memory_eval_service import MemoryEvalService
 from app.services.memory_jobs import MemoryJobsService
 from app.services.memory_rank_policy_service import MemoryRankPolicyService
+from app.services.self_evolution_service import CohortPromotionService, MetricBaselineService, StrategyCalibrationService
 
 router = APIRouter(
     prefix="/admin/memory",
@@ -67,11 +69,15 @@ async def memory_stats(db: AsyncSession = Depends(get_db)):
         ("episodic", EpisodicMemory),
     ):
         total_result = await db.execute(
-            select(func.count(model.id)).where(model.deleted_at.is_(None))
+            select(func.count(model.id)).where(
+                model.deleted_at.is_(None),
+                getattr(model, "archived_at", None).is_(None) if hasattr(model, "archived_at") else True,
+            )
         )
         missing_result = await db.execute(
             select(func.count(model.id)).where(
                 model.deleted_at.is_(None),
+                getattr(model, "archived_at", None).is_(None) if hasattr(model, "archived_at") else True,
                 model.evidence_missing.is_(True),
             )
         )
@@ -119,6 +125,7 @@ async def memory_health(
         result = await db.execute(
             select(model)
             .where(model.evidence_missing.is_(True))
+            .where(getattr(model, "archived_at", None).is_(None) if hasattr(model, "archived_at") else True)
             .order_by(model.updated_at.desc())
             .limit(limit)
         )
@@ -188,6 +195,8 @@ async def memory_jobs_status(db: AsyncSession = Depends(get_db)):
         (EpisodicMemory, "episodic"),
     ):
         conditions = [model.evidence_missing.is_(True), model.deleted_at.is_(None)]
+        if hasattr(model, "archived_at"):
+            conditions.append(model.archived_at.is_(None))
         if hasattr(model, "retracted_at"):
             conditions.append(model.retracted_at.is_(None))
         result = await db.execute(
@@ -304,6 +313,20 @@ async def ai_phases_status(user_id: str | None = Query(default=None)):
             redis_status = {"status": "unhealthy", "error": str(exc)}
     celery_status = get_celery_status()
     redis_state = str(redis_status.get("status") or "")
+    baseline_strategy = None
+    promotion_history: list[dict[str, object]] = []
+    metric_baseline: dict[str, object] = {}
+    metric_anomalies: dict[str, object] = {}
+    rule_calibration: dict[str, object] = {"by_rule": {}, "weak_rules": []}
+    if cache_service.redis is not None:
+        baseline_service = MetricBaselineService(cache_service.redis)
+        metric_baseline, metric_anomalies = await baseline_service.get_status_payload()
+        promotion_service = CohortPromotionService(cache_service.redis)
+        baseline_strategy, promotion_history = await promotion_service.get_admin_payload()
+        if user_id:
+            with contextlib.suppress(Exception):
+                calibration = StrategyCalibrationService(redis=cache_service.redis)
+                rule_calibration = await calibration.get_rule_calibration(user_id=user_id)
 
     return {
         "stages": {
@@ -347,6 +370,11 @@ async def ai_phases_status(user_id: str | None = Query(default=None)):
             "weekly_report_delivery_blocked": redis_state != "healthy" or celery_status.get("status") != "healthy",
         },
         "experiment_cohort": _experiment_cohort_for_user(user_id),
+        "rule_calibration": rule_calibration,
+        "metric_baseline": metric_baseline,
+        "metric_anomalies": metric_anomalies,
+        "baseline_strategy": baseline_strategy,
+        "promotion_history": promotion_history[-5:],
         "metrics": {
             "perceptible_insight_sent_total": snapshot_metric(PERCEPTIBLE_INSIGHT_SENT_TOTAL),
             "perceptible_insight_skipped_total": snapshot_metric(PERCEPTIBLE_INSIGHT_SKIPPED_TOTAL),

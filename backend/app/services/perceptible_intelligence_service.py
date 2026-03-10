@@ -29,6 +29,7 @@ from app.models.task import Task, TaskStatus
 from app.models.task_feedback import TaskFeedback
 from app.services.plan_progress_service import PlanProgressService
 from app.services.progress_narrative_service import ProgressNarrativeService
+from app.services.self_evolution_service import StrategyCalibrationService
 from app.services.system_update_service import SystemUpdateService, build_system_update
 
 
@@ -914,6 +915,14 @@ class WeeklyLearningReportService:
         if not enqueued:
             WEEKLY_LEARNING_REPORT_SKIPPED_TOTAL.labels(reason="delivery_unavailable").inc()
             return False
+        try:
+            calibration = StrategyCalibrationService(self.db, self.redis)
+            await calibration.record_profile_hit_rate(
+                user_id=user_id,
+                hit_rate=((report.get("profile_hit_rate") or {}).get("hit_rate")),
+            )
+        except Exception as exc:
+            logger.warning(f"Failed to record profile hit rate for weekly report: {exc}")
         await self._mark_report_generated(user_id)
         WEEKLY_LEARNING_REPORT_GENERATED_TOTAL.inc()
         EVIDENCE_BACKED_VISIBLE_UPDATE_TOTAL.labels(kind="weekly_learning_report").inc()
@@ -1004,6 +1013,18 @@ class WeeklyLearningReportService:
                             "evidence_source": "plan_reasoning",
                         }
                     )
+            elif update.get("update_type") == "memory_governance_cleanup":
+                archived = int(metadata.get("archived") or 0)
+                decayed = int(metadata.get("decayed") or 0)
+                messages.append(
+                    {
+                        "source": "memory_governance_cleanup",
+                        "text": f"本周清理了 {archived} 条不再活跃的画像记录，并衰减了 {decayed} 条长期未消费记录。",
+                        "evidence": "来自最近 7 天内的画像新鲜度治理任务。",
+                        "confidence_tier": "inferred",
+                        "evidence_source": "memory_governance_cleanup",
+                    }
+                )
         deduped: list[dict[str, str]] = []
         seen: set[str] = set()
         for item in messages:

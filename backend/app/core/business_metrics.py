@@ -450,6 +450,13 @@ ADAPTIVE_ROLLBACK_TOTAL = get_or_create_metric(
     []
 )
 
+ADAPTIVE_ADJUSTMENT_SKIPPED_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_adaptive_adjustment_skipped_total',
+    'Adaptive adjustments skipped before apply',
+    ['reason']
+)
+
 # ========== LTM Eval Metrics ==========
 LTM_EVAL_TOTAL = get_or_create_metric(
     Counter,

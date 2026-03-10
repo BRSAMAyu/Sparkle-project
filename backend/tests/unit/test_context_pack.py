@@ -7,9 +7,11 @@ def _utcnow() -> datetime:
 
 import pytest
 
+from app.config import settings
 from app.core.context_budget import ContextBudgetScheduler
 from app.core.context_pack import ContextPackBuilder
 from app.core.intent_router import IntentRouter
+from app.models.memory import MemoryPreference
 from app.models.user import User
 from app.services.memory_service import MemoryService
 
@@ -112,3 +114,38 @@ async def test_context_pack_intent_budget(db_session):
 
     router = IntentRouter()
     assert router.get_intent({"context": {"intent": "planning"}}) == "planning"
+
+
+@pytest.mark.asyncio
+async def test_context_pack_marks_consumed_memory_records(db_session, monkeypatch):
+    monkeypatch.setattr(settings, "ENABLE_MEMORY_GOVERNANCE", True, raising=False)
+
+    user_id = uuid4()
+    user = User(
+        id=user_id,
+        username=f"user_{user_id.hex[:8]}",
+        email=f"{user_id.hex[:8]}@example.com",
+        hashed_password="test",
+    )
+    db_session.add(user)
+    await db_session.commit()
+
+    memory_service = MemoryService(db_session)
+    pref = await memory_service.upsert_preference(
+        user_id=user_id,
+        pref_key="depth_preference",
+        pref_value={"value": 0.7},
+        evidence_refs=[{"type": "event", "id": "evt_consumed"}],
+    )
+
+    scheduler = ContextBudgetScheduler(
+        budgets={"chat": {"preferences": 200, "goals": 50, "episodic": 50}}
+    )
+    builder = ContextPackBuilder(db_session, scheduler=scheduler)
+    pack = await builder.build(user_id, intent="chat")
+
+    assert "depth_preference" in pack.preferences
+
+    refreshed = await db_session.get(MemoryPreference, pref.id)
+    assert refreshed is not None
+    assert refreshed.last_consumed_at is not None

@@ -104,6 +104,25 @@ def test_build_system_prompt_trims_low_priority_sections_when_over_budget() -> N
     assert "其余低优先级背景已压缩" in prompt
 
 
+def test_build_system_prompt_includes_understanding_depth_hint() -> None:
+    prompt = build_system_prompt(
+        user_context={
+            "preferences": {"depth_preference": 0.5, "curiosity_preference": 0.5},
+            "understanding_depth": {"level": "L3", "score": 3},
+            "understanding_depth_hint": {
+                "level": "L3",
+                "description": "我现在不只知道你的偏好，还能更稳定地预判你会怎么执行了。",
+                "natural_hint": "如果自然，可以顺带一句提到：我现在不只知道你的偏好，还能比较稳定地预判你的执行节奏。",
+            },
+        },
+        conversation_history={"messages": []},
+    )
+
+    assert "## 理解深度升级提示 [L2 引导]" in prompt
+    assert "仅当本轮表达自然且不打断当前任务时" in prompt
+    assert "当前升级: L3" in prompt
+
+
 @pytest.mark.asyncio
 async def test_context_pack_semantic_gating_filters_irrelevant_memory(db_session, monkeypatch) -> None:
     monkeypatch.setattr(settings, "ENABLE_CONTEXT_FOCUSING", True, raising=False)

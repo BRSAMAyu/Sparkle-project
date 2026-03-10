@@ -440,6 +440,34 @@ def test_experiment_cohort_is_stable():
     assert third in {"A", "B", "C"}
 
 
+def test_plan_alignment_score_uses_weak_rule_weight():
+    service = PlanReviewService()
+    plan = ExecutablePlan(
+        plan_id="plan-weak",
+        confidence=0.72,
+        tool_calls=[ToolCallSpec(id="1", name="list_tasks", params={})],
+        constraints={
+            "task_difficulty": "lower",
+        },
+    )
+
+    score, summary, matched = service._score_plan_alignment(
+        plan=plan,
+        mappings=[
+            {
+                "rule_key": "avg_completion_rate_low",
+                "recommended_constraint": "task_difficulty",
+                "recommended_value": "lower",
+                "confidence_tier": "weak",
+            }
+        ],
+    )
+
+    assert round(score or 0.0, 2) == 1.0
+    assert matched == ["avg_completion_rate_low"]
+    assert "画像建议" in (summary or "")
+
+
 @pytest.mark.asyncio
 async def test_weekly_learning_report_includes_profile_hit_rate(db_session):
     user_id = uuid4()

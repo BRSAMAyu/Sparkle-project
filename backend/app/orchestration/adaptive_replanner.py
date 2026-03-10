@@ -12,7 +12,7 @@ from uuid import UUID
 from loguru import logger
 from sqlalchemy import desc, select
 
-from app.core.business_metrics import ADAPTIVE_ROLLBACK_TOTAL
+from app.core.business_metrics import ADAPTIVE_ADJUSTMENT_SKIPPED_TOTAL, ADAPTIVE_ROLLBACK_TOTAL
 from app.models.cognitive import BehaviorPattern
 from app.orchestration.dual_core_router import AdaptationRecord
 from app.orchestration.plan_review_service import plan_review_service
@@ -65,6 +65,7 @@ class CognitivePatternTrigger:
         *,
         user_id: UUID,
         existing_constraints: dict[str, Any] | None,
+        failed_adjustments: list[dict[str, Any]] | None = None,
         limit: int | None = None,
         pattern_name: str | None = None,
     ) -> list[PlanParameterAdjustment]:
@@ -101,6 +102,9 @@ class CognitivePatternTrigger:
                     locked_parameters=locked,
                     sources=sources,
                 ):
+                    continue
+                if self._matches_failed_adjustment(adjustment, failed_adjustments or []):
+                    ADAPTIVE_ADJUSTMENT_SKIPPED_TOTAL.labels(reason="previously_failed").inc()
                     continue
                 adjustments.append(adjustment)
                 seen_parameters.add(adjustment.parameter)
@@ -172,6 +176,40 @@ class CognitivePatternTrigger:
             return True
         if adjustment.parameter == "max_session_minutes" and explicit_preferences.get("focus_duration_preference") not in (None, ""):
             return True
+        return False
+
+    @staticmethod
+    def _direction(value: Any) -> str:
+        if isinstance(value, bool):
+            return "enable" if value else "disable"
+        if isinstance(value, (int, float)):
+            if value > 0:
+                return "increase"
+            if value < 0:
+                return "decrease"
+            return "stable"
+        text = str(value or "").strip().lower()
+        if text in {"lower", "lighter", "shorter", "finer", "good_enough", "eighty_percent"}:
+            return "decrease"
+        if text in {"higher", "more", "longer", "preserve"}:
+            return "increase"
+        return text or "unknown"
+
+    @classmethod
+    def _matches_failed_adjustment(
+        cls,
+        adjustment: PlanParameterAdjustment,
+        failed_adjustments: list[dict[str, Any]],
+    ) -> bool:
+        parameter = str(adjustment.parameter or "").strip()
+        direction = cls._direction(adjustment.value)
+        for item in failed_adjustments:
+            if not isinstance(item, dict):
+                continue
+            if str(item.get("constraint_key") or "").strip() != parameter:
+                continue
+            if str(item.get("direction") or "").strip() == direction:
+                return True
         return False
 
 
@@ -560,6 +598,7 @@ class AdaptiveReplanner:
         adjustments = await self.cognitive_pattern_trigger.build_adjustments(
             user_id=user_id,
             existing_constraints=state.constraints or {},
+            failed_adjustments=list((((state.facts or {}).get("adaptive_meta")) or {}).get("failed_adjustments") or []),
             pattern_name=pattern_name,
         )
         if not adjustments:
@@ -838,6 +877,8 @@ class AdaptiveReplanner:
             )
             return []
 
+        current_snapshot = self._snapshot_by_id(snapshots, active_snapshot_id)
+
         rollback_adjustments = dict(previous_snapshot.get("adaptive_adjustments") or {})
         record = AdaptationRecord(
             what_changed="回滚到了上一版更稳定的执行策略",
@@ -849,9 +890,23 @@ class AdaptiveReplanner:
         recent = list(adaptive_meta.get("recent_adaptations", []) or [])
         recent.append(record.to_dict())
         adaptive_meta["recent_adaptations"] = recent[-10:]
+        failed_adjustments = list(adaptive_meta.get("failed_adjustments") or [])
+        failed_adjustments.extend(
+            self._diff_failed_adjustments(
+                current_snapshot=current_snapshot or {},
+                restored_snapshot=previous_snapshot,
+                reason=feedback_category or "",
+            )
+        )
+        adaptive_meta["failed_adjustments"] = failed_adjustments[-5:]
         adaptive_meta["active_snapshot_id"] = str(previous_snapshot.get("id") or "")
         adaptive_meta["last_rollback_at"] = _utcnow().isoformat()
         adaptive_meta["last_rollback_reason"] = feedback_category or ""
+        adaptive_meta["rollback_learning_state"] = {
+            "last_restored_snapshot_id": adaptive_meta["active_snapshot_id"],
+            "last_failed_adjustment_count": len(adaptive_meta["failed_adjustments"]),
+            "updated_at": _utcnow().isoformat(),
+        }
         adaptive_meta["rollback_monitor"] = {
             "current_snapshot_id": adaptive_meta["active_snapshot_id"],
             "negative_feedback_streak": 0,
@@ -916,6 +971,46 @@ class AdaptiveReplanner:
                     return candidate
             break
         return None
+
+    @staticmethod
+    def _snapshot_by_id(
+        snapshots: list[dict[str, Any]],
+        snapshot_id: str,
+    ) -> dict[str, Any] | None:
+        for snapshot in snapshots:
+            if not isinstance(snapshot, dict):
+                continue
+            if str(snapshot.get("id") or "") == snapshot_id:
+                return snapshot
+        return None
+
+    def _diff_failed_adjustments(
+        self,
+        *,
+        current_snapshot: dict[str, Any],
+        restored_snapshot: dict[str, Any],
+        reason: str,
+    ) -> list[dict[str, Any]]:
+        current = dict(current_snapshot.get("adaptive_adjustments") or {})
+        restored = dict(restored_snapshot.get("adaptive_adjustments") or {})
+        failed: list[dict[str, Any]] = []
+        keys = sorted(set(current.keys()) | set(restored.keys()))
+        for key in keys:
+            current_value = current.get(key)
+            restored_value = restored.get(key)
+            if current_value == restored_value:
+                continue
+            failed.append(
+                {
+                    "constraint_key": key,
+                    "direction": self.cognitive_pattern_trigger._direction(current_value),
+                    "previous_value": current_value,
+                    "rolled_back_value": restored_value,
+                    "reason": reason,
+                    "rolled_back_at": _utcnow().isoformat(),
+                }
+            )
+        return failed
 
     async def _enqueue_adaptation_update(
         self,

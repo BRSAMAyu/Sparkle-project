@@ -120,6 +120,9 @@ class MemoryJobsService:
             episodic_summary: dict[UUID, int] = {}
             if settings.ENABLE_MEMORY_DECAY:
                 episodic_summary = await self._apply_episodic_decay(users, window_days)
+            governance_summary: dict[UUID, dict[str, int]] = {}
+            if settings.ENABLE_MEMORY_GOVERNANCE:
+                governance_summary = await self._apply_consumption_governance(users)
 
             for user in users:
                 behavior = behavior_summary.get(user.id, {})
@@ -163,6 +166,24 @@ class MemoryJobsService:
                             metadata={"count": episodic_updated},
                         ),
                     )
+                governance = governance_summary.get(user.id, {})
+                decayed = int(governance.get("decayed", 0) or 0)
+                archived = int(governance.get("archived", 0) or 0)
+                if decayed > 0 or archived > 0:
+                    await SystemUpdateService().enqueue(
+                        user.id,
+                        build_system_update(
+                            update_type="memory_governance_cleanup",
+                            category="memory",
+                            title="画像记录已做新鲜度治理",
+                            description=f"本轮衰减了 {decayed} 条长期未消费记录，归档了 {archived} 条不再活跃的画像记录。",
+                            priority="low",
+                            metadata={
+                                "decayed": decayed,
+                                "archived": archived,
+                            },
+                        ),
+                    )
 
             MEMORY_JOB_RUNS_TOTAL.labels(job="decay", status="ok").inc()
             summary = {
@@ -170,6 +191,8 @@ class MemoryJobsService:
                 "behavior_patterns": sum(item.get("updated", 0) for item in behavior_summary.values()),
                 "behavior_archived": sum(item.get("archived", 0) for item in behavior_summary.values()),
                 "episodic": sum(episodic_summary.values()),
+                "memory_governance_decayed": sum(item.get("decayed", 0) for item in governance_summary.values()),
+                "memory_governance_archived": sum(item.get("archived", 0) for item in governance_summary.values()),
             }
             logger.info("Memory decay job completed {summary}", summary=summary)
             return self._record_status("decay", "ok", summary)
@@ -272,6 +295,8 @@ class MemoryJobsService:
 
     async def _get_missing(self, model, limit: int) -> list[Any]:
         conditions = [model.evidence_missing.is_(True), model.deleted_at.is_(None)]
+        if hasattr(model, "archived_at"):
+            conditions.append(model.archived_at.is_(None))
         if hasattr(model, "retracted_at"):
             conditions.append(model.retracted_at.is_(None))
         result = await self.db.execute(
@@ -294,6 +319,7 @@ class MemoryJobsService:
                 select(EpisodicMemory).where(
                     EpisodicMemory.user_id == user.id,
                     EpisodicMemory.deleted_at.is_(None),
+                    EpisodicMemory.archived_at.is_(None),
                     EpisodicMemory.retracted_at.is_(None),
                     EpisodicMemory.occurred_at <= cutoff,
                     EpisodicMemory.updated_at <= recent_guard,
@@ -320,11 +346,71 @@ class MemoryJobsService:
             (EpisodicMemory, "episodic"),
         ):
             conditions = [model.evidence_missing.is_(True), model.deleted_at.is_(None)]
+            if hasattr(model, "archived_at"):
+                conditions.append(model.archived_at.is_(None))
             if hasattr(model, "retracted_at"):
                 conditions.append(model.retracted_at.is_(None))
             result = await self.db.execute(select(func.count(model.id)).where(*conditions))
             count = result.scalar() or 0
             EVIDENCE_MISSING_CURRENT.labels(type=kind).set(count)
+
+    async def _apply_consumption_governance(self, users: list[User]) -> dict[UUID, dict[str, int]]:
+        if not users:
+            return {}
+
+        now = _utcnow()
+        sixty_days_ago = now - timedelta(days=60)
+        ninety_days_ago = now - timedelta(days=90)
+        summary: dict[UUID, dict[str, int]] = {}
+        any_updates = False
+
+        async def _process_model(model, *, score_fields: tuple[str, ...]) -> None:
+            nonlocal any_updates
+            for user in users:
+                result = await self.db.execute(
+                    select(model).where(
+                        model.user_id == user.id,
+                        model.deleted_at.is_(None),
+                        model.archived_at.is_(None),
+                        model.retracted_at.is_(None),
+                    )
+                )
+                records = result.scalars().all()
+                decayed = 0
+                archived = 0
+                for record in records:
+                    last_consumed_at = getattr(record, "last_consumed_at", None) or record.updated_at or record.created_at
+                    if not last_consumed_at:
+                        continue
+                    current_scores = [float(getattr(record, field) or 0.0) for field in score_fields if getattr(record, field, None) is not None]
+                    current_signal = max(current_scores) if current_scores else 0.0
+                    if last_consumed_at <= ninety_days_ago and current_signal < 0.3:
+                        record.archived_at = now
+                        archived += 1
+                        any_updates = True
+                        continue
+                    if last_consumed_at <= sixty_days_ago:
+                        changed = False
+                        for field in score_fields:
+                            value = getattr(record, field, None)
+                            if value is None:
+                                continue
+                            setattr(record, field, max(0.0, float(value or 0.0) * 0.9))
+                            changed = True
+                        if changed:
+                            decayed += 1
+                            any_updates = True
+                if decayed or archived:
+                    bucket = summary.setdefault(user.id, {"decayed": 0, "archived": 0})
+                    bucket["decayed"] += decayed
+                    bucket["archived"] += archived
+
+        await _process_model(MemoryPreference, score_fields=("confidence", "evidence_score"))
+        await _process_model(MemoryGoal, score_fields=("evidence_score",))
+        await _process_model(EpisodicMemory, score_fields=("importance_score", "evidence_score"))
+        if any_updates:
+            await self.db.commit()
+        return summary
 
     def _record_status(self, job: str, status: str, detail: dict[str, Any]) -> dict[str, Any]:
         payload = {

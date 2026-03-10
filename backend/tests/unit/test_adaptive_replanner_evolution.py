@@ -5,6 +5,7 @@ from uuid import uuid4
 import pytest
 
 from app.orchestration.adaptive_replanner import AdaptiveReplanner
+from app.orchestration.adaptive_replanner import CognitivePatternTrigger, PlanParameterAdjustment
 from app.services.plan_progress_service import PlanHealthReport
 
 
@@ -84,3 +85,37 @@ async def test_replanner_rolls_back_after_two_negative_feedbacks() -> None:
     patch = replanner.plan_state_service.upsert_plan_state.await_args.kwargs["patch"]
     assert patch["facts"]["adaptive_adjustments"]["time_multiplier"] == 1.0
     assert patch["facts"]["adaptive_meta"]["active_snapshot_id"] == "snap-base"
+    failed_adjustments = patch["facts"]["adaptive_meta"]["failed_adjustments"]
+    assert failed_adjustments
+    assert failed_adjustments[0]["constraint_key"] == "time_multiplier"
+    assert patch["facts"]["adaptive_meta"]["rollback_learning_state"]["last_restored_snapshot_id"] == "snap-base"
+
+
+def test_cognitive_pattern_trigger_skips_previously_failed_adjustment() -> None:
+    adjustment = PlanParameterAdjustment(
+        parameter="task_duration_multiplier",
+        value=1.3,
+        reason="test",
+        pattern_name="planning optimism",
+        confidence_score=0.82,
+    )
+
+    assert CognitivePatternTrigger._matches_failed_adjustment(
+        adjustment,
+        [
+            {
+                "constraint_key": "task_duration_multiplier",
+                "direction": "increase",
+            }
+        ],
+    ) is True
+
+    assert CognitivePatternTrigger._matches_failed_adjustment(
+        adjustment,
+        [
+            {
+                "constraint_key": "task_duration_multiplier",
+                "direction": "decrease",
+            }
+        ],
+    ) is False
