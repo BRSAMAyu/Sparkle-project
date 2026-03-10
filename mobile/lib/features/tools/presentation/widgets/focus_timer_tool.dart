@@ -74,12 +74,12 @@ class _FocusTimerToolState extends State<FocusTimerTool> {
       title: title,
       subtitle: subtitle,
       accentColor: accent,
+      fillHeight: true,
       heroChips: [
         ToolHeroChip(
           label: _mode == TimerMode.countDown ? '倒计时模式' : '正计时模式',
           accentColor: accent,
-          icon:
-              _mode == TimerMode.countDown ? Icons.timelapse : Icons.schedule,
+          icon: _mode == TimerMode.countDown ? Icons.timelapse : Icons.schedule,
         ),
         ToolHeroChip(
           label: _isRunning ? '进行中' : '待开始',
@@ -131,7 +131,8 @@ class _FocusTimerToolState extends State<FocusTimerTool> {
                         ToolChoiceChip(
                           label: '正计时',
                           selected: _mode == TimerMode.countUp,
-                          onTap: () => setState(() => _mode = TimerMode.countUp),
+                          onTap: () =>
+                              setState(() => _mode = TimerMode.countUp),
                           accentColor: accent,
                           icon: Icons.schedule_rounded,
                         ),
@@ -190,59 +191,83 @@ class _FocusTimerToolState extends State<FocusTimerTool> {
               accentColor: accent,
               title: '主计时盘',
               subtitle: '直接开始、暂停或重置。计时完成后会给出本地提示。',
-              child: Center(
-                child: TimerWidget(
-                  key: ValueKey(
-                    '${widget.preset.name}_${_mode.name}_$initialSeconds$_sessionSeed',
+              child: LayoutBuilder(
+                builder: (context, constraints) => Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: constraints.maxWidth.clamp(0, 320),
+                    ),
+                    child: TimerWidget(
+                      key: ValueKey(
+                        '${widget.preset.name}_${_mode.name}_$initialSeconds$_sessionSeed',
+                      ),
+                      mode: _mode,
+                      initialSeconds: initialSeconds,
+                      maxSeconds: maxSeconds,
+                      onStateChange: (isRunning) {
+                        setState(() {
+                          _isRunning = isRunning;
+                        });
+                      },
+                      onComplete: () {
+                        unawaited(HapticFeedback.heavyImpact());
+                        AppFeedback.success(
+                          context,
+                          isPomodoro ? '番茄时段已完成' : '倒计时已结束',
+                        );
+                        setState(() {
+                          _isRunning = false;
+                        });
+                      },
+                    ),
                   ),
-                  mode: _mode,
-                  initialSeconds: initialSeconds,
-                  maxSeconds: maxSeconds,
-                  onStateChange: (isRunning) {
-                    setState(() {
-                      _isRunning = isRunning;
-                    });
-                  },
-                  onComplete: () {
-                    unawaited(HapticFeedback.heavyImpact());
-                    AppFeedback.success(
-                      context,
-                      isPomodoro ? '番茄时段已完成' : '倒计时已结束',
-                    );
-                    setState(() {
-                      _isRunning = false;
-                    });
-                  },
                 ),
               ),
             ),
           ],
         ),
       ),
-      footer: Row(
-        children: [
-          Expanded(
-            child: SparkleButton(
-              label: '重置',
-              variant: ButtonVariant.ghost,
-              onPressed: _resetTimer,
-              icon: const Icon(Icons.refresh_rounded),
-            ),
-          ),
-          const SizedBox(width: DS.spacing12),
-          Expanded(
-            child: SparkleButton(
-              label: _mode == TimerMode.countUp ? '切到倒计时' : '切到正计时',
-              onPressed: () => setState(() {
-                _mode = _mode == TimerMode.countUp
-                    ? TimerMode.countDown
-                    : TimerMode.countUp;
-                _sessionSeed++;
-              }),
-              icon: const Icon(Icons.swap_horiz_rounded),
-            ),
-          ),
-        ],
+      footer: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 560;
+          final resetButton = SparkleButton(
+            label: '重置',
+            variant: ButtonVariant.ghost,
+            onPressed: _resetTimer,
+            icon: const Icon(Icons.refresh_rounded),
+            expand: true,
+          );
+          final switchButton = SparkleButton(
+            label: _mode == TimerMode.countUp ? '切到倒计时' : '切到正计时',
+            onPressed: () => setState(() {
+              _mode = _mode == TimerMode.countUp
+                  ? TimerMode.countDown
+                  : TimerMode.countUp;
+              _sessionSeed++;
+            }),
+            icon: const Icon(Icons.swap_horiz_rounded),
+            expand: true,
+          );
+
+          if (compact) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                resetButton,
+                const SizedBox(height: DS.spacing12),
+                switchButton,
+              ],
+            );
+          }
+
+          return Row(
+            children: [
+              Expanded(child: resetButton),
+              const SizedBox(width: DS.spacing12),
+              Expanded(child: switchButton),
+            ],
+          );
+        },
       ),
     );
   }

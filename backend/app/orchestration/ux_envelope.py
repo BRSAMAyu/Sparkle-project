@@ -194,6 +194,10 @@ class UXEnvelopeBuilder:
         if collaboration_summary:
             envelope["collaboration_summary"] = collaboration_summary
 
+        session_adaptation = self._session_adaptation(final_state)
+        if session_adaptation:
+            envelope["session_adaptation"] = session_adaptation
+
         return envelope
 
     def to_metadata_map(self, envelope: dict[str, dict[str, Any]]) -> dict[str, str]:
@@ -609,6 +613,25 @@ class UXEnvelopeBuilder:
                 "kind": "pending_review",
             }
         return None
+
+    def _session_adaptation(self, final_state: Any) -> dict[str, Any] | None:
+        context_data = getattr(final_state, "context_data", {}) or {}
+        signal = context_data.get("session_feedback_signal")
+        if not isinstance(signal, dict):
+            return None
+        adaptation = context_data.get("session_adaptation")
+        return {
+            "signal_type": str(signal.get("signal_type") or ""),
+            "confidence": signal.get("confidence"),
+            "trigger_text": str(signal.get("trigger_text") or ""),
+            "applies_adaptation": bool(signal.get("applies_adaptation")),
+            "visible_hint": str(signal.get("visible_hint") or ""),
+            "applied_strategy": (
+                str((adaptation or {}).get("applied_strategy") or "")
+                if isinstance(adaptation, dict)
+                else ""
+            ),
+        }
 
     def _mode_explanation(self, *, chat_mode: str, profile: PresentationProfile, selected_experts: list[str]) -> dict[str, Any]:
         description = profile.companion_frame

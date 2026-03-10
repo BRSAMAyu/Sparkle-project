@@ -183,6 +183,41 @@ FEEDBACK_TO_EFFECT_SECONDS = get_or_create_metric(
     buckets=[60, 300, 900, 1800, 3600, 14400, 86400]
 )
 
+SESSION_FEEDBACK_DETECTED_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_session_feedback_detected_total',
+    'Total detected in-session feedback signals',
+    ['signal_type']
+)
+
+SESSION_FEEDBACK_APPLIED_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_session_feedback_applied_total',
+    'Total in-session feedback signals that changed the current-turn strategy',
+    ['signal_type']
+)
+
+SESSION_FEEDBACK_VISIBLE_HINT_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_session_feedback_visible_hint_total',
+    'Total visible session adaptation hints surfaced to the user',
+    ['signal_type']
+)
+
+SESSION_FEEDBACK_IGNORED_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_session_feedback_ignored_total',
+    'Total in-session feedback signals ignored or bypassed',
+    ['reason']
+)
+
+SESSION_FEEDBACK_CONFIDENCE_BUCKET = get_or_create_metric(
+    Counter,
+    'sparkle_session_feedback_confidence_bucket',
+    'Confidence buckets for detected in-session feedback signals',
+    ['signal_type', 'bucket']
+)
+
 # 装饰器：用于测量函数执行时间并记录指标
 def track_latency(module, method):
     """Decorator to track function execution latency and record metrics."""

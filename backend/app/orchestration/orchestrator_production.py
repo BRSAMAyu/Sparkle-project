@@ -810,6 +810,7 @@ class ProductionChatOrchestrator:
                 user_context_data,
                 conversation_history=conversation_context,
                 plan_context=plan_context,
+                session_feedback_instruction=str((context_data or {}).get("session_feedback_instruction") or ""),
             )
 
             if preferred_tools_hint:

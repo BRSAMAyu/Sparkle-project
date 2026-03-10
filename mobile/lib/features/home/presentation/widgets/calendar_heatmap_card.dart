@@ -48,6 +48,18 @@ class CalendarHeatmapCard extends ConsumerWidget {
       final showLegend = !dense;
       final contentPadding = dense ? DS.spacing10 : DS.spacing12;
       final headerSpacing = dense ? DS.spacing8 : DS.spacing10;
+      final monthlySummaries = calendarState.taskSummaries.entries
+          .where(
+            (entry) =>
+                entry.key.year == now.year && entry.key.month == now.month,
+          )
+          .map((entry) => entry.value)
+          .toList(growable: false);
+      final activeDays =
+          monthlySummaries.where((summary) => summary.hasTasks).length;
+      final peakTasks = monthlySummaries.isEmpty
+          ? 0
+          : monthlySummaries.map((summary) => summary.total).reduce(max);
 
       return GestureDetector(
         onTap: () => context.push('/calendar-stats'),
@@ -62,18 +74,50 @@ class CalendarHeatmapCard extends ConsumerWidget {
               SizedBox(height: headerSpacing),
               Expanded(
                 child: LayoutBuilder(
-                  builder: (context, constraints) => _buildMonthGrid(
-                    context,
-                    ref,
-                    constraints,
-                    calendarState,
-                  ),
+                  builder: (context, constraints) {
+                    final showSidebar = constraints.maxWidth > 240;
+                    final grid = _buildMonthGrid(
+                      context,
+                      ref,
+                      BoxConstraints(
+                        maxWidth: showSidebar
+                            ? constraints.maxWidth * 0.64
+                            : constraints.maxWidth,
+                        maxHeight: constraints.maxHeight,
+                      ),
+                      calendarState,
+                    );
+
+                    if (!showSidebar) {
+                      return Column(
+                        children: [
+                          Expanded(child: grid),
+                          if (showLegend) ...[
+                            const SizedBox(height: DS.spacing8),
+                            _buildLegend(context),
+                          ],
+                        ],
+                      );
+                    }
+
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(child: grid),
+                        const SizedBox(width: DS.spacing10),
+                        SizedBox(
+                          width: dense ? 70 : 84,
+                          child: _CompactCalendarSidebar(
+                            activeDays: activeDays,
+                            peakTasks: peakTasks,
+                            showLegend: showLegend,
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ),
-              if (showLegend) ...[
-                const SizedBox(height: DS.spacing8),
-                _buildLegend(context),
-              ],
             ],
           ),
         ),
@@ -250,7 +294,7 @@ class CalendarHeatmapCard extends ConsumerWidget {
     final totalCells = rows * columns;
 
     return Align(
-      alignment: Alignment.topLeft,
+      alignment: Alignment.centerLeft,
       child: SizedBox(
         width: cellSize * columns + spacing * (columns - 1),
         height: cellSize * rows + spacing * (rows - 1),
@@ -277,6 +321,78 @@ class CalendarHeatmapCard extends ConsumerWidget {
   void _handleDateTap(WidgetRef ref, DateTime date) {
     ref.read(calendarPreviewProvider.notifier).selectDate(date);
   }
+}
+
+class _CompactCalendarSidebar extends StatelessWidget {
+  const _CompactCalendarSidebar({
+    required this.activeDays,
+    required this.peakTasks,
+    required this.showLegend,
+  });
+
+  final int activeDays;
+  final int peakTasks;
+  final bool showLegend;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(DS.spacing8),
+        decoration: BoxDecoration(
+          color: DS.surfaceOverlay,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: DS.borderSubtle),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _CompactCalendarStat(label: '活跃', value: '$activeDays天'),
+            const SizedBox(height: DS.spacing10),
+            _CompactCalendarStat(label: '峰值', value: '$peakTasks项'),
+            const Spacer(),
+            if (showLegend)
+              Text(
+                '格子越深，任务越密集',
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: DS.textSecondary,
+                      height: 1.35,
+                    ),
+              ),
+          ],
+        ),
+      );
+}
+
+class _CompactCalendarStat extends StatelessWidget {
+  const _CompactCalendarStat({
+    required this.label,
+    required this.value,
+  });
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: DS.textSecondary,
+                ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: DS.textPrimary,
+                  fontWeight: DS.fontWeightBold,
+                ),
+          ),
+        ],
+      );
 }
 
 /// Individual day cell in the calendar grid

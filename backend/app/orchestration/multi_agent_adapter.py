@@ -247,6 +247,7 @@ class MultiAgentWorkflowAdapter:
             prompt_version=prompt_version,
             agent_role=synthesis_role,
             plan_context=plan_context,
+            session_feedback_instruction=str(context_data.get("session_feedback_instruction") or ""),
             chat_mode=chat_mode,
         )
         synthesis_guidance = synthesis_template or self._default_synthesis_prompt(chat_mode)
@@ -426,6 +427,7 @@ class MultiAgentWorkflowAdapter:
             prompt_version=str(context_data.get("prompt_version") or "v1"),
             agent_role=synthesis_role,
             plan_context=plan_context,
+            session_feedback_instruction=str(context_data.get("session_feedback_instruction") or ""),
             chat_mode=chat_mode,
         )
         system = (

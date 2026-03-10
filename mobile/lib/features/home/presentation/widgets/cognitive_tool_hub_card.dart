@@ -88,7 +88,7 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
               Row(
                 children: [
                   Icon(
-                    Icons.dashboard_customize_outlined,
+                    Icons.widgets_rounded,
                     color: DS.prismPurple,
                     size: 18,
                   ),
@@ -117,6 +117,21 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
                           ),
                       ],
                     ),
+                  ),
+                  IconButton(
+                    constraints: const BoxConstraints.tightFor(
+                      width: 32,
+                      height: 32,
+                    ),
+                    padding: EdgeInsets.zero,
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () => context.push('/tools/library?tab=manage'),
+                    icon: Icon(
+                      Icons.tune_rounded,
+                      size: 18,
+                      color: DS.prismPurple,
+                    ),
+                    tooltip: '工具设置',
                   ),
                   if (!widget.dense && weeklyPattern != null) ...[
                     const SizedBox(width: DS.spacing8),
@@ -421,7 +436,7 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
       return _buildEmptyToolsState(context);
     }
 
-    final gridSpacing = widget.dense ? DS.spacing6 : DS.spacing8;
+    final gridSpacing = dense ? DS.spacing6 : DS.spacing8;
 
     return Column(
       children: [
@@ -437,19 +452,24 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
             itemBuilder: (context, pageIndex) {
               final pageTools = pages[pageIndex];
               return GridView.builder(
-                itemCount: pageTools.length,
+                itemCount: 4,
                 physics: const NeverScrollableScrollPhysics(),
                 padding: EdgeInsets.zero,
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   mainAxisSpacing: gridSpacing,
                   crossAxisSpacing: gridSpacing,
-                  childAspectRatio: dense ? 1.02 : 1.08,
+                  mainAxisExtent: dense ? 54 : 62,
                 ),
-                itemBuilder: (context, index) => _CompactToolTile(
-                  tool: pageTools[index],
-                  dense: dense,
-                ),
+                itemBuilder: (context, index) {
+                  if (index >= pageTools.length) {
+                    return const SizedBox.shrink();
+                  }
+                  return _CompactToolTile(
+                    tool: pageTools[index],
+                    dense: dense,
+                  );
+                },
               );
             },
           ),
@@ -638,14 +658,13 @@ class _CompactToolTile extends ConsumerWidget {
           child: Padding(
             padding: EdgeInsets.symmetric(
               horizontal: dense ? DS.spacing8 : DS.spacing10,
-              vertical: dense ? DS.spacing8 : DS.spacing10,
+              vertical: dense ? DS.spacing6 : DS.spacing8,
             ),
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final iconOnly =
-                    constraints.maxHeight < 70 || constraints.maxWidth < 84;
-                final iconBoxSize = dense ? 32.0 : 38.0;
-                final iconSize = dense ? 16.0 : 18.0;
+                final iconOnly = constraints.maxWidth < 88;
+                final iconBoxSize = dense ? 28.0 : 32.0;
+                final iconSize = dense ? 15.0 : 16.0;
 
                 if (iconOnly) {
                   return Center(
@@ -665,8 +684,7 @@ class _CompactToolTile extends ConsumerWidget {
                   );
                 }
 
-                return Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                return Row(
                   children: [
                     Container(
                       width: iconBoxSize,
@@ -681,16 +699,18 @@ class _CompactToolTile extends ConsumerWidget {
                         color: DS.brandPrimaryConst,
                       ),
                     ),
-                    SizedBox(height: dense ? DS.spacing4 : DS.spacing8),
-                    Text(
-                      tool.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                      style: context.sparkleTypography.labelSmall.copyWith(
-                        color: DS.textPrimary,
-                        fontSize: dense ? 10.5 : null,
-                        fontWeight: DS.fontWeightBold,
+                    const SizedBox(width: DS.spacing8),
+                    Expanded(
+                      child: Text(
+                        tool.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.sparkleTypography.labelSmall.copyWith(
+                          color: DS.textPrimary,
+                          fontSize: dense ? 10.5 : 11,
+                          height: 1.15,
+                          fontWeight: DS.fontWeightBold,
+                        ),
                       ),
                     ),
                   ],
