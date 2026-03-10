@@ -413,6 +413,11 @@ class Settings(BaseSettings):
     ENABLE_STRUCTURED_NEXT_ACTIONS: bool = False
     ENABLE_BLOCKED_TEMPERATURE: bool = False
     ENABLE_UX_PRESENTATION_METADATA: bool = False
+    ENABLE_PERCEPTIBLE_INTELLIGENCE: bool = False
+    ENABLE_PROACTIVE_INSIGHTS: bool = False
+    ENABLE_PLAN_REASONING_SUMMARY: bool = False
+    ENABLE_WEEKLY_LEARNING_REPORT: bool = False
+    ENABLE_PROGRESS_COMPARISONS: bool = False
     ENABLE_SUMMARIZATION_WORKER: bool = True
 
     # Optional Graph Sync Worker

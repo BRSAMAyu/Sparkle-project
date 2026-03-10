@@ -390,6 +390,31 @@ def visualize_graph(self, user_id: str, graph_data: dict):
         raise self.retry(exc=exc, countdown=2 ** self.request.retries)
 
 
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.generate_weekly_learning_reports")
+def generate_weekly_learning_reports(self, limit: int = 200):
+    """
+    聚合周级学习报告并写入 system updates。
+    """
+    import asyncio
+
+    from app.core.cache import cache_service
+    from app.db.session import AsyncSessionLocal
+    from app.services.perceptible_intelligence_service import WeeklyLearningReportService
+
+    async def _run():
+        async with AsyncSessionLocal() as session:
+            service = WeeklyLearningReportService(session, cache_service.redis)
+            return await service.enqueue_reports_for_active_users(limit=limit)
+
+    try:
+        result = asyncio.run(_run())
+        logger.info(f"✅ Weekly learning reports generated: {result}")
+        return result
+    except Exception as exc:
+        logger.error(f"❌ Failed to generate weekly learning reports: {exc}")
+        raise self.retry(exc=exc, countdown=60)
+
+
 # =============================================================================
 # 任务监控装饰器
 # =============================================================================

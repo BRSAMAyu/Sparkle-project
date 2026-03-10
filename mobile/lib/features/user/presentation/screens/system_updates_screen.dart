@@ -171,6 +171,10 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
     final category = item['category']?.toString() ?? '';
     final priority = item['priority']?.toString() ?? '';
     final createdAt = _formatTime(item['created_at']);
+    final metadata =
+        (item['metadata'] as Map<dynamic, dynamic>? ?? const <dynamic, dynamic>{})
+            .map<String, dynamic>((key, value) => MapEntry('$key', value));
+    final evolutionKind = metadata['evolution_kind']?.toString() ?? '';
 
     final priorityStyle = _priorityStyle(priority);
 
@@ -208,6 +212,7 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
               style: TextStyle(color: DS.textSecondary),
             ),
           ],
+          ..._buildStructuredDetails(metadata, evolutionKind),
           if (category.isNotEmpty) ...[
             const SizedBox(height: DS.spacing8),
             _pill(category, DS.neutral100, DS.neutral600),
@@ -215,6 +220,160 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
         ],
       ),
     );
+  }
+
+  List<Widget> _buildStructuredDetails(
+    Map<String, dynamic> metadata,
+    String evolutionKind,
+  ) {
+    if (evolutionKind == 'proactive_insight') {
+      final insightText = metadata['insight_text']?.toString() ?? '';
+      final evidenceSummary = metadata['evidence_summary']?.toString() ?? '';
+      final confidence = metadata['confidence'];
+      return [
+        if (insightText.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing8),
+          Text(
+            insightText,
+            style: TextStyle(
+              color: DS.textPrimary,
+              fontWeight: DS.fontWeightSemibold,
+            ),
+          ),
+        ],
+        if (evidenceSummary.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing8),
+          Text(
+            evidenceSummary,
+            style: TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeSm),
+          ),
+        ],
+        if (confidence != null) ...[
+          const SizedBox(height: DS.spacing8),
+          _pill(
+            '置信度 ${((confidence as num).toDouble() * 100).toInt()}%',
+            DS.info.withValues(alpha: 0.12),
+            DS.info,
+          ),
+        ],
+      ];
+    }
+    if (evolutionKind == 'weekly_learning_report') {
+      final learnings = (metadata['top_learnings'] as List<dynamic>? ?? [])
+          .map((e) => '$e')
+          .where((e) => e.isNotEmpty)
+          .toList();
+      final oneKeyAdjustment = metadata['one_key_adjustment']?.toString() ?? '';
+      final comparisonHighlight = metadata['comparison_highlight']?.toString() ?? '';
+      final periodRange = metadata['period_range']?.toString() ?? '';
+      return [
+        if (learnings.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing8),
+          ...learnings.map(
+            (item) => Padding(
+              padding: const EdgeInsets.only(bottom: DS.spacing6),
+              child: Text('• $item', style: TextStyle(color: DS.textPrimary)),
+            ),
+          ),
+        ],
+        if (oneKeyAdjustment.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing8),
+          Text(
+            '下周继续适配：$oneKeyAdjustment',
+            style: TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeSm),
+          ),
+        ],
+        if (comparisonHighlight.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing8),
+          Text(
+            comparisonHighlight,
+            style: TextStyle(
+              color: DS.textPrimary,
+              fontWeight: DS.fontWeightSemibold,
+            ),
+          ),
+        ],
+        if (periodRange.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing8),
+          Text(
+            periodRange,
+            style: TextStyle(color: DS.neutral500, fontSize: DS.fontSizeSm),
+          ),
+        ],
+      ];
+    }
+    if (evolutionKind == 'progress_comparison') {
+      final comparison =
+          (metadata['comparison'] as Map<dynamic, dynamic>? ??
+                  const <dynamic, dynamic>{})
+              .map<String, dynamic>((key, value) => MapEntry('$key', value));
+      if (comparison.isEmpty) {
+        return const <Widget>[];
+      }
+      return [
+        const SizedBox(height: DS.spacing8),
+        Text(
+          comparison['delta_text']?.toString() ?? '',
+          style: TextStyle(
+            color: DS.textPrimary,
+            fontWeight: DS.fontWeightSemibold,
+          ),
+        ),
+        const SizedBox(height: DS.spacing8),
+        Text(
+          '${comparison['before_label'] ?? '之前'}：${comparison['before_value'] ?? '-'}',
+          style: TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeSm),
+        ),
+        const SizedBox(height: DS.spacing4),
+        Text(
+          '${comparison['after_label'] ?? '现在'}：${comparison['after_value'] ?? '-'}',
+          style: TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeSm),
+        ),
+        if ((comparison['why_it_matters']?.toString() ?? '').isNotEmpty) ...[
+          const SizedBox(height: DS.spacing8),
+          Text(
+            comparison['why_it_matters'].toString(),
+            style: TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeSm),
+          ),
+        ],
+      ];
+    }
+    if (evolutionKind == 'plan_reasoning') {
+      final reasoningSummary = metadata['reasoning_summary']?.toString() ?? '';
+      final reasoningDetails =
+          (metadata['reasoning_details'] as List<dynamic>? ?? [])
+              .whereType<Map<dynamic, dynamic>>()
+              .map(Map<String, dynamic>.from)
+              .toList();
+      return [
+        if (reasoningSummary.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing8),
+          Text(
+            reasoningSummary,
+            style: TextStyle(
+              color: DS.textPrimary,
+              fontWeight: DS.fontWeightSemibold,
+            ),
+          ),
+        ],
+        if (reasoningDetails.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing8),
+          ...reasoningDetails.map(
+            (detail) => Padding(
+              padding: const EdgeInsets.only(bottom: DS.spacing8),
+              child: Text(
+                '• ${detail['label'] ?? ''}：${detail['evidence'] ?? ''}',
+                style: TextStyle(
+                  color: DS.textSecondary,
+                  fontSize: DS.fontSizeSm,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ];
+    }
+    return const <Widget>[];
   }
 
   List<String> _collectOptions(List<Map<String, dynamic>> items, String key) {

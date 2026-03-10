@@ -301,6 +301,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       final category = data['category']?.toString();
       final metadata = data['metadata'];
       if (category == 'evolution' && metadata is Map<String, dynamic>) {
+        final evolutionKind = metadata['evolution_kind']?.toString() ?? '';
         final adaptation = metadata['adaptation_record'];
         final preferenceLearning = metadata['preference_learning'];
         final progressSnapshot = metadata['progress_snapshot'];
@@ -311,8 +312,36 @@ class ChatNotifier extends StateNotifier<ChatState> {
         return WidgetPayload(
           type: 'evolution_card',
           data: {
+            'evolution_kind': evolutionKind,
             'headline': data['title']?.toString() ?? '系统正在继续适应你',
             'summary': data['description']?.toString() ?? '',
+            if (metadata['insight_text'] != null)
+              'insight_text': metadata['insight_text'],
+            if (metadata['evidence_summary'] != null)
+              'evidence_summary': metadata['evidence_summary'],
+            if (metadata['recommended_action'] is Map)
+              'recommended_action': Map<String, dynamic>.from(
+                metadata['recommended_action'] as Map,
+              ),
+            if (metadata['confidence'] != null) 'confidence': metadata['confidence'],
+            if (metadata['weekly_summary'] != null)
+              'weekly_summary': metadata['weekly_summary'],
+            if (metadata['top_learnings'] is List<dynamic>)
+              'top_learnings': metadata['top_learnings'],
+            if (metadata['one_key_adjustment'] != null)
+              'one_key_adjustment': metadata['one_key_adjustment'],
+            if (metadata['comparison_highlight'] != null)
+              'comparison_highlight': metadata['comparison_highlight'],
+            if (metadata['period_range'] != null)
+              'period_range': metadata['period_range'],
+            if (metadata['reasoning_summary'] != null)
+              'reasoning_summary': metadata['reasoning_summary'],
+            if (metadata['reasoning_details'] is List<dynamic>)
+              'reasoning_details': metadata['reasoning_details'],
+            if (metadata['comparison'] is Map)
+              'comparison': Map<String, dynamic>.from(
+                metadata['comparison'] as Map,
+              ),
             if (adaptation is Map<String, dynamic>)
               'adaptation_records': [adaptation],
             if (preferenceLearning is Map<String, dynamic>)

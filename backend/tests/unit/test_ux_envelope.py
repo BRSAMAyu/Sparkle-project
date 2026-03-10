@@ -323,3 +323,42 @@ def test_ux_envelope_builder_escalates_blocked_temperature(monkeypatch) -> None:
     )
 
     assert direct["ux_result"]["blocked_temperature"] == "guided"
+
+
+def test_ux_envelope_builder_exposes_plan_reasoning_summary() -> None:
+    builder = UXEnvelopeBuilder()
+    final_state = WorkflowState(
+        messages=[{"role": "user", "content": "帮我安排这周计划"}],
+        context_data={
+            "chat_mode": "study_plan",
+            "plan_review": {
+                "decision": "approved",
+                "reasoning_summary": "这个计划被通过，是因为当前执行复杂度可控且整体置信度较高。",
+                "reasoning_details": [
+                    {
+                        "label": "执行复杂度",
+                        "evidence": "本次计划包含 2 个动作，风险标记 0 个。",
+                        "impact": "适合直接推进。",
+                    }
+                ],
+            },
+        },
+    )
+
+    envelope = _build_envelope(
+        builder,
+        user_message="帮我安排这周计划",
+        full_response="这是这周的安排。",
+        final_state=final_state,
+        executable_plan=SimpleNamespace(confidence=0.9, tool_calls=[{"name": "create_task"}]),
+        route_decision=RouteDecision(execution_mode="hybrid", reason="study_plan_mode", risk_level="low"),
+        include_references=False,
+        file_ids=[],
+        execution_validation=None,
+        conversation_context=None,
+        plan_context={"plan_id": "plan-1"},
+        user_context_payload=None,
+    )
+
+    assert envelope["ux_evolution"]["evolution_kind"] == "plan_reasoning"
+    assert "执行复杂度可控" in envelope["ux_evolution"]["reasoning_summary"]

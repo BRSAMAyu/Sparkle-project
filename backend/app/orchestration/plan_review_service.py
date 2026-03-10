@@ -16,6 +16,8 @@ from typing import Any
 
 from loguru import logger
 
+from app.config import settings
+from app.core.business_metrics import PLAN_REASONING_GENERATED_TOTAL
 from app.core.event_bus import event_bus
 from app.core.pending_actions import pending_actions_store
 from app.orchestration.schemas import ExecutablePlan
@@ -81,6 +83,8 @@ class PlanReviewResult:
     suggested_modifications: dict[str, Any] | None = None
     auto_approved: bool = False
     user_facing_reason: str | None = None
+    reasoning_summary: str | None = None
+    reasoning_details: list[dict[str, str]] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -93,6 +97,8 @@ class PlanReviewResult:
             "suggested_modifications": self.suggested_modifications,
             "auto_approved": self.auto_approved,
             "user_facing_reason": self.user_facing_reason,
+            "reasoning_summary": self.reasoning_summary,
+            "reasoning_details": self.reasoning_details,
         }
 
 
@@ -172,6 +178,13 @@ class PlanReviewService:
         rule_result = await self._quick_rule_check(plan, user_context)
         if rule_result:
             logger.info(f"Plan {plan.plan_id} auto-approved by rules: {rule_result}")
+            reasoning_summary, reasoning_details = self._build_reasoning_payload(
+                plan=plan,
+                user_context=user_context,
+                decision=ReviewDecision.APPROVED.value,
+                auto_approved=True,
+                auto_approve_reason=rule_result,
+            )
             return PlanReviewResult(
                 review_id=review_id,
                 plan_id=plan.plan_id,
@@ -185,6 +198,8 @@ class PlanReviewService:
                     auto_approved=True,
                     auto_approve_reason=rule_result,
                 ),
+                reasoning_summary=reasoning_summary,
+                reasoning_details=reasoning_details,
             )
 
         # Step 2: LLM-based deep review
@@ -192,6 +207,12 @@ class PlanReviewService:
         llm_result = await self._llm_review(plan, user_message, user_context)
 
         decision = llm_result.get("decision", ReviewDecision.REQUIRES_CONFIRMATION.value)
+        reasoning_summary, reasoning_details = self._build_reasoning_payload(
+            plan=plan,
+            user_context=user_context,
+            decision=decision,
+            auto_approved=False,
+        )
 
         return PlanReviewResult(
             review_id=review_id,
@@ -215,6 +236,8 @@ class PlanReviewService:
                 decision=decision,
                 auto_approved=False,
             ),
+            reasoning_summary=reasoning_summary,
+            reasoning_details=reasoning_details,
         )
 
     async def _quick_rule_check(self, plan: ExecutablePlan, user_context: dict[str, Any]) -> str | None:
@@ -662,6 +685,8 @@ Please review this plan and provide your assessment."""
                 "confidence": review.confidence,
                 "comments": [c.to_dict() for c in review.comments],
                 "suggested_modifications": review.suggested_modifications,
+                "reasoning_summary": review.reasoning_summary,
+                "reasoning_details": review.reasoning_details,
             },
         )
         return action_id
@@ -704,6 +729,73 @@ Please review this plan and provide your assessment."""
         elif decision == ReviewDecision.REQUIRES_CONFIRMATION.value:
             return "🔍 请确认计划：需要您确认后再执行"
         return "计划审查完成"
+
+    def _build_reasoning_payload(
+        self,
+        *,
+        plan: ExecutablePlan,
+        user_context: dict[str, Any],
+        decision: str,
+        auto_approved: bool,
+        auto_approve_reason: str | None = None,
+    ) -> tuple[str | None, list[dict[str, str]] | None]:
+        if not settings.ENABLE_PLAN_REASONING_SUMMARY:
+            return None, None
+        if decision != ReviewDecision.APPROVED.value:
+            return None, None
+
+        details: list[dict[str, str]] = []
+        tool_count = len(plan.tool_calls or [])
+        confidence_pct = f"{float(plan.confidence or 0.0):.0%}"
+        details.append(
+            {
+                "label": "执行复杂度",
+                "evidence": f"本次计划包含 {tool_count} 个动作，风险标记 {len(plan.risk_flags or [])} 个。",
+                "impact": "动作数量和风险都在可控范围内，适合直接推进。",
+            }
+        )
+
+        llm_profile = user_context.get("llm_profile") if isinstance(user_context, dict) else {}
+        llm_profile = llm_profile if isinstance(llm_profile, dict) else {}
+        verbosity = str(llm_profile.get("verbosity_target") or "").strip()
+        tone = str(llm_profile.get("tone") or "").strip()
+        if verbosity or tone:
+            details.append(
+                {
+                    "label": "长期偏好",
+                    "evidence": f"当前回答偏好为 {verbosity or 'balanced'} / {tone or '稳定'}。",
+                    "impact": "审查通过后的执行说明会继续按你的表达节奏和沟通风格呈现。",
+                }
+            )
+
+        active_plans = user_context.get("active_plans") if isinstance(user_context, dict) else None
+        if isinstance(active_plans, list) and active_plans:
+            details.append(
+                {
+                    "label": "当前计划负载",
+                    "evidence": f"你当前有 {len(active_plans)} 个活跃计划，系统优先保持这次方案足够轻量。",
+                    "impact": "这样能降低新计划和现有节奏互相挤占的风险。",
+                }
+            )
+
+        if auto_approved and auto_approve_reason:
+            details.append(
+                {
+                    "label": "自动通过依据",
+                    "evidence": self._get_auto_approve_reason(auto_approve_reason),
+                    "impact": "这说明计划满足了安全且低风险的快速通过条件。",
+                }
+            )
+
+        summary_parts = [
+            f"这个计划被通过，是因为当前执行复杂度可控（{tool_count} 个动作）",
+            f"且整体置信度约 {confidence_pct}",
+        ]
+        if auto_approved and auto_approve_reason:
+            summary_parts.append(f"并满足“{self._get_auto_approve_reason(auto_approve_reason)}”的快速通过条件")
+        summary = "，".join(summary_parts) + "。"
+        PLAN_REASONING_GENERATED_TOTAL.labels(decision=decision).inc()
+        return summary, details[:3]
 
     def _get_auto_approve_reason(self, reason_code: str | None) -> str:
         """
