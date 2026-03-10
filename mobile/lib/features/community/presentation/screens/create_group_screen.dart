@@ -181,33 +181,39 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                       initialValue: _type,
                       isExpanded: true,
                       decoration: const InputDecoration(
-                        labelText: 'Group Type',
+                        labelText: '小组类型',
                         border: OutlineInputBorder(),
                       ),
                       items: const [
                         DropdownMenuItem(
                           value: GroupType.squad,
                           child: Text(
-                            'Study Squad',
+                            '学习小组',
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         DropdownMenuItem(
                           value: GroupType.sprint,
                           child: Text(
-                            'Sprint Group',
+                            '冲刺小组',
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
                       selectedItemBuilder: (context) => const [
-                        Text(
-                          'Study Squad',
-                          overflow: TextOverflow.ellipsis,
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            '学习小组',
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                        Text(
-                          'Sprint Group',
-                          overflow: TextOverflow.ellipsis,
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            '冲刺小组',
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ],
                       onChanged: (value) {

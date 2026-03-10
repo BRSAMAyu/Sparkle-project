@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/cognitive/data/models/behavior_pattern_model.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/cognitive_provider.dart';
 
@@ -41,29 +42,27 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
       role: SparklePageRole.immersive,
       safeArea: false,
       child: SafeArea(
-        child: ContentConstraint(
-          child: Column(
-            children: [
-              _buildAppBar(context),
-              Expanded(
-                child: RefreshIndicator(
-                  onRefresh: _loadPatterns,
-                  child: cognitiveState.isLoading &&
-                          cognitiveState.patterns.isEmpty
-                      ? Center(
-                          child: CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              DS.brandPrimary70,
+        child: Column(
+          children: [
+            _buildAppBar(context),
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: _loadPatterns,
+                child:
+                    cognitiveState.isLoading && cognitiveState.patterns.isEmpty
+                        ? Center(
+                            child: CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                DS.brandPrimary70,
+                              ),
                             ),
-                          ),
-                        )
-                      : cognitiveState.patterns.isEmpty
-                          ? _buildEmptyState()
-                          : _buildPatternList(cognitiveState.patterns),
-                ),
+                          )
+                        : cognitiveState.patterns.isEmpty
+                            ? _buildEmptyState()
+                            : _buildPatternList(cognitiveState.patterns),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -114,7 +113,7 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(DS.xxl),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const SizedBox(height: 80),
             Container(
@@ -131,7 +130,7 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
             ),
             const SizedBox(height: DS.xl),
             Text(
-              '暂无行为定式',
+              '还没有生成真实行为定式',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -140,7 +139,7 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
             ),
             const SizedBox(height: DS.sm),
             Text(
-              '继续记录你的想法和情绪\nAI 会为你发现行为模式',
+              '继续记录想法和复盘后，这里会自动生成真实洞察。\n先看下面的示例卡，页面结构不会再是空白。',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
@@ -148,6 +147,13 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
                 height: 1.5,
               ),
             ),
+            const SizedBox(height: DS.spacing24),
+            ...DemoDataService().demoBehaviorPatterns.take(2).map(
+                  (pattern) => Padding(
+                    padding: const EdgeInsets.only(bottom: DS.spacing16),
+                    child: _PatternCard(pattern: pattern),
+                  ),
+                ),
           ],
         ),
       );

@@ -1,7 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/network/api_client.dart';
-import 'package:sparkle/core/services/task_notification_scheduler.dart' show TaskReminderConfig;
+import 'package:sparkle/core/services/task_notification_scheduler.dart'
+    show TaskReminderConfig;
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
@@ -23,10 +24,11 @@ class LearningPreferences {
   final double depth;
   final double curiosity;
 
-  LearningPreferences copyWith({double? depth, double? curiosity}) => LearningPreferences(
-      depth: depth ?? this.depth,
-      curiosity: curiosity ?? this.curiosity,
-    );
+  LearningPreferences copyWith({double? depth, double? curiosity}) =>
+      LearningPreferences(
+        depth: depth ?? this.depth,
+        curiosity: curiosity ?? this.curiosity,
+      );
 }
 
 /// Provider for learning preferences (depth and curiosity)
@@ -91,8 +93,7 @@ class WeeklyAgendaNotifier extends StateNotifier<Map<String, dynamic>> {
 }
 
 class TaskReminderConfigNotifier extends StateNotifier<TaskReminderConfig> {
-  TaskReminderConfigNotifier(this._ref)
-      : super(const TaskReminderConfig()) {
+  TaskReminderConfigNotifier(this._ref) : super(const TaskReminderConfig()) {
     _ref.listen<AuthState>(authProvider, (prev, next) {
       if (next.user != null && prev?.user?.id != next.user?.id) {
         _loadFromSettings();
@@ -111,7 +112,8 @@ class TaskReminderConfigNotifier extends StateNotifier<TaskReminderConfig> {
       final repo = _ref.read(userRepositoryProvider);
       final settings = await repo.fetchUserSettings();
       final enabled = settings['task_reminders_enabled'] as bool? ?? true;
-      final times = settings['task_reminder_times'] as List<dynamic>? ?? [1440, 60, 15];
+      final times =
+          settings['task_reminder_times'] as List<dynamic>? ?? [1440, 60, 15];
 
       state = TaskReminderConfig(
         enabled: enabled,
@@ -151,9 +153,9 @@ class TaskReminderConfigNotifier extends StateNotifier<TaskReminderConfig> {
 
 class PushPreferencesNotifier extends StateNotifier<PushPreferences> {
   PushPreferencesNotifier(this._ref)
-      : super(PushPreferences(
-          
-        ),) {
+      : super(
+          PushPreferences(),
+        ) {
     _ref.listen<AuthState>(authProvider, (prev, next) {
       if (next.user != null && prev?.user?.id != next.user?.id) {
         _loadFromUser(next.user);
@@ -270,11 +272,13 @@ class LearningPreferencesNotifier extends StateNotifier<LearningPreferences> {
 
 /// Provider to manage the 'Enter to Send' preference
 final enterToSendProvider = StateNotifierProvider<EnterToSendNotifier, bool>(
-    (ref) => EnterToSendNotifier(),);
+  (ref) => EnterToSendNotifier(),
+);
 
 final transparencyLevelProvider =
     StateNotifierProvider<TransparencyLevelNotifier, int>(
-        TransparencyLevelNotifier.new,);
+  TransparencyLevelNotifier.new,
+);
 
 final transparentModeProvider = Provider<bool>(
   (ref) => ref.watch(transparencyLevelProvider) > 0,
@@ -282,14 +286,16 @@ final transparentModeProvider = Provider<bool>(
 
 final onboardingCompletedProvider =
     StateNotifierProvider<OnboardingCompletedNotifier, bool>(
-        (ref) => OnboardingCompletedNotifier(),);
+  (ref) => OnboardingCompletedNotifier(),
+);
 
 final systemUpdateLevelProvider =
     StateNotifierProvider<SystemUpdateLevelNotifier, int>(
-        SystemUpdateLevelNotifier.new,);
+  SystemUpdateLevelNotifier.new,
+);
 
 class EnterToSendNotifier extends StateNotifier<bool> {
-  EnterToSendNotifier() : super(false) {
+  EnterToSendNotifier() : super(true) {
     _loadSettings();
   }
 
@@ -302,8 +308,8 @@ class EnterToSendNotifier extends StateNotifier<bool> {
         state = enabled;
       }
     } catch (_) {
-      // Default to false
-      state = false;
+      // Default to enabled
+      state = true;
     }
   }
 

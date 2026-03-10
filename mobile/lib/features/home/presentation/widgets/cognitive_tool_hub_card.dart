@@ -60,8 +60,8 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
     final weeklyPattern = cognitive.weeklyPattern;
 
     if (widget.compact) {
-      final contentPadding = widget.dense ? DS.spacing10 : DS.spacing12;
-      final topSpacing = widget.dense ? DS.spacing8 : DS.spacing10;
+      final contentPadding = widget.dense ? DS.spacing8 : DS.spacing10;
+      final topSpacing = widget.dense ? DS.spacing6 : DS.spacing8;
       final compactPages = _chunkTools(pinnedTools, 4);
       const title = '工具快捷';
 
@@ -103,6 +103,7 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
                           overflow: TextOverflow.ellipsis,
                           style: context.sparkleTypography.labelLarge.copyWith(
                             fontWeight: DS.fontWeightBold,
+                            height: 1.0,
                           ),
                         ),
                         if (!widget.dense && compactPages.length > 1)
@@ -120,8 +121,8 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
                   ),
                   IconButton(
                     constraints: const BoxConstraints.tightFor(
-                      width: 32,
-                      height: 32,
+                      width: 28,
+                      height: 28,
                     ),
                     padding: EdgeInsets.zero,
                     visualDensity: VisualDensity.compact,
@@ -459,7 +460,7 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
                   crossAxisCount: 2,
                   mainAxisSpacing: gridSpacing,
                   crossAxisSpacing: gridSpacing,
-                  mainAxisExtent: dense ? 54 : 62,
+                  mainAxisExtent: dense ? 50 : 58,
                 ),
                 itemBuilder: (context, index) {
                   if (index >= pageTools.length) {
@@ -657,14 +658,14 @@ class _CompactToolTile extends ConsumerWidget {
           ),
           child: Padding(
             padding: EdgeInsets.symmetric(
-              horizontal: dense ? DS.spacing8 : DS.spacing10,
-              vertical: dense ? DS.spacing6 : DS.spacing8,
+              horizontal: dense ? DS.spacing6 : DS.spacing8,
+              vertical: dense ? DS.spacing4 : DS.spacing6,
             ),
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final iconOnly = constraints.maxWidth < 88;
-                final iconBoxSize = dense ? 28.0 : 32.0;
-                final iconSize = dense ? 15.0 : 16.0;
+                final iconBoxSize = dense ? 24.0 : 30.0;
+                final iconSize = dense ? 13.0 : 15.0;
 
                 if (iconOnly) {
                   return Center(
@@ -703,11 +704,11 @@ class _CompactToolTile extends ConsumerWidget {
                     Expanded(
                       child: Text(
                         tool.title,
-                        maxLines: 2,
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: context.sparkleTypography.labelSmall.copyWith(
                           color: DS.textPrimary,
-                          fontSize: dense ? 10.5 : 11,
+                          fontSize: dense ? 10 : 10.5,
                           height: 1.15,
                           fontWeight: DS.fontWeightBold,
                         ),

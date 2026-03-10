@@ -59,7 +59,9 @@ async def get_me(
         updated_at=current_user.updated_at.isoformat() if current_user.updated_at else "",
         photon_balance=current_user.photon_balance,
         equipped_skin=current_user.equipped_skin,
+        equipped_skin_source=current_user.equipped_skin_source,
         equipped_title=current_user.equipped_title,
+        equipped_title_source=current_user.equipped_title_source,
         push_preferences=PushPreferenceResponse(
             enable_curiosity=push_pref.enable_curiosity if push_pref else True,
             persona_type=push_pref.persona_type if push_pref else "coach",
@@ -136,7 +138,9 @@ async def update_me(
         updated_at=current_user.updated_at.isoformat() if current_user.updated_at else "",
         photon_balance=current_user.photon_balance,
         equipped_skin=current_user.equipped_skin,
+        equipped_skin_source=current_user.equipped_skin_source,
         equipped_title=current_user.equipped_title,
+        equipped_title_source=current_user.equipped_title_source,
         push_preferences=PushPreferenceResponse(
             enable_curiosity=push_pref.enable_curiosity if push_pref else True,
             persona_type=push_pref.persona_type if push_pref else "coach",
@@ -218,7 +222,9 @@ async def update_avatar(
         updated_at=current_user.updated_at.isoformat() if current_user.updated_at else "",
         photon_balance=current_user.photon_balance,
         equipped_skin=current_user.equipped_skin,
+        equipped_skin_source=current_user.equipped_skin_source,
         equipped_title=current_user.equipped_title,
+        equipped_title_source=current_user.equipped_title_source,
         push_preferences=PushPreferenceResponse(
             enable_curiosity=push_pref.enable_curiosity if push_pref else True,
             persona_type=push_pref.persona_type if push_pref else "coach",
@@ -301,7 +307,9 @@ async def update_my_preferences(
         updated_at=current_user.updated_at.isoformat() if current_user.updated_at else "",
         photon_balance=current_user.photon_balance,
         equipped_skin=current_user.equipped_skin,
+        equipped_skin_source=current_user.equipped_skin_source,
         equipped_title=current_user.equipped_title,
+        equipped_title_source=current_user.equipped_title_source,
         push_preferences=PushPreferenceResponse(
             enable_curiosity=push_pref.enable_curiosity if push_pref else True,
             persona_type=push_pref.persona_type if push_pref else "coach",
@@ -447,7 +455,9 @@ async def update_schedule_preferences(
         updated_at=current_user.updated_at.isoformat() if current_user.updated_at else "",
         photon_balance=current_user.photon_balance,
         equipped_skin=current_user.equipped_skin,
+        equipped_skin_source=current_user.equipped_skin_source,
         equipped_title=current_user.equipped_title,
+        equipped_title_source=current_user.equipped_title_source,
         push_preferences=PushPreferenceResponse(
             enable_curiosity=push_pref.enable_curiosity if push_pref else True,
             persona_type=push_pref.persona_type if push_pref else "coach",

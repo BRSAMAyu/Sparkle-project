@@ -85,11 +85,11 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
   String _getLabel(AgendaType type) {
     switch (type) {
       case AgendaType.busy:
-        return '繁忙 (Focus)';
+        return '繁忙';
       case AgendaType.fragmented:
-        return '碎片 (Frag)';
+        return '碎片';
       case AgendaType.relax:
-        return '放松 (Free)';
+        return '放松';
     }
   }
 
@@ -102,8 +102,10 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
     return Column(
       children: [
         // Legend / Type Selector
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        Wrap(
+          spacing: DS.spacing8,
+          runSpacing: DS.spacing8,
+          alignment: WrapAlignment.center,
           children: AgendaType.values.map((type) {
             final isSelected = _selectedType == type;
             return GestureDetector(
@@ -111,7 +113,7 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 padding: const EdgeInsets.symmetric(
-                  horizontal: DS.spacing12,
+                  horizontal: DS.spacing10,
                   vertical: DS.spacing8,
                 ),
                 decoration: BoxDecoration(
@@ -136,6 +138,8 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
                 ),
                 child: Text(
                   _getLabel(type),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: isDark ? DS.brandPrimary : DS.brandPrimary87,
                     fontSize: 12,

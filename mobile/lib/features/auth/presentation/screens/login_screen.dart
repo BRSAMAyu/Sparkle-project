@@ -17,6 +17,11 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
+  static const _brandOrange = Color(0xFFD9773A);
+  static const _brandOrangeDeep = Color(0xFFBA5923);
+  static const _brandBlue = Color(0xFF4C78B2);
+  static const _brandBlueDeep = Color(0xFF2F588E);
+
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -108,22 +113,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         const SizedBox(height: DS.spacing24),
-                        Icon(
-                          Icons.whatshot_outlined,
-                          size: 60,
-                          color: DS.brandPrimaryConst,
+                        const _BrandMark(
+                          orange: _brandOrange,
+                          orangeDeep: _brandOrangeDeep,
                         ),
                         const SizedBox(height: DS.lg),
-                        Text(
-                          l10n.appTitle,
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context)
-                              .textTheme
-                              .headlineSmall
-                              ?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(context).colorScheme.secondary,
-                              ),
+                        _BrandWordmark(
+                          title: l10n.appTitle,
+                          blue: _brandBlue,
+                          blueDeep: _brandBlueDeep,
                         ),
                         const SizedBox(height: DS.sm),
                         Text(
@@ -159,7 +157,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               onPressed: () => setState(
                                 () => _isPasswordVisible = !_isPasswordVisible,
                               ),
-                              variant: ButtonVariant.ghost,
                               size: DS.touchTargetMinSize,
                             ),
                           ),
@@ -170,7 +167,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         SparkleButton(
                           label: l10n.login,
                           onPressed: authState.isLoading ? null : _submit,
-                          variant: ButtonVariant.primary,
                           expand: true,
                           loading: authState.isLoading,
                           disabled: authState.isLoading,
@@ -219,9 +215,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ],
                         ),
                         const SizedBox(height: DS.lg),
-                        SparkleButton.ghost(
-                          label: l10n.noAccount,
-                          onPressed: () => context.go('/register'),
+                        Center(
+                          child: SparkleButton.ghost(
+                            label: l10n.noAccount,
+                            onPressed: () => context.go('/register'),
+                          ),
                         ),
                         const SizedBox(height: DS.sm),
                         SparkleButton(
@@ -261,6 +259,109 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BrandMark extends StatelessWidget {
+  const _BrandMark({
+    required this.orange,
+    required this.orangeDeep,
+  });
+
+  final Color orange;
+  final Color orangeDeep;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        height: 96,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Container(
+              width: 92,
+              height: 92,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    orange.withValues(alpha: 0.22),
+                    orange.withValues(alpha: 0.08),
+                    Colors.transparent,
+                  ],
+                  stops: const [0.0, 0.58, 1.0],
+                ),
+              ),
+            ),
+            Container(
+              width: 74,
+              height: 74,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [orange, orangeDeep],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: orange.withValues(alpha: 0.28),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.whatshot_rounded,
+              size: 34,
+              color: Colors.white,
+            ),
+          ],
+        ),
+      );
+}
+
+class _BrandWordmark extends StatelessWidget {
+  const _BrandWordmark({
+    required this.title,
+    required this.blue,
+    required this.blueDeep,
+  });
+
+  final String title;
+  final Color blue;
+  final Color blueDeep;
+
+  @override
+  Widget build(BuildContext context) {
+    final baseStyle = Theme.of(context).textTheme.headlineSmall?.copyWith(
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.2,
+          height: 1.05,
+          color: blueDeep,
+        );
+
+    return ShaderMask(
+      shaderCallback: (bounds) => LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [blue, blueDeep],
+      ).createShader(bounds),
+      blendMode: BlendMode.srcIn,
+      child: Text(
+        title,
+        textAlign: TextAlign.center,
+        style: baseStyle?.copyWith(
+          shadows: [
+            Shadow(
+              color: blue.withValues(alpha: 0.16),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
       ),
     );

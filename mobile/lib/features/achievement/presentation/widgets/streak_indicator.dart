@@ -10,10 +10,13 @@ import 'package:sparkle/shared/entities/achievement_model.dart';
 enum StreakIndicatorStyle {
   /// 紧凑型 - 用于导航栏或小空间
   compact,
+
   /// 标准型 - 用于卡片或列表
   standard,
+
   /// 完整型 - 用于详情页或个人资料
   full,
+
   /// 圆形 - 用于仪表盘焦点区域
   circular,
 }
@@ -77,40 +80,40 @@ class _StreakIndicatorCompact extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing8,
-          vertical: DS.spacing4,
-        ),
-        decoration: BoxDecoration(
-          color: _flameColor.withValues(alpha: 0.1),
-          borderRadius: DS.borderRadius12,
-          border: Border.all(
-            color: _flameColor.withValues(alpha: 0.3),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing8,
+            vertical: DS.spacing4,
+          ),
+          decoration: BoxDecoration(
+            color: _flameColor.withValues(alpha: 0.1),
+            borderRadius: DS.borderRadius12,
+            border: Border.all(
+              color: _flameColor.withValues(alpha: 0.3),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.local_fire_department_rounded,
+                size: DS.iconSizeSm,
+                color: _flameColor,
+              ),
+              const SizedBox(width: DS.spacing4),
+              Text(
+                '${streakStats.currentStreak}',
+                style: TextStyle(
+                  fontSize: DS.fontSizeSm,
+                  fontWeight: DS.fontWeightBold,
+                  color: DS.textPrimary,
+                ),
+              ),
+            ],
           ),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.local_fire_department_rounded,
-              size: DS.iconSizeSm,
-              color: _flameColor,
-            ),
-            const SizedBox(width: DS.spacing4),
-            Text(
-              '${streakStats.currentStreak}',
-              style: TextStyle(
-                fontSize: DS.fontSizeSm,
-                fontWeight: DS.fontWeightBold,
-                color: DS.textPrimary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+      );
 }
 
 /// 标准型连胜指示器
@@ -127,100 +130,104 @@ class _StreakIndicatorStandard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(DS.spacing12),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              _flameColor.withValues(alpha: 0.15),
-              _flameColor.withValues(alpha: 0.05),
-            ],
-          ),
-          borderRadius: DS.borderRadius16,
-          border: Border.all(
-            color: _flameColor.withValues(alpha: 0.3),
-            width: 1.5,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildFlameIcon(),
-            const SizedBox(width: DS.spacing12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '连续学习',
-                  style: TextStyle(
-                    fontSize: DS.fontSizeXs,
-                    color: DS.textSecondary,
-                  ),
+        onTap: onTap,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxWidth < 320;
+            return Container(
+              padding: const EdgeInsets.all(DS.spacing12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    _flameColor.withValues(alpha: 0.15),
+                    _flameColor.withValues(alpha: 0.05),
+                  ],
                 ),
-                Text(
-                  '${streakStats.currentStreak} 天',
-                  style: TextStyle(
-                    fontSize: DS.fontSizeLg,
-                    fontWeight: DS.fontWeightBold,
-                    color: _flameColor,
-                  ),
-                ),
-              ],
-            ),
-            if (streakStats.maxStreak > streakStats.currentStreak) ...[
-              const SizedBox(width: DS.spacing12),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: DS.spacing8,
-                  vertical: DS.spacing4,
-                ),
-                decoration: BoxDecoration(
-                  color: DS.neutral200,
-                  borderRadius: DS.borderRadius8,
-                ),
-                child: Text(
-                  '最高 ${streakStats.maxStreak}',
-                  style: TextStyle(
-                    fontSize: DS.fontSizeXs,
-                    color: DS.textSecondary,
-                  ),
+                borderRadius: DS.borderRadius16,
+                border: Border.all(
+                  color: _flameColor.withValues(alpha: 0.3),
+                  width: 1.5,
                 ),
               ),
-            ],
-          ],
+              child: Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: DS.spacing12,
+                runSpacing: DS.spacing8,
+                children: [
+                  _buildFlameIcon(),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '连续学习',
+                        style: TextStyle(
+                          fontSize: DS.fontSizeXs,
+                          color: DS.textSecondary,
+                        ),
+                      ),
+                      Text(
+                        '${streakStats.currentStreak} 天',
+                        style: TextStyle(
+                          fontSize: compact ? DS.fontSizeBase : DS.fontSizeLg,
+                          fontWeight: DS.fontWeightBold,
+                          color: _flameColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (streakStats.maxStreak > streakStats.currentStreak)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: DS.spacing8,
+                        vertical: DS.spacing4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: DS.neutral200,
+                        borderRadius: DS.borderRadius8,
+                      ),
+                      child: Text(
+                        '最高 ${streakStats.maxStreak}',
+                        style: TextStyle(
+                          fontSize: DS.fontSizeXs,
+                          color: DS.textSecondary,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            );
+          },
         ),
-      ),
-    );
+      );
 
   Widget _buildFlameIcon() => Container(
-      width: 48,
-      height: 48,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            _flameColor,
-            _flameColor.withValues(alpha: 0.6),
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              _flameColor,
+              _flameColor.withValues(alpha: 0.6),
+            ],
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: _flameColor.withValues(alpha: 0.3),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
           ],
         ),
-        boxShadow: [
-          BoxShadow(
-            color: _flameColor.withValues(alpha: 0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Icon(
-        Icons.whatshot_rounded,
-        color: DS.textOnPrimary,
-        size: DS.iconSizeLg,
-      ),
-    );
+        child: Icon(
+          Icons.whatshot_rounded,
+          color: DS.textOnPrimary,
+          size: DS.iconSizeLg,
+        ),
+      );
 }
 
 /// 完整型连胜指示器
@@ -270,163 +277,164 @@ class _StreakIndicatorFullState extends State<_StreakIndicatorFull>
 
   @override
   Widget build(BuildContext context) => GestureDetector(
-      onTap: widget.onTap,
-      child: Container(
-        padding: const EdgeInsets.all(DS.spacing16),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              _flameColor.withValues(alpha: 0.2),
-              _flameColor.withValues(alpha: 0.05),
+        onTap: widget.onTap,
+        child: Container(
+          padding: const EdgeInsets.all(DS.spacing16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                _flameColor.withValues(alpha: 0.2),
+                _flameColor.withValues(alpha: 0.05),
+              ],
+            ),
+            borderRadius: DS.borderRadius20,
+            border: Border.all(
+              color: _flameColor.withValues(alpha: 0.4),
+              width: 2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: _flameColor.withValues(alpha: 0.2),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
             ],
           ),
-          borderRadius: DS.borderRadius20,
-          border: Border.all(
-            color: _flameColor.withValues(alpha: 0.4),
-            width: 2,
+          child: Column(
+            children: [
+              // 顶部火焰和天数
+              Row(
+                children: [
+                  AnimatedBuilder(
+                    animation: _flameAnimation,
+                    builder: (context, child) => Transform.scale(
+                      scale: _flameAnimation.value,
+                      child: _buildLargeFlameIcon(),
+                    ),
+                  ),
+                  const SizedBox(width: DS.spacing16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '连续学习',
+                          style: TextStyle(
+                            fontSize: DS.fontSizeSm,
+                            color: DS.textSecondary,
+                          ),
+                        ),
+                        Text(
+                          '${widget.streakStats.currentStreak} 天',
+                          style: TextStyle(
+                            fontSize: DS.fontSize3xl,
+                            fontWeight: DS.fontWeightBold,
+                            color: _flameColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: DS.spacing12),
+              // 统计信息
+              Wrap(
+                spacing: DS.spacing12,
+                runSpacing: DS.spacing10,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  _buildStatItem(
+                    '最高',
+                    '${widget.streakStats.maxStreak}天',
+                    Icons.emoji_events,
+                  ),
+                  const SizedBox(width: DS.spacing12),
+                  _buildStatItem(
+                    '累计',
+                    '${widget.streakStats.totalCheckinDays}天',
+                    Icons.calendar_today,
+                  ),
+                  if (widget.showFreezeCharges) _buildFreezeCharges(),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+
+  Widget _buildLargeFlameIcon() => Container(
+        width: 64,
+        height: 64,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              _flameColor,
+              _flameColor.withValues(alpha: 0.5),
+            ],
           ),
           boxShadow: [
             BoxShadow(
-              color: _flameColor.withValues(alpha: 0.2),
+              color: _flameColor.withValues(alpha: 0.4),
               blurRadius: 20,
-              offset: const Offset(0, 8),
+              offset: const Offset(0, 6),
             ),
           ],
         ),
-        child: Column(
-          children: [
-            // 顶部火焰和天数
-            Row(
-              children: [
-                AnimatedBuilder(
-                  animation: _flameAnimation,
-                  builder: (context, child) => Transform.scale(
-                    scale: _flameAnimation.value,
-                    child: _buildLargeFlameIcon(),
-                  ),
-                ),
-                const SizedBox(width: DS.spacing16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '连续学习',
-                        style: TextStyle(
-                          fontSize: DS.fontSizeSm,
-                          color: DS.textSecondary,
-                        ),
-                      ),
-                      Text(
-                        '${widget.streakStats.currentStreak} 天',
-                        style: TextStyle(
-                          fontSize: DS.fontSize3xl,
-                          fontWeight: DS.fontWeightBold,
-                          color: _flameColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: DS.spacing12),
-            // 统计信息
-            Row(
-              children: [
-                _buildStatItem(
-                  '最高',
-                  '${widget.streakStats.maxStreak}天',
-                  Icons.emoji_events,
-                ),
-                const SizedBox(width: DS.spacing12),
-                _buildStatItem(
-                  '累计',
-                  '${widget.streakStats.totalCheckinDays}天',
-                  Icons.calendar_today,
-                ),
-                const Spacer(),
-                if (widget.showFreezeCharges)
-                  _buildFreezeCharges(),
-              ],
-            ),
-          ],
+        child: Icon(
+          Icons.whatshot_rounded,
+          color: DS.textOnPrimary,
+          size: DS.iconSize3xl,
         ),
-      ),
-    );
-
-  Widget _buildLargeFlameIcon() => Container(
-      width: 64,
-      height: 64,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            _flameColor,
-            _flameColor.withValues(alpha: 0.5),
-          ],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: _flameColor.withValues(alpha: 0.4),
-            blurRadius: 20,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Icon(
-        Icons.whatshot_rounded,
-        color: DS.textOnPrimary,
-        size: DS.iconSize3xl,
-      ),
-    );
+      );
 
   Widget _buildStatItem(String label, String value, IconData icon) => Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: DS.spacing12,
-        vertical: DS.spacing8,
-      ),
-      decoration: BoxDecoration(
-        color: DS.surfacePrimary.withValues(alpha: 0.6),
-        borderRadius: DS.borderRadius12,
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: DS.iconSizeSm,
-            color: DS.textSecondary,
-          ),
-          const SizedBox(width: DS.spacing6),
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: DS.fontSizeXs,
-                  color: DS.textSecondary,
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing12,
+          vertical: DS.spacing8,
+        ),
+        decoration: BoxDecoration(
+          color: DS.surfacePrimary.withValues(alpha: 0.6),
+          borderRadius: DS.borderRadius12,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: DS.iconSizeSm,
+              color: DS.textSecondary,
+            ),
+            const SizedBox(width: DS.spacing6),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: DS.fontSizeXs,
+                    color: DS.textSecondary,
+                  ),
                 ),
-              ),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: DS.fontSizeSm,
-                  fontWeight: DS.fontWeightBold,
-                  color: DS.textPrimary,
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: DS.fontSizeSm,
+                    fontWeight: DS.fontWeightBold,
+                    color: DS.textPrimary,
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
+              ],
+            ),
+          ],
+        ),
+      );
 
   Widget _buildFreezeCharges() {
     final charges = widget.streakStats.freezeCharges;
@@ -442,9 +450,7 @@ class _StreakIndicatorFullState extends State<_StreakIndicatorFull>
             height: 20,
             margin: const EdgeInsets.only(left: 2),
             decoration: BoxDecoration(
-              color: isActive
-                  ? DS.info.withValues(alpha: 0.8)
-                  : DS.neutral300,
+              color: isActive ? DS.info.withValues(alpha: 0.8) : DS.neutral300,
               borderRadius: DS.borderRadius4,
               border: Border.all(
                 color: isActive ? DS.info : DS.neutral400,
@@ -566,7 +572,9 @@ class _StreakIndicatorCircularState extends State<_StreakIndicatorCircular>
                 builder: (context, child) => CustomPaint(
                   size: const Size(100, 100),
                   painter: _CircularProgressPainter(
-                    progress: isZeroStreak ? 1.0 : progress * _progressAnimation.value,
+                    progress: isZeroStreak
+                        ? 1.0
+                        : progress * _progressAnimation.value,
                     color: displayColor,
                     isBackground: isZeroStreak,
                   ),
@@ -641,7 +649,7 @@ class _CircularProgressPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = strokeWidth
         ..strokeCap = StrokeCap.round;
-      
+
       _drawDashedCircle(canvas, center, radius, dashPaint);
     } else if (progress > 0) {
       // 正常进度
@@ -665,14 +673,15 @@ class _CircularProgressPainter extends CustomPainter {
     }
   }
 
-  void _drawDashedCircle(Canvas canvas, Offset center, double radius, Paint paint) {
+  void _drawDashedCircle(
+      Canvas canvas, Offset center, double radius, Paint paint) {
     const dashWidth = 5.0;
     const dashSpace = 5.0;
     final circumference = 2 * math.pi * radius;
-    
+
     const startAngle = -math.pi / 2;
     var currentAngle = startAngle;
-    
+
     while (currentAngle < startAngle + 2 * math.pi) {
       final arcAngle = (dashWidth / circumference) * 2 * math.pi;
       canvas.drawArc(
@@ -688,7 +697,7 @@ class _CircularProgressPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_CircularProgressPainter oldDelegate) =>
-      oldDelegate.progress != progress || 
+      oldDelegate.progress != progress ||
       oldDelegate.color != color ||
       oldDelegate.isBackground != isBackground;
 }
@@ -704,9 +713,9 @@ class NavStreakIndicator extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => StreakIndicator(
-      style: StreakIndicatorStyle.compact,
-      onTap: onTap,
-    );
+        style: StreakIndicatorStyle.compact,
+        onTap: onTap,
+      );
 }
 
 /// 便捷组件：卡片连胜指示器
@@ -720,8 +729,8 @@ class CardStreakIndicator extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => StreakIndicator(
-      onTap: onTap,
-    );
+        onTap: onTap,
+      );
 }
 
 /// 便捷组件：仪表盘圆形指示器
@@ -735,7 +744,7 @@ class DashboardStreakIndicator extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => StreakIndicator(
-      style: StreakIndicatorStyle.circular,
-      onTap: onTap,
-    );
+        style: StreakIndicatorStyle.circular,
+        onTap: onTap,
+      );
 }

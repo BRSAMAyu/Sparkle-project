@@ -33,7 +33,9 @@ UserModel _$UserModelFromJson(Map<String, dynamic> json) => UserModel(
               json['push_preferences'] as Map<String, dynamic>),
       photonBalance: (json['photon_balance'] as num?)?.toInt() ?? 0,
       equippedSkin: json['equipped_skin'] as String?,
+      equippedSkinSource: json['equipped_skin_source'] as String?,
       equippedTitle: json['equipped_title'] as String?,
+      equippedTitleSource: json['equipped_title_source'] as String?,
     );
 
 Map<String, dynamic> _$UserModelToJson(UserModel instance) => <String, dynamic>{
@@ -56,7 +58,9 @@ Map<String, dynamic> _$UserModelToJson(UserModel instance) => <String, dynamic>{
       'updated_at': instance.updatedAt.toIso8601String(),
       'photon_balance': instance.photonBalance,
       'equipped_skin': instance.equippedSkin,
+      'equipped_skin_source': instance.equippedSkinSource,
       'equipped_title': instance.equippedTitle,
+      'equipped_title_source': instance.equippedTitleSource,
     };
 
 const _$AvatarStatusEnumMap = {

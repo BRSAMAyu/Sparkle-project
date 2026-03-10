@@ -1,6 +1,6 @@
 """Achievement Schemas - Achievement system request/response models"""
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
@@ -37,7 +37,7 @@ class AchievementDetail(AchievementBase):
     total_unlocked: int = Field(default=0, description="Total unlocked count")
 
 
-class UserAchievementBase(BaseSchema):
+class UserAchievementBase(BaseModel):
     """User achievement basic information"""
     achievement_id: str = Field(description="Achievement ID")
     progress: float = Field(default=0.0, description="Progress 0.0-1.0")
@@ -55,10 +55,18 @@ class UserAchievementDetail(UserAchievementBase):
     last_progress_update: datetime | None = Field(default=None, description="Last progress update")
 
 
+class UserAchievementProgressPayload(UserAchievementBase):
+    """User achievement progress payload for nested achievement responses"""
+    unlocked_at: datetime | None = Field(default=None, description="Unlocked time")
+    share_count: int = Field(default=0, description="Share count")
+    is_first_unlocker: bool = Field(default=False, description="Is first unlocker")
+    last_progress_update: datetime | None = Field(default=None, description="Last progress update")
+
+
 class AchievementWithProgress(BaseModel):
     """Achievement with user progress"""
     achievement: AchievementDetail = Field(description="Achievement info")
-    user_progress: UserAchievementDetail | None = Field(default=None, description="User progress")
+    user_progress: UserAchievementProgressPayload | None = Field(default=None, description="User progress")
     is_unlocked: bool = Field(default=False, description="Is unlocked")
     progress_percentage: int = Field(default=0, description="Progress percentage")
 
@@ -67,6 +75,12 @@ class AchievementListResponse(BaseModel):
     """Achievement list response"""
     data: list[AchievementWithProgress] = Field(default_factory=list, description="Achievement list")
     meta: dict[str, Any] = Field(default_factory=dict, description="Metadata like categories, stats")
+
+
+class CloseToUnlockAchievementListResponse(BaseModel):
+    """Close-to-unlock achievement list response"""
+    data: list[AchievementWithProgress] = Field(default_factory=list, description="Achievement list")
+    count: int = Field(default=0, description="Achievement count")
 
 
 class AchievementMapNode(BaseModel):
@@ -185,7 +199,7 @@ class TitleListResponse(BaseModel):
 
 # ========== Event Schemas ==========
 
-class AchievementEventType(str, Enum):
+class AchievementEventType(StrEnum):
     """Achievement event types"""
     TASK_COMPLETED = "task_completed"
     DAILY_CHECKIN = "daily_checkin"

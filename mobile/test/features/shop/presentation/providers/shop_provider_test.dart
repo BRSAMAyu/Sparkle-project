@@ -1,8 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
+import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sparkle/features/shop/data/repositories/shop_repository.dart';
 import 'package:sparkle/features/shop/presentation/providers/shop_provider.dart';
 import 'package:sparkle/shared/entities/shop_model.dart';
+import 'package:sparkle/shared/entities/user_brief.dart';
+import 'package:sparkle/shared/entities/user_model.dart';
 
 class TestShopRepository implements ShopRepository {
   int getShopItemsCalls = 0;
@@ -115,8 +121,10 @@ class TestShopRepository implements ShopRepository {
   }
 
   @override
-  Future<Map<String, dynamic>> useConsumable(String consumableId,
-      {int quantity = 1,}) {
+  Future<Map<String, dynamic>> useConsumable(
+    String consumableId, {
+    int quantity = 1,
+  }) {
     throw UnimplementedError();
   }
 }
@@ -134,30 +142,34 @@ ShopItem buildShopItem({
   bool isOwned = false,
   bool isAvailable = true,
   bool isLimited = false,
-}) => ShopItem(
-    id: id,
-    name: name,
-    itemType: itemType,
-    category: category,
-    pricePhotons: pricePhotons,
-    rarity: rarity,
-    sortOrder: sortOrder,
-    hasDiscount: hasDiscount,
-    isInStock: isInStock,
-    isOwned: isOwned,
-    isAvailable: isAvailable,
-    isLimited: isLimited,
-  );
+}) =>
+    ShopItem(
+      id: id,
+      name: name,
+      itemType: itemType,
+      category: category,
+      pricePhotons: pricePhotons,
+      rarity: rarity,
+      sortOrder: sortOrder,
+      hasDiscount: hasDiscount,
+      isInStock: isInStock,
+      isOwned: isOwned,
+      isAvailable: isAvailable,
+      isLimited: isLimited,
+    );
 
 void main() {
   late TestShopRepository mockRepository;
+  late _FakeAuthNotifier authNotifier;
   late ProviderContainer container;
 
   setUp(() {
     mockRepository = TestShopRepository();
+    authNotifier = _FakeAuthNotifier();
     container = ProviderContainer(
       overrides: [
         shopRepositoryProvider.overrideWithValue(mockRepository),
+        authProvider.overrideWith((ref) => authNotifier),
       ],
     );
   });
@@ -191,7 +203,8 @@ void main() {
         String? category,
         String? rarity,
         bool onlyAvailable = true,
-      }) async => items;
+      }) async =>
+          items;
 
       container.read(shopItemsProvider);
 
@@ -239,7 +252,8 @@ void main() {
         String? category,
         String? rarity,
         bool onlyAvailable = true,
-      }) async => items;
+      }) async =>
+          items;
 
       container.read(shopItemsProvider);
       await Future<void>.delayed(Duration.zero);
@@ -288,7 +302,8 @@ void main() {
         String? category,
         String? rarity,
         bool onlyAvailable = true,
-      }) async => items;
+      }) async =>
+          items;
 
       mockRepository.purchaseItemHandler = (itemId) async => {'success': true};
 
@@ -304,6 +319,8 @@ void main() {
 
       // Should refresh items after purchase
       expect(mockRepository.getShopItemsCalls, 2);
+      expect(mockRepository.getInventoryCalls, greaterThanOrEqualTo(2));
+      expect(authNotifier.refreshUserCalls, 1);
     });
 
     test('purchaseItem handles errors and updates error state', () async {
@@ -321,7 +338,8 @@ void main() {
         String? category,
         String? rarity,
         bool onlyAvailable = true,
-      }) async => items;
+      }) async =>
+          items;
 
       mockRepository.purchaseItemHandler = (itemId) async {
         throw Exception('Insufficient balance');
@@ -354,7 +372,8 @@ void main() {
         String? category,
         String? rarity,
         bool onlyAvailable = true,
-      }) async => items;
+      }) async =>
+          items;
 
       container.read(shopItemsProvider);
       await Future<void>.delayed(Duration.zero);
@@ -365,7 +384,8 @@ void main() {
         String? category,
         String? rarity,
         bool onlyAvailable = true,
-      }) async => items;
+      }) async =>
+          items;
 
       final notifier = container.read(shopItemsProvider.notifier);
       await notifier.refresh();
@@ -394,7 +414,8 @@ void main() {
       mockRepository.getPurchaseHistoryHandler = ({
         int limit = 20,
         int offset = 0,
-      }) async => purchases;
+      }) async =>
+          purchases;
 
       container.read(purchaseHistoryProvider);
 
@@ -465,7 +486,8 @@ void main() {
       mockRepository.getPurchaseHistoryHandler = ({
         int limit = 20,
         int offset = 0,
-      }) async => [];
+      }) async =>
+          [];
 
       container.read(purchaseHistoryProvider);
       final notifier = container.read(purchaseHistoryProvider.notifier);
@@ -495,7 +517,8 @@ void main() {
       mockRepository.getPurchaseHistoryHandler = ({
         int limit = 20,
         int offset = 0,
-      }) async => purchases;
+      }) async =>
+          purchases;
 
       container.read(purchaseHistoryProvider);
       final notifier = container.read(purchaseHistoryProvider.notifier);
@@ -505,7 +528,8 @@ void main() {
       mockRepository.getPurchaseHistoryHandler = ({
         int limit = 20,
         int offset = 0,
-      }) async => purchases;
+      }) async =>
+          purchases;
 
       await notifier.refresh();
 
@@ -574,7 +598,8 @@ void main() {
       mockRepository.equipItemHandler = ({
         required String itemType,
         String? itemId,
-      }) async => {'success': true};
+      }) async =>
+          {'success': true};
 
       container.read(inventoryProvider);
       await Future<void>.delayed(Duration.zero);
@@ -587,6 +612,7 @@ void main() {
 
       expect(result, isTrue);
       expect(mockRepository.getInventoryCalls, 2); // Initial + after equip
+      expect(authNotifier.refreshUserCalls, 1);
     });
 
     test('handles equip errors gracefully', () async {
@@ -675,7 +701,8 @@ void main() {
     test('loads owned item IDs', () async {
       final ownedIds = ['skin_001', 'skin_002', 'title_001'];
 
-      mockRepository.getOwnedItemsHandler = ({String? itemType}) async => ownedIds;
+      mockRepository.getOwnedItemsHandler =
+          ({String? itemType}) async => ownedIds;
 
       final result = await container.read(ownedItemsProvider.future);
 
@@ -898,4 +925,67 @@ void main() {
       expect(testContainer.dispose, returnsNormally);
     });
   });
+}
+
+class _FakeAuthNotifier extends AuthNotifier {
+  _FakeAuthNotifier() : super(_UnusedAuthRepository()) {
+    state = AuthState(
+      isLoading: false,
+      isAuthenticated: true,
+      user: UserModel(
+        id: '00000000-0000-0000-0000-000000000001',
+        username: 'shop_test_user',
+        email: 'shop@example.com',
+        flameLevel: 3,
+        flameBrightness: 0.8,
+        depthPreference: 0.5,
+        curiosityPreference: 0.5,
+        isActive: true,
+        status: UserStatus.online,
+        createdAt: DateTime(2026, 1, 1),
+        updatedAt: DateTime(2026, 1, 1),
+      ),
+    );
+  }
+
+  int refreshUserCalls = 0;
+
+  @override
+  Future<void> checkAuthStatus() async {}
+
+  @override
+  Future<void> refreshUser() async {
+    refreshUserCalls += 1;
+  }
+}
+
+class _UnusedAuthRepository extends AuthRepository {
+  _UnusedAuthRepository()
+      : super(_UnusedApiClient(), const FlutterSecureStorage());
+
+  @override
+  Future<bool> isLoggedIn() async => true;
+
+  @override
+  Future<UserModel> getCurrentUser() async => UserModel(
+        id: '00000000-0000-0000-0000-000000000001',
+        username: 'shop_test_user',
+        email: 'shop@example.com',
+        flameLevel: 3,
+        flameBrightness: 0.8,
+        depthPreference: 0.5,
+        curiosityPreference: 0.5,
+        isActive: true,
+        status: UserStatus.online,
+        createdAt: DateTime(2026, 1, 1),
+        updatedAt: DateTime(2026, 1, 1),
+      );
+
+  @override
+  Future<void> logout({bool keepDemoMode = false}) async {}
+}
+
+class _UnusedApiClient implements ApiClient {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

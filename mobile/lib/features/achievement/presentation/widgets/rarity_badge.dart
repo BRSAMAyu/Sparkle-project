@@ -23,77 +23,61 @@ class RarityBadge extends StatelessWidget {
     final name = _getRarityName();
     final icon = _getRarityIcon();
 
-    if (isCompact) {
-      return Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing6,
-          vertical: DS.spacing4,
-        ),
-        decoration: BoxDecoration(
-          color: colors.background,
-          borderRadius: DS.borderRadius8,
-          border: Border.all(
-            color: colors.border,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: DS.iconSizeXs,
-              color: colors.text,
-            ),
-            if (showLabel) ...[
-              const SizedBox(width: DS.spacing4),
-              Text(
-                name,
-                style: TextStyle(
-                  fontSize: DS.fontSizeXs,
-                  fontWeight: DS.fontWeightMedium,
-                  color: colors.text,
-                ),
-              ),
-            ],
-          ],
-        ),
-      );
-    }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.hasBoundedWidth
+            ? constraints.maxWidth
+            : double.infinity;
+        final superCompact = width < 36;
+        final compactLabel = width < 64;
+        final adaptiveShowLabel = showLabel && !superCompact && !compactLabel;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: DS.spacing8,
-        vertical: DS.spacing4,
-      ),
-      decoration: BoxDecoration(
-        color: colors.background,
-        borderRadius: DS.borderRadius12,
-        border: Border.all(
-          color: colors.border,
-          width: 1.5,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: DS.iconSizeSm,
-            color: colors.text,
+        return Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: isCompact
+                ? (superCompact ? 2 : DS.spacing6)
+                : (compactLabel ? DS.spacing6 : DS.spacing8),
+            vertical: superCompact ? 2 : DS.spacing4,
           ),
-          if (showLabel) ...[
-            const SizedBox(width: DS.spacing4),
-            Text(
-              name,
-              style: TextStyle(
-                fontSize: DS.fontSizeSm,
-                fontWeight: DS.fontWeightSemibold,
+          decoration: BoxDecoration(
+            color: colors.background,
+            borderRadius: isCompact ? DS.borderRadius8 : DS.borderRadius12,
+            border: Border.all(
+              color: colors.border,
+              width: isCompact ? 1 : 1.5,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: superCompact
+                    ? 11
+                    : (isCompact ? DS.iconSizeXs : DS.iconSizeSm),
                 color: colors.text,
               ),
-            ),
-          ],
-        ],
-      ),
+              if (adaptiveShowLabel) ...[
+                const SizedBox(width: DS.spacing4),
+                Flexible(
+                  child: Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: isCompact ? DS.fontSizeXs : DS.fontSizeSm,
+                      fontWeight: isCompact
+                          ? DS.fontWeightMedium
+                          : DS.fontWeightSemibold,
+                      color: colors.text,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 

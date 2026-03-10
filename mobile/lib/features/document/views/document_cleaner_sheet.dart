@@ -108,6 +108,8 @@ class _DocumentCleanerPanelState extends ConsumerState<DocumentCleanerPanel> {
       title: '文档清洗',
       subtitle: '把扫描件、讲义和课件整理成可读文本。支持真实 GLM OCR 链路，适合笔记沉淀和资料预处理。',
       accentColor: accent,
+      compactHeader: true,
+      fillHeight: true,
       headerAction: _isSheet
           ? SparkleIconButton(
               icon: const Icon(Icons.close_rounded),
@@ -237,58 +239,52 @@ class _DocumentCleanerPanelState extends ConsumerState<DocumentCleanerPanel> {
                       )
                     : LayoutBuilder(
                         builder: (context, constraints) {
-                          final compact = constraints.maxWidth < 520;
-                          final fileInfo = Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  fileName,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium
-                                      ?.copyWith(
-                                        color: DS.textPrimary,
-                                        fontWeight: DS.fontWeightBold,
-                                      ),
-                                ),
-                                const SizedBox(height: DS.spacing4),
-                                Text(
-                                  extension ?? '文档文件',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
-                                      ?.copyWith(color: DS.textSecondary),
-                                ),
-                              ],
-                            ),
-                          );
+                          final compact = constraints.maxWidth < 620;
+                          Widget buildFileInfo() => Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    fileName,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(
+                                          color: DS.textPrimary,
+                                          fontWeight: DS.fontWeightBold,
+                                        ),
+                                  ),
+                                  const SizedBox(height: DS.spacing4),
+                                  Text(
+                                    extension ?? '文档文件',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(color: DS.textSecondary),
+                                  ),
+                                ],
+                              );
 
                           if (compact) {
                             return Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      width: 52,
-                                      height: 52,
-                                      decoration: BoxDecoration(
-                                        color: accent.withValues(alpha: 0.12),
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
-                                      child: Icon(
-                                        Icons.insert_drive_file_rounded,
-                                        color: accent,
-                                      ),
-                                    ),
-                                    const SizedBox(width: DS.spacing16),
-                                    fileInfo,
-                                  ],
+                                Container(
+                                  width: 52,
+                                  height: 52,
+                                  decoration: BoxDecoration(
+                                    color: accent.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Icon(
+                                    Icons.insert_drive_file_rounded,
+                                    color: accent,
+                                  ),
                                 ),
+                                const SizedBox(height: DS.spacing12),
+                                buildFileInfo(),
                                 const SizedBox(height: DS.spacing12),
                                 SparkleButton(
                                   label: '更换文件',
@@ -315,7 +311,7 @@ class _DocumentCleanerPanelState extends ConsumerState<DocumentCleanerPanel> {
                                 ),
                               ),
                               const SizedBox(width: DS.spacing16),
-                              fileInfo,
+                              Expanded(child: buildFileInfo()),
                               const SizedBox(width: DS.spacing12),
                               SparkleButton(
                                 label: '更换',

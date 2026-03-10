@@ -1,5 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sparkle/core/network/dio_provider.dart';
+import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
 import 'package:sparkle/features/error_book/data/models/error_semantic_summary.dart';
 import 'package:sparkle/features/error_book/data/repositories/error_book_repository.dart';
@@ -81,16 +82,43 @@ Future<ErrorListResponse> errorList(
   ErrorListQuery query,
 ) async {
   final repository = ref.watch(errorBookRepositoryProvider);
+  try {
+    return await repository.getErrors(
+      subject: query.subject,
+      chapter: query.chapter,
+      needReview: query.needReview,
+      keyword: query.keyword,
+      cognitiveDimension: query.cognitiveDimension,
+      page: query.page,
+      pageSize: query.pageSize,
+    );
+  } catch (_) {
+    final items = _demoErrorRecords().where((item) {
+      final subjectMatches =
+          query.subject == null || query.subject == item.subject;
+      final chapterMatches =
+          query.chapter == null || query.chapter == item.chapter;
+      final needReviewMatches = query.needReview != true ||
+          item.nextReviewAt == null ||
+          !item.nextReviewAt!.isAfter(DateTime.now());
+      final keyword = query.keyword?.trim().toLowerCase() ?? '';
+      final keywordMatches = keyword.isEmpty ||
+          item.questionText.toLowerCase().contains(keyword) ||
+          item.correctAnswer.toLowerCase().contains(keyword);
+      return subjectMatches &&
+          chapterMatches &&
+          needReviewMatches &&
+          keywordMatches;
+    }).toList();
 
-  return repository.getErrors(
-    subject: query.subject,
-    chapter: query.chapter,
-    needReview: query.needReview,
-    keyword: query.keyword,
-    cognitiveDimension: query.cognitiveDimension,
-    page: query.page,
-    pageSize: query.pageSize,
-  );
+    return ErrorListResponse(
+      items: items,
+      total: items.length,
+      page: query.page,
+      pageSize: query.pageSize,
+      hasNext: false,
+    );
+  }
 }
 
 // ============================================
@@ -127,8 +155,40 @@ final errorSemanticSummaryProvider =
 @riverpod
 Future<List<ErrorRecord>> todayReviewList(TodayReviewListRef ref) async {
   final repository = ref.watch(errorBookRepositoryProvider);
-  final response = await repository.getTodayReviewList();
-  return response.items;
+  try {
+    final response = await repository.getTodayReviewList();
+    return response.items;
+  } catch (_) {
+    final now = DateTime.now();
+    return [
+      ErrorRecord(
+        id: 'demo_review_1',
+        questionText: '已知二次函数 y=x²-4x+3，求顶点坐标。',
+        userAnswer: '(2,3)',
+        correctAnswer: '(2,-1)',
+        subject: 'math',
+        masteryLevel: 0.42,
+        reviewCount: 2,
+        createdAt: now.subtract(const Duration(days: 3)),
+        updatedAt: now.subtract(const Duration(hours: 4)),
+        chapter: '二次函数',
+        aiAnalysisSummary: '顶点公式代入时符号出错，建议先配方再验算。',
+      ),
+      ErrorRecord(
+        id: 'demo_review_2',
+        questionText: 'Translate: The data suggests a positive correlation.',
+        userAnswer: '数据说明一个积极的关系。',
+        correctAnswer: '数据表明存在正相关。',
+        subject: 'english',
+        masteryLevel: 0.58,
+        reviewCount: 1,
+        createdAt: now.subtract(const Duration(days: 1)),
+        updatedAt: now.subtract(const Duration(hours: 2)),
+        chapter: '学术英语',
+        aiAnalysisSummary: '术语“positive correlation”需要固定搭配记忆。',
+      ),
+    ];
+  }
 }
 
 // ============================================
@@ -139,7 +199,64 @@ Future<List<ErrorRecord>> todayReviewList(TodayReviewListRef ref) async {
 @riverpod
 Future<ReviewStats> errorStats(ErrorStatsRef ref) async {
   final repository = ref.watch(errorBookRepositoryProvider);
-  return repository.getStats();
+  try {
+    return await repository.getStats();
+  } catch (_) {
+    final items = _demoErrorRecords();
+    final now = DateTime.now();
+    final subjectDistribution = <String, int>{};
+    for (final item in items) {
+      subjectDistribution[item.subject] =
+          (subjectDistribution[item.subject] ?? 0) + 1;
+    }
+    return ReviewStats(
+      totalErrors: items.length,
+      masteredCount: items.where((item) => item.masteryLevel >= 0.8).length,
+      needReviewCount: items
+          .where(
+            (item) =>
+                item.nextReviewAt == null || !item.nextReviewAt!.isAfter(now),
+          )
+          .length,
+      reviewStreakDays: 3,
+      subjectDistribution: subjectDistribution,
+    );
+  }
+}
+
+List<ErrorRecord> _demoErrorRecords() => DemoDataService()
+    .demoErrorRecords
+    .map(
+      (item) => ErrorRecord(
+        id: item['id'] as String,
+        questionText: item['question_text'] as String,
+        userAnswer: item['user_answer'] as String,
+        correctAnswer: item['correct_answer'] as String,
+        subject: _mapDemoSubject(item['subject'] as String),
+        masteryLevel: (item['mastery_level'] as num).toDouble(),
+        reviewCount: item['review_count'] as int,
+        createdAt: DateTime.parse(item['created_at'] as String),
+        updatedAt: DateTime.parse(item['updated_at'] as String),
+        chapter: item['chapter'] as String?,
+        difficulty: item['difficulty'] as int?,
+        nextReviewAt:
+            DateTime.tryParse(item['next_review_at'] as String? ?? ''),
+        aiAnalysisSummary: item['ai_analysis_summary'] as String?,
+      ),
+    )
+    .toList();
+
+String _mapDemoSubject(String raw) {
+  switch (raw) {
+    case '数据结构':
+      return 'cs';
+    case '计算机网络':
+      return 'network';
+    case '操作系统':
+      return 'os';
+    default:
+      return raw.toLowerCase();
+  }
 }
 
 // ============================================

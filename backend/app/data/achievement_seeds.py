@@ -180,8 +180,7 @@ INITIAL_ACHIEVEMENTS = [
         },
         "reward_config": [
             {"type": "photon", "quantity": 1000},
-            {"type": "title", "value": "knowledge_navigator", "display": "知识领航员"},
-            {"type": "function", "feature": "advanced_analytics", "name": "高级数据分析"}
+            {"type": "title", "value": "knowledge_navigator", "display": "知识领航员"}
         ]
     },
     {
@@ -221,7 +220,6 @@ INITIAL_ACHIEVEMENTS = [
         "category": "mastery",
         "sort_order": 20,
         "reward_config": [
-            {"type": "ai_persona", "persona_id": "mathematician", "trigger_keywords": ["数学", "公式", "证明"]},
             {"type": "title", "value": "math_master", "display": "数学大师"}
         ]
     },
@@ -237,7 +235,6 @@ INITIAL_ACHIEVEMENTS = [
         "category": "mastery",
         "sort_order": 21,
         "reward_config": [
-            {"type": "ai_persona", "persona_id": "physicist", "trigger_keywords": ["物理", "力学", "能量"]},
             {"type": "title", "value": "physics_master", "display": "物理大师"}
         ]
     },
@@ -375,7 +372,6 @@ INITIAL_ACHIEVEMENTS = [
         "category": "hidden",
         "sort_order": 100,
         "reward_config": [
-            {"type": "avatar_frame", "asset_url": "/frames/night_owl.png", "rarity": "epic"},
             {"type": "title", "value": "night_owl", "display": "深夜学者"}
         ]
     },
@@ -597,8 +593,7 @@ INITIAL_ACHIEVEMENTS = [
         "reward_config": [
             {"type": "photon", "quantity": 2000},
             {"type": "title", "value": "sprint_legend", "display": "冲刺传奇"},
-            {"type": "freeze_charge", "quantity": 3},
-            {"type": "galaxy_skin", "skin_id": "sprint_legend_galaxy"}
+            {"type": "freeze_charge", "quantity": 3}
         ]
     },
     {

@@ -33,11 +33,17 @@ class FocusMainScreen extends ConsumerWidget {
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.all(DS.xl),
+                padding: const EdgeInsets.fromLTRB(
+                  DS.spacing20,
+                  DS.spacing16,
+                  DS.spacing20,
+                  DS.spacing12,
+                ),
                 child: Text(
                   '准备好开始专注了吗？',
+                  textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 24,
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: DS.textPrimary,
                   ),
@@ -141,8 +147,11 @@ class FocusMainScreen extends ConsumerWidget {
               '预计 ${task.estimatedMinutes} 分钟',
               style: TextStyle(color: DS.textSecondary),
             ),
-            trailing: Icon(Icons.arrow_forward_ios,
-                color: DS.textSecondary.withValues(alpha: 0.5), size: 16),
+            trailing: Icon(
+              Icons.arrow_forward_ios,
+              color: DS.textSecondary.withValues(alpha: 0.5),
+              size: 16,
+            ),
             onTap: () {
               // 🔧 修复：设置activeTaskProvider以便TaskExecutionScreen能读取
               ref.read(activeTaskProvider.notifier).state = task;

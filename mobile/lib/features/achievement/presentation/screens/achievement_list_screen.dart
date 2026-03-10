@@ -126,42 +126,45 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen> {
         ),
         child: SafeArea(
           bottom: false,
-          child: Column(
-            children: [
-              // 标题和操作栏
-              Row(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final compact = constraints.maxWidth < 420;
+              return Column(
                 children: [
-                  SparkleIconButton(
-                    icon: const Icon(Icons.arrow_back),
-                    onPressed: () => context.pop(),
-                    variant: ButtonVariant.ghost,
-                    size: DS.touchTargetMinSize,
-                  ),
-                  const SizedBox(width: DS.spacing8),
-                  Expanded(
-                    child: Text(
-                      '成就',
-                      style: TextStyle(
-                        fontSize: DS.fontSizeXl,
-                        fontWeight: DS.fontWeightBold,
-                        color: DS.textPrimary,
+                  Row(
+                    children: [
+                      SparkleIconButton(
+                        icon: const Icon(Icons.arrow_back),
+                        onPressed: () => context.pop(),
+                        variant: ButtonVariant.ghost,
+                        size: DS.touchTargetMinSize,
                       ),
-                    ),
+                      const SizedBox(width: DS.spacing8),
+                      Expanded(
+                        child: Text(
+                          '成就',
+                          style: TextStyle(
+                            fontSize: DS.fontSizeXl,
+                            fontWeight: DS.fontWeightBold,
+                            color: DS.textPrimary,
+                          ),
+                        ),
+                      ),
+                      _buildViewToggle(),
+                    ],
                   ),
-                  _buildViewToggle(),
+                  const SizedBox(height: DS.spacing16),
+                  DashboardStreakIndicator(
+                    onTap: () => _showStreakDetails(context),
+                  ),
+                  const SizedBox(height: DS.spacing16),
+                  AchievementStatsPanel(
+                    stats: state.stats,
+                    isCompact: compact,
+                  ),
                 ],
-              ),
-              const SizedBox(height: DS.spacing16),
-
-              // 连胜指示器
-              DashboardStreakIndicator(
-                onTap: () => _showStreakDetails(context),
-              ),
-              const SizedBox(height: DS.spacing16),
-
-              // 统计面板
-              AchievementStatsPanel(stats: state.stats),
-            ],
+              );
+            },
           ),
         ),
       );
@@ -217,64 +220,82 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen> {
           horizontal: DS.spacing16,
           vertical: DS.spacing12,
         ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: DS.spacing12),
-                decoration: BoxDecoration(
-                  color: DS.surfaceSecondary,
-                  borderRadius: DS.borderRadius12,
-                  border: Border.all(color: DS.border),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.search,
-                      size: DS.iconSizeSm,
-                      color: DS.textSecondary,
-                    ),
-                    const SizedBox(width: DS.spacing8),
-                    Expanded(
-                      child: TextField(
-                        controller: _searchController,
-                        decoration: InputDecoration(
-                          hintText: '搜索成就',
-                          hintStyle: TextStyle(
-                            fontSize: DS.fontSizeSm,
-                            color: DS.textSecondary,
-                          ),
-                          border: InputBorder.none,
-                          isDense: true,
-                        ),
-                        style: TextStyle(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxWidth < 420;
+            final search = Container(
+              padding: const EdgeInsets.symmetric(horizontal: DS.spacing12),
+              decoration: BoxDecoration(
+                color: DS.surfaceSecondary,
+                borderRadius: DS.borderRadius12,
+                border: Border.all(color: DS.border),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.search,
+                    size: DS.iconSizeSm,
+                    color: DS.textSecondary,
+                  ),
+                  const SizedBox(width: DS.spacing8),
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        hintText: '搜索成就',
+                        hintStyle: TextStyle(
                           fontSize: DS.fontSizeSm,
-                          color: DS.textPrimary,
-                        ),
-                        onChanged: (value) {
-                          setState(() => _searchQuery = value);
-                        },
-                      ),
-                    ),
-                    if (_searchQuery.isNotEmpty)
-                      GestureDetector(
-                        onTap: () {
-                          _searchController.clear();
-                          setState(() => _searchQuery = '');
-                        },
-                        child: Icon(
-                          Icons.clear,
-                          size: DS.iconSizeSm,
                           color: DS.textSecondary,
                         ),
+                        border: InputBorder.none,
+                        isDense: true,
                       ),
-                  ],
-                ),
+                      style: TextStyle(
+                        fontSize: DS.fontSizeSm,
+                        color: DS.textPrimary,
+                      ),
+                      onChanged: (value) {
+                        setState(() => _searchQuery = value);
+                      },
+                    ),
+                  ),
+                  if (_searchQuery.isNotEmpty)
+                    GestureDetector(
+                      onTap: () {
+                        _searchController.clear();
+                        setState(() => _searchQuery = '');
+                      },
+                      child: Icon(
+                        Icons.clear,
+                        size: DS.iconSizeSm,
+                        color: DS.textSecondary,
+                      ),
+                    ),
+                ],
               ),
-            ),
-            const SizedBox(width: DS.spacing12),
-            _buildFilterButton(),
-          ],
+            );
+
+            if (compact) {
+              return Column(
+                children: [
+                  search,
+                  const SizedBox(height: DS.spacing12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: _buildFilterButton(),
+                  ),
+                ],
+              );
+            }
+
+            return Row(
+              children: [
+                Expanded(child: search),
+                const SizedBox(width: DS.spacing12),
+                _buildFilterButton(),
+              ],
+            );
+          },
         ),
       );
 
@@ -284,7 +305,10 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen> {
     return GestureDetector(
       onTap: () => _showFilterSheet(context),
       child: Container(
-        padding: const EdgeInsets.all(DS.spacing12),
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing16,
+          vertical: DS.spacing12,
+        ),
         decoration: BoxDecoration(
           color: hasFilters
               ? DS.brandPrimary.withValues(alpha: 0.1)
@@ -294,10 +318,25 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen> {
             color: hasFilters ? DS.brandPrimary : DS.border,
           ),
         ),
-        child: Icon(
-          Icons.filter_list,
-          size: DS.iconSizeSm,
-          color: hasFilters ? DS.brandPrimary : DS.textSecondary,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.filter_list,
+              size: DS.iconSizeSm,
+              color: hasFilters ? DS.brandPrimary : DS.textSecondary,
+            ),
+            const SizedBox(width: DS.spacing8),
+            Text(
+              hasFilters ? '筛选中' : '筛选',
+              style: TextStyle(
+                fontSize: DS.fontSizeSm,
+                color: hasFilters ? DS.brandPrimary : DS.textSecondary,
+                fontWeight: DS.fontWeightMedium,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -368,22 +407,39 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen> {
     if (_viewMode == AchievementViewMode.grid) {
       return SliverPadding(
         padding: const EdgeInsets.all(DS.spacing16),
-        sliver: SliverGrid(
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: context.isMobile ? 2 : 3,
-            mainAxisSpacing: DS.spacing12,
-            crossAxisSpacing: DS.spacing12,
-          ),
-          delegate: SliverChildBuilderDelegate(
-            (context, index) {
-              final achievement = filteredAchievements[index];
-              return AchievementGridCard(
-                achievement: achievement,
-                onTap: () => _openAchievementDetail(achievement),
-              );
-            },
-            childCount: filteredAchievements.length,
-          ),
+        sliver: SliverLayoutBuilder(
+          builder: (context, constraints) {
+            final width = constraints.crossAxisExtent;
+            final crossAxisCount = width < 380
+                ? 1
+                : width < 900
+                    ? 2
+                    : 3;
+            final mainAxisExtent = width < 380
+                ? 190.0
+                : width < 900
+                    ? 228.0
+                    : 236.0;
+
+            return SliverGrid(
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: crossAxisCount,
+                mainAxisSpacing: DS.spacing12,
+                crossAxisSpacing: DS.spacing12,
+                mainAxisExtent: mainAxisExtent,
+              ),
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final achievement = filteredAchievements[index];
+                  return AchievementGridCard(
+                    achievement: achievement,
+                    onTap: () => _openAchievementDetail(achievement),
+                  );
+                },
+                childCount: filteredAchievements.length,
+              ),
+            );
+          },
         ),
       );
     }

@@ -271,81 +271,90 @@ class _AchievementDetailScreenState
         ),
       );
 
-  Widget _buildTitleSection(AchievementWithProgress achievement) => Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  achievement.achievement.name,
-                  style: TextStyle(
-                    fontSize: DS.fontSize2xl,
-                    fontWeight: DS.fontWeightBold,
-                    color: DS.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: DS.spacing8),
-                Row(
+  Widget _buildTitleSection(AchievementWithProgress achievement) =>
+      LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 420;
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (achievement.isUnlocked) ...[
-                      Icon(
-                        Icons.check_circle,
-                        size: DS.iconSizeSm,
-                        color: DS.semanticSuccess,
-                      ),
-                      const SizedBox(width: DS.spacing6),
-                      Text(
-                        '已解锁',
-                        style: TextStyle(
-                          fontSize: DS.fontSizeSm,
-                          color: DS.semanticSuccess,
-                          fontWeight: DS.fontWeightMedium,
-                        ),
-                      ),
-                    ] else ...[
-                      Icon(
-                        Icons.lock_outline,
-                        size: DS.iconSizeSm,
-                        color: DS.textTertiary,
-                      ),
-                      const SizedBox(width: DS.spacing6),
-                      Text(
-                        '未解锁',
-                        style: TextStyle(
-                          fontSize: DS.fontSizeSm,
-                          color: DS.textTertiary,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(width: DS.spacing12),
                     Text(
-                      _getTypeName(achievement.achievement.type),
+                      achievement.achievement.name,
+                      maxLines: compact ? 3 : 4,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: DS.fontSizeSm,
-                        color: DS.textSecondary,
+                        fontSize: compact ? DS.fontSizeXl : DS.fontSize2xl,
+                        fontWeight: DS.fontWeightBold,
+                        color: DS.textPrimary,
                       ),
+                    ),
+                    const SizedBox(height: DS.spacing8),
+                    Wrap(
+                      spacing: DS.spacing12,
+                      runSpacing: DS.spacing8,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        if (achievement.isUnlocked) ...[
+                          Icon(
+                            Icons.check_circle,
+                            size: DS.iconSizeSm,
+                            color: DS.semanticSuccess,
+                          ),
+                          Text(
+                            '已解锁',
+                            style: TextStyle(
+                              fontSize: DS.fontSizeSm,
+                              color: DS.semanticSuccess,
+                              fontWeight: DS.fontWeightMedium,
+                            ),
+                          ),
+                        ] else ...[
+                          Icon(
+                            Icons.lock_outline,
+                            size: DS.iconSizeSm,
+                            color: DS.textTertiary,
+                          ),
+                          Text(
+                            '未解锁',
+                            style: TextStyle(
+                              fontSize: DS.fontSizeSm,
+                              color: DS.textTertiary,
+                            ),
+                          ),
+                        ],
+                        Text(
+                          _getTypeName(achievement.achievement.type),
+                          style: TextStyle(
+                            fontSize: DS.fontSizeSm,
+                            color: DS.textSecondary,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
-          ),
-          // 置顶按钮
-          SparkleIconButton(
-            icon: Icon(
-              achievement.userProgress?.isPinned ?? false
-                  ? Icons.push_pin
-                  : Icons.push_pin_outlined,
-              color: (achievement.userProgress?.isPinned ?? false)
-                  ? DS.semanticWarning
-                  : DS.textSecondary,
-            ),
-            onPressed: () => _togglePin(achievement),
-            variant: ButtonVariant.ghost,
-            size: DS.touchTargetMinSize,
-          ),
-        ],
+              ),
+              const SizedBox(width: DS.spacing8),
+              SparkleIconButton(
+                icon: Icon(
+                  achievement.userProgress?.isPinned ?? false
+                      ? Icons.push_pin
+                      : Icons.push_pin_outlined,
+                  color: (achievement.userProgress?.isPinned ?? false)
+                      ? DS.semanticWarning
+                      : DS.textSecondary,
+                ),
+                onPressed: () => _togglePin(achievement),
+                variant: ButtonVariant.ghost,
+                size: DS.touchTargetMinSize,
+              ),
+            ],
+          );
+        },
       );
 
   Widget _buildSectionTitle(String title) => Text(
@@ -390,8 +399,9 @@ class _AchievementDetailScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            runSpacing: DS.spacing8,
             children: [
               Text(
                 '完成进度',
@@ -440,8 +450,9 @@ class _AchievementDetailScreenState
           ),
           const SizedBox(height: DS.spacing12),
           if (userProgress != null)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              runSpacing: DS.spacing4,
               children: [
                 Text(
                   '${userProgress.progressValue}',
@@ -672,7 +683,7 @@ class _AchievementDetailScreenState
       Padding(
         padding: const EdgeInsets.symmetric(vertical: DS.spacing6),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               label,
@@ -681,12 +692,17 @@ class _AchievementDetailScreenState
                 color: DS.textSecondary,
               ),
             ),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: DS.fontSizeSm,
-                fontWeight: highlight ? DS.fontWeightBold : DS.fontWeightMedium,
-                color: highlight ? DS.semanticWarning : DS.textPrimary,
+            const SizedBox(width: DS.spacing12),
+            Expanded(
+              child: Text(
+                value,
+                textAlign: TextAlign.right,
+                style: TextStyle(
+                  fontSize: DS.fontSizeSm,
+                  fontWeight:
+                      highlight ? DS.fontWeightBold : DS.fontWeightMedium,
+                  color: highlight ? DS.semanticWarning : DS.textPrimary,
+                ),
               ),
             ),
           ],

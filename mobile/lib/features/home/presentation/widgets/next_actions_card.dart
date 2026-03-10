@@ -123,7 +123,8 @@ class _CompactNextActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final visibleActions = actions.take(2).toList();
+    final maxActions = embedded ? 1 : 2;
+    final visibleActions = actions.take(maxActions).toList();
     final card = MaterialStyler(
       material: AppMaterials.ceramic.copyWith(
         backgroundGradient: LinearGradient(
@@ -174,7 +175,9 @@ class _CompactNextActions extends StatelessWidget {
                     Text(
                       visibleActions.isEmpty
                           ? '当前没有待推进任务'
-                          : '优先处理最关键的 ${actions.length} 项行动',
+                          : embedded
+                              ? '最关键的待办'
+                              : '优先处理最关键的 ${actions.length} 项行动',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: context.sparkleTypography.labelSmall.copyWith(
@@ -287,6 +290,8 @@ class _EmbeddedActionBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
         children: [
           ...actions.asMap().entries.map(
                 (entry) => Padding(
@@ -300,25 +305,15 @@ class _EmbeddedActionBody extends StatelessWidget {
                   ),
                 ),
               ),
-          const Spacer(),
-          if (onViewAll != null)
-            Align(
-              alignment: Alignment.centerRight,
-              child: InkWell(
-                onTap: onViewAll,
-                borderRadius: BorderRadius.circular(999),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: DS.spacing4,
-                    vertical: 2,
-                  ),
-                  child: Text(
-                    allActionCount > actions.length ? '查看全部 →' : '任务总览 →',
-                    style: context.sparkleTypography.labelLarge.copyWith(
-                      color: DS.brandPrimary,
-                      fontWeight: DS.fontWeightBold,
-                    ),
-                  ),
+          if (allActionCount > actions.length && !dense)
+            Padding(
+              padding: const EdgeInsets.only(top: DS.spacing4),
+              child: Text(
+                '其余 ${allActionCount - actions.length} 项见任务页',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: context.sparkleTypography.labelSmall.copyWith(
+                  color: DS.textSecondary,
                 ),
               ),
             ),
@@ -409,60 +404,19 @@ class _CompactNextActionRow extends ConsumerWidget {
           borderRadius: DS.borderRadius12,
           border: embedded ? Border.all(color: DS.borderSubtle) : null,
         ),
-        child: Row(
-          children: [
-            Container(
-              width: dense ? 28 : 30,
-              height: dense ? 28 : 30,
-              decoration: BoxDecoration(
-                color: _getTypeColor(task.type).withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                _getTypeIcon(task.type),
-                size: dense ? 15 : 16,
-                color: _getTypeColor(task.type),
-              ),
-            ),
-            const SizedBox(width: DS.spacing8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    task.title,
-                    maxLines: dense ? 1 : 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.sparkleTypography.labelLarge.copyWith(
-                      color: DS.textPrimary,
-                      fontSize: dense ? 12 : null,
-                      fontWeight: DS.fontWeightSemiBold,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${task.estimatedMinutes} 分钟 · ${_taskLabel(task.type)}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.sparkleTypography.labelSmall.copyWith(
-                      color: DS.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: DS.spacing8),
-            Container(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compactAction = dense || constraints.maxWidth < 250;
+            final actionChip = Container(
               padding: EdgeInsets.symmetric(
-                horizontal: dense ? DS.spacing6 : DS.spacing8,
-                vertical: dense ? DS.spacing4 : DS.spacing6,
+                horizontal: compactAction ? DS.spacing6 : DS.spacing8,
+                vertical: compactAction ? DS.spacing4 : DS.spacing6,
               ),
               decoration: BoxDecoration(
                 color: DS.brandPrimary.withValues(alpha: 0.14),
                 borderRadius: BorderRadius.circular(999),
               ),
-              child: dense
+              child: compactAction
                   ? Icon(
                       Icons.play_arrow_rounded,
                       size: 16,
@@ -475,8 +429,57 @@ class _CompactNextActionRow extends ConsumerWidget {
                         fontWeight: DS.fontWeightBold,
                       ),
                     ),
-            ),
-          ],
+            );
+
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: dense ? 28 : 30,
+                  height: dense ? 28 : 30,
+                  decoration: BoxDecoration(
+                    color: _getTypeColor(task.type).withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    _getTypeIcon(task.type),
+                    size: dense ? 15 : 16,
+                    color: _getTypeColor(task.type),
+                  ),
+                ),
+                const SizedBox(width: DS.spacing8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        task.title,
+                        maxLines: embedded ? 2 : (dense ? 1 : 2),
+                        overflow: TextOverflow.ellipsis,
+                        style: context.sparkleTypography.labelLarge.copyWith(
+                          color: DS.textPrimary,
+                          fontSize: dense ? 12 : null,
+                          fontWeight: DS.fontWeightSemiBold,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${task.estimatedMinutes} 分钟 · ${_taskLabel(task.type)}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.sparkleTypography.labelSmall.copyWith(
+                          color: DS.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: DS.spacing8),
+                actionChip,
+              ],
+            );
+          },
         ),
       ),
     );

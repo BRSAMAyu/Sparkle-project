@@ -194,7 +194,8 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
             title: '生词本',
             subtitle: '把查词结果变成可复习资产。支持搜索、重要度筛选和快闪式复习。',
             accentColor: DS.success,
-            fillHeight: true,
+            compactHeader: true,
+            fillHeight: false,
             heroChips: [
               ToolHeroChip(
                 label: '$totalCount 个词条',
@@ -272,6 +273,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                   ),
                   child: TabBar(
                     controller: _tabController,
+                    indicatorSize: TabBarIndicatorSize.tab,
                     indicator: BoxDecoration(
                       color: DS.success.withValues(alpha: 0.18),
                       borderRadius: BorderRadius.circular(16),
@@ -282,14 +284,15 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                     labelColor: DS.textPrimary,
                     unselectedLabelColor: DS.textSecondary,
                     dividerColor: Colors.transparent,
-                    tabs: [
-                      Tab(text: '待复习 ($dueCount)'),
-                      Tab(text: '全部 ($totalCount)'),
+                    tabs: const [
+                      Tab(text: '待复习'),
+                      Tab(text: '全部词条'),
                     ],
                   ),
                 ),
                 const SizedBox(height: DS.spacing16),
-                Expanded(
+                SizedBox(
+                  height: 420,
                   child: TabBarView(
                     controller: _tabController,
                     children: [
@@ -331,16 +334,18 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
     required bool isReviewList,
   }) {
     if (words.isEmpty) {
-      return ToolSectionCard(
-        accentColor: isReviewList ? DS.warning : DS.success,
-        child: ToolEmptyState(
-          icon: isReviewList
-              ? Icons.check_circle_outline_rounded
-              : Icons.library_books_outlined,
-          title: isReviewList ? '当前没有待复习单词' : '生词本还是空的',
-          description:
-              isReviewList ? '继续通过查词工具积累新词，或者稍后再来复习。' : '先去查词，把值得反复看的词条收进来。',
+      return SingleChildScrollView(
+        child: ToolSectionCard(
           accentColor: isReviewList ? DS.warning : DS.success,
+          child: ToolEmptyState(
+            icon: isReviewList
+                ? Icons.check_circle_outline_rounded
+                : Icons.library_books_outlined,
+            title: isReviewList ? '当前没有待复习单词' : '生词本还是空的',
+            description:
+                isReviewList ? '继续通过查词工具积累新词，或者稍后再来复习。' : '先去查词，把值得反复看的词条收进来。',
+            accentColor: isReviewList ? DS.warning : DS.success,
+          ),
         ),
       );
     }
@@ -394,6 +399,8 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
       title: '复习模式',
       subtitle: '以快闪卡片方式确认是否记住当前词条。',
       accentColor: DS.warning,
+      compactHeader: true,
+      fillHeight: false,
       heroChips: [
         ToolHeroChip(
           label: '${_currentReviewIndex + 1} / ${_sessionWords.length}',
@@ -408,10 +415,10 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
       ],
       body: Column(
         children: [
-          Expanded(
+          SizedBox(
+            height: 360,
             child: ToolSectionCard(
               accentColor: _showAnswer ? DS.success : DS.warning,
-              fillHeight: true,
               title: word['word'] as String? ?? '',
               subtitle: phonetic,
               child: InkWell(
@@ -439,7 +446,9 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            _showAnswer ? (definition ?? '暂无释义') : '点击显示释义',
+                            _showAnswer
+                                ? (definition ?? '暂无释义')
+                                : '点击显示释义',
                             textAlign: TextAlign.center,
                             style: Theme.of(context)
                                 .textTheme
@@ -474,46 +483,60 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
           ),
         ],
       ),
-      footer: _showAnswer
-          ? Row(
-              children: [
-                Expanded(
-                  child: SparkleButton(
+      footer: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 560;
+          final actions = _showAnswer
+              ? <Widget>[
+                  SparkleButton(
                     label: '不认识',
                     variant: ButtonVariant.ghost,
                     onPressed: () => _handleReview(false),
                     icon: const Icon(Icons.close_rounded),
+                    expand: true,
                   ),
-                ),
-                const SizedBox(width: DS.spacing12),
-                Expanded(
-                  child: SparkleButton(
+                  SparkleButton(
                     label: '认识',
                     onPressed: () => _handleReview(true),
                     icon: const Icon(Icons.check_rounded),
+                    expand: true,
                   ),
-                ),
-              ],
-            )
-          : Row(
-              children: [
-                Expanded(
-                  child: SparkleButton(
+                ]
+              : <Widget>[
+                  SparkleButton(
                     label: '退出复习',
                     variant: ButtonVariant.ghost,
                     onPressed: () => setState(() => _isReviewMode = false),
+                    expand: true,
                   ),
-                ),
-                const SizedBox(width: DS.spacing12),
-                Expanded(
-                  child: SparkleButton(
+                  SparkleButton(
                     label: '显示答案',
                     onPressed: () => setState(() => _showAnswer = true),
                     icon: const Icon(Icons.visibility_rounded),
+                    expand: true,
                   ),
-                ),
+                ];
+
+          if (compact) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                actions[0],
+                const SizedBox(height: DS.spacing12),
+                actions[1],
               ],
-            ),
+            );
+          }
+
+          return Row(
+            children: [
+              Expanded(child: actions[0]),
+              const SizedBox(width: DS.spacing12),
+              Expanded(child: actions[1]),
+            ],
+          );
+        },
+      ),
     );
   }
 }

@@ -1,128 +1,144 @@
 """
-填充初始成就数据到数据库
-Populate initial achievement data to database
+填充并同步成就定义数据到数据库
+Populate and sync achievement definitions to database
 """
 import asyncio
-import json
 from datetime import UTC, datetime
+from typing import Any
 
-from sqlalchemy import select, text
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.data.achievement_seeds import INITIAL_ACHIEVEMENTS, INITIAL_GALAXY_SKINS
 from app.db.session import AsyncSessionLocal
-from app.models.achievement import Achievement
+from app.models.achievement import Achievement, GalaxySkin
+
+SUPPORTED_REWARD_TYPES = {"photon", "title", "galaxy_skin", "freeze_charge"}
+ACHIEVEMENT_SYNC_FIELDS = [
+    "name",
+    "description",
+    "icon_url",
+    "type",
+    "rarity",
+    "trigger_code",
+    "trigger_config",
+    "is_hidden",
+    "hint",
+    "prerequisites",
+    "visual_effect_type",
+    "visual_config",
+    "reward_config",
+    "sort_order",
+    "category",
+    "parent_id",
+]
+GALAXY_SKIN_SYNC_FIELDS = [
+    "name",
+    "description",
+    "preview_url",
+    "unlock_type",
+    "unlock_requirement",
+    "skin_config",
+    "rarity",
+    "sort_order",
+]
 
 
-def escape_sql(s: str) -> str:
-    """Escape string for SQL (single quotes)"""
-    if s is None:
-        return "NULL"
-    return f"'{s.replace(chr(39), chr(39) + chr(39))}'"
+def _normalize_rewards(reward_config: Any) -> list[dict[str, Any]]:
+    if not reward_config:
+        return []
+    if isinstance(reward_config, list):
+        return reward_config
+    return reward_config.get("rewards", [])
 
 
-async def populate_achievements():
-    """填充成就数据 - 使用 raw SQL 避免 enum 问题"""
+def validate_achievement_seed_data() -> None:
+    skin_ids = {skin["id"] for skin in INITIAL_GALAXY_SKINS}
+
+    for achievement in INITIAL_ACHIEVEMENTS:
+        for reward in _normalize_rewards(achievement.get("reward_config")):
+            reward_type = reward.get("type")
+            if reward_type not in SUPPORTED_REWARD_TYPES:
+                raise ValueError(
+                    f"Unsupported reward type '{reward_type}' in achievement '{achievement['id']}'"
+                )
+            if reward_type == "galaxy_skin":
+                skin_id = reward.get("skin_id")
+                if skin_id not in skin_ids:
+                    raise ValueError(
+                        f"Achievement '{achievement['id']}' references unknown galaxy skin '{skin_id}'"
+                    )
+
+
+async def sync_achievement_definitions(db: AsyncSession) -> tuple[int, int]:
+    synced_achievements = 0
+    synced_skins = 0
+
+    for data in INITIAL_ACHIEVEMENTS:
+        achievement = await db.get(Achievement, data["id"])
+
+        if achievement is None:
+            achievement = Achievement(id=data["id"])
+            db.add(achievement)
+
+        for field in ACHIEVEMENT_SYNC_FIELDS:
+            setattr(achievement, field, data.get(field))
+        achievement.updated_at = datetime.now(UTC).replace(tzinfo=None)
+        synced_achievements += 1
+
+    for data in INITIAL_GALAXY_SKINS:
+        skin = await db.get(GalaxySkin, data["id"])
+
+        if skin is None:
+            skin = GalaxySkin(id=data["id"])
+            db.add(skin)
+
+        for field in GALAXY_SKIN_SYNC_FIELDS:
+            setattr(skin, field, data.get(field))
+        skin.updated_at = datetime.now(UTC).replace(tzinfo=None)
+        synced_skins += 1
+
+    await db.commit()
+    return synced_achievements, synced_skins
+
+
+async def _upsert_achievement_definitions() -> tuple[int, int]:
     async with AsyncSessionLocal() as db:
-        # Check if achievements already exist
-        result = await db.execute(select(Achievement).limit(1))
-        if result.scalar():
-            print("Achievements already exist, skipping...")
-            return
-
-        now = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")
-
-        # Populate achievements using raw SQL
-        for data in INITIAL_ACHIEVEMENTS:
-            type_str = data.get("type", "milestone")
-            rarity_str = data.get("rarity", "common")
-            visual_effect_str = data.get("visual_effect_type", "none")
-
-            # Build the SQL query
-            sql = text(f"""INSERT INTO achievements (
-                id, name, description, icon_url, type, rarity, trigger_code, trigger_config,
-                is_hidden, hint, prerequisites, visual_effect_type, visual_config,
-                reward_config, total_unlocked, sort_order, category, parent_id,
-                created_at, updated_at
-            ) VALUES (
-                '{data["id"]}',
-                '{data["name"].replace(chr(39), chr(39) + chr(39))}',
-                {escape_sql(data.get("description"))},
-                {escape_sql(data.get("icon_url"))},
-                '{type_str}'::achievementtype,
-                '{rarity_str}'::achievementrarity,
-                '{data["trigger_code"]}',
-                '{json.dumps(data.get("trigger_config")).replace(chr(39), chr(39) + chr(39))}'::jsonb,
-                {str(data.get("is_hidden", False)).lower()},
-                {escape_sql(data.get("hint"))},
-                '{json.dumps(data.get("prerequisites")).replace(chr(39), chr(39) + chr(39))}'::jsonb,
-                '{visual_effect_str}'::visualeffecttype,
-                '{json.dumps(data.get("visual_config")).replace(chr(39), chr(39) + chr(39))}'::jsonb,
-                '{json.dumps(data.get("reward_config")).replace(chr(39), chr(39) + chr(39))}'::jsonb,
-                0,
-                {data.get("sort_order", 0)},
-                {escape_sql(data.get("category"))},
-                {escape_sql(data.get("parent_id"))},
-                '{now}'::timestamp,
-                '{now}'::timestamp
-            )""")
-
-            await db.execute(sql)
-
-        # Populate galaxy skins
-        for data in INITIAL_GALAXY_SKINS:
-            rarity_str = data.get("rarity", "common")
-
-            sql = text(f"""INSERT INTO galaxy_skins (
-                id, name, description, preview_url, unlock_type, unlock_requirement,
-                skin_config, rarity, sort_order, created_at, updated_at
-            ) VALUES (
-                '{data["id"]}',
-                '{data["name"].replace(chr(39), chr(39) + chr(39))}',
-                {escape_sql(data.get("description"))},
-                {escape_sql(data.get("preview_url"))},
-                {escape_sql(data.get("unlock_type"))},
-                '{json.dumps(data.get("unlock_requirement")).replace(chr(39), chr(39) + chr(39))}'::jsonb,
-                '{json.dumps(data.get("skin_config")).replace(chr(39), chr(39) + chr(39))}'::jsonb,
-                '{rarity_str}'::achievementrarity,
-                {data.get("sort_order", 0)},
-                '{now}'::timestamp,
-                '{now}'::timestamp
-            )""")
-
-            await db.execute(sql)
-
-        await db.commit()
-        print(f"Populated {len(INITIAL_ACHIEVEMENTS)} achievements and {len(INITIAL_GALAXY_SKINS)} galaxy skins")
+        return await sync_achievement_definitions(db)
 
 
-async def show_achievement_summary():
+async def populate_achievements() -> tuple[int, int]:
+    """幂等同步成就和星系皮肤定义"""
+    validate_achievement_seed_data()
+    synced_achievements, synced_skins = await _upsert_achievement_definitions()
+    print(
+        f"Synchronized {synced_achievements} achievements and {synced_skins} galaxy skins"
+    )
+    return synced_achievements, synced_skins
+
+
+async def show_achievement_summary() -> None:
     """Show achievement summary"""
     async with AsyncSessionLocal() as db:
-        # Count by rarity
-        from sqlalchemy import func
         result = await db.execute(
-            select(Achievement.rarity, func.count(Achievement.id))
-            .group_by(Achievement.rarity)
+            select(Achievement.rarity, func.count(Achievement.id)).group_by(Achievement.rarity)
         )
         print("\nAchievements by rarity:")
         for rarity, count in result.all():
             print(f"  {rarity}: {count}")
 
-        # Count by category
         result = await db.execute(
-            select(Achievement.category, func.count(Achievement.id))
-            .group_by(Achievement.category)
+            select(Achievement.category, func.count(Achievement.id)).group_by(Achievement.category)
         )
         print("\nAchievements by category:")
         for category, count in result.all():
             print(f"  {category}: {count}")
 
-        # Show galaxy skins
-        result = await db.execute(select(Achievement))
-        print(f"\nTotal achievements: {len(result.scalars().all())}")
+        total = await db.execute(select(func.count(Achievement.id)))
+        print(f"\nTotal achievements: {total.scalar_one()}")
 
 
 if __name__ == "__main__":
-    print("Populating achievement data...")
+    print("Synchronizing achievement definitions...")
     asyncio.run(populate_achievements())
     asyncio.run(show_achievement_summary())

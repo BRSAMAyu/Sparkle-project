@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
 
@@ -12,7 +14,7 @@ Color _shiftLightness(Color color, double amount) {
   return hsl.withLightness(lightness).toColor();
 }
 
-class ToolShell extends StatelessWidget {
+class ToolShell extends StatefulWidget {
   const ToolShell({
     required this.surface,
     required this.icon,
@@ -26,6 +28,7 @@ class ToolShell extends StatelessWidget {
     this.fillHeight = false,
     this.footer,
     this.maxWidth = 980,
+    this.compactHeader = false,
   });
 
   final ToolSurface surface;
@@ -39,43 +42,81 @@ class ToolShell extends StatelessWidget {
   final bool fillHeight;
   final Widget? footer;
   final double maxWidth;
+  final bool compactHeader;
 
-  bool get _isSheet => surface == ToolSurface.sheet;
+  @override
+  State<ToolShell> createState() => _ToolShellState();
+}
+
+class _ToolShellState extends State<ToolShell> {
+  static const _headerPrefPrefix = 'tool_shell.header_hidden.';
+
+  bool _headerCollapsed = false;
+
+  bool get _isSheet => widget.surface == ToolSurface.sheet;
+  bool get _effectiveCompactHeader => widget.compactHeader || _headerCollapsed;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_loadHeaderPreference());
+  }
+
+  Future<void> _loadHeaderPreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    final nextValue =
+        prefs.getBool('$_headerPrefPrefix${widget.title}') ?? false;
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _headerCollapsed = nextValue;
+    });
+  }
+
+  Future<void> _toggleHeaderCollapsed() async {
+    final nextValue = !_headerCollapsed;
+    setState(() {
+      _headerCollapsed = nextValue;
+    });
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('$_headerPrefPrefix${widget.title}', nextValue);
+  }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final panelColor = _mix(
       DS.surfaceOverlay,
-      accentColor,
+      widget.accentColor,
       isDark ? 0.08 : 0.03,
     );
     final heroStart = _mix(
       DS.surfacePrimaryElevated,
-      accentColor,
+      widget.accentColor,
       isDark ? 0.24 : 0.12,
     );
     final heroEnd = _mix(
       DS.surfacePrimary,
-      accentColor,
+      widget.accentColor,
       isDark ? 0.06 : 0.03,
     );
     final heroIconColor =
-        _shiftLightness(accentColor, isDark ? 0.12 : -0.04);
+        _shiftLightness(widget.accentColor, isDark ? 0.12 : -0.04);
     final iconSurface = _mix(
       DS.surfacePrimary,
-      accentColor,
+      widget.accentColor,
       isDark ? 0.20 : 0.10,
     );
     final borderColor = _mix(
       DS.borderStrong,
-      accentColor,
+      widget.accentColor,
       isDark ? 0.18 : 0.10,
     );
 
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      mainAxisSize: fillHeight ? MainAxisSize.max : MainAxisSize.min,
+      mainAxisSize: widget.fillHeight ? MainAxisSize.max : MainAxisSize.min,
       children: [
         if (_isSheet)
           Padding(
@@ -102,14 +143,17 @@ class ToolShell extends StatelessWidget {
             border: Border.all(color: borderColor),
             boxShadow: [
               BoxShadow(
-                color: accentColor.withValues(alpha: isDark ? 0.12 : 0.08),
+                color:
+                    widget.accentColor.withValues(alpha: isDark ? 0.12 : 0.08),
                 blurRadius: isDark ? 28 : 24,
                 offset: const Offset(0, 16),
               ),
             ],
           ),
           child: Padding(
-            padding: const EdgeInsets.all(DS.spacing24),
+            padding: EdgeInsets.all(
+              _effectiveCompactHeader ? DS.spacing16 : DS.spacing24,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -117,79 +161,122 @@ class ToolShell extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      width: 52,
-                      height: 52,
+                      width: _effectiveCompactHeader ? 40 : 52,
+                      height: _effectiveCompactHeader ? 40 : 52,
                       decoration: BoxDecoration(
                         color: iconSurface,
                         borderRadius: BorderRadius.circular(18),
                         border: Border.all(
-                          color: accentColor.withValues(
+                          color: widget.accentColor.withValues(
                             alpha: isDark ? 0.34 : 0.18,
                           ),
                         ),
                       ),
                       child: Icon(
-                        icon,
+                        widget.icon,
                         color: heroIconColor,
-                        size: 26,
+                        size: _effectiveCompactHeader ? 20 : 26,
                       ),
                     ),
-                    const SizedBox(width: DS.spacing16),
+                    SizedBox(
+                      width:
+                          _effectiveCompactHeader ? DS.spacing10 : DS.spacing16,
+                    ),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            title,
-                            style: Theme.of(context)
-                                .textTheme
-                                .headlineSmall
+                            widget.title,
+                            maxLines: _effectiveCompactHeader ? 1 : 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: (_effectiveCompactHeader
+                                    ? Theme.of(context).textTheme.titleLarge
+                                    : Theme.of(context).textTheme.headlineSmall)
                                 ?.copyWith(
-                                  color: DS.textPrimary,
-                                  fontWeight: DS.fontWeightBold,
-                                  height: 1.05,
-                                ),
+                              color: DS.textPrimary,
+                              fontWeight: DS.fontWeightBold,
+                              height: 1.05,
+                            ),
                           ),
-                          const SizedBox(height: DS.spacing8),
-                          Text(
-                            subtitle,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.copyWith(
-                                  color: DS.textSecondary,
-                                  height: 1.5,
-                                ),
-                          ),
+                          if (!_headerCollapsed) ...[
+                            SizedBox(
+                              height: _effectiveCompactHeader
+                                  ? DS.spacing6
+                                  : DS.spacing8,
+                            ),
+                            Text(
+                              widget.subtitle,
+                              maxLines: _effectiveCompactHeader ? 2 : 3,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: DS.textSecondary,
+                                    height: _effectiveCompactHeader ? 1.4 : 1.5,
+                                  ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
-                    if (headerAction != null) ...[
+                    if (widget.headerAction != null) ...[
                       const SizedBox(width: DS.spacing12),
-                      headerAction!,
+                      widget.headerAction!,
                     ],
+                    SparkleIconButton(
+                      variant: ButtonVariant.ghost,
+                      size: 32,
+                      onPressed: _toggleHeaderCollapsed,
+                      icon: Icon(
+                        _headerCollapsed
+                            ? Icons.visibility_off_rounded
+                            : Icons.visibility_rounded,
+                        size: 18,
+                      ),
+                    ),
                   ],
                 ),
-                if (heroChips.isNotEmpty) ...[
-                  const SizedBox(height: DS.spacing16),
+                if (!_headerCollapsed && widget.heroChips.isNotEmpty) ...[
+                  SizedBox(
+                    height:
+                        _effectiveCompactHeader ? DS.spacing10 : DS.spacing16,
+                  ),
                   Wrap(
-                    spacing: DS.spacing10,
-                    runSpacing: DS.spacing10,
-                    children: heroChips,
+                    spacing:
+                        _effectiveCompactHeader ? DS.spacing8 : DS.spacing10,
+                    runSpacing:
+                        _effectiveCompactHeader ? DS.spacing8 : DS.spacing10,
+                    children: widget.heroChips,
                   ),
                 ],
               ],
             ),
           ),
         ),
-        const SizedBox(height: DS.spacing20),
-        if (fillHeight) Expanded(child: body) else body,
-        if (footer != null) ...[
-          const SizedBox(height: DS.spacing20),
-          footer!,
+        SizedBox(height: _effectiveCompactHeader ? DS.spacing12 : DS.spacing20),
+        if (widget.fillHeight)
+          Expanded(child: widget.body)
+        else if (_isSheet)
+          Flexible(child: widget.body)
+        else
+          widget.body,
+        if (widget.footer != null) ...[
+          SizedBox(
+            height: _effectiveCompactHeader ? DS.spacing12 : DS.spacing20,
+          ),
+          widget.footer!,
         ],
       ],
     );
+
+    final contentBody = !widget.fillHeight && !_isSheet
+        ? SingleChildScrollView(
+            padding: EdgeInsets.zero,
+            child: content,
+          )
+        : content;
 
     final root = DecoratedBox(
       decoration: BoxDecoration(
@@ -211,7 +298,7 @@ class ToolShell extends StatelessWidget {
           DS.spacing20,
           DS.spacing20,
         ),
-        child: content,
+        child: contentBody,
       ),
     );
 
@@ -219,7 +306,7 @@ class ToolShell extends StatelessWidget {
       alignment: Alignment.topCenter,
       child: ConstrainedBox(
         constraints: BoxConstraints(
-          maxWidth: maxWidth,
+          maxWidth: widget.maxWidth,
           maxHeight: _isSheet
               ? math.min(MediaQuery.sizeOf(context).height * 0.88, 940)
               : double.infinity,
@@ -299,13 +386,11 @@ class ToolSectionCard extends StatelessWidget {
                           const SizedBox(height: DS.spacing4),
                           Text(
                             subtitle!,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(
-                                  color: DS.textSecondary,
-                                  height: 1.4,
-                                ),
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: DS.textSecondary,
+                                      height: 1.4,
+                                    ),
                           ),
                         ],
                       ],
@@ -480,9 +565,8 @@ class ToolChoiceChip extends StatelessWidget {
               label,
               style: Theme.of(context).textTheme.labelLarge?.copyWith(
                     color: foreground,
-                    fontWeight: selected
-                        ? DS.fontWeightBold
-                        : DS.fontWeightMedium,
+                    fontWeight:
+                        selected ? DS.fontWeightBold : DS.fontWeightMedium,
                   ),
             ),
           ],

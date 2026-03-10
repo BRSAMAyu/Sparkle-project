@@ -24,7 +24,8 @@ from app.models.achievement import (
     UserTitle,
 )
 from app.models.community import GroupTaskClaim
-from app.models.galaxy import KnowledgeNode, UserNodeStatus
+from app.models.galaxy import KnowledgeNode, StudyRecord, UserNodeStatus
+from app.models.subject import Subject
 from app.services.system_update_service import SystemUpdateService, build_system_update
 
 
@@ -62,6 +63,26 @@ class AchievementEvent:
 class AchievementEngine:
     """成就引擎 - 核心服务"""
     GROUP_TASK_WEIGHT_FACTOR = 0.7
+    SUPPORTED_TRIGGER_CODES = {
+        "ALL_SECTORS_UNLOCKED",
+        "EARLY_BIRD",
+        "NIGHT_OWL_STUDY",
+        "NODES_MASTERED",
+        "NODES_UNLOCKED",
+        "PERFECTIONIST",
+        "SECTOR_MASTERY",
+        "SPEED_UNLOCK",
+        "SPRINTS_STREAK",
+        "SPRINTS_TOTAL",
+        "SPRINT_AHEAD",
+        "SPRINT_PERFECT",
+        "STREAK_DAYS",
+        "STUDY_MINUTES_SINGLE",
+        "STUDY_MINUTES_TOTAL",
+        "TASKS_TOTAL",
+        "WEEKEND_WARRIOR",
+    }
+    SUPPORTED_REWARD_TYPES = {"freeze_charge", "galaxy_skin", "photon", "title"}
 
     # 成就定义缓存（内存缓存）
     _achievement_cache: dict[str, Achievement] = {}
@@ -190,19 +211,33 @@ class AchievementEngine:
             # 特殊匹配逻辑
             match event_type:
                 case AchievementEvent.TASK_COMPLETED:
-                    if trigger_code in ["TASKS_TOTAL", "TASKS_COMPLETED"]:
+                    if trigger_code in ["TASKS_TOTAL", "TASKS_COMPLETED", "WEEKEND_WARRIOR"]:
                         relevant.append(achievement)
                 case AchievementEvent.DAILY_CHECKIN:
                     if trigger_code == "STREAK_DAYS":
                         relevant.append(achievement)
                 case AchievementEvent.NODE_UNLOCKED:
-                    if trigger_code in ["NODES_UNLOCKED", "SECTOR_MASTERY"]:
+                    if trigger_code in [
+                        "ALL_SECTORS_UNLOCKED",
+                        "NODES_UNLOCKED",
+                        "SECTOR_MASTERY",
+                        "SPEED_UNLOCK",
+                    ]:
                         relevant.append(achievement)
                 case AchievementEvent.NODE_MASTERED:
-                    if trigger_code in ["NODES_MASTERED", "PERFECTIONIST"]:
+                    if trigger_code in ["NODES_MASTERED", "PERFECTIONIST", "SECTOR_MASTERY", "WEEKEND_WARRIOR"]:
                         relevant.append(achievement)
                 case AchievementEvent.STUDY_MINUTES_ACCUMULATED:
-                    if trigger_code in ["STUDY_MINUTES_TOTAL", "STUDY_MINUTES_SINGLE"]:
+                    if trigger_code in ["STUDY_MINUTES_TOTAL", "STUDY_MINUTES_SINGLE", "WEEKEND_WARRIOR"]:
+                        relevant.append(achievement)
+                case AchievementEvent.NIGHT_STUDY:
+                    if trigger_code == "NIGHT_OWL_STUDY":
+                        relevant.append(achievement)
+                case AchievementEvent.EARLY_BIRD:
+                    if trigger_code == "EARLY_BIRD":
+                        relevant.append(achievement)
+                case AchievementEvent.STREAK_MILESTONE:
+                    if trigger_code == "STREAK_DAYS":
                         relevant.append(achievement)
                 # Sprint event matching
                 case AchievementEvent.SPRINT_COMPLETED:
@@ -217,8 +252,59 @@ class AchievementEngine:
                 case AchievementEvent.SPRINT_AHEAD:
                     if trigger_code in ["SPRINTS_TOTAL", "SPRINT_AHEAD"]:
                         relevant.append(achievement)
-
         return relevant
+
+    async def _get_user_achievement_progress(
+        self, user_id: str, achievement_id: str
+    ) -> UserAchievement | None:
+        query = select(UserAchievement).where(
+            and_(
+                UserAchievement.user_id == user_id,
+                UserAchievement.achievement_id == achievement_id,
+            )
+        )
+        result = await self.db.execute(query)
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    def _extract_session_hour(value: Any) -> int | None:
+        if value is None:
+            return None
+        if isinstance(value, str):
+            try:
+                value = datetime.fromisoformat(value)
+            except ValueError:
+                return None
+        if isinstance(value, datetime):
+            return value.hour
+        return None
+
+    @staticmethod
+    def _weekend_bucket_for(ts: datetime) -> date | None:
+        day = ts.date()
+        weekday = day.weekday()
+        if weekday == 5:
+            return day
+        if weekday == 6:
+            return day - timedelta(days=1)
+        return None
+
+    @classmethod
+    def _calculate_weekend_streak(cls, timestamps: list[datetime]) -> int:
+        buckets = sorted({cls._weekend_bucket_for(ts) for ts in timestamps if cls._weekend_bucket_for(ts)})
+        if not buckets:
+            return 0
+
+        max_streak = 1
+        current_streak = 1
+        for previous, current in zip(buckets, buckets[1:], strict=False):
+            if (current - previous).days == 7:
+                current_streak += 1
+            else:
+                current_streak = 1
+            max_streak = max(max_streak, current_streak)
+
+        return max_streak
 
     async def _is_unlocked(self, user_id: str, achievement_id: str) -> bool:
         """检查成就是否已解锁"""
@@ -332,24 +418,23 @@ class AchievementEngine:
             # 领域精通
             case "SECTOR_MASTERY":
                 sector = config.get("sector")
-                target_percent = config.get("percent", 80)
-
-                # 查询该领域所有节点
-                query = select(UserNodeStatus).join(KnowledgeNode).where(
+                mastery_threshold = config.get("percent", 80)
+                target = config.get("count", 20)
+                query = select(func.count()).select_from(UserNodeStatus).join(
+                    KnowledgeNode, UserNodeStatus.node_id == KnowledgeNode.id
+                ).join(
+                    Subject, KnowledgeNode.subject_id == Subject.id
+                ).where(
                     and_(
                         UserNodeStatus.user_id == user_id,
-                        KnowledgeNode.sector_code == sector,
-                        UserNodeStatus.is_unlocked
+                        Subject.sector_code == sector,
+                        UserNodeStatus.is_unlocked,
+                        UserNodeStatus.mastery_score >= mastery_threshold,
                     )
                 )
                 result = await self.db.execute(query)
-                statuses = result.scalars().all()
-
-                if not statuses:
-                    return (0.0, 0, 100)
-
-                mastered = sum(1 for s in statuses if s.mastery_score >= target_percent)
-                return (mastered / len(statuses), mastered, len(statuses))
+                current = result.scalar_one() or 0
+                return (min(current / target, 1.0), current, target)
 
             # 学习时长累计
             case "STUDY_MINUTES_TOTAL":
@@ -369,16 +454,102 @@ class AchievementEngine:
 
             # 深夜学习（隐藏成就）
             case "NIGHT_OWL_STUDY":
-                hour = _utcnow().hour
-                if hour >= 23 or hour <= 5:
+                hour = self._extract_session_hour(kwargs.get("session_start_time"))
+                target = config.get("sessions", 10)
+                progress_record = await self._get_user_achievement_progress(user_id, achievement.id)
+                current = progress_record.progress_value if progress_record else 0
+                if hour is not None and (hour >= 23 or hour < 5):
                     # 检查累计次数
                     cache_key = f"night_owl:{user_id}"
-                    count = await cache_service.get(cache_key) or 0
-                    count += 1
-                    await cache_service.set(cache_key, count, ex=86400*30)
-                    target = config.get("sessions", 10)
+                    count = max(await cache_service.get(cache_key) or 0, current) + 1
+                    await cache_service.set(cache_key, count, ttl=86400 * 30)
                     return (min(count / target, 1.0), count, target)
-                return (0.0, 0, 10)
+                return (min(current / target, 1.0), current, target)
+
+            case "EARLY_BIRD":
+                hour = self._extract_session_hour(kwargs.get("session_start_time"))
+                target = config.get("sessions", 10)
+                progress_record = await self._get_user_achievement_progress(user_id, achievement.id)
+                current = progress_record.progress_value if progress_record else 0
+                if hour is not None and 5 <= hour < 8:
+                    cache_key = f"early_bird:{user_id}"
+                    count = max(await cache_service.get(cache_key) or 0, current) + 1
+                    await cache_service.set(cache_key, count, ttl=86400 * 30)
+                    return (min(count / target, 1.0), count, target)
+                return (min(current / target, 1.0), current, target)
+
+            case "SPEED_UNLOCK":
+                target = config.get("count", 20)
+                hours = config.get("hours", 24)
+                window_start = _utcnow() - timedelta(hours=hours)
+                query = select(func.count()).select_from(UserNodeStatus).where(
+                    and_(
+                        UserNodeStatus.user_id == user_id,
+                        UserNodeStatus.is_unlocked,
+                        UserNodeStatus.first_unlock_at.isnot(None),
+                        UserNodeStatus.first_unlock_at >= window_start,
+                    )
+                )
+                result = await self.db.execute(query)
+                current = result.scalar_one() or 0
+                return (min(current / target, 1.0), current, target)
+
+            case "ALL_SECTORS_UNLOCKED":
+                sectors = config.get("sectors", [])
+                target = len(sectors)
+                if target == 0:
+                    return (0.0, 0, 1)
+
+                query = select(func.distinct(Subject.sector_code)).select_from(UserNodeStatus).join(
+                    KnowledgeNode, UserNodeStatus.node_id == KnowledgeNode.id
+                ).join(
+                    Subject, KnowledgeNode.subject_id == Subject.id
+                ).where(
+                    and_(
+                        UserNodeStatus.user_id == user_id,
+                        UserNodeStatus.is_unlocked,
+                        Subject.sector_code.in_(sectors),
+                    )
+                )
+                result = await self.db.execute(query)
+                current = len(result.scalars().all())
+                return (min(current / target, 1.0), current, target)
+
+            case "WEEKEND_WARRIOR":
+                from app.models.focus import FocusSession, FocusStatus
+                from app.models.task import Task, TaskStatus
+
+                target = config.get("consecutive_weekends", 4)
+                timestamps: list[datetime] = []
+
+                focus_result = await self.db.execute(
+                    select(FocusSession.start_time).where(
+                        and_(
+                            FocusSession.user_id == user_id,
+                            FocusSession.status == FocusStatus.COMPLETED,
+                        )
+                    )
+                )
+                timestamps.extend(ts for ts in focus_result.scalars().all() if ts is not None)
+
+                task_result = await self.db.execute(
+                    select(Task.completed_at).where(
+                        and_(
+                            Task.user_id == user_id,
+                            Task.status == TaskStatus.COMPLETED,
+                            Task.completed_at.isnot(None),
+                        )
+                    )
+                )
+                timestamps.extend(ts for ts in task_result.scalars().all() if ts is not None)
+
+                study_result = await self.db.execute(
+                    select(StudyRecord.created_at).where(StudyRecord.user_id == user_id)
+                )
+                timestamps.extend(ts for ts in study_result.scalars().all() if ts is not None)
+
+                current = self._calculate_weekend_streak(timestamps)
+                return (min(current / target, 1.0), current, target)
 
             # 完美主义者（单节点100%掌握度）
             case "PERFECTIONIST":
@@ -401,7 +572,7 @@ class AchievementEngine:
                     and_(
                         Plan.user_id == user_id,
                         Plan.type == PlanType.SPRINT,
-                        not Plan.is_active  # 已归档（完成/放弃）
+                        Plan.is_active.is_(False),
                     )
                 )
                 result = await self.db.execute(query)
@@ -417,7 +588,7 @@ class AchievementEngine:
                     and_(
                         Plan.user_id == user_id,
                         Plan.type == PlanType.SPRINT,
-                        not Plan.is_active,
+                        Plan.is_active.is_(False),
                         Plan.progress >= 1.0
                     )
                 )
@@ -435,7 +606,7 @@ class AchievementEngine:
                     and_(
                         Plan.user_id == user_id,
                         Plan.type == PlanType.SPRINT,
-                        not Plan.is_active
+                        Plan.is_active.is_(False)
                     )
                 ).order_by(Plan.updated_at.desc())
 
@@ -469,7 +640,7 @@ class AchievementEngine:
                     and_(
                         Plan.user_id == user_id,
                         Plan.type == PlanType.SPRINT,
-                        not Plan.is_active,
+                        Plan.is_active.is_(False),
                         Plan.progress >= 1.0,
                         Plan.target_date.isnot(None)
                     )
@@ -479,7 +650,8 @@ class AchievementEngine:
 
                 # 估算超前完成数（这里简化处理，实际应用中需要更精确的记录）
                 target = config.get("count", 1)
-                return (min(1.0, total / target) if total > 0 else (0.0, 0, target), total, target)
+                progress = min(total / target, 1.0) if total > 0 else 0.0
+                return (progress, total, target)
 
             case _:
                 logger.warning(f"Unknown trigger code: {trigger_code}")
@@ -882,7 +1054,11 @@ class AchievementEngine:
         user_progress = {ua.achievement_id: ua for ua in result.scalars().all()}
 
         # 组装结果
-        from app.schemas.achievement import AchievementDetail, AchievementWithProgress, UserAchievementDetail
+        from app.schemas.achievement import (
+            AchievementDetail,
+            AchievementWithProgress,
+            UserAchievementProgressPayload,
+        )
 
         result_list = []
         for achievement in filtered:
@@ -892,7 +1068,7 @@ class AchievementEngine:
 
             # 转换为schema
             achievement_detail = AchievementDetail.model_validate(achievement)
-            user_progress_detail = UserAchievementDetail.model_validate(user_ach) if user_ach else None
+            user_progress_detail = UserAchievementProgressPayload.model_validate(user_ach) if user_ach else None
 
             result_list.append(AchievementWithProgress(
                 achievement=achievement_detail,
@@ -1111,7 +1287,7 @@ class AchievementEngine:
 
         # 更新连击计数
         combo += unlock_count
-        await cache_service.set(session_key, combo, ex=300)  # 5分钟内有效
+        await cache_service.set(session_key, combo, ttl=300)  # 5分钟内有效
 
         # 只在连击>=2时返回信息
         if combo >= 2:
@@ -1164,7 +1340,7 @@ class AchievementEngine:
             return None
 
         # 标记为已领取
-        await cache_service.set(cache_key, True, ex=86400)  # 24小时
+        await cache_service.set(cache_key, True, ttl=86400)  # 24小时
 
         # 获取连胜统计
         stats = await self._get_or_create_streak_stats(user_id)
@@ -1204,6 +1380,12 @@ class AchievementEngine:
         if category:
             all_achievements = [a for a in all_achievements if a.category == category]
 
+        from app.schemas.achievement import (
+            AchievementDetail,
+            AchievementWithProgress,
+            UserAchievementProgressPayload,
+        )
+
         close_achievements = []
 
         for achievement in all_achievements:
@@ -1222,19 +1404,28 @@ class AchievementEngine:
 
             # 只返回达到阈值的
             if progress >= threshold:
-                close_achievements.append({
-                    "achievement_id": achievement.id,
-                    "name": achievement.name,
-                    "description": achievement.description,
-                    "rarity": achievement.rarity.value,
-                    "progress": progress,
-                    "progress_value": current_value,
-                    "progress_target": target_value,
-                    "remaining": target_value - current_value,
-                })
+                user_progress = UserAchievementProgressPayload(
+                    achievement_id=achievement.id,
+                    progress=progress,
+                    progress_value=current_value,
+                    progress_target=target_value,
+                    is_pinned=False,
+                    share_count=0,
+                    is_first_unlocker=False,
+                    unlocked_at=None,
+                    last_progress_update=None,
+                )
+                close_achievements.append(
+                    AchievementWithProgress(
+                        achievement=AchievementDetail.model_validate(achievement),
+                        user_progress=user_progress,
+                        is_unlocked=False,
+                        progress_percentage=int(progress * 100),
+                    ).model_dump()
+                )
 
         # 按进度降序排序
-        close_achievements.sort(key=lambda x: x["progress"], reverse=True)
+        close_achievements.sort(key=lambda x: x["progress_percentage"], reverse=True)
 
         return close_achievements
 

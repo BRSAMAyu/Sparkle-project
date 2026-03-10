@@ -3,6 +3,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/cognitive/data/models/curiosity_capsule_model.dart';
+import 'package:sparkle/features/cognitive/presentation/providers/capsule_archive_provider.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/capsule_provider.dart';
 
 class CuriosityCapsuleCard extends ConsumerWidget {
@@ -10,11 +11,13 @@ class CuriosityCapsuleCard extends ConsumerWidget {
     required this.capsule,
     this.highlighted = false,
     this.initiallyExpanded = false,
+    this.archived = false,
     super.key,
   });
   final CuriosityCapsuleModel capsule;
   final bool highlighted;
   final bool initiallyExpanded;
+  final bool archived;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -128,6 +131,28 @@ class CuriosityCapsuleCard extends ConsumerWidget {
                         padding: EdgeInsets.zero,
                         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
+                    const SizedBox(height: DS.spacing12),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: SparkleButton(
+                        label: archived ? '恢复到当前列表' : '归档这条胶囊',
+                        variant: ButtonVariant.ghost,
+                        onPressed: () {
+                          ref
+                              .read(capsuleArchiveProvider.notifier)
+                              .toggleArchive(capsule.id);
+                          AppFeedback.info(
+                            context,
+                            archived ? '已恢复到当前列表' : '已归档，可在历史中查看',
+                          );
+                        },
+                        icon: Icon(
+                          archived
+                              ? Icons.unarchive_outlined
+                              : Icons.archive_outlined,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
