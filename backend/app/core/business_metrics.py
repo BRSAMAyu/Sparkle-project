@@ -11,6 +11,34 @@ def get_or_create_metric(metric_type, name, documentation, labelnames=(), **kwar
         return REGISTRY._names_to_collectors[name]
     return metric_type(name, documentation, labelnames, **kwargs)
 
+
+def snapshot_metric(metric: Any) -> dict[str, float]:
+    """Return a best-effort snapshot of a Prometheus metric's current values."""
+    def _read_value(collector: Any) -> float:
+        value_ref = getattr(getattr(collector, "_value", None), "get", None)
+        if callable(value_ref):
+            return float(value_ref())
+        sum_ref = getattr(getattr(collector, "_sum", None), "get", None)
+        if callable(sum_ref):
+            return float(sum_ref())
+        return 0.0
+
+    labelled = getattr(metric, "_metrics", None)
+    if isinstance(labelled, dict) and labelled:
+        payload: dict[str, float] = {}
+        label_names = list(getattr(metric, "_labelnames", ()) or ())
+        for labels, child in labelled.items():
+            if isinstance(labels, dict):
+                label_pairs = sorted(labels.items())
+                label_key = ",".join(f"{key}={value}" for key, value in label_pairs) or "default"
+            elif isinstance(labels, tuple) and label_names and len(labels) == len(label_names):
+                label_key = ",".join(f"{key}={value}" for key, value in zip(label_names, labels, strict=False)) or "default"
+            else:
+                label_key = str(labels) or "default"
+            payload[label_key] = _read_value(child)
+        return payload
+    return {"default": _read_value(metric)}
+
 # ========== Routing Metrics ==========
 ROUTING_DECISIONS = get_or_create_metric(
     Counter,
@@ -392,6 +420,34 @@ PROGRESS_COMPARISON_SKIPPED_TOTAL = get_or_create_metric(
     'sparkle_progress_comparison_skipped_total',
     'Skipped progress comparisons by reason',
     ['reason']
+)
+
+EVIDENCE_BACKED_VISIBLE_UPDATE_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_evidence_backed_visible_update_total',
+    'Visible user updates with evidence payloads',
+    ['kind']
+)
+
+PLAN_REASONING_SOURCE_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_plan_reasoning_source_total',
+    'Generated plan reasoning summaries by source',
+    ['source']
+)
+
+PHASE4_OPERATION_DURATION_SECONDS = get_or_create_metric(
+    Histogram,
+    'sparkle_phase4_operation_duration_seconds',
+    'Latency for critical phase 4 operations',
+    ['operation']
+)
+
+ADAPTIVE_ROLLBACK_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_adaptive_rollback_total',
+    'Adaptive strategy rollbacks after repeated negative feedback',
+    []
 )
 
 # ========== LTM Eval Metrics ==========

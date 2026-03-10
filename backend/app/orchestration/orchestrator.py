@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import hashlib
 import json
 import time
 import uuid
@@ -21,6 +22,7 @@ from app.core.business_metrics import (
     COLLABORATION_LATENCY,
     COLLABORATION_SUCCESS,
     CONTEXT_FOCUS_DECISION_TOTAL,
+    EVIDENCE_BACKED_VISIBLE_UPDATE_TOTAL,
     HITL_REQUESTED,
 )
 from app.core.metrics import (
@@ -315,6 +317,38 @@ class ChatOrchestrator:
         except Exception:
             return uuid.uuid5(uuid.NAMESPACE_URL, f"sparkle-session:{raw}")
 
+    @staticmethod
+    def _experiment_cohort_for_user(user_id: str | None) -> str | None:
+        raw = str(user_id or "").strip()
+        if not raw:
+            return None
+        bucket = int(hashlib.sha256(raw.encode("utf-8")).hexdigest(), 16) % 3
+        return ("A", "B", "C")[bucket]
+
+    @staticmethod
+    def _apply_cohort_to_session_feedback_signal(
+        signal: SessionFeedbackSignal | None,
+        experiment_cohort: str | None,
+    ) -> SessionFeedbackSignal | None:
+        if signal is None or str(experiment_cohort or "") != "B":
+            return signal
+        stronger_hints = {
+            "simplify": "好，我直接说最关键的：",
+            "expand": "我按更完整的脉络展开说：",
+            "mismatch": "我先对准你真正要问的点：",
+        }
+        stronger_hint = stronger_hints.get(signal.signal_type)
+        if not stronger_hint:
+            return signal
+        return SessionFeedbackSignal(
+            signal_type=signal.signal_type,
+            confidence=signal.confidence,
+            trigger_text=signal.trigger_text,
+            applies_adaptation=signal.applies_adaptation,
+            visible_hint=signal.visible_hint,
+            transition_hint=stronger_hint,
+        )
+
     def _track_task(self, task: asyncio.Task) -> None:
         """Track background tasks for graceful shutdown."""
         self._bg_tasks.add(task)
@@ -439,6 +473,8 @@ class ChatOrchestrator:
         user_message: str,
         user_context_payload: dict[str, Any] | None,
         plan_id: str | None,
+        session_feedback_signal: dict[str, Any] | None = None,
+        session_id: str | None = None,
     ) -> None:
         if not active_db:
             return
@@ -452,6 +488,9 @@ class ChatOrchestrator:
                 context_focus=(user_context_payload or {}).get("context_focus") if isinstance(user_context_payload, dict) else None,
                 plan_id=plan_id,
                 progress_snapshot=(user_context_payload or {}).get("progress_snapshot") if isinstance(user_context_payload, dict) else None,
+                session_feedback=session_feedback_signal,
+                session_id=session_id,
+                experiment_cohort=(user_context_payload or {}).get("experiment_cohort") if isinstance(user_context_payload, dict) else None,
             )
         except Exception as exc:
             logger.warning(f"Failed to enqueue perceptible insight: {exc}")
@@ -1095,6 +1134,7 @@ class ChatOrchestrator:
         preferences: dict[str, Any] | None,
         llm_profile_data: dict[str, Any] | None,
         preference_version: int,
+        experiment_cohort: str | None,
     ) -> dict[str, Any]:
         identity: dict[str, Any] = {}
         if isinstance(user_context_data, dict):
@@ -1124,6 +1164,7 @@ class ChatOrchestrator:
             "preferences": prefs,
             "llm_profile": llm_profile,
             "preference_version": preference_version,
+            "experiment_cohort": experiment_cohort,
         }
 
     async def _build_user_context(self, user_id: str, db_session: AsyncSession) -> dict[str, Any]:
@@ -1138,6 +1179,7 @@ class ChatOrchestrator:
             user_service = UserService(db_session, self.redis)
             base_user_context = await user_service.get_context(uuid.UUID(user_id))
             base_user_context_data = base_user_context.model_dump() if base_user_context else None
+            experiment_cohort = self._experiment_cohort_for_user(user_id)
 
             # P1: Task Status Summary
             task_status_summary = await self._get_task_status_summary(user_id, db_session)
@@ -1215,6 +1257,7 @@ class ChatOrchestrator:
                     preferences=cognitive_context.preferences,
                     llm_profile_data=llm_profile_data,
                     preference_version=preference_version,
+                    experiment_cohort=experiment_cohort,
                 )
 
                 return {
@@ -1226,6 +1269,7 @@ class ChatOrchestrator:
                     "focus_stats": cognitive_context.focus_stats,
                     "preference_version": preference_version,
                     "llm_profile": llm_profile_data,
+                    "experiment_cohort": experiment_cohort,
                     "task_status_summary": task_status_summary,
                     "profile": profile_payload,
 
@@ -1323,6 +1367,7 @@ class ChatOrchestrator:
                     preferences=preferences_dict,
                     llm_profile_data=llm_profile_data,
                     preference_version=preference_version,
+                    experiment_cohort=experiment_cohort,
                 )
 
                 return {
@@ -1337,6 +1382,7 @@ class ChatOrchestrator:
                     "focus_stats": focus_stats,
                     "preference_version": preference_version,
                     "llm_profile": llm_profile_data,
+                    "experiment_cohort": experiment_cohort,
                     "task_status_summary": task_status_summary,
                     "profile": profile_payload,
                 }
@@ -1348,6 +1394,7 @@ class ChatOrchestrator:
                     preferences={"depth_preference": 0.5, "curiosity_preference": 0.5},
                     llm_profile_data=llm_profile_data,
                     preference_version=preference_version,
+                    experiment_cohort=experiment_cohort,
                 )
                 return {
                     "user_context": None,
@@ -1358,6 +1405,7 @@ class ChatOrchestrator:
                     "focus_stats": focus_stats,
                     "preference_version": preference_version,
                     "llm_profile": llm_profile_data,
+                    "experiment_cohort": experiment_cohort,
                     "task_status_summary": task_status_summary,
                     "profile": profile_payload,
                 }
@@ -1376,7 +1424,9 @@ class ChatOrchestrator:
                     preferences={"depth_preference": 0.5, "curiosity_preference": 0.5},
                     llm_profile_data=None,
                     preference_version=0,
+                    experiment_cohort=self._experiment_cohort_for_user(user_id),
                 ),
+                "experiment_cohort": self._experiment_cohort_for_user(user_id),
             }
 
     async def _build_conversation_context(self, session_id: str, user_id: str) -> dict[str, Any]:
@@ -2169,9 +2219,14 @@ class ChatOrchestrator:
                                         "comparison": comparison,
                                         "headline": "你和之前相比，已经不是同一种推进状态了",
                                         "summary": str(comparison.get("delta_text") or ""),
+                                        "evidence_summary": str(comparison.get("evidence_summary") or ""),
+                                        "period_range": str(comparison.get("period_range") or ""),
+                                        "evidence_source": str(comparison.get("source") or "comparison"),
+                                        "confidence_tier": "inferred",
                                     },
                                 ),
                             )
+                            EVIDENCE_BACKED_VISIBLE_UPDATE_TOTAL.labels(kind="progress_comparison").inc()
                     except Exception as exc:
                         logger.warning(f"Failed to enqueue progress comparison: {exc}")
                 logger.info(
@@ -2397,6 +2452,7 @@ class ChatOrchestrator:
             "trace_id": trace_id,
             "preference_version": (user_context_payload or {}).get("preference_version", 0),
             "verbosity_target": llm_profile_meta.get("verbosity_target", "balanced"),
+            "experiment_cohort": (user_context_payload or {}).get("experiment_cohort", ""),
         }
         if used_fallback_response:
             response_metadata["response_fallback"] = "generated"
@@ -2793,6 +2849,7 @@ class ChatOrchestrator:
             "tool_error": str(bool(tr.is_error)).lower(),
             "preference_version": (user_context_payload or {}).get("preference_version", 0),
             "verbosity_target": llm_profile_meta.get("verbosity_target", "balanced"),
+            "experiment_cohort": (user_context_payload or {}).get("experiment_cohort", ""),
         }
         ux_envelope = await ux_envelope_builder.build(
             user_message=self._extract_latest_user_message(conversation_history),
@@ -2987,6 +3044,7 @@ class ChatOrchestrator:
                     "workflow_id": workflow_id,
                     "prompt_version": prompt_version,
                     "session_adaptation_visible": "true" if session_adaptation_visible else "false",
+                    "experiment_cohort": (user_context_payload or {}).get("experiment_cohort", ""),
                     **metadata_map,
                 }
                 if parsed_session_signal is not None:
@@ -3374,7 +3432,10 @@ class ChatOrchestrator:
                 review_result = await plan_review_service.review_plan(
                     plan=executable_plan,
                     user_message=user_message,
-                    user_context=user_context_payload or {},
+                    user_context={
+                        **(user_context_payload or {}),
+                        "plan_context": plan_context or (user_context_payload or {}).get("plan_context"),
+                    },
                 )
                 if (
                     settings.ENABLE_PERCEPTIBLE_INTELLIGENCE
@@ -3396,10 +3457,20 @@ class ChatOrchestrator:
                                     "headline": "这次计划这样安排，是有依据的",
                                     "reasoning_summary": review_result.reasoning_summary,
                                     "reasoning_details": review_result.reasoning_details or [],
+                                    "reasoning_source": review_result.reasoning_source or "",
+                                    "persona_strategy_mapping": review_result.persona_strategy_mapping or [],
+                                    "alignment_score": review_result.alignment_score,
+                                    "alignment_summary": review_result.alignment_summary or "",
+                                    "evidence_summary": "；".join(
+                                        detail.get("evidence", "")
+                                        for detail in (review_result.reasoning_details or [])
+                                        if isinstance(detail, dict) and detail.get("evidence")
+                                    ),
                                     "plan_id": review_result.plan_id,
                                 },
                             ),
                         )
+                        EVIDENCE_BACKED_VISIBLE_UPDATE_TOTAL.labels(kind="plan_reasoning").inc()
                     except Exception as exc:
                         logger.warning(f"Failed to enqueue plan reasoning summary: {exc}")
                 if plan_id:
@@ -3718,6 +3789,10 @@ class ChatOrchestrator:
                         user_message=user_message,
                         conversation_context=conversation_context,
                     )
+                session_feedback_signal = self._apply_cohort_to_session_feedback_signal(
+                    session_feedback_signal,
+                    (user_context_payload or {}).get("experiment_cohort") if isinstance(user_context_payload, dict) else None,
+                )
 
                 expert_routing_decision = None
                 if settings.ENABLE_EXPERT_STRATEGY_V1 and is_expert_chat_mode(chat_mode):
@@ -3779,6 +3854,8 @@ class ChatOrchestrator:
                     user_message=user_message,
                     user_context_payload=user_context_payload,
                     plan_id=plan_id,
+                    session_feedback_signal=session_feedback_signal.to_dict() if session_feedback_signal else None,
+                    session_id=session_id,
                 )
                 update_responses, adaptation_records, preference_learnings, evolution_highlights, progress_snapshot = await self._drain_system_updates(user_id)
                 if adaptation_records:

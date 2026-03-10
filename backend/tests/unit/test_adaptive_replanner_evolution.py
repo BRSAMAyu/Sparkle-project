@@ -1,4 +1,8 @@
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
 from uuid import uuid4
+
+import pytest
 
 from app.orchestration.adaptive_replanner import AdaptiveReplanner
 from app.services.plan_progress_service import PlanHealthReport
@@ -28,3 +32,55 @@ def test_build_adjustment_record_prefers_hard_task_template() -> None:
 
     assert record.user_facing_message == "我发现你最近的任务偏难了，帮你调轻了一些。"
     assert "降低任务启动门槛" in record.expected_effect
+
+
+@pytest.mark.asyncio
+async def test_replanner_rolls_back_after_two_negative_feedbacks() -> None:
+    user_id = uuid4()
+    plan_id = uuid4()
+    state = SimpleNamespace(
+        facts={
+            "adaptive_adjustments": {"time_multiplier": 1.15},
+            "adaptive_meta": {
+                "active_snapshot_id": "snap-new",
+                "adjustment_snapshots": [
+                    {
+                        "id": "snap-base",
+                        "adaptive_adjustments": {"time_multiplier": 1.0},
+                        "trigger": "baseline",
+                        "reasons": [],
+                    },
+                    {
+                        "id": "snap-new",
+                        "adaptive_adjustments": {"time_multiplier": 1.15},
+                        "trigger": "task_feedback",
+                        "reasons": ["time_overrun"],
+                    },
+                ],
+                "rollback_monitor": {
+                    "current_snapshot_id": "snap-new",
+                    "negative_feedback_streak": 1,
+                    "last_feedback_category": "too_difficult",
+                },
+            },
+        }
+    )
+    replanner = object.__new__(AdaptiveReplanner)
+    replanner.plan_state_service = SimpleNamespace(
+        get_plan_state=AsyncMock(return_value=state),
+        upsert_plan_state=AsyncMock(),
+    )
+    replanner._enqueue_adaptation_update = AsyncMock()
+
+    records = await replanner._maybe_rollback_after_feedback(
+        user_id=user_id,
+        plan_id=plan_id,
+        feedback_category="too_difficult",
+        task_id=uuid4(),
+    )
+
+    assert len(records) == 1
+    assert "回滚" in records[0].what_changed
+    patch = replanner.plan_state_service.upsert_plan_state.await_args.kwargs["patch"]
+    assert patch["facts"]["adaptive_adjustments"]["time_multiplier"] == 1.0
+    assert patch["facts"]["adaptive_meta"]["active_snapshot_id"] == "snap-base"

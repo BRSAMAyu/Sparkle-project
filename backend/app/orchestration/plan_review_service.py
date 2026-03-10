@@ -8,6 +8,7 @@ Implements intelligent plan review with:
 """
 import asyncio
 import json
+import time
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -17,7 +18,11 @@ from typing import Any
 from loguru import logger
 
 from app.config import settings
-from app.core.business_metrics import PLAN_REASONING_GENERATED_TOTAL
+from app.core.business_metrics import (
+    PHASE4_OPERATION_DURATION_SECONDS,
+    PLAN_REASONING_GENERATED_TOTAL,
+    PLAN_REASONING_SOURCE_TOTAL,
+)
 from app.core.event_bus import event_bus
 from app.core.pending_actions import pending_actions_store
 from app.orchestration.schemas import ExecutablePlan
@@ -85,6 +90,10 @@ class PlanReviewResult:
     user_facing_reason: str | None = None
     reasoning_summary: str | None = None
     reasoning_details: list[dict[str, str]] | None = None
+    reasoning_source: str | None = None
+    persona_strategy_mapping: list[dict[str, Any]] | None = None
+    alignment_score: float | None = None
+    alignment_summary: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -99,6 +108,10 @@ class PlanReviewResult:
             "user_facing_reason": self.user_facing_reason,
             "reasoning_summary": self.reasoning_summary,
             "reasoning_details": self.reasoning_details,
+            "reasoning_source": self.reasoning_source,
+            "persona_strategy_mapping": self.persona_strategy_mapping,
+            "alignment_score": self.alignment_score,
+            "alignment_summary": self.alignment_summary,
         }
 
 
@@ -185,12 +198,29 @@ class PlanReviewService:
                 auto_approved=True,
                 auto_approve_reason=rule_result,
             )
+            persona_strategy_mapping = self._build_persona_strategy_mapping(user_context)
+            alignment_score, alignment_summary = self._score_plan_alignment(
+                plan=plan,
+                mappings=persona_strategy_mapping,
+            )
+            comments: list[ReviewComment] = []
+            if alignment_score is not None and alignment_score < 0.55:
+                comments.append(
+                    ReviewComment(
+                        category=ReviewCategory.ALIGNMENT.value,
+                        severity=SeverityLevel.WARNING.value,
+                        message=alignment_summary or "当前计划和你的近期执行画像存在一定偏差。",
+                        suggested_fix="建议降低难度、缩短单次负载或把任务拆细后再执行。",
+                    )
+                )
+            if reasoning_summary:
+                PLAN_REASONING_SOURCE_TOTAL.labels(source="rules_only").inc()
             return PlanReviewResult(
                 review_id=review_id,
                 plan_id=plan.plan_id,
                 decision=ReviewDecision.APPROVED.value,
                 confidence=1.0,
-                comments=[],
+                comments=comments,
                 reviewed_at=reviewed_at,
                 auto_approved=True,
                 user_facing_reason=self._get_user_facing_reason(
@@ -200,6 +230,10 @@ class PlanReviewService:
                 ),
                 reasoning_summary=reasoning_summary,
                 reasoning_details=reasoning_details,
+                reasoning_source="rules_only",
+                persona_strategy_mapping=persona_strategy_mapping,
+                alignment_score=alignment_score,
+                alignment_summary=alignment_summary,
             )
 
         # Step 2: LLM-based deep review
@@ -207,28 +241,46 @@ class PlanReviewService:
         llm_result = await self._llm_review(plan, user_message, user_context)
 
         decision = llm_result.get("decision", ReviewDecision.REQUIRES_CONFIRMATION.value)
+        reasoning_source = "llm_fallback" if llm_result.get("fallback_used") else "llm_review"
         reasoning_summary, reasoning_details = self._build_reasoning_payload(
             plan=plan,
             user_context=user_context,
             decision=decision,
             auto_approved=False,
         )
+        persona_strategy_mapping = self._build_persona_strategy_mapping(user_context)
+        alignment_score, alignment_summary = self._score_plan_alignment(
+            plan=plan,
+            mappings=persona_strategy_mapping,
+        )
+        comments = [
+            ReviewComment(
+                category=c.get("category", ReviewCategory.SUGGESTION.value),
+                severity=c.get("severity", SeverityLevel.INFO.value),
+                message=c.get("message", ""),
+                suggested_fix=c.get("suggested_fix"),
+                affected_tool_calls=c.get("affected_tool_calls", []),
+            )
+            for c in llm_result.get("comments", [])
+        ]
+        if decision == ReviewDecision.APPROVED.value and alignment_score is not None and alignment_score < 0.55:
+            comments.append(
+                ReviewComment(
+                    category=ReviewCategory.ALIGNMENT.value,
+                    severity=SeverityLevel.WARNING.value,
+                    message=alignment_summary or "当前计划和你的近期执行画像存在一定偏差。",
+                    suggested_fix="建议把任务颗粒度再拆细一点，或先降低本轮负载后再推进。",
+                )
+            )
 
+        if reasoning_summary:
+            PLAN_REASONING_SOURCE_TOTAL.labels(source=reasoning_source).inc()
         return PlanReviewResult(
             review_id=review_id,
             plan_id=plan.plan_id,
             decision=decision,
             confidence=llm_result.get("confidence", 0.5),
-            comments=[
-                ReviewComment(
-                    category=c.get("category", ReviewCategory.SUGGESTION.value),
-                    severity=c.get("severity", SeverityLevel.INFO.value),
-                    message=c.get("message", ""),
-                    suggested_fix=c.get("suggested_fix"),
-                    affected_tool_calls=c.get("affected_tool_calls", []),
-                )
-                for c in llm_result.get("comments", [])
-            ],
+            comments=comments,
             reviewed_at=reviewed_at,
             suggested_modifications=llm_result.get("suggested_modifications"),
             auto_approved=False,
@@ -238,6 +290,10 @@ class PlanReviewService:
             ),
             reasoning_summary=reasoning_summary,
             reasoning_details=reasoning_details,
+            reasoning_source=reasoning_source,
+            persona_strategy_mapping=persona_strategy_mapping,
+            alignment_score=alignment_score,
+            alignment_summary=alignment_summary,
         )
 
     async def _quick_rule_check(self, plan: ExecutablePlan, user_context: dict[str, Any]) -> str | None:
@@ -687,9 +743,219 @@ Please review this plan and provide your assessment."""
                 "suggested_modifications": review.suggested_modifications,
                 "reasoning_summary": review.reasoning_summary,
                 "reasoning_details": review.reasoning_details,
+                "reasoning_source": review.reasoning_source,
+                "persona_strategy_mapping": review.persona_strategy_mapping,
+                "alignment_score": review.alignment_score,
+                "alignment_summary": review.alignment_summary,
             },
         )
         return action_id
+
+    def _build_persona_strategy_mapping(
+        self,
+        user_context: dict[str, Any],
+    ) -> list[dict[str, Any]]:
+        normalized_context = user_context if isinstance(user_context, dict) else {}
+        plan_context = normalized_context.get("plan_context")
+        plan_context = plan_context if isinstance(plan_context, dict) else {}
+        task_summary = plan_context.get("task_summary")
+        task_summary = task_summary if isinstance(task_summary, dict) else {}
+        facts = plan_context.get("facts")
+        facts = facts if isinstance(facts, dict) else {}
+        recent_feedback = plan_context.get("recent_feedback")
+        recent_feedback = recent_feedback if isinstance(recent_feedback, list) else []
+
+        mappings: list[dict[str, Any]] = []
+
+        def add_mapping(
+            *,
+            signal_key: str,
+            signal_label: str,
+            evidence: str,
+            recommended_constraint: str,
+            recommended_value: str,
+            confidence_tier: str,
+        ) -> None:
+            mappings.append(
+                {
+                    "signal_key": signal_key,
+                    "signal_label": signal_label,
+                    "evidence": evidence,
+                    "recommended_constraint": recommended_constraint,
+                    "recommended_value": recommended_value,
+                    "confidence_tier": confidence_tier,
+                }
+            )
+
+        completion_rate = task_summary.get("avg_completion_rate")
+        try:
+            completion_rate_value = float(completion_rate) if completion_rate is not None else None
+        except Exception:
+            completion_rate_value = None
+        if completion_rate_value is not None and completion_rate_value < 0.6:
+            add_mapping(
+                signal_key="avg_completion_rate_low",
+                signal_label="近期完成率偏低",
+                evidence=f"当前计划平均完成率约 {completion_rate_value:.0%}。",
+                recommended_constraint="task_difficulty",
+                recommended_value="lower",
+                confidence_tier="inferred",
+            )
+
+        avg_task_duration = facts.get("avg_task_duration_minutes")
+        session_length_preference = facts.get("session_length_preference")
+        try:
+            avg_task_duration_value = float(avg_task_duration) if avg_task_duration is not None else None
+        except Exception:
+            avg_task_duration_value = None
+        try:
+            session_length_value = float(session_length_preference) if session_length_preference is not None else None
+        except Exception:
+            session_length_value = None
+        if (
+            avg_task_duration_value is not None
+            and session_length_value is not None
+            and session_length_value > 0
+            and avg_task_duration_value > session_length_value * 1.5
+        ):
+            add_mapping(
+                signal_key="avg_task_duration_overrun",
+                signal_label="近期单次任务普遍拉长",
+                evidence=(
+                    f"最近平均有效执行时长约 {avg_task_duration_value:.0f} 分钟，"
+                    f"明显高于偏好时长 {session_length_value:.0f} 分钟。"
+                ),
+                recommended_constraint="task_granularity",
+                recommended_value="finer",
+                confidence_tier="inferred",
+            )
+
+        hard_count = 0
+        long_count = 0
+        just_right_count = 0
+        explicit_count = 0
+        for item in recent_feedback:
+            if not isinstance(item, dict):
+                continue
+            category = str(item.get("category") or "").strip().lower()
+            content = str(item.get("content") or "").strip().lower()
+            if item.get("completion_quality") is not None or category:
+                explicit_count += 1
+            if category == "too_difficult" or "太难" in content:
+                hard_count += 1
+            if category == "too_long" or "太长" in content:
+                long_count += 1
+            if category == "just_right" or "刚好" in content:
+                just_right_count += 1
+
+        feedback_tier = "explicit" if explicit_count else "implicit"
+        if hard_count >= 2:
+            add_mapping(
+                signal_key="feedback_too_hard",
+                signal_label="近期多次反馈偏难",
+                evidence=f"最近反馈中有 {hard_count} 次提到任务难度偏高。",
+                recommended_constraint="task_difficulty",
+                recommended_value="lower",
+                confidence_tier=feedback_tier,
+            )
+        if long_count >= 2:
+            add_mapping(
+                signal_key="feedback_too_long",
+                signal_label="近期多次反馈偏长",
+                evidence=f"最近反馈中有 {long_count} 次提到节奏或时长偏长。",
+                recommended_constraint="session_length",
+                recommended_value="shorter",
+                confidence_tier=feedback_tier,
+            )
+
+        active_plans = normalized_context.get("active_plans")
+        if isinstance(active_plans, list) and len(active_plans) >= 3:
+            add_mapping(
+                signal_key="active_plan_load_high",
+                signal_label="活跃计划负载偏高",
+                evidence=f"当前同时存在 {len(active_plans)} 个活跃计划。",
+                recommended_constraint="concurrency",
+                recommended_value="lower",
+                confidence_tier="inferred",
+            )
+
+        if just_right_count >= 2 and (completion_rate_value is None or completion_rate_value >= 0.7):
+            add_mapping(
+                signal_key="feedback_just_right",
+                signal_label="近期节奏匹配度较高",
+                evidence=f"最近反馈里已有 {just_right_count} 次明确表示节奏刚好。",
+                recommended_constraint="load_shape",
+                recommended_value="preserve",
+                confidence_tier=feedback_tier,
+            )
+
+        return mappings[:5]
+
+    def _score_plan_alignment(
+        self,
+        *,
+        plan: ExecutablePlan,
+        mappings: list[dict[str, Any]] | None,
+    ) -> tuple[float | None, str | None]:
+        if not mappings:
+            return None, None
+
+        tool_count = len(plan.tool_calls or [])
+        risk_count = len(plan.risk_flags or [])
+        total_steps = int(plan.total_steps or tool_count)
+        timeouts = [int(call.timeout_ms or 0) for call in (plan.tool_calls or []) if getattr(call, "timeout_ms", None)]
+        avg_timeout = sum(timeouts) / len(timeouts) if timeouts else 0.0
+        max_parallel = 1
+        if plan.execution_order:
+            max_parallel = max((len(layer) for layer in plan.execution_order if isinstance(layer, list)), default=1)
+        low_scope = tool_count <= 5 and risk_count <= 1
+        finer_granularity = total_steps >= 3 or tool_count >= 3
+        shorter_session = avg_timeout > 0 and avg_timeout <= 15000
+        lower_concurrency = plan.collaboration_mode != "parallel" and max_parallel <= 1
+        preserve_load = low_scope and tool_count >= 1
+
+        tier_weight = {
+            "explicit": 1.0,
+            "implicit": 0.8,
+            "inferred": 0.6,
+        }
+        achieved_weight = 0.0
+        total_weight = 0.0
+        matched_labels: list[str] = []
+
+        for item in mappings:
+            constraint = str(item.get("recommended_constraint") or "").strip().lower()
+            value = str(item.get("recommended_value") or "").strip().lower()
+            tier = str(item.get("confidence_tier") or "inferred").strip().lower()
+            weight = tier_weight.get(tier, 0.6)
+            total_weight += weight
+            satisfied = False
+            if constraint == "task_difficulty" and value == "lower":
+                satisfied = low_scope and risk_count <= 1
+            elif constraint == "task_granularity" and value == "finer":
+                satisfied = finer_granularity
+            elif constraint == "session_length" and value == "shorter":
+                satisfied = shorter_session or finer_granularity
+            elif constraint == "concurrency" and value == "lower":
+                satisfied = lower_concurrency
+            elif constraint == "load_shape" and value == "preserve":
+                satisfied = preserve_load and plan.confidence >= 0.6
+            if satisfied:
+                achieved_weight += weight
+                matched_labels.append(str(item.get("signal_label") or item.get("signal_key") or ""))
+
+        if total_weight <= 0:
+            return None, None
+        score = round(achieved_weight / total_weight, 2)
+        if score >= 0.8:
+            summary = "这次计划和你最近的执行画像基本一致，关键建议大多被实际吸收进了方案里。"
+        elif score >= 0.55:
+            summary = "这次计划和你的近期画像大体一致，但还有少量约束没有完全落到执行方案里。"
+        else:
+            summary = "这次计划和你的近期画像对齐度偏低，建议再检查难度、颗粒度或并行负载是否收得够紧。"
+        if matched_labels:
+            summary = f"{summary} 已命中的画像建议包括：{'、'.join(label for label in matched_labels if label)[:60]}。"
+        return score, summary
 
     def _get_review_description(self, review: PlanReviewResult) -> str:
         """Get user-friendly description of review"""
@@ -739,62 +1005,166 @@ Please review this plan and provide your assessment."""
         auto_approved: bool,
         auto_approve_reason: str | None = None,
     ) -> tuple[str | None, list[dict[str, str]] | None]:
+        started_at = time.perf_counter()
         if not settings.ENABLE_PLAN_REASONING_SUMMARY:
             return None, None
         if decision != ReviewDecision.APPROVED.value:
             return None, None
 
-        details: list[dict[str, str]] = []
-        tool_count = len(plan.tool_calls or [])
-        confidence_pct = f"{float(plan.confidence or 0.0):.0%}"
-        details.append(
-            {
-                "label": "执行复杂度",
-                "evidence": f"本次计划包含 {tool_count} 个动作，风险标记 {len(plan.risk_flags or [])} 个。",
-                "impact": "动作数量和风险都在可控范围内，适合直接推进。",
-            }
-        )
-
-        llm_profile = user_context.get("llm_profile") if isinstance(user_context, dict) else {}
+        normalized_context = user_context if isinstance(user_context, dict) else {}
+        plan_context = normalized_context.get("plan_context")
+        plan_context = plan_context if isinstance(plan_context, dict) else {}
+        progress_snapshot = normalized_context.get("progress_snapshot")
+        progress_snapshot = progress_snapshot if isinstance(progress_snapshot, dict) else {}
+        llm_profile = normalized_context.get("llm_profile")
         llm_profile = llm_profile if isinstance(llm_profile, dict) else {}
+
+        details: list[dict[str, str]] = []
+
+        def append_detail(
+            *,
+            label: str,
+            evidence: str,
+            impact: str,
+            confidence_tier: str,
+        ) -> None:
+            details.append(
+                {
+                    "label": label,
+                    "evidence": evidence,
+                    "impact": impact,
+                    "confidence_tier": confidence_tier,
+                }
+            )
+
+        task_summary = plan_context.get("task_summary")
+        task_summary = task_summary if isinstance(task_summary, dict) else {}
+        completed = int(task_summary.get("completed", 0) or 0)
+        total = int(task_summary.get("total", 0) or 0)
+        completion_rate = task_summary.get("avg_completion_rate")
+        try:
+            completion_rate_value = float(completion_rate) if completion_rate is not None else None
+        except Exception:
+            completion_rate_value = None
+        if total > 0:
+            append_detail(
+                label="最近执行完成率",
+                evidence=(
+                    f"当前计划已完成 {completed}/{total} 个任务"
+                    f"{f'，平均完成率约 {completion_rate_value:.0%}' if completion_rate_value is not None else ''}。"
+                ),
+                impact="这次方案会优先延续你已经能稳定推进的节奏，而不是突然加重负担。",
+                confidence_tier="inferred",
+            )
+
+        facts = plan_context.get("facts")
+        facts = facts if isinstance(facts, dict) else {}
+        avg_task_duration = facts.get("avg_task_duration_minutes")
+        session_length_preference = facts.get("session_length_preference")
+        difficulty_preference = facts.get("difficulty_preference")
+        fact_parts: list[str] = []
+        if avg_task_duration:
+            fact_parts.append(f"最近平均有效执行时长约 {avg_task_duration} 分钟")
+        if session_length_preference:
+            fact_parts.append(f"计划上下文记录的单次偏好时长约 {session_length_preference} 分钟")
+        if difficulty_preference is not None:
+            fact_parts.append(f"当前难度偏好约 {difficulty_preference}")
+        if fact_parts:
+            append_detail(
+                label="近期执行时长与难度",
+                evidence="；".join(fact_parts) + "。",
+                impact="这让计划时长和任务颗粒度更贴近你最近真实能完成的强度。",
+                confidence_tier="inferred",
+            )
+
+        recent_feedback = plan_context.get("recent_feedback")
+        if isinstance(recent_feedback, list) and recent_feedback:
+            detail_count = 0
+            long_count = 0
+            hard_count = 0
+            explicit_count = 0
+            for item in recent_feedback:
+                if not isinstance(item, dict):
+                    continue
+                content = str(item.get("content") or "").lower()
+                detail_count += 1
+                if item.get("completion_quality") is not None or item.get("category"):
+                    explicit_count += 1
+                if "long" in content or "太长" in content:
+                    long_count += 1
+                if "difficult" in content or "太难" in content:
+                    hard_count += 1
+            feedback_fragments: list[str] = []
+            if long_count:
+                feedback_fragments.append(f"{long_count} 条反馈提到节奏偏长")
+            if hard_count:
+                feedback_fragments.append(f"{hard_count} 条反馈提到难度偏高")
+            if feedback_fragments:
+                append_detail(
+                    label="最近反馈信号",
+                    evidence=f"最近 {detail_count} 条计划反馈中，" + "，".join(feedback_fragments) + "。",
+                    impact="通过后的方案会优先压住过长或过难的风险，避免重复踩到最近的阻力点。",
+                    confidence_tier="explicit" if explicit_count else "implicit",
+                )
+
+        highlights = [str(item).strip() for item in (progress_snapshot.get("highlights") or []) if str(item).strip()]
+        if highlights:
+            append_detail(
+                label="近期进度快照",
+                evidence=highlights[0],
+                impact="规划说明会优先沿着你最近真正有进展的方向继续推进。",
+                confidence_tier="inferred",
+            )
+
+        active_plans = normalized_context.get("active_plans") if isinstance(normalized_context, dict) else None
+        if isinstance(active_plans, list) and active_plans:
+            append_detail(
+                label="当前计划负载",
+                evidence=f"你当前有 {len(active_plans)} 个活跃计划，系统优先保持这次方案足够轻量。",
+                impact="这样能降低新计划和现有节奏互相挤占的风险。",
+                confidence_tier="inferred",
+            )
+
+        if not details:
+            tool_count = len(plan.tool_calls or [])
+            append_detail(
+                label="执行复杂度",
+                evidence=f"本次计划包含 {tool_count} 个动作，风险标记 {len(plan.risk_flags or [])} 个。",
+                impact="动作数量和风险都在可控范围内，适合直接推进。",
+                confidence_tier="inferred",
+            )
+
         verbosity = str(llm_profile.get("verbosity_target") or "").strip()
         tone = str(llm_profile.get("tone") or "").strip()
-        if verbosity or tone:
-            details.append(
-                {
-                    "label": "长期偏好",
-                    "evidence": f"当前回答偏好为 {verbosity or 'balanced'} / {tone or '稳定'}。",
-                    "impact": "审查通过后的执行说明会继续按你的表达节奏和沟通风格呈现。",
-                }
-            )
-
-        active_plans = user_context.get("active_plans") if isinstance(user_context, dict) else None
-        if isinstance(active_plans, list) and active_plans:
-            details.append(
-                {
-                    "label": "当前计划负载",
-                    "evidence": f"你当前有 {len(active_plans)} 个活跃计划，系统优先保持这次方案足够轻量。",
-                    "impact": "这样能降低新计划和现有节奏互相挤占的风险。",
-                }
-            )
-
         if auto_approved and auto_approve_reason:
-            details.append(
-                {
-                    "label": "自动通过依据",
-                    "evidence": self._get_auto_approve_reason(auto_approve_reason),
-                    "impact": "这说明计划满足了安全且低风险的快速通过条件。",
-                }
+            append_detail(
+                label="自动通过依据",
+                evidence=self._get_auto_approve_reason(auto_approve_reason),
+                impact="这说明计划满足了安全且低风险的快速通过条件。",
+                confidence_tier="inferred",
             )
 
-        summary_parts = [
-            f"这个计划被通过，是因为当前执行复杂度可控（{tool_count} 个动作）",
-            f"且整体置信度约 {confidence_pct}",
-        ]
+        summary_parts: list[str] = []
+        if total > 0:
+            if completion_rate_value is not None:
+                summary_parts.append(f"这个计划被通过，是因为你当前计划的稳定完成率约为 {completion_rate_value:.0%}")
+            else:
+                summary_parts.append(f"这个计划被通过，是因为你当前计划已经稳定完成了 {completed}/{total} 个任务")
+        elif avg_task_duration:
+            summary_parts.append(f"这个计划被通过，是因为你最近的有效执行时长大约稳定在 {avg_task_duration} 分钟")
+        else:
+            tool_count = len(plan.tool_calls or [])
+            confidence_pct = f"{float(plan.confidence or 0.0):.0%}"
+            summary_parts.append(f"这个计划被通过，是因为当前执行复杂度可控（{tool_count} 个动作）且整体置信度约 {confidence_pct}")
+        if verbosity or tone:
+            summary_parts.append(f"说明方式也会继续按你偏好的 {verbosity or 'balanced'} / {tone or '稳定'} 节奏呈现")
         if auto_approved and auto_approve_reason:
             summary_parts.append(f"并满足“{self._get_auto_approve_reason(auto_approve_reason)}”的快速通过条件")
         summary = "，".join(summary_parts) + "。"
         PLAN_REASONING_GENERATED_TOTAL.labels(decision=decision).inc()
+        PHASE4_OPERATION_DURATION_SECONDS.labels(operation="build_reasoning_payload").observe(
+            max(time.perf_counter() - started_at, 0.0)
+        )
         return summary, details[:3]
 
     def _get_auto_approve_reason(self, reason_code: str | None) -> str:

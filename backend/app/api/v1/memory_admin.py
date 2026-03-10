@@ -7,7 +7,24 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_active_superuser, get_db
 from app.config import settings
-from app.core.business_metrics import CONTEXT_PACK_INTENT
+from app.core.business_metrics import (
+    ADAPTIVE_ROLLBACK_TOTAL,
+    CONTEXT_SEMANTIC_GATING_FALLBACK_TOTAL,
+    CONTEXT_PACK_INTENT,
+    EVIDENCE_BACKED_VISIBLE_UPDATE_TOTAL,
+    PHASE4_OPERATION_DURATION_SECONDS,
+    PERCEPTIBLE_INSIGHT_SENT_TOTAL,
+    PERCEPTIBLE_INSIGHT_SKIPPED_TOTAL,
+    PLAN_REASONING_GENERATED_TOTAL,
+    PLAN_REASONING_SOURCE_TOTAL,
+    PROGRESS_COMPARISON_GENERATED_TOTAL,
+    PROGRESS_COMPARISON_SKIPPED_TOTAL,
+    WEEKLY_LEARNING_REPORT_GENERATED_TOTAL,
+    WEEKLY_LEARNING_REPORT_SKIPPED_TOTAL,
+    snapshot_metric,
+)
+from app.core.cache import cache_service
+from app.core.celery_app import get_celery_status
 from app.core.context_budget import DEFAULT_BUDGETS, _apply_min_budget, _normalize_budget
 from app.models.memory import EpisodicMemory, MemoryGoal, MemoryPreference
 from app.models.user import User
@@ -75,6 +92,16 @@ async def memory_stats(db: AsyncSession = Depends(get_db)):
             "recent_retractions": retracted,
         }
     return {"counts": counts}
+
+
+def _experiment_cohort_for_user(user_id: str | None) -> str | None:
+    import hashlib
+
+    raw = str(user_id or "").strip()
+    if not raw:
+        return None
+    bucket = int(hashlib.sha256(raw.encode("utf-8")).hexdigest(), 16) % 3
+    return ("A", "B", "C")[bucket]
 
 
 @router.get("/health")
@@ -145,7 +172,7 @@ async def run_adjustments(db: AsyncSession = Depends(get_db)):
 
     jobs = MemoryJobsService(db)
     summary["evidence_health"] = await jobs.run_evidence_health_job(limit_per_type=200)
-    summary["decay"] = await jobs.run_decay_job(window_days=30)
+    summary["decay"] = await jobs.run_decay_job(window_days=14)
 
     return {"status": "ok", "summary": summary}
 
@@ -185,7 +212,7 @@ async def run_memory_job(
         return await service.run_evidence_health_job(limit_per_type=limit_per_type)
     if job_type == "decay":
         user_id = payload.get("user_id")
-        window_days = payload.get("window_days", 30)
+        window_days = payload.get("window_days", 14)
         try:
             parsed_user_id = UUID(user_id) if user_id else None
         except ValueError as exc:
@@ -260,6 +287,80 @@ async def rollout_status(
             "cohort_tags": settings.LTM_ROLLOUT_COHORT_TAGS,
         },
         "sample": {"size": len(users), "enabled": enabled},
+    }
+
+
+@router.get("/ai-phases/status")
+async def ai_phases_status(user_id: str | None = Query(default=None)):
+    _ensure_governance_enabled()
+    redis_status = {"status": "unknown"}
+    if cache_service.redis is None:
+        redis_status = {"status": "unavailable"}
+    else:
+        try:
+            await cache_service.redis.ping()
+            redis_status = {"status": "healthy"}
+        except Exception as exc:
+            redis_status = {"status": "unhealthy", "error": str(exc)}
+    celery_status = get_celery_status()
+    redis_state = str(redis_status.get("status") or "")
+
+    return {
+        "stages": {
+            "stage_1_context_focusing": {
+                "enabled": settings.ENABLE_CONTEXT_FOCUSING,
+                "semantic_gating": settings.ENABLE_CONTEXT_SEMANTIC_GATING,
+                "briefing": settings.ENABLE_CONTEXT_BRIEFING,
+                "metadata": settings.ENABLE_CONTEXT_FOCUS_METADATA,
+            },
+            "stage_2_feedback_adaptation": {
+                "enabled": settings.ENABLE_SESSION_FEEDBACK_ADAPTATION,
+            },
+            "stage_3_adaptive_presentation": {
+                "enabled": settings.ENABLE_ADAPTIVE_PRESENTATION,
+                "structured_next_actions": settings.ENABLE_STRUCTURED_NEXT_ACTIONS,
+                "blocked_temperature": settings.ENABLE_BLOCKED_TEMPERATURE,
+                "metadata": settings.ENABLE_UX_PRESENTATION_METADATA,
+            },
+            "stage_4_perceptible_intelligence": {
+                "enabled": settings.ENABLE_PERCEPTIBLE_INTELLIGENCE,
+                "proactive_insights": settings.ENABLE_PROACTIVE_INSIGHTS,
+                "plan_reasoning_summary": settings.ENABLE_PLAN_REASONING_SUMMARY,
+                "weekly_learning_report": settings.ENABLE_WEEKLY_LEARNING_REPORT,
+                "progress_comparisons": settings.ENABLE_PROGRESS_COMPARISONS,
+            },
+        },
+        "dependencies": {
+            "redis": redis_status,
+            "celery": celery_status,
+        },
+        "degradation": {
+            "redis_unavailable": redis_state != "healthy",
+            "semantic_gating_fallback_active": any(
+                value > 0.0 for value in snapshot_metric(CONTEXT_SEMANTIC_GATING_FALLBACK_TOTAL).values()
+            ),
+            "llm_review_fallback_recent": any(
+                value > 0.0
+                for key, value in snapshot_metric(PLAN_REASONING_SOURCE_TOTAL).items()
+                if "source=llm_fallback" in key or "source=rules_only" in key
+            ),
+            "weekly_report_delivery_blocked": redis_state != "healthy" or celery_status.get("status") != "healthy",
+        },
+        "experiment_cohort": _experiment_cohort_for_user(user_id),
+        "metrics": {
+            "perceptible_insight_sent_total": snapshot_metric(PERCEPTIBLE_INSIGHT_SENT_TOTAL),
+            "perceptible_insight_skipped_total": snapshot_metric(PERCEPTIBLE_INSIGHT_SKIPPED_TOTAL),
+            "plan_reasoning_generated_total": snapshot_metric(PLAN_REASONING_GENERATED_TOTAL),
+            "plan_reasoning_source_total": snapshot_metric(PLAN_REASONING_SOURCE_TOTAL),
+            "weekly_learning_report_generated_total": snapshot_metric(WEEKLY_LEARNING_REPORT_GENERATED_TOTAL),
+            "weekly_learning_report_skipped_total": snapshot_metric(WEEKLY_LEARNING_REPORT_SKIPPED_TOTAL),
+            "progress_comparison_generated_total": snapshot_metric(PROGRESS_COMPARISON_GENERATED_TOTAL),
+            "progress_comparison_skipped_total": snapshot_metric(PROGRESS_COMPARISON_SKIPPED_TOTAL),
+            "evidence_backed_visible_update_total": snapshot_metric(EVIDENCE_BACKED_VISIBLE_UPDATE_TOTAL),
+            "context_semantic_gating_fallback_total": snapshot_metric(CONTEXT_SEMANTIC_GATING_FALLBACK_TOTAL),
+            "phase4_operation_duration_seconds": snapshot_metric(PHASE4_OPERATION_DURATION_SECONDS),
+            "adaptive_rollback_total": snapshot_metric(ADAPTIVE_ROLLBACK_TOTAL),
+        },
     }
 
 

@@ -2,6 +2,7 @@
 Application Configuration Management
 使用 pydantic-settings 管理配置
 """
+import json
 import os
 from urllib.parse import quote, unquote, urlparse, urlunparse
 
@@ -332,6 +333,7 @@ class Settings(BaseSettings):
     ENABLE_CONTEXT_SEMANTIC_GATING: bool = False
     ENABLE_CONTEXT_BRIEFING: bool = False
     ENABLE_CONTEXT_FOCUS_METADATA: bool = False
+    CONTEXT_SEMANTIC_GATING_RULES_JSON: str = ""
     CONTEXT_RANKING_SOFT_CAP_EPISODIC: int = 6
     CONTEXT_RANKING_SOFT_CAP_GOALS: int = 5
     ENABLE_MEMORY_CONFLICT_RESOLUTION: bool = True
@@ -460,6 +462,17 @@ class Settings(BaseSettings):
         if not v:
             return ""
         return v
+
+    @property
+    def CONTEXT_SEMANTIC_GATING_RULES(self) -> dict[str, dict[str, float | int]]:
+        raw = str(self.CONTEXT_SEMANTIC_GATING_RULES_JSON or "").strip()
+        if not raw:
+            return {}
+        try:
+            parsed = json.loads(raw)
+        except Exception:
+            return {}
+        return parsed if isinstance(parsed, dict) else {}
 
     @model_validator(mode="after")
     def finalize_urls(self):

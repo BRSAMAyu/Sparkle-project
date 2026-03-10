@@ -12,6 +12,7 @@ from uuid import UUID
 from loguru import logger
 from sqlalchemy import desc, select
 
+from app.core.business_metrics import ADAPTIVE_ROLLBACK_TOTAL
 from app.models.cognitive import BehaviorPattern
 from app.orchestration.dual_core_router import AdaptationRecord
 from app.orchestration.plan_review_service import plan_review_service
@@ -181,6 +182,8 @@ class AdaptiveReplanner:
 
     AUTO_ADJUSTMENT_COOLDOWN = timedelta(hours=2)
     AUTO_REPLAN_COOLDOWN = timedelta(hours=12)
+    SNAPSHOT_HISTORY_LIMIT = 3
+    NEGATIVE_FEEDBACK_CATEGORIES = {"too_difficult", "too_long", "unclear", "irrelevant"}
 
     def __init__(
         self,
@@ -217,6 +220,14 @@ class AdaptiveReplanner:
         category: str | None = None,
         difficulty_delta: float | None = None,
     ) -> list[AdaptationRecord]:
+        rollback_records = await self._maybe_rollback_after_feedback(
+            user_id=user_id,
+            plan_id=plan_id,
+            feedback_category=category,
+            task_id=task_id,
+        )
+        if rollback_records:
+            return rollback_records
         report = await self.progress_service.evaluate_progress(user_id, plan_id)
         return await self._handle_report(
             report,
@@ -405,6 +416,30 @@ class AdaptiveReplanner:
         recent = list(adaptive_meta.get("recent_adaptations", []) or [])
         recent.append(record.to_dict())
         adaptive_meta["recent_adaptations"] = recent[-10:]
+        existing_adaptive = dict(((state.facts or {}).get("adaptive_adjustments")) or {})
+        snapshots = list(adaptive_meta.get("adjustment_snapshots", []) or [])
+        if not snapshots:
+            snapshots.append(
+                self._build_adjustment_snapshot(
+                    adaptive_adjustments=existing_adaptive,
+                    trigger="baseline",
+                    reasons=[],
+                )
+            )
+        current_adaptive = dict(adjustments.get("adaptive_adjustments", {}) or existing_adaptive)
+        snapshot = self._build_adjustment_snapshot(
+            adaptive_adjustments=current_adaptive,
+            trigger=trigger,
+            reasons=report.reasons,
+        )
+        snapshots.append(snapshot)
+        adaptive_meta["adjustment_snapshots"] = snapshots[-self.SNAPSHOT_HISTORY_LIMIT :]
+        adaptive_meta["active_snapshot_id"] = snapshot["id"]
+        adaptive_meta["rollback_monitor"] = {
+            "current_snapshot_id": snapshot["id"],
+            "negative_feedback_streak": 0,
+            "last_feedback_category": feedback_category or "",
+        }
         adjustments["adaptive_meta"] = adaptive_meta
 
         feedback_entry = self._build_feedback_entry(
@@ -735,6 +770,152 @@ class AdaptiveReplanner:
             user_facing_message=message_map.get(adjustment.parameter, "我根据你的行为模式，微调了当前计划。"),
             source="cognitive_pattern_trigger",
         )
+
+    async def _maybe_rollback_after_feedback(
+        self,
+        *,
+        user_id: UUID,
+        plan_id: UUID,
+        feedback_category: str | None,
+        task_id: UUID | None,
+    ) -> list[AdaptationRecord]:
+        state = await self.plan_state_service.get_plan_state(user_id, plan_id)
+        if not state:
+            return []
+        facts = dict(state.facts or {})
+        adaptive_meta = dict((facts.get("adaptive_meta") or {}))
+        snapshots = list(adaptive_meta.get("adjustment_snapshots") or [])
+        active_snapshot_id = str(adaptive_meta.get("active_snapshot_id") or "").strip()
+        if not snapshots or not active_snapshot_id:
+            return []
+
+        rollback_monitor = dict(adaptive_meta.get("rollback_monitor") or {})
+        category = str(feedback_category or "").strip().lower()
+        is_negative = category in self.NEGATIVE_FEEDBACK_CATEGORIES
+        current_snapshot_id = str(rollback_monitor.get("current_snapshot_id") or active_snapshot_id)
+        negative_streak = int(rollback_monitor.get("negative_feedback_streak") or 0)
+
+        if current_snapshot_id != active_snapshot_id:
+            negative_streak = 0
+
+        if not is_negative:
+            adaptive_meta["rollback_monitor"] = {
+                "current_snapshot_id": active_snapshot_id,
+                "negative_feedback_streak": 0,
+                "last_feedback_category": category,
+            }
+            await self.plan_state_service.upsert_plan_state(
+                user_id=user_id,
+                plan_id=plan_id,
+                patch={"facts": {"adaptive_meta": adaptive_meta}},
+                bump_version=False,
+            )
+            return []
+
+        negative_streak += 1
+        adaptive_meta["rollback_monitor"] = {
+            "current_snapshot_id": active_snapshot_id,
+            "negative_feedback_streak": negative_streak,
+            "last_feedback_category": category,
+        }
+
+        if negative_streak < 2:
+            await self.plan_state_service.upsert_plan_state(
+                user_id=user_id,
+                plan_id=plan_id,
+                patch={"facts": {"adaptive_meta": adaptive_meta}},
+                bump_version=False,
+            )
+            return []
+
+        previous_snapshot = self._previous_snapshot(snapshots, active_snapshot_id)
+        if not previous_snapshot:
+            await self.plan_state_service.upsert_plan_state(
+                user_id=user_id,
+                plan_id=plan_id,
+                patch={"facts": {"adaptive_meta": adaptive_meta}},
+                bump_version=False,
+            )
+            return []
+
+        rollback_adjustments = dict(previous_snapshot.get("adaptive_adjustments") or {})
+        record = AdaptationRecord(
+            what_changed="回滚到了上一版更稳定的执行策略",
+            why=f"最近连续两次反馈「{feedback_category or '不匹配'}」，说明当前自适应调节开始偏离你的真实状态。",
+            expected_effect="先恢复到上一版已验证更稳的节奏，避免系统继续沿着错误方向放大偏差。",
+            user_facing_message="我发现这轮自动调节有点过头了，先帮你切回上一版更稳的节奏。",
+            source="adaptive_replanner_rollback",
+        )
+        recent = list(adaptive_meta.get("recent_adaptations", []) or [])
+        recent.append(record.to_dict())
+        adaptive_meta["recent_adaptations"] = recent[-10:]
+        adaptive_meta["active_snapshot_id"] = str(previous_snapshot.get("id") or "")
+        adaptive_meta["last_rollback_at"] = _utcnow().isoformat()
+        adaptive_meta["last_rollback_reason"] = feedback_category or ""
+        adaptive_meta["rollback_monitor"] = {
+            "current_snapshot_id": adaptive_meta["active_snapshot_id"],
+            "negative_feedback_streak": 0,
+            "last_feedback_category": category,
+        }
+
+        feedback_entry = self._build_feedback_entry(
+            feedback_type="adaptive_rollback",
+            content=f"Rollback to previous adaptive snapshot due to repeated negative feedback: {feedback_category or 'unknown'}",
+            task_id=task_id,
+            applied_adjustment={
+                "adaptive_adjustments": rollback_adjustments,
+                "restored_snapshot_id": adaptive_meta["active_snapshot_id"],
+            },
+        )
+        await self.plan_state_service.upsert_plan_state(
+            user_id=user_id,
+            plan_id=plan_id,
+            patch={
+                "facts": {
+                    "adaptive_adjustments": rollback_adjustments,
+                    "adaptive_meta": adaptive_meta,
+                },
+                "feedback_log": feedback_entry,
+            },
+            bump_version=True,
+        )
+        ADAPTIVE_ROLLBACK_TOTAL.inc()
+        await self._enqueue_adaptation_update(user_id, record, update_type="plan_adaptation")
+        return [record]
+
+    def _build_adjustment_snapshot(
+        self,
+        *,
+        adaptive_adjustments: dict[str, Any],
+        trigger: str,
+        reasons: list[str],
+    ) -> dict[str, Any]:
+        return {
+            "id": f"as-{uuid.uuid4().hex[:10]}",
+            "created_at": _utcnow().isoformat(),
+            "adaptive_adjustments": dict(adaptive_adjustments or {}),
+            "trigger": trigger,
+            "reasons": list(reasons or [])[:3],
+        }
+
+    def _previous_snapshot(
+        self,
+        snapshots: list[dict[str, Any]],
+        active_snapshot_id: str,
+    ) -> dict[str, Any] | None:
+        normalized = [item for item in snapshots if isinstance(item, dict)]
+        if len(normalized) < 2:
+            return None
+        for index in range(len(normalized) - 1, -1, -1):
+            snapshot = normalized[index]
+            if str(snapshot.get("id") or "") != active_snapshot_id:
+                continue
+            for previous in range(index - 1, -1, -1):
+                candidate = normalized[previous]
+                if str(candidate.get("id") or "") != active_snapshot_id:
+                    return candidate
+            break
+        return None
 
     async def _enqueue_adaptation_update(
         self,
