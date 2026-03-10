@@ -261,6 +261,41 @@ CONTEXT_PACK_INTENT = get_or_create_metric(
     ['intent']
 )
 
+CONTEXT_FOCUS_DECISION_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_context_focus_decision_total',
+    'Context focus decisions by focus mode and route intent',
+    ['focus_mode', 'route_intent']
+)
+
+CONTEXT_SEMANTIC_GATING_APPLIED_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_context_semantic_gating_applied_total',
+    'Semantic gating applied by section',
+    ['section']
+)
+
+CONTEXT_SEMANTIC_GATING_FALLBACK_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_context_semantic_gating_fallback_total',
+    'Semantic gating fallbacks by reason',
+    ['reason']
+)
+
+CONTEXT_BRIEFING_GENERATED_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_context_briefing_generated_total',
+    'Generated context briefing notes by focus mode',
+    ['focus_mode']
+)
+
+CONTEXT_FOCUS_PROMPT_SECTION_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_context_focus_prompt_section_total',
+    'Prompt section usage under context focus',
+    ['focus_mode', 'section', 'detail_level']
+)
+
 # ========== LTM Eval Metrics ==========
 LTM_EVAL_TOTAL = get_or_create_metric(
     Counter,

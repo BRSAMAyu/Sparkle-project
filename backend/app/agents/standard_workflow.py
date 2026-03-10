@@ -243,6 +243,8 @@ Ask about their available time and current tasks if needed.
         intent_instruction=intent_instruction, # Vision Item 4b
         session_feedback_instruction=str(state.context_data.get("session_feedback_instruction") or ""),
         dual_core_instruction=str(state.context_data.get("dual_core_prompt_instruction") or ""),
+        context_focus=state.context_data.get("context_focus"),
+        context_briefing_note=str(state.context_data.get("context_briefing_note") or ""),
         chat_mode=str(state.context_data.get("chat_mode", "standard") or "standard"),
     )
 

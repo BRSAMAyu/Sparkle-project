@@ -1187,7 +1187,10 @@ Please review this plan and provide your assessment."""
                     context_builder = ContextPackBuilder(db, redis=self.redis)
                     context_pack = await context_builder.build(
                         user_id=UUID(user_id),
-                        intent="chat",
+                        intent="planning",
+                        query_text=replan_message,
+                        focus_mode="plan_focus",
+                        route_intent="plan",
                     )
                     user_context = context_pack.to_prompt_context()
                 except Exception as e:
