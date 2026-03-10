@@ -280,94 +280,97 @@ class _StreakIndicatorFullState extends State<_StreakIndicatorFull>
   Color get _flameColor => DS.getStreakColor(widget.streakStats.currentStreak);
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-        onTap: widget.onTap,
-        child: Container(
-          padding: const EdgeInsets.all(DS.spacing16),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                _flameColor.withValues(alpha: 0.2),
-                _flameColor.withValues(alpha: 0.05),
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return GestureDetector(
+      onTap: widget.onTap,
+      child: Container(
+        padding: const EdgeInsets.all(DS.spacing16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              _flameColor.withValues(alpha: 0.2),
+              _flameColor.withValues(alpha: 0.05),
+            ],
+          ),
+          borderRadius: DS.borderRadius20,
+          border: Border.all(
+            color: _flameColor.withValues(alpha: 0.4),
+            width: 2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: _flameColor.withValues(alpha: 0.2),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            // 顶部火焰和天数
+            Row(
+              children: [
+                AnimatedBuilder(
+                  animation: _flameAnimation,
+                  builder: (context, child) => Transform.scale(
+                    scale: _flameAnimation.value,
+                    child: _buildLargeFlameIcon(),
+                  ),
+                ),
+                const SizedBox(width: DS.spacing16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.streakTitle,
+                        style: TextStyle(
+                          fontSize: DS.fontSizeSm,
+                          color: DS.textSecondary,
+                        ),
+                      ),
+                      Text(
+                        l10n.streakDays(widget.streakStats.currentStreak),
+                        style: TextStyle(
+                          fontSize: DS.fontSize3xl,
+                          fontWeight: DS.fontWeightBold,
+                          color: _flameColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
-            borderRadius: DS.borderRadius20,
-            border: Border.all(
-              color: _flameColor.withValues(alpha: 0.4),
-              width: 2,
+            const SizedBox(height: DS.spacing12),
+            // 统计信息
+            Wrap(
+              spacing: DS.spacing12,
+              runSpacing: DS.spacing10,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                _buildStatItem(
+                  l10n.streakMax(widget.streakStats.maxStreak).split(' ')[0],
+                  l10n.streakDays(widget.streakStats.maxStreak),
+                  Icons.emoji_events,
+                ),
+                const SizedBox(width: DS.spacing12),
+                _buildStatItem(
+                  l10n.streakTotal(widget.streakStats.totalCheckinDays).split(' ')[0],
+                  l10n.streakDays(widget.streakStats.totalCheckinDays),
+                  Icons.calendar_today,
+                ),
+                if (widget.showFreezeCharges) _buildFreezeCharges(),
+              ],
             ),
-            boxShadow: [
-              BoxShadow(
-                color: _flameColor.withValues(alpha: 0.2),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              // 顶部火焰和天数
-              Row(
-                children: [
-                  AnimatedBuilder(
-                    animation: _flameAnimation,
-                    builder: (context, child) => Transform.scale(
-                      scale: _flameAnimation.value,
-                      child: _buildLargeFlameIcon(),
-                    ),
-                  ),
-                  const SizedBox(width: DS.spacing16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '连续学习',
-                          style: TextStyle(
-                            fontSize: DS.fontSizeSm,
-                            color: DS.textSecondary,
-                          ),
-                        ),
-                        Text(
-                          '${widget.streakStats.currentStreak} 天',
-                          style: TextStyle(
-                            fontSize: DS.fontSize3xl,
-                            fontWeight: DS.fontWeightBold,
-                            color: _flameColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: DS.spacing12),
-              // 统计信息
-              Wrap(
-                spacing: DS.spacing12,
-                runSpacing: DS.spacing10,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  _buildStatItem(
-                    '最高',
-                    '${widget.streakStats.maxStreak}天',
-                    Icons.emoji_events,
-                  ),
-                  const SizedBox(width: DS.spacing12),
-                  _buildStatItem(
-                    '累计',
-                    '${widget.streakStats.totalCheckinDays}天',
-                    Icons.calendar_today,
-                  ),
-                  if (widget.showFreezeCharges) _buildFreezeCharges(),
-                ],
-              ),
-            ],
-          ),
+          ],
         ),
-      );
+      ),
+    );
+  }
 
   Widget _buildLargeFlameIcon() => Container(
         width: 64,
@@ -595,7 +598,7 @@ class _StreakIndicatorCircularState extends State<_StreakIndicatorCircular>
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    isZeroStreak ? '开始' : '${widget.streakStats.currentStreak}',
+                    isZeroStreak ? context.l10n.streakStartChallenge : '${widget.streakStats.currentStreak}',
                     style: TextStyle(
                       fontSize: isZeroStreak ? DS.fontSizeSm : DS.fontSizeLg,
                       fontWeight: DS.fontWeightBold,
@@ -603,7 +606,7 @@ class _StreakIndicatorCircularState extends State<_StreakIndicatorCircular>
                     ),
                   ),
                   Text(
-                    isZeroStreak ? '挑战' : '天',
+                    isZeroStreak ? context.l10n.streakChallenge : context.l10n.streakDays(0).replaceAll('0', '').trim(),
                     style: TextStyle(
                       fontSize: 10,
                       color: DS.textSecondary,

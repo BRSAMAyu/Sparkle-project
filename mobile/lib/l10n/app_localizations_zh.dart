@@ -1008,6 +1008,65 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get focusReadyPrompt => '准备好开始专注了吗？';
+
+  @override
+  String get focusNoPendingTasks => '没有待办任务';
+
+  @override
+  String get focusNoTasksButCanFocus => '不过你依然可以直接开始专注!';
+
+  @override
+  String get focusFreeFocus => '自由专注';
+
+  @override
+  String get focusStartNow => '立即开始';
+
+  @override
+  String get focusCreateTask => '或者创建一个新任务';
+
+  @override
+  String get focusQuickStart => '快速开启专注 (25min)';
+
+  @override
+  String focusEstimated(Object minutes) {
+    return '预计 $minutes 分钟';
+  }
+
+  @override
+  String get streakTitle => '连续学习';
+
+  @override
+  String streakDays(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count天',
+      one: '1天',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String streakMax(Object count) {
+    return '最高$count';
+  }
+
+  @override
+  String streakTotal(Object count) {
+    return '累计$count';
+  }
+
+  @override
+  String get streakStartChallenge => '开始';
+
+  @override
+  String get streakChallenge => '挑战';
+
+  @override
+  String get streakFreezeCharges => '冻结次数';
+
+  @override
   String get errorNetwork => '网络错误';
 
   @override
@@ -1399,4 +1458,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get commonOnline => '在线';
+
+  @override
+  String get commonOperationWarning => '操作可能未成功';
 }

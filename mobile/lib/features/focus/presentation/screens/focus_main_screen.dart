@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/features/task/task.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
@@ -40,7 +41,7 @@ class FocusMainScreen extends ConsumerWidget {
                   DS.spacing12,
                 ),
                 child: Text(
-                  '准备好开始专注了吗？',
+                  context.l10n.focusReadyPrompt,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 20,
@@ -81,12 +82,12 @@ class FocusMainScreen extends ConsumerWidget {
             ),
             const SizedBox(height: DS.lg),
             Text(
-              '没有待办任务',
+              context.l10n.focusNoPendingTasks,
               style: TextStyle(color: DS.textSecondary, fontSize: 16),
             ),
             const SizedBox(height: DS.md),
             Text(
-              '不过你依然可以直接开始专注！',
+              context.l10n.focusNoTasksButCanFocus,
               style: TextStyle(color: DS.textSecondary, fontSize: 14),
             ),
             const SizedBox(height: DS.lg),
@@ -99,7 +100,7 @@ class FocusMainScreen extends ConsumerWidget {
                   final dummyTask = TaskModel(
                     id: 'quick_focus_${DateTime.now().millisecondsSinceEpoch}',
                     userId: '',
-                    title: '自由专注',
+                    title: context.l10n.focusFreeFocus,
                     type: TaskType.learning,
                     estimatedMinutes: 25,
                     difficulty: 1,
@@ -115,12 +116,12 @@ class FocusMainScreen extends ConsumerWidget {
                   context.push('/tasks/${dummyTask.id}/execute');
                 },
                 icon: const Icon(Icons.play_circle_outline),
-                label: '立即开始专注',
+                label: context.l10n.focusStartNow,
               ),
             ),
             const SizedBox(height: DS.sm),
             SparkleButton.ghost(
-              label: '或者创建一个新任务',
+              label: context.l10n.focusCreateTask,
               onPressed: () => context.push('/tasks/new'),
             ),
           ],
@@ -144,7 +145,7 @@ class FocusMainScreen extends ConsumerWidget {
               ),
             ),
             subtitle: Text(
-              '预计 ${task.estimatedMinutes} 分钟',
+              context.l10n.focusEstimated(task.estimatedMinutes),
               style: TextStyle(color: DS.textSecondary),
             ),
             trailing: Icon(
@@ -165,7 +166,7 @@ class FocusMainScreen extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: SparkleButton(
           expand: true,
-          label: '快速开启专注 (25min)',
+          label: context.l10n.focusQuickStart,
           onPressed: () {
             // Create a dummy task for quick focus if needed, or just push a generic task
             final dummyTask = TaskModel(
