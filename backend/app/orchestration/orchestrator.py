@@ -25,6 +25,11 @@ from app.core.metrics import (
     REQUEST_LATENCY,
     RESPONSE_FALLBACK_GENERATED_TOTAL,
     ROUTING_SUMMARY_CONTEXT_TOTAL,
+    SESSION_FEEDBACK_APPLIED_TOTAL,
+    SESSION_FEEDBACK_CONFIDENCE_BUCKET,
+    SESSION_FEEDBACK_DETECTED_TOTAL,
+    SESSION_FEEDBACK_IGNORED_TOTAL,
+    SESSION_FEEDBACK_VISIBLE_HINT_TOTAL,
     TOKEN_USAGE,
 )
 from app.core.pending_actions import pending_actions_store
@@ -61,6 +66,15 @@ from app.orchestration.mode_workflow_config import get_workflow_config
 from app.orchestration.multi_agent_adapter import MultiAgentWorkflowAdapter, execute_multi_agent_workflow
 from app.orchestration.observability_logger import observability_logger
 from app.orchestration.plan_review_service import ReviewDecision, plan_review_service
+from app.orchestration.session_feedback import (
+    SESSION_FEEDBACK_TTL_SECONDS,
+    SessionAdaptationContext,
+    SessionFeedbackSignal,
+    apply_session_feedback_visible_prefix,
+    build_session_adaptation_context,
+    build_session_feedback_instruction,
+    detect_session_feedback_signal,
+)
 
 # Phase 1 & Phase 2: Full-Loop Closed System with LangGraph Planner
 from app.orchestration.route_adapter import to_route_decision
@@ -104,6 +118,7 @@ STATE_FAILED = "FAILED"
 CONTEXT_VERSION_KEY_PREFIX = "user:context:versions:"
 CONTEXT_VERSION_TTL_SECONDS = 6 * 60 * 60
 REALTIME_VERSION_DOMAINS = ("tasks", "plans", "focus", "progress", "prefs")
+SESSION_FEEDBACK_KEY_PREFIX = "session:feedback:"
 
 
 def _utcnow() -> datetime:
@@ -337,6 +352,107 @@ class ChatOrchestrator:
         if progress_snapshot:
             evolution_highlights = [*evolution_highlights[:2], *(progress_snapshot.get("highlights") or [])[:1]]
         return responses, adaptation_records[:3], preference_learnings[:3], evolution_highlights[:3], progress_snapshot
+
+    @staticmethod
+    def _session_feedback_key(session_id: str) -> str:
+        return f"{SESSION_FEEDBACK_KEY_PREFIX}{session_id}"
+
+    @staticmethod
+    def _extract_previous_message(
+        conversation_context: dict[str, Any] | None,
+        *,
+        role: str,
+    ) -> str:
+        messages = (conversation_context or {}).get("messages") or []
+        if not isinstance(messages, list):
+            return ""
+        for message in reversed(messages):
+            if not isinstance(message, dict):
+                continue
+            if str(message.get("role") or "").lower() != role:
+                continue
+            content = str(message.get("content") or "").strip()
+            if content:
+                return content
+        return ""
+
+    async def _load_session_adaptation_context(
+        self,
+        session_id: str,
+    ) -> SessionAdaptationContext:
+        if not self.redis or not session_id:
+            return SessionAdaptationContext()
+        try:
+            raw = await self.redis.get(self._session_feedback_key(session_id))
+            if not raw:
+                return SessionAdaptationContext()
+            payload = json.loads(raw)
+            return SessionAdaptationContext.from_dict(payload)
+        except Exception as e:
+            logger.warning(f"Failed to load session adaptation context: {e}")
+            return SessionAdaptationContext()
+
+    async def _save_session_adaptation_context(
+        self,
+        session_id: str,
+        context: SessionAdaptationContext,
+    ) -> None:
+        if not self.redis or not session_id:
+            return
+        try:
+            await self.redis.setex(
+                self._session_feedback_key(session_id),
+                SESSION_FEEDBACK_TTL_SECONDS,
+                json.dumps(context.to_dict(), ensure_ascii=False),
+            )
+        except Exception as e:
+            logger.warning(f"Failed to save session adaptation context: {e}")
+
+    async def _detect_session_feedback(
+        self,
+        *,
+        session_id: str,
+        user_message: str,
+        conversation_context: dict[str, Any] | None,
+    ) -> tuple[SessionFeedbackSignal | None, SessionAdaptationContext | None]:
+        if not settings.ENABLE_SESSION_FEEDBACK_ADAPTATION:
+            return None, None
+        if not str(user_message or "").strip():
+            return None, None
+
+        previous_assistant = self._extract_previous_message(conversation_context, role="assistant")
+        if not previous_assistant:
+            SESSION_FEEDBACK_IGNORED_TOTAL.labels(reason="no_previous_assistant").inc()
+            return None, None
+
+        previous_user = self._extract_previous_message(conversation_context, role="user")
+        signal = detect_session_feedback_signal(
+            user_message=user_message,
+            previous_assistant_message=previous_assistant,
+            previous_user_message=previous_user,
+        )
+        if signal is None:
+            return None, None
+
+        SESSION_FEEDBACK_DETECTED_TOTAL.labels(signal_type=signal.signal_type).inc()
+        SESSION_FEEDBACK_CONFIDENCE_BUCKET.labels(
+            signal_type=signal.signal_type,
+            bucket=signal.confidence_bucket,
+        ).inc()
+
+        if signal.signal_type in {"mismatch", "simplify", "expand"} and not signal.applies_adaptation:
+            SESSION_FEEDBACK_IGNORED_TOTAL.labels(reason="below_threshold").inc()
+
+        if signal.applies_adaptation:
+            SESSION_FEEDBACK_APPLIED_TOTAL.labels(signal_type=signal.signal_type).inc()
+
+        existing_context = await self._load_session_adaptation_context(session_id)
+        adaptation_context = build_session_adaptation_context(
+            signal=signal,
+            existing_context=existing_context,
+        )
+        await self._save_session_adaptation_context(session_id, adaptation_context)
+        return signal, adaptation_context
 
     def _chain_event_handlers(self, *handlers):
         """Chain multiple event handlers"""
@@ -2111,6 +2227,16 @@ class ChatOrchestrator:
             RESPONSE_FALLBACK_GENERATED_TOTAL.labels(source="standard_empty_final").inc()
 
         llm_profile_meta = self._extract_llm_profile_meta(user_context_payload)
+        session_feedback_signal = final_state.context_data.get("session_feedback_signal")
+        full_response, session_adaptation_visible = apply_session_feedback_visible_prefix(
+            full_response,
+            session_feedback_signal,
+        )
+        parsed_session_signal = SessionFeedbackSignal.from_dict(session_feedback_signal)
+        if parsed_session_signal and session_adaptation_visible and parsed_session_signal.applies_adaptation:
+            SESSION_FEEDBACK_VISIBLE_HINT_TOTAL.labels(
+                signal_type=parsed_session_signal.signal_type,
+            ).inc()
         response_metadata = {
             "response_id": response_id,
             "trace_id": trace_id,
@@ -2133,6 +2259,17 @@ class ChatOrchestrator:
                 [str(expert) for expert in selected_experts],
                 ensure_ascii=False,
             )
+        if parsed_session_signal is not None:
+            response_metadata["session_feedback_signal"] = json.dumps(
+                parsed_session_signal.to_dict(),
+                ensure_ascii=False,
+            )
+        if final_state.context_data.get("session_adaptation"):
+            response_metadata["session_adaptation"] = json.dumps(
+                final_state.context_data["session_adaptation"],
+                ensure_ascii=False,
+            )
+        response_metadata["session_adaptation_visible"] = "true" if session_adaptation_visible else "false"
 
         execution_validation = await self._validate_plan_execution(
             executable_plan=executable_plan,
@@ -2541,6 +2678,8 @@ class ChatOrchestrator:
         workflow_id: str,
         prompt_version: str,
         stream_callback,
+        session_feedback_signal: dict[str, Any] | None = None,
+        session_adaptation_context: dict[str, Any] | None = None,
         result_holder: dict[str, Any] | None = None,
     ) -> AsyncGenerator[agent_service_pb2.ChatResponse, None]:
         """Handle non-standard chat modes (multi-agent workflows).
@@ -2558,6 +2697,9 @@ class ChatOrchestrator:
             "db_session": active_db,
             "prompt_version": prompt_version,
             "workflow_id": workflow_id,
+            "session_feedback_signal": session_feedback_signal,
+            "session_feedback_instruction": build_session_feedback_instruction(session_feedback_signal),
+            "session_adaptation": session_adaptation_context,
         }
         full_text_parts: list[str] = []
         full_text_override = ""
@@ -2625,6 +2767,7 @@ class ChatOrchestrator:
             logger.info(f"[Orchestrator] Multi-agent workflow completed with {response_count} responses")
             await self._update_state(session_id, STATE_DONE, "Multi-agent workflow completed")
             final_text = full_text_override or "".join(full_text_parts)
+            parsed_session_signal = SessionFeedbackSignal.from_dict(session_feedback_signal)
             if not had_error and (not final_text or not final_text.strip()):
                 execution_summary = str(result_holder.get("execution_summary", "")).strip()
                 if execution_summary:
@@ -2635,6 +2778,14 @@ class ChatOrchestrator:
                     )
                     metadata_map["response_fallback"] = "mode_execution_summary"
                     RESPONSE_FALLBACK_GENERATED_TOTAL.labels(source="mode_empty_final").inc()
+            final_text, session_adaptation_visible = apply_session_feedback_visible_prefix(
+                final_text,
+                session_feedback_signal,
+            )
+            if parsed_session_signal and session_adaptation_visible and parsed_session_signal.applies_adaptation:
+                SESSION_FEEDBACK_VISIBLE_HINT_TOTAL.labels(
+                    signal_type=parsed_session_signal.signal_type,
+                ).inc()
             if not had_error and final_text:
                 await self._persist_assistant_message(
                     active_db=active_db,
@@ -2655,8 +2806,19 @@ class ChatOrchestrator:
                     "trace_id": trace_id,
                     "workflow_id": workflow_id,
                     "prompt_version": prompt_version,
+                    "session_adaptation_visible": "true" if session_adaptation_visible else "false",
                     **metadata_map,
                 }
+                if parsed_session_signal is not None:
+                    response_metadata["session_feedback_signal"] = json.dumps(
+                        parsed_session_signal.to_dict(),
+                        ensure_ascii=False,
+                    )
+                if session_adaptation_context:
+                    response_metadata["session_adaptation"] = json.dumps(
+                        session_adaptation_context,
+                        ensure_ascii=False,
+                    )
                 result_holder["final_response_data"] = {
                     "message": final_text,
                     "full_text": final_text,
@@ -3316,6 +3478,15 @@ class ChatOrchestrator:
                     list(request.history),
                 )
 
+                session_feedback_signal = None
+                session_adaptation_context = None
+                if not request.HasField("tool_result"):
+                    session_feedback_signal, session_adaptation_context = await self._detect_session_feedback(
+                        session_id=session_id,
+                        user_message=user_message,
+                        conversation_context=conversation_context,
+                    )
+
                 expert_routing_decision = None
                 if settings.ENABLE_EXPERT_STRATEGY_V1 and is_expert_chat_mode(chat_mode):
                     user_preferences = (user_context_payload or {}).get("preferences", {})
@@ -3351,6 +3522,13 @@ class ChatOrchestrator:
                 state = WorkflowState()
                 if user_message:
                     state.append_message("user", user_message)
+                if session_feedback_signal is not None:
+                    state.context_data["session_feedback_signal"] = session_feedback_signal.to_dict()
+                    session_feedback_instruction = build_session_feedback_instruction(session_feedback_signal)
+                    if session_feedback_instruction:
+                        state.context_data["session_feedback_instruction"] = session_feedback_instruction
+                if session_adaptation_context is not None:
+                    state.context_data["session_adaptation"] = session_adaptation_context.to_dict()
                 queue: asyncio.Queue = asyncio.Queue()
 
                 async def stream_callback(resp: agent_service_pb2.ChatResponse):
@@ -3465,7 +3643,14 @@ class ChatOrchestrator:
                         response_id=response_id, request_id=request_id, trace_id=trace_id, start_time=start_time,
                         user_context_payload=user_context_payload, conversation_context=conversation_context,
                         plan_context=plan_context, active_db=active_db, workflow_id=workflow_id,
-                        prompt_version=prompt_version, stream_callback=stream_callback, result_holder=mode_result,
+                        prompt_version=prompt_version, stream_callback=stream_callback,
+                        session_feedback_signal=(
+                            session_feedback_signal.to_dict() if session_feedback_signal is not None else None
+                        ),
+                        session_adaptation_context=(
+                            session_adaptation_context.to_dict() if session_adaptation_context is not None else None
+                        ),
+                        result_holder=mode_result,
                     ):
                         yield resp
                     final_response_data = mode_result.get("final_response_data")

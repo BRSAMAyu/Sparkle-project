@@ -76,6 +76,10 @@ AGENT_SYSTEM_PROMPT = """你是 Sparkle（星火），一个智能学习助手�
 
 
 
+{session_feedback_section}
+
+
+
 {dual_core_section}
 
 
@@ -133,6 +137,10 @@ MODE_SYSTEM_PROMPTS = {
 
 
 {intent_section}
+
+
+
+{session_feedback_section}
 
 
 
@@ -210,6 +218,10 @@ MODE_SYSTEM_PROMPTS = {
 
 
 
+{session_feedback_section}
+
+
+
 {dual_core_section}
 
 
@@ -281,6 +293,10 @@ MODE_SYSTEM_PROMPTS = {
 
 
 {intent_section}
+
+
+
+{session_feedback_section}
 
 
 
@@ -372,6 +388,8 @@ def build_system_prompt(
 
     intent_instruction: str = None,  # Vision Item 4b: Explicit Intent Injection
 
+    session_feedback_instruction: str = None,
+
     dual_core_instruction: str = None,
 
     context_level: str = "full",  # full | light
@@ -399,7 +417,8 @@ def build_system_prompt(
         plan_context: 计划上下文（从PlanContextBuilder获取）
 
         intent_instruction: 显式意图指令（从RequestRouter获取）
-        dual_core_instruction: 双核心路由指令（优先级低于显式意图，高于一般偏好）
+        session_feedback_instruction: 会话内即时反馈指令（优先级低于显式意图，高于 dual-core/一般偏好）
+        dual_core_instruction: 双核心路由指令（优先级低于显式意图与会话内反馈，高于一般偏好）
 
 
 
@@ -478,6 +497,14 @@ def build_system_prompt(
 
         intent_section = f"\n## 当前意图指令 (最高优先级)\n{intent_instruction}\n请务必执行此意图对应的操作 (如调用相关工具)。"
 
+    session_feedback_section = ""
+    if session_feedback_instruction:
+        session_feedback_section = (
+            "\n## 会话内反馈适配 (次高优先级)\n"
+            f"{session_feedback_instruction}\n"
+            "这是一轮内即时调整，优先于长期偏好，但不会更新长期画像。"
+        )
+
     dual_core_section = ""
     if dual_core_instruction:
         dual_core_section = (
@@ -501,6 +528,7 @@ def build_system_prompt(
                 preference_instructions=preference_instructions,
                 plan_context_section=plan_context_section,
                 intent_section=intent_section,
+                session_feedback_section=session_feedback_section,
                 dual_core_section=dual_core_section,
                 task_awareness_section=TASK_AWARENESS_SECTION,
                 cognitive_prism_section=cognitive_prism_section,
@@ -523,6 +551,8 @@ def build_system_prompt(
         if intent_instruction:
 
              prompt += f"\n\n## 当前意图指令\n{intent_instruction}"
+        if session_feedback_instruction:
+             prompt += f"\n\n## 会话内反馈适配\n{session_feedback_instruction}"
         if dual_core_instruction:
 
              prompt += f"\n\n## 双核心路由指令\n{dual_core_instruction}"

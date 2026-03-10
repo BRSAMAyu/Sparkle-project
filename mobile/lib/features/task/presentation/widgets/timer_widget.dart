@@ -69,7 +69,7 @@ class _TimerWidgetState extends State<TimerWidget>
     if (_isRunning) return;
     setState(() => _isRunning = true);
     widget.onStateChange?.call(true);
-    _pulseController.repeat(reverse: true);
+    unawaited(_pulseController.repeat(reverse: true));
 
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (widget.mode == TimerMode.countUp) {
@@ -91,8 +91,9 @@ class _TimerWidgetState extends State<TimerWidget>
     if (!_isRunning) return;
     _timer?.cancel();
     setState(() => _isRunning = false);
-    _pulseController.stop();
-    _pulseController.value = 1.0; // Reset scale
+    _pulseController
+      ..stop()
+      ..value = 1.0; // Reset scale
     if (notify) widget.onStateChange?.call(false);
   }
 
@@ -129,69 +130,84 @@ class _TimerWidgetState extends State<TimerWidget>
       if (_currentSeconds > maxSecs) progress = 1.0;
     }
 
-    return Column(
-      children: [
-        AnimatedBuilder(
-          animation: _pulseAnimation,
-          builder: (context, child) => Transform.scale(
-            scale: _isRunning ? _pulseAnimation.value : 1.0,
-            child: child,
-          ),
-          child: CustomPaint(
-            size: const Size(220, 220),
-            painter: _CircularTimerPainter(
-              progress: progress,
-              gradient: LinearGradient(
-                colors: [
-                  DS.primaryBase.withValues(alpha: 0.95),
-                  Color.lerp(
-                    DS.primaryBase,
-                    DS.surfaceTertiary,
-                    Theme.of(context).brightness == Brightness.dark
-                        ? 0.26
-                        : 0.18,
-                  )!
-                      .withValues(alpha: 0.88),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableWidth = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : MediaQuery.sizeOf(context).width;
+        final dialSize = availableWidth.clamp(168.0, 220.0);
+        final timeFontSize = dialSize * 0.16;
+        final controlIconSize = (dialSize * 0.36).clamp(64.0, 80.0);
+
+        return Column(
+          children: [
+            AnimatedBuilder(
+              animation: _pulseAnimation,
+              builder: (context, child) => Transform.scale(
+                scale: _isRunning ? _pulseAnimation.value : 1.0,
+                child: child,
               ),
-              backgroundColor: DS.surfaceSecondary,
-            ),
-            child: SizedBox(
-              width: 220,
-              height: 220,
-              child: Center(
-                child: Text(
-                  _formatTime(_currentSeconds),
-                  style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                        fontWeight: DS.fontWeightBold,
-                        fontFamily: 'monospace',
-                        color: DS.textPrimary,
-                      ),
+              child: CustomPaint(
+                size: Size.square(dialSize),
+                painter: _CircularTimerPainter(
+                  progress: progress,
+                  gradient: LinearGradient(
+                    colors: [
+                      DS.primaryBase.withValues(alpha: 0.95),
+                      Color.lerp(
+                        DS.primaryBase,
+                        DS.surfaceTertiary,
+                        Theme.of(context).brightness == Brightness.dark
+                            ? 0.26
+                            : 0.18,
+                      )!
+                          .withValues(alpha: 0.88),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  backgroundColor: DS.surfaceSecondary,
+                ),
+                child: SizedBox(
+                  width: dialSize,
+                  height: dialSize,
+                  child: Center(
+                    child: Text(
+                      _formatTime(_currentSeconds),
+                      style:
+                          Theme.of(context).textTheme.displayMedium?.copyWith(
+                                fontSize: timeFontSize,
+                                fontWeight: DS.fontWeightBold,
+                                fontFamily: 'monospace',
+                                color: DS.textPrimary,
+                              ),
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
-        ),
-        const SizedBox(height: DS.spacing32),
-        AnimatedSwitcher(
-          duration: DS.durationFast,
-          transitionBuilder: (child, animation) => ScaleTransition(
-            scale: animation,
-            child: FadeTransition(opacity: animation, child: child),
-          ),
-          child: GestureDetector(
-            key: ValueKey(_isRunning),
-            onTap: _toggleTimer,
-            child: Icon(
-              _isRunning ? Icons.pause_circle_filled : Icons.play_circle_filled,
-              size: 80,
-              color: DS.primaryBase,
+            SizedBox(height: dialSize * 0.14),
+            AnimatedSwitcher(
+              duration: DS.durationFast,
+              transitionBuilder: (child, animation) => ScaleTransition(
+                scale: animation,
+                child: FadeTransition(opacity: animation, child: child),
+              ),
+              child: GestureDetector(
+                key: ValueKey(_isRunning),
+                onTap: _toggleTimer,
+                child: Icon(
+                  _isRunning
+                      ? Icons.pause_circle_filled
+                      : Icons.play_circle_filled,
+                  size: controlIconSize,
+                  color: DS.primaryBase,
+                ),
+              ),
             ),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 }

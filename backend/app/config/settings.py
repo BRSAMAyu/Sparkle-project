@@ -404,6 +404,7 @@ class Settings(BaseSettings):
     ENABLE_EXPERT_ENTRY: bool = True
     ENABLE_UNIFIED_GRAPH_ROUTING: bool = True
     ENABLE_EXPERT_STRATEGY_V1: bool = True
+    ENABLE_SESSION_FEEDBACK_ADAPTATION: bool = False
     ENABLE_SUMMARIZATION_WORKER: bool = True
 
     # Optional Graph Sync Worker

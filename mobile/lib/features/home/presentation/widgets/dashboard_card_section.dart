@@ -70,6 +70,7 @@ class DashboardCardSection extends ConsumerWidget {
         return NextActionsCard(
           compact: true,
           dense: isGridMode,
+          embedded: true,
           onViewAll: () => context.push('/tasks'),
         );
       case DashboardCardIds.curiosity:
