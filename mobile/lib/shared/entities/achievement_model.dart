@@ -154,28 +154,29 @@ class AchievementModel {
     int? totalUnlocked,
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) => AchievementModel(
-      id: id ?? this.id,
-      name: name ?? this.name,
-      description: description ?? this.description,
-      iconUrl: iconUrl ?? this.iconUrl,
-      type: type ?? this.type,
-      rarity: rarity ?? this.rarity,
-      category: category ?? this.category,
-      isHidden: isHidden ?? this.isHidden,
-      hint: hint ?? this.hint,
-      sortOrder: sortOrder ?? this.sortOrder,
-      parentId: parentId ?? this.parentId,
-      triggerCode: triggerCode ?? this.triggerCode,
-      triggerConfig: triggerConfig ?? this.triggerConfig,
-      prerequisites: prerequisites ?? this.prerequisites,
-      visualEffectType: visualEffectType ?? this.visualEffectType,
-      visualConfig: visualConfig ?? this.visualConfig,
-      rewardConfig: rewardConfig ?? this.rewardConfig,
-      totalUnlocked: totalUnlocked ?? this.totalUnlocked,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
-    );
+  }) =>
+      AchievementModel(
+        id: id ?? this.id,
+        name: name ?? this.name,
+        description: description ?? this.description,
+        iconUrl: iconUrl ?? this.iconUrl,
+        type: type ?? this.type,
+        rarity: rarity ?? this.rarity,
+        category: category ?? this.category,
+        isHidden: isHidden ?? this.isHidden,
+        hint: hint ?? this.hint,
+        sortOrder: sortOrder ?? this.sortOrder,
+        parentId: parentId ?? this.parentId,
+        triggerCode: triggerCode ?? this.triggerCode,
+        triggerConfig: triggerConfig ?? this.triggerConfig,
+        prerequisites: prerequisites ?? this.prerequisites,
+        visualEffectType: visualEffectType ?? this.visualEffectType,
+        visualConfig: visualConfig ?? this.visualConfig,
+        rewardConfig: rewardConfig ?? this.rewardConfig,
+        totalUnlocked: totalUnlocked ?? this.totalUnlocked,
+        createdAt: createdAt ?? this.createdAt,
+        updatedAt: updatedAt ?? this.updatedAt,
+      );
 }
 
 // ========== 用户成就进度 ==========
@@ -226,17 +227,18 @@ class UserAchievementProgress {
     bool? isFirstUnlocker,
     DateTime? unlockedAt,
     DateTime? lastProgressUpdate,
-  }) => UserAchievementProgress(
-      achievementId: achievementId ?? this.achievementId,
-      progress: progress ?? this.progress,
-      progressValue: progressValue ?? this.progressValue,
-      progressTarget: progressTarget ?? this.progressTarget,
-      isPinned: isPinned ?? this.isPinned,
-      shareCount: shareCount ?? this.shareCount,
-      isFirstUnlocker: isFirstUnlocker ?? this.isFirstUnlocker,
-      unlockedAt: unlockedAt ?? this.unlockedAt,
-      lastProgressUpdate: lastProgressUpdate ?? this.lastProgressUpdate,
-    );
+  }) =>
+      UserAchievementProgress(
+        achievementId: achievementId ?? this.achievementId,
+        progress: progress ?? this.progress,
+        progressValue: progressValue ?? this.progressValue,
+        progressTarget: progressTarget ?? this.progressTarget,
+        isPinned: isPinned ?? this.isPinned,
+        shareCount: shareCount ?? this.shareCount,
+        isFirstUnlocker: isFirstUnlocker ?? this.isFirstUnlocker,
+        unlockedAt: unlockedAt ?? this.unlockedAt,
+        lastProgressUpdate: lastProgressUpdate ?? this.lastProgressUpdate,
+      );
 }
 
 // ========== 成就与进度组合 ==========
@@ -272,7 +274,10 @@ class StreakStats {
     required this.currentStreak,
     required this.maxStreak,
     required this.longestStreak,
-    required this.freezeCharges, @JsonKey(name: 'max_freeze_charges') required this.maxFreezeCharges, required this.totalCheckinDays, this.lastActivityDate,
+    required this.freezeCharges,
+    @JsonKey(name: 'max_freeze_charges') required this.maxFreezeCharges,
+    required this.totalCheckinDays,
+    this.lastActivityDate,
     this.longestStreakStart,
     this.longestStreakEnd,
   });
@@ -590,4 +595,47 @@ class AchievementUnlockEvent {
   final bool isFirst;
 
   Map<String, dynamic> toJson() => _$AchievementUnlockEventToJson(this);
+}
+
+// ========== 成就分享卡 ==========
+
+class AchievementShareCard {
+  AchievementShareCard({
+    required this.cardUrl,
+    required this.mimeType,
+    required this.width,
+    required this.height,
+    required this.generatedAt,
+    required this.achievement,
+  });
+
+  factory AchievementShareCard.fromJson(Map<String, dynamic> json) =>
+      AchievementShareCard(
+        cardUrl: json['card_url'] as String? ?? '',
+        mimeType: json['mime_type'] as String? ?? 'image/png',
+        width: (json['width'] as num?)?.toInt() ?? 0,
+        height: (json['height'] as num?)?.toInt() ?? 0,
+        generatedAt: DateTime.parse(
+          json['generated_at'] as String? ?? DateTime.now().toIso8601String(),
+        ),
+        achievement: AchievementModel.fromJson(
+          json['achievement'] as Map<String, dynamic>? ?? <String, dynamic>{},
+        ),
+      );
+
+  final String cardUrl;
+  final String mimeType;
+  final int width;
+  final int height;
+  final DateTime generatedAt;
+  final AchievementModel achievement;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'card_url': cardUrl,
+        'mime_type': mimeType,
+        'width': width,
+        'height': height,
+        'generated_at': generatedAt.toIso8601String(),
+        'achievement': achievement.toJson(),
+      };
 }

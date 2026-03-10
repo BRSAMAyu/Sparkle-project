@@ -129,6 +129,19 @@ WebSocket 接口主要用于实时对话、状态同步和复杂交互。
 - `GET /api/v1/user/profile`: 获取个人资料
 - `PUT /api/v1/user/settings`: 更新设置
 
+### 3.4 成就 (Achievements)
+- `GET /api/v1/achievements`: 获取成就列表
+- `GET /api/v1/achievements/{achievement_id}`: 获取成就详情（canonical）
+- `POST /api/v1/achievements/{achievement_id}/share`: 生成 PNG 分享卡（canonical）
+- `POST /api/v1/achievements/{achievement_id}/pin?pinned=true|false`: 置顶/取消置顶（canonical）
+- `GET /api/v1/achievements/close-to-unlock`: 获取接近解锁的成就
+- `POST /api/v1/achievements/events/process`: 内部接口，需 `X-Internal-Token`
+
+兼容旧路由仍保留一阶段：
+- `GET /api/v1/achievements/achievements/{achievement_id}`
+- `POST /api/v1/achievements/achievements/{achievement_id}/share`
+- `POST /api/v1/achievements/achievements/{achievement_id}/pin`
+
 ## 4. 错误码 (Error Codes)
 
 | 代码 | 说明 | 处理建议 |

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 
@@ -129,77 +130,80 @@ class _StreakIndicatorStandard extends StatelessWidget {
   Color get _flameColor => DS.getStreakColor(streakStats.currentStreak);
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-        onTap: onTap,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final compact = constraints.maxWidth < 320;
-            return Container(
-              padding: const EdgeInsets.all(DS.spacing12),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    _flameColor.withValues(alpha: 0.15),
-                    _flameColor.withValues(alpha: 0.05),
-                  ],
-                ),
-                borderRadius: DS.borderRadius16,
-                border: Border.all(
-                  color: _flameColor.withValues(alpha: 0.3),
-                  width: 1.5,
-                ),
-              ),
-              child: Wrap(
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: DS.spacing12,
-                runSpacing: DS.spacing8,
-                children: [
-                  _buildFlameIcon(),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        '连续学习',
-                        style: TextStyle(
-                          fontSize: DS.fontSizeXs,
-                          color: DS.textSecondary,
-                        ),
-                      ),
-                      Text(
-                        '${streakStats.currentStreak} 天',
-                        style: TextStyle(
-                          fontSize: compact ? DS.fontSizeBase : DS.fontSizeLg,
-                          fontWeight: DS.fontWeightBold,
-                          color: _flameColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (streakStats.maxStreak > streakStats.currentStreak)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: DS.spacing8,
-                        vertical: DS.spacing4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: DS.neutral200,
-                        borderRadius: DS.borderRadius8,
-                      ),
-                      child: Text(
-                        '最高 ${streakStats.maxStreak}',
-                        style: TextStyle(
-                          fontSize: DS.fontSizeXs,
-                          color: DS.textSecondary,
-                        ),
-                      ),
-                    ),
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return GestureDetector(
+      onTap: onTap,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 320;
+          return Container(
+            padding: const EdgeInsets.all(DS.spacing12),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  _flameColor.withValues(alpha: 0.15),
+                  _flameColor.withValues(alpha: 0.05),
                 ],
               ),
-            );
-          },
-        ),
-      );
+              borderRadius: DS.borderRadius16,
+              border: Border.all(
+                color: _flameColor.withValues(alpha: 0.3),
+                width: 1.5,
+              ),
+            ),
+            child: Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: DS.spacing12,
+              runSpacing: DS.spacing8,
+              children: [
+                _buildFlameIcon(),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      l10n.streakTitle,
+                      style: TextStyle(
+                        fontSize: DS.fontSizeXs,
+                        color: DS.textSecondary,
+                      ),
+                    ),
+                    Text(
+                      l10n.streakDays(streakStats.currentStreak),
+                      style: TextStyle(
+                        fontSize: compact ? DS.fontSizeBase : DS.fontSizeLg,
+                        fontWeight: DS.fontWeightBold,
+                        color: _flameColor,
+                      ),
+                    ),
+                  ],
+                ),
+                if (streakStats.maxStreak > streakStats.currentStreak)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: DS.spacing8,
+                      vertical: DS.spacing4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: DS.neutral200,
+                      borderRadius: DS.borderRadius8,
+                    ),
+                    child: Text(
+                      l10n.streakMax(streakStats.maxStreak),
+                      style: TextStyle(
+                        fontSize: DS.fontSizeXs,
+                        color: DS.textSecondary,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
 
   Widget _buildFlameIcon() => Container(
         width: 48,

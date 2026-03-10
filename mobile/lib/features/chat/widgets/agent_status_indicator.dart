@@ -2,23 +2,46 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 /// Agent 状态枚举
 ///
 /// 对应后端 orchestrator 的状态
 enum AgentStatus {
-  idle('idle', '空闲', Icons.check_circle_outline),
-  thinking('thinking', '思考中', Icons.psychology),
-  searching('searching', '搜索中', Icons.search),
-  executingTool('executing_tool', '执行操作中', Icons.build_circle),
-  generating('generating', '正在输入', Icons.edit_note),
-  error('error', '出错了', Icons.error_outline);
+  idle('idle', Icons.check_circle_outline),
+  thinking('thinking', Icons.psychology),
+  searching('searching', Icons.search),
+  executingTool('executing_tool', Icons.build_circle),
+  generating('generating', Icons.edit_note),
+  error('error', Icons.error_outline);
 
-  const AgentStatus(this.code, this.label, this.icon);
+  const AgentStatus(this.code, this.icon);
 
   final String code;
-  final String label;
   final IconData icon;
+
+  /// Get localized label for this status
+  String getLocalizedLabel({AppLocalizations? l10n}) {
+    final loc = l10n ?? S;
+    switch (this) {
+      case AgentStatus.idle:
+        return loc.aiStatusIdle;
+      case AgentStatus.thinking:
+        return loc.aiStatusThinking;
+      case AgentStatus.searching:
+        return loc.aiStatusSearching;
+      case AgentStatus.executingTool:
+        return loc.aiStatusExecutingTool;
+      case AgentStatus.generating:
+        return loc.aiStatusGenerating;
+      case AgentStatus.error:
+        return loc.aiStatusError;
+    }
+  }
+
+  /// Legacy getter for backward compatibility - uses global l10n
+  String get label => getLocalizedLabel();
 
   static AgentStatus fromCode(String code) => AgentStatus.values.firstWhere(
         (status) => status.code == code,

@@ -83,6 +83,12 @@ class CloseToUnlockAchievementListResponse(BaseModel):
     count: int = Field(default=0, description="Achievement count")
 
 
+class AchievementDetailResponse(BaseModel):
+    """Achievement detail response"""
+    data: AchievementDetail = Field(description="Achievement detail")
+    is_unlocked: bool = Field(default=False, description="Whether the user has unlocked the achievement")
+
+
 class AchievementMapNode(BaseModel):
     """Achievement map node for visualization"""
     id: str = Field(description="Achievement ID")
@@ -231,13 +237,29 @@ class AchievementEventRequest(BaseModel):
     event_data: dict[str, Any] | None = Field(default=None, description="Event data")
 
 
+class AchievementEventProcessResponse(BaseModel):
+    """Internal achievement event processing response"""
+    success: bool = Field(default=True, description="Request success")
+    unlocked_count: int = Field(default=0, description="Number of achievements unlocked by this event")
+    unlocked: list[dict[str, Any]] = Field(default_factory=list, description="Unlocked achievement payloads")
+
+
 # ========== Share Schemas ==========
 
 class AchievementShareResponse(BaseModel):
     """Achievement share response"""
     card_url: str = Field(description="Share card image URL")
+    mime_type: str = Field(default="image/png", description="Share card MIME type")
+    width: int = Field(description="Share card width in pixels")
+    height: int = Field(description="Share card height in pixels")
+    generated_at: datetime = Field(description="Share card generation time")
     achievement: AchievementDetail = Field(description="Achievement info")
-    unlocked_at: datetime = Field(description="Unlocked time")
+
+
+class AchievementPinResponse(BaseModel):
+    """Pin achievement response"""
+    success: bool = Field(default=True, description="Request success")
+    pinned: bool = Field(default=False, description="Whether the achievement is pinned")
 
 
 # ========== Stats Schemas ==========

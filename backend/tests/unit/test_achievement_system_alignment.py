@@ -83,6 +83,24 @@ async def test_seed_reward_types_are_supported_and_skin_refs_valid():
 
 
 @pytest.mark.asyncio
+async def test_seed_ids_and_prerequisites_are_consistent():
+    achievement_ids = [seed["id"] for seed in INITIAL_ACHIEVEMENTS]
+    assert len(achievement_ids) == len(set(achievement_ids))
+
+    skin_ids = [skin["id"] for skin in INITIAL_GALAXY_SKINS]
+    assert len(skin_ids) == len(set(skin_ids))
+
+    id_set = set(achievement_ids)
+    missing_prereqs = [
+        (seed["id"], prereq)
+        for seed in INITIAL_ACHIEVEMENTS
+        for prereq in (seed.get("prerequisites") or [])
+        if prereq not in id_set
+    ]
+    assert missing_prereqs == []
+
+
+@pytest.mark.asyncio
 async def test_sync_achievement_definitions_inserts_and_updates_existing_records(db_session, test_user):
     existing_achievement = Achievement(
         id="nodes_10",

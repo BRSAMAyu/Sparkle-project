@@ -2,25 +2,48 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:sparkle/core/constants/api_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/features/user/presentation/widgets/achievement_card_generator.dart';
+import 'package:sparkle/shared/entities/achievement_model.dart';
+
+typedef AchievementShareCardDownloader = Future<File> Function(
+  AchievementShareCard shareCard,
+);
+typedef AchievementShareFileAction = Future<void> Function(
+  File file,
+  AchievementShareCard shareCard,
+);
+typedef AchievementSharePreviewBuilder = Widget Function(
+  File file,
+  AchievementShareCard shareCard,
+);
 
 /// 成就分享对话框
 ///
-/// 生成成就卡片并提供分享选项：
+/// 加载服务端生成的成就卡片并提供分享选项：
 /// - 分享到社交媒体
 /// - 保存到相册
-/// - 复制链接
 class AchievementShareDialog extends StatefulWidget {
   const AchievementShareDialog({
-    required this.achievementType,
-    required this.data,
+    required this.shareCardFuture,
+    this.downloadCard,
+    this.shareFile,
+    this.saveFileToGallery,
+    this.previewBuilder,
+    this.showFeedback = true,
     super.key,
   });
-  final String achievementType;
-  final Map<String, dynamic> data;
+  final Future<AchievementShareCard?> shareCardFuture;
+  final AchievementShareCardDownloader? downloadCard;
+  final AchievementShareFileAction? shareFile;
+  final AchievementShareFileAction? saveFileToGallery;
+  final AchievementSharePreviewBuilder? previewBuilder;
+  final bool showFeedback;
 
   @override
   State<AchievementShareDialog> createState() => _AchievementShareDialogState();
@@ -28,78 +51,71 @@ class AchievementShareDialog extends StatefulWidget {
 
 class _AchievementShareDialogState extends State<AchievementShareDialog> {
   bool _isGenerating = false;
-  String? _imagePath;
+  File? _imageFile;
+  AchievementShareCard? _shareCard;
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    unawaited(_generateCard());
+    unawaited(_prepareCard());
   }
 
-  Future<void> _generateCard() async {
+  Future<void> _prepareCard() async {
     setState(() => _isGenerating = true);
 
     try {
-      // Generate the card image
-      final imageData = await AchievementCardGenerator.generateCard(
-        achievementType: widget.achievementType,
-        data: widget.data,
-      );
-
-      if (imageData != null) {
-        // Save to temporary directory
-        final tempDir = await getTemporaryDirectory();
-        final file = File(
-          '${tempDir.path}/achievement_${DateTime.now().millisecondsSinceEpoch}.png',
-        );
-        await file.writeAsBytes(imageData);
-
-        setState(() {
-          _imagePath = file.path;
-          _isGenerating = false;
-        });
-      } else {
-        setState(() => _isGenerating = false);
-        if (mounted) {
-          _showError('生成失败，请重试');
-        }
+      final shareCard = await widget.shareCardFuture;
+      if (shareCard == null) {
+        throw Exception('分享卡生成失败，请稍后重试');
       }
+
+      final downloader = widget.downloadCard ?? _downloadCardToTempFile;
+      final file = await downloader(shareCard);
+
+      if (!mounted) return;
+      setState(() {
+        _shareCard = shareCard;
+        _imageFile = file;
+        _errorMessage = null;
+        _isGenerating = false;
+      });
     } catch (e) {
-      setState(() => _isGenerating = false);
+      setState(() {
+        _isGenerating = false;
+        _errorMessage = e.toString();
+      });
       if (mounted) {
-        _showError('生成失败: $e');
+        _showError('分享卡准备失败: $e');
       }
     }
   }
 
   void _showError(String message) {
+    if (!widget.showFeedback) {
+      return;
+    }
     AppFeedback.error(context, message);
   }
 
   Future<void> _shareToSocial() async {
-    if (_imagePath == null) return;
+    if (_imageFile == null || _shareCard == null) return;
 
     try {
-      await SharePlus.instance.share(
-        ShareParams(
-          files: [XFile(_imagePath!)],
-          text: '我在 Sparkle 取得了新成就！🎉',
-        ),
-      );
+      final shareFile = widget.shareFile ?? _shareFile;
+      await shareFile(_imageFile!, _shareCard!);
     } catch (e) {
       _showError('分享失败: $e');
     }
   }
 
   Future<void> _saveToGallery() async {
-    if (_imagePath == null) return;
+    if (_imageFile == null || _shareCard == null) return;
 
     try {
-      // Feature: Use image_gallery_saver package to save to gallery
-      // Requires: flutter pub add image_gallery_saver
-      // await ImageGallerySaver.saveFile(_imagePath!);
-
-      if (mounted) {
+      final saveFile = widget.saveFileToGallery ?? _saveImageToGallery;
+      await saveFile(_imageFile!, _shareCard!);
+      if (mounted && widget.showFeedback) {
         AppFeedback.success(context, '已保存到相册');
       }
     } catch (e) {
@@ -144,21 +160,23 @@ class _AchievementShareDialogState extends State<AchievementShareDialog> {
                         const CircularProgressIndicator(),
                         const SizedBox(height: DS.lg),
                         Text(
-                          '正在生成分享卡片...',
+                          '正在准备分享卡片...',
                           style: TextStyle(color: DS.textSecondary),
                         ),
                       ],
                     ),
                   ),
                 )
-              else if (_imagePath != null)
+              else if (_imageFile != null)
                 ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-                  child: Image.file(
-                    File(_imagePath!),
-                    height: 300,
-                    fit: BoxFit.cover,
-                  ),
+                  child:
+                      widget.previewBuilder?.call(_imageFile!, _shareCard!) ??
+                          Image.file(
+                            _imageFile!,
+                            height: 300,
+                            fit: BoxFit.cover,
+                          ),
                 )
               else
                 SizedBox(
@@ -172,10 +190,19 @@ class _AchievementShareDialogState extends State<AchievementShareDialog> {
                   ),
                 ),
 
+              if (_errorMessage != null) ...[
+                const SizedBox(height: DS.md),
+                Text(
+                  _errorMessage!,
+                  style: TextStyle(color: DS.textSecondary),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+
               const SizedBox(height: DS.xl),
 
               // Share options
-              if (_imagePath != null) ...[
+              if (_imageFile != null) ...[
                 _buildShareButton(
                   icon: Icons.share,
                   label: '分享到社交媒体',
@@ -244,16 +271,95 @@ class _AchievementShareDialogState extends State<AchievementShareDialog> {
 /// 便捷函数：显示成就分享对话框
 void showAchievementShareDialog(
   BuildContext context, {
-  required String achievementType,
-  required Map<String, dynamic> data,
+  required Future<AchievementShareCard?> shareCardFuture,
+  AchievementShareCardDownloader? downloadCard,
+  AchievementShareFileAction? shareFile,
+  AchievementShareFileAction? saveFileToGallery,
+  AchievementSharePreviewBuilder? previewBuilder,
+  bool showFeedback = true,
 }) {
   unawaited(
     showDialog<void>(
       context: context,
       builder: (context) => AchievementShareDialog(
-        achievementType: achievementType,
-        data: data,
+        shareCardFuture: shareCardFuture,
+        downloadCard: downloadCard,
+        shareFile: shareFile,
+        saveFileToGallery: saveFileToGallery,
+        previewBuilder: previewBuilder,
+        showFeedback: showFeedback,
       ),
     ),
   );
+}
+
+Future<File> _downloadCardToTempFile(AchievementShareCard shareCard) async {
+  final resolvedUrl = _resolveCardUrl(shareCard.cardUrl);
+  if (resolvedUrl.isEmpty) {
+    throw Exception('分享卡地址为空');
+  }
+
+  final response = await http.get(Uri.parse(resolvedUrl));
+  if (response.statusCode < 200 || response.statusCode >= 300) {
+    throw Exception('下载分享卡失败 (${response.statusCode})');
+  }
+
+  final tempDir = await getTemporaryDirectory();
+  final file = File(
+    '${tempDir.path}/achievement_${shareCard.achievement.id}_${shareCard.generatedAt.millisecondsSinceEpoch}.png',
+  );
+  await file.writeAsBytes(response.bodyBytes);
+  return file;
+}
+
+Future<void> _shareFile(File file, AchievementShareCard shareCard) async {
+  await SharePlus.instance.share(
+    ShareParams(
+      files: [XFile(file.path)],
+      text: '我在 Sparkle 解锁了「${shareCard.achievement.name}」',
+    ),
+  );
+}
+
+Future<void> _saveImageToGallery(
+  File file,
+  AchievementShareCard shareCard,
+) async {
+  final photoStatus = await Permission.photos.request();
+  if (!photoStatus.isGranted && !photoStatus.isLimited && Platform.isAndroid) {
+    final storageStatus = await Permission.storage.request();
+    if (!storageStatus.isGranted) {
+      throw Exception('没有相册写入权限');
+    }
+  } else if (!photoStatus.isGranted &&
+      !photoStatus.isLimited &&
+      Platform.isIOS) {
+    throw Exception('没有相册写入权限');
+  }
+
+  final result = await ImageGallerySaver.saveFile(
+    file.path,
+    name: 'sparkle_${shareCard.achievement.id}',
+  );
+  if (result == null) {
+    throw Exception('保存结果为空');
+  }
+
+  if (result is Map) {
+    final isSuccess = result['isSuccess'] == true || result['success'] == true;
+    if (!isSuccess) {
+      throw Exception('相册保存失败');
+    }
+  }
+}
+
+String _resolveCardUrl(String rawUrl) {
+  if (rawUrl.isEmpty) {
+    return rawUrl;
+  }
+  final uri = Uri.parse(rawUrl);
+  if (uri.hasScheme) {
+    return rawUrl;
+  }
+  return Uri.parse(ApiConstants.baseUrl).resolve(rawUrl).toString();
 }

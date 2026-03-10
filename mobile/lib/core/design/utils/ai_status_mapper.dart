@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 /// Semantic tone for AI status indicators.
 enum AiStatusTone { info, success, warning, brand, neutral }
@@ -10,35 +12,53 @@ enum AiStatusTone { info, success, warning, brand, neutral }
 /// that can be resolved to colors via design tokens.
 class AiStatusMapper {
   /// Get display label for AI status.
-  static String label(String rawStatus) {
+  ///
+  /// If [l10n] is provided, returns localized string.
+  /// Otherwise, uses the global [I18nService].
+  static String label(String rawStatus, {AppLocalizations? l10n}) {
+    final loc = l10n ?? S;
     switch (rawStatus) {
       case 'THINKING':
-        return '思考中...';
+        return loc.aiStatusThinking;
       case 'GENERATING':
-        return '正在生成回复...';
+        return loc.aiStatusGenerating;
       case 'EXECUTING_TOOL':
-        return '正在使用工具...';
+        return loc.aiStatusExecutingTool;
       case 'SEARCHING':
-        return '正在搜索...';
+        return loc.aiStatusSearching;
+      case 'ANALYZING':
+        return loc.aiStatusAnalyzing;
+      case 'PLANNING':
+        return loc.aiStatusPlanning;
+      case 'REVIEWING':
+        return loc.aiStatusReviewing;
+      case 'WAITING':
+        return loc.aiStatusWaiting;
+      case 'READY':
+        return loc.aiStatusReady;
+      case 'ERROR':
+        return loc.aiStatusError;
+      case 'IDLE':
+        return loc.aiStatusIdle;
+      case 'CONNECTING':
+        return loc.aiStatusConnecting;
+      case 'RECONNECTING':
+        return loc.aiStatusReconnecting;
+      case 'DISCONNECTED':
+        return loc.aiStatusDisconnected;
       default:
-        return '处理中...';
+        return loc.aiStatusProcessing;
     }
   }
 
   /// Get compact label for AI status (used in bubbles).
-  static String compactLabel(String rawStatus) {
-    switch (rawStatus) {
-      case 'THINKING':
-        return '思考中';
-      case 'GENERATING':
-        return '生成中';
-      case 'EXECUTING_TOOL':
-        return '工具执行中';
-      case 'SEARCHING':
-        return '搜索中';
-      default:
-        return '处理中';
-    }
+  ///
+  /// If [l10n] is provided, returns localized string.
+  /// Otherwise, uses the global [I18nService].
+  static String compactLabel(String rawStatus, {AppLocalizations? l10n}) {
+    final loc = l10n ?? S;
+    // Compact labels are the same as full labels since they're already short
+    return label(rawStatus, l10n: loc);
   }
 
   /// Get semantic tone for AI status.

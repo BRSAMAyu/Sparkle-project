@@ -5,22 +5,110 @@ Achievements API Endpoints
 from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Path, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
+from app.config import settings
 from app.db.session import get_db
 from app.models.achievement import AchievementRarity
 from app.models.user import User
 from app.schemas.achievement import (
+    AchievementDetail,
+    AchievementDetailResponse,
+    AchievementEventProcessResponse,
+    AchievementPinResponse,
+    AchievementShareResponse,
     CloseToUnlockAchievementListResponse,
     ContractCreateRequest,
     ContractResponse,
 )
 from app.services.achievement_engine import AchievementEngine, ContractService
 from app.services.equipment_service import EquipmentService, EquipmentSource
+from app.services.share_card_service import ShareCardService
 
 router = APIRouter()
+
+
+async def verify_internal_token(x_internal_token: str | None = Header(None)) -> None:
+    """Protect internal-only achievement endpoints with a shared key."""
+    if settings.INTERNAL_API_KEY and x_internal_token != settings.INTERNAL_API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid internal token")
+
+
+async def _build_achievement_detail_response(
+    achievement_id: str,
+    current_user: User,
+    db: AsyncSession,
+) -> AchievementDetailResponse:
+    engine = AchievementEngine(db)
+    achievement = await engine._get_achievement(achievement_id)
+
+    if not achievement:
+        raise HTTPException(status_code=404, detail="Achievement not found")
+
+    is_unlocked = await engine._is_unlocked(current_user.id, achievement_id)
+    return AchievementDetailResponse(
+        data=AchievementDetail.model_validate(achievement),
+        is_unlocked=is_unlocked,
+    )
+
+
+async def _share_achievement_card(
+    achievement_id: str,
+    current_user: User,
+    db: AsyncSession,
+) -> AchievementShareResponse:
+    service = ShareCardService(db)
+
+    try:
+        result, achievement, _ = await service.generate_achievement_share_card(
+            current_user.id,
+            achievement_id,
+        )
+    except ValueError as exc:
+        message = str(exc)
+        if message == "Achievement not found":
+            raise HTTPException(status_code=404, detail=message) from exc
+        if message == "Achievement not unlocked yet":
+            raise HTTPException(status_code=400, detail=message) from exc
+        raise HTTPException(status_code=400, detail=message) from exc
+
+    return AchievementShareResponse(
+        card_url=result.card_url,
+        mime_type=result.mime_type,
+        width=result.width,
+        height=result.height,
+        generated_at=result.generated_at,
+        achievement=AchievementDetail.model_validate(achievement),
+    )
+
+
+async def _pin_achievement_state(
+    achievement_id: str,
+    pinned: bool,
+    current_user: User,
+    db: AsyncSession,
+) -> AchievementPinResponse:
+    from sqlalchemy import and_, select
+
+    from app.models.achievement import UserAchievement
+
+    query = select(UserAchievement).where(
+        and_(
+            UserAchievement.user_id == current_user.id,
+            UserAchievement.achievement_id == achievement_id,
+        )
+    )
+    result = await db.execute(query)
+    user_achievement = result.scalar_one_or_none()
+
+    if not user_achievement:
+        raise HTTPException(status_code=404, detail="Achievement progress not found")
+
+    user_achievement.is_pinned = pinned
+    await db.commit()
+    return AchievementPinResponse(success=True, pinned=pinned)
 
 
 @router.get("", response_model=dict[str, Any])
@@ -89,7 +177,11 @@ async def get_streak_stats(
     return await engine.get_streak_stats(current_user.id)
 
 
-@router.get("/achievements/{achievement_id}", response_model=dict[str, Any])
+@router.get(
+    "/achievements/{achievement_id}",
+    response_model=AchievementDetailResponse,
+    deprecated=True,
+)
 async def get_achievement_detail(
     achievement_id: str = Path(..., description="Achievement ID"),
     current_user: User = Depends(get_current_user),
@@ -100,22 +192,14 @@ async def get_achievement_detail(
 
     Returns achievement details with user progress.
     """
-    engine = AchievementEngine(db)
-    achievement = await engine._get_achievement(achievement_id)
-
-    if not achievement:
-        raise HTTPException(status_code=404, detail="Achievement not found")
-
-    is_unlocked = await engine._is_unlocked(current_user.id, achievement_id)
-
-    from app.schemas.achievement import AchievementDetail
-    return {
-        "data": AchievementDetail.model_validate(achievement).model_dump(),
-        "is_unlocked": is_unlocked
-    }
+    return await _build_achievement_detail_response(achievement_id, current_user, db)
 
 
-@router.post("/achievements/{achievement_id}/share", response_model=dict[str, Any])
+@router.post(
+    "/achievements/{achievement_id}/share",
+    response_model=AchievementShareResponse,
+    deprecated=True,
+)
 async def share_achievement(
     achievement_id: str = Path(..., description="Achievement ID"),
     current_user: User = Depends(get_current_user),
@@ -126,27 +210,14 @@ async def share_achievement(
 
     Returns a shareable image URL for the achievement.
     """
-    engine = AchievementEngine(db)
-    achievement = await engine._get_achievement(achievement_id)
-
-    if not achievement:
-        raise HTTPException(status_code=404, detail="Achievement not found")
-
-    is_unlocked = await engine._is_unlocked(current_user.id, achievement_id)
-
-    if not is_unlocked:
-        raise HTTPException(status_code=400, detail="Achievement not unlocked yet")
-
-    # TODO: Generate actual share card image
-    card_url = f"/api/v1/achievements/{achievement_id}/card/{current_user.id}"
-
-    return {
-        "card_url": card_url,
-        "achievement": achievement
-    }
+    return await _share_achievement_card(achievement_id, current_user, db)
 
 
-@router.post("/achievements/{achievement_id}/pin", response_model=dict[str, Any])
+@router.post(
+    "/achievements/{achievement_id}/pin",
+    response_model=AchievementPinResponse,
+    deprecated=True,
+)
 async def pin_achievement(
     achievement_id: str = Path(..., description="Achievement ID"),
     pinned: bool = Query(..., description="Pin state"),
@@ -158,29 +229,7 @@ async def pin_achievement(
 
     Updates the pinned state of an achievement.
     """
-    from sqlalchemy import and_, select
-
-    from app.models.achievement import UserAchievement
-
-    query = select(UserAchievement).where(
-        and_(
-            UserAchievement.user_id == current_user.id,
-            UserAchievement.achievement_id == achievement_id
-        )
-    )
-    result = await db.execute(query)
-    user_achievement = result.scalar_one_or_none()
-
-    if not user_achievement:
-        raise HTTPException(status_code=404, detail="Achievement progress not found")
-
-    user_achievement.is_pinned = pinned
-    await db.commit()
-
-    return {
-        "success": True,
-        "pinned": pinned
-    }
+    return await _pin_achievement_state(achievement_id, pinned, current_user, db)
 
 
 @router.get("/contracts", response_model=dict[str, Any])
@@ -403,11 +452,12 @@ async def equip_title(
 
 # ========== Internal Event Endpoint ==========
 
-@router.post("/events/process", response_model=dict[str, Any])
+@router.post("/events/process", response_model=AchievementEventProcessResponse)
 async def process_achievement_event(
+    user_id: str = Query(..., description="Target user ID"),
     event_type: str = Query(..., description="Event type"),
     event_data: dict[str, Any] | None = None,
-    current_user: User = Depends(get_current_user),
+    _: None = Depends(verify_internal_token),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -421,16 +471,16 @@ async def process_achievement_event(
 
     engine = AchievementEngine(db)
     unlocked = await engine.process_event(
-        current_user.id,
+        user_id,
         event_type,
         **event_data
     )
 
-    return {
-        "success": True,
-        "unlocked_count": len(unlocked),
-        "unlocked": unlocked
-    }
+    return AchievementEventProcessResponse(
+        success=True,
+        unlocked_count=len(unlocked),
+        unlocked=unlocked,
+    )
 
 
 # ========== Enhancement Endpoints ==========
@@ -459,3 +509,34 @@ async def get_close_to_unlock_achievements(
         "data": close_achievements,
         "count": len(close_achievements)
     }
+
+
+@router.get("/{achievement_id}", response_model=AchievementDetailResponse)
+async def get_achievement_detail_canonical(
+    achievement_id: str = Path(..., description="Achievement ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Canonical achievement detail endpoint."""
+    return await _build_achievement_detail_response(achievement_id, current_user, db)
+
+
+@router.post("/{achievement_id}/share", response_model=AchievementShareResponse)
+async def share_achievement_canonical(
+    achievement_id: str = Path(..., description="Achievement ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Canonical share card endpoint."""
+    return await _share_achievement_card(achievement_id, current_user, db)
+
+
+@router.post("/{achievement_id}/pin", response_model=AchievementPinResponse)
+async def pin_achievement_canonical(
+    achievement_id: str = Path(..., description="Achievement ID"),
+    pinned: bool = Query(..., description="Pin state"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Canonical achievement pin endpoint."""
+    return await _pin_achievement_state(achievement_id, pinned, current_user, db)

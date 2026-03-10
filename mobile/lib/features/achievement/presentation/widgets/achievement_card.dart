@@ -452,7 +452,7 @@ class AchievementCard extends StatelessWidget {
               colors: achievement.isUnlocked
                   ? [
                       DS.semanticSuccess,
-                      DS.semanticSuccess.withValues(alpha: 0.8)
+                      DS.semanticSuccess.withValues(alpha: 0.8),
                     ]
                   : [
                       rarityColor,

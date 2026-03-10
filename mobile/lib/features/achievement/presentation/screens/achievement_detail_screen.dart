@@ -1,10 +1,13 @@
+import 'dart:async';
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/rarity_badge.dart';
+import 'package:sparkle/features/user/presentation/widgets/achievement_share_dialog.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 
 /// 成就详情页面
@@ -40,7 +43,7 @@ class _AchievementDetailScreenState
         curve: Curves.easeInOut,
       ),
     );
-    _controller.repeat(reverse: true);
+    unawaited(_controller.repeat(reverse: true));
   }
 
   @override
@@ -93,7 +96,9 @@ class _AchievementDetailScreenState
   }
 
   Widget _buildHeader(
-      BuildContext context, AchievementWithProgress achievement) {
+    BuildContext context,
+    AchievementWithProgress achievement,
+  ) {
     final rarity = achievement.achievement.rarity;
     final rarityColor = RarityColorProvider.getColor(rarity);
 
@@ -142,7 +147,6 @@ class _AchievementDetailScreenState
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
           variant: ButtonVariant.ghost,
-          size: DS.touchTargetMinSize,
         ),
       ),
       actions: [
@@ -156,7 +160,6 @@ class _AchievementDetailScreenState
             icon: const Icon(Icons.share_outlined),
             onPressed: () => _shareAchievement(achievement),
             variant: ButtonVariant.ghost,
-            size: DS.touchTargetMinSize,
           ),
         ),
       ],
@@ -350,7 +353,6 @@ class _AchievementDetailScreenState
                 ),
                 onPressed: () => _togglePin(achievement),
                 variant: ButtonVariant.ghost,
-                size: DS.touchTargetMinSize,
               ),
             ],
           );
@@ -438,7 +440,7 @@ class _AchievementDetailScreenState
                       gradient: LinearGradient(
                         colors: [
                           rarityColor,
-                          rarityColor.withValues(alpha: 0.7)
+                          rarityColor.withValues(alpha: 0.7),
                         ],
                       ),
                       borderRadius: DS.borderRadiusFull,
@@ -798,14 +800,25 @@ class _AchievementDetailScreenState
 
   void _togglePin(AchievementWithProgress achievement) {
     final isPinned = achievement.userProgress?.isPinned ?? false;
-    ref
-        .read(achievementProvider.notifier)
-        .pinAchievement(achievement.achievement.id, !isPinned);
+    unawaited(
+      ref
+          .read(achievementProvider.notifier)
+          .pinAchievement(achievement.achievement.id, !isPinned),
+    );
   }
 
   void _shareAchievement(AchievementWithProgress achievement) {
-    // TODO: 实现分享功能
-    AppFeedback.info(context, '分享功能开发中');
+    if (!achievement.isUnlocked) {
+      AppFeedback.info(context, '解锁后才可以分享这个成就');
+      return;
+    }
+
+    showAchievementShareDialog(
+      context,
+      shareCardFuture: ref
+          .read(achievementProvider.notifier)
+          .shareAchievement(achievement.achievement.id),
+    );
   }
 }
 

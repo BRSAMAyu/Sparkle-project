@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/achievement/data/repositories/achievement_repository.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
@@ -39,7 +39,9 @@ void main() {
 
     expect(result, isTrue);
     expect(
-        achievementRepository.equipGalaxySkinCalls, ['legendary_anniversary']);
+      achievementRepository.equipGalaxySkinCalls,
+      ['legendary_anniversary'],
+    );
     expect(achievementRepository.getGalaxySkinsCalls, greaterThanOrEqualTo(2));
     expect(authNotifier.refreshUserCalls, 1);
   });
@@ -56,6 +58,24 @@ void main() {
     expect(achievementRepository.getTitlesCalls, greaterThanOrEqualTo(2));
     expect(authNotifier.refreshUserCalls, 1);
   });
+
+  test('shareAchievement delegates to repository', () async {
+    container.read(achievementProvider);
+    await Future<void>.delayed(Duration.zero);
+
+    final notifier = container.read(achievementProvider.notifier);
+    final result = await notifier.shareAchievement('legendary_anniversary');
+
+    expect(result, isNotNull);
+    expect(
+      result?.cardUrl,
+      '/uploads/achievement-cards/user-1/legendary_anniversary.png',
+    );
+    expect(
+      achievementRepository.shareAchievementCalls,
+      ['legendary_anniversary'],
+    );
+  });
 }
 
 class _FakeAchievementRepository extends AchievementRepository {
@@ -63,6 +83,7 @@ class _FakeAchievementRepository extends AchievementRepository {
 
   final List<String> equipGalaxySkinCalls = <String>[];
   final List<String> equipTitleCalls = <String>[];
+  final List<String> shareAchievementCalls = <String>[];
   int getGalaxySkinsCalls = 0;
   int getTitlesCalls = 0;
 
@@ -157,6 +178,26 @@ class _FakeAchievementRepository extends AchievementRepository {
   }
 
   @override
+  Future<AchievementShareCard> shareAchievement(String achievementId) async {
+    shareAchievementCalls.add(achievementId);
+    return AchievementShareCard(
+      cardUrl: '/uploads/achievement-cards/user-1/$achievementId.png',
+      mimeType: 'image/png',
+      width: 1080,
+      height: 1440,
+      generatedAt: DateTime(2026, 3, 10),
+      achievement: AchievementModel(
+        id: achievementId,
+        name: '分享成就',
+        type: AchievementType.milestone,
+        rarity: AchievementRarity.epic,
+        createdAt: DateTime(2026, 3, 10),
+        updatedAt: DateTime(2026, 3, 10),
+      ),
+    );
+  }
+
+  @override
   Future<AchievementMapData> getAchievementMap() async =>
       AchievementMapData(nodes: const <AchievementMapNode>[]);
 }
@@ -164,7 +205,6 @@ class _FakeAchievementRepository extends AchievementRepository {
 class _FakeAuthNotifier extends AuthNotifier {
   _FakeAuthNotifier() : super(_UnusedAuthRepository()) {
     state = AuthState(
-      isLoading: false,
       isAuthenticated: true,
       user: _buildUser(),
     );
@@ -191,8 +231,8 @@ UserModel _buildUser() => UserModel(
       curiosityPreference: 0.5,
       isActive: true,
       status: UserStatus.online,
-      createdAt: DateTime(2026, 1, 1),
-      updatedAt: DateTime(2026, 1, 1),
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
     );
 
 class _UnusedAuthRepository extends AuthRepository {
