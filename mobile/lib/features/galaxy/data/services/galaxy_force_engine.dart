@@ -15,20 +15,68 @@ class GalaxyForceTickResult {
 
 class GalaxyForceEngine {
   GalaxyForceEngine({
-    this.damping = 0.85,
-    this.springK = 0.08,
-    this.repulsionK = 5000,
-    this.centerGravity = 0.002,
-    this.maxVelocity = 15,
-    this.repulsionRadius = 300,
-  });
+    double damping = 0.88,
+    double springK = 0.045,
+    double repulsionK = 12000,
+    double centerGravity = 0.0016,
+    double maxVelocity = 14,
+    double repulsionRadius = 340,
+    double springRestLength = 128,
+  })  : _damping = damping,
+        _springK = springK,
+        _repulsionK = repulsionK,
+        _centerGravity = centerGravity,
+        _maxVelocity = maxVelocity,
+        _repulsionRadius = repulsionRadius,
+        _springRestLength = springRestLength;
 
-  final double damping;
-  final double springK;
-  final double repulsionK;
-  final double centerGravity;
-  final double maxVelocity;
-  final double repulsionRadius;
+  double _damping;
+  double _springK;
+  double _repulsionK;
+  double _centerGravity;
+  double _maxVelocity;
+  double _repulsionRadius;
+  double _springRestLength;
+
+  double get damping => _damping;
+  double get springK => _springK;
+  double get repulsionK => _repulsionK;
+  double get centerGravity => _centerGravity;
+  double get maxVelocity => _maxVelocity;
+  double get repulsionRadius => _repulsionRadius;
+  double get springRestLength => _springRestLength;
+
+  void updateParameters({
+    double? damping,
+    double? springK,
+    double? repulsionK,
+    double? centerGravity,
+    double? maxVelocity,
+    double? repulsionRadius,
+    double? springRestLength,
+  }) {
+    if (damping != null) {
+      _damping = damping;
+    }
+    if (springK != null) {
+      _springK = springK;
+    }
+    if (repulsionK != null) {
+      _repulsionK = repulsionK;
+    }
+    if (centerGravity != null) {
+      _centerGravity = centerGravity;
+    }
+    if (maxVelocity != null) {
+      _maxVelocity = maxVelocity;
+    }
+    if (repulsionRadius != null) {
+      _repulsionRadius = repulsionRadius;
+    }
+    if (springRestLength != null) {
+      _springRestLength = springRestLength;
+    }
+  }
 
   final Map<String, Offset> _velocities = <String, Offset>{};
   final Set<String> _activeNodeIds = <String>{};
@@ -101,13 +149,19 @@ class GalaxyForceEngine {
         }
 
         final delta = neighborPosition - position;
+        final distance = math.max(delta.distance, 1.0);
+        final direction = delta / distance;
         final relationStrength =
             edgeStrengths[_edgeStrengthKey(nodeId, neighborId)] ?? 1;
-        totalForce += delta * springK * relationStrength;
+        final targetDistance = (_springRestLength *
+                (1.08 - (relationStrength - 1).clamp(0.0, 0.65) * 0.18))
+            .clamp(84.0, 156.0);
+        final stretch = distance - targetDistance;
+        totalForce += direction * stretch * _springK * relationStrength;
       }
 
       final repulsionRect =
-          Rect.fromCircle(center: position, radius: repulsionRadius);
+          Rect.fromCircle(center: position, radius: _repulsionRadius);
       final nearbyNodeIds = spatialIndex.queryRect(repulsionRect);
       for (final nearbyNodeId in nearbyNodeIds) {
         if (nearbyNodeId == nodeId) {
@@ -121,25 +175,32 @@ class GalaxyForceEngine {
 
         final delta = position - otherPosition;
         final distance = math.max(delta.distance, 12.0);
-        if (distance > repulsionRadius) {
+        if (distance > _repulsionRadius) {
           continue;
         }
 
-        totalForce += (delta / distance) * (repulsionK / (distance * distance));
+        final falloff = 1 - (distance / _repulsionRadius);
+        totalForce += (delta / distance) *
+            ((_repulsionK * falloff.clamp(0.0, 1.0)) / (distance * distance));
       }
 
-      totalForce += Offset(-position.dx, -position.dy) * centerGravity;
+      totalForce += Offset(-position.dx, -position.dy) * _centerGravity;
 
       var velocity = (_velocities[nodeId] ?? Offset.zero) + totalForce;
-      velocity = velocity * damping;
+      velocity = velocity * _damping;
       final velocityDistance = velocity.distance;
-      if (velocityDistance > maxVelocity) {
-        velocity = (velocity / velocityDistance) * maxVelocity;
+      if (velocityDistance < 0.12 && totalForce.distance < 0.08) {
+        _velocities[nodeId] = Offset.zero;
+        nextPositions[nodeId] = position;
+        continue;
+      }
+      if (velocityDistance > _maxVelocity) {
+        velocity = (velocity / velocityDistance) * _maxVelocity;
       }
 
       final nextPosition = position + velocity;
       if (viewport == null ||
-          viewport.inflate(repulsionRadius).contains(nextPosition)) {
+          viewport.inflate(_repulsionRadius).contains(nextPosition)) {
         nextPositions[nodeId] = nextPosition;
       } else {
         nextPositions[nodeId] = position + velocity * 0.35;

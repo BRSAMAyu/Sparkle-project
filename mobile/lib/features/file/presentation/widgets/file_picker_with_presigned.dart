@@ -12,11 +12,15 @@ class FilePickerWithPresignedUpload extends ConsumerStatefulWidget {
     this.groupId,
     this.onUploaded,
     this.onError,
+    this.secondaryActionLabel,
+    this.onSecondaryAction,
   });
 
   final String? groupId;
   final void Function(StoredFile file)? onUploaded;
   final void Function(String message)? onError;
+  final String? secondaryActionLabel;
+  final VoidCallback? onSecondaryAction;
 
   @override
   ConsumerState<FilePickerWithPresignedUpload> createState() =>
@@ -121,123 +125,316 @@ class _FilePickerWithPresignedUploadState
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final fileName = _selectedFile?.path.split('/').last;
+    final fileType = fileName?.split('.').last.toUpperCase();
+    final fileSize = _selectedFile == null
+        ? null
+        : '${(_selectedFile!.lengthSync() / 1024 / 1024).toStringAsFixed(1)} MB';
 
-    return Container(
-      padding: const EdgeInsets.all(DS.lg),
-      decoration: BoxDecoration(
-        // Use surfaceSecondary to match Dashboard ceramic cards
-        color: DS.surfaceSecondary,
-        borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(DS.borderRadiusXl),
-        ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 16),
-              decoration: BoxDecoration(
-                color: DS.surfaceTertiary,
-                borderRadius: BorderRadius.circular(2),
-              ),
+    return SafeArea(
+      top: false,
+      child: SingleChildScrollView(
+        child: Container(
+          padding: const EdgeInsets.all(DS.lg),
+          decoration: BoxDecoration(
+            color: DS.surfaceSecondary,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(DS.borderRadiusXl),
             ),
           ),
-          Text(
-            '上传文件',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: DS.fontWeightBold,
-              color: DS.textPrimary,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          GestureDetector(
-            onTap: _isUploading ? null : _pickFile,
-            child: Container(
-              height: 140,
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: DS.surfaceTertiary,
-                  width: 1.5,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: DS.surfaceTertiary,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-                borderRadius: BorderRadius.circular(DS.borderRadiusLg),
-                color: isDark ? DS.surfaceTertiary : DS.neutral50,
               ),
-              child: Center(
-                child: _selectedFile == null
-                    ? Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.cloud_upload_outlined,
-                            size: 48,
-                            color: DS.primaryBase,
+              Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: DS.brandPrimary.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Icon(
+                      Icons.upload_file_rounded,
+                      color: DS.brandPrimary,
+                    ),
+                  ),
+                  const SizedBox(width: DS.spacing12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '上传文件',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: DS.fontWeightBold,
+                            color: DS.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '支持文档与图片，上传到对话后可继续分享或引用。',
+                          style: TextStyle(
+                            color: DS.textSecondary,
+                            height: 1.45,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: DS.spacing16),
+              Wrap(
+                spacing: DS.spacing12,
+                runSpacing: DS.spacing12,
+                children: [
+                  _UploadMetric(
+                    label: '文件',
+                    value: fileType ?? '--',
+                    icon: Icons.insert_drive_file_outlined,
+                  ),
+                  _UploadMetric(
+                    label: '大小',
+                    value: fileSize ?? '--',
+                    icon: Icons.sd_storage_outlined,
+                  ),
+                ],
+              ),
+              const SizedBox(height: DS.spacing16),
+              GestureDetector(
+                onTap: _isUploading ? null : _pickFile,
+                child: Container(
+                  constraints: const BoxConstraints(minHeight: 148),
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: DS.surfaceTertiary,
+                      width: 1.5,
+                    ),
+                    borderRadius: BorderRadius.circular(DS.borderRadiusLg),
+                    color: isDark ? DS.surfaceTertiary : DS.neutral50,
+                  ),
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(DS.spacing16),
+                      child: _selectedFile == null
+                          ? Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.cloud_upload_outlined,
+                                  size: 48,
+                                  color: DS.primaryBase,
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  '点击选择文件',
+                                  style: TextStyle(
+                                    color: DS.textSecondary,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'PDF、DOCX、PPTX、TXT 和常见图片都支持',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: DS.textTertiary,
+                                  ),
+                                ),
+                              ],
+                            )
+                          : Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.insert_drive_file,
+                                  size: 40,
+                                  color: DS.primaryBase,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  fileName ?? '',
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontWeight: DS.fontWeightSemiBold,
+                                    color: DS.textPrimary,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  fileSize == null
+                                      ? '已选择文件'
+                                      : '${fileType ?? '文件'} · $fileSize',
+                                  style: TextStyle(
+                                    color: DS.textSecondary,
+                                  ),
+                                ),
+                                if (_isUploading) ...[
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    '上传中 ${(_progress * 100).toStringAsFixed(0)}%',
+                                    style: TextStyle(
+                                      color: DS.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              if (_error != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    _error!,
+                    style: TextStyle(color: DS.error, fontSize: 12),
+                  ),
+                ),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final compact = constraints.maxWidth < 460;
+                  final pickButton = SparkleButton(
+                    expand: true,
+                    label: _selectedFile == null ? '选择文件' : '重新选择',
+                    variant: ButtonVariant.ghost,
+                    onPressed: _isUploading ? null : _pickFile,
+                  );
+                  final uploadButton = SparkleButton(
+                    expand: true,
+                    label: _resumeSession == null ? '开始上传' : '继续上传',
+                    onPressed: _selectedFile == null || _isUploading
+                        ? null
+                        : _startUpload,
+                    loading: _isUploading,
+                  );
+
+                  if (compact) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (widget.secondaryActionLabel != null &&
+                            widget.onSecondaryAction != null) ...[
+                          SparkleButton(
+                            expand: true,
+                            label: widget.secondaryActionLabel!,
+                            variant: ButtonVariant.ghost,
+                            onPressed: widget.onSecondaryAction,
+                            icon: const Icon(Icons.auto_fix_high_rounded),
                           ),
                           const SizedBox(height: 12),
-                          Text(
-                            '点击选择文件',
-                            style: TextStyle(
-                              color: DS.textSecondary,
-                            ),
-                          ),
                         ],
-                      )
-                    : Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.insert_drive_file,
-                            size: 40,
-                            color: DS.primaryBase,
+                        pickButton,
+                        const SizedBox(height: 12),
+                        uploadButton,
+                      ],
+                    );
+                  }
+
+                  return Row(
+                    children: [
+                      if (widget.secondaryActionLabel != null &&
+                          widget.onSecondaryAction != null) ...[
+                        Expanded(
+                          child: SparkleButton(
+                            expand: true,
+                            label: widget.secondaryActionLabel!,
+                            variant: ButtonVariant.ghost,
+                            onPressed: widget.onSecondaryAction,
+                            icon: const Icon(Icons.auto_fix_high_rounded),
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            _selectedFile!.path.split('/').last,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontWeight: DS.fontWeightSemiBold,
-                              color: DS.textPrimary,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          if (_isUploading)
-                            Text(
-                              '上传中 ${(_progress * 100).toStringAsFixed(0)}%',
-                              style: TextStyle(
-                                color: DS.textSecondary,
-                              ),
-                            ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(width: 12),
+                      ],
+                      Expanded(child: pickButton),
+                      const SizedBox(width: 12),
+                      Expanded(child: uploadButton),
+                    ],
+                  );
+                },
               ),
-            ),
+            ],
           ),
-          const SizedBox(height: 16),
-          if (_error != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Text(
-                _error!,
-                style: TextStyle(color: DS.error, fontSize: 12),
-              ),
-            ),
-          SparkleButton(
-            expand: true,
-            label: _resumeSession == null ? '开始上传' : '继续上传',
-            onPressed: _selectedFile == null || _isUploading
-                ? null
-                : () {
-                    _startUpload();
-                  },
-            loading: _isUploading,
-          ),
-        ],
+        ),
       ),
     );
   }
+}
+
+class _UploadMetric extends StatelessWidget {
+  const _UploadMetric({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        constraints: const BoxConstraints(minWidth: 132),
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing12,
+          vertical: DS.spacing10,
+        ),
+        decoration: BoxDecoration(
+          color: DS.surfaceOverlay,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: DS.borderSubtle),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: DS.brandPrimary),
+            const SizedBox(width: DS.spacing8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: DS.textSecondary,
+                      fontSize: 11,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    value,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: DS.textPrimary,
+                      fontWeight: DS.fontWeightBold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
 }

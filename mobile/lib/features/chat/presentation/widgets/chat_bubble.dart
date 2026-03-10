@@ -156,21 +156,23 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
       final heroTag = 'message_${chatMessage.id}';
 
       // 打开详情视图
-      unawaited(Navigator.of(context).push(
-        PageRouteBuilder<void>(
-          opaque: false, // 使用半透明背景
-          barrierColor: DS.overlay30.withValues(alpha: 0),
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              FadeTransition(
-            opacity: animation,
-            child: MessageDetailView(
-              message: chatMessage,
-              heroTag: heroTag,
+      unawaited(
+        Navigator.of(context).push(
+          PageRouteBuilder<void>(
+            opaque: false, // 使用半透明背景
+            barrierColor: DS.overlay30.withValues(alpha: 0),
+            pageBuilder: (context, animation, secondaryAnimation) =>
+                FadeTransition(
+              opacity: animation,
+              child: MessageDetailView(
+                message: chatMessage,
+                heroTag: heroTag,
+              ),
             ),
+            transitionDuration: const Duration(milliseconds: 250),
           ),
-          transitionDuration: const Duration(milliseconds: 250),
         ),
-      ),);
+      );
     }
   }
 
@@ -181,92 +183,94 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
     final canRevoke =
         _isUser && DateTime.now().difference(_createdAt).inHours < 24;
 
-    unawaited(showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: DS.overlay30.withValues(alpha: 0),
-      builder: (context) => DecoratedBox(
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (!_isUser &&
-                  _responseId != null &&
-                  _responseId!.isNotEmpty &&
-                  widget.onResponseFeedback != null &&
-                  widget.message is ChatMessageModel)
+    unawaited(
+      showModalBottomSheet<void>(
+        context: context,
+        backgroundColor: DS.overlay30.withValues(alpha: 0),
+        builder: (context) => DecoratedBox(
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (!_isUser &&
+                    _responseId != null &&
+                    _responseId!.isNotEmpty &&
+                    widget.onResponseFeedback != null &&
+                    widget.message is ChatMessageModel)
+                  ListTile(
+                    leading: const Icon(Icons.thumb_up_alt_rounded),
+                    title: const Text('有帮助'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      widget.onResponseFeedback!(
+                        widget.message as ChatMessageModel,
+                        'up',
+                      );
+                    },
+                  ),
+                if (!_isUser &&
+                    _responseId != null &&
+                    _responseId!.isNotEmpty &&
+                    widget.onResponseFeedback != null &&
+                    widget.message is ChatMessageModel)
+                  ListTile(
+                    leading: const Icon(Icons.thumb_down_alt_rounded),
+                    title: const Text('没帮助'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      widget.onResponseFeedback!(
+                        widget.message as ChatMessageModel,
+                        'down',
+                      );
+                    },
+                  ),
+                if (widget.onQuote != null &&
+                    widget.message is PrivateMessageInfo)
+                  ListTile(
+                    leading: const Icon(Icons.format_quote_rounded),
+                    title: const Text('引用'),
+                    onTap: () {
+                      if (mounted) {
+                        Navigator.pop(context);
+                        widget.onQuote!(widget.message);
+                      }
+                    },
+                  ),
                 ListTile(
-                  leading: const Icon(Icons.thumb_up_alt_rounded),
-                  title: const Text('有帮助'),
+                  leading: const Icon(Icons.copy_rounded),
+                  title: const Text('复制'),
                   onTap: () {
-                    Navigator.pop(context);
-                    widget.onResponseFeedback!(
-                      widget.message as ChatMessageModel,
-                      'up',
+                    unawaited(
+                      Clipboard.setData(ClipboardData(text: _content)),
                     );
-                  },
-                ),
-              if (!_isUser &&
-                  _responseId != null &&
-                  _responseId!.isNotEmpty &&
-                  widget.onResponseFeedback != null &&
-                  widget.message is ChatMessageModel)
-                ListTile(
-                  leading: const Icon(Icons.thumb_down_alt_rounded),
-                  title: const Text('没帮助'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    widget.onResponseFeedback!(
-                      widget.message as ChatMessageModel,
-                      'down',
-                    );
-                  },
-                ),
-              if (widget.onQuote != null &&
-                  widget.message is PrivateMessageInfo)
-                ListTile(
-                  leading: const Icon(Icons.format_quote_rounded),
-                  title: const Text('引用'),
-                  onTap: () {
                     if (mounted) {
                       Navigator.pop(context);
-                      widget.onQuote!(widget.message);
+                      AppFeedback.info(context, '已复制到剪贴板');
                     }
                   },
                 ),
-              ListTile(
-                leading: const Icon(Icons.copy_rounded),
-                title: const Text('复制'),
-                onTap: () {
-                  unawaited(
-                    Clipboard.setData(ClipboardData(text: _content)),
-                  );
-                  if (mounted) {
-                    Navigator.pop(context);
-                    AppFeedback.info(context, '已复制到剪贴板');
-                  }
-                },
-              ),
-              if (canRevoke && widget.onRevoke != null)
-                ListTile(
-                  leading: Icon(Icons.undo_rounded, color: DS.error),
-                  title: Text('撤销', style: TextStyle(color: DS.error)),
-                  onTap: () {
-                    if (mounted) {
-                      Navigator.pop(context);
-                      widget.onRevoke!(widget.message);
-                    }
-                  },
-                ),
-              const SizedBox(height: DS.sm),
-            ],
+                if (canRevoke && widget.onRevoke != null)
+                  ListTile(
+                    leading: Icon(Icons.undo_rounded, color: DS.error),
+                    title: Text('撤销', style: TextStyle(color: DS.error)),
+                    onTap: () {
+                      if (mounted) {
+                        Navigator.pop(context);
+                        widget.onRevoke!(widget.message);
+                      }
+                    },
+                  ),
+                const SizedBox(height: DS.sm),
+              ],
+            ),
           ),
         ),
       ),
-    ),);
+    );
   }
 
   @override
@@ -558,50 +562,53 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
     BuildContext context,
     bool isUser,
     PrivateMessageInfo msg,
-  ) =>
-      Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        decoration: BoxDecoration(
-          color: isUser
-              ? DS.brandPrimary.withValues(alpha: 0.15)
-              : DS.surfaceTertiary.withValues(alpha: 0.5),
-          borderRadius: BorderRadius.circular(8),
-          border: Border(
-            left: BorderSide(
-              color: isUser
-                  ? DS.brandPrimary.withValues(alpha: 0.7)
-                  : DS.brandPrimary,
-              width: 3,
-            ),
+  ) {
+    final backgroundColor =
+        isUser ? Colors.white.withValues(alpha: 0.18) : DS.surfacePanel;
+    final senderColor = isUser ? DS.textOnPrimary : DS.brandPrimary;
+    final contentColor =
+        isUser ? DS.textOnPrimary.withValues(alpha: 0.9) : DS.textPrimary;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(8),
+        border: Border(
+          left: BorderSide(
+            color: isUser
+                ? DS.brandPrimary.withValues(alpha: 0.7)
+                : DS.brandPrimary,
+            width: 3,
           ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              msg.sender.displayName,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: isUser ? DS.brandPrimary : DS.brandPrimary,
-              ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            msg.sender.displayName,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: senderColor,
             ),
-            const SizedBox(height: 2),
-            Text(
-              msg.content ?? '',
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 12,
-                color: isUser
-                    ? DS.brandPrimary.withValues(alpha: 0.9)
-                    : DS.textSecondary,
-              ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            msg.content ?? '',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 12,
+              color: contentColor,
             ),
-          ],
-        ),
-      );
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildRevokedPlaceholder() => Center(
         child: Padding(

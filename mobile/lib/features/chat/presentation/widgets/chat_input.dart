@@ -58,6 +58,36 @@ class _ChatInputState extends ConsumerState<ChatInput> {
               widget.onFileUploaded?.call(file);
             },
             onError: (message) => AppFeedback.error(context, message),
+            secondaryActionLabel: '文档清洗',
+            onSecondaryAction: () {
+              Navigator.pop(context);
+              unawaited(
+                launchTool(
+                  this.context,
+                  ref,
+                  'document_cleaner',
+                  launchContext: ToolLaunchContext.chatInput,
+                  preference: ToolOpenPreference.sheet,
+                  onTextResult: (result) {
+                    if (!mounted) {
+                      return;
+                    }
+                    setState(() {
+                      _controller.text = result;
+                    });
+                    if (!_isFocusChanging) {
+                      _isFocusChanging = true;
+                      Future.delayed(const Duration(milliseconds: 150), () {
+                        if (mounted && _focusNode.canRequestFocus) {
+                          _focusNode.requestFocus();
+                        }
+                        _isFocusChanging = false;
+                      });
+                    }
+                  },
+                ),
+              );
+            },
           ),
         ),
       );
@@ -123,9 +153,10 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
   @override
   void dispose() {
-    _controller.removeListener(_handleTextChange);
+    _controller
+      ..removeListener(_handleTextChange)
+      ..dispose();
     // widget.onTextChanged?.call(''); // Removed to prevent unsafe ancestor lookup during disposal
-    _controller.dispose();
     _focusNode.dispose();
     _textNotEmpty.dispose();
     super.dispose();
@@ -385,10 +416,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
           vertical: DS.spacing8,
         ),
         decoration: BoxDecoration(
-          // Use surfaceSecondary for dark mode to match Dashboard ceramic cards
-          color: isDark
-              ? DS.surfaceSecondary
-              : DS.brandPrimary.withValues(alpha: 0.1),
+          color: isDark ? DS.surfaceSecondary : DS.surfacePanel,
           borderRadius: BorderRadius.circular(12),
           border: Border(
             left: BorderSide(color: DS.brandPrimaryConst, width: 4),
@@ -415,7 +443,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                     overflow: TextOverflow.fade,
                     style: TextStyle(
                       fontSize: DS.fontSizeXs,
-                      color: DS.textSecondary,
+                      color: isDark ? DS.textSecondary : DS.textPrimary,
                     ),
                   ),
                 ],
@@ -432,7 +460,6 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                 ),
                 onPressed: widget.onCancelQuote,
                 variant: ButtonVariant.ghost,
-                size: DS.touchTargetMinSize,
               ),
             ),
           ],

@@ -15,21 +15,23 @@ class HomeNotificationCard extends ConsumerWidget {
     final unreadMessageCount = ref.watch(unreadMessageCountProvider);
 
     if (unreadMessageCount > 0) {
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(
-          DS.spacing16,
-          0,
-          DS.spacing16,
-          DS.spacing8,
-        ),
-        child: _NotificationBanner(
-          icon: Icons.forum_outlined,
-          iconColor: DS.capsuleAccent,
-          summary: unreadMessageCount > 99
-              ? '99+ 条未读消息'
-              : '$unreadMessageCount 条未读消息',
-          actionLabel: '查看',
-          onTap: () => context.push('/community'),
+      return ContentConstraint(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            DS.spacing16,
+            0,
+            DS.spacing16,
+            DS.spacing8,
+          ),
+          child: _NotificationBanner(
+            icon: Icons.forum_outlined,
+            iconColor: DS.capsuleAccent,
+            summary: unreadMessageCount > 99
+                ? '99+ 条未读消息'
+                : '$unreadMessageCount 条未读消息',
+            actionLabel: '查看',
+            onTap: () => context.push('/community'),
+          ),
         ),
       );
     }
@@ -40,21 +42,23 @@ class HomeNotificationCard extends ConsumerWidget {
           return const SizedBox.shrink();
         }
 
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(
-            DS.spacing16,
-            0,
-            DS.spacing16,
-            DS.spacing8,
-          ),
-          child: _NotificationBanner(
-            icon: _getIcon(notifications.first.type),
-            iconColor: _getIconColor(notifications.first.type),
-            summary: notifications.length == 1
-                ? '1 条未读通知'
-                : '${notifications.length} 条未读通知',
-            actionLabel: '查看',
-            onTap: () => context.push('/notifications'),
+        return ContentConstraint(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              DS.spacing16,
+              0,
+              DS.spacing16,
+              DS.spacing8,
+            ),
+            child: _NotificationBanner(
+              icon: _getIcon(notifications.first.type),
+              iconColor: _getIconColor(notifications.first.type),
+              summary: notifications.length == 1
+                  ? '1 条未读通知'
+                  : '${notifications.length} 条未读通知',
+              actionLabel: '查看',
+              onTap: () => context.push('/notifications'),
+            ),
           ),
         );
       },
@@ -114,7 +118,7 @@ class _NotificationBanner extends StatelessWidget {
           onTap: onTap,
           borderRadius: DS.borderRadius16,
           child: MaterialStyler(
-            material: AppMaterials.ceramic.copyWith(shadows: const []),
+            material: AppMaterials.ceramic,
             borderRadius: DS.borderRadius16,
             padding: const EdgeInsets.symmetric(
               horizontal: DS.spacing12,

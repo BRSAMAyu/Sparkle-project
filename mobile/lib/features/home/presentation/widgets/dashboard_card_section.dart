@@ -31,30 +31,21 @@ class DashboardCardSection extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Text(
-                  '可定制卡片区',
-                  style: context.sparkleTypography.titleLarge.copyWith(
-                    fontWeight: DS.fontWeightBold,
-                    color: DS.textPrimary,
-                  ),
-                ),
-                const Spacer(),
-                TextButton.icon(
-                  onPressed: () => _openEditSheet(context),
-                  icon: const Icon(Icons.edit_outlined, size: 18),
-                  label: const Text('编辑'),
-                ),
-              ],
-            ),
-            const SizedBox(height: DS.spacing12),
             if (cards.isEmpty)
               const _EmptyDashboardCardSection()
             else if (config.layoutMode == DashboardCardLayoutMode.swipe)
               DashboardCardCarousel(cards: cards)
             else
               DashboardCardGrid(cards: cards),
+            const SizedBox(height: DS.spacing8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: () => _openEditSheet(context),
+                icon: const Icon(Icons.edit_outlined, size: 18),
+                label: const Text('可定制卡片区'),
+              ),
+            ),
           ],
         ),
       ),
@@ -78,12 +69,13 @@ class DashboardCardSection extends ConsumerWidget {
       case DashboardCardIds.nextActions:
         return NextActionsCard(
           compact: true,
+          dense: isGridMode,
           onViewAll: () => context.push('/tasks'),
         );
       case DashboardCardIds.curiosity:
-        return const DashboardCuriosityCard(compact: true);
+        return DashboardCuriosityCard(compact: true, dense: isGridMode);
       case DashboardCardIds.longTermPlan:
-        return const LongTermPlanCard(compact: true);
+        return LongTermPlanCard(compact: true, dense: isGridMode);
       default:
         return const _EmptyDashboardCardSection();
     }
@@ -152,6 +144,8 @@ class _DashboardStreakCard extends StatelessWidget {
                 style: context.sparkleTypography.labelSmall.copyWith(
                   color: DS.textSecondary,
                 ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),

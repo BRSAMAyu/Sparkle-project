@@ -41,7 +41,7 @@ void main() {
       engine.releaseAnchor();
 
       var settled = false;
-      for (var i = 0; i < 240; i++) {
+      for (var i = 0; i < 600; i++) {
         final result = engine.tick(
           positions: positions,
           adjacency: adjacency,

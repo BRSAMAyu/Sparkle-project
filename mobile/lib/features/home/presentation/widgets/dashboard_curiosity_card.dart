@@ -8,16 +8,25 @@ class DashboardCuriosityCard extends ConsumerWidget {
   const DashboardCuriosityCard({
     super.key,
     this.compact = false,
+    this.dense = false,
   });
 
   final bool compact;
+  final bool dense;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final dashboardState = ref.watch(dashboardProvider);
     final cognitive = dashboardState.cognitive;
-    final padding = compact ? DS.spacing12 : DS.lg;
-    final iconSize = compact ? 18.0 : 20.0;
+    final padding = compact ? (dense ? DS.spacing10 : DS.spacing12) : DS.lg;
+    final iconSize = dense ? 16.0 : (compact ? 18.0 : 20.0);
+    final description = cognitive.description?.trim();
+    final solutionText = cognitive.solutionText?.trim();
+    final snippet = (description?.isNotEmpty ?? false)
+        ? description
+        : (solutionText?.isNotEmpty ?? false)
+            ? solutionText
+            : null;
 
     return GestureDetector(
       onTap: () => context.push('/curiosity-capsule'),
@@ -47,10 +56,11 @@ class DashboardCuriosityCard extends ConsumerWidget {
             Text(
               cognitive.weeklyPattern ?? '探索未知',
               style: context.sparkleTypography.labelLarge.copyWith(
+                fontSize: dense ? 13 : null,
                 fontWeight: FontWeight.bold,
                 color: DS.textPrimary,
               ),
-              maxLines: compact ? 3 : 2,
+              maxLines: dense ? 2 : (compact ? 3 : 2),
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: DS.xs),
@@ -60,6 +70,18 @@ class DashboardCuriosityCard extends ConsumerWidget {
                 color: DS.textSecondary,
               ),
             ),
+            if (snippet != null) ...[
+              SizedBox(height: dense ? DS.spacing4 : DS.spacing6),
+              Text(
+                snippet,
+                maxLines: dense ? 2 : 3,
+                overflow: TextOverflow.ellipsis,
+                style: context.sparkleTypography.labelSmall.copyWith(
+                  color: DS.textSecondary,
+                  height: 1.4,
+                ),
+              ),
+            ],
           ],
         ),
       ),

@@ -9,7 +9,7 @@ class DashboardCardGrid extends StatelessWidget {
     super.key,
   });
 
-  static const double gridCardHeight = 184;
+  static const double gridCardHeight = 196;
 
   final List<Widget> cards;
 
@@ -17,17 +17,22 @@ class DashboardCardGrid extends StatelessWidget {
   Widget build(BuildContext context) => DashboardEntrance(
         index: 7,
         slideOffset: Offset.zero,
-        child: AlignedGridView.count(
-          crossAxisCount: 2,
-          mainAxisSpacing: DS.spacing12,
-          crossAxisSpacing: DS.spacing12,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: cards.length,
-          itemBuilder: (context, index) => SizedBox(
-            height: DashboardCardGrid.gridCardHeight,
-            child: cards[index],
-          ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final crossAxisCount = constraints.maxWidth < 300 ? 1 : 2;
+            return AlignedGridView.count(
+              crossAxisCount: crossAxisCount,
+              mainAxisSpacing: DS.spacing12,
+              crossAxisSpacing: DS.spacing12,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: cards.length,
+              itemBuilder: (context, index) => SizedBox(
+                height: DashboardCardGrid.gridCardHeight,
+                child: cards[index],
+              ),
+            );
+          },
         ),
       );
 }

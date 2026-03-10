@@ -9,9 +9,11 @@ class GalaxyControls extends StatelessWidget {
     required this.onZoomOut,
     required this.onReplay,
     required this.onSearch,
+    required this.onSettings,
     required this.isDarkMode,
     this.isReplaying = false,
     this.isSearchOpen = false,
+    this.isSettingsOpen = false,
     super.key,
   });
 
@@ -20,9 +22,11 @@ class GalaxyControls extends StatelessWidget {
   final VoidCallback onZoomOut;
   final VoidCallback onReplay;
   final VoidCallback onSearch;
+  final VoidCallback onSettings;
   final bool isDarkMode;
   final bool isReplaying;
   final bool isSearchOpen;
+  final bool isSettingsOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -105,6 +109,14 @@ class GalaxyControls extends StatelessWidget {
                       iconColor: isReplaying ? glowColor : iconColor,
                       onPressed: onReplay,
                       isActive: isReplaying,
+                      activeGlowColor: glowColor,
+                    ),
+                    _ControlButton(
+                      icon: Icons.tune_rounded,
+                      tooltip: '星图设置',
+                      iconColor: isSettingsOpen ? glowColor : iconColor,
+                      onPressed: onSettings,
+                      isActive: isSettingsOpen,
                       activeGlowColor: glowColor,
                     ),
                   ],

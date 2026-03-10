@@ -122,7 +122,8 @@ class _DocumentCleanerPanelState extends ConsumerState<DocumentCleanerPanel> {
           icon: _enableOcr ? Icons.visibility_rounded : Icons.notes_rounded,
         ),
         ToolHeroChip(
-          label: fileName == null ? '支持 PDF / DOCX / PPTX' : extension ?? '文件已选',
+          label:
+              fileName == null ? '支持 PDF / DOCX / PPTX' : extension ?? '文件已选',
           accentColor: accent,
           icon: Icons.insert_drive_file_rounded,
         ),
@@ -155,7 +156,8 @@ class _DocumentCleanerPanelState extends ConsumerState<DocumentCleanerPanel> {
                 ],
               ),
               const SizedBox(height: DS.spacing16),
-              if (taskStatus == null) _buildSetupCard(accent, fileName, extension),
+              if (taskStatus == null)
+                _buildSetupCard(accent, fileName, extension),
               if (taskStatus != null &&
                   (taskStatus.status == 'queued' ||
                       taskStatus.status == 'processing'))
@@ -225,34 +227,21 @@ class _DocumentCleanerPanelState extends ConsumerState<DocumentCleanerPanel> {
                           Text(
                             '支持 PDF、DOCX、PPTX；扫描件推荐开启 OCR。',
                             textAlign: TextAlign.center,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(
-                                  color: DS.textSecondary,
-                                  height: 1.5,
-                                ),
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: DS.textSecondary,
+                                      height: 1.5,
+                                    ),
                           ),
                         ],
                       )
-                    : Row(
-                        children: [
-                          Container(
-                            width: 52,
-                            height: 52,
-                            decoration: BoxDecoration(
-                              color: accent.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Icon(
-                              Icons.insert_drive_file_rounded,
-                              color: accent,
-                            ),
-                          ),
-                          const SizedBox(width: DS.spacing16),
-                          Expanded(
+                    : LayoutBuilder(
+                        builder: (context, constraints) {
+                          final compact = constraints.maxWidth < 520;
+                          final fileInfo = Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
                                   fileName,
@@ -276,14 +265,66 @@ class _DocumentCleanerPanelState extends ConsumerState<DocumentCleanerPanel> {
                                 ),
                               ],
                             ),
-                          ),
-                          const SizedBox(width: DS.spacing12),
-                          SparkleButton(
-                            label: '更换',
-                            variant: ButtonVariant.ghost,
-                            onPressed: _pickFile,
-                          ),
-                        ],
+                          );
+
+                          if (compact) {
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      width: 52,
+                                      height: 52,
+                                      decoration: BoxDecoration(
+                                        color: accent.withValues(alpha: 0.12),
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      child: Icon(
+                                        Icons.insert_drive_file_rounded,
+                                        color: accent,
+                                      ),
+                                    ),
+                                    const SizedBox(width: DS.spacing16),
+                                    fileInfo,
+                                  ],
+                                ),
+                                const SizedBox(height: DS.spacing12),
+                                SparkleButton(
+                                  label: '更换文件',
+                                  variant: ButtonVariant.ghost,
+                                  onPressed: _pickFile,
+                                  expand: true,
+                                ),
+                              ],
+                            );
+                          }
+
+                          return Row(
+                            children: [
+                              Container(
+                                width: 52,
+                                height: 52,
+                                decoration: BoxDecoration(
+                                  color: accent.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Icon(
+                                  Icons.insert_drive_file_rounded,
+                                  color: accent,
+                                ),
+                              ),
+                              const SizedBox(width: DS.spacing16),
+                              fileInfo,
+                              const SizedBox(width: DS.spacing12),
+                              SparkleButton(
+                                label: '更换',
+                                variant: ButtonVariant.ghost,
+                                onPressed: _pickFile,
+                              ),
+                            ],
+                          );
+                        },
                       ),
               ),
             ),
@@ -460,32 +501,49 @@ class _DocumentCleanerPanelState extends ConsumerState<DocumentCleanerPanel> {
             ),
           ),
           const SizedBox(height: DS.spacing16),
-          Row(
-            children: [
-              Expanded(
-                child: SparkleButton(
-                  label: _isSheet ? '发送到对话' : '使用结果',
-                  onPressed: () {
-                    widget.onResult?.call(result.summary);
-                    if (_isSheet) {
-                      Navigator.pop(context);
-                    }
-                  },
-                  icon: Icon(
-                    _isSheet ? Icons.send_rounded : Icons.arrow_forward_rounded,
-                  ),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final compact = constraints.maxWidth < 520;
+              final primary = SparkleButton(
+                label: _isSheet ? '发送到对话' : '使用结果',
+                onPressed: () {
+                  widget.onResult?.call(result.summary);
+                  if (_isSheet) {
+                    Navigator.pop(context);
+                  }
+                },
+                icon: Icon(
+                  _isSheet ? Icons.send_rounded : Icons.arrow_forward_rounded,
                 ),
-              ),
-              const SizedBox(width: DS.spacing12),
-              Expanded(
-                child: SparkleButton(
-                  label: '复制摘要',
-                  variant: ButtonVariant.ghost,
-                  onPressed: () => _copyResult(result.summary),
-                  icon: const Icon(Icons.copy_rounded),
-                ),
-              ),
-            ],
+                expand: true,
+              );
+              final secondary = SparkleButton(
+                label: '复制摘要',
+                variant: ButtonVariant.ghost,
+                onPressed: () => _copyResult(result.summary),
+                icon: const Icon(Icons.copy_rounded),
+                expand: true,
+              );
+
+              if (compact) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    primary,
+                    const SizedBox(height: DS.spacing12),
+                    secondary,
+                  ],
+                );
+              }
+
+              return Row(
+                children: [
+                  Expanded(child: primary),
+                  const SizedBox(width: DS.spacing12),
+                  Expanded(child: secondary),
+                ],
+              );
+            },
           ),
         ],
       );
@@ -506,7 +564,8 @@ class _DocumentCleanerPanelState extends ConsumerState<DocumentCleanerPanel> {
             SparkleButton(
               label: '重新尝试',
               variant: ButtonVariant.ghost,
-              onPressed: () => ref.read(documentControllerProvider.notifier).reset(),
+              onPressed: () =>
+                  ref.read(documentControllerProvider.notifier).reset(),
               icon: const Icon(Icons.refresh_rounded),
             ),
           ],

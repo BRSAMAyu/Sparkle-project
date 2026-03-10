@@ -90,7 +90,9 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
 
     if (_type == GroupType.sprint && _deadline == null) {
       AppFeedback.info(
-          context, 'Please select a deadline for the sprint group');
+        context,
+        'Please select a deadline for the sprint group',
+      );
       return;
     }
 
@@ -133,7 +135,6 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
 
   @override
   Widget build(BuildContext context) => PopScope(
-        canPop: false,
         onPopInvokedWithResult: (didPop, result) async {
           if (didPop) return;
           final shouldPop = await _onWillPop();
@@ -147,7 +148,6 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
           appBar: AppBar(
             leading: SparkleIconButton(
               variant: ButtonVariant.ghost,
-              size: DS.touchTargetMinSize,
               icon: const Icon(Icons.arrow_back),
               onPressed: () => context.pop(),
             ),
@@ -179,6 +179,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                     const SizedBox(height: DS.spacing16),
                     DropdownButtonFormField<GroupType>(
                       initialValue: _type,
+                      isExpanded: true,
                       decoration: const InputDecoration(
                         labelText: 'Group Type',
                         border: OutlineInputBorder(),
@@ -186,11 +187,27 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                       items: const [
                         DropdownMenuItem(
                           value: GroupType.squad,
-                          child: Text('Study Squad (Long-term)'),
+                          child: Text(
+                            'Study Squad',
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                         DropdownMenuItem(
                           value: GroupType.sprint,
-                          child: Text('Sprint Group (Short-term with DDL)'),
+                          child: Text(
+                            'Sprint Group',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                      selectedItemBuilder: (context) => const [
+                        Text(
+                          'Study Squad',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          'Sprint Group',
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                       onChanged: (value) {

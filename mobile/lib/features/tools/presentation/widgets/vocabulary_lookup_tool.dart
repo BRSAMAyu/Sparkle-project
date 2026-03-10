@@ -50,15 +50,21 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
       return;
     }
 
-    await ref.read(vocabularyProvider.notifier).fetchWordbook();
-    final remoteWord =
-        ref.read(vocabularyProvider.notifier).getWordbookEntryByWord(word);
+    final notifier = ref.read(vocabularyProvider.notifier);
+    await notifier.fetchWordbook();
+    if (!mounted) {
+      return;
+    }
+    final remoteWord = notifier.getWordbookEntryByWord(word);
     setState(() {
       _isInLocalWordbook = remoteWord != null;
     });
 
-    await ref.read(vocabularyProvider.notifier).lookup(word);
-    ref.read(vocabularyProvider.notifier).fetchAssociations(word);
+    await notifier.lookup(word);
+    if (!mounted) {
+      return;
+    }
+    notifier.fetchAssociations(word);
   }
 
   Future<void> _generateSentence() async {
@@ -95,7 +101,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
           partOfSpeech: result['pos'] as String?,
         );
 
-    if (!success) {
+    if (!mounted || !success) {
       return;
     }
 
@@ -110,22 +116,23 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
   }
 
   Future<void> _removeFromWordbook() async {
-    final word = (_controller.text.trim()).toLowerCase();
+    final word = _controller.text.trim().toLowerCase();
     if (word.isEmpty) {
       return;
     }
-    await ref.read(vocabularyProvider.notifier).fetchWordbook();
-    final remoteWord =
-        ref.read(vocabularyProvider.notifier).getWordbookEntryByWord(word);
+    final notifier = ref.read(vocabularyProvider.notifier);
+    await notifier.fetchWordbook();
+    if (!mounted) {
+      return;
+    }
+    final remoteWord = notifier.getWordbookEntryByWord(word);
 
     if (remoteWord != null && remoteWord['id'] != null) {
-      await ref
-          .read(vocabularyProvider.notifier)
-          .deleteWordbookEntry(remoteWord['id'] as String);
-      setState(() => _isInLocalWordbook = false);
+      await notifier.deleteWordbookEntry(remoteWord['id'] as String);
       if (!mounted) {
         return;
       }
+      setState(() => _isInLocalWordbook = false);
       HapticFeedback.lightImpact();
       AppFeedback.info(context, '已从生词本移除 "$word"');
     }
@@ -169,28 +176,59 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
             accentColor: accent,
             title: '查询输入',
             subtitle: '输入英文单词后回车或点击查询。',
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    focusNode: _focusNode,
-                    decoration: const InputDecoration(
-                      hintText: '输入英文单词...',
-                      prefixIcon: Icon(Icons.menu_book_rounded),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final compact = constraints.maxWidth < 520;
+                if (compact) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      TextField(
+                        controller: _controller,
+                        focusNode: _focusNode,
+                        decoration: const InputDecoration(
+                          hintText: '输入英文单词...',
+                          prefixIcon: Icon(Icons.menu_book_rounded),
+                        ),
+                        textInputAction: TextInputAction.search,
+                        onSubmitted: (_) => _lookup(),
+                      ),
+                      const SizedBox(height: DS.spacing12),
+                      SparkleButton(
+                        label: '查询',
+                        onPressed: _lookup,
+                        icon: const Icon(Icons.search_rounded),
+                        loading: state.isLookingUp,
+                        expand: true,
+                      ),
+                    ],
+                  );
+                }
+
+                return Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _controller,
+                        focusNode: _focusNode,
+                        decoration: const InputDecoration(
+                          hintText: '输入英文单词...',
+                          prefixIcon: Icon(Icons.menu_book_rounded),
+                        ),
+                        textInputAction: TextInputAction.search,
+                        onSubmitted: (_) => _lookup(),
+                      ),
                     ),
-                    textInputAction: TextInputAction.search,
-                    onSubmitted: (_) => _lookup(),
-                  ),
-                ),
-                const SizedBox(width: DS.spacing12),
-                SparkleButton(
-                  label: '查询',
-                  onPressed: _lookup,
-                  icon: const Icon(Icons.search_rounded),
-                  loading: state.isLookingUp,
-                ),
-              ],
+                    const SizedBox(width: DS.spacing12),
+                    SparkleButton(
+                      label: '查询',
+                      onPressed: _lookup,
+                      icon: const Icon(Icons.search_rounded),
+                      loading: state.isLookingUp,
+                    ),
+                  ],
+                );
+              },
             ),
           ),
           const SizedBox(height: DS.spacing16),
@@ -211,37 +249,46 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            result['word'] as String? ?? '',
-                            style: Theme.of(context)
-                                .textTheme
-                                .headlineMedium
-                                ?.copyWith(
-                                  color: DS.textPrimary,
-                                  fontWeight: DS.fontWeightBold,
+                          Wrap(
+                            spacing: DS.spacing10,
+                            runSpacing: DS.spacing8,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              ConstrainedBox(
+                                constraints:
+                                    const BoxConstraints(maxWidth: 320),
+                                child: Text(
+                                  result['word'] as String? ?? '',
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .headlineMedium
+                                      ?.copyWith(
+                                        color: DS.textPrimary,
+                                        fontWeight: DS.fontWeightBold,
+                                      ),
                                 ),
+                              ),
+                              if ((result['phonetic'] as String?) != null)
+                                Text(
+                                  result['phonetic'] as String,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyLarge
+                                      ?.copyWith(
+                                        color: DS.textSecondary,
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                ),
+                              if ((result['pos'] as String?) != null)
+                                ToolHeroChip(
+                                  label: result['pos'] as String,
+                                  accentColor: accent,
+                                  icon: Icons.sell_rounded,
+                                ),
+                            ],
                           ),
-                          if ((result['phonetic'] as String?) != null) ...[
-                            const SizedBox(height: DS.spacing6),
-                            Text(
-                              result['phonetic'] as String,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyLarge
-                                  ?.copyWith(
-                                    color: DS.textSecondary,
-                                    fontStyle: FontStyle.italic,
-                                  ),
-                            ),
-                          ],
-                          if ((result['pos'] as String?) != null) ...[
-                            const SizedBox(height: DS.spacing8),
-                            ToolHeroChip(
-                              label: result['pos'] as String,
-                              accentColor: accent,
-                              icon: Icons.sell_rounded,
-                            ),
-                          ],
                           const SizedBox(height: DS.spacing16),
                           if (definitions != null) ...[
                             Text(
@@ -350,32 +397,56 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
           ),
         ],
       ),
-      footer: Row(
-        children: [
-          Expanded(
-            child: SparkleButton(
-              label: '生成例句',
-              variant: ButtonVariant.ghost,
-              onPressed: result == null ? null : _generateSentence,
-              icon: const Icon(Icons.auto_awesome_rounded),
-            ),
-          ),
-          const SizedBox(width: DS.spacing12),
-          Expanded(
-            child: _isInLocalWordbook
-                ? SparkleButton(
-                    label: '移出生词本',
-                    variant: ButtonVariant.ghost,
-                    onPressed: _removeFromWordbook,
-                    icon: const Icon(Icons.remove_circle_outline_rounded),
-                  )
-                : SparkleButton(
-                    label: '加入生词本',
-                    onPressed: result == null ? null : _addToWordbook,
-                    icon: const Icon(Icons.bookmark_add_rounded),
-                  ),
-          ),
-        ],
+      footer: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 520;
+          final secondaryAction = _isInLocalWordbook
+              ? SparkleButton(
+                  label: '移出生词本',
+                  variant: ButtonVariant.ghost,
+                  onPressed: _removeFromWordbook,
+                  icon: const Icon(Icons.remove_circle_outline_rounded),
+                  expand: true,
+                )
+              : SparkleButton(
+                  label: '加入生词本',
+                  onPressed: result == null ? null : _addToWordbook,
+                  icon: const Icon(Icons.bookmark_add_rounded),
+                  expand: true,
+                );
+
+          if (compact) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SparkleButton(
+                  label: '生成例句',
+                  variant: ButtonVariant.ghost,
+                  onPressed: result == null ? null : _generateSentence,
+                  icon: const Icon(Icons.auto_awesome_rounded),
+                  expand: true,
+                ),
+                const SizedBox(height: DS.spacing12),
+                secondaryAction,
+              ],
+            );
+          }
+
+          return Row(
+            children: [
+              Expanded(
+                child: SparkleButton(
+                  label: '生成例句',
+                  variant: ButtonVariant.ghost,
+                  onPressed: result == null ? null : _generateSentence,
+                  icon: const Icon(Icons.auto_awesome_rounded),
+                ),
+              ),
+              const SizedBox(width: DS.spacing12),
+              Expanded(child: secondaryAction),
+            ],
+          );
+        },
       ),
     );
   }
