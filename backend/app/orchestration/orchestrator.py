@@ -2374,7 +2374,7 @@ class ChatOrchestrator:
             response_metadata["execution_validation"] = execution_validation
 
         await self._hydrate_evolution_context(final_state=final_state, user_id=user_id)
-        ux_envelope = ux_envelope_builder.build(
+        ux_envelope = await ux_envelope_builder.build(
             user_message=self._extract_latest_user_message(final_state.messages),
             full_response=full_response,
             final_state=final_state,
@@ -2708,7 +2708,7 @@ class ChatOrchestrator:
             "preference_version": (user_context_payload or {}).get("preference_version", 0),
             "verbosity_target": llm_profile_meta.get("verbosity_target", "balanced"),
         }
-        ux_envelope = ux_envelope_builder.build(
+        ux_envelope = await ux_envelope_builder.build(
             user_message=self._extract_latest_user_message(conversation_history),
             full_response=full_response,
             final_state=WorkflowState(messages=conversation_history, context_data={

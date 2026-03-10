@@ -296,6 +296,48 @@ CONTEXT_FOCUS_PROMPT_SECTION_TOTAL = get_or_create_metric(
     ['focus_mode', 'section', 'detail_level']
 )
 
+UX_PRESENTATION_STYLE_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_ux_presentation_style_total',
+    'Adaptive presentation style decisions',
+    ['style_variant', 'tone_variant', 'chat_mode']
+)
+
+UX_STAGE_DETECTED_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_ux_stage_detected_total',
+    'Detected UX conversation stages',
+    ['stage', 'chat_mode']
+)
+
+UX_NEXT_ACTION_GENERATED_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_ux_next_action_generated_total',
+    'Generated UX next actions',
+    ['stage', 'action_type']
+)
+
+UX_NEXT_ACTION_FALLBACK_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_ux_next_action_fallback_total',
+    'Fallbacks while generating UX next actions',
+    ['reason']
+)
+
+UX_BLOCKED_TEMPERATURE_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_ux_blocked_temperature_total',
+    'Blocked presentation temperatures',
+    ['failure_kind', 'temperature']
+)
+
+UX_BLOCKED_HISTORY_HIT_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_ux_blocked_history_hit_total',
+    'Blocked presentation history hits',
+    ['failure_kind']
+)
+
 # ========== LTM Eval Metrics ==========
 LTM_EVAL_TOTAL = get_or_create_metric(
     Counter,

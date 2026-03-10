@@ -4,6 +4,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
@@ -76,7 +77,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       (previous, next) {
         if (next != null && next != previous) {
           final message = ref.read(chatProvider).lastActionMessage;
-          if (message != null && mounted) {
+          if (!mounted) {
+            return;
+          }
+          if (next == 'navigation_ready' && message != null && message.isNotEmpty) {
+            unawaited(context.push(message));
+            final notifier = ref.read(chatProvider.notifier);
+            notifier.state = notifier.state.copyWith(clearActionFeedback: true);
+            return;
+          }
+          if (message != null) {
             if (next == 'failed' || next == 'error') {
               AppFeedback.error(context, message);
             } else {

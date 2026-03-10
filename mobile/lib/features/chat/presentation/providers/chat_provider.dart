@@ -117,6 +117,76 @@ class ChatNotifier extends StateNotifier<ChatState> {
     return const [];
   }
 
+  Map<String, dynamic> _normalizeUxActionItem(
+    dynamic raw, {
+    String defaultType = 'prompt',
+  }) {
+    if (raw is Map) {
+      final item = Map<String, dynamic>.from(raw);
+      final payload = item['payload'] is Map
+          ? Map<String, dynamic>.from(item['payload'] as Map)
+          : <String, dynamic>{};
+      final type = item['type']?.toString() ?? defaultType;
+      final label =
+          item['label']?.toString() ??
+          payload['label']?.toString() ??
+          item['prompt']?.toString() ??
+          payload['prompt']?.toString() ??
+          item['route']?.toString() ??
+          payload['route']?.toString() ??
+          '';
+      if (label.isEmpty) {
+        return const {};
+      }
+      if (type == 'prompt' && !payload.containsKey('prompt')) {
+        payload['prompt'] = item['prompt']?.toString() ?? label;
+      }
+      if (!payload.containsKey('route') && item['route'] != null) {
+        payload['route'] = item['route'];
+      }
+      if (!payload.containsKey('task_id') && item['task_id'] != null) {
+        payload['task_id'] = item['task_id'];
+      }
+      if (!payload.containsKey('plan_id') && item['plan_id'] != null) {
+        payload['plan_id'] = item['plan_id'];
+      }
+      if (!payload.containsKey('title') && item['title'] != null) {
+        payload['title'] = item['title'];
+      }
+      return {
+        'label': label,
+        'type': type,
+        'payload': payload,
+        if (item['style'] != null) 'style': item['style'],
+        if (item['stage'] != null) 'stage': item['stage'],
+        if (item['reason_key'] != null) 'reason_key': item['reason_key'],
+        if (payload['prompt'] != null) 'prompt': payload['prompt'],
+        if (payload['route'] != null) 'route': payload['route'],
+      };
+    }
+
+    final label = '$raw'.trim();
+    if (label.isEmpty) {
+      return const {};
+    }
+    return {
+      'label': label,
+      'type': defaultType,
+      'payload': {'prompt': label},
+      'prompt': label,
+    };
+  }
+
+  List<Map<String, dynamic>> _normalizeUxActionList(dynamic raw) {
+    if (raw is! List) {
+      return const [];
+    }
+    return raw
+        .map((item) => _normalizeUxActionItem(item))
+        .where((item) => item.isNotEmpty)
+        .toList();
+  }
+
   Map<String, dynamic> _extractUxEnvelope(Map<String, dynamic>? metadata) {
     if (metadata == null) return const {};
     final envelope = <String, dynamic>{};
@@ -179,30 +249,17 @@ class ChatNotifier extends StateNotifier<ChatState> {
     if (followthrough is Map<String, dynamic>) {
       final nextActionsRaw = followthrough['next_actions'];
       final retryOptionsRaw = followthrough['retry_options'];
-      final nextActions = (nextActionsRaw is List)
-          ? nextActionsRaw.map((e) => '$e').where((e) => e.isNotEmpty).toList()
-          : <String>[];
-      final retryOptions = (retryOptionsRaw is List)
-          ? retryOptionsRaw.map((e) => '$e').where((e) => e.isNotEmpty).toList()
-          : <String>[];
+      final nextActions = _normalizeUxActionList(nextActionsRaw);
+      final retryOptions = _normalizeUxActionList(retryOptionsRaw);
       addWidget('next_actions', {
         'title': followthrough['next_actions_title']?.toString() ?? '下一步建议',
-        'actions': nextActions
-            .map((label) => {
-                  'label': label,
-                  'type': 'prompt',
-                  'prompt': label,
-                },)
-            .toList(),
-        'retry_options': retryOptions
-            .map((label) => {
-                  'label': label,
-                  'type': 'prompt',
-                  'prompt': label,
-                },)
-            .toList(),
+        'actions': nextActions,
+        'retry_options': retryOptions,
         'recovery_message': followthrough['recovery_message'],
         'memory_updates': followthrough['memory_updates'],
+        if (followthrough['stage'] != null) 'stage': followthrough['stage'],
+        if (followthrough['next_actions_strategy'] != null)
+          'next_actions_strategy': followthrough['next_actions_strategy'],
       });
     }
 
@@ -227,9 +284,13 @@ class ChatNotifier extends StateNotifier<ChatState> {
               ? followthrough['recovery_message']
               : null,
           'completion_state': completionState,
+          if (result['blocked_temperature'] != null)
+            'blocked_temperature': result['blocked_temperature'],
+          if (result['blocked_repeat_count'] != null)
+            'blocked_repeat_count': result['blocked_repeat_count'],
           'retry_options': followthrough is Map<String, dynamic>
-              ? followthrough['retry_options']
-              : const <String>[],
+              ? _normalizeUxActionList(followthrough['retry_options'])
+              : const <Map<String, dynamic>>[],
         });
       }
     }
