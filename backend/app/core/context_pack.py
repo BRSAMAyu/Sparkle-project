@@ -169,11 +169,33 @@ def _select_with_diversity(
     return selected
 
 
-SEMANTIC_GATING_RULES: dict[str, dict[str, float | int]] = {
+DEFAULT_SEMANTIC_GATING_RULES: dict[str, dict[str, float | int]] = {
     "preferences": {"candidate_limit": 12, "top_k": 5, "threshold": 0.55},
     "goals": {"candidate_limit": 10, "top_k": 4, "threshold": 0.50},
     "episodic": {"candidate_limit": 12, "top_k": 4, "threshold": 0.52},
 }
+
+
+def _get_semantic_gating_rules() -> dict[str, dict[str, float | int]]:
+    rules = {
+        section: dict(config)
+        for section, config in DEFAULT_SEMANTIC_GATING_RULES.items()
+    }
+    overrides = settings.CONTEXT_SEMANTIC_GATING_RULES
+    if not isinstance(overrides, dict):
+        return rules
+    for section, config in overrides.items():
+        if section not in rules or not isinstance(config, dict):
+            continue
+        for key in ("candidate_limit", "top_k", "threshold"):
+            value = config.get(key)
+            if value is None:
+                continue
+            try:
+                rules[section][key] = int(value) if key != "threshold" else float(value)
+            except Exception:
+                continue
+    return rules
 
 
 def _normalized_ranked(items: list[Any]) -> list[RankedItem[Any]]:
@@ -262,7 +284,7 @@ async def _apply_semantic_gating(
         CONTEXT_SEMANTIC_GATING_FALLBACK_TOTAL.labels(reason=metadata["fallback_reason"]).inc()
         return ranked_items, metadata
 
-    rules = SEMANTIC_GATING_RULES[section]
+    rules = _get_semantic_gating_rules()[section]
     candidates = ranked_items[: int(rules["candidate_limit"])]
     if not candidates:
         metadata["fallback_reason"] = "no_candidates"

@@ -32,6 +32,88 @@ class _SafeFormatDict(dict):
     def __missing__(self, key: str) -> str:
         return ""
 
+
+PROMPT_SECTION_SOFT_LIMIT_TOKENS = 2800
+
+
+def _estimate_prompt_tokens(text: str) -> int:
+    return max(1, len(str(text or "")) // 4)
+
+
+def _detect_feedback_mode(instruction: str | None) -> str:
+    text = str(instruction or "").lower()
+    if not text:
+        return ""
+    if "精简" in text or "太难" in text or "太长" in text or "收短" in text:
+        return "simplify"
+    if "更详细" in text or "更展开" in text or "例子" in text:
+        return "expand"
+    if "答偏" in text or "重答" in text or "当前诉求" in text:
+        return "mismatch"
+    return ""
+
+
+def _soften_section(content: str, *, reason: str) -> str:
+    text = str(content or "").strip()
+    if not text:
+        return ""
+    lines = [line for line in text.splitlines() if line.strip()]
+    return "\n".join([lines[0], f"[冲突预检] {reason}", *lines[1:]]) if lines else text
+
+
+def _truncate_section(content: str, *, target_tokens: int) -> str:
+    text = str(content or "").strip()
+    if not text or _estimate_prompt_tokens(text) <= target_tokens:
+        return text
+    lines = [line for line in text.splitlines() if line.strip()]
+    if not lines:
+        return text
+    kept: list[str] = []
+    used_tokens = 0
+    for idx, line in enumerate(lines):
+        line_tokens = _estimate_prompt_tokens(line)
+        if idx > 0 and used_tokens + line_tokens > target_tokens:
+            break
+        kept.append(line)
+        used_tokens += line_tokens
+    kept.append("...其余低优先级背景已压缩；若与更高优先级指令冲突，以更高优先级为准。")
+    return "\n".join(kept)
+
+
+def _apply_prompt_budget(section_map: dict[str, str], *, priority_map: dict[str, int]) -> dict[str, str]:
+    total_tokens = sum(_estimate_prompt_tokens(content) for content in section_map.values() if str(content or "").strip())
+    if total_tokens <= PROMPT_SECTION_SOFT_LIMIT_TOKENS:
+        return section_map
+
+    min_tokens = {
+        "user_context": 120,
+        "preference_instructions": 80,
+        "conversation_history_section": 80,
+        "task_awareness_section": 80,
+        "cognitive_prism_section": 80,
+        "plan_context_section": 120,
+        "dual_core_section": 80,
+    }
+    adjusted = dict(section_map)
+    for priority in (3, 2):
+        for section_name, content in list(adjusted.items()):
+            if priority_map.get(section_name) != priority:
+                continue
+            text = str(content or "").strip()
+            if not text:
+                continue
+            current_tokens = _estimate_prompt_tokens(text)
+            target_tokens = max(min_tokens.get(section_name, 60), int(current_tokens * 0.6))
+            adjusted[section_name] = _truncate_section(text, target_tokens=target_tokens)
+            total_tokens = sum(
+                _estimate_prompt_tokens(item)
+                for item in adjusted.values()
+                if str(item or "").strip()
+            )
+            if total_tokens <= PROMPT_SECTION_SOFT_LIMIT_TOKENS:
+                return adjusted
+    return adjusted
+
 # ============================================
 # 通用 Agent Prompt 模板
 # ============================================
@@ -533,12 +615,18 @@ def build_system_prompt(
 
     if intent_instruction:
 
-        intent_section = f"\n## 当前意图指令 (最高优先级)\n{intent_instruction}\n请务必执行此意图对应的操作 (如调用相关工具)。"
+        intent_section = (
+            "\n## 当前意图指令 [L1 强制]\n"
+            "[冲突处理] 若与其他指令冲突，优先执行本节。\n"
+            f"{intent_instruction}\n"
+            "请务必执行此意图对应的操作 (如调用相关工具)。"
+        )
 
     session_feedback_section = ""
     if session_feedback_instruction:
         session_feedback_section = (
-            "\n## 会话内反馈适配 (次高优先级)\n"
+            "\n## 会话内反馈适配 [L1 强制]\n"
+            "[冲突处理] 这是本轮即时适配，优先于引导层和背景层。\n"
             f"{session_feedback_instruction}\n"
             "这是一轮内即时调整，优先于长期偏好，但不会更新长期画像。"
         )
@@ -546,7 +634,7 @@ def build_system_prompt(
     dual_core_section = ""
     if dual_core_instruction:
         dual_core_section = (
-            "\n## 双核心路由指令 (高优先级)\n"
+            "\n## 双核心路由指令 [L2 引导]\n"
             f"{dual_core_instruction}\n"
             "请先遵循这组路径与约束，再结合用户一般偏好组织回答。"
         )
@@ -557,7 +645,71 @@ def build_system_prompt(
 
     context_briefing_section = ""
     if context_briefing_note:
-        context_briefing_section = f"## 本轮关键上下文摘要\n{context_briefing_note}"
+        context_briefing_section = f"## 本轮关键上下文摘要 [L0 简报]\n{context_briefing_note}"
+
+    feedback_mode = _detect_feedback_mode(session_feedback_instruction)
+    if feedback_mode == "simplify":
+        preference_instructions = _soften_section(
+            preference_instructions,
+            reason="本轮以精简表达为准；以下偏好仅在不增加篇幅时参考。",
+        )
+        if dual_core_section:
+            dual_core_section = _soften_section(
+                dual_core_section,
+                reason="本轮即时反馈要求更精简；保留路径约束，但避免展开过多说明。",
+            )
+        if cognitive_prism_section:
+            cognitive_prism_section = _soften_section(
+                cognitive_prism_section,
+                reason="本轮以精简表达为准；认知洞察仅作软建议。",
+            )
+    elif feedback_mode == "expand":
+        preference_instructions = _soften_section(
+            preference_instructions,
+            reason="本轮需要更展开说明；简洁偏好降为背景参考。",
+        )
+    elif feedback_mode == "mismatch":
+        if conversation_history_section:
+            conversation_history_section = _soften_section(
+                conversation_history_section,
+                reason="用户刚纠正了方向；历史对话仅作背景，不能覆盖当前诉求。",
+            )
+        if cognitive_prism_section:
+            cognitive_prism_section = _soften_section(
+                cognitive_prism_section,
+                reason="当前以纠正后的问题方向为准；认知洞察只能作为补充。",
+            )
+
+    focus_decision = ContextFocusDecision.from_dict(context_focus)
+    cognitive_priority = 2 if focus_decision and focus_decision.focus_mode in {"emotional_focus", "cognitive_focus"} else 3
+    section_map = {
+        "user_context": f"[优先级：L3 背景]\n{formatted_user_context}".strip(),
+        "preference_instructions": f"[优先级：L3 背景]\n{preference_instructions}".strip(),
+        "plan_context_section": plan_context_section,
+        "dual_core_section": dual_core_section,
+        "cognitive_prism_section": cognitive_prism_section,
+        "conversation_history_section": f"[优先级：L3 背景]\n{conversation_history_section}".strip() if conversation_history_section else "",
+        "task_awareness_section": f"[优先级：L3 背景]\n{TASK_AWARENESS_SECTION}".strip(),
+    }
+    section_map = _apply_prompt_budget(
+        section_map,
+        priority_map={
+            "user_context": 3,
+            "preference_instructions": 3,
+            "plan_context_section": 2,
+            "dual_core_section": 2,
+            "cognitive_prism_section": cognitive_priority,
+            "conversation_history_section": 3,
+            "task_awareness_section": 3,
+        },
+    )
+    formatted_user_context = section_map["user_context"]
+    preference_instructions = section_map["preference_instructions"]
+    plan_context_section = section_map["plan_context_section"]
+    dual_core_section = section_map["dual_core_section"]
+    cognitive_prism_section = section_map["cognitive_prism_section"]
+    conversation_history_section = section_map["conversation_history_section"]
+    task_awareness_section = section_map["task_awareness_section"]
 
 
     # 3. 如果是通用模板，进行完整渲染
@@ -573,7 +725,7 @@ def build_system_prompt(
                 session_feedback_section=session_feedback_section,
                 dual_core_section=dual_core_section,
                 context_briefing_section=context_briefing_section,
-                task_awareness_section=TASK_AWARENESS_SECTION,
+                task_awareness_section=task_awareness_section,
                 cognitive_prism_section=cognitive_prism_section,
             )
         )
@@ -595,13 +747,11 @@ def build_system_prompt(
         if context_briefing_section:
              prompt = f"{context_briefing_section}\n\n{prompt}"
         if intent_instruction:
-
-             prompt += f"\n\n## 当前意图指令\n{intent_instruction}"
+             prompt += f"\n\n## 当前意图指令 [L1 强制]\n{intent_instruction}"
         if session_feedback_instruction:
-             prompt += f"\n\n## 会话内反馈适配\n{session_feedback_instruction}"
+             prompt += f"\n\n## 会话内反馈适配 [L1 强制]\n{session_feedback_instruction}"
         if dual_core_instruction:
-
-             prompt += f"\n\n## 双核心路由指令\n{dual_core_instruction}"
+             prompt += f"\n\n## 双核心路由指令 [L2 引导]\n{dual_core_instruction}"
 
 
 
@@ -839,7 +989,7 @@ def _format_plan_context(
             return ""
 
     # 【强调标题】让 LLM 注意到这部分的重要性
-    lines = ["## 用户学习计划（请在回复中适当引用以下信息）"]
+    lines = ["## 用户学习计划 [L2 引导]（请在回复中适当引用以下信息）"]
 
     # 【计划标题】用户可识别的名称，而非 UUID
     plan_title = plan_context.get("plan_title") or plan_context.get("title") or plan_context.get("name")
@@ -1182,7 +1332,8 @@ def _format_cognitive_prism_section(user_context: dict, context_focus: dict[str,
 
     pattern_text = "、".join(pattern_desc) if pattern_desc else f"{pattern_count}个"
 
-    lines = ["## 认知棱镜 - 行为模式洞察"]
+    priority = "L2 引导" if detail_level == "full" else "L3 背景"
+    lines = [f"## 认知棱镜 - 行为模式洞察 [{priority}]"]
     lines.append(f"用户已有 {pattern_count} 个行为模式分析结果（{pattern_text}）。")
 
     if recent_patterns:

@@ -21,9 +21,9 @@ class BehaviorPatternDecayService:
     async def apply_decay(
         self,
         user_id: UUID,
-        window_days: int = 30,
+        window_days: int = 14,
         decay_factor: float = 0.9,
-        min_confidence: float = 0.35,
+        min_confidence: float = 0.3,
     ) -> dict[str, int]:
         if not settings.ENABLE_BEHAVIOR_DECAY:
             return {"updated": 0, "archived": 0}

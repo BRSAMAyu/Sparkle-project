@@ -19,6 +19,7 @@ def test_detect_simplify_signal_applies_adaptation() -> None:
     assert signal.signal_type == "simplify"
     assert signal.applies_adaptation is True
     assert signal.visible_hint == "我换成更简洁的版本："
+    assert signal.transition_hint == "好，精简版："
 
 
 def test_detect_mismatch_has_higher_priority_than_expand() -> None:
@@ -57,6 +58,7 @@ def test_build_session_feedback_instruction_contains_exact_visible_prefix() -> N
     assert signal is not None
     assert signal.signal_type == "expand"
     assert "我改用更展开的方式说明：" in instruction
+    assert "我换个更展开的讲法：" in instruction
     assert "至少补 1 个例子或类比" in instruction
 
 
@@ -75,6 +77,20 @@ def test_apply_visible_prefix_is_idempotent() -> None:
     assert visible_second is True
     assert first == second
     assert first.startswith("我换成更简洁的版本：")
+
+
+def test_apply_visible_prefix_accepts_natural_transition_hint() -> None:
+    signal = detect_session_feedback_signal(
+        user_message="简单点说",
+        previous_assistant_message="上一轮我给了很长的解释。",
+        previous_user_message="什么是向量数据库？",
+    )
+    assert signal is not None
+
+    adapted, visible = apply_session_feedback_visible_prefix("好，精简版：\n这是正文。", signal)
+
+    assert visible is True
+    assert adapted == "好，精简版：\n这是正文。"
 
 
 def test_build_session_adaptation_context_keeps_latest_three_signals() -> None:

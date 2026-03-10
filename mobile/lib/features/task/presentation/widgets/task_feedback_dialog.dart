@@ -28,6 +28,7 @@ class TaskFeedbackDialog extends ConsumerStatefulWidget {
 
 class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
   int? _rating;
+  String? _selectedCategory;
   final _feedbackController = TextEditingController();
   bool _hasRecordedSkip = false;
   bool _isSubmitting = false;
@@ -65,6 +66,7 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
               feedbackText: _feedbackController.text.trim().isEmpty
                   ? null
                   : _feedbackController.text.trim(),
+              category: _selectedCategory,
             ),
           );
     }
@@ -322,6 +324,37 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
 
                       const SizedBox(height: DS.spacing16),
 
+                      Text(
+                        '这次的难度感觉怎么样？',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: DS.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: DS.xs),
+                      Wrap(
+                        spacing: DS.spacing8,
+                        runSpacing: DS.spacing8,
+                        children: [
+                          _FeedbackCategoryChip(
+                            label: '刚好',
+                            selected: _selectedCategory == 'just_right',
+                            onTap: () => setState(() => _selectedCategory = 'just_right'),
+                          ),
+                          _FeedbackCategoryChip(
+                            label: '还是难',
+                            selected: _selectedCategory == 'too_difficult',
+                            onTap: () => setState(() => _selectedCategory = 'too_difficult'),
+                          ),
+                          _FeedbackCategoryChip(
+                            label: '太简单',
+                            selected: _selectedCategory == 'too_easy',
+                            onTap: () => setState(() => _selectedCategory = 'too_easy'),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: DS.spacing16),
+
                       // Text Feedback (Optional)
                       Text(
                         '有什么想说的? (选填)',
@@ -438,6 +471,46 @@ class _StarRating extends StatelessWidget {
           );
         }),
       );
+}
+
+class _FeedbackCategoryChip extends StatelessWidget {
+  const _FeedbackCategoryChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: DS.borderRadius20,
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing12,
+          vertical: DS.spacing8,
+        ),
+        decoration: BoxDecoration(
+          color: selected ? DS.primaryBase.withValues(alpha: 0.12) : DS.neutral50,
+          borderRadius: DS.borderRadius20,
+          border: Border.all(
+            color: selected ? DS.primaryBase : DS.neutral300,
+          ),
+        ),
+        child: Text(
+          label,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: selected ? DS.primaryBase : DS.textSecondary,
+                fontWeight: selected ? DS.fontWeightSemibold : DS.fontWeightMedium,
+              ),
+        ),
+      ),
+    );
+  }
 }
 
 class _NextActionCard extends StatelessWidget {

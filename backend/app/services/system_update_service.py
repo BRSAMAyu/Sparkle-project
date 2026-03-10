@@ -20,9 +20,9 @@ class SystemUpdateService:
     def __init__(self, redis_client=None):
         self.redis = redis_client or cache_service.redis
 
-    async def enqueue(self, user_id: UUID | str, payload: dict[str, Any]) -> None:
+    async def enqueue(self, user_id: UUID | str, payload: dict[str, Any]) -> bool:
         if not self.redis:
-            return
+            return False
         key = f"{self.KEY_PREFIX}{user_id}"
         raw = json.dumps(payload, ensure_ascii=True, default=str)
         try:
@@ -31,8 +31,10 @@ class SystemUpdateService:
             pipe.ltrim(key, 0, self.MAX_ITEMS - 1)
             pipe.expire(key, self.TTL_SECONDS)
             await pipe.execute()
+            return True
         except Exception as exc:
             logger.warning(f"SystemUpdate enqueue failed: {exc}")
+            return False
 
     async def drain(self, user_id: UUID | str, limit: int = 20) -> list[dict[str, Any]]:
         if not self.redis:

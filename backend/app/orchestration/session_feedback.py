@@ -28,6 +28,12 @@ _VISIBLE_PREFIXES = {
     "mismatch": "我直接按你要的方向重答：",
 }
 
+_TRANSITION_HINT_POOLS = {
+    "simplify": ("好，精简版：", "我先说最关键的："),
+    "expand": ("我换个更展开的讲法：", "我按步骤展开说："),
+    "mismatch": ("我按你刚才真正想问的来答：", "我先把方向校正一下："),
+}
+
 _MISMATCH_PHRASES = (
     "不是这个意思",
     "不对",
@@ -134,6 +140,7 @@ class SessionFeedbackSignal:
     trigger_text: str
     applies_adaptation: bool
     visible_hint: str | None = None
+    transition_hint: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -142,6 +149,7 @@ class SessionFeedbackSignal:
             "trigger_text": self.trigger_text,
             "applies_adaptation": self.applies_adaptation,
             "visible_hint": self.visible_hint,
+            "transition_hint": self.transition_hint,
         }
 
     @classmethod
@@ -157,6 +165,7 @@ class SessionFeedbackSignal:
             trigger_text=str(payload.get("trigger_text") or ""),
             applies_adaptation=bool(payload.get("applies_adaptation")),
             visible_hint=str(payload.get("visible_hint") or "") or None,
+            transition_hint=str(payload.get("transition_hint") or "") or None,
         )
 
     @property
@@ -270,6 +279,7 @@ def _build_signal(signal_type: str, confidence: float, trigger_text: str) -> Ses
         trigger_text=trigger_text,
         applies_adaptation=applies,
         visible_hint=_VISIBLE_PREFIXES.get(signal_type) if applies else None,
+        transition_hint=_TRANSITION_HINT_POOLS.get(signal_type, ("",))[0] if applies else None,
     )
 
 
@@ -279,10 +289,12 @@ def build_session_feedback_instruction(signal: SessionFeedbackSignal | dict[str,
         return ""
 
     prefix = parsed.visible_hint or _VISIBLE_PREFIXES.get(parsed.signal_type, "")
+    transition_hint = parsed.transition_hint or ""
     if parsed.signal_type == "simplify":
         return (
             "用户刚刚明确表示上一轮内容太难、太长或不够易懂。\n"
-            f"你必须在回答开头先用这句极短提示：{prefix}\n"
+            f"优先在回答开头自然使用这句过渡语：{transition_hint or prefix}\n"
+            f"如果你没有自然使用过渡语，系统会在最终输出兜底补上：{prefix}\n"
             "随后严格执行：\n"
             "- 控制在 3 个要点以内\n"
             "- 优先短句，不堆术语\n"
@@ -292,7 +304,8 @@ def build_session_feedback_instruction(signal: SessionFeedbackSignal | dict[str,
     if parsed.signal_type == "expand":
         return (
             "用户刚刚明确要求更详细、更展开的解释。\n"
-            f"你必须在回答开头先用这句极短提示：{prefix}\n"
+            f"优先在回答开头自然使用这句过渡语：{transition_hint or prefix}\n"
+            f"如果你没有自然使用过渡语，系统会在最终输出兜底补上：{prefix}\n"
             "随后严格执行：\n"
             "- 使用分步骤解释\n"
             "- 至少补 1 个例子或类比\n"
@@ -302,7 +315,8 @@ def build_session_feedback_instruction(signal: SessionFeedbackSignal | dict[str,
     if parsed.signal_type == "mismatch":
         return (
             "用户刚刚明确表示上一轮答偏了方向。\n"
-            f"你必须在回答开头先用这句极短提示：{prefix}\n"
+            f"优先在回答开头自然使用这句过渡语：{transition_hint or prefix}\n"
+            f"如果你没有自然使用过渡语，系统会在最终输出兜底补上：{prefix}\n"
             "随后严格执行：\n"
             "- 不要为上一轮辩护\n"
             "- 直接按用户当前诉求重答\n"
@@ -325,8 +339,14 @@ def apply_session_feedback_visible_prefix(
         return response, False
 
     normalized_response = str(response or "").lstrip()
+    transition_hint = str(parsed.transition_hint or "").strip()
     normalized_prefix = prefix.rstrip("：:")
-    if normalized_response.startswith(prefix) or normalized_response.startswith(normalized_prefix):
+    normalized_transition_hint = transition_hint.rstrip("：:").strip()
+    if (
+        normalized_response.startswith(prefix)
+        or normalized_response.startswith(normalized_prefix)
+        or (normalized_transition_hint and normalized_response.startswith(normalized_transition_hint))
+    ):
         return response, True
 
     if not normalized_response:

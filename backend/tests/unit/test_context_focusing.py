@@ -5,7 +5,7 @@ import pytest
 
 from app.config import settings
 from app.core.context_budget import ContextBudgetScheduler
-from app.core.context_pack import ContextPackBuilder
+from app.core.context_pack import ContextPackBuilder, _get_semantic_gating_rules
 from app.models.user import User
 from app.orchestration.context_focus import ContextFocusResolver
 from app.orchestration.prompts import build_system_prompt
@@ -64,6 +64,44 @@ def test_build_system_prompt_uses_briefing_and_hides_irrelevant_plan_section() -
     assert "## 本轮关键上下文摘要" in prompt
     assert "矩阵乘法" in prompt
     assert "英语冲刺计划" not in prompt
+
+
+def test_build_system_prompt_marks_priorities_and_softens_conflicts() -> None:
+    prompt = build_system_prompt(
+        user_context={
+            "preferences": {"depth_preference": 0.9, "curiosity_preference": 0.8},
+            "llm_profile": {"system_prompt_additions": "## 用户偏好适配\n- 请尽量深入展开说明"},
+            "cognitive_insights": {"has_cognitive_patterns": True, "pattern_count": 2, "recent_patterns": ["启动困难"]},
+        },
+        conversation_history={"messages": [{"role": "user", "content": "上一轮说太复杂了"}]},
+        session_feedback_instruction="用户刚要求更简洁，请立刻收短。",
+        dual_core_instruction="优先做认知拆解，再逐层展开。",
+    )
+
+    assert "## 会话内反馈适配 [L1 强制]" in prompt
+    assert "## 双核心路由指令 [L2 引导]" in prompt
+    assert "[优先级：L3 背景]" in prompt
+    assert "[冲突预检] 本轮以精简表达为准" in prompt
+
+
+def test_build_system_prompt_trims_low_priority_sections_when_over_budget() -> None:
+    long_text = "这是很长的背景信息。" * 1200
+    prompt = build_system_prompt(
+        user_context={
+            "preferences": {"depth_preference": 0.5, "curiosity_preference": 0.5},
+            "llm_profile": {"system_prompt_additions": "## 用户偏好适配\n- 保持稳定"},
+            "active_goals": [{"title": long_text, "status": "active"}],
+            "episodic_memories": [{"summary": long_text}],
+        },
+        conversation_history={"messages": [{"role": "user", "content": long_text}]},
+        intent_instruction="先解决用户当前问题。",
+        session_feedback_instruction="用户刚要求更简洁，请立刻收短。",
+        dual_core_instruction="优先执行当前目标。",
+    )
+
+    assert "## 当前意图指令 [L1 强制]" in prompt
+    assert "## 会话内反馈适配 [L1 强制]" in prompt
+    assert "其余低优先级背景已压缩" in prompt
 
 
 @pytest.mark.asyncio
@@ -161,3 +199,19 @@ async def test_context_pack_semantic_gating_filters_irrelevant_memory(db_session
     assert pack.context_focus is not None
     assert pack.context_focus["focus_mode"] == "knowledge_focus"
     assert pack.context_briefing_note
+
+
+def test_context_pack_semantic_gating_rules_can_be_overridden(monkeypatch) -> None:
+    monkeypatch.setattr(
+        settings,
+        "CONTEXT_SEMANTIC_GATING_RULES_JSON",
+        '{"preferences":{"candidate_limit":9,"top_k":2,"threshold":0.61}}',
+        raising=False,
+    )
+
+    rules = _get_semantic_gating_rules()
+
+    assert rules["preferences"]["candidate_limit"] == 9
+    assert rules["preferences"]["top_k"] == 2
+    assert rules["preferences"]["threshold"] == 0.61
+    assert rules["goals"]["top_k"] == 4

@@ -45,17 +45,20 @@ class ReviewReasoningDetail {
     required this.label,
     required this.evidence,
     required this.impact,
+    this.confidenceTier,
   });
 
   final String label;
   final String evidence;
   final String impact;
+  final String? confidenceTier;
 
   static ReviewReasoningDetail fromJson(Map<String, dynamic> json) =>
       ReviewReasoningDetail(
         label: json['label'] as String? ?? '',
         evidence: json['evidence'] as String? ?? '',
         impact: json['impact'] as String? ?? '',
+        confidenceTier: json['confidence_tier'] as String?,
       );
 }
 
@@ -74,6 +77,8 @@ class PlanReviewResult {
     this.userFacingReason,
     this.reasoningSummary,
     this.reasoningDetails = const [],
+    this.alignmentSummary,
+    this.alignmentScore,
   });
 
   final String reviewId;
@@ -88,6 +93,8 @@ class PlanReviewResult {
   final String? userFacingReason; // User-facing explanation of the decision
   final String? reasoningSummary;
   final List<ReviewReasoningDetail> reasoningDetails;
+  final String? alignmentSummary;
+  final double? alignmentScore;
 
   static ReviewDecision _parseDecision(String value) {
     switch (value) {
@@ -129,6 +136,8 @@ class PlanReviewResult {
                 )
                 .toList() ??
             const [],
+        alignmentSummary: json['alignment_summary'] as String?,
+        alignmentScore: (json['alignment_score'] as num?)?.toDouble(),
       );
 }
 
@@ -476,6 +485,10 @@ class _PlanReviewCardState extends State<PlanReviewCard>
                             const SizedBox(height: DS.spacing12),
                             _buildReasoningSummary(color),
                           ],
+                          if ((widget.review.alignmentSummary ?? '').isNotEmpty) ...[
+                            const SizedBox(height: DS.spacing12),
+                            _buildAlignmentSummary(),
+                          ],
                           if (widget.review.reasoningDetails.isNotEmpty) ...[
                             const SizedBox(height: DS.spacing12),
                             _buildReasoningDetails(),
@@ -563,10 +576,56 @@ class _PlanReviewCardState extends State<PlanReviewCard>
                   const SizedBox(height: DS.spacing6),
                   Text('影响：${detail.impact}'),
                 ],
+                if ((detail.confidenceTier ?? '').isNotEmpty) ...[
+                  const SizedBox(height: DS.spacing6),
+                  Text('证据层级：${detail.confidenceTier}'),
+                ],
               ],
             ),
           );
         }).toList(),
+      );
+
+  Widget _buildAlignmentSummary() => Container(
+        padding: const EdgeInsets.all(DS.spacing12),
+        decoration: BoxDecoration(
+          color: DS.info.withValues(alpha: 0.08),
+          borderRadius: DS.borderRadius8,
+          border: Border.all(color: DS.info.withValues(alpha: 0.18)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.track_changes_outlined,
+              size: DS.iconSizeSm,
+              color: DS.info,
+            ),
+            const SizedBox(width: DS.spacing8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.review.alignmentSummary ?? '',
+                    style: const TextStyle(height: 1.45),
+                  ),
+                  if (widget.review.alignmentScore != null) ...[
+                    const SizedBox(height: DS.spacing6),
+                    Text(
+                      '画像对齐度 ${(widget.review.alignmentScore! * 100).toStringAsFixed(0)}%',
+                      style: TextStyle(
+                        color: DS.info,
+                        fontSize: DS.fontSizeXs,
+                        fontWeight: DS.fontWeightSemibold,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
       );
 
   Widget _buildDecisionBadge(ReviewDecision decision) {

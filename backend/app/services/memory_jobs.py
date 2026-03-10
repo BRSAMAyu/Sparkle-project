@@ -104,7 +104,7 @@ class MemoryJobsService:
             logger.error("Memory evidence health job failed: {error}", error=exc)
             return self._record_status("evidence_health", "error", {"error": str(exc)})
 
-    async def run_decay_job(self, user_id: UUID | None = None, window_days: int = 30) -> dict[str, Any]:
+    async def run_decay_job(self, user_id: UUID | None = None, window_days: int = 14) -> dict[str, Any]:
         logger.info("Memory decay job started user_id={user_id} window_days={window}", user_id=user_id, window=window_days)
         try:
             users = await self._get_active_users(user_id)

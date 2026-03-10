@@ -1200,11 +1200,17 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     final comparisonHighlight = action.data['comparison_highlight']?.toString() ?? '';
     final periodRange = action.data['period_range']?.toString() ?? '';
     final reasoningSummary = action.data['reasoning_summary']?.toString() ?? '';
+    final alignmentSummary = action.data['alignment_summary']?.toString() ?? '';
+    final alignmentScore = (action.data['alignment_score'] as num?)?.toDouble();
     final reasoningDetails =
         (action.data['reasoning_details'] as List<dynamic>? ?? [])
             .whereType<Map<dynamic, dynamic>>()
             .map(Map<String, dynamic>.from)
             .toList();
+    final profileHitRate =
+        (action.data['profile_hit_rate'] as Map<dynamic, dynamic>? ??
+                const <dynamic, dynamic>{})
+            .map<String, dynamic>((key, value) => MapEntry('$key', value));
     final confidence = (action.data['confidence'] as num?)?.toDouble();
     final topLearnings = (action.data['top_learnings'] as List<dynamic>? ?? [])
         .map((e) => '$e')
@@ -1341,12 +1347,31 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
               '下周我会这样继续适配：$oneKeyAdjustment',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DS.neutral700,
+              ),
+            ),
+          ],
+          if (evidenceSummary.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing8),
+            Text(
+              evidenceSummary,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: DS.neutral700,
                   ),
             ),
           ],
           if (comparisonHighlight.isNotEmpty) ...[
             const SizedBox(height: DS.spacing8),
             _buildMetaPill(comparisonHighlight),
+          ],
+          if (profileHitRate.isNotEmpty &&
+              (profileHitRate['summary']?.toString() ?? '').isNotEmpty) ...[
+            const SizedBox(height: DS.spacing8),
+            Text(
+              profileHitRate['summary'].toString(),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: DS.neutral700,
+                  ),
+            ),
           ],
           if (periodRange.isNotEmpty) ...[
             const SizedBox(height: DS.spacing8),
@@ -1384,6 +1409,15 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                   ),
             ),
           ],
+          if (evidenceSummary.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing8),
+            Text(
+              evidenceSummary,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: DS.neutral700,
+                  ),
+            ),
+          ],
         ],
         if ((evolutionKind == 'plan_reasoning' || reasoningSummary.isNotEmpty) &&
             reasoningSummary.isNotEmpty) ...[
@@ -1393,6 +1427,30 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: DS.neutral900,
                   fontWeight: DS.fontWeightSemibold,
+              ),
+          ),
+        ],
+        if (alignmentSummary.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing8),
+          Text(
+            alignmentSummary,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: DS.info,
+                ),
+          ),
+        ],
+        if (alignmentScore != null) ...[
+          const SizedBox(height: DS.spacing8),
+          _buildMetaPill('画像对齐度 ${(alignmentScore * 100).toInt()}%'),
+        ],
+        if (evolutionKind == 'plan_reasoning' &&
+            evidenceSummary.isNotEmpty &&
+            reasoningDetails.isEmpty) ...[
+          const SizedBox(height: DS.spacing8),
+          Text(
+            evidenceSummary,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: DS.neutral700,
                 ),
           ),
         ],

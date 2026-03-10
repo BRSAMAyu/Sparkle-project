@@ -266,6 +266,7 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
       final oneKeyAdjustment = metadata['one_key_adjustment']?.toString() ?? '';
       final comparisonHighlight = metadata['comparison_highlight']?.toString() ?? '';
       final periodRange = metadata['period_range']?.toString() ?? '';
+      final evidenceSummary = metadata['evidence_summary']?.toString() ?? '';
       return [
         if (learnings.isNotEmpty) ...[
           const SizedBox(height: DS.spacing8),
@@ -280,6 +281,13 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
           const SizedBox(height: DS.spacing8),
           Text(
             '下周继续适配：$oneKeyAdjustment',
+            style: TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeSm),
+          ),
+        ],
+        if (evidenceSummary.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing8),
+          Text(
+            evidenceSummary,
             style: TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeSm),
           ),
         ],
@@ -307,6 +315,7 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
           (metadata['comparison'] as Map<dynamic, dynamic>? ??
                   const <dynamic, dynamic>{})
               .map<String, dynamic>((key, value) => MapEntry('$key', value));
+      final evidenceSummary = metadata['evidence_summary']?.toString() ?? '';
       if (comparison.isEmpty) {
         return const <Widget>[];
       }
@@ -336,15 +345,25 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
             style: TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeSm),
           ),
         ],
+        if (evidenceSummary.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing8),
+          Text(
+            evidenceSummary,
+            style: TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeSm),
+          ),
+        ],
       ];
     }
     if (evolutionKind == 'plan_reasoning') {
       final reasoningSummary = metadata['reasoning_summary']?.toString() ?? '';
+      final alignmentSummary = metadata['alignment_summary']?.toString() ?? '';
+      final alignmentScore = (metadata['alignment_score'] as num?)?.toDouble();
       final reasoningDetails =
           (metadata['reasoning_details'] as List<dynamic>? ?? [])
               .whereType<Map<dynamic, dynamic>>()
               .map(Map<String, dynamic>.from)
               .toList();
+      final evidenceSummary = metadata['evidence_summary']?.toString() ?? '';
       return [
         if (reasoningSummary.isNotEmpty) ...[
           const SizedBox(height: DS.spacing8),
@@ -352,6 +371,24 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
             reasoningSummary,
             style: TextStyle(
               color: DS.textPrimary,
+              fontWeight: DS.fontWeightSemibold,
+            ),
+          ),
+        ],
+        if (alignmentSummary.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing8),
+          Text(
+            alignmentSummary,
+            style: TextStyle(color: DS.info, fontSize: DS.fontSizeSm),
+          ),
+        ],
+        if (alignmentScore != null) ...[
+          const SizedBox(height: DS.spacing4),
+          Text(
+            '画像对齐度 ${(alignmentScore * 100).toStringAsFixed(0)}%',
+            style: TextStyle(
+              color: DS.info,
+              fontSize: DS.fontSizeXs,
               fontWeight: DS.fontWeightSemibold,
             ),
           ),
@@ -369,6 +406,13 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
                 ),
               ),
             ),
+          ),
+        ],
+        if (evidenceSummary.isNotEmpty && reasoningDetails.isEmpty) ...[
+          const SizedBox(height: DS.spacing8),
+          Text(
+            evidenceSummary,
+            style: TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeSm),
           ),
         ],
       ];

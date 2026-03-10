@@ -185,7 +185,7 @@ class SchedulerService:
         try:
             async with AsyncSessionLocal() as db:
                 service = MemoryJobsService(db)
-                await service.run_decay_job(window_days=30)
+                await service.run_decay_job(window_days=14)
         except Exception as e:
             logger.error(f"Error in memory decay job: {e}", exc_info=True)
 
