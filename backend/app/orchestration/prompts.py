@@ -23,8 +23,10 @@ import random
 from loguru import logger
 
 from app.core.agent_profiles import AgentRole, agent_profile_registry
+from app.core.business_metrics import CONTEXT_FOCUS_PROMPT_SECTION_TOTAL
 from app.core.plan_context import merge_plan_context
 from app.config import settings
+from app.orchestration.context_focus import ContextFocusDecision
 
 class _SafeFormatDict(dict):
     def __missing__(self, key: str) -> str:
@@ -66,9 +68,7 @@ AGENT_SYSTEM_PROMPT = """你是 Sparkle（星火），一个智能学习助手�
 
 
 
-## 当前用户上下文
-
-{user_context}
+{context_briefing_section}
 
 
 
@@ -84,11 +84,21 @@ AGENT_SYSTEM_PROMPT = """你是 Sparkle（星火），一个智能学习助手�
 
 
 
+## 当前用户上下文
+
+{user_context}
+
+
+
 {preference_instructions}
 
 
 
 {plan_context_section}
+
+
+
+{cognitive_prism_section}
 
 
 
@@ -99,10 +109,6 @@ AGENT_SYSTEM_PROMPT = """你是 Sparkle（星火），一个智能学习助手�
 
 
 {task_awareness_section}
-
-
-
-{cognitive_prism_section}
 
 
 
@@ -130,9 +136,7 @@ MODE_SYSTEM_PROMPTS = {
 
 
 
-## 当前用户上下文
-
-{user_context}
+{context_briefing_section}
 
 
 
@@ -148,11 +152,21 @@ MODE_SYSTEM_PROMPTS = {
 
 
 
+## 当前用户上下文
+
+{user_context}
+
+
+
 {preference_instructions}
 
 
 
 {plan_context_section}
+
+
+
+{cognitive_prism_section}
 
 
 
@@ -163,10 +177,6 @@ MODE_SYSTEM_PROMPTS = {
 
 
 {task_awareness_section}
-
-
-
-{cognitive_prism_section}
 
 
 
@@ -208,9 +218,7 @@ MODE_SYSTEM_PROMPTS = {
 
 
 
-## 当前用户上下文
-
-{user_context}
+{context_briefing_section}
 
 
 
@@ -226,11 +234,21 @@ MODE_SYSTEM_PROMPTS = {
 
 
 
+## 当前用户上下文
+
+{user_context}
+
+
+
 {preference_instructions}
 
 
 
 {plan_context_section}
+
+
+
+{cognitive_prism_section}
 
 
 
@@ -241,10 +259,6 @@ MODE_SYSTEM_PROMPTS = {
 
 
 {task_awareness_section}
-
-
-
-{cognitive_prism_section}
 
 
 
@@ -286,9 +300,7 @@ MODE_SYSTEM_PROMPTS = {
 
 
 
-## 当前用户上下文
-
-{user_context}
+{context_briefing_section}
 
 
 
@@ -304,11 +316,21 @@ MODE_SYSTEM_PROMPTS = {
 
 
 
+## 当前用户上下文
+
+{user_context}
+
+
+
 {preference_instructions}
 
 
 
 {plan_context_section}
+
+
+
+{cognitive_prism_section}
 
 
 
@@ -319,10 +341,6 @@ MODE_SYSTEM_PROMPTS = {
 
 
 {task_awareness_section}
-
-
-
-{cognitive_prism_section}
 
 
 
@@ -392,6 +410,10 @@ def build_system_prompt(
 
     dual_core_instruction: str = None,
 
+    context_focus: dict | None = None,
+
+    context_briefing_note: str | None = None,
+
     context_level: str = "full",  # full | light
 
     chat_mode: str = "standard",
@@ -419,6 +441,8 @@ def build_system_prompt(
         intent_instruction: 显式意图指令（从RequestRouter获取）
         session_feedback_instruction: 会话内即时反馈指令（优先级低于显式意图，高于 dual-core/一般偏好）
         dual_core_instruction: 双核心路由指令（优先级低于显式意图与会话内反馈，高于一般偏好）
+        context_focus: 上下文聚焦决策
+        context_briefing_note: 本轮关键上下文摘要
 
 
 
@@ -448,6 +472,14 @@ def build_system_prompt(
 
         user_context = merge_plan_context(user_context, plan_context)
 
+    if context_focus is None and isinstance(user_context, dict):
+        raw_context_focus = user_context.get("context_focus")
+        if isinstance(raw_context_focus, dict):
+            context_focus = raw_context_focus
+
+    if not context_briefing_note and isinstance(user_context, dict):
+        context_briefing_note = str(user_context.get("context_briefing_note") or "").strip()
+
 
 
     # 1. 首先检查 AgentProfile 是否有专用 prompt
@@ -463,18 +495,20 @@ def build_system_prompt(
 
     # 2. 格式化上下文
 
-    formatted_user_context = format_user_context(user_context, context_level=context_level)
+    formatted_user_context = format_user_context(
+        user_context,
+        context_level=context_level,
+        context_focus=context_focus,
+    )
 
 
 
     llm_profile = _extract_llm_profile(user_context)
 
-    preference_instructions = llm_profile.get(
-
-        "system_prompt_additions",
-
-        _get_default_preference_instructions(user_context)
-
+    preference_instructions = _resolve_preference_instructions(
+        user_context=user_context,
+        llm_profile=llm_profile,
+        context_focus=context_focus,
     )
 
 
@@ -485,7 +519,11 @@ def build_system_prompt(
 
     # 2.5 格式化计划上下文
 
-    plan_context_section = _format_plan_context(plan_context)
+    plan_context_section = _format_plan_context(
+        plan_context,
+        context_focus=context_focus,
+        query_text=str(user_context.get("current_query", "") or ""),
+    )
 
 
 
@@ -515,7 +553,11 @@ def build_system_prompt(
 
 
     # 2.7 格式化认知棱镜指令
-    cognitive_prism_section = _format_cognitive_prism_section(user_context)
+    cognitive_prism_section = _format_cognitive_prism_section(user_context, context_focus=context_focus)
+
+    context_briefing_section = ""
+    if context_briefing_note:
+        context_briefing_section = f"## 本轮关键上下文摘要\n{context_briefing_note}"
 
 
     # 3. 如果是通用模板，进行完整渲染
@@ -530,6 +572,7 @@ def build_system_prompt(
                 intent_section=intent_section,
                 session_feedback_section=session_feedback_section,
                 dual_core_section=dual_core_section,
+                context_briefing_section=context_briefing_section,
                 task_awareness_section=TASK_AWARENESS_SECTION,
                 cognitive_prism_section=cognitive_prism_section,
             )
@@ -545,9 +588,12 @@ def build_system_prompt(
             _SafeFormatDict(
                 user_context=formatted_user_context,
                 query=user_context.get("current_query", ""),
+                context_briefing_section=context_briefing_section,
             )
         )
 
+        if context_briefing_section:
+             prompt = f"{context_briefing_section}\n\n{prompt}"
         if intent_instruction:
 
              prompt += f"\n\n## 当前意图指令\n{intent_instruction}"
@@ -571,6 +617,14 @@ def build_system_prompt(
         chat_mode=chat_mode,
         context_level=context_level,
         prompt_version=prompt_version,
+    )
+    _record_context_focus_prompt_sections(
+        focus_payload=context_focus,
+        context_briefing_section=context_briefing_section,
+        user_context_section=formatted_user_context,
+        plan_context_section=plan_context_section,
+        cognitive_prism_section=cognitive_prism_section,
+        conversation_history_section=conversation_history_section,
     )
 
     return prompt
@@ -729,7 +783,35 @@ def _get_default_preference_instructions(user_context: dict) -> str:
 """
 
 
-def _format_plan_context(plan_context: dict = None) -> str:
+def _resolve_preference_instructions(
+    *,
+    user_context: dict,
+    llm_profile: dict[str, Any],
+    context_focus: dict[str, Any] | None,
+) -> str:
+    focus_decision = ContextFocusDecision.from_dict(context_focus)
+    if focus_decision and focus_decision.focus_mode == "emotional_focus":
+        tone = str(llm_profile.get("tone") or "稳定、温和").strip()
+        verbosity = str(llm_profile.get("verbosity_target") or "concise").strip()
+        return (
+            "## 用户偏好适配\n"
+            f"- 当前优先语气：{tone}\n"
+            f"- 当前优先长度：{verbosity}\n"
+            "- 回答先降低认知负荷，再给可执行下一步"
+        )
+
+    return llm_profile.get(
+        "system_prompt_additions",
+        _get_default_preference_instructions(user_context),
+    )
+
+
+def _format_plan_context(
+    plan_context: dict = None,
+    *,
+    context_focus: dict[str, Any] | None = None,
+    query_text: str = "",
+) -> str:
     """
     格式化计划上下文
 
@@ -747,6 +829,15 @@ def _format_plan_context(plan_context: dict = None) -> str:
     if not plan_context or not isinstance(plan_context, dict):
         return ""
 
+    focus_decision = ContextFocusDecision.from_dict(context_focus)
+    detail_level = "medium"
+    if focus_decision is not None:
+        detail_level = str(focus_decision.section_weights.get("plan_context", "medium"))
+        if detail_level == "off":
+            return ""
+        if detail_level == "low" and not _is_query_plan_related(query_text, plan_context):
+            return ""
+
     # 【强调标题】让 LLM 注意到这部分的重要性
     lines = ["## 用户学习计划（请在回复中适当引用以下信息）"]
 
@@ -758,6 +849,9 @@ def _format_plan_context(plan_context: dict = None) -> str:
     goal = plan_context.get("goal") or plan_context.get("plan_description")
     if goal:
         lines.append(f"**计划目标**: {goal}")
+
+    if detail_level == "minimal":
+        return "\n".join(lines[:3])
 
     # 状态（如果不是 active 可以提示）
     status = plan_context.get("status")
@@ -805,11 +899,14 @@ def _format_plan_context(plan_context: dict = None) -> str:
         rate = task_summary.get("avg_completion_rate")
         rate_str = f"，完成率 {rate:.0%}" if rate is not None else ""
         lines.append(f"- 已完成 {completed}/{total} 个任务{rate_str}")
+        if detail_level == "low":
+            return "\n".join(lines)
 
     # 【最近任务】帮助 LLM 了解用户最近在做什么
     task_summaries = plan_context.get("task_summaries") or plan_context.get("recent_tasks")
     if task_summaries:
-        recent = task_summaries[:2] if len(task_summaries) > 2 else task_summaries
+        limit = 1 if detail_level in {"low", "medium"} else 2
+        recent = task_summaries[:limit] if len(task_summaries) > limit else task_summaries
         lines.append("\n**最近在做**:")
         for t in recent:
             if isinstance(t, dict):
@@ -843,11 +940,18 @@ def _format_plan_context(plan_context: dict = None) -> str:
     return "\n".join(lines)
 
 
-def format_user_context(context: dict, context_level: str = "full") -> str:
+def format_user_context(
+    context: dict,
+    context_level: str = "full",
+    context_focus: dict[str, Any] | None = None,
+) -> str:
     """格式化用户上下文"""
     lines = []
 
     normalized = _normalize_user_context(context)
+    focus_decision = ContextFocusDecision.from_dict(context_focus)
+    section_weights = focus_decision.section_weights if focus_decision else {}
+    section_caps = focus_decision.section_caps if focus_decision else {}
 
     # 用户基本信息
     identity = normalized.get("identity")
@@ -876,17 +980,27 @@ def format_user_context(context: dict, context_level: str = "full") -> str:
         lines.append(f"火花等级: {identity['flame_level']}")
 
     # 学习偏好
-    if normalized.get("preferences"):
+    if normalized.get("preferences") and section_weights.get("preferences", "medium") != "off":
         prefs = normalized["preferences"]
         lines.append("【学习偏好】")
-        lines.append(f"- 深度: {prefs.get('depth_preference', 0.5):.1f}")
-        lines.append(f"- 好奇心: {prefs.get('curiosity_preference', 0.5):.1f}")
+        if focus_decision and focus_decision.focus_mode == "emotional_focus":
+            llm_profile = normalized.get("llm_profile") or {}
+            tone = llm_profile.get("tone")
+            verbosity = llm_profile.get("verbosity_target")
+            if tone:
+                lines.append(f"- 语气偏好: {tone}")
+            if verbosity:
+                lines.append(f"- 长度偏好: {verbosity}")
+        else:
+            lines.append(f"- 深度: {prefs.get('depth_preference', 0.5):.1f}")
+            lines.append(f"- 好奇心: {prefs.get('curiosity_preference', 0.5):.1f}")
 
     # 碎片时间推荐线索：待办任务
     next_actions = normalized.get("next_actions") or []
-    if next_actions:
+    task_weight = section_weights.get("task_summary", "medium")
+    if next_actions and task_weight != "off":
         lines.append("【待办任务】")
-        limit = 1 if context_level == "light" else 3
+        limit = section_caps.get("next_actions") or (1 if context_level == "light" else 3)
         lines.append(f"Top {limit}:")
         for task in next_actions[:limit]:
             lines.append(f"- {task.get('title')} ({task.get('estimated_minutes')}m, {task.get('type')})")
@@ -900,11 +1014,27 @@ def format_user_context(context: dict, context_level: str = "full") -> str:
 
     # 活跃计划
     active_plans = normalized.get("active_plans") or []
-    if active_plans:
+    if active_plans and section_weights.get("plan_context", "medium") != "off":
         lines.append("【活跃计划】")
-        limit = 1 if context_level == "light" else 3
+        limit = section_caps.get("active_plans") or (1 if context_level == "light" else 3)
         for plan in active_plans[:limit]:
             lines.append(f"- {plan.get('title')} ({plan.get('type')}, 进度 {plan.get('progress', 0):.0%})")
+
+    active_goals = normalized.get("active_goals") or []
+    if active_goals and section_weights.get("goals", "medium") != "off":
+        lines.append("【当前目标】")
+        goal_limit = section_caps.get("goals") or (1 if context_level == "light" else 3)
+        for goal in active_goals[:goal_limit]:
+            lines.append(f"- {goal.get('title')} ({goal.get('status', 'active')})")
+
+    episodic_memories = normalized.get("episodic_memories") or []
+    if episodic_memories and section_weights.get("episodic", "medium") != "off":
+        lines.append("【近期相关记忆】")
+        memory_limit = section_caps.get("episodic") or (1 if context_level == "light" else 2)
+        for memory in episodic_memories[:memory_limit]:
+            summary = str(memory.get("summary") or "").strip()
+            if summary:
+                lines.append(f"- {summary}")
 
     # 工具偏好 (P4)
     if normalized.get("preferred_tools"):
@@ -920,7 +1050,7 @@ def format_user_context(context: dict, context_level: str = "full") -> str:
             urgency_label = "紧急" if urgency.get("urgent") else "一般"
             lines.append(f"考试倒计时: {days_left} 天 ({urgency_label})")
 
-    if context_level == "full":
+    if context_level == "full" and not active_goals and not episodic_memories:
         context_pack = normalized.get("context_pack") or {}
         metadata = context_pack.get("metadata") if isinstance(context_pack, dict) else None
         evidence = metadata.get("evidence_summary") if isinstance(metadata, dict) else None
@@ -984,6 +1114,10 @@ def _normalize_user_context(context: dict) -> dict:
     if context.get("preferences") and "preferences" not in normalized:
         normalized["preferences"] = context["preferences"]
 
+    llm_profile = context.get("llm_profile")
+    if isinstance(llm_profile, dict):
+        normalized["llm_profile"] = llm_profile
+
     if context.get("analytics_summary"):
         normalized["analytics_summary"] = context["analytics_summary"]
 
@@ -1005,16 +1139,28 @@ def _normalize_user_context(context: dict) -> dict:
     if context.get("context_pack"):
         normalized["context_pack"] = context["context_pack"]
 
+    if context.get("active_goals"):
+        normalized["active_goals"] = context["active_goals"]
+
+    if context.get("episodic_memories"):
+        normalized["episodic_memories"] = context["episodic_memories"]
+
     return normalized
 
 
-def _format_cognitive_prism_section(user_context: dict) -> str:
+def _format_cognitive_prism_section(user_context: dict, context_focus: dict[str, Any] | None = None) -> str:
     """
     格式化认知棱镜指令
 
     当用户有已识别的行为模式时，添加系统提示词引导 LLM 主动展示认知棱镜。
     """
     cognitive_insights = user_context.get("cognitive_insights", {})
+    focus_decision = ContextFocusDecision.from_dict(context_focus)
+    detail_level = "compact"
+    if focus_decision is not None:
+        detail_level = str(focus_decision.section_weights.get("cognitive_prism", "compact"))
+        if detail_level == "off":
+            return ""
 
     if not cognitive_insights.get("has_cognitive_patterns"):
         return ""
@@ -1040,7 +1186,8 @@ def _format_cognitive_prism_section(user_context: dict) -> str:
     lines.append(f"用户已有 {pattern_count} 个行为模式分析结果（{pattern_text}）。")
 
     if recent_patterns:
-        lines.append(f"最近识别的模式: {', '.join(recent_patterns)}")
+        limit = 1 if detail_level == "compact" else min(3, len(recent_patterns))
+        lines.append(f"最近识别的模式: {', '.join(recent_patterns[:limit])}")
 
     lines.append("")
     lines.append("当用户询问学习情况、效率、状态，或适合展示洞察时，主动调用")
@@ -1049,6 +1196,54 @@ def _format_cognitive_prism_section(user_context: dict) -> str:
     lines.append("这不是强制要求，而是要在合适的对话时机自然地展示。")
 
     return "\n".join(lines)
+
+
+def _is_query_plan_related(query_text: str, plan_context: dict[str, Any]) -> bool:
+    query = str(query_text or "").strip().lower()
+    if not query:
+        return False
+    if any(keyword in query for keyword in ("计划", "任务", "复习", "里程碑", "进度", "安排")):
+        return True
+    references = [
+        str(plan_context.get("plan_title") or ""),
+        str(plan_context.get("goal") or ""),
+        str(plan_context.get("plan_description") or ""),
+    ]
+    recent_tasks = plan_context.get("task_summaries") or plan_context.get("recent_tasks") or []
+    for task in recent_tasks[:3]:
+        if isinstance(task, dict):
+            references.append(str(task.get("title") or task.get("name") or ""))
+    haystack = " ".join(part.lower() for part in references if part)
+    return bool(haystack and any(token for token in query.split() if token and token in haystack))
+
+
+def _record_context_focus_prompt_sections(
+    *,
+    focus_payload: dict[str, Any] | None,
+    context_briefing_section: str,
+    user_context_section: str,
+    plan_context_section: str,
+    cognitive_prism_section: str,
+    conversation_history_section: str,
+) -> None:
+    focus_decision = ContextFocusDecision.from_dict(focus_payload)
+    focus_mode = focus_decision.focus_mode if focus_decision else "general_focus"
+    detail_defaults = focus_decision.section_weights if focus_decision else {}
+    sections = {
+        "briefing": (context_briefing_section, "high"),
+        "user_context": (user_context_section, detail_defaults.get("user_context", "medium")),
+        "plan_context": (plan_context_section, detail_defaults.get("plan_context", "medium")),
+        "cognitive_prism": (cognitive_prism_section, detail_defaults.get("cognitive_prism", "compact")),
+        "conversation_history": (conversation_history_section, "standard"),
+    }
+    for section, (content, detail_level) in sections.items():
+        if not str(content or "").strip():
+            continue
+        CONTEXT_FOCUS_PROMPT_SECTION_TOTAL.labels(
+            focus_mode=focus_mode,
+            section=section,
+            detail_level=detail_level,
+        ).inc()
 
 
 def _extract_profile(user_context: dict) -> dict:

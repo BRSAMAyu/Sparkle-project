@@ -72,7 +72,11 @@ async def chat_with_task_context(
     AgentErrorHandler()
 
     # 2. Build Context
-    user_context = await get_user_context(db, current_user.id, payload={"context": request.context})
+    user_context = await get_user_context(
+        db,
+        current_user.id,
+        payload={"context": request.context, "message": request.message},
+    )
 
     # Inject Task Context specifically
     task_context = {
@@ -193,7 +197,11 @@ async def chat(
     error_handler = AgentErrorHandler()
 
     # 1. 构建上下文和对话历史
-    user_context = await get_user_context(db, current_user.id, payload={"context": request.context})
+    user_context = await get_user_context(
+        db,
+        current_user.id,
+        payload={"context": request.context, "message": request.message},
+    )
     conversation_history_raw = await get_conversation_history(
         db, current_user.id, request.conversation_id
     )
@@ -330,7 +338,11 @@ async def chat_stream(
         user_id_uuid = current_user.id
 
         # Build context
-        user_context = await get_user_context(db, user_id_uuid, payload={"context": request.context})
+        user_context = await get_user_context(
+            db,
+            user_id_uuid,
+            payload={"context": request.context, "message": request.message},
+        )
         conversation_history_raw = await get_conversation_history(
             db, user_id_uuid, request.conversation_id
         )
@@ -610,6 +622,9 @@ async def get_user_context(db: AsyncSession, user_id: UUID, payload: dict[str, A
             pack_builder = ContextPackBuilder(db, redis=cache_service.redis)
             request_id = payload.get("request_id") if payload else None
             trace_id = payload.get("trace_id") if payload else None
+            query_text = str(payload.get("message") or "") if payload else ""
+            focus_mode = payload.get("focus_mode") if payload else None
+            route_intent = payload.get("route_intent") if payload else None
 
             # Extract plan_id from payload for PlanScope context
             plan_id = None
@@ -627,6 +642,9 @@ async def get_user_context(db: AsyncSession, user_id: UUID, payload: dict[str, A
                 request_id=request_id,
                 trace_id=trace_id,
                 plan_id=plan_id,
+                query_text=query_text,
+                focus_mode=focus_mode,
+                route_intent=route_intent or intent,
             )
             return pack.to_prompt_context()
 

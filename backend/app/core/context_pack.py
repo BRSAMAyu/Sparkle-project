@@ -16,14 +16,24 @@ except ImportError:  # pragma: no cover - optional runtime dependency
 
 from app.config import settings
 from app.core.business_metrics import (
+    CONTEXT_BRIEFING_GENERATED_TOTAL,
     CONTEXT_PACK_BUILD,
     CONTEXT_PACK_INTENT,
     CONTEXT_PACK_OVER_BUDGET,
+    CONTEXT_SEMANTIC_GATING_APPLIED_TOTAL,
+    CONTEXT_SEMANTIC_GATING_FALLBACK_TOTAL,
 )
 from app.core.context_budget import ContextBudgetScheduler
 from app.core.context_ranker import RankedItem, rank_items
 from app.core.plan_context import PlanContextBuilder
+from app.orchestration.context_focus import (
+    ContextFocusResolver,
+    build_context_briefing_note,
+    cosine_similarity,
+    get_focus_profile,
+)
 from app.services.context_pack_telemetry_service import ContextPackTelemetryService
+from app.services.embedding_service import embedding_service
 from app.services.ltm_rollout_service import LtmRolloutService
 from app.services.memory_conflict_resolver import MemoryConflictResolver
 from app.services.memory_rank_policy_service import MemoryRankPolicyService
@@ -159,6 +169,156 @@ def _select_with_diversity(
     return selected
 
 
+SEMANTIC_GATING_RULES: dict[str, dict[str, float | int]] = {
+    "preferences": {"candidate_limit": 12, "top_k": 5, "threshold": 0.55},
+    "goals": {"candidate_limit": 10, "top_k": 4, "threshold": 0.50},
+    "episodic": {"candidate_limit": 12, "top_k": 4, "threshold": 0.52},
+}
+
+
+def _normalized_ranked(items: list[Any]) -> list[RankedItem[Any]]:
+    normalized: list[RankedItem[Any]] = []
+    for item in items:
+        normalized.append(
+            RankedItem(
+                item=item,
+                score=float(getattr(item, "evidence_score", 0.0) or 0.0),
+            )
+        )
+    normalized.sort(
+        key=lambda entry: (
+            entry.score,
+            getattr(entry.item, "updated_at", None) or getattr(entry.item, "occurred_at", None),
+        ),
+        reverse=True,
+    )
+    return normalized
+
+
+def _serialize_focus_value(value: Any) -> str:
+    if isinstance(value, dict):
+        primary = value.get("value")
+        if primary is not None:
+            return str(primary)
+        return _serialize(value)
+    if isinstance(value, list):
+        return ", ".join(str(item) for item in value[:5])
+    return str(value)
+
+
+def _build_semantic_text(item: Any, section: str) -> str:
+    if section == "preferences":
+        return f"{getattr(item, 'pref_key', '')} {_serialize_focus_value(getattr(item, 'pref_value', ''))}".strip()
+    if section == "goals":
+        title = getattr(item, "title", "")
+        status = getattr(item, "status", "")
+        target_date = getattr(item, "target_date", None)
+        return f"{title} {status} {target_date or ''}".strip()
+    summary = getattr(item, "summary", "")
+    tags = getattr(item, "tags", None) or []
+    importance = getattr(item, "importance_score", "")
+    return f"{summary} {' '.join(str(tag) for tag in tags)} {importance}".strip()
+
+
+def _reweight_budgets(budgets: dict[str, int], focus_mode: str | None) -> dict[str, int]:
+    profile = get_focus_profile(focus_mode)
+    weighted = {
+        key: float(budgets.get(key, 0)) * float(profile.memory_budget_weights.get(key, 1.0))
+        for key in ("preferences", "goals", "episodic")
+    }
+    total = sum(budgets.get(key, 0) for key in weighted)
+    weighted_total = sum(weighted.values())
+    if total <= 0 or weighted_total <= 0:
+        return dict(budgets)
+    scaled = {key: weighted[key] * total / weighted_total for key in weighted}
+    adjusted = {}
+    remainder = total
+    keys = list(weighted.keys())
+    for idx, key in enumerate(keys):
+        if idx == len(keys) - 1:
+            adjusted[key] = max(0, remainder)
+            break
+        value = max(0, int(round(scaled[key])))
+        adjusted[key] = value
+        remainder -= value
+    return adjusted
+
+
+async def _apply_semantic_gating(
+    ranked_items: list[RankedItem[Any]],
+    *,
+    query_text: str | None,
+    section: str,
+) -> tuple[list[RankedItem[Any]], dict[str, Any]]:
+    metadata: dict[str, Any] = {
+        "section": section,
+        "applied": False,
+        "candidate_count": len(ranked_items),
+        "selected_count": len(ranked_items),
+    }
+    text = str(query_text or "").strip()
+    if not text:
+        metadata["fallback_reason"] = "missing_query"
+        CONTEXT_SEMANTIC_GATING_FALLBACK_TOTAL.labels(reason=metadata["fallback_reason"]).inc()
+        return ranked_items, metadata
+
+    rules = SEMANTIC_GATING_RULES[section]
+    candidates = ranked_items[: int(rules["candidate_limit"])]
+    if not candidates:
+        metadata["fallback_reason"] = "no_candidates"
+        CONTEXT_SEMANTIC_GATING_FALLBACK_TOTAL.labels(reason=metadata["fallback_reason"]).inc()
+        return ranked_items, metadata
+
+    candidate_texts = [_build_semantic_text(entry.item, section) for entry in candidates]
+    if not any(candidate_texts):
+        metadata["fallback_reason"] = "empty_candidate_text"
+        CONTEXT_SEMANTIC_GATING_FALLBACK_TOTAL.labels(reason=metadata["fallback_reason"]).inc()
+        return ranked_items, metadata
+
+    try:
+        embeddings = await embedding_service.batch_embeddings(
+            [text, *candidate_texts],
+            text_type="query",
+        )
+        if len(embeddings) < len(candidate_texts) + 1:
+            raise ValueError("embedding_count_mismatch")
+        query_embedding = embeddings[0]
+        if not query_embedding or not any(query_embedding):
+            raise ValueError("query_embedding_empty")
+    except Exception as exc:
+        metadata["fallback_reason"] = f"embedding_error:{type(exc).__name__}"
+        CONTEXT_SEMANTIC_GATING_FALLBACK_TOTAL.labels(reason=metadata["fallback_reason"]).inc()
+        logger.warning(f"Semantic gating failed for {section}: {exc}")
+        return ranked_items, metadata
+
+    scored: list[RankedItem[Any]] = []
+    threshold = float(rules["threshold"])
+    top_k = int(rules["top_k"])
+    for idx, entry in enumerate(candidates, start=1):
+        semantic_score = cosine_similarity(query_embedding, embeddings[idx])
+        final_score = (entry.score * 0.6) + (semantic_score * 0.4)
+        if semantic_score >= threshold:
+            scored.append(RankedItem(item=entry.item, score=final_score))
+
+    if len(scored) < top_k:
+        existing_ids = {getattr(entry.item, "id", None) or getattr(entry.item, "pref_key", None) for entry in scored}
+        for entry in candidates:
+            identity = getattr(entry.item, "id", None) or getattr(entry.item, "pref_key", None)
+            if identity in existing_ids:
+                continue
+            scored.append(entry)
+            if len(scored) >= top_k:
+                break
+
+    scored.sort(key=lambda entry: entry.score, reverse=True)
+    selected = scored[:top_k] or ranked_items
+    metadata["applied"] = True
+    metadata["selected_count"] = len(selected)
+    metadata["top_score"] = selected[0].score if selected else 0.0
+    CONTEXT_SEMANTIC_GATING_APPLIED_TOTAL.labels(section=section).inc()
+    return selected, metadata
+
+
 @dataclass
 class ContextPack:
     user_id: UUID
@@ -172,6 +332,8 @@ class ContextPack:
     pack_id: UUID | None = None
     metadata: dict[str, Any] | None = None
     plan_context: dict[str, Any] | None = None  # PlanScope context
+    context_focus: dict[str, Any] | None = None
+    context_briefing_note: str | None = None
 
     def to_prompt_context(self) -> dict[str, Any]:
         result = {
@@ -187,6 +349,10 @@ class ContextPack:
                 "metadata": self.metadata or {},
             },
         }
+        if self.context_focus:
+            result["context_focus"] = self.context_focus
+        if self.context_briefing_note:
+            result["context_briefing_note"] = self.context_briefing_note
         # Include plan_context if present (non-empty)
         if self.plan_context:
             result["plan_context"] = self.plan_context
@@ -212,6 +378,9 @@ class ContextPackBuilder:
         request_id: str | None = None,
         trace_id: str | None = None,
         plan_id: UUID | None = None,
+        query_text: str | None = None,
+        focus_mode: str | None = None,
+        route_intent: str | None = None,
     ) -> ContextPack:
         rollout_enabled = True
         if settings.ENABLE_LTM_ROLLOUT:
@@ -243,6 +412,18 @@ class ContextPackBuilder:
                     logger.warning(f"Failed to build basic plan context: {e2}")
                     plan_context = None
 
+        focus_decision = None
+        if settings.ENABLE_CONTEXT_FOCUSING:
+            focus_resolver = ContextFocusResolver()
+            focus_decision = focus_resolver.resolve(
+                user_message=str(query_text or ""),
+                route_intent=route_intent or intent,
+                plan_context=plan_context,
+                cognitive_insights=None,
+                force_focus_mode=focus_mode,
+            )
+            budgets = _reweight_budgets(budgets, focus_decision.focus_mode)
+
         conflict_enabled = settings.ENABLE_MEMORY_CONFLICT_RESOLUTION and rollout_enabled
         resolver = MemoryConflictResolver() if conflict_enabled else None
 
@@ -266,68 +447,20 @@ class ContextPackBuilder:
             ranked_goals = rank_items(goals, kind="goals", weights=weights)
             ranked_episodic = rank_items(episodic, kind="episodic", weights=weights)
 
-            cap_goals = settings.CONTEXT_RANKING_SOFT_CAP_GOALS
-            cap_episodic = settings.CONTEXT_RANKING_SOFT_CAP_EPISODIC
-
             selected_goals = _select_with_diversity(
                 ranked_goals,
-                cap_goals,
+                settings.CONTEXT_RANKING_SOFT_CAP_GOALS,
                 lambda item: item.status,
             )
             selected_episodic = _select_with_diversity(
                 ranked_episodic,
-                cap_episodic,
+                settings.CONTEXT_RANKING_SOFT_CAP_EPISODIC,
                 lambda item: (item.tags or [None])[0],
             )
 
             resolved_pref_records = preference_records
             resolved_goals = [entry.item for entry in selected_goals]
             resolved_episodic = [entry.item for entry in selected_episodic]
-
-            if conflict_enabled and resolver is not None:
-                preferences, resolved_pref_records, pref_conflicts = resolver.resolve_preferences(
-                    {item.pref_key: item.pref_value for item in preference_records},
-                    pref_history or resolved_pref_records,
-                )
-                resolved_goals, goal_conflicts = resolver.resolve_goals(resolved_goals)
-                resolved_episodic, episodic_conflicts = resolver.resolve_episodic(resolved_episodic)
-                resolved_goals, resolved_episodic, cross_conflicts = resolver.resolve_cross_type(
-                    resolved_goals,
-                    resolved_episodic,
-                )
-                conflicts.extend(pref_conflicts)
-                conflicts.extend(goal_conflicts)
-                conflicts.extend(episodic_conflicts)
-                conflicts.extend(cross_conflicts)
-            else:
-                preferences = {item.pref_key: item.pref_value for item in preference_records}
-
-            ranked_preferences = rank_items(resolved_pref_records, kind="preferences", weights=weights)
-            ranked_goals = rank_items(resolved_goals, kind="goals", weights=weights)
-            ranked_episodic = rank_items(resolved_episodic, kind="episodic", weights=weights)
-
-            goal_payloads = [
-                {
-                    "id": str(entry.item.id),
-                    "title": entry.item.title,
-                    "status": entry.item.status,
-                    "target_date": entry.item.target_date,
-                }
-                for entry in ranked_goals
-            ]
-            episodic_payloads = [
-                {
-                    "id": str(entry.item.id),
-                    "summary": entry.item.summary,
-                    "occurred_at": entry.item.occurred_at,
-                    "importance_score": entry.item.importance_score,
-                }
-                for entry in ranked_episodic
-            ]
-
-            pref_scores = {entry.item.pref_key: entry.score for entry in ranked_preferences}
-            goal_scores = {str(entry.item.id): entry.score for entry in ranked_goals}
-            episodic_scores = {str(entry.item.id): entry.score for entry in ranked_episodic}
         else:
             preference_records.sort(
                 key=lambda item: (item.evidence_score or 0.0, item.updated_at),
@@ -341,51 +474,86 @@ class ContextPackBuilder:
                 key=lambda item: (item.evidence_score or 0.0, item.occurred_at),
                 reverse=True,
             )
-
             resolved_pref_records = preference_records
             resolved_goals = goals
             resolved_episodic = episodic
 
-            if conflict_enabled and resolver is not None:
-                preferences, resolved_pref_records, pref_conflicts = resolver.resolve_preferences(
-                    {item.pref_key: item.pref_value for item in preference_records},
-                    pref_history or resolved_pref_records,
-                )
-                resolved_goals, goal_conflicts = resolver.resolve_goals(resolved_goals)
-                resolved_episodic, episodic_conflicts = resolver.resolve_episodic(resolved_episodic)
-                resolved_goals, resolved_episodic, cross_conflicts = resolver.resolve_cross_type(
-                    resolved_goals,
-                    resolved_episodic,
-                )
-                conflicts.extend(pref_conflicts)
-                conflicts.extend(goal_conflicts)
-                conflicts.extend(episodic_conflicts)
-                conflicts.extend(cross_conflicts)
-            else:
-                preferences = {item.pref_key: item.pref_value for item in preference_records}
+        if conflict_enabled and resolver is not None:
+            preferences, resolved_pref_records, pref_conflicts = resolver.resolve_preferences(
+                {item.pref_key: item.pref_value for item in preference_records},
+                pref_history or resolved_pref_records,
+            )
+            resolved_goals, goal_conflicts = resolver.resolve_goals(resolved_goals)
+            resolved_episodic, episodic_conflicts = resolver.resolve_episodic(resolved_episodic)
+            resolved_goals, resolved_episodic, cross_conflicts = resolver.resolve_cross_type(
+                resolved_goals,
+                resolved_episodic,
+            )
+            conflicts.extend(pref_conflicts)
+            conflicts.extend(goal_conflicts)
+            conflicts.extend(episodic_conflicts)
+            conflicts.extend(cross_conflicts)
+        else:
+            preferences = {item.pref_key: item.pref_value for item in preference_records}
 
-            goal_payloads = [
-                {
-                    "id": str(item.id),
-                    "title": item.title,
-                    "status": item.status,
-                    "target_date": item.target_date,
-                }
-                for item in resolved_goals
-            ]
-            episodic_payloads = [
-                {
-                    "id": str(item.id),
-                    "summary": item.summary,
-                    "occurred_at": item.occurred_at,
-                    "importance_score": item.importance_score,
-                }
-                for item in resolved_episodic
-            ]
+        ranked_preferences = (
+            rank_items(resolved_pref_records, kind="preferences", weights=weights)
+            if ranking_enabled else _normalized_ranked(resolved_pref_records)
+        )
+        ranked_goals = (
+            rank_items(resolved_goals, kind="goals", weights=weights)
+            if ranking_enabled else _normalized_ranked(resolved_goals)
+        )
+        ranked_episodic = (
+            rank_items(resolved_episodic, kind="episodic", weights=weights)
+            if ranking_enabled else _normalized_ranked(resolved_episodic)
+        )
 
-            pref_scores = {}
-            goal_scores = {}
-            episodic_scores = {}
+        semantic_metadata: dict[str, Any] = {}
+        if focus_decision and focus_decision.semantic_gating_enabled and settings.ENABLE_CONTEXT_SEMANTIC_GATING:
+            ranked_preferences, semantic_metadata["preferences"] = await _apply_semantic_gating(
+                ranked_preferences,
+                query_text=query_text,
+                section="preferences",
+            )
+            ranked_goals, semantic_metadata["goals"] = await _apply_semantic_gating(
+                ranked_goals,
+                query_text=query_text,
+                section="goals",
+            )
+            ranked_episodic, semantic_metadata["episodic"] = await _apply_semantic_gating(
+                ranked_episodic,
+                query_text=query_text,
+                section="episodic",
+            )
+
+        preferences = {
+            entry.item.pref_key: entry.item.pref_value
+            for entry in ranked_preferences
+        }
+        goal_payloads = [
+            {
+                "id": str(entry.item.id),
+                "title": entry.item.title,
+                "status": entry.item.status,
+                "target_date": entry.item.target_date,
+            }
+            for entry in ranked_goals
+        ]
+        episodic_payloads = [
+            {
+                "id": str(entry.item.id),
+                "summary": entry.item.summary,
+                "occurred_at": entry.item.occurred_at,
+                "importance_score": entry.item.importance_score,
+                "tags": getattr(entry.item, "tags", None) or [],
+            }
+            for entry in ranked_episodic
+        ]
+
+        pref_scores = {entry.item.pref_key: entry.score for entry in ranked_preferences}
+        goal_scores = {str(entry.item.id): entry.score for entry in ranked_goals}
+        episodic_scores = {str(entry.item.id): entry.score for entry in ranked_episodic}
 
         pref_budget = budgets.get("preferences", 0)
         goals_budget = budgets.get("goals", 0)
@@ -438,8 +606,12 @@ class ContextPackBuilder:
                     for payload in trimmed_episodic[:10]
                 ],
             }
+        if semantic_metadata:
+            metadata["semantic_gating"] = semantic_metadata
         if conflicts:
             metadata["conflicts"] = conflicts
+        if focus_decision:
+            metadata["context_focus"] = focus_decision.to_dict()
 
         preference_source_records = resolved_pref_records if conflict_enabled else preference_records
         goal_source_records = resolved_goals if conflict_enabled else goals
@@ -484,6 +656,25 @@ class ContextPackBuilder:
 
         if evidence_summary["preferences"] or evidence_summary["goals"] or evidence_summary["episodic"]:
             metadata["evidence_summary"] = evidence_summary
+
+        context_briefing_note = ""
+        if focus_decision and settings.ENABLE_CONTEXT_BRIEFING:
+            context_briefing_note = build_context_briefing_note(
+                decision=focus_decision,
+                plan_context=plan_context,
+                user_context={
+                    "llm_profile": {},
+                },
+                focused_memory={
+                    "preferences": trimmed_preferences,
+                    "active_goals": trimmed_goals,
+                    "episodic_memories": trimmed_episodic,
+                },
+            )
+            if context_briefing_note:
+                CONTEXT_BRIEFING_GENERATED_TOTAL.labels(
+                    focus_mode=focus_decision.focus_mode,
+                ).inc()
 
         pack_id = None
         if settings.ENABLE_CONTEXT_PACK_TELEMETRY:
@@ -546,4 +737,6 @@ class ContextPackBuilder:
             pack_id=pack_id,
             metadata=metadata or None,
             plan_context=plan_context,
+            context_focus=focus_decision.to_dict() if focus_decision else None,
+            context_briefing_note=context_briefing_note or None,
         )

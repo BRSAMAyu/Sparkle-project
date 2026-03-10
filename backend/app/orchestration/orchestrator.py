@@ -17,7 +17,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.agents.standard_workflow import create_standard_chat_graph
 from app.checkpoint.redis_checkpointer import RedisCheckpointer
 from app.config import settings
-from app.core.business_metrics import COLLABORATION_LATENCY, COLLABORATION_SUCCESS, HITL_REQUESTED
+from app.core.business_metrics import (
+    COLLABORATION_LATENCY,
+    COLLABORATION_SUCCESS,
+    CONTEXT_FOCUS_DECISION_TOTAL,
+    HITL_REQUESTED,
+)
 from app.core.metrics import (
     ACTIVE_SESSIONS,
     ADAPTIVE_ROUTING_ADJUSTMENTS_TOTAL,
@@ -47,6 +52,10 @@ from app.models.task_feedback import TaskFeedback
 # Phase 3: Circuit Breaker, Observability, Shadow Mode
 from app.orchestration.circuit_breaker import CircuitBreaker, CircuitBreakerConfig, circuit_breaker_registry
 from app.orchestration.composer import ResponseComposer
+from app.orchestration.context_focus import (
+    FocusedContextAssembler,
+    infer_route_intent_from_chat_mode,
+)
 from app.orchestration.context_pruner import ContextPruner
 from app.orchestration.dynamic_tool_registry import dynamic_tool_registry
 from app.orchestration.dual_core_router import DualCoreRoutingInput, dual_core_router
@@ -453,6 +462,66 @@ class ChatOrchestrator:
         )
         await self._save_session_adaptation_context(session_id, adaptation_context)
         return signal, adaptation_context
+
+    async def _apply_context_focus_overlay(
+        self,
+        *,
+        active_db: AsyncSession | None,
+        user_id: str,
+        user_message: str,
+        route_intent: str | None,
+        plan_id: uuid.UUID | None,
+        plan_context: dict[str, Any] | None,
+        user_context_payload: dict[str, Any] | None,
+        state: WorkflowState | None = None,
+        session_feedback_signal: dict[str, Any] | None = None,
+        force_focus_mode: str | None = None,
+    ) -> dict[str, Any] | None:
+        if not settings.ENABLE_CONTEXT_FOCUSING or not active_db or user_context_payload is None:
+            return user_context_payload
+
+        try:
+            assembler = FocusedContextAssembler(active_db, self.redis)
+            focus_decision, focused_memory, briefing_note = await assembler.assemble(
+                user_id=uuid.UUID(str(user_id)),
+                user_message=user_message,
+                route_intent=route_intent,
+                plan_id=plan_id,
+                plan_context=plan_context,
+                user_context_payload=user_context_payload,
+                session_feedback_signal=session_feedback_signal,
+                force_focus_mode=force_focus_mode,
+            )
+        except Exception as exc:
+            logger.warning(f"Failed to apply context focus overlay: {exc}")
+            return user_context_payload
+
+        merged_context = dict(user_context_payload)
+        merged_context["current_query"] = user_message
+        merged_context["context_focus"] = focus_decision.to_dict()
+        if briefing_note:
+            merged_context["context_briefing_note"] = briefing_note
+        if focused_memory:
+            merged_context["preferences"] = focused_memory.get("preferences", merged_context.get("preferences", {}))
+            merged_context["active_goals"] = focused_memory.get("active_goals", [])
+            merged_context["episodic_memories"] = focused_memory.get("episodic_memories", [])
+            merged_context["focused_memory"] = focused_memory
+            focused_pack = focused_memory.get("context_pack")
+            if isinstance(focused_pack, dict):
+                merged_context["context_pack"] = focused_pack
+
+        CONTEXT_FOCUS_DECISION_TOTAL.labels(
+            focus_mode=focus_decision.focus_mode,
+            route_intent=str(focus_decision.route_intent or route_intent or "chat"),
+        ).inc()
+
+        if state is not None:
+            state.context_data["user_context"] = merged_context
+            state.context_data["context_focus"] = focus_decision.to_dict()
+            state.context_data["focused_memory"] = focused_memory
+            if briefing_note:
+                state.context_data["context_briefing_note"] = briefing_note
+        return merged_context
 
     def _chain_event_handlers(self, *handlers):
         """Chain multiple event handlers"""
@@ -2270,6 +2339,29 @@ class ChatOrchestrator:
                 ensure_ascii=False,
             )
         response_metadata["session_adaptation_visible"] = "true" if session_adaptation_visible else "false"
+        if settings.ENABLE_CONTEXT_FOCUS_METADATA:
+            context_focus = final_state.context_data.get("context_focus")
+            if context_focus:
+                response_metadata["context_focus"] = json.dumps(context_focus, ensure_ascii=False)
+                response_metadata["context_section_weights"] = json.dumps(
+                    dict(context_focus.get("section_weights") or {}),
+                    ensure_ascii=False,
+                )
+            briefing_note = str(final_state.context_data.get("context_briefing_note") or "").strip()
+            if briefing_note:
+                response_metadata["context_briefing_note"] = briefing_note
+            focused_memory = final_state.context_data.get("focused_memory")
+            if isinstance(focused_memory, dict):
+                summary = {
+                    "preferences": len(dict(focused_memory.get("preferences") or {})),
+                    "goals": len(list(focused_memory.get("active_goals") or [])),
+                    "episodic": len(list(focused_memory.get("episodic_memories") or [])),
+                }
+                response_metadata["focused_memory_summary"] = json.dumps(summary, ensure_ascii=False)
+                context_pack_meta = ((focused_memory.get("context_pack") or {}).get("metadata") or {})
+                semantic_meta = context_pack_meta.get("semantic_gating")
+                if semantic_meta:
+                    response_metadata["context_semantic_gating"] = json.dumps(semantic_meta, ensure_ascii=False)
 
         execution_validation = await self._validate_plan_execution(
             executable_plan=executable_plan,
@@ -2700,6 +2792,8 @@ class ChatOrchestrator:
             "session_feedback_signal": session_feedback_signal,
             "session_feedback_instruction": build_session_feedback_instruction(session_feedback_signal),
             "session_adaptation": session_adaptation_context,
+            "context_focus": (user_context_payload or {}).get("context_focus"),
+            "context_briefing_note": (user_context_payload or {}).get("context_briefing_note"),
         }
         full_text_parts: list[str] = []
         full_text_override = ""
@@ -2819,6 +2913,32 @@ class ChatOrchestrator:
                         session_adaptation_context,
                         ensure_ascii=False,
                     )
+                if settings.ENABLE_CONTEXT_FOCUS_METADATA:
+                    context_focus = None
+                    briefing_note = ""
+                    focused_memory = None
+                    if isinstance(user_context_payload, dict):
+                        context_focus = user_context_payload.get("context_focus")
+                        briefing_note = str(user_context_payload.get("context_briefing_note") or "").strip()
+                        focused_memory = user_context_payload.get("focused_memory")
+                    if context_focus:
+                        response_metadata["context_focus"] = json.dumps(context_focus, ensure_ascii=False)
+                        response_metadata["context_section_weights"] = json.dumps(
+                            dict(context_focus.get("section_weights") or {}),
+                            ensure_ascii=False,
+                        )
+                    if briefing_note:
+                        response_metadata["context_briefing_note"] = briefing_note
+                    if isinstance(focused_memory, dict):
+                        summary = {
+                            "preferences": len(dict(focused_memory.get("preferences") or {})),
+                            "goals": len(list(focused_memory.get("active_goals") or [])),
+                            "episodic": len(list(focused_memory.get("episodic_memories") or [])),
+                        }
+                        response_metadata["focused_memory_summary"] = json.dumps(summary, ensure_ascii=False)
+                        semantic_meta = (((focused_memory.get("context_pack") or {}).get("metadata") or {}).get("semantic_gating"))
+                        if semantic_meta:
+                            response_metadata["context_semantic_gating"] = json.dumps(semantic_meta, ensure_ascii=False)
                 result_holder["final_response_data"] = {
                     "message": final_text,
                     "full_text": final_text,
@@ -3583,6 +3703,21 @@ class ChatOrchestrator:
                             yield queued
                         return
 
+                if chat_mode != CHAT_MODE_STANDARD and not settings.ENABLE_UNIFIED_GRAPH_ROUTING:
+                    user_context_payload = await self._apply_context_focus_overlay(
+                        active_db=active_db,
+                        user_id=user_id,
+                        user_message=user_message,
+                        route_intent=infer_route_intent_from_chat_mode(chat_mode),
+                        plan_id=plan_id,
+                        plan_context=plan_context,
+                        user_context_payload=user_context_payload,
+                        state=state,
+                        session_feedback_signal=(
+                            session_feedback_signal.to_dict() if session_feedback_signal is not None else None
+                        ),
+                    )
+
                 # Step 6: Prepare runtime context (transparency, tools)
                 transparency_generator, emit_transparency_event = await self._prepare_runtime_context(
                     state,
@@ -3686,6 +3821,24 @@ class ChatOrchestrator:
                     unified_routing_result=unified_routing_result,
                     information_sufficient=bool((state.context_data.get("goal_quality") or {}).get("passed", True)),
                     stream_callback=stream_callback,
+                )
+
+                user_context_payload = await self._apply_context_focus_overlay(
+                    active_db=active_db,
+                    user_id=user_id,
+                    user_message=user_message,
+                    route_intent=(
+                        unified_routing_result.primary_intent.value
+                        if unified_routing_result and hasattr(unified_routing_result, "primary_intent")
+                        else intent_type
+                    ),
+                    plan_id=plan_id,
+                    plan_context=plan_context,
+                    user_context_payload=user_context_payload,
+                    state=state,
+                    session_feedback_signal=(
+                        session_feedback_signal.to_dict() if session_feedback_signal is not None else None
+                    ),
                 )
 
                 # Step 11: Plan & validate (langgraph/hybrid mode)
