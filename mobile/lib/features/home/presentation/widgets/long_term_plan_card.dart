@@ -8,9 +8,11 @@ class LongTermPlanCard extends ConsumerWidget {
   const LongTermPlanCard({
     super.key,
     this.compact = false,
+    this.dense = false,
   });
 
   final bool compact;
+  final bool dense;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -22,7 +24,9 @@ class LongTermPlanCard extends ConsumerWidget {
       child: MaterialStyler(
         material: AppMaterials.ceramic,
         borderRadius: DS.borderRadius20,
-        padding: EdgeInsets.all(compact ? DS.spacing12 : DS.lg),
+        padding: EdgeInsets.all(
+          compact ? (dense ? DS.spacing10 : DS.spacing12) : DS.lg,
+        ),
         child: growth != null
             ? _buildContent(context, growth)
             : _buildEmptyState(context),
@@ -42,12 +46,16 @@ class LongTermPlanCard extends ConsumerWidget {
             Text(
               '长期计划',
               style: TextStyle(
-                fontSize: compact ? 11 : 12,
+                fontSize: dense ? 10 : (compact ? 11 : 12),
                 fontWeight: FontWeight.w500,
                 color: DS.textSecondary,
               ),
             ),
-            Icon(Icons.spa_rounded, color: DS.success, size: compact ? 15 : 16),
+            Icon(
+              Icons.spa_rounded,
+              color: DS.success,
+              size: dense ? 14 : (compact ? 15 : 16),
+            ),
           ],
         ),
         const Spacer(),
@@ -57,7 +65,7 @@ class LongTermPlanCard extends ConsumerWidget {
               Text(
                 '${(growth.progress * 100).toInt()}%',
                 style: TextStyle(
-                  fontSize: compact ? 18 : 20,
+                  fontSize: dense ? 16 : (compact ? 18 : 20),
                   fontWeight: FontWeight.bold,
                   color: DS.success,
                 ),
@@ -80,20 +88,24 @@ class LongTermPlanCard extends ConsumerWidget {
         Text(
           growth.name,
           style: TextStyle(
-            fontSize: compact ? 11 : 12,
+            fontSize: dense ? 10 : (compact ? 11 : 12),
             fontWeight: FontWeight.w600,
             color: DS.textPrimary,
           ),
-          maxLines: 1,
+          maxLines: dense ? 2 : 1,
           overflow: TextOverflow.ellipsis,
         ),
         const SizedBox(height: 2),
         Text(
-          'Mastery: ${(growth.masteryLevel * 100).toInt()}%',
+          dense
+              ? '掌握 ${(growth.masteryLevel * 100).toInt()}%'
+              : 'Mastery: ${(growth.masteryLevel * 100).toInt()}%',
           style: TextStyle(
-            fontSize: compact ? 9 : 10,
+            fontSize: dense ? 9 : (compact ? 9 : 10),
             color: DS.textSecondary,
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
       ],
     );
@@ -114,7 +126,7 @@ class LongTermPlanCard extends ConsumerWidget {
         Text(
           '创建长期计划',
           style: TextStyle(
-            fontSize: compact ? 11 : 12,
+            fontSize: dense ? 10 : (compact ? 11 : 12),
             color: DS.textSecondary,
           ),
         ),

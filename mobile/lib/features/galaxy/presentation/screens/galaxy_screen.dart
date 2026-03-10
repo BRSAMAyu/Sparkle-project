@@ -19,6 +19,7 @@ import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_gestu
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_mini_map.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_node_preview_card.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_search_panel.dart';
+import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_simulation_settings_sheet.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_config.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/star_map_painter.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/star_success_animation.dart';
@@ -33,6 +34,8 @@ class GalaxyScreen extends ConsumerStatefulWidget {
 
 class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     with TickerProviderStateMixin {
+  static const bool _useDarkGalaxyTheme = true;
+
   late final GalaxyGestureHandler _gestureHandler;
   late final Ticker _flingTicker;
   late final Ticker _physicsTicker;
@@ -84,10 +87,15 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   bool _didPlayEntranceAnimation = false;
   bool _isBuildAnimating = false;
   bool _isSearchOpen = false;
+  bool _isSettingsOpen = false;
   bool _performanceDegraded = false;
   double _buildRevealProgress = 1;
   double _entranceRevealProgress = 1;
   double _ambientPhase = 0;
+  double _springStrength = 0.045;
+  double _repulsionStrength = 12000;
+  double _centerGravityStrength = 0.0016;
+  double _replaySpeed = 1.0;
   int _sceneVersion = 0;
   String _searchQuery = '';
   List<GalaxyNodeModel> _searchResults = const <GalaxyNodeModel>[];
@@ -95,12 +103,10 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   Set<String> _focusNodeIds = const <String>{};
   Map<String, Offset> _microDriftOffsets = const <String, Offset>{};
   List<GalaxyEdgeParticle> _edgeParticles = const <GalaxyEdgeParticle>[];
-  List<_ReplayStage> _replayStages = const <_ReplayStage>[];
   List<_CelebrationEntry> _celebrations = const <_CelebrationEntry>[];
   Duration _ambientElapsed = Duration.zero;
   Duration _lastInteractionElapsed = Duration.zero;
   Duration _lastDriftShuffleElapsed = Duration.zero;
-  int _activeReplayStageIndex = -1;
   int _consecutiveSlowFrames = 0;
   int _consecutiveFastFrames = 0;
   double _frameBudgetMs = 16;
@@ -120,6 +126,11 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       screenToWorld: (screenPoint) => _camera.screenToWorld(screenPoint),
       hitTestNode: _hitTestNode,
       onCommand: _handleGestureCommand,
+    );
+    _forceEngine.updateParameters(
+      springK: _springStrength,
+      repulsionK: _repulsionStrength,
+      centerGravity: _centerGravityStrength,
     );
     _flingTicker = createTicker(_handleFlingTick);
     _physicsTicker = createTicker(_handlePhysicsTick);
@@ -284,8 +295,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       _pendingPersistNodeId = null;
       _isLoading = false;
       _didFitInitialCamera = preserveCamera;
-      _replayStages = const <_ReplayStage>[];
-      _activeReplayStageIndex = -1;
       _sceneVersion++;
     });
 
@@ -416,7 +425,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
     if (command is PanCommand) {
       _stopFling();
-      _stopBuildReplay();
       _stopPhysicsSimulation(commitPendingNode: true);
       setState(() {
         _cancelTapFeedbackState();
@@ -429,7 +437,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
     if (command is ZoomCommand) {
       _stopFling();
-      _stopBuildReplay();
       _stopPhysicsSimulation(commitPendingNode: true);
       setState(() {
         _cancelTapFeedbackState();
@@ -487,7 +494,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
         _previewScreenPosition = _computePreviewPosition(
           anchor: _camera.worldToScreen(command.hit!.worldPosition),
         );
-          });
+      });
       return;
     }
 
@@ -520,12 +527,11 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
         _draggingNodeId = command.nodeId;
         _positions = updatedPositions;
         _microDriftOffsets = const <String, Offset>{};
-          });
+      });
       return;
     }
 
     if (command is FlingCommand) {
-      _stopBuildReplay();
       _stopPhysicsSimulation(commitPendingNode: true);
       _startFling(command.velocity);
     }
@@ -533,7 +539,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
   void _handleDoubleTap(DoubleTapCommand command) {
     _stopFling();
-    _stopBuildReplay();
     _stopPhysicsSimulation(commitPendingNode: true);
     _cancelTapFeedbackState();
     _clearPreviewState();
@@ -702,7 +707,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       unawaited(_accessibilityService.selectionHaptic());
       _forceEngine.releaseAnchor();
       _startPhysicsSimulation();
-      }
+    }
   }
 
   void _startFling(Velocity velocity) {
@@ -783,7 +788,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     setState(() {
       _positions = result.positions;
       _sceneVersion++;
-      });
+    });
 
     if (result.isSettled) {
       _stopPhysicsSimulation(commitPendingNode: true);
@@ -868,10 +873,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       return;
     }
 
-    final color = SectorConfig.getGlowColor(
-      nextNode.sector,
-      isDarkMode: Theme.of(context).brightness == Brightness.dark,
-    );
+    final color = SectorConfig.getGlowColor(nextNode.sector);
     final entry = _CelebrationEntry(
       id: '${nextNode.id}:${DateTime.now().microsecondsSinceEpoch}',
       nodeId: nextNode.id,
@@ -1015,7 +1017,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     }
 
     _stopFling();
-    _stopBuildReplay();
     _stopPhysicsSimulation(commitPendingNode: true);
     final emphasis = highlightNeighbors
         ? <String>{nodeId, ...?_adjacency[nodeId]}
@@ -1075,105 +1076,10 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   void _handleMiniMapDrag(Offset worldPoint) {
     _noteInteraction();
     _stopFling();
-    _stopBuildReplay();
     _stopPhysicsSimulation(commitPendingNode: true);
     setState(() {
       _camera = _camera.centerOnWorldPoint(worldPoint: worldPoint);
     });
-  }
-
-  List<_ReplayStage> _buildReplayStageSequence() {
-    if (_graph == null || _viewportSize == Size.zero) {
-      return const <_ReplayStage>[];
-    }
-
-    final sectors = <SectorEnum, List<String>>{};
-    for (final node in _nodesById.values) {
-      sectors.putIfAbsent(node.sector, () => <String>[]).add(node.id);
-    }
-
-    final orderedEntries = sectors.entries
-        .where((entry) => entry.value.isNotEmpty)
-        .toList(growable: false)
-      ..sort((a, b) {
-        final aImportance = a.value
-            .map((id) => _nodesById[id]?.importance ?? 0)
-            .fold<int>(0, math.max);
-        final bImportance = b.value
-            .map((id) => _nodesById[id]?.importance ?? 0)
-            .fold<int>(0, math.max);
-        return bImportance.compareTo(aImportance);
-      });
-
-    final list = <_ReplayStage>[];
-    final sectorEntries = orderedEntries;
-    for (var index = 0; index < sectorEntries.length; index++) {
-      final entry = sectorEntries[index];
-      final positions = entry.value
-          .map((id) => _positions[id])
-          .whereType<Offset>()
-          .toList(growable: false);
-      if (positions.isEmpty) {
-        continue;
-      }
-
-      var minX = double.infinity;
-      var minY = double.infinity;
-      var maxX = double.negativeInfinity;
-      var maxY = double.negativeInfinity;
-      for (final point in positions) {
-        minX = math.min(minX, point.dx);
-        minY = math.min(minY, point.dy);
-        maxX = math.max(maxX, point.dx);
-        maxY = math.max(maxY, point.dy);
-      }
-      final stageBounds = Rect.fromLTRB(minX, minY, maxX, maxY).inflate(120);
-      final camera = GalaxyCamera.fitRect(
-        worldBounds: stageBounds,
-        viewportSize: _viewportSize,
-        padding: 80,
-      );
-      final featuredNodeId = entry.value
-          .map((id) => _nodesById[id])
-          .whereType<GalaxyNodeModel>()
-          .toList()
-        ..sort((a, b) => b.importance.compareTo(a.importance));
-      list.add(
-        _ReplayStage(
-          sector: entry.key,
-          camera: camera,
-          focusNodeIds: entry.value.toSet(),
-          featuredNodeId:
-              featuredNodeId.isEmpty ? null : featuredNodeId.first.id,
-          startProgress: index / sectorEntries.length,
-          endProgress: (index + 1) / sectorEntries.length,
-        ),
-      );
-    }
-
-    return list;
-  }
-
-  void _activateReplayStage(int stageIndex) {
-    if (stageIndex < 0 || stageIndex >= _replayStages.length) {
-      return;
-    }
-
-    final stage = _replayStages[stageIndex];
-    if (_activeReplayStageIndex == stageIndex) {
-      return;
-    }
-
-    unawaited(_accessibilityService.lightHaptic());
-    setState(() {
-      _activeReplayStageIndex = stageIndex;
-      _focusNodeIds = stage.focusNodeIds;
-      _selectedNodeId = stage.featuredNodeId;
-      });
-    _animateCameraTo(
-      stage.camera,
-      duration: const Duration(milliseconds: 620),
-    );
   }
 
   void _handleAmbientTick(Duration elapsed) {
@@ -1218,17 +1124,12 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       (edge) =>
           edge.sourceId == selectedNodeId || edge.targetId == selectedNodeId,
     );
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
     for (final edge in relevantEdges) {
       final node = _nodesById[edge.sourceId] ?? _nodesById[edge.targetId];
       if (node == null) {
         continue;
       }
-      final color = SectorConfig.getGlowColor(
-        node.sector,
-        isDarkMode: isDarkMode,
-      );
+      final color = SectorConfig.getGlowColor(node.sector);
       final count = edge.strength > 0.8
           ? 3
           : edge.strength > 0.55
@@ -1429,21 +1330,10 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     }
 
     final progress = _buildReplayController.value;
-    if (_replayStages.isNotEmpty) {
-      final stageIndex = _replayStages.indexWhere(
-        (stage) =>
-            progress >= stage.startProgress && progress < stage.endProgress,
-      );
-      if (stageIndex >= 0) {
-        _activateReplayStage(stageIndex);
-      } else if (progress >= 1 && _replayStages.isNotEmpty) {
-        _activateReplayStage(_replayStages.length - 1);
-      }
-    }
-
     setState(() {
       _buildRevealProgress = progress;
-      _ambientPhase = progress * math.pi * 2;
+      _ambientPhase =
+          _ambientElapsed.inMicroseconds / Duration.microsecondsPerSecond;
     });
   }
 
@@ -1456,13 +1346,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       _isBuildAnimating = false;
       _buildRevealProgress = 1;
       _focusNodeIds = const <String>{};
-      _replayStages = const <_ReplayStage>[];
-      _activeReplayStageIndex = -1;
     });
-    _animateCameraTo(
-      _fitOverviewCamera(),
-      duration: const Duration(milliseconds: 520),
-    );
   }
 
   void _toggleBuildReplay() {
@@ -1482,11 +1366,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     _stopPhysicsSimulation(commitPendingNode: true);
     _clearPreviewState();
     _cancelTapFeedbackState();
-    final replayStages = _buildReplayStageSequence();
-    if (replayStages.isEmpty) {
-      return;
-    }
-    final totalMs = math.max(1800, 420 + replayStages.length * 760);
+    final totalMs = _currentBuildReplayDurationMs();
 
     setState(() {
       _selectedNodeId = null;
@@ -1494,11 +1374,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       _isBuildAnimating = true;
       _buildRevealProgress = 0;
       _focusNodeIds = const <String>{};
-      _replayStages = replayStages;
-      _activeReplayStageIndex = -1;
       _sceneVersion++;
-      });
-    _activateReplayStage(0);
+    });
     _buildReplayController
       ..duration = Duration(milliseconds: totalMs)
       ..stop()
@@ -1521,9 +1398,118 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       _isBuildAnimating = false;
       _buildRevealProgress = 1;
       _focusNodeIds = const <String>{};
-      _replayStages = const <_ReplayStage>[];
-      _activeReplayStageIndex = -1;
-      });
+    });
+  }
+
+  int _currentBuildReplayDurationMs() {
+    final graph = _graph;
+    if (graph == null) {
+      return 4800;
+    }
+    final baseDuration = (2600 + graph.nodes.length * 18).clamp(3600, 12000);
+    return (baseDuration / _replaySpeed).round();
+  }
+
+  void _updatePhysicsSettings({
+    double? springStrength,
+    double? repulsionStrength,
+    double? centerGravity,
+    bool notify = true,
+  }) {
+    _forceEngine.updateParameters(
+      springK: springStrength,
+      repulsionK: repulsionStrength,
+      centerGravity: centerGravity,
+    );
+    if (!notify || !mounted) {
+      return;
+    }
+    setState(() {
+      if (springStrength != null) {
+        _springStrength = springStrength;
+      }
+      if (repulsionStrength != null) {
+        _repulsionStrength = repulsionStrength;
+      }
+      if (centerGravity != null) {
+        _centerGravityStrength = centerGravity;
+      }
+    });
+  }
+
+  void _updateReplaySpeed(double value) {
+    setState(() {
+      _replaySpeed = value;
+    });
+    if (!_isBuildAnimating) {
+      return;
+    }
+    final progress = _buildReplayController.value.clamp(0.0, 1.0);
+    final remainingProgress = (1 - progress).clamp(0.0, 1.0);
+    _buildReplayController
+      ..stop()
+      ..duration = Duration(
+        milliseconds: (_currentBuildReplayDurationMs() * remainingProgress)
+            .round()
+            .clamp(1, 12000),
+      );
+    unawaited(_buildReplayController.forward(from: progress));
+  }
+
+  void _resetSimulationSettings() {
+    _updatePhysicsSettings(
+      springStrength: 0.045,
+      repulsionStrength: 12000,
+      centerGravity: 0.0016,
+    );
+    _updateReplaySpeed(1.0);
+  }
+
+  Future<void> _openSimulationSettings() async {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    setState(() {
+      _isSettingsOpen = true;
+    });
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setSheetState) => GalaxySimulationSettingsSheet(
+          isDarkMode: isDarkMode,
+          springStrength: _springStrength,
+          repulsionStrength: _repulsionStrength,
+          centerGravity: _centerGravityStrength,
+          replaySpeed: _replaySpeed,
+          onSpringChanged: (value) {
+            _updatePhysicsSettings(springStrength: value);
+            setSheetState(() {});
+          },
+          onRepulsionChanged: (value) {
+            _updatePhysicsSettings(repulsionStrength: value);
+            setSheetState(() {});
+          },
+          onCenterGravityChanged: (value) {
+            _updatePhysicsSettings(centerGravity: value);
+            setSheetState(() {});
+          },
+          onReplaySpeedChanged: (value) {
+            _updateReplaySpeed(value);
+            setSheetState(() {});
+          },
+          onReset: () {
+            _resetSimulationSettings();
+            setSheetState(() {});
+          },
+        ),
+      ),
+    );
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _isSettingsOpen = false;
+    });
   }
 
   void _stopAllAutoMotion({required bool commitPhysicsPosition}) {
@@ -1572,7 +1558,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       return;
     }
     _stopFling();
-    _stopBuildReplay();
     _stopPhysicsSimulation(commitPendingNode: true);
     final target = _camera.applyZoom(
       factor,
@@ -1586,7 +1571,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
   void _fitOverviewAnimated() {
     _stopFling();
-    _stopBuildReplay();
     _stopPhysicsSimulation(commitPendingNode: true);
     _animateCameraTo(_fitOverviewCamera());
   }
@@ -1684,9 +1668,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor =
-        isDarkMode ? const Color(0xFF060A12) : const Color(0xFFF5F6F8);
+    const isDarkMode = _useDarkGalaxyTheme;
+    const backgroundColor = isDarkMode ? Color(0xFF060A12) : Color(0xFFF5F6F8);
     final graph = _graph;
     final currentSector = _currentSector();
     final blendedColors = isDarkMode ? _darkBlendedColors : _lightBlendedColors;
@@ -1695,233 +1678,249 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
         : _entranceRevealProgress.clamp(0.0, 1.0);
     final overviewStats = graph == null ? null : _buildOverviewStats(graph);
 
-    return Scaffold(
-      backgroundColor: backgroundColor,
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          _updateViewportSize(
-            Size(constraints.maxWidth, constraints.maxHeight),
-          );
+    final baseTheme = Theme.of(context);
+    final galaxyTheme = baseTheme.copyWith(
+      brightness: Brightness.dark,
+      scaffoldBackgroundColor: backgroundColor,
+      colorScheme: baseTheme.colorScheme.copyWith(
+        brightness: Brightness.dark,
+        surface: const Color(0xFF101929),
+        onSurface: Colors.white,
+      ),
+    );
 
-          if (_isLoading) {
-            return _StatusPanel(
-              backgroundColor: backgroundColor,
-              foregroundColor: isDarkMode ? Colors.white : Colors.black,
-              title: '知识星图加载中',
-              message: '正在生成你的学习星图骨架',
-              showLoader: true,
+    return Theme(
+      data: galaxyTheme,
+      child: Scaffold(
+        backgroundColor: backgroundColor,
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            _updateViewportSize(
+              Size(constraints.maxWidth, constraints.maxHeight),
             );
-          }
 
-          if (_loadError != null) {
-            return _StatusPanel(
-              backgroundColor: backgroundColor,
-              foregroundColor: isDarkMode ? Colors.white : Colors.black,
-              title: '知识星图加载失败',
-              message: '$_loadError',
-              actionLabel: '重试',
-              onAction: _loadGraph,
-            );
-          }
+            if (_isLoading) {
+              return const _StatusPanel(
+                backgroundColor: backgroundColor,
+                foregroundColor: Colors.white,
+                title: '知识星图加载中',
+                message: '正在生成你的学习星图骨架',
+                showLoader: true,
+              );
+            }
 
-          if (graph == null) {
-            return _StatusPanel(
-              backgroundColor: backgroundColor,
-              foregroundColor: isDarkMode ? Colors.white : Colors.black,
-              title: '暂无星图数据',
-              message: '开始你的第一次学习，点亮第一颗星。',
-              actionLabel: '重新加载',
-              onAction: _loadGraph,
-            );
-          }
+            if (_loadError != null) {
+              return _StatusPanel(
+                backgroundColor: backgroundColor,
+                foregroundColor: isDarkMode ? Colors.white : Colors.black,
+                title: '知识星图加载失败',
+                message: '$_loadError',
+                actionLabel: '重试',
+                onAction: _loadGraph,
+              );
+            }
 
-          return Listener(
-            behavior: HitTestBehavior.opaque,
-            onPointerDown: _handlePointerDown,
-            onPointerMove: _gestureHandler.handlePointerMove,
-            onPointerUp: _handlePointerUp,
-            onPointerCancel: _handlePointerCancel,
-            onPointerSignal: _handlePointerSignal,
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              switchInCurve: Curves.easeOut,
-              switchOutCurve: Curves.easeIn,
-              child: Stack(
-                key: ValueKey<bool>(isDarkMode),
-                children: [
-                  RepaintBoundary(
-                    child: CustomPaint(
-                      painter: StarMapPainter(
-                        camera: _camera,
-                        nodesById: _nodesById,
-                        edges: graph.edges,
-                        positions: _positions,
-                        spatialIndex: _spatialIndex,
-                        labelCache: _labelCache,
-                        backdropPictureCache: _backdropPictureCache,
-                        parallaxStarLayerCache: _parallaxStarLayerCache,
-                        sceneVersion: _sceneVersion,
-                        selectedNodeId: _selectedNodeId,
-                        previewNodeId: _previewNode?.id,
-                        draggingNodeId: _draggingNodeId,
-                        tapFeedbackNodeId: _tapFeedbackNodeId,
-                        tapFeedbackProgress: _tapFeedbackAnimation.value,
-                        tapFeedbackPhase: _tapFeedbackController.value,
-                        isDarkMode: isDarkMode,
-                        worldBounds: _computeWorldBounds(),
-                        blendedColors: blendedColors,
-                        revealRanks: _revealRanks,
-                        nodeConnectionCounts: _nodeConnectionCounts,
-                        ambientPhase: _ambientPhase,
-                        buildRevealProgress: sceneRevealProgress,
-                        isBuildAnimating: _isBuildAnimating,
-                        focusNodeIds: _focusNodeIds,
-                        searchMatchedNodeIds: _searchMatchedNodeIds,
-                        driftOffsets: _microDriftOffsets,
-                        edgeParticles: _edgeParticles,
-                        celebrationNodeIds:
-                            _celebrations.map((entry) => entry.nodeId).toSet(),
-                        performanceDegraded: _performanceDegraded,
-                      ),
-                      child: const SizedBox.expand(),
-                    ),
-                  ),
-                  ..._celebrations.map((entry) {
-                    final worldPosition = _positions[entry.nodeId];
-                    if (worldPosition == null) {
-                      return const SizedBox.shrink();
-                    }
-                    return Positioned.fill(
-                      child: IgnorePointer(
-                        child: StarSuccessAnimation(
-                          key: ValueKey(entry.id),
-                          position: _camera.worldToScreen(worldPosition),
-                          color: entry.color,
-                          onComplete: () => _removeCelebration(entry.id),
+            if (graph == null) {
+              return _StatusPanel(
+                backgroundColor: backgroundColor,
+                foregroundColor: isDarkMode ? Colors.white : Colors.black,
+                title: '暂无星图数据',
+                message: '开始你的第一次学习，点亮第一颗星。',
+                actionLabel: '重新加载',
+                onAction: _loadGraph,
+              );
+            }
+
+            return Listener(
+              behavior: HitTestBehavior.opaque,
+              onPointerDown: _handlePointerDown,
+              onPointerMove: _gestureHandler.handlePointerMove,
+              onPointerUp: _handlePointerUp,
+              onPointerCancel: _handlePointerCancel,
+              onPointerSignal: _handlePointerSignal,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                switchInCurve: Curves.easeOut,
+                switchOutCurve: Curves.easeIn,
+                child: Stack(
+                  key: const ValueKey<bool>(isDarkMode),
+                  children: [
+                    RepaintBoundary(
+                      child: CustomPaint(
+                        painter: StarMapPainter(
+                          camera: _camera,
+                          nodesById: _nodesById,
+                          edges: graph.edges,
+                          positions: _positions,
+                          spatialIndex: _spatialIndex,
+                          labelCache: _labelCache,
+                          backdropPictureCache: _backdropPictureCache,
+                          parallaxStarLayerCache: _parallaxStarLayerCache,
+                          sceneVersion: _sceneVersion,
+                          selectedNodeId: _selectedNodeId,
+                          previewNodeId: _previewNode?.id,
+                          draggingNodeId: _draggingNodeId,
+                          tapFeedbackNodeId: _tapFeedbackNodeId,
+                          tapFeedbackProgress: _tapFeedbackAnimation.value,
+                          tapFeedbackPhase: _tapFeedbackController.value,
+                          isDarkMode: isDarkMode,
+                          worldBounds: _computeWorldBounds(),
+                          blendedColors: blendedColors,
+                          revealRanks: _revealRanks,
+                          nodeConnectionCounts: _nodeConnectionCounts,
+                          ambientPhase: _ambientPhase,
+                          buildRevealProgress: sceneRevealProgress,
+                          isBuildAnimating: _isBuildAnimating,
+                          focusNodeIds: _focusNodeIds,
+                          searchMatchedNodeIds: _searchMatchedNodeIds,
+                          driftOffsets: _microDriftOffsets,
+                          edgeParticles: _edgeParticles,
+                          celebrationNodeIds: _celebrations
+                              .map((entry) => entry.nodeId)
+                              .toSet(),
+                          performanceDegraded: _performanceDegraded,
                         ),
+                        child: const SizedBox.expand(),
                       ),
-                    );
-                  }),
-                  if (_previewNode != null && _previewScreenPosition != null)
-                    Positioned(
-                      left: _previewScreenPosition!.dx,
-                      top: _previewScreenPosition!.dy,
-                      child: AnimatedScale(
-                        scale: 1,
-                        duration: const Duration(milliseconds: 180),
-                        curve: Curves.easeOutBack,
-                        child: AnimatedOpacity(
-                          opacity: 1,
-                          duration: const Duration(milliseconds: 160),
-                          child: GalaxyNodePreviewCard(
-                            node: _previewNode!,
-                            onFocus: _focusPreviewNode,
-                            onInspectConnections: _inspectPreviewConnections,
+                    ),
+                    ..._celebrations.map((entry) {
+                      final worldPosition = _positions[entry.nodeId];
+                      if (worldPosition == null) {
+                        return const SizedBox.shrink();
+                      }
+                      return Positioned.fill(
+                        child: IgnorePointer(
+                          child: StarSuccessAnimation(
+                            key: ValueKey(entry.id),
+                            position: _camera.worldToScreen(worldPosition),
+                            color: entry.color,
+                            onComplete: () => _removeCelebration(entry.id),
+                          ),
+                        ),
+                      );
+                    }),
+                    if (_previewNode != null && _previewScreenPosition != null)
+                      Positioned(
+                        left: _previewScreenPosition!.dx,
+                        top: _previewScreenPosition!.dy,
+                        child: AnimatedScale(
+                          scale: 1,
+                          duration: const Duration(milliseconds: 180),
+                          curve: Curves.easeOutBack,
+                          child: AnimatedOpacity(
+                            opacity: 1,
+                            duration: const Duration(milliseconds: 160),
+                            child: GalaxyNodePreviewCard(
+                              node: _previewNode!,
+                              onFocus: _focusPreviewNode,
+                              onInspectConnections: _inspectPreviewConnections,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  SafeArea(
-                    child: Stack(
-                      children: [
-                        Positioned(
-                          top: 12,
-                          left: 16,
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 150),
-                            child: currentSector == null
-                                ? const SizedBox.shrink()
-                                : GalaxySectorIndicator(
-                                    key: ValueKey(currentSector.name),
-                                    label: SectorConfig.getStyle(currentSector)
-                                        .name,
-                                    color: SectorConfig.getColor(
-                                      currentSector,
+                    SafeArea(
+                      child: Stack(
+                        children: [
+                          Positioned(
+                            top: 12,
+                            left: 16,
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 150),
+                              child: currentSector == null
+                                  ? const SizedBox.shrink()
+                                  : GalaxySectorIndicator(
+                                      key: ValueKey(currentSector.name),
+                                      label:
+                                          SectorConfig.getStyle(currentSector)
+                                              .name,
+                                      color:
+                                          SectorConfig.getColor(currentSector),
                                       isDarkMode: isDarkMode,
                                     ),
-                                    isDarkMode: isDarkMode,
-                                  ),
-                          ),
-                        ),
-                        if (overviewStats != null && _camera.scale < 0.32)
-                          Positioned(
-                            top: 14,
-                            right: 16,
-                            child: _GalaxyOverviewStats(
-                              stats: overviewStats,
-                              isDarkMode: isDarkMode,
                             ),
                           ),
-                        Positioned(
-                          left: 16,
-                          bottom: 16,
-                          child: AnimatedOpacity(
-                            opacity: _camera.scale >= 0.3 ? 1 : 0,
-                            duration: const Duration(milliseconds: 180),
-                            child: IgnorePointer(
-                              ignoring: _camera.scale < 0.3,
-                              child: GalaxyMiniMap(
-                                camera: _camera,
-                                positions: _positions,
-                                nodesById: _nodesById,
-                                worldBounds: _computeWorldBounds(),
+                          if (overviewStats != null && _camera.scale < 0.32)
+                            Positioned(
+                              top: 14,
+                              right: 16,
+                              child: _GalaxyOverviewStats(
+                                stats: overviewStats,
                                 isDarkMode: isDarkMode,
-                                sceneVersion: _sceneVersion,
-                                onNavigate: _handleMiniMapNavigate,
-                                onViewportDragged: _handleMiniMapDrag,
                               ),
                             ),
-                          ),
-                        ),
-                        Positioned(
-                          right: 16,
-                          bottom: 16,
-                          child: GalaxyControls(
-                            onZoomIn: () => _zoomAroundCenter(1.5),
-                            onFitToOverview: _fitOverviewAnimated,
-                            onZoomOut: () => _zoomAroundCenter(1 / 1.5),
-                            onReplay: _toggleBuildReplay,
-                            onSearch: _toggleSearchPanel,
-                            isDarkMode: isDarkMode,
-                            isReplaying: _isBuildAnimating,
-                            isSearchOpen: _isSearchOpen,
-                          ),
-                        ),
-                        Positioned(
-                          top: 58,
-                          right: 16,
-                          child: AnimatedSlide(
-                            offset: _isSearchOpen
-                                ? Offset.zero
-                                : const Offset(0, -0.08),
-                            duration: const Duration(milliseconds: 220),
-                            curve: Curves.easeOutCubic,
+                          Positioned(
+                            left: 16,
+                            bottom: 16,
                             child: AnimatedOpacity(
-                              opacity: _isSearchOpen ? 1 : 0,
+                              opacity: _camera.scale >= 0.3 ? 1 : 0,
                               duration: const Duration(milliseconds: 180),
                               child: IgnorePointer(
-                                ignoring: !_isSearchOpen,
-                                child: GalaxySearchPanel(
-                                  controller: _searchController,
-                                  query: _searchQuery,
-                                  results: _searchResults,
+                                ignoring: _camera.scale < 0.3,
+                                child: GalaxyMiniMap(
+                                  camera: _camera,
+                                  positions: _positions,
+                                  nodesById: _nodesById,
+                                  worldBounds: _computeWorldBounds(),
                                   isDarkMode: isDarkMode,
-                                  onQueryChanged: _updateSearchQuery,
-                                  onClose: _toggleSearchPanel,
-                                  onNodeSelected: _handleSearchNodeSelected,
+                                  sceneVersion: _sceneVersion,
+                                  onNavigate: _handleMiniMapNavigate,
+                                  onViewportDragged: _handleMiniMapDrag,
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
+                          Positioned(
+                            right: 16,
+                            bottom: 16,
+                            child: GalaxyControls(
+                              onZoomIn: () => _zoomAroundCenter(1.5),
+                              onFitToOverview: _fitOverviewAnimated,
+                              onZoomOut: () => _zoomAroundCenter(1 / 1.5),
+                              onReplay: _toggleBuildReplay,
+                              onSearch: _toggleSearchPanel,
+                              onSettings: _openSimulationSettings,
+                              isDarkMode: isDarkMode,
+                              isReplaying: _isBuildAnimating,
+                              isSearchOpen: _isSearchOpen,
+                              isSettingsOpen: _isSettingsOpen,
+                            ),
+                          ),
+                          Positioned(
+                            top: 58,
+                            right: 16,
+                            child: AnimatedSlide(
+                              offset: _isSearchOpen
+                                  ? Offset.zero
+                                  : const Offset(0, -0.08),
+                              duration: const Duration(milliseconds: 220),
+                              curve: Curves.easeOutCubic,
+                              child: AnimatedOpacity(
+                                opacity: _isSearchOpen ? 1 : 0,
+                                duration: const Duration(milliseconds: 180),
+                                child: IgnorePointer(
+                                  ignoring: !_isSearchOpen,
+                                  child: GalaxySearchPanel(
+                                    controller: _searchController,
+                                    query: _searchQuery,
+                                    results: _searchResults,
+                                    isDarkMode: isDarkMode,
+                                    onQueryChanged: _updateSearchQuery,
+                                    onClose: _toggleSearchPanel,
+                                    onNodeSelected: _handleSearchNodeSelected,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
@@ -2240,22 +2239,4 @@ class _CelebrationEntry {
   final String nodeId;
   final Color color;
   final bool emphasizeNeighbors;
-}
-
-class _ReplayStage {
-  const _ReplayStage({
-    required this.sector,
-    required this.camera,
-    required this.focusNodeIds,
-    required this.startProgress,
-    required this.endProgress,
-    this.featuredNodeId,
-  });
-
-  final SectorEnum sector;
-  final GalaxyCamera camera;
-  final Set<String> focusNodeIds;
-  final double startProgress;
-  final double endProgress;
-  final String? featuredNodeId;
 }

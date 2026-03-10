@@ -303,6 +303,7 @@ class _LibraryToolCard extends StatelessWidget {
         DS.surfacePrimary;
     return SizedBox(
       width: 168,
+      height: 196,
       child: Material(
         color: background,
         borderRadius: BorderRadius.circular(20),
@@ -330,6 +331,12 @@ class _LibraryToolCard extends StatelessWidget {
                     ),
                     const Spacer(),
                     IconButton(
+                      constraints: const BoxConstraints.tightFor(
+                        width: 32,
+                        height: 32,
+                      ),
+                      padding: EdgeInsets.zero,
+                      visualDensity: VisualDensity.compact,
                       onPressed: onTogglePin,
                       icon: Icon(
                         pinned ? Icons.push_pin : Icons.push_pin_outlined,
@@ -342,6 +349,8 @@ class _LibraryToolCard extends StatelessWidget {
                 const SizedBox(height: DS.spacing12),
                 Text(
                   tool.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: DS.fontWeightBold,
                       ),
@@ -349,11 +358,14 @@ class _LibraryToolCard extends StatelessWidget {
                 const SizedBox(height: DS.spacing8),
                 Text(
                   _categoryLabel(tool.category),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: accent,
                         fontWeight: DS.fontWeightBold,
                       ),
                 ),
+                const Spacer(),
                 if (tool.description != null) ...[
                   const SizedBox(height: DS.spacing8),
                   Text(

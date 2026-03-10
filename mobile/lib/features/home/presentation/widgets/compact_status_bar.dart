@@ -39,78 +39,101 @@ class CompactStatusBar extends StatelessWidget {
             ),
             child: SizedBox(
               height: 48,
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 14,
-                    backgroundImage: user?.avatarUrl != null
-                        ? NetworkImage(user!.avatarUrl!)
-                        : null,
-                    backgroundColor: DS.avatarFallbackBackground,
-                    child: user?.avatarUrl == null
-                        ? Text(
-                            nickname[0].toUpperCase(),
-                            style: TextStyle(
-                              color: DS.avatarFallbackForeground,
-                              fontWeight: DS.fontWeightBold,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final width = constraints.maxWidth;
+                  final showUserBadge = width >= 316;
+                  final showFlameChip = width >= 352;
+                  final showWeatherLabel = width >= 390;
+
+                  return Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 14,
+                        backgroundImage: user?.avatarUrl != null
+                            ? NetworkImage(user!.avatarUrl!)
+                            : null,
+                        backgroundColor: DS.avatarFallbackBackground,
+                        child: user?.avatarUrl == null
+                            ? Text(
+                                nickname[0].toUpperCase(),
+                                style: TextStyle(
+                                  color: DS.avatarFallbackForeground,
+                                  fontWeight: DS.fontWeightBold,
+                                ),
+                              )
+                            : null,
+                      ),
+                      const SizedBox(width: DS.spacing10),
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                nickname,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: context.sparkleTypography.labelLarge
+                                    .copyWith(
+                                  color: DS.textPrimary,
+                                  fontWeight: DS.fontWeightBold,
+                                ),
+                              ),
                             ),
-                          )
-                        : null,
-                  ),
-                  const SizedBox(width: DS.spacing10),
-                  Expanded(
-                    child: Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            nickname,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style:
-                                context.sparkleTypography.labelLarge.copyWith(
-                              color: DS.textPrimary,
-                              fontWeight: DS.fontWeightBold,
-                            ),
+                            if (showUserBadge) ...[
+                              const SizedBox(width: DS.spacing8),
+                              _MiniBadge(
+                                label: width < 352
+                                    ? 'L${user?.flameLevel ?? 1}'
+                                    : 'Lv.${user?.flameLevel ?? 1}',
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: DS.spacing8),
+                      if (showFlameChip) ...[
+                        _MiniInfoChip(
+                          icon: Icons.local_fire_department_rounded,
+                          label: width >= 376
+                              ? 'Lv.${dashboardState.flame.level}'
+                              : null,
+                          color: DS.warning,
+                          animateLabel: true,
+                          maxWidth: width >= 376 ? 76 : 32,
+                        ),
+                        const SizedBox(width: DS.spacing6),
+                      ],
+                      _MiniInfoChip(
+                        icon: _weatherIconForType(dashboardState.weather.type),
+                        label: showWeatherLabel
+                            ? dashboardState.weather.condition
+                            : null,
+                        color: DS.brandPrimary,
+                        maxWidth: showWeatherLabel ? 88 : 32,
+                      ),
+                      const SizedBox(width: DS.spacing6),
+                      InkWell(
+                        onTap: () => context.push(UserRoutes.settings),
+                        borderRadius: BorderRadius.circular(999),
+                        child: Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: DS.surfaceOverlay,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: DS.borderSubtle),
+                          ),
+                          child: Icon(
+                            Icons.settings_outlined,
+                            size: 18,
+                            color: DS.textSecondary,
                           ),
                         ),
-                        const SizedBox(width: DS.spacing8),
-                        _MiniBadge(label: 'Lv.${user?.flameLevel ?? 1}'),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: DS.spacing8),
-                  _MiniInfoChip(
-                    icon: Icons.local_fire_department_rounded,
-                    label: 'Lv.${dashboardState.flame.level}',
-                    color: DS.warning,
-                    animateLabel: true,
-                  ),
-                  const SizedBox(width: DS.spacing6),
-                  _MiniInfoChip(
-                    icon: _weatherIconForType(dashboardState.weather.type),
-                    label: dashboardState.weather.condition,
-                    color: DS.brandPrimary,
-                  ),
-                  const SizedBox(width: DS.spacing6),
-                  InkWell(
-                    onTap: () => context.push(UserRoutes.settings),
-                    borderRadius: BorderRadius.circular(999),
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: DS.surfaceOverlay,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: DS.borderSubtle),
                       ),
-                      child: Icon(
-                        Icons.settings_outlined,
-                        size: 18,
-                        color: DS.textSecondary,
-                      ),
-                    ),
-                  ),
-                ],
+                    ],
+                  );
+                },
               ),
             ),
           ),
@@ -163,19 +186,21 @@ class _MiniBadge extends StatelessWidget {
 class _MiniInfoChip extends StatelessWidget {
   const _MiniInfoChip({
     required this.icon,
-    required this.label,
     required this.color,
+    this.label,
     this.animateLabel = false,
+    this.maxWidth = 112,
   });
 
   final IconData icon;
-  final String label;
+  final String? label;
   final Color color;
   final bool animateLabel;
+  final double maxWidth;
 
   @override
   Widget build(BuildContext context) => Container(
-        constraints: const BoxConstraints(maxWidth: 112),
+        constraints: BoxConstraints(maxWidth: maxWidth),
         padding: const EdgeInsets.symmetric(
           horizontal: DS.spacing8,
           vertical: DS.spacing6,
@@ -189,24 +214,28 @@ class _MiniInfoChip extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, size: 14, color: color),
-            const SizedBox(width: DS.spacing4),
-            Flexible(
-              child: AnimatedSwitcher(
-                duration: DS.durationFast,
-                switchInCurve: DS.motionCurve(SparkleMotionToken.micro),
-                switchOutCurve: DS.motionCurve(SparkleMotionToken.micro),
-                child: Text(
-                  label,
-                  key: ValueKey(animateLabel ? label : '$icon-$label'),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: context.sparkleTypography.labelSmall.copyWith(
-                    color: DS.textPrimary,
-                    fontWeight: DS.fontWeightSemiBold,
+            if (label != null) ...[
+              const SizedBox(width: DS.spacing4),
+              Flexible(
+                child: AnimatedSwitcher(
+                  duration: DS.durationFast,
+                  switchInCurve: DS.motionCurve(SparkleMotionToken.micro),
+                  switchOutCurve: DS.motionCurve(SparkleMotionToken.micro),
+                  child: Text(
+                    label!,
+                    key: ValueKey(
+                      animateLabel ? label! : '$icon-$label',
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.sparkleTypography.labelSmall.copyWith(
+                      color: DS.textPrimary,
+                      fontWeight: DS.fontWeightSemiBold,
+                    ),
                   ),
                 ),
               ),
-            ),
+            ],
           ],
         ),
       );

@@ -61,9 +61,9 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
 
     if (widget.compact) {
       final contentPadding = widget.dense ? DS.spacing10 : DS.spacing12;
-      final topSpacing = widget.dense ? DS.spacing8 : DS.spacing12;
-      final gridSpacing = widget.dense ? DS.spacing6 : DS.spacing8;
-      final title = widget.dense ? '工具快捷' : (weeklyPattern ?? '工具快捷');
+      final topSpacing = widget.dense ? DS.spacing8 : DS.spacing10;
+      final compactPages = _chunkTools(pinnedTools, 4);
+      const title = '工具快捷';
 
       return ClipRRect(
         borderRadius: DS.borderRadius20,
@@ -88,40 +88,60 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
               Row(
                 children: [
                   Icon(
-                    Icons.diamond_outlined,
+                    Icons.dashboard_customize_outlined,
                     color: DS.prismPurple,
                     size: 18,
                   ),
                   const SizedBox(width: DS.spacing8),
                   Expanded(
-                    child: Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: context.sparkleTypography.labelLarge.copyWith(
-                        fontWeight: DS.fontWeightBold,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: context.sparkleTypography.labelLarge.copyWith(
+                            fontWeight: DS.fontWeightBold,
+                          ),
+                        ),
+                        if (!widget.dense && compactPages.length > 1)
+                          Text(
+                            '左右滑动查看更多工具',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style:
+                                context.sparkleTypography.labelSmall.copyWith(
+                              color: DS.textSecondary,
+                            ),
+                          ),
+                      ],
                     ),
                   ),
+                  if (!widget.dense && weeklyPattern != null) ...[
+                    const SizedBox(width: DS.spacing8),
+                    Flexible(
+                      child: Text(
+                        weeklyPattern,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.right,
+                        style: context.sparkleTypography.labelSmall.copyWith(
+                          color: DS.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
               SizedBox(height: topSpacing),
               Expanded(
                 child: pinnedTools.isEmpty
                     ? _buildEmptyToolsState(context)
-                    : GridView.builder(
-                        itemCount: pinnedTools.take(4).length,
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          mainAxisSpacing: gridSpacing,
-                          crossAxisSpacing: gridSpacing,
-                          childAspectRatio: 1.85,
-                        ),
-                        itemBuilder: (context, index) => _ToolShortcutChip(
-                          tool: pinnedTools[index],
-                        ),
+                    : _buildCompactToolsPager(
+                        context,
+                        compactPages,
+                        dense: widget.dense,
                       ),
               ),
             ],
@@ -392,6 +412,73 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
     );
   }
 
+  Widget _buildCompactToolsPager(
+    BuildContext context,
+    List<List<ToolDefinition>> pages, {
+    required bool dense,
+  }) {
+    if (pages.isEmpty) {
+      return _buildEmptyToolsState(context);
+    }
+
+    final gridSpacing = widget.dense ? DS.spacing6 : DS.spacing8;
+
+    return Column(
+      children: [
+        Expanded(
+          child: PageView.builder(
+            controller: _pageController,
+            itemCount: pages.length,
+            onPageChanged: (page) {
+              setState(() {
+                _currentPage = page;
+              });
+            },
+            itemBuilder: (context, pageIndex) {
+              final pageTools = pages[pageIndex];
+              return GridView.builder(
+                itemCount: pageTools.length,
+                physics: const NeverScrollableScrollPhysics(),
+                padding: EdgeInsets.zero,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: gridSpacing,
+                  crossAxisSpacing: gridSpacing,
+                  childAspectRatio: dense ? 1.02 : 1.08,
+                ),
+                itemBuilder: (context, index) => _CompactToolTile(
+                  tool: pageTools[index],
+                  dense: dense,
+                ),
+              );
+            },
+          ),
+        ),
+        if (pages.length > 1) ...[
+          const SizedBox(height: DS.spacing8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(
+              pages.length,
+              (index) => AnimatedContainer(
+                duration: DS.durationFast,
+                width: _currentPage == index ? 18 : 6,
+                height: 6,
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                decoration: BoxDecoration(
+                  color: _currentPage == index
+                      ? DS.prismPurple
+                      : DS.prismPurple.withValues(alpha: 0.22),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
   Widget _buildEmptyToolsState(BuildContext context) => InkWell(
         onTap: () => context.push('/tools/library?tab=manage'),
         borderRadius: BorderRadius.circular(16),
@@ -511,6 +598,104 @@ class _ToolShortcutChip extends ConsumerWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+        ),
+      );
+}
+
+class _CompactToolTile extends ConsumerWidget {
+  const _CompactToolTile({
+    required this.tool,
+    this.dense = false,
+  });
+
+  final ToolDefinition tool;
+  final bool dense;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => InkWell(
+        onTap: () => launchTool(
+          context,
+          ref,
+          tool.id,
+          launchContext: ToolLaunchContext.home,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        child: Ink(
+          decoration: BoxDecoration(
+            color: DS.surfacePrimary.withValues(alpha: 0.76),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: DS.borderSubtle),
+            boxShadow: [
+              BoxShadow(
+                color: DS.prismPurple.withValues(alpha: 0.06),
+                blurRadius: 12,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: dense ? DS.spacing8 : DS.spacing10,
+              vertical: dense ? DS.spacing8 : DS.spacing10,
+            ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final iconOnly =
+                    constraints.maxHeight < 70 || constraints.maxWidth < 84;
+                final iconBoxSize = dense ? 32.0 : 38.0;
+                final iconSize = dense ? 16.0 : 18.0;
+
+                if (iconOnly) {
+                  return Center(
+                    child: Container(
+                      width: iconBoxSize,
+                      height: iconBoxSize,
+                      decoration: BoxDecoration(
+                        color: DS.brandPrimary.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        tool.icon,
+                        size: iconSize,
+                        color: DS.brandPrimaryConst,
+                      ),
+                    ),
+                  );
+                }
+
+                return Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: iconBoxSize,
+                      height: iconBoxSize,
+                      decoration: BoxDecoration(
+                        color: DS.brandPrimary.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        tool.icon,
+                        size: iconSize,
+                        color: DS.brandPrimaryConst,
+                      ),
+                    ),
+                    SizedBox(height: dense ? DS.spacing4 : DS.spacing8),
+                    Text(
+                      tool.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: context.sparkleTypography.labelSmall.copyWith(
+                        color: DS.textPrimary,
+                        fontSize: dense ? 10.5 : null,
+                        fontWeight: DS.fontWeightBold,
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         ),

@@ -14,10 +14,12 @@ class NextActionsCard extends ConsumerWidget {
     super.key,
     this.onViewAll,
     this.compact = false,
+    this.dense = false,
   });
 
   final VoidCallback? onViewAll;
   final bool compact;
+  final bool dense;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -28,6 +30,7 @@ class NextActionsCard extends ConsumerWidget {
       return _CompactNextActions(
         actions: nextActions,
         onViewAll: onViewAll,
+        dense: dense,
       );
     }
 
@@ -106,14 +109,16 @@ class _CompactNextActions extends ConsumerWidget {
   const _CompactNextActions({
     required this.actions,
     this.onViewAll,
+    this.dense = false,
   });
 
   final List<TaskData> actions;
   final VoidCallback? onViewAll;
+  final bool dense;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final visibleActions = actions.take(2).toList();
+    final visibleActions = actions.take(dense ? 1 : 2).toList();
 
     return ContentConstraint(
       child: Padding(
@@ -129,10 +134,12 @@ class _CompactNextActions extends ConsumerWidget {
           child: MaterialStyler(
             material: AppMaterials.ceramic,
             borderRadius: DS.borderRadius20,
-            padding: const EdgeInsets.all(DS.spacing12),
+            padding: EdgeInsets.all(dense ? DS.spacing10 : DS.spacing12),
             child: visibleActions.isEmpty
                 ? Text(
                     '今天没有待推进的行动',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: context.sparkleTypography.labelLarge.copyWith(
                       color: DS.textSecondary,
                     ),
@@ -142,11 +149,16 @@ class _CompactNextActions extends ConsumerWidget {
                     children: [
                       ...visibleActions.map(
                         (task) => Padding(
-                          padding: const EdgeInsets.only(bottom: DS.spacing8),
-                          child: _CompactNextActionRow(task: task),
+                          padding: EdgeInsets.only(
+                            bottom: dense ? DS.spacing6 : DS.spacing8,
+                          ),
+                          child: _CompactNextActionRow(
+                            task: task,
+                            dense: dense,
+                          ),
                         ),
                       ),
-                      if (actions.length > 2)
+                      if (actions.length > visibleActions.length)
                         Align(
                           alignment: Alignment.centerRight,
                           child: InkWell(
@@ -158,7 +170,7 @@ class _CompactNextActions extends ConsumerWidget {
                                 vertical: 2,
                               ),
                               child: Text(
-                                '查看全部 →',
+                                dense ? '全部 →' : '查看全部 →',
                                 style: context.sparkleTypography.labelLarge
                                     .copyWith(
                                   color: DS.brandPrimary,
@@ -178,9 +190,13 @@ class _CompactNextActions extends ConsumerWidget {
 }
 
 class _CompactNextActionRow extends ConsumerWidget {
-  const _CompactNextActionRow({required this.task});
+  const _CompactNextActionRow({
+    required this.task,
+    this.dense = false,
+  });
 
   final TaskData task;
+  final bool dense;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -190,8 +206,10 @@ class _CompactNextActionRow extends ConsumerWidget {
       onTap: () => _openTaskExecution(context, ref, taskModel),
       borderRadius: DS.borderRadius12,
       child: Container(
-        height: 36,
-        padding: const EdgeInsets.symmetric(horizontal: DS.spacing8),
+        height: dense ? 34 : 36,
+        padding: EdgeInsets.symmetric(
+          horizontal: dense ? DS.spacing6 : DS.spacing8,
+        ),
         decoration: BoxDecoration(
           color: _itemColor(context),
           borderRadius: DS.borderRadius12,
@@ -214,6 +232,7 @@ class _CompactNextActionRow extends ConsumerWidget {
                 overflow: TextOverflow.ellipsis,
                 style: context.sparkleTypography.labelLarge.copyWith(
                   color: DS.textPrimary,
+                  fontSize: dense ? 12 : null,
                   fontWeight: DS.fontWeightSemiBold,
                 ),
               ),
@@ -223,21 +242,31 @@ class _CompactNextActionRow extends ConsumerWidget {
               onTap: () => _openTaskExecution(context, ref, taskModel),
               borderRadius: BorderRadius.circular(999),
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: DS.spacing10,
-                  vertical: DS.spacing4,
-                ),
+                width: dense ? 24 : null,
+                height: dense ? 24 : null,
+                padding: dense
+                    ? EdgeInsets.zero
+                    : const EdgeInsets.symmetric(
+                        horizontal: DS.spacing10,
+                        vertical: DS.spacing4,
+                      ),
                 decoration: BoxDecoration(
                   color: DS.brandPrimary.withValues(alpha: 0.16),
                   borderRadius: BorderRadius.circular(999),
                 ),
-                child: Text(
-                  '开始',
-                  style: context.sparkleTypography.labelSmall.copyWith(
-                    color: DS.brandPrimary,
-                    fontWeight: DS.fontWeightBold,
-                  ),
-                ),
+                child: dense
+                    ? Icon(
+                        Icons.play_arrow_rounded,
+                        size: 16,
+                        color: DS.brandPrimary,
+                      )
+                    : Text(
+                        '开始',
+                        style: context.sparkleTypography.labelSmall.copyWith(
+                          color: DS.brandPrimary,
+                          fontWeight: DS.fontWeightBold,
+                        ),
+                      ),
               ),
             ),
           ],

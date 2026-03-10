@@ -109,7 +109,9 @@ class ThemeManager extends ChangeNotifier {
   /// [skinId] - 皮肤ID（如 "skin_galaxy_nova_001"）
   /// [skinConfig] - 皮肤配置，格式：{theme: "nova", colors: ["#FF6B6B", "#4ECDC4"]}
   Future<void> equipShopSkin(
-      String skinId, Map<String, dynamic> skinConfig) async {
+    String skinId,
+    Map<String, dynamic> skinConfig,
+  ) async {
     _equippedSkinId = skinId;
     _skinConfig = skinConfig;
     await _saveToPrefs();
@@ -172,8 +174,8 @@ class ThemeManager extends ChangeNotifier {
     );
 
     final shadows = newColors.brightness == Brightness.light
-        ? SparkleShadows.light(brandPrimary: newColors.brandPrimary)
-        : SparkleShadows.dark(brandPrimary: newColors.brandPrimary);
+        ? SparkleShadows.light()
+        : SparkleShadows.dark();
 
     return base.copyWith(colors: newColors, shadows: shadows);
   }
@@ -222,8 +224,8 @@ class ThemeManager extends ChangeNotifier {
     }
 
     final shadows = colors.brightness == Brightness.light
-        ? SparkleShadows.light(brandPrimary: colors.brandPrimary)
-        : SparkleShadows.dark(brandPrimary: colors.brandPrimary);
+        ? SparkleShadows.light()
+        : SparkleShadows.dark();
 
     return base.copyWith(colors: colors, shadows: shadows);
   }
@@ -278,8 +280,7 @@ class ThemeManager extends ChangeNotifier {
   /// 简单的JSON字符串化（用于皮肤配置）
   String _stringifySimpleJson(Map<String, dynamic>? map) {
     if (map == null) return '{}';
-    final buffer = StringBuffer();
-    buffer.write('{');
+    final buffer = StringBuffer()..write('{');
     var first = true;
     map.forEach((key, value) {
       if (!first) buffer.write(', ');
@@ -328,7 +329,7 @@ class SparkleThemeData {
       typography: SparkleTypography.standard(),
       spacing: const SparkleSpacing(),
       animations: const SparkleAnimations(),
-      shadows: SparkleShadows.light(brandPrimary: colors.brandPrimary),
+      shadows: SparkleShadows.light(),
     );
   }
 
@@ -339,7 +340,7 @@ class SparkleThemeData {
       typography: SparkleTypography.standard(),
       spacing: const SparkleSpacing(),
       animations: const SparkleAnimations(),
-      shadows: SparkleShadows.dark(brandPrimary: colors.brandPrimary),
+      shadows: SparkleShadows.dark(),
     );
   }
   final SparkleColors colors;
@@ -905,50 +906,65 @@ class SparkleShadows {
     required this.large,
   });
 
-  factory SparkleShadows.light({Color? brandPrimary}) => SparkleShadows(
+  factory SparkleShadows.light() => const SparkleShadows(
         small: [
           BoxShadow(
-            color: const Color(0x14000000),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Color(0x12000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+          BoxShadow(
+            color: Color(0x18000000),
+            blurRadius: 18,
+            offset: Offset(0, 8),
           ),
         ],
         medium: [
           BoxShadow(
-            color: const Color(0x16000000),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
+            color: Color(0x14000000),
+            blurRadius: 10,
+            offset: Offset(0, 3),
+          ),
+          BoxShadow(
+            color: Color(0x1A000000),
+            blurRadius: 24,
+            offset: Offset(0, 10),
           ),
         ],
         large: [
           BoxShadow(
-            color: const Color(0x1A000000),
-            blurRadius: 28,
-            offset: const Offset(0, 14),
+            color: Color(0x16000000),
+            blurRadius: 14,
+            offset: Offset(0, 4),
+          ),
+          BoxShadow(
+            color: Color(0x20000000),
+            blurRadius: 32,
+            offset: Offset(0, 14),
           ),
         ],
       );
 
-  factory SparkleShadows.dark({Color? brandPrimary}) => SparkleShadows(
+  factory SparkleShadows.dark() => const SparkleShadows(
         small: [
           BoxShadow(
-            color: const Color(0x66000000),
+            color: Color(0x66000000),
             blurRadius: 14,
-            offset: const Offset(0, 5),
+            offset: Offset(0, 5),
           ),
         ],
         medium: [
           BoxShadow(
-            color: const Color(0x73000000),
+            color: Color(0x73000000),
             blurRadius: 20,
-            offset: const Offset(0, 10),
+            offset: Offset(0, 10),
           ),
         ],
         large: [
           BoxShadow(
-            color: const Color(0x8A000000),
+            color: Color(0x8A000000),
             blurRadius: 34,
-            offset: const Offset(0, 18),
+            offset: Offset(0, 18),
           ),
         ],
       );
