@@ -1,36 +1,102 @@
 part of 'chat_provider.dart';
 
 extension ChatNotifierActions on ChatNotifier {
+  Map<String, dynamic> _actionPayload(Map<String, dynamic> payload) {
+    final nested = payload['payload'];
+    if (nested is Map<String, dynamic>) {
+      return nested;
+    }
+    if (nested is Map) {
+      return Map<String, dynamic>.from(nested);
+    }
+    return const <String, dynamic>{};
+  }
+
+  String _actionString(
+    Map<String, dynamic> payload,
+    String key,
+  ) {
+    final nested = _actionPayload(payload);
+    final value = nested[key] ?? payload[key];
+    return value?.toString() ?? '';
+  }
+
+  void _queueNavigation(String route, {String? successMessage}) {
+    if (route.isEmpty) {
+      return;
+    }
+    state = state.copyWith(
+      lastActionStatus: 'navigation_ready',
+      lastActionMessage: route,
+    );
+    if (successMessage != null && successMessage.isNotEmpty) {
+      debugPrint('➡️ $successMessage -> $route');
+    }
+  }
+
   Future<void> handleWidgetAction(
     String actionType,
     Map<String, dynamic> payload,
   ) async {
     switch (actionType) {
       case 'prompt':
-        final prompt =
-            payload['prompt']?.toString() ?? payload['label']?.toString() ?? '';
+        final prompt = _actionString(payload, 'prompt').isNotEmpty
+            ? _actionString(payload, 'prompt')
+            : payload['label']?.toString() ?? '';
         if (prompt.isNotEmpty) {
           await sendMessage(prompt);
         }
         return;
       case 'route':
-        final route = payload['route']?.toString() ?? '';
+        final route = _actionString(payload, 'route');
         if (route.isNotEmpty) {
-          state = state.copyWith(
-            lastActionStatus: 'navigation_ready',
-            lastActionMessage: route,
-          );
+          _queueNavigation(route);
         }
         return;
+      case 'switch_plan':
+        final planId = _actionString(payload, 'plan_id');
+        if (planId.isEmpty) {
+          return;
+        }
+        _ref.read(activePlanProvider.notifier).selectPlan(planId);
+        await switchPlanSession(planId);
+        state = state.copyWith(
+          lastActionStatus: 'plan_switched',
+          lastActionMessage: '已切换到对应计划上下文',
+        );
+        return;
+      case 'open_task':
+        final taskId = _actionString(payload, 'task_id');
+        final route = _actionString(payload, 'route').isNotEmpty
+            ? _actionString(payload, 'route')
+            : (taskId.isNotEmpty ? '/tasks/$taskId/execute' : '');
+        _queueNavigation(route);
+        return;
+      case 'start_focus':
+        final taskId = _actionString(payload, 'task_id');
+        final route = _actionString(payload, 'route').isNotEmpty
+            ? _actionString(payload, 'route')
+            : (taskId.isNotEmpty ? '/focus/mindfulness/$taskId' : '/focus');
+        _queueNavigation(route);
+        return;
+      case 'create_task_draft':
+        final title = _actionString(payload, 'title');
+        final route = _actionString(payload, 'route').isNotEmpty
+            ? _actionString(payload, 'route')
+            : (title.isNotEmpty
+                ? '/tasks/new?title=${Uri.encodeComponent(title)}'
+                : '/tasks/new');
+        _queueNavigation(route);
+        return;
       case 'reflection_submit':
-        final feedbackId = payload['feedback_id']?.toString() ?? '';
+        final feedbackId = _actionString(payload, 'feedback_id');
         if (feedbackId.isEmpty) {
           return;
         }
         await _ref.read(taskRepositoryProvider).submitReflectionAnswer(
               feedbackId,
-              selectedOption: payload['selected_option']?.toString(),
-              freeText: payload['free_text']?.toString(),
+              selectedOption: _actionString(payload, 'selected_option'),
+              freeText: _actionString(payload, 'free_text'),
             );
         state = state.copyWith(
           lastActionStatus: 'reflection_submitted',

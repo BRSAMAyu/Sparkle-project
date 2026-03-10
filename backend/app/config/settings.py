@@ -409,6 +409,10 @@ class Settings(BaseSettings):
     ENABLE_UNIFIED_GRAPH_ROUTING: bool = True
     ENABLE_EXPERT_STRATEGY_V1: bool = True
     ENABLE_SESSION_FEEDBACK_ADAPTATION: bool = False
+    ENABLE_ADAPTIVE_PRESENTATION: bool = False
+    ENABLE_STRUCTURED_NEXT_ACTIONS: bool = False
+    ENABLE_BLOCKED_TEMPERATURE: bool = False
+    ENABLE_UX_PRESENTATION_METADATA: bool = False
     ENABLE_SUMMARIZATION_WORKER: bool = True
 
     # Optional Graph Sync Worker

@@ -1085,6 +1085,16 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       bool secondary = false,
     }) {
       final label = item['label']?.toString() ?? '';
+      final style = item['style']?.toString() ?? (secondary ? 'secondary' : 'primary');
+      final isPrimary = style == 'primary' && !secondary;
+      final isGhost = style == 'ghost';
+      final backgroundColor = isPrimary
+          ? DS.primaryBase.withValues(alpha: 0.12)
+          : (isGhost ? DS.surfacePrimary : DS.surfaceTertiary);
+      final borderColor = isPrimary
+          ? DS.primaryBase.withValues(alpha: 0.2)
+          : (isGhost ? DS.neutral300 : DS.neutral200);
+      final textColor = isPrimary ? DS.primaryBase : DS.neutral700;
       return InkWell(
         onTap: label.isEmpty
             ? null
@@ -1101,20 +1111,14 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             vertical: DS.spacing8,
           ),
           decoration: BoxDecoration(
-            color: secondary
-                ? DS.surfaceTertiary
-                : DS.primaryBase.withValues(alpha: 0.12),
+            color: backgroundColor,
             borderRadius: DS.borderRadius20,
-            border: Border.all(
-              color: secondary
-                  ? DS.neutral200
-                  : DS.primaryBase.withValues(alpha: 0.2),
-            ),
+            border: Border.all(color: borderColor),
           ),
           child: Text(
             label,
             style: TextStyle(
-              color: secondary ? DS.neutral700 : DS.primaryBase,
+              color: textColor,
               fontWeight: DS.fontWeightSemibold,
             ),
           ),
@@ -1490,8 +1494,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     final reason = action.data['reason']?.toString() ?? '';
     final recoveryMessage = action.data['recovery_message']?.toString() ?? '';
     final retryOptions = (action.data['retry_options'] as List<dynamic>? ?? [])
-        .map((e) => '$e')
-        .where((e) => e.isNotEmpty)
+        .map((e) => e is Map ? Map<String, dynamic>.from(e) : {'label': '$e', 'type': 'prompt', 'payload': {'prompt': '$e'}})
+        .where((e) => (e['label']?.toString() ?? '').isNotEmpty)
         .toList();
 
     return Column(
@@ -1533,8 +1537,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                   (item) => InkWell(
                     onTap: () => unawaited(
                       widget.onWidgetAction?.call(
-                        'prompt',
-                        {'prompt': item, 'label': item},
+                        item['type']?.toString() ?? 'prompt',
+                        item,
                       ),
                     ),
                     borderRadius: DS.borderRadius20,
@@ -1549,7 +1553,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                         border: Border.all(color: DS.neutral200),
                       ),
                       child: Text(
-                        item,
+                        item['label']?.toString() ?? '',
                         style: TextStyle(
                           color: DS.neutral700,
                           fontWeight: DS.fontWeightSemibold,

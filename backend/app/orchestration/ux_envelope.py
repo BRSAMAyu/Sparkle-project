@@ -2,10 +2,47 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Any
 
+from app.config import settings
+from app.core.business_metrics import (
+    UX_BLOCKED_HISTORY_HIT_TOTAL,
+    UX_BLOCKED_TEMPERATURE_TOTAL,
+    UX_NEXT_ACTION_FALLBACK_TOTAL,
+    UX_NEXT_ACTION_GENERATED_TOTAL,
+    UX_PRESENTATION_STYLE_TOTAL,
+    UX_STAGE_DETECTED_TOTAL,
+)
+from app.core.cache import cache_service
 from app.orchestration.chat_modes import CHAT_MODE_STANDARD
 from app.orchestration.mode_workflow_config import get_workflow_config
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
+WARM_TONE_KEYWORDS = {"warm", "gentle", "encouraging", "supportive", "温和", "鼓励", "陪伴", "柔和"}
+ANALYTICAL_TONE_KEYWORDS = {"analytical", "professional", "structured", "rational", "理性", "结构化", "专业", "冷静"}
+HIGH_EXPLORATION_KEYWORDS = {"high", "deep", "wide", "exploratory", "高", "深入", "发散"}
+COMPACT_VERBOSITY_KEYWORDS = {"low", "brief", "concise", "short", "简洁", "精简", "短"}
+EXPLORATORY_VERBOSITY_KEYWORDS = {"high", "verbose", "detailed", "rich", "详细", "展开", "丰富"}
+NEGATIVE_USER_SIGNAL_KEYWORDS = {
+    "崩溃",
+    "焦虑",
+    "压力",
+    "学不进去",
+    "撑不住",
+    "烦",
+    "累",
+    "难受",
+    "痛苦",
+    "沮丧",
+    "低落",
+    "不想",
+}
+HIGH_FRICTION_ACTION_TYPES = {"start_focus", "create_task_draft", "switch_plan"}
 
 
 @dataclass(frozen=True)
@@ -20,6 +57,84 @@ class PresentationProfile:
     blocked_message: str
     partial_message: str
     next_action_limit: int = 3
+
+
+@dataclass(frozen=True)
+class PresentationStyleDecision:
+    style_variant: str
+    tone_variant: str
+    next_action_limit: int
+    companion_frame_variant: str
+    next_actions_title_variant: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "style_variant": self.style_variant,
+            "tone_variant": self.tone_variant,
+            "next_action_limit": self.next_action_limit,
+            "companion_frame_variant": self.companion_frame_variant,
+            "next_actions_title_variant": self.next_actions_title_variant,
+        }
+
+
+@dataclass(frozen=True)
+class StructuredAction:
+    label: str
+    type: str
+    payload: dict[str, Any]
+    style: str
+    stage: str
+    reason_key: str
+
+    def to_dict(self) -> dict[str, Any]:
+        data = {
+            "label": self.label,
+            "type": self.type,
+            "payload": self.payload,
+            "style": self.style,
+            "stage": self.stage,
+            "reason_key": self.reason_key,
+        }
+        for key in ("prompt", "route", "plan_id", "task_id", "title"):
+            if key in self.payload and self.payload[key]:
+                data[key] = self.payload[key]
+        return data
+
+
+class BlockedPresentationHistoryStore:
+    TTL_SECONDS = 60 * 60 * 24 * 30
+
+    def __init__(self) -> None:
+        self._local_state: dict[str, dict[str, Any]] = {}
+
+    @staticmethod
+    def _key(user_id: str, failure_kind: str) -> str:
+        return f"ux:blocking:{user_id}:{failure_kind}"
+
+    async def record(self, user_id: str | None, failure_kind: str | None) -> int:
+        if not user_id or not failure_kind or failure_kind == "none":
+            return 0
+        key = self._key(user_id, failure_kind)
+        now = _utcnow().isoformat()
+        redis_client = cache_service.redis
+        if redis_client:
+            try:
+                raw = await redis_client.get(key)
+                payload = json.loads(raw) if raw else {}
+                count = int(payload.get("count") or 0) + 1
+                await redis_client.setex(
+                    key,
+                    self.TTL_SECONDS,
+                    json.dumps({"count": count, "last_seen_at": now}, ensure_ascii=False),
+                )
+                return count
+            except Exception:
+                pass
+
+        payload = self._local_state.get(key) or {"count": 0}
+        count = int(payload.get("count") or 0) + 1
+        self._local_state[key] = {"count": count, "last_seen_at": now}
+        return count
 
 
 _MODE_PROFILES: dict[str, PresentationProfile] = {
@@ -82,7 +197,10 @@ _MODE_PROFILES: dict[str, PresentationProfile] = {
 
 
 class UXEnvelopeBuilder:
-    def build(
+    def __init__(self, blocked_history_store: BlockedPresentationHistoryStore | None = None) -> None:
+        self._blocked_history_store = blocked_history_store or BlockedPresentationHistoryStore()
+
+    async def build(
         self,
         *,
         user_message: str,
@@ -97,34 +215,25 @@ class UXEnvelopeBuilder:
         plan_context: dict[str, Any] | None,
         user_context_payload: dict[str, Any] | None,
     ) -> dict[str, dict[str, Any]]:
-        chat_mode = str((getattr(final_state, "context_data", {}) or {}).get("chat_mode") or CHAT_MODE_STANDARD)
+        context_data = getattr(final_state, "context_data", {}) or {}
+        chat_mode = str(context_data.get("chat_mode") or CHAT_MODE_STANDARD)
         profile = self._get_profile(chat_mode)
         selected_experts = self._selected_experts(final_state)
-
-        ux_turn = {
-            "intent_summary": self._intent_summary(user_message, chat_mode),
-            "mode_label": profile.mode_label,
-            "companion_frame": profile.companion_frame,
-            "dual_core_mode": self._dual_core_mode(final_state),
-            "mode_reason": self._dual_core_reason(final_state),
-        }
+        style_decision = self._presentation_style_decision(
+            chat_mode=chat_mode,
+            profile=profile,
+            user_message=user_message,
+            user_context_payload=user_context_payload,
+            final_state=final_state,
+        )
+        if settings.ENABLE_ADAPTIVE_PRESENTATION:
+            UX_PRESENTATION_STYLE_TOTAL.labels(
+                style_variant=style_decision.style_variant,
+                tone_variant=style_decision.tone_variant,
+                chat_mode=chat_mode,
+            ).inc()
 
         completion_state = self._completion_state(final_state, executable_plan, execution_validation)
-        confidence_band = self._confidence_band(executable_plan, route_decision, execution_validation)
-        ux_result = {
-            "answer_kind": self._answer_kind(profile, executable_plan, chat_mode),
-            "confidence_band": confidence_band,
-            "completion_state": completion_state,
-            "headline": self._result_headline(chat_mode, completion_state, selected_experts),
-            "first_screen_focus": profile.first_screen_focus,
-            "why_this_answer": self._why_this_answer(
-                chat_mode=chat_mode,
-                include_references=include_references,
-                selected_experts=selected_experts,
-                execution_validation=execution_validation,
-                route_decision=route_decision,
-            ),
-        }
         recovery_state = self._recovery_state(
             chat_mode=chat_mode,
             completion_state=completion_state,
@@ -135,28 +244,114 @@ class UXEnvelopeBuilder:
             route_decision=route_decision,
             profile=profile,
         )
+        blocked_repeat_count = 0
+        blocked_temperature = None
+        if recovery_state["failure_kind"] != "none":
+            blocked_repeat_count, blocked_temperature = await self._blocked_state(
+                failure_kind=recovery_state["failure_kind"],
+                user_message=user_message,
+                user_context_payload=user_context_payload,
+                final_state=final_state,
+                style_decision=style_decision,
+            )
+            recovery_state["failure_message"] = self._temperature_adjusted_failure_message(
+                profile=profile,
+                failure_kind=recovery_state["failure_kind"],
+                base_message=recovery_state["failure_message"],
+                blocked_temperature=blocked_temperature,
+            )
+
+        confidence_band = self._confidence_band(executable_plan, route_decision, execution_validation)
+        stage = self._conversation_stage(
+            chat_mode=chat_mode,
+            completion_state=completion_state,
+            recovery_kind=recovery_state["failure_kind"],
+            final_state=final_state,
+            executable_plan=executable_plan,
+            execution_validation=execution_validation,
+            plan_context=plan_context,
+            full_response=full_response,
+        )
+        if settings.ENABLE_ADAPTIVE_PRESENTATION:
+            UX_STAGE_DETECTED_TOTAL.labels(stage=stage, chat_mode=chat_mode).inc()
+
+        headline = self._result_headline(chat_mode, completion_state, selected_experts)
+        if blocked_temperature and completion_state in {"blocked", "needs_input"}:
+            headline = self._blocked_headline(
+                profile=profile,
+                blocked_temperature=blocked_temperature,
+                completion_state=completion_state,
+            )
+
+        ux_turn = {
+            "intent_summary": self._intent_summary(user_message, chat_mode),
+            "mode_label": profile.mode_label,
+            "companion_frame": (
+                style_decision.companion_frame_variant
+                if settings.ENABLE_ADAPTIVE_PRESENTATION
+                else profile.companion_frame
+            ),
+            "dual_core_mode": self._dual_core_mode(final_state),
+            "mode_reason": self._dual_core_reason(final_state),
+        }
+        if settings.ENABLE_ADAPTIVE_PRESENTATION or settings.ENABLE_UX_PRESENTATION_METADATA:
+            ux_turn["presentation_style"] = style_decision.style_variant
+            ux_turn["tone_variant"] = style_decision.tone_variant
+
+        ux_result = {
+            "answer_kind": self._answer_kind(profile, executable_plan, chat_mode),
+            "confidence_band": confidence_band,
+            "completion_state": completion_state,
+            "headline": headline,
+            "first_screen_focus": profile.first_screen_focus,
+            "why_this_answer": self._why_this_answer(
+                chat_mode=chat_mode,
+                include_references=include_references,
+                selected_experts=selected_experts,
+                execution_validation=execution_validation,
+                route_decision=route_decision,
+            ),
+        }
         ux_result.update(recovery_state)
+        if settings.ENABLE_BLOCKED_TEMPERATURE or settings.ENABLE_UX_PRESENTATION_METADATA:
+            ux_result["blocked_reason"] = recovery_state["failure_kind"]
+            ux_result["blocked_temperature"] = blocked_temperature
+            ux_result["blocked_repeat_count"] = blocked_repeat_count
 
         memory_updates = self._memory_updates(final_state, user_context_payload)
+        next_actions = self._next_actions(
+            chat_mode=chat_mode,
+            executable_plan=executable_plan,
+            plan_context=plan_context,
+            profile=profile,
+            full_response=full_response,
+            final_state=final_state,
+            stage=stage,
+            style_decision=style_decision,
+            completion_state=completion_state,
+        )
+        retry_options = self._retry_options(
+            completion_state=completion_state,
+            include_references=include_references,
+            has_files=bool(file_ids),
+            profile=profile,
+            recovery_kind=recovery_state["failure_kind"],
+        )
+
         ux_followthrough = {
-            "next_actions_title": profile.next_actions_title,
-            "next_actions": self._next_actions(
-                chat_mode=chat_mode,
-                executable_plan=executable_plan,
-                plan_context=plan_context,
+            "next_actions_title": self._next_actions_title(
                 profile=profile,
-                full_response=full_response,
+                stage=stage,
+                style_decision=style_decision,
             ),
-            "retry_options": self._retry_options(
-                completion_state=completion_state,
-                include_references=include_references,
-                has_files=bool(file_ids),
-                profile=profile,
-                recovery_kind=recovery_state["failure_kind"],
-            ),
+            "next_actions": next_actions,
+            "retry_options": retry_options,
             "recovery_message": recovery_state["failure_message"],
             "memory_updates": memory_updates,
         }
+        if settings.ENABLE_ADAPTIVE_PRESENTATION or settings.ENABLE_UX_PRESENTATION_METADATA:
+            ux_followthrough["stage"] = stage
+            ux_followthrough["next_actions_strategy"] = f"{stage}:{style_decision.style_variant}"
 
         ux_sources = {
             "citations_available": bool(include_references or file_ids),
@@ -221,6 +416,308 @@ class UXEnvelopeBuilder:
                 partial_message="专家视角的主结论已经给出，但仍可以补充一层证据或约束，让建议更稳。",
             )
         return _MODE_PROFILES.get(chat_mode, _MODE_PROFILES[CHAT_MODE_STANDARD])
+
+    def _presentation_style_decision(
+        self,
+        *,
+        chat_mode: str,
+        profile: PresentationProfile,
+        user_message: str,
+        user_context_payload: dict[str, Any] | None,
+        final_state: Any,
+    ) -> PresentationStyleDecision:
+        context_data = getattr(final_state, "context_data", {}) or {}
+        llm_profile = (user_context_payload or {}).get("llm_profile")
+        llm_profile = llm_profile if isinstance(llm_profile, dict) else {}
+        verbosity = str(llm_profile.get("verbosity_target") or "").strip().lower()
+        exploration = str(llm_profile.get("exploration_level") or "").strip().lower()
+        tone = str(llm_profile.get("tone") or "").strip().lower()
+        session_signal = context_data.get("session_feedback_signal")
+        signal_type = str((session_signal or {}).get("signal_type") or "").strip().lower()
+        focus_mode = str(((context_data.get("context_focus") or {}).get("focus_mode")) or "").strip().lower()
+
+        if signal_type == "simplify" or any(token in verbosity for token in COMPACT_VERBOSITY_KEYWORDS):
+            style_variant = "compact"
+        elif (
+            signal_type == "expand"
+            or any(token in verbosity for token in EXPLORATORY_VERBOSITY_KEYWORDS)
+            or any(token in exploration for token in HIGH_EXPLORATION_KEYWORDS)
+        ):
+            style_variant = "exploratory"
+        else:
+            style_variant = "balanced"
+
+        if focus_mode == "emotional_focus" or any(token in tone for token in WARM_TONE_KEYWORDS):
+            tone_variant = "warm"
+        elif any(token in tone for token in ANALYTICAL_TONE_KEYWORDS):
+            tone_variant = "analytical"
+        else:
+            tone_variant = "direct"
+
+        next_action_limit = {
+            "compact": 2,
+            "balanced": profile.next_action_limit,
+            "exploratory": 4,
+        }.get(style_variant, profile.next_action_limit)
+
+        companion_frame_variant = self._companion_frame_variant(
+            profile=profile,
+            chat_mode=chat_mode,
+            style_variant=style_variant,
+            tone_variant=tone_variant,
+            user_message=user_message,
+        )
+        next_actions_title_variant = self._base_next_actions_title(
+            profile=profile,
+            style_variant=style_variant,
+            tone_variant=tone_variant,
+        )
+        return PresentationStyleDecision(
+            style_variant=style_variant,
+            tone_variant=tone_variant,
+            next_action_limit=next_action_limit,
+            companion_frame_variant=companion_frame_variant,
+            next_actions_title_variant=next_actions_title_variant,
+        )
+
+    async def _blocked_state(
+        self,
+        *,
+        failure_kind: str,
+        user_message: str,
+        user_context_payload: dict[str, Any] | None,
+        final_state: Any,
+        style_decision: PresentationStyleDecision,
+    ) -> tuple[int, str]:
+        if not settings.ENABLE_BLOCKED_TEMPERATURE:
+            return 0, self._blocked_temperature(
+                repeat_count=0,
+                user_message=user_message,
+                user_context_payload=user_context_payload,
+                final_state=final_state,
+                style_decision=style_decision,
+            )
+
+        user_id = self._extract_user_id(user_context_payload=user_context_payload, final_state=final_state)
+        repeat_count = await self._blocked_history_store.record(user_id, failure_kind)
+        if repeat_count > 1:
+            UX_BLOCKED_HISTORY_HIT_TOTAL.labels(failure_kind=failure_kind).inc()
+        blocked_temperature = self._blocked_temperature(
+            repeat_count=repeat_count,
+            user_message=user_message,
+            user_context_payload=user_context_payload,
+            final_state=final_state,
+            style_decision=style_decision,
+        )
+        UX_BLOCKED_TEMPERATURE_TOTAL.labels(
+            failure_kind=failure_kind,
+            temperature=blocked_temperature,
+        ).inc()
+        return repeat_count, blocked_temperature
+
+    def _blocked_temperature(
+        self,
+        *,
+        repeat_count: int,
+        user_message: str,
+        user_context_payload: dict[str, Any] | None,
+        final_state: Any,
+        style_decision: PresentationStyleDecision,
+    ) -> str:
+        context_data = getattr(final_state, "context_data", {}) or {}
+        focus_mode = str(((context_data.get("context_focus") or {}).get("focus_mode")) or "")
+        if focus_mode == "emotional_focus":
+            return "gentle"
+        if style_decision.tone_variant == "warm" and self._message_has_negative_signal(user_message):
+            return "gentle"
+        if repeat_count >= 2:
+            return "direct"
+        return "guided"
+
+    def _blocked_headline(
+        self,
+        *,
+        profile: PresentationProfile,
+        blocked_temperature: str,
+        completion_state: str,
+    ) -> str:
+        if blocked_temperature == "gentle":
+            return "别急，我还差一点点信息，就能继续帮你收敛。"
+        if blocked_temperature == "direct":
+            if completion_state == "needs_input":
+                return "先补这一个关键信息，我就继续。"
+            return "这轮先停在这里，补上关键条件后继续。"
+        return profile.blocked_title
+
+    def _temperature_adjusted_failure_message(
+        self,
+        *,
+        profile: PresentationProfile,
+        failure_kind: str,
+        base_message: str,
+        blocked_temperature: str | None,
+    ) -> str:
+        if not blocked_temperature or failure_kind == "none":
+            return base_message
+        if blocked_temperature == "guided":
+            return base_message
+        if blocked_temperature == "direct":
+            direct_messages = {
+                "missing_input": "还缺一个关键信息。补上后我就直接继续。",
+                "tool_failure": "有步骤执行失败了。先补条件，或让我换一种做法。",
+                "timeout": "这轮超时了。你可以先看当前结果，或让我基于现有信息继续。",
+                "blocked": "还差一个关键条件。补上后我继续。",
+                "partial_tool_failure": "主结论可用，但还有执行失败项。先决定是否继续复核。",
+                "expert_degraded": "这轮走了降级路径。主结论可用，但深度会略弱。",
+                "limited_evidence": "当前证据不够。先补材料，或接受保守结论。",
+                "provider_unavailable": "外部模型这轮降级了。现在能先给主结论，稍后可再试深挖。",
+            }
+            return direct_messages.get(failure_kind, base_message)
+        gentle_messages = {
+            "missing_input": "我已经靠近答案了，只差一点点现实信息，补上后我就能继续帮你收紧。",
+            "tool_failure": "我已经尽量保住这轮可用的部分了，只是有个执行步骤没顺利完成。我们可以换一种更稳的方式继续。",
+            "timeout": "我已经拿到一部分结果了，只是这轮时间不太够。你可以先看当前结论，我也可以接着帮你慢慢收紧。",
+            "blocked": "方向已经有了，只是还差一个关键条件。补上以后，我会尽量更顺着你的节奏继续。",
+        }
+        return gentle_messages.get(failure_kind, base_message or profile.blocked_message)
+
+    def _conversation_stage(
+        self,
+        *,
+        chat_mode: str,
+        completion_state: str,
+        recovery_kind: str,
+        final_state: Any,
+        executable_plan: Any | None,
+        execution_validation: dict[str, Any] | None,
+        plan_context: dict[str, Any] | None,
+        full_response: str,
+    ) -> str:
+        context_data = getattr(final_state, "context_data", {}) or {}
+        if completion_state in {"blocked", "needs_input"} or recovery_kind != "none":
+            return "blocked"
+
+        plan_result = context_data.get("plan_execution_result")
+        if execution_validation:
+            total = int(execution_validation.get("total_steps") or execution_validation.get("total_tool_calls") or 0)
+            failed = int(execution_validation.get("failed_steps") or execution_validation.get("failed_tool_calls") or 0)
+            if total > 0 and failed == 0:
+                has_reflection = bool(
+                    context_data.get("adaptation_records")
+                    or context_data.get("preference_learnings")
+                    or context_data.get("progress_snapshot")
+                )
+                return "reflect" if has_reflection else "completed"
+            if total > 0 and plan_result is not None:
+                return "executing"
+
+        plan_review = context_data.get("plan_review")
+        if isinstance(plan_review, dict) and plan_review.get("decision") in {
+            "approved",
+            "requires_confirmation",
+            "needs_modification",
+        }:
+            return "plan_ready"
+
+        if plan_context and plan_context.get("plan_id") and (
+            chat_mode == "study_plan"
+            or executable_plan is not None
+            or any(token in full_response for token in ("第一步", "开始", "执行", "今天先"))
+        ):
+            return "plan_ready"
+
+        if plan_result is not None and hasattr(plan_result, "step_results"):
+            return "executing"
+
+        return "explore"
+
+    def _companion_frame_variant(
+        self,
+        *,
+        profile: PresentationProfile,
+        chat_mode: str,
+        style_variant: str,
+        tone_variant: str,
+        user_message: str,
+    ) -> str:
+        if style_variant == "compact":
+            if tone_variant == "warm":
+                return "我先用更短、更轻一点的方式，把当前最有用的部分说清。"
+            if tone_variant == "analytical":
+                return "我先压缩成结论、关键依据和下一步，避免信息过载。"
+            return "我先给你最直接可用的部分，再看要不要展开。"
+        if style_variant == "exploratory":
+            if tone_variant == "warm":
+                return f"{profile.companion_frame} 如果你愿意，我也会补几个更适合继续聊下去的方向。"
+            if tone_variant == "analytical":
+                return f"{profile.companion_frame} 我会顺手标出关键依据、风险和可选分支。"
+            return f"{profile.companion_frame} 我也会补几个可继续探索的方向。"
+        if tone_variant == "warm" or self._message_has_negative_signal(user_message):
+            return "我会先顺着你的节奏把关键部分说清，再带你决定下一步。"
+        if tone_variant == "analytical":
+            return f"{profile.companion_frame} 我会尽量按结论、依据、动作来组织。"
+        return profile.companion_frame
+
+    def _base_next_actions_title(
+        self,
+        *,
+        profile: PresentationProfile,
+        style_variant: str,
+        tone_variant: str,
+    ) -> str:
+        if style_variant == "compact":
+            return "先做这 1 到 2 步就够了"
+        if style_variant == "exploratory" and tone_variant == "warm":
+            return "如果你愿意，可以从这里继续往前走"
+        if tone_variant == "analytical":
+            return "建议按这个顺序继续"
+        return profile.next_actions_title
+
+    def _next_actions_title(
+        self,
+        *,
+        profile: PresentationProfile,
+        stage: str,
+        style_decision: PresentationStyleDecision,
+    ) -> str:
+        if not settings.ENABLE_ADAPTIVE_PRESENTATION:
+            return profile.next_actions_title
+        stage_titles = {
+            "explore": {
+                "compact": "你可以先这样继续",
+                "balanced": style_decision.next_actions_title_variant,
+                "exploratory": "如果要继续深入，可以从这里展开",
+            },
+            "plan_ready": {
+                "compact": "先把计划落到这一步",
+                "balanced": "下一步先把计划落地",
+                "exploratory": "先开始第一步，再决定要不要继续扩展",
+            },
+            "executing": {
+                "compact": "继续把这一小步推进完",
+                "balanced": "现在最值得继续的是这几步",
+                "exploratory": "执行中可以优先推进这些动作",
+            },
+            "blocked": {
+                "compact": "先补这一点，我就继续",
+                "balanced": "先解除当前阻塞",
+                "exploratory": "先把阻塞拆开，再继续推进",
+            },
+            "completed": {
+                "compact": "这轮结束后，建议这样承接",
+                "balanced": "你现在可以这样收尾或承接",
+                "exploratory": "这轮完成后，还可以这样往前走",
+            },
+            "reflect": {
+                "compact": "现在适合做个短回顾",
+                "balanced": "这时候适合回顾一下过程",
+                "exploratory": "如果你愿意，现在可以顺手做一轮反思更新",
+            },
+        }
+        title = stage_titles.get(stage, {}).get(style_decision.style_variant) or style_decision.next_actions_title_variant
+        if style_decision.tone_variant == "warm" and stage == "blocked":
+            return "别急，我们先把这一点补齐"
+        return title
 
     def _selected_experts(self, final_state: Any) -> list[str]:
         context_data = getattr(final_state, "context_data", {}) or {}
@@ -409,6 +906,319 @@ class UXEnvelopeBuilder:
         plan_context: dict[str, Any] | None,
         profile: PresentationProfile,
         full_response: str,
+        final_state: Any,
+        stage: str,
+        style_decision: PresentationStyleDecision,
+        completion_state: str,
+    ) -> list[Any]:
+        if not settings.ENABLE_ADAPTIVE_PRESENTATION and not settings.ENABLE_STRUCTURED_NEXT_ACTIONS:
+            return self._default_next_action_labels(
+                chat_mode=chat_mode,
+                executable_plan=executable_plan,
+                plan_context=plan_context,
+                profile=profile,
+                full_response=full_response,
+            )
+
+        task_candidates = self._task_candidates(plan_context=plan_context, final_state=final_state)
+        actions = self._build_stage_actions(
+            stage=stage,
+            chat_mode=chat_mode,
+            full_response=full_response,
+            plan_context=plan_context,
+            task_candidates=task_candidates,
+            style_decision=style_decision,
+            completion_state=completion_state,
+        )
+        if not actions:
+            UX_NEXT_ACTION_FALLBACK_TOTAL.labels(reason="empty_stage_actions").inc()
+            fallback = self._default_next_action_labels(
+                chat_mode=chat_mode,
+                executable_plan=executable_plan,
+                plan_context=plan_context,
+                profile=profile,
+                full_response=full_response,
+            )
+            if not settings.ENABLE_STRUCTURED_NEXT_ACTIONS:
+                return fallback
+            actions = [
+                StructuredAction(
+                    label=label,
+                    type="prompt",
+                    payload={"prompt": label},
+                    style="primary" if idx == 0 else "secondary",
+                    stage=stage,
+                    reason_key="fallback_prompt",
+                )
+                for idx, label in enumerate(fallback)
+            ]
+
+        finalized = self._finalize_actions(
+            actions=actions,
+            limit=style_decision.next_action_limit if settings.ENABLE_ADAPTIVE_PRESENTATION else profile.next_action_limit,
+        )
+        if not settings.ENABLE_STRUCTURED_NEXT_ACTIONS:
+            return [action.label for action in finalized]
+        for action in finalized:
+            UX_NEXT_ACTION_GENERATED_TOTAL.labels(stage=stage, action_type=action.type).inc()
+        return [action.to_dict() for action in finalized]
+
+    def _build_stage_actions(
+        self,
+        *,
+        stage: str,
+        chat_mode: str,
+        full_response: str,
+        plan_context: dict[str, Any] | None,
+        task_candidates: list[dict[str, Any]],
+        style_decision: PresentationStyleDecision,
+        completion_state: str,
+    ) -> list[StructuredAction]:
+        actions: list[StructuredAction] = []
+        primary_task = task_candidates[0] if task_candidates else None
+        plan_id = str((plan_context or {}).get("plan_id") or "").strip()
+        plan_title = str(
+            (plan_context or {}).get("plan_title")
+            or (plan_context or {}).get("plan_name")
+            or "当前计划"
+        ).strip()
+
+        if stage == "plan_ready":
+            if primary_task:
+                actions.append(self._start_focus_action(primary_task, stage=stage, style="primary"))
+                actions.append(self._open_task_action(primary_task, stage=stage, style="secondary"))
+            elif plan_title:
+                actions.append(
+                    StructuredAction(
+                        label="把第一步建成任务",
+                        type="create_task_draft",
+                        payload={"title": f"开始执行：{plan_title}"},
+                        style="primary",
+                        stage=stage,
+                        reason_key="draft_first_task",
+                    )
+                )
+                UX_NEXT_ACTION_FALLBACK_TOTAL.labels(reason="missing_task_context").inc()
+            if plan_id:
+                actions.append(
+                    StructuredAction(
+                        label="切回这个计划继续",
+                        type="switch_plan",
+                        payload={"plan_id": plan_id},
+                        style="ghost",
+                        stage=stage,
+                        reason_key="switch_plan_context",
+                    )
+                )
+            actions.append(
+                StructuredAction(
+                    label="帮我再调一下时间安排",
+                    type="prompt",
+                    payload={"prompt": "帮我再调整一下这份计划的时间安排"},
+                    style="secondary",
+                    stage=stage,
+                    reason_key="adjust_plan",
+                )
+            )
+            return actions
+
+        if stage == "executing":
+            if primary_task:
+                actions.append(self._open_task_action(primary_task, stage=stage, style="primary"))
+                actions.append(self._start_focus_action(primary_task, stage=stage, style="secondary"))
+            else:
+                UX_NEXT_ACTION_FALLBACK_TOTAL.labels(reason="executing_without_task").inc()
+                actions.append(
+                    StructuredAction(
+                        label="我来继续拆下一步",
+                        type="prompt",
+                        payload={"prompt": "根据当前执行结果，继续帮我拆下一步"},
+                        style="primary",
+                        stage=stage,
+                        reason_key="continue_execution_prompt",
+                    )
+                )
+            actions.append(
+                StructuredAction(
+                    label="帮我汇总当前进展",
+                    type="prompt",
+                    payload={"prompt": "帮我汇总一下当前进展和下一步"},
+                    style="secondary",
+                    stage=stage,
+                    reason_key="summarize_progress",
+                )
+            )
+            return actions
+
+        if stage == "blocked":
+            blocked_prompt = {
+                "compact": "我补一下关键信息",
+                "balanced": "我来补充缺失信息后继续",
+                "exploratory": "换一种方式继续推进这个问题",
+            }.get(style_decision.style_variant, "我补一下关键信息")
+            actions.append(
+                StructuredAction(
+                    label=blocked_prompt,
+                    type="prompt",
+                    payload={"prompt": blocked_prompt},
+                    style="primary",
+                    stage=stage,
+                    reason_key="recover_prompt",
+                )
+            )
+            if plan_id:
+                actions.append(
+                    StructuredAction(
+                        label="先回到当前计划看上下文",
+                        type="switch_plan",
+                        payload={"plan_id": plan_id},
+                        style="secondary",
+                        stage=stage,
+                        reason_key="recover_plan_context",
+                    )
+                )
+            actions.append(
+                StructuredAction(
+                    label="去任务页看当前状态",
+                    type="route",
+                    payload={"route": "/tasks"},
+                    style="ghost",
+                    stage=stage,
+                    reason_key="open_tasks_overview",
+                )
+            )
+            return actions
+
+        if stage == "completed":
+            actions.append(
+                StructuredAction(
+                    label="帮我总结这次结果",
+                    type="prompt",
+                    payload={"prompt": "帮我总结一下这次结果，并告诉我接下来怎么承接"},
+                    style="primary",
+                    stage=stage,
+                    reason_key="summarize_outcome",
+                )
+            )
+            actions.append(
+                StructuredAction(
+                    label="打开任务页继续承接",
+                    type="route",
+                    payload={"route": "/tasks"},
+                    style="secondary",
+                    stage=stage,
+                    reason_key="route_tasks",
+                )
+            )
+            if plan_id:
+                actions.append(
+                    StructuredAction(
+                        label="切回这个计划继续",
+                        type="switch_plan",
+                        payload={"plan_id": plan_id},
+                        style="ghost",
+                        stage=stage,
+                        reason_key="switch_plan_after_completion",
+                    )
+                )
+            return actions
+
+        if stage == "reflect":
+            actions.append(
+                StructuredAction(
+                    label="回顾一下这个过程",
+                    type="prompt",
+                    payload={"prompt": "回顾一下这个过程，告诉我哪里做得好、哪里还可以优化"},
+                    style="primary",
+                    stage=stage,
+                    reason_key="reflect_process",
+                )
+            )
+            actions.append(
+                StructuredAction(
+                    label="根据这次表现更新计划",
+                    type="prompt",
+                    payload={"prompt": "根据这次表现，帮我更新接下来的计划节奏"},
+                    style="secondary",
+                    stage=stage,
+                    reason_key="update_plan_from_reflection",
+                )
+            )
+            actions.append(
+                StructuredAction(
+                    label="去今日复盘页看看",
+                    type="route",
+                    payload={"route": "/review?mode=today"},
+                    style="ghost",
+                    stage=stage,
+                    reason_key="open_review",
+                )
+            )
+            return actions
+
+        actions.append(
+            StructuredAction(
+                label="继续问下去",
+                type="prompt",
+                payload={"prompt": "继续围绕这个问题展开，但优先告诉我最关键的下一步"},
+                style="primary",
+                stage=stage,
+                reason_key="continue_conversation",
+            )
+        )
+        if "清单" in full_response or "总结" in full_response:
+            actions.append(
+                StructuredAction(
+                    label="把它改成执行清单",
+                    type="prompt",
+                    payload={"prompt": "把刚才的内容改写成一个可以直接执行的清单"},
+                    style="secondary",
+                    stage=stage,
+                    reason_key="convert_to_checklist",
+                )
+            )
+        elif chat_mode == "deep_analysis":
+            actions.append(
+                StructuredAction(
+                    label="只保留结论和风险",
+                    type="prompt",
+                    payload={"prompt": "只保留结论、关键依据和风险，帮我压缩成短版"},
+                    style="secondary",
+                    stage=stage,
+                    reason_key="compress_analysis",
+                )
+            )
+        else:
+            actions.append(
+                StructuredAction(
+                    label="帮我改成可执行步骤",
+                    type="prompt",
+                    payload={"prompt": "把刚才的回答改成可执行步骤"},
+                    style="secondary",
+                    stage=stage,
+                    reason_key="convert_to_actions",
+                )
+            )
+        actions.append(
+            StructuredAction(
+                label="去任务页看看当前安排",
+                type="route",
+                payload={"route": "/tasks"},
+                style="ghost",
+                stage=stage,
+                reason_key="route_tasks_from_explore",
+            )
+        )
+        return actions
+
+    def _default_next_action_labels(
+        self,
+        *,
+        chat_mode: str,
+        executable_plan: Any | None,
+        plan_context: dict[str, Any] | None,
+        profile: PresentationProfile,
+        full_response: str,
     ) -> list[str]:
         actions: list[str] = []
         if chat_mode == "study_plan":
@@ -439,6 +1249,93 @@ class UXEnvelopeBuilder:
                 break
         return deduped
 
+    def _task_candidates(self, *, plan_context: dict[str, Any] | None, final_state: Any) -> list[dict[str, Any]]:
+        context_data = getattr(final_state, "context_data", {}) or {}
+        raw_tasks = (
+            (plan_context or {}).get("task_summaries")
+            or (plan_context or {}).get("recent_tasks")
+            or (context_data.get("plan_context") or {}).get("task_summaries")
+            or []
+        )
+        candidates: list[dict[str, Any]] = []
+        if not isinstance(raw_tasks, list):
+            return candidates
+        for item in raw_tasks:
+            if not isinstance(item, dict):
+                continue
+            task_id = str(item.get("task_id") or item.get("id") or "").strip()
+            if not task_id:
+                continue
+            candidates.append(
+                {
+                    "task_id": task_id,
+                    "title": str(item.get("title") or "当前任务").strip() or "当前任务",
+                    "status": str(item.get("status") or "").strip().lower(),
+                    "route": f"/tasks/{task_id}",
+                    "execute_route": f"/tasks/{task_id}/execute",
+                    "focus_route": f"/focus/mindfulness/{task_id}",
+                }
+            )
+        status_priority = {"in_progress": 0, "pending": 1, "todo": 2, "not_started": 3, "completed": 9}
+        candidates.sort(key=lambda item: status_priority.get(item["status"], 5))
+        return candidates
+
+    def _open_task_action(self, task: dict[str, Any], *, stage: str, style: str) -> StructuredAction:
+        return StructuredAction(
+            label=f"打开「{task['title']}」",
+            type="open_task",
+            payload={"task_id": task["task_id"], "route": task["execute_route"]},
+            style=style,
+            stage=stage,
+            reason_key="open_primary_task",
+        )
+
+    def _start_focus_action(self, task: dict[str, Any], *, stage: str, style: str) -> StructuredAction:
+        return StructuredAction(
+            label=f"开始专注「{task['title']}」",
+            type="start_focus",
+            payload={"task_id": task["task_id"], "route": task["focus_route"]},
+            style=style,
+            stage=stage,
+            reason_key="start_focus",
+        )
+
+    def _finalize_actions(self, *, actions: list[StructuredAction], limit: int) -> list[StructuredAction]:
+        deduped: list[StructuredAction] = []
+        seen: set[str] = set()
+        high_friction_used = False
+        for action in actions:
+            key = json.dumps(
+                {
+                    "label": action.label,
+                    "type": action.type,
+                    "payload": action.payload,
+                },
+                ensure_ascii=False,
+                sort_keys=True,
+            )
+            if key in seen:
+                continue
+            if action.type in HIGH_FRICTION_ACTION_TYPES:
+                if high_friction_used:
+                    continue
+                high_friction_used = True
+            seen.add(key)
+            deduped.append(action)
+            if len(deduped) >= limit:
+                break
+        if deduped and not any(action.style == "primary" for action in deduped):
+            first = deduped[0]
+            deduped[0] = StructuredAction(
+                label=first.label,
+                type=first.type,
+                payload=first.payload,
+                style="primary",
+                stage=first.stage,
+                reason_key=first.reason_key,
+            )
+        return deduped
+
     def _retry_options(
         self,
         *,
@@ -447,7 +1344,7 @@ class UXEnvelopeBuilder:
         has_files: bool,
         profile: PresentationProfile,
         recovery_kind: str,
-    ) -> list[str]:
+    ) -> list[Any]:
         options = list(profile.default_retry_options)
         if completion_state in {"partial", "blocked", "needs_input"}:
             options.insert(0, "补充信息后重试")
@@ -465,7 +1362,20 @@ class UXEnvelopeBuilder:
         for option in options:
             if option not in deduped:
                 deduped.append(option)
-        return deduped[:3]
+        trimmed = deduped[:3]
+        if not settings.ENABLE_STRUCTURED_NEXT_ACTIONS:
+            return trimmed
+        return [
+            StructuredAction(
+                label=option,
+                type="prompt",
+                payload={"prompt": option},
+                style="secondary",
+                stage="blocked",
+                reason_key="retry_option",
+            ).to_dict()
+            for option in trimmed
+        ]
 
     def _memory_updates(self, final_state: Any, user_context_payload: dict[str, Any] | None) -> dict[str, Any]:
         highlights: list[str] = []
@@ -592,7 +1502,7 @@ class UXEnvelopeBuilder:
         final_state: Any,
     ) -> dict[str, Any] | None:
         if plan_context and plan_context.get("plan_id"):
-            plan_name = plan_context.get("plan_name") or "当前计划"
+            plan_name = plan_context.get("plan_name") or plan_context.get("plan_title") or "当前计划"
             return {
                 "title": "继续当前节奏",
                 "message": f"我会继续围绕 {plan_name} 帮你推进，不用从头再讲。",
@@ -657,6 +1567,21 @@ class UXEnvelopeBuilder:
             "fallback_reason": (metadata or {}).get("fallback_reason") or context_data.get("fallback_reason"),
             "route_confidence": (metadata or {}).get("route_confidence") or context_data.get("route_confidence"),
         }
+
+    def _extract_user_id(self, *, user_context_payload: dict[str, Any] | None, final_state: Any) -> str | None:
+        if isinstance(user_context_payload, dict):
+            user_context = user_context_payload.get("user_context")
+            if isinstance(user_context, dict):
+                user_id = str(user_context.get("user_id") or "").strip()
+                if user_id:
+                    return user_id
+        context_data = getattr(final_state, "context_data", {}) or {}
+        user_id = str(context_data.get("user_id") or "").strip()
+        return user_id or None
+
+    def _message_has_negative_signal(self, user_message: str) -> bool:
+        compact = str(user_message or "").strip().lower()
+        return any(token in compact for token in NEGATIVE_USER_SIGNAL_KEYWORDS)
 
 
 ux_envelope_builder = UXEnvelopeBuilder()

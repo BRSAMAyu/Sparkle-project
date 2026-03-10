@@ -1,11 +1,18 @@
+import asyncio
 from types import SimpleNamespace
 
-from app.orchestration.ux_envelope import ux_envelope_builder
+from app.config import settings
 from app.orchestration.schemas import RouteDecision
 from app.orchestration.statechart_engine import WorkflowState
+from app.orchestration.ux_envelope import UXEnvelopeBuilder
+
+
+def _build_envelope(builder: UXEnvelopeBuilder, **kwargs):
+    return asyncio.run(builder.build(**kwargs))
 
 
 def test_ux_envelope_builder_returns_core_sections() -> None:
+    builder = UXEnvelopeBuilder()
     final_state = WorkflowState(
         messages=[
             {"role": "user", "content": "帮我做一份下周的学习计划"},
@@ -41,7 +48,8 @@ def test_ux_envelope_builder_returns_core_sections() -> None:
     )
     executable_plan = SimpleNamespace(confidence=0.88, tool_calls=[{"name": "create_task"}])
 
-    envelope = ux_envelope_builder.build(
+    envelope = _build_envelope(
+        builder,
         user_message="帮我做一份下周的学习计划",
         full_response="这是你的下周学习计划。",
         final_state=final_state,
@@ -72,6 +80,7 @@ def test_ux_envelope_builder_returns_core_sections() -> None:
 
 
 def test_ux_envelope_builder_mode_specific_headlines_and_recovery() -> None:
+    builder = UXEnvelopeBuilder()
     cases = [
         ("standard", "我会先直接回答你的当前问题，再补依据和下一步。", "none"),
         ("deep_analysis", "我会先给综合判断，再把依据、反例和风险摊开。", "none"),
@@ -85,7 +94,8 @@ def test_ux_envelope_builder_mode_specific_headlines_and_recovery() -> None:
             messages=[{"role": "user", "content": "测试问题"}],
             context_data={"chat_mode": chat_mode},
         )
-        envelope = ux_envelope_builder.build(
+        envelope = _build_envelope(
+            builder,
             user_message="测试问题",
             full_response="测试回答",
             final_state=final_state,
@@ -105,11 +115,13 @@ def test_ux_envelope_builder_mode_specific_headlines_and_recovery() -> None:
 
 
 def test_ux_envelope_builder_marks_tool_failure_and_recovery_copy() -> None:
+    builder = UXEnvelopeBuilder()
     final_state = WorkflowState(
         messages=[{"role": "user", "content": "帮我执行这个计划"}],
         context_data={"chat_mode": "expert_auto", "selected_experts": ["planner", "reviewer"]},
     )
-    envelope = ux_envelope_builder.build(
+    envelope = _build_envelope(
+        builder,
         user_message="帮我执行这个计划",
         full_response="这是当前可确认的结果。",
         final_state=final_state,
@@ -130,6 +142,7 @@ def test_ux_envelope_builder_marks_tool_failure_and_recovery_copy() -> None:
 
 
 def test_ux_envelope_builder_exposes_preference_learning_in_evolution() -> None:
+    builder = UXEnvelopeBuilder()
     final_state = WorkflowState(
         messages=[{"role": "user", "content": "以后请更简洁一点"}],
         context_data={
@@ -150,7 +163,8 @@ def test_ux_envelope_builder_exposes_preference_learning_in_evolution() -> None:
         },
     )
 
-    envelope = ux_envelope_builder.build(
+    envelope = _build_envelope(
+        builder,
         user_message="以后请更简洁一点",
         full_response="好的，之后我会更简洁。",
         final_state=final_state,
@@ -170,6 +184,7 @@ def test_ux_envelope_builder_exposes_preference_learning_in_evolution() -> None:
 
 
 def test_ux_envelope_builder_merges_evolution_highlights() -> None:
+    builder = UXEnvelopeBuilder()
     final_state = WorkflowState(
         messages=[{"role": "user", "content": "我刚完成了群组冲刺任务"}],
         context_data={
@@ -181,7 +196,8 @@ def test_ux_envelope_builder_merges_evolution_highlights() -> None:
         },
     )
 
-    envelope = ux_envelope_builder.build(
+    envelope = _build_envelope(
+        builder,
         user_message="我刚完成了群组冲刺任务",
         full_response="我已经同步了你的群组进度。",
         final_state=final_state,
@@ -197,3 +213,113 @@ def test_ux_envelope_builder_merges_evolution_highlights() -> None:
 
     assert "你在群组中的贡献已计入个人成就。" in envelope["ux_followthrough"]["memory_updates"]["highlights"]
     assert "你刚刚解锁了「冲刺先锋」。" in envelope["ux_followthrough"]["memory_updates"]["highlights"]
+
+
+def test_ux_envelope_builder_adapts_style_and_structured_actions(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "ENABLE_ADAPTIVE_PRESENTATION", True)
+    monkeypatch.setattr(settings, "ENABLE_STRUCTURED_NEXT_ACTIONS", True)
+    monkeypatch.setattr(settings, "ENABLE_UX_PRESENTATION_METADATA", True)
+    builder = UXEnvelopeBuilder()
+
+    final_state = WorkflowState(
+        messages=[{"role": "user", "content": "帮我调整这周复习计划"}],
+        context_data={
+            "chat_mode": "study_plan",
+            "plan_review": {"decision": "approved"},
+            "plan_context": {
+                "plan_id": "plan-1",
+                "plan_title": "考研冲刺",
+                "task_summaries": [
+                    {"task_id": "task-1", "title": "整理英语错题", "status": "pending"},
+                ],
+            },
+        },
+    )
+
+    envelope = _build_envelope(
+        builder,
+        user_message="帮我调整这周复习计划",
+        full_response="我已经把第一步整理好了。",
+        final_state=final_state,
+        executable_plan=SimpleNamespace(confidence=0.88, tool_calls=[{"name": "create_task"}]),
+        route_decision=RouteDecision(execution_mode="hybrid", reason="study_plan_mode", risk_level="low", confidence=0.8),
+        include_references=False,
+        file_ids=[],
+        execution_validation=None,
+        conversation_context=None,
+        plan_context=final_state.context_data["plan_context"],
+        user_context_payload={
+            "llm_profile": {
+                "verbosity_target": "high",
+                "exploration_level": "high",
+                "tone": "structured",
+            }
+        },
+    )
+
+    assert envelope["ux_turn"]["presentation_style"] == "exploratory"
+    assert envelope["ux_turn"]["tone_variant"] == "analytical"
+    assert envelope["ux_followthrough"]["stage"] == "plan_ready"
+    assert envelope["ux_followthrough"]["next_actions"]
+    first_action = envelope["ux_followthrough"]["next_actions"][0]
+    assert isinstance(first_action, dict)
+    assert first_action["type"] in {"start_focus", "open_task", "switch_plan", "create_task_draft", "prompt"}
+    assert first_action["style"] == "primary"
+
+
+def test_ux_envelope_builder_escalates_blocked_temperature(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "ENABLE_BLOCKED_TEMPERATURE", True)
+    monkeypatch.setattr(settings, "ENABLE_UX_PRESENTATION_METADATA", True)
+    builder = UXEnvelopeBuilder()
+
+    final_state = WorkflowState(
+        messages=[{"role": "user", "content": "我最近有点崩溃，帮我继续排计划"}],
+        context_data={
+            "chat_mode": "study_plan",
+            "context_focus": {"focus_mode": "emotional_focus"},
+        },
+    )
+    kwargs = {
+        "user_message": "我最近有点崩溃，帮我继续排计划",
+        "full_response": "我先收住范围。",
+        "final_state": final_state,
+        "executable_plan": None,
+        "route_decision": RouteDecision(execution_mode="direct", reason="study_plan_mode", risk_level="low"),
+        "include_references": False,
+        "file_ids": [],
+        "execution_validation": None,
+        "conversation_context": None,
+        "plan_context": None,
+        "user_context_payload": {"user_context": {"user_id": "user-1"}},
+    }
+
+    first = _build_envelope(builder, **kwargs)
+    second = _build_envelope(builder, **kwargs)
+
+    assert first["ux_result"]["blocked_reason"] == "missing_input"
+    assert first["ux_result"]["blocked_temperature"] == "gentle"
+    assert second["ux_result"]["blocked_repeat_count"] >= 2
+
+    monkeypatch.setattr(settings, "ENABLE_BLOCKED_TEMPERATURE", False)
+    monkeypatch.setattr(settings, "ENABLE_UX_PRESENTATION_METADATA", True)
+    direct_builder = UXEnvelopeBuilder()
+    direct_state = WorkflowState(
+        messages=[{"role": "user", "content": "继续"}],
+        context_data={"chat_mode": "study_plan"},
+    )
+    direct = _build_envelope(
+        direct_builder,
+        user_message="继续",
+        full_response="继续。",
+        final_state=direct_state,
+        executable_plan=None,
+        route_decision=RouteDecision(execution_mode="direct", reason="study_plan_mode", risk_level="low"),
+        include_references=False,
+        file_ids=[],
+        execution_validation=None,
+        conversation_context=None,
+        plan_context=None,
+        user_context_payload={"user_context": {"user_id": "user-2"}},
+    )
+
+    assert direct["ux_result"]["blocked_temperature"] == "guided"
