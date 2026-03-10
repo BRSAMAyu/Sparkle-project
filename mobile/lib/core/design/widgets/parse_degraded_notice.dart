@@ -1,19 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
-/// 对话中的降级提示 (v2.1)
+/// Degraded notice for dialogs (v2.1)
 class ParseDegradedNotice extends StatelessWidget {
   const ParseDegradedNotice({super.key, this.reason});
+
   final String? reason;
 
   @override
-  Widget build(BuildContext context) => Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        padding: const EdgeInsets.all(DS.md),
-        decoration: BoxDecoration(
-          color: DS.brandPrimary.shade50,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: DS.brandPrimary.shade200),
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(DS.md),
+      decoration: BoxDecoration(
+        color: DS.brandPrimary.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: DS.brandPrimary.shade200),
         ),
         child: Row(
           children: [
@@ -24,7 +28,7 @@ class ParseDegradedNotice extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '操作可能未成功',
+                    l10n.commonOperationWarning,
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: DS.brandPrimary.shade900,
@@ -46,4 +50,5 @@ class ParseDegradedNotice extends StatelessWidget {
           ],
         ),
       );
+  }
 }

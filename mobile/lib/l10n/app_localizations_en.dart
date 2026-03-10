@@ -1023,6 +1023,65 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get focusReadyPrompt => 'Ready to focus?';
+
+  @override
+  String get focusNoPendingTasks => 'No pending tasks';
+
+  @override
+  String get focusNoTasksButCanFocus => 'But you can still start focusing!';
+
+  @override
+  String get focusFreeFocus => 'Free Focus';
+
+  @override
+  String get focusStartNow => 'Start Now';
+
+  @override
+  String get focusCreateTask => 'Or create a new task';
+
+  @override
+  String get focusQuickStart => 'Quick Focus (25min)';
+
+  @override
+  String focusEstimated(Object minutes) {
+    return 'Estimated $minutes minutes';
+  }
+
+  @override
+  String get streakTitle => 'Learning Streak';
+
+  @override
+  String streakDays(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count days',
+      one: '1 day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String streakMax(Object count) {
+    return 'Best $count';
+  }
+
+  @override
+  String streakTotal(Object count) {
+    return 'Total $count';
+  }
+
+  @override
+  String get streakStartChallenge => 'Start';
+
+  @override
+  String get streakChallenge => 'Challenge';
+
+  @override
+  String get streakFreezeCharges => 'Freeze Charges';
+
+  @override
   String get errorNetwork => 'Network error';
 
   @override
@@ -1488,4 +1547,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get commonOnline => 'Online';
+
+  @override
+  String get commonOperationWarning => 'Operation may not have succeeded';
 }

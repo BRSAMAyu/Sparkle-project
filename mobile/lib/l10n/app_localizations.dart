@@ -2018,6 +2018,96 @@ abstract class AppLocalizations {
   /// **'最佳：{time}'**
   String focusStatsBestDay(Object time);
 
+  /// No description provided for @focusReadyPrompt.
+  ///
+  /// In zh, this message translates to:
+  /// **'准备好开始专注了吗？'**
+  String get focusReadyPrompt;
+
+  /// No description provided for @focusNoPendingTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有待办任务'**
+  String get focusNoPendingTasks;
+
+  /// No description provided for @focusNoTasksButCanFocus.
+  ///
+  /// In zh, this message translates to:
+  /// **'不过你依然可以直接开始专注!'**
+  String get focusNoTasksButCanFocus;
+
+  /// No description provided for @focusFreeFocus.
+  ///
+  /// In zh, this message translates to:
+  /// **'自由专注'**
+  String get focusFreeFocus;
+
+  /// No description provided for @focusStartNow.
+  ///
+  /// In zh, this message translates to:
+  /// **'立即开始'**
+  String get focusStartNow;
+
+  /// No description provided for @focusCreateTask.
+  ///
+  /// In zh, this message translates to:
+  /// **'或者创建一个新任务'**
+  String get focusCreateTask;
+
+  /// No description provided for @focusQuickStart.
+  ///
+  /// In zh, this message translates to:
+  /// **'快速开启专注 (25min)'**
+  String get focusQuickStart;
+
+  /// No description provided for @focusEstimated.
+  ///
+  /// In zh, this message translates to:
+  /// **'预计 {minutes} 分钟'**
+  String focusEstimated(Object minutes);
+
+  /// No description provided for @streakTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'连续学习'**
+  String get streakTitle;
+
+  /// No description provided for @streakDays.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count, plural, =1{1天} other{{count}天}}'**
+  String streakDays(num count);
+
+  /// No description provided for @streakMax.
+  ///
+  /// In zh, this message translates to:
+  /// **'最高{count}'**
+  String streakMax(Object count);
+
+  /// No description provided for @streakTotal.
+  ///
+  /// In zh, this message translates to:
+  /// **'累计{count}'**
+  String streakTotal(Object count);
+
+  /// No description provided for @streakStartChallenge.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始'**
+  String get streakStartChallenge;
+
+  /// No description provided for @streakChallenge.
+  ///
+  /// In zh, this message translates to:
+  /// **'挑战'**
+  String get streakChallenge;
+
+  /// No description provided for @streakFreezeCharges.
+  ///
+  /// In zh, this message translates to:
+  /// **'冻结次数'**
+  String get streakFreezeCharges;
+
   /// No description provided for @errorNetwork.
   ///
   /// In zh, this message translates to:
@@ -2689,6 +2779,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'在线'**
   String get commonOnline;
+
+  /// No description provided for @commonOperationWarning.
+  ///
+  /// In zh, this message translates to:
+  /// **'操作可能未成功'**
+  String get commonOperationWarning;
 }
 
 class _AppLocalizationsDelegate
