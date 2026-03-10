@@ -1190,8 +1190,32 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
   }
 
   Widget _buildEvolutionCard(BuildContext context, WidgetPayload action) {
+    final evolutionKind = action.data['evolution_kind']?.toString() ?? '';
     final headline = action.data['headline']?.toString() ?? '系统正在继续适应你';
     final summary = action.data['summary']?.toString() ?? '';
+    final insightText = action.data['insight_text']?.toString() ?? '';
+    final evidenceSummary = action.data['evidence_summary']?.toString() ?? '';
+    final weeklySummary = action.data['weekly_summary']?.toString() ?? '';
+    final oneKeyAdjustment = action.data['one_key_adjustment']?.toString() ?? '';
+    final comparisonHighlight = action.data['comparison_highlight']?.toString() ?? '';
+    final periodRange = action.data['period_range']?.toString() ?? '';
+    final reasoningSummary = action.data['reasoning_summary']?.toString() ?? '';
+    final reasoningDetails =
+        (action.data['reasoning_details'] as List<dynamic>? ?? [])
+            .whereType<Map<dynamic, dynamic>>()
+            .map(Map<String, dynamic>.from)
+            .toList();
+    final confidence = (action.data['confidence'] as num?)?.toDouble();
+    final topLearnings = (action.data['top_learnings'] as List<dynamic>? ?? [])
+        .map((e) => '$e')
+        .where((e) => e.isNotEmpty)
+        .toList();
+    final comparison = (action.data['comparison'] as Map<dynamic, dynamic>? ??
+            const <dynamic, dynamic>{})
+        .map<String, dynamic>((key, value) => MapEntry('$key', value));
+    final recommendedAction =
+        (action.data['recommended_action'] as Map<dynamic, dynamic>?)
+            ?.map<String, dynamic>((key, value) => MapEntry('$key', value));
     final adaptationRecords =
         (action.data['adaptation_records'] as List<dynamic>? ?? [])
             .whereType<Map<dynamic, dynamic>>()
@@ -1266,6 +1290,145 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: DS.neutral700,
                 ),
+          ),
+        ],
+        if (evolutionKind == 'proactive_insight' && insightText.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing12),
+          Text(
+            insightText,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: DS.neutral900,
+                  fontWeight: DS.fontWeightSemibold,
+                ),
+          ),
+          if (evidenceSummary.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing8),
+            Text(
+              evidenceSummary,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: DS.neutral700,
+                  ),
+            ),
+          ],
+          if (confidence != null) ...[
+            const SizedBox(height: DS.spacing8),
+            _buildMetaPill('置信度 ${(confidence * 100).toInt()}%'),
+          ],
+        ],
+        if (evolutionKind == 'weekly_learning_report') ...[
+          if (weeklySummary.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing12),
+            Text(
+              weeklySummary,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: DS.neutral900,
+                    fontWeight: DS.fontWeightSemibold,
+                  ),
+            ),
+          ],
+          if (topLearnings.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing10),
+            ...topLearnings.map(
+              (item) => Padding(
+                padding: const EdgeInsets.only(bottom: DS.spacing6),
+                child: Text('• $item'),
+              ),
+            ),
+          ],
+          if (oneKeyAdjustment.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing8),
+            Text(
+              '下周我会这样继续适配：$oneKeyAdjustment',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: DS.neutral700,
+                  ),
+            ),
+          ],
+          if (comparisonHighlight.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing8),
+            _buildMetaPill(comparisonHighlight),
+          ],
+          if (periodRange.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing8),
+            Text(
+              periodRange,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: DS.neutral500,
+                  ),
+            ),
+          ],
+        ],
+        if (evolutionKind == 'progress_comparison' && comparison.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing12),
+          Text(
+            comparison['delta_text']?.toString() ?? '',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: DS.neutral900,
+                  fontWeight: DS.fontWeightSemibold,
+                ),
+          ),
+          const SizedBox(height: DS.spacing8),
+          _buildMetaPill(
+            '${comparison['before_label'] ?? '之前'}: ${comparison['before_value'] ?? '-'}',
+          ),
+          const SizedBox(height: DS.spacing6),
+          _buildMetaPill(
+            '${comparison['after_label'] ?? '现在'}: ${comparison['after_value'] ?? '-'}',
+          ),
+          if ((comparison['why_it_matters']?.toString() ?? '').isNotEmpty) ...[
+            const SizedBox(height: DS.spacing8),
+            Text(
+              comparison['why_it_matters'].toString(),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: DS.neutral700,
+                  ),
+            ),
+          ],
+        ],
+        if ((evolutionKind == 'plan_reasoning' || reasoningSummary.isNotEmpty) &&
+            reasoningSummary.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing12),
+          Text(
+            reasoningSummary,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: DS.neutral900,
+                  fontWeight: DS.fontWeightSemibold,
+                ),
+          ),
+        ],
+        if (reasoningDetails.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing12),
+          ExpansionTile(
+            tilePadding: EdgeInsets.zero,
+            childrenPadding: EdgeInsets.zero,
+            title: Text(
+              '查看规划依据',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: DS.info,
+                    fontWeight: DS.fontWeightSemibold,
+                  ),
+            ),
+            children: reasoningDetails.map((detail) {
+              return buildDetailBlock({
+                'what_changed': detail['label'],
+                'why': detail['evidence'],
+                'expected_effect': detail['impact'],
+              });
+            }).toList(),
+          ),
+        ],
+        if (recommendedAction != null) ...[
+          const SizedBox(height: DS.spacing12),
+          CustomButton.primary(
+            text: recommendedAction['label']?.toString() ?? '继续',
+            onPressed: () => unawaited(
+              widget.onWidgetAction?.call(
+                recommendedAction['type']?.toString() ?? 'prompt',
+                recommendedAction,
+              ),
+            ),
+            size: CustomButtonSize.small,
+            customGradient: DS.infoGradient,
           ),
         ],
         if (adaptationRecords.isNotEmpty || preferenceLearnings.isNotEmpty) ...[

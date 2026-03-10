@@ -338,6 +338,62 @@ UX_BLOCKED_HISTORY_HIT_TOTAL = get_or_create_metric(
     ['failure_kind']
 )
 
+PERCEPTIBLE_INSIGHT_CANDIDATE_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_perceptible_insight_candidate_total',
+    'Perceptible insight candidates by scenario',
+    ['scenario']
+)
+
+PERCEPTIBLE_INSIGHT_SENT_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_perceptible_insight_sent_total',
+    'Sent perceptible insights by pattern type',
+    ['pattern_type']
+)
+
+PERCEPTIBLE_INSIGHT_SKIPPED_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_perceptible_insight_skipped_total',
+    'Skipped perceptible insights by reason',
+    ['reason']
+)
+
+PLAN_REASONING_GENERATED_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_plan_reasoning_generated_total',
+    'Generated plan reasoning summaries by decision',
+    ['decision']
+)
+
+WEEKLY_LEARNING_REPORT_GENERATED_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_weekly_learning_report_generated_total',
+    'Generated weekly learning reports',
+    []
+)
+
+WEEKLY_LEARNING_REPORT_SKIPPED_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_weekly_learning_report_skipped_total',
+    'Skipped weekly learning reports by reason',
+    ['reason']
+)
+
+PROGRESS_COMPARISON_GENERATED_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_progress_comparison_generated_total',
+    'Generated progress comparisons by source',
+    ['source']
+)
+
+PROGRESS_COMPARISON_SKIPPED_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_progress_comparison_skipped_total',
+    'Skipped progress comparisons by reason',
+    ['reason']
+)
+
 # ========== LTM Eval Metrics ==========
 LTM_EVAL_TOTAL = get_or_create_metric(
     Counter,

@@ -1383,6 +1383,11 @@ class UXEnvelopeBuilder:
         preference_learnings = self._preference_learnings(final_state)
         context_data = getattr(final_state, "context_data", {}) or {}
         evolution_highlights = list(context_data.get("evolution_highlights") or [])
+        plan_review = context_data.get("plan_review") if isinstance(context_data.get("plan_review"), dict) else {}
+        plan_reasoning_summary = str((plan_review or {}).get("reasoning_summary") or "").strip()
+        plan_reasoning_details = (plan_review or {}).get("reasoning_details")
+        if not isinstance(plan_reasoning_details, list):
+            plan_reasoning_details = []
         if context_data.get("plan_review"):
             highlights.append("已记录本轮计划审查状态")
         if context_data.get("pending_review_action_id"):
@@ -1416,6 +1421,8 @@ class UXEnvelopeBuilder:
             "adaptation_records": adaptation_records,
             "preference_learnings": preference_learnings,
             "progress_snapshot": progress_snapshot if isinstance(progress_snapshot, dict) else None,
+            "plan_reasoning_summary": plan_reasoning_summary,
+            "plan_reasoning_details": plan_reasoning_details[:3],
         }
 
     def _adaptation_records(self, final_state: Any) -> list[dict[str, Any]]:
@@ -1445,7 +1452,9 @@ class UXEnvelopeBuilder:
         preference_learnings = memory_updates.get("preference_learnings") or []
         highlights = memory_updates.get("highlights") or []
         progress_snapshot = memory_updates.get("progress_snapshot")
-        if not adaptation_records and not preference_learnings and not progress_snapshot:
+        plan_reasoning_summary = str(memory_updates.get("plan_reasoning_summary") or "").strip()
+        plan_reasoning_details = memory_updates.get("plan_reasoning_details") or []
+        if not adaptation_records and not preference_learnings and not progress_snapshot and not plan_reasoning_summary:
             return None
         headline = "系统正在根据你的反馈继续调整"
         summary = (
@@ -1453,16 +1462,25 @@ class UXEnvelopeBuilder:
             if highlights
             else "我会把这轮新学到的偏好和调整继续用于后续对话。"
         )
+        evolution_kind = "adaptation"
         if isinstance(progress_snapshot, dict) and (progress_snapshot.get("highlights") or []):
             headline = "这是你最近一段时间最值得看到的进步"
             summary = str((progress_snapshot.get("highlights") or [summary])[0])
+            evolution_kind = "progress_snapshot"
+        elif plan_reasoning_summary:
+            headline = "这次计划这样安排，是有依据的"
+            summary = plan_reasoning_summary
+            evolution_kind = "plan_reasoning"
         return {
+            "evolution_kind": evolution_kind,
             "headline": headline,
             "summary": summary,
             "adaptation_records": adaptation_records,
             "preference_learnings": preference_learnings,
             "highlights": highlights,
             "progress_snapshot": progress_snapshot,
+            "reasoning_summary": plan_reasoning_summary,
+            "reasoning_details": plan_reasoning_details,
         }
 
     def _dual_core_mode(self, final_state: Any) -> str:

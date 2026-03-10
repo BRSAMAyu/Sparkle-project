@@ -40,6 +40,25 @@ class ReviewComment {
       );
 }
 
+class ReviewReasoningDetail {
+  const ReviewReasoningDetail({
+    required this.label,
+    required this.evidence,
+    required this.impact,
+  });
+
+  final String label;
+  final String evidence;
+  final String impact;
+
+  static ReviewReasoningDetail fromJson(Map<String, dynamic> json) =>
+      ReviewReasoningDetail(
+        label: json['label'] as String? ?? '',
+        evidence: json['evidence'] as String? ?? '',
+        impact: json['impact'] as String? ?? '',
+      );
+}
+
 /// Plan review result model
 class PlanReviewResult {
   const PlanReviewResult({
@@ -53,6 +72,8 @@ class PlanReviewResult {
     this.autoApproved = false,
     this.actionId,
     this.userFacingReason,
+    this.reasoningSummary,
+    this.reasoningDetails = const [],
   });
 
   final String reviewId;
@@ -65,6 +86,8 @@ class PlanReviewResult {
   final bool autoApproved;
   final String? actionId; // For feedback
   final String? userFacingReason; // User-facing explanation of the decision
+  final String? reasoningSummary;
+  final List<ReviewReasoningDetail> reasoningDetails;
 
   static ReviewDecision _parseDecision(String value) {
     switch (value) {
@@ -97,6 +120,15 @@ class PlanReviewResult {
         autoApproved: json['auto_approved'] as bool? ?? false,
         actionId: json['action_id'] as String?,
         userFacingReason: json['user_facing_reason'] as String?,
+        reasoningSummary: json['reasoning_summary'] as String?,
+        reasoningDetails: (json['reasoning_details'] as List<dynamic>?)
+                ?.map(
+                  (e) => ReviewReasoningDetail.fromJson(
+                    Map<String, dynamic>.from(e as Map),
+                  ),
+                )
+                .toList() ??
+            const [],
       );
 }
 
@@ -440,6 +472,14 @@ class _PlanReviewCardState extends State<PlanReviewCard>
                               ),
                             ),
                           ],
+                          if ((widget.review.reasoningSummary ?? '').isNotEmpty) ...[
+                            const SizedBox(height: DS.spacing12),
+                            _buildReasoningSummary(color),
+                          ],
+                          if (widget.review.reasoningDetails.isNotEmpty) ...[
+                            const SizedBox(height: DS.spacing12),
+                            _buildReasoningDetails(),
+                          ],
                           if (widget.review.comments.isNotEmpty) ...[
                             const SizedBox(height: DS.spacing16),
                             _buildCommentsSection(),
@@ -465,6 +505,69 @@ class _PlanReviewCardState extends State<PlanReviewCard>
       ),
     );
   }
+
+  Widget _buildReasoningSummary(Color accentColor) => Container(
+        padding: const EdgeInsets.all(DS.spacing12),
+        decoration: BoxDecoration(
+          color: accentColor.withValues(alpha: 0.08),
+          borderRadius: DS.borderRadius8,
+          border: Border.all(color: accentColor.withValues(alpha: 0.18)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.lightbulb_outline_rounded,
+              size: DS.iconSizeSm,
+              color: accentColor,
+            ),
+            const SizedBox(width: DS.spacing8),
+            Expanded(
+              child: Text(
+                widget.review.reasoningSummary ?? '',
+                style: const TextStyle(height: 1.45),
+              ),
+            ),
+          ],
+        ),
+      );
+
+  Widget _buildReasoningDetails() => ExpansionTile(
+        tilePadding: EdgeInsets.zero,
+        childrenPadding: EdgeInsets.zero,
+        title: Text(
+          '查看规划依据',
+          style: const TextStyle(fontWeight: DS.fontWeightSemibold),
+        ),
+        children: widget.review.reasoningDetails.map((detail) {
+          return Container(
+            margin: const EdgeInsets.only(top: DS.spacing8),
+            padding: const EdgeInsets.all(DS.spacing12),
+            decoration: BoxDecoration(
+              color: DS.neutral100,
+              borderRadius: DS.borderRadius12,
+              border: Border.all(color: DS.neutral200),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  detail.label,
+                  style: const TextStyle(fontWeight: DS.fontWeightSemibold),
+                ),
+                if (detail.evidence.isNotEmpty) ...[
+                  const SizedBox(height: DS.spacing6),
+                  Text('依据：${detail.evidence}'),
+                ],
+                if (detail.impact.isNotEmpty) ...[
+                  const SizedBox(height: DS.spacing6),
+                  Text('影响：${detail.impact}'),
+                ],
+              ],
+            ),
+          );
+        }).toList(),
+      );
 
   Widget _buildDecisionBadge(ReviewDecision decision) {
     String label;

@@ -112,8 +112,12 @@ from app.services.plan_progress_service import PlanProgressService
 from app.services.progress_narrative_service import ProgressNarrativeService
 from app.services.plan_execution_record_service import PlanExecutionRecordService
 from app.services.plan_execution_validator import PlanExecutionValidator
+from app.services.perceptible_intelligence_service import (
+    PerceptibleInsightService,
+    ProgressComparisonService,
+)
 from app.services.shadow_prediction_service import shadow_prediction_service
-from app.services.system_update_service import SystemUpdateService
+from app.services.system_update_service import SystemUpdateService, build_system_update
 from app.services.user_service import UserService
 
 # FSM States
@@ -345,6 +349,16 @@ class ChatOrchestrator:
                     evolution_highlights.append(str(metadata["highlight"]).strip())
                 if metadata.get("evolution_kind") == "progress_snapshot" and isinstance(metadata.get("progress_snapshot"), dict):
                     progress_snapshot = metadata["progress_snapshot"]
+                if metadata.get("evolution_kind") == "proactive_insight" and metadata.get("insight_text"):
+                    evolution_highlights.append(str(metadata["insight_text"]).strip())
+                if metadata.get("evolution_kind") == "weekly_learning_report" and metadata.get("weekly_summary"):
+                    evolution_highlights.append(str(metadata["weekly_summary"]).strip())
+                if metadata.get("evolution_kind") == "progress_comparison":
+                    comparison = metadata.get("comparison")
+                    if isinstance(comparison, dict) and comparison.get("delta_text"):
+                        evolution_highlights.append(str(comparison["delta_text"]).strip())
+                if metadata.get("evolution_kind") == "plan_reasoning" and metadata.get("reasoning_summary"):
+                    evolution_highlights.append(str(metadata["reasoning_summary"]).strip())
             widget_struct = struct_pb2.Struct()
             widget_struct.update(update)
             responses.append(
@@ -416,6 +430,31 @@ class ChatOrchestrator:
             )
         except Exception as e:
             logger.warning(f"Failed to save session adaptation context: {e}")
+
+    async def _maybe_enqueue_perceptible_insight(
+        self,
+        *,
+        active_db: AsyncSession | None,
+        user_id: str,
+        user_message: str,
+        user_context_payload: dict[str, Any] | None,
+        plan_id: str | None,
+    ) -> None:
+        if not active_db:
+            return
+        if not (settings.ENABLE_PERCEPTIBLE_INTELLIGENCE and settings.ENABLE_PROACTIVE_INSIGHTS):
+            return
+        try:
+            service = PerceptibleInsightService(active_db, getattr(self, "redis", None))
+            await service.maybe_enqueue_session_insight(
+                user_id=user_id,
+                user_message=user_message,
+                context_focus=(user_context_payload or {}).get("context_focus") if isinstance(user_context_payload, dict) else None,
+                plan_id=plan_id,
+                progress_snapshot=(user_context_payload or {}).get("progress_snapshot") if isinstance(user_context_payload, dict) else None,
+            )
+        except Exception as exc:
+            logger.warning(f"Failed to enqueue perceptible insight: {exc}")
 
     async def _detect_session_feedback(
         self,
@@ -2106,6 +2145,35 @@ class ChatOrchestrator:
                 )
                 if adaptation_records:
                     final_state.context_data["adaptation_records"] = adaptation_records
+                if (
+                    settings.ENABLE_PERCEPTIBLE_INTELLIGENCE
+                    and settings.ENABLE_PROGRESS_COMPARISONS
+                    and validation_result.validation_status == "passed"
+                ):
+                    try:
+                        comparison = await ProgressComparisonService(active_db).build_best_comparison(
+                            user_id=uuid.UUID(user_id),
+                            plan_id=uuid.UUID(str(executable_plan.plan_id)),
+                        )
+                        if comparison:
+                            await SystemUpdateService(getattr(self, "redis", None)).enqueue(
+                                user_id,
+                                build_system_update(
+                                    update_type="progress_comparison",
+                                    category="evolution",
+                                    title="你和之前相比，已经不是同一种推进状态了",
+                                    description=str(comparison.get("delta_text") or ""),
+                                    priority="medium",
+                                    metadata={
+                                        "evolution_kind": "progress_comparison",
+                                        "comparison": comparison,
+                                        "headline": "你和之前相比，已经不是同一种推进状态了",
+                                        "summary": str(comparison.get("delta_text") or ""),
+                                    },
+                                ),
+                            )
+                    except Exception as exc:
+                        logger.warning(f"Failed to enqueue progress comparison: {exc}")
                 logger.info(
                     "DAG plan execution validation: plan_id={} status={} score={:.2f} steps={} aborted={}",
                     validation_result.plan_id,
@@ -2251,6 +2319,24 @@ class ChatOrchestrator:
                 snapshot = metadata.get("progress_snapshot")
                 if metadata.get("evolution_kind") == "progress_snapshot" and isinstance(snapshot, dict):
                     progress_snapshot = snapshot
+                if metadata.get("evolution_kind") == "proactive_insight" and metadata.get("insight_text"):
+                    highlight = str(metadata["insight_text"]).strip()
+                    if highlight and highlight not in evolution_highlights:
+                        evolution_highlights.append(highlight)
+                if metadata.get("evolution_kind") == "weekly_learning_report" and metadata.get("weekly_summary"):
+                    highlight = str(metadata["weekly_summary"]).strip()
+                    if highlight and highlight not in evolution_highlights:
+                        evolution_highlights.append(highlight)
+                if metadata.get("evolution_kind") == "progress_comparison":
+                    comparison = metadata.get("comparison")
+                    if isinstance(comparison, dict) and comparison.get("delta_text"):
+                        highlight = str(comparison["delta_text"]).strip()
+                        if highlight and highlight not in evolution_highlights:
+                            evolution_highlights.append(highlight)
+                if metadata.get("evolution_kind") == "plan_reasoning" and metadata.get("reasoning_summary"):
+                    highlight = str(metadata["reasoning_summary"]).strip()
+                    if highlight and highlight not in evolution_highlights:
+                        evolution_highlights.append(highlight)
             if progress_snapshot is None and hasattr(self, "db_session_factory"):
                 async with self.db_session_factory() as db_session:
                     service = ProgressNarrativeService(db_session, getattr(self, "redis", None))
@@ -3290,6 +3376,32 @@ class ChatOrchestrator:
                     user_message=user_message,
                     user_context=user_context_payload or {},
                 )
+                if (
+                    settings.ENABLE_PERCEPTIBLE_INTELLIGENCE
+                    and settings.ENABLE_PLAN_REASONING_SUMMARY
+                    and review_result.decision == ReviewDecision.APPROVED.value
+                    and review_result.reasoning_summary
+                ):
+                    try:
+                        await SystemUpdateService(getattr(self, "redis", None)).enqueue(
+                            user_id,
+                            build_system_update(
+                                update_type="plan_reasoning",
+                                category="evolution",
+                                title="这次计划这样安排，是有依据的",
+                                description=review_result.reasoning_summary,
+                                priority="low",
+                                metadata={
+                                    "evolution_kind": "plan_reasoning",
+                                    "headline": "这次计划这样安排，是有依据的",
+                                    "reasoning_summary": review_result.reasoning_summary,
+                                    "reasoning_details": review_result.reasoning_details or [],
+                                    "plan_id": review_result.plan_id,
+                                },
+                            ),
+                        )
+                    except Exception as exc:
+                        logger.warning(f"Failed to enqueue plan reasoning summary: {exc}")
                 if plan_id:
                     from app.services.plan_feedback_service import get_plan_feedback_service
 
@@ -3661,6 +3773,13 @@ class ChatOrchestrator:
                     await queue.put(resp)
 
                 # Step 4.5: Proactively emit unread evolution/system updates at session start
+                await self._maybe_enqueue_perceptible_insight(
+                    active_db=active_db,
+                    user_id=user_id,
+                    user_message=user_message,
+                    user_context_payload=user_context_payload,
+                    plan_id=plan_id,
+                )
                 update_responses, adaptation_records, preference_learnings, evolution_highlights, progress_snapshot = await self._drain_system_updates(user_id)
                 if adaptation_records:
                     state.context_data["adaptation_records"] = adaptation_records

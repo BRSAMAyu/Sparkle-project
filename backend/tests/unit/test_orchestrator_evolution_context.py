@@ -65,3 +65,27 @@ async def test_hydrate_evolution_context_backfills_highlights():
         await orchestrator._hydrate_evolution_context(final_state=final_state, user_id="user-1")
 
     assert final_state.context_data["evolution_highlights"] == ["你刚刚解锁了「冲刺先锋」。"]
+
+
+@pytest.mark.asyncio
+async def test_hydrate_evolution_context_backfills_perceptible_highlights():
+    orchestrator = object.__new__(ChatOrchestrator)
+    orchestrator.redis = AsyncMock()
+
+    final_state = SimpleNamespace(context_data={})
+    updates = [
+        {
+            "metadata": {
+                "evolution_kind": "proactive_insight",
+                "insight_text": "你最近晚间开始学习时，完成率会明显下降。",
+            }
+        }
+    ]
+
+    with patch(
+        "app.orchestration.orchestrator.SystemUpdateService.list_updates",
+        AsyncMock(return_value=updates),
+    ):
+        await orchestrator._hydrate_evolution_context(final_state=final_state, user_id="user-1")
+
+    assert "你最近晚间开始学习时，完成率会明显下降。" in final_state.context_data["evolution_highlights"]

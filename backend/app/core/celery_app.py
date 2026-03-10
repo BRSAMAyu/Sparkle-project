@@ -15,6 +15,7 @@ import logging
 import os
 
 from celery import Celery
+from celery.schedules import crontab
 
 logger = logging.getLogger(__name__)
 
@@ -801,6 +802,13 @@ celery_app.conf.beat_schedule = {
         "task": "generate_daily_capsules_for_all",
         "schedule": 604800.0,  # 7天
         "args": (),
+        "options": {"queue": "default"}
+    },
+
+    # 每周一上午9点生成学习报告
+    "weekly-learning-report": {
+        "task": "app.core.celery_tasks.generate_weekly_learning_reports",
+        "schedule": crontab(day_of_week="mon", hour=9, minute=0),
         "options": {"queue": "default"}
     },
 
