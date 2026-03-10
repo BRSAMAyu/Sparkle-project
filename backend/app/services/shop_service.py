@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.shop import ItemRarity, ShopItem, ShopItemType, ShopPurchase, UserConsumable
-from app.models.user import User
+from app.services.equipment_service import EquipmentService
 from app.services.photon_service import PhotonService
 
 
@@ -258,6 +258,11 @@ class ShopService:
                 self.db.add(purchase)
                 await self.db.flush()
 
+                if item.item_type == ShopItemType.SKIN:
+                    await EquipmentService(self.db).equip_shop_skin(user_id, item.id)
+                elif item.item_type == ShopItemType.TITLE:
+                    await EquipmentService(self.db).equip_shop_title(user_id, item.id)
+
             # 9. 删除缓存（事务提交后）
             from app.config import settings
             from app.core.cache import cache_service
@@ -345,23 +350,9 @@ class ShopService:
                 )
                 self.db.add(consumable)
 
-        # 皮肤类型：更新用户表的 equipped_skin 字段
-        elif item.item_type == "skin":
-            user_query = select(User).where(User.id == user_id)
-            result = await self.db.execute(user_query)
-            user = result.scalar_one_or_none()
-            if user:
-                user.equipped_skin = item.id
-                # TODO: 实现 skin 库存管理（如 user_skins 表）
-
-        # 称号类型：更新用户表的 equipped_title 字段
-        elif item.item_type == "title":
-            user_query = select(User).where(User.id == user_id)
-            result = await self.db.execute(user_query)
-            user = result.scalar_one_or_none()
-            if user:
-                user.equipped_title = item.id
-                # TODO: 实现 title 库存管理（如 user_titles 表）
+        elif item.item_type in ["skin", "title"]:
+            # 非消耗品 ownership 以购买记录为准，自动装备在购买记录落库后统一处理
+            pass
 
         await self.db.flush()
 

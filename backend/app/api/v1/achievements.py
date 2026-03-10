@@ -13,10 +13,12 @@ from app.db.session import get_db
 from app.models.achievement import AchievementRarity
 from app.models.user import User
 from app.schemas.achievement import (
+    CloseToUnlockAchievementListResponse,
     ContractCreateRequest,
     ContractResponse,
 )
 from app.services.achievement_engine import AchievementEngine, ContractService
+from app.services.equipment_service import EquipmentService, EquipmentSource
 
 router = APIRouter()
 
@@ -258,7 +260,7 @@ async def cancel_contract(
         raise HTTPException(status_code=404, detail="No active contract found")
 
     contract.status = ContractStatus.FAILED
-    contract.failed_at = _utcnow()
+    contract.failed_at = datetime.now(UTC).replace(tzinfo=None)
     contract.failure_reason = "User cancelled"
 
     await db.commit()
@@ -299,15 +301,15 @@ async def list_galaxy_skins(
     # 组装结果
     from app.schemas.achievement import GalaxySkinDetail
     skin_list = []
-    equipped_skin_id = None
+    equipped_skin_id = current_user.equipped_skin if current_user.equipped_skin_source == EquipmentSource.ACHIEVEMENT else None
 
     for skin in skins:
         user_skin = user_skins.get(skin.id)
         is_unlocked = user_skin is not None
-        is_equipped = user_skin.is_equipped if user_skin else False
-
-        if is_equipped:
-            equipped_skin_id = skin.id
+        is_equipped = (
+            current_user.equipped_skin_source == EquipmentSource.ACHIEVEMENT
+            and current_user.equipped_skin == skin.id
+        )
 
         skin_list.append(GalaxySkinDetail(
             **skin.__dict__,
@@ -332,38 +334,12 @@ async def equip_galaxy_skin(
 
     Equips a galaxy skin.
     """
-    from sqlalchemy import and_, select, update
-
-    from app.models.achievement import UserGalaxySkin
-
-    # 检查皮肤是否已解锁
-    query = select(UserGalaxySkin).where(
-        and_(
-            UserGalaxySkin.user_id == current_user.id,
-            UserGalaxySkin.skin_id == skin_id
-        )
-    )
-    result = await db.execute(query)
-    user_skin = result.scalar_one_or_none()
-
-    if not user_skin:
-        raise HTTPException(status_code=404, detail="Skin not unlocked")
-
-    # 取消所有已装备的皮肤
-    await db.execute(
-        update(UserGalaxySkin)
-        .where(UserGalaxySkin.user_id == current_user.id)
-        .values(is_equipped=False)
-    )
-
-    # 装备新皮肤
-    user_skin.is_equipped = True
-    await db.commit()
-
-    return {
-        "success": True,
-        "equipped_skin_id": skin_id
-    }
+    service = EquipmentService(db)
+    try:
+        result = await service.equip_achievement_skin(str(current_user.id), skin_id)
+        return result
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
 
 
 @router.get("/titles", response_model=dict[str, Any])
@@ -387,8 +363,18 @@ async def list_user_titles(
     titles = result.scalars().all()
 
     from app.schemas.achievement import UserTitleResponse
-    title_list = [UserTitleResponse.model_validate(t) for t in titles]
-    equipped_title = next((t.title_id for t in titles if t.is_equipped), None)
+    equipped_title = current_user.equipped_title if current_user.equipped_title_source == EquipmentSource.ACHIEVEMENT else None
+    title_list = [
+        UserTitleResponse.model_validate(title).model_copy(
+            update={
+                "is_equipped": (
+                    current_user.equipped_title_source == EquipmentSource.ACHIEVEMENT
+                    and current_user.equipped_title == title.title_id
+                )
+            }
+        )
+        for title in titles
+    ]
 
     return {
         "data": [t.model_dump() for t in title_list],
@@ -407,38 +393,12 @@ async def equip_title(
 
     Equips a user title.
     """
-    from sqlalchemy import and_, select, update
-
-    from app.models.achievement import UserTitle
-
-    # 检查称号是否存在
-    query = select(UserTitle).where(
-        and_(
-            UserTitle.user_id == current_user.id,
-            UserTitle.title_id == title_id
-        )
-    )
-    result = await db.execute(query)
-    user_title = result.scalar_one_or_none()
-
-    if not user_title:
-        raise HTTPException(status_code=404, detail="Title not found")
-
-    # 取消所有已装备的称号
-    await db.execute(
-        update(UserTitle)
-        .where(UserTitle.user_id == current_user.id)
-        .values(is_equipped=False)
-    )
-
-    # 装备新称号
-    user_title.is_equipped = True
-    await db.commit()
-
-    return {
-        "success": True,
-        "equipped_title": title_id
-    }
+    service = EquipmentService(db)
+    try:
+        result = await service.equip_achievement_title(str(current_user.id), title_id)
+        return result
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
 
 
 # ========== Internal Event Endpoint ==========
@@ -475,7 +435,7 @@ async def process_achievement_event(
 
 # ========== Enhancement Endpoints ==========
 
-@router.get("/close-to-unlock", response_model=dict[str, Any])
+@router.get("/close-to-unlock", response_model=CloseToUnlockAchievementListResponse)
 async def get_close_to_unlock_achievements(
     category: str | None = Query(None, description="Filter by category (e.g., 'sprint')"),
     threshold: float = Query(0.8, description="Progress threshold (0.0-1.0)"),

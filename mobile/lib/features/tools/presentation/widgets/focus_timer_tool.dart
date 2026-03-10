@@ -74,7 +74,8 @@ class _FocusTimerToolState extends State<FocusTimerTool> {
       title: title,
       subtitle: subtitle,
       accentColor: accent,
-      fillHeight: true,
+      compactHeader: true,
+      fillHeight: false,
       heroChips: [
         ToolHeroChip(
           label: _mode == TimerMode.countDown ? '倒计时模式' : '正计时模式',
@@ -87,88 +88,106 @@ class _FocusTimerToolState extends State<FocusTimerTool> {
           icon: _isRunning ? Icons.play_circle_fill_rounded : Icons.pause,
         ),
       ],
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Wrap(
-              spacing: DS.spacing12,
-              runSpacing: DS.spacing12,
-              children: [
-                ToolMetricCard(
-                  label: '当前时长',
-                  value: _mode == TimerMode.countDown
-                      ? '$_selectedMinutes 分'
-                      : '开放',
-                  accentColor: accent,
-                  icon: Icons.flag_rounded,
-                  caption: _mode == TimerMode.countDown ? '单次目标时长' : '适合追踪投入长度',
-                ),
-                ToolMetricCard(
-                  label: '预计结束',
-                  value: estimatedEnd == null
-                      ? '不限'
-                      : '${estimatedEnd.hour.toString().padLeft(2, '0')}:${estimatedEnd.minute.toString().padLeft(2, '0')}',
-                  accentColor: accent,
-                  icon: Icons.event_available_rounded,
-                  caption: estimatedEnd == null ? '由你主动暂停' : '方便衔接下一段计划',
-                ),
-              ],
-            ),
-            const SizedBox(height: DS.spacing16),
-            ToolSectionCard(
-              accentColor: accent,
-              title: '计时设置',
-              subtitle: '选中的选项会用低饱和高对比的强调色呈现，深浅色模式都保持清晰。',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (!isPomodoro) ...[
-                    Wrap(
-                      spacing: DS.spacing10,
-                      runSpacing: DS.spacing10,
-                      children: [
-                        ToolChoiceChip(
-                          label: '正计时',
-                          selected: _mode == TimerMode.countUp,
-                          onTap: () =>
-                              setState(() => _mode = TimerMode.countUp),
-                          accentColor: accent,
-                          icon: Icons.schedule_rounded,
-                        ),
-                        ToolChoiceChip(
-                          label: '倒计时',
-                          selected: _mode == TimerMode.countDown,
-                          onTap: () =>
-                              setState(() => _mode = TimerMode.countDown),
-                          accentColor: accent,
-                          icon: Icons.timelapse_rounded,
-                        ),
-                      ],
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ToolSectionCard(
+            accentColor: accent,
+            title: '主计时盘',
+            subtitle: '直接开始、暂停或重置。计时完成后会给出本地提示。',
+            child: LayoutBuilder(
+              builder: (context, constraints) => Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: constraints.maxWidth.clamp(0, 320),
+                  ),
+                  child: TimerWidget(
+                    key: ValueKey(
+                      '${widget.preset.name}_${_mode.name}_$initialSeconds$_sessionSeed',
                     ),
-                    if (_mode == TimerMode.countDown) ...[
-                      const SizedBox(height: DS.spacing16),
-                      Wrap(
-                        spacing: DS.spacing10,
-                        runSpacing: DS.spacing10,
-                        children: _countdownOptions
-                            .map(
-                              (minutes) => ToolChoiceChip(
-                                label: '$minutes 分钟',
-                                selected: _selectedMinutes == minutes,
-                                onTap: () =>
-                                    setState(() => _selectedMinutes = minutes),
-                                accentColor: accent,
-                              ),
-                            )
-                            .toList(),
+                    mode: _mode,
+                    initialSeconds: initialSeconds,
+                    maxSeconds: maxSeconds,
+                    onStateChange: (isRunning) {
+                      setState(() {
+                        _isRunning = isRunning;
+                      });
+                    },
+                    onComplete: () {
+                      unawaited(HapticFeedback.heavyImpact());
+                      AppFeedback.success(
+                        context,
+                        isPomodoro ? '番茄时段已完成' : '倒计时已结束',
+                      );
+                      setState(() {
+                        _isRunning = false;
+                      });
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: DS.spacing16),
+          Wrap(
+            spacing: DS.spacing12,
+            runSpacing: DS.spacing12,
+            children: [
+              ToolMetricCard(
+                label: '当前时长',
+                value:
+                    _mode == TimerMode.countDown ? '$_selectedMinutes 分' : '开放',
+                accentColor: accent,
+                icon: Icons.flag_rounded,
+                caption: _mode == TimerMode.countDown ? '单次目标时长' : '适合追踪投入长度',
+              ),
+              ToolMetricCard(
+                label: '预计结束',
+                value: estimatedEnd == null
+                    ? '不限'
+                    : '${estimatedEnd.hour.toString().padLeft(2, '0')}:${estimatedEnd.minute.toString().padLeft(2, '0')}',
+                accentColor: accent,
+                icon: Icons.event_available_rounded,
+                caption: estimatedEnd == null ? '由你主动暂停' : '方便衔接下一段计划',
+              ),
+            ],
+          ),
+          const SizedBox(height: DS.spacing16),
+          ToolSectionCard(
+            accentColor: accent,
+            title: '计时设置',
+            subtitle: '先选模式，再选时长。',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (!isPomodoro) ...[
+                  Wrap(
+                    spacing: DS.spacing10,
+                    runSpacing: DS.spacing10,
+                    children: [
+                      ToolChoiceChip(
+                        label: '正计时',
+                        selected: _mode == TimerMode.countUp,
+                        onTap: () => setState(() => _mode = TimerMode.countUp),
+                        accentColor: accent,
+                        icon: Icons.schedule_rounded,
+                      ),
+                      ToolChoiceChip(
+                        label: '倒计时',
+                        selected: _mode == TimerMode.countDown,
+                        onTap: () =>
+                            setState(() => _mode = TimerMode.countDown),
+                        accentColor: accent,
+                        icon: Icons.timelapse_rounded,
                       ),
                     ],
-                  ] else
+                  ),
+                  if (_mode == TimerMode.countDown) ...[
+                    const SizedBox(height: DS.spacing16),
                     Wrap(
                       spacing: DS.spacing10,
                       runSpacing: DS.spacing10,
-                      children: _pomodoroOptions
+                      children: _countdownOptions
                           .map(
                             (minutes) => ToolChoiceChip(
                               label: '$minutes 分钟',
@@ -176,56 +195,34 @@ class _FocusTimerToolState extends State<FocusTimerTool> {
                               onTap: () =>
                                   setState(() => _selectedMinutes = minutes),
                               accentColor: accent,
-                              icon: minutes == 25
-                                  ? Icons.local_fire_department_rounded
-                                  : Icons.bolt_rounded,
                             ),
                           )
                           .toList(),
                     ),
-                ],
-              ),
-            ),
-            const SizedBox(height: DS.spacing16),
-            ToolSectionCard(
-              accentColor: accent,
-              title: '主计时盘',
-              subtitle: '直接开始、暂停或重置。计时完成后会给出本地提示。',
-              child: LayoutBuilder(
-                builder: (context, constraints) => Center(
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: constraints.maxWidth.clamp(0, 320),
-                    ),
-                    child: TimerWidget(
-                      key: ValueKey(
-                        '${widget.preset.name}_${_mode.name}_$initialSeconds$_sessionSeed',
-                      ),
-                      mode: _mode,
-                      initialSeconds: initialSeconds,
-                      maxSeconds: maxSeconds,
-                      onStateChange: (isRunning) {
-                        setState(() {
-                          _isRunning = isRunning;
-                        });
-                      },
-                      onComplete: () {
-                        unawaited(HapticFeedback.heavyImpact());
-                        AppFeedback.success(
-                          context,
-                          isPomodoro ? '番茄时段已完成' : '倒计时已结束',
-                        );
-                        setState(() {
-                          _isRunning = false;
-                        });
-                      },
-                    ),
+                  ],
+                ] else
+                  Wrap(
+                    spacing: DS.spacing10,
+                    runSpacing: DS.spacing10,
+                    children: _pomodoroOptions
+                        .map(
+                          (minutes) => ToolChoiceChip(
+                            label: '$minutes 分钟',
+                            selected: _selectedMinutes == minutes,
+                            onTap: () =>
+                                setState(() => _selectedMinutes = minutes),
+                            accentColor: accent,
+                            icon: minutes == 25
+                                ? Icons.local_fire_department_rounded
+                                : Icons.bolt_rounded,
+                          ),
+                        )
+                        .toList(),
                   ),
-                ),
-              ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
       footer: LayoutBuilder(
         builder: (context, constraints) {

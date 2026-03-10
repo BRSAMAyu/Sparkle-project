@@ -10,7 +10,7 @@ from sqlalchemy.orm import relationship
 from app.models.base import GUID, BaseModel
 
 
-class AchievementRarity(str, enum.Enum):
+class AchievementRarity(enum.StrEnum):
     """成就稀有度"""
     COMMON = "common"       # 普通（银色）
     RARE = "rare"           # 稀有（金色）
@@ -18,7 +18,7 @@ class AchievementRarity(str, enum.Enum):
     LEGENDARY = "legendary" # 传说（彩虹）
 
 
-class AchievementType(str, enum.Enum):
+class AchievementType(enum.StrEnum):
     """成就类型"""
     MILESTONE = "milestone"         # 学习里程碑
     STREAK = "streak"               # 连续学习
@@ -32,7 +32,7 @@ class AchievementType(str, enum.Enum):
     SPRINT = "sprint"               # 冲刺专属成就
 
 
-class VisualEffectType(str, enum.Enum):
+class VisualEffectType(enum.StrEnum):
     """视觉特效类型"""
     NONE = "none"
     BLACK_HOLE = "black_hole"           # 恒星坍缩成黑洞
@@ -43,7 +43,7 @@ class VisualEffectType(str, enum.Enum):
     DUAL_STAR_CONNECTION = "dual_star"  # 双星连接
 
 
-class ContractStatus(str, enum.Enum):
+class ContractStatus(enum.StrEnum):
     """契约状态"""
     ACTIVE = "active"
     COMPLETED = "completed"
@@ -66,7 +66,7 @@ class Achievement(BaseModel):
     rarity = Column(Enum(AchievementRarity), default=AchievementRarity.COMMON)
 
     # 触发条件
-    trigger_code = Column(String(50), nullable=False, index=True, unique=True)
+    trigger_code = Column(String(50), nullable=False, index=True)
     trigger_config = Column(JSON)  # 触发条件配置，如 {"days": 7, "count": 100}
 
     # 隐藏成就

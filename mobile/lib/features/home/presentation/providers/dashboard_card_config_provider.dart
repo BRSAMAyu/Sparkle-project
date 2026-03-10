@@ -22,6 +22,18 @@ class DashboardCardIds {
     longTermPlan,
   ];
 
+  static const List<String> defaultOrder = [
+    calendar,
+    tools,
+    curiosity,
+    longTermPlan,
+    nextActions,
+    focus,
+    streak,
+  ];
+
+  static const List<String> legacyDefaultOrder = all;
+
   static const List<String> defaultVisible = [
     calendar,
     tools,
@@ -39,7 +51,7 @@ class DashboardCardConfigState {
 
   factory DashboardCardConfigState.defaults() => const DashboardCardConfigState(
         visibleCardIds: DashboardCardIds.defaultVisible,
-        cardOrder: DashboardCardIds.all,
+        cardOrder: DashboardCardIds.defaultOrder,
         layoutMode: DashboardCardLayoutMode.swipe,
       );
 
@@ -77,10 +89,15 @@ class DashboardCardConfigState {
           .map((item) => item.toString())
           .where(DashboardCardIds.all.contains)
           .toList();
+      final normalizedSavedOrder = savedOrder.isEmpty
+          ? DashboardCardIds.defaultOrder
+          : _listEquals(savedOrder, DashboardCardIds.legacyDefaultOrder)
+              ? DashboardCardIds.defaultOrder
+              : savedOrder;
       final missingIds = DashboardCardIds.all
-          .where((cardId) => !savedOrder.contains(cardId))
+          .where((cardId) => !normalizedSavedOrder.contains(cardId))
           .toList();
-      final cardOrder = [...savedOrder, ...missingIds];
+      final cardOrder = [...normalizedSavedOrder, ...missingIds];
       final layoutMode = DashboardCardLayoutMode.values.firstWhere(
         (value) => value.name == json['layoutMode'],
         orElse: () => DashboardCardLayoutMode.swipe,

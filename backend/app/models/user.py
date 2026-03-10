@@ -11,14 +11,14 @@ from sqlalchemy.orm import relationship
 from app.models.base import GUID, BaseModel
 
 
-class UserStatus(str, enum.Enum):
+class UserStatus(enum.StrEnum):
     """用户在线状态"""
     ONLINE = "online"
     OFFLINE = "offline"
     INVISIBLE = "invisible"
 
 
-class AvatarStatus(str, enum.Enum):
+class AvatarStatus(enum.StrEnum):
     """头像审核状态"""
     APPROVED = "approved"   # 审核通过
     PENDING = "pending"     # 待审核
@@ -78,8 +78,10 @@ class User(BaseModel):
     photon_updated_at = Column(DateTime, nullable=True)  # 光子积分最后更新时间
 
     # 🆕 商城装备系统 (V3.2)
-    equipped_skin = Column(String(50), nullable=True, index=True)  # 当前装备的皮肤ID（对应shop_items.id）
-    equipped_title = Column(String(50), nullable=True, index=True)  # 当前装备的称号ID（对应shop_items.id）
+    equipped_skin = Column(String(50), nullable=True, index=True)  # 当前装备的皮肤ID（按来源命名空间解释）
+    equipped_skin_source = Column(String(20), nullable=True, index=True)  # achievement | shop
+    equipped_title = Column(String(50), nullable=True, index=True)  # 当前装备的称号ID（按来源命名空间解释）
+    equipped_title_source = Column(String(20), nullable=True, index=True)  # achievement | shop
 
     # 关系定义
     push_preference = relationship(

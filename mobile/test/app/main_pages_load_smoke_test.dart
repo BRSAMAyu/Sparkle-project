@@ -75,10 +75,12 @@ void main() {
       final container = ProviderContainer();
       addTearDown(container.dispose);
       final notifier = container.read(dashboardCardConfigProvider.notifier);
+      final currentOrder =
+          container.read(dashboardCardConfigProvider).cardOrder;
       notifier.setLayoutMode(DashboardCardLayoutMode.grid);
       notifier.toggleCardVisibility(DashboardCardIds.focus);
       notifier.reorderCards(
-        DashboardCardIds.all.indexOf(DashboardCardIds.longTermPlan),
+        currentOrder.indexOf(DashboardCardIds.longTermPlan),
         0,
       );
       await notifier.saveImmediate();

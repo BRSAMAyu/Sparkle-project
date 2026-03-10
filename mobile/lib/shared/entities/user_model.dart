@@ -35,7 +35,9 @@ class UserModel {
     this.pushPreferences,
     this.photonBalance = 0,
     this.equippedSkin,
+    this.equippedSkinSource,
     this.equippedTitle,
+    this.equippedTitleSource,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) =>
@@ -76,8 +78,12 @@ class UserModel {
   final int photonBalance;
   @JsonKey(name: 'equipped_skin')
   final String? equippedSkin;
+  @JsonKey(name: 'equipped_skin_source')
+  final String? equippedSkinSource;
   @JsonKey(name: 'equipped_title')
   final String? equippedTitle;
+  @JsonKey(name: 'equipped_title_source')
+  final String? equippedTitleSource;
   Map<String, dynamic> toJson() => _$UserModelToJson(this);
 }
 

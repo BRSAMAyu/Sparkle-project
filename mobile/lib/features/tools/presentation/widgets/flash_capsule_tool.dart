@@ -135,7 +135,8 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
       title: '闪念胶囊',
       subtitle: '把一闪而过的疑点及时落地成错题线索，减少“知道有问题但没记住”的损耗。',
       accentColor: accent,
-      fillHeight: true,
+      compactHeader: true,
+      fillHeight: false,
       heroChips: [
         ToolHeroChip(
           label: _subjects.isEmpty ? '等待科目加载' : '${_subjects.length} 个科目',
@@ -150,6 +151,72 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
       ],
       body: Column(
         children: [
+          ToolSectionCard(
+            accentColor: accent,
+            title: '记录内容',
+            subtitle: '选择科目、错误类型，再补充知识点和描述。',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (_isLoading)
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(DS.spacing24),
+                      child: CircularProgressIndicator(color: accent),
+                    ),
+                  )
+                else
+                  _SubjectDropdown(
+                    value: _selectedSubjectId,
+                    subjects: _subjects,
+                    onChanged: (value) {
+                      setState(() => _selectedSubjectId = value);
+                    },
+                  ),
+                const SizedBox(height: DS.spacing16),
+                TextField(
+                  controller: _topicController,
+                  decoration: const InputDecoration(
+                    labelText: '知识点',
+                    hintText: '例如：三角函数求导、牛顿第二定律...',
+                  ),
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: DS.spacing16),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Wrap(
+                    spacing: DS.spacing10,
+                    runSpacing: DS.spacing10,
+                    children: _errorTypes
+                        .map(
+                          (type) => ToolChoiceChip(
+                            label: type,
+                            selected: _selectedErrorType == type,
+                            onTap: () => setState(() {
+                              _selectedErrorType = type;
+                            }),
+                            accentColor: accent,
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ),
+                const SizedBox(height: DS.spacing16),
+                TextField(
+                  controller: _descriptionController,
+                  maxLines: 8,
+                  decoration: const InputDecoration(
+                    labelText: '错误描述',
+                    hintText: '记录你是怎么错的、卡在什么地方、下次要如何避免。',
+                    alignLabelWithHint: true,
+                  ),
+                  onChanged: (_) => setState(() {}),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: DS.spacing16),
           Wrap(
             spacing: DS.spacing12,
             runSpacing: DS.spacing12,
@@ -167,77 +234,6 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                 icon: Icons.notes_rounded,
               ),
             ],
-          ),
-          const SizedBox(height: DS.spacing16),
-          Expanded(
-            child: ToolSectionCard(
-              accentColor: accent,
-              fillHeight: true,
-              title: '记录内容',
-              subtitle: '选择科目、错误类型，再补充知识点和描述。',
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (_isLoading)
-                      Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(DS.spacing24),
-                          child: CircularProgressIndicator(color: accent),
-                        ),
-                      )
-                    else
-                      _SubjectDropdown(
-                        value: _selectedSubjectId,
-                        subjects: _subjects,
-                        onChanged: (value) {
-                          setState(() => _selectedSubjectId = value);
-                        },
-                      ),
-                    const SizedBox(height: DS.spacing16),
-                    TextField(
-                      controller: _topicController,
-                      decoration: const InputDecoration(
-                        labelText: '知识点',
-                        hintText: '例如：三角函数求导、牛顿第二定律...',
-                      ),
-                      onChanged: (_) => setState(() {}),
-                    ),
-                    const SizedBox(height: DS.spacing16),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Wrap(
-                        spacing: DS.spacing10,
-                        runSpacing: DS.spacing10,
-                        children: _errorTypes
-                            .map(
-                              (type) => ToolChoiceChip(
-                                label: type,
-                                selected: _selectedErrorType == type,
-                                onTap: () => setState(() {
-                                  _selectedErrorType = type;
-                                }),
-                                accentColor: accent,
-                              ),
-                            )
-                            .toList(),
-                      ),
-                    ),
-                    const SizedBox(height: DS.spacing16),
-                    TextField(
-                      controller: _descriptionController,
-                      maxLines: 8,
-                      decoration: const InputDecoration(
-                        labelText: '错误描述',
-                        hintText: '记录你是怎么错的、卡在什么地方、下次要如何避免。',
-                        alignLabelWithHint: true,
-                      ),
-                      onChanged: (_) => setState(() {}),
-                    ),
-                  ],
-                ),
-              ),
-            ),
           ),
         ],
       ),

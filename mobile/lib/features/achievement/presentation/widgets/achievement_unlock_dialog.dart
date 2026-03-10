@@ -248,146 +248,185 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
     final rarity = widget.event.rarity;
     final colors = _getRarityColors();
 
-    return Container(
-      width: 320,
-      padding: const EdgeInsets.all(DS.spacing24),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            colors.primary.withValues(alpha: 0.95),
-            colors.secondary.withValues(alpha: 0.9),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: colors.border,
-          width: 2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: colors.glow,
-            blurRadius: 32,
-            spreadRadius: 4,
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // 稀有度徽章
-          RarityBadge(rarity: rarity),
-          const SizedBox(height: DS.spacing16),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final dialogWidth = math.min(constraints.maxWidth - 24, 320.0);
+        final compact = dialogWidth < 300;
 
-          // 成就图标
-          _buildIconContainer(),
-          const SizedBox(height: DS.spacing16),
-
-          // 成就名称
-          Text(
-            widget.event.name,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: DS.fontSizeXl,
-              fontWeight: DS.fontWeightBold,
-              color: colors.text,
-            ),
-          ),
-          const SizedBox(height: DS.spacing8),
-
-          // 解锁文本
-          Text(
-            _getUnlockText(),
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: DS.fontSizeBase,
-              color: colors.text.withValues(alpha: 0.8),
-            ),
-          ),
-
-          // 解锁时间
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: DS.spacing12),
-            child: Text(
-              _formatTime(widget.event.unlockedAt),
-              style: TextStyle(
-                fontSize: DS.fontSizeXs,
-                color: colors.text.withValues(alpha: 0.6),
-              ),
-            ),
-          ),
-
-          // 首次解锁标记
-          if (widget.event.isFirst)
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: DS.spacing12,
-                vertical: DS.spacing6,
-              ),
+        return ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: dialogWidth),
+          child: SingleChildScrollView(
+            child: Container(
+              width: dialogWidth,
+              padding: EdgeInsets.all(compact ? DS.spacing20 : DS.spacing24),
               decoration: BoxDecoration(
-                color: DS.warning.withValues(alpha: 0.3),
-                borderRadius: DS.borderRadius12,
-                border: Border.all(
-                  color: DS.warning,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    colors.primary.withValues(alpha: 0.95),
+                    colors.secondary.withValues(alpha: 0.9),
+                  ],
                 ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.star,
-                    size: DS.iconSizeSm,
-                    color: DS.warning,
-                  ),
-                  const SizedBox(width: DS.spacing4),
-                  Text(
-                    '首位解锁者！',
-                    style: TextStyle(
-                      fontSize: DS.fontSizeXs,
-                      fontWeight: DS.fontWeightBold,
-                      color: DS.warning,
-                    ),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: colors.border,
+                  width: 2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: colors.glow,
+                    blurRadius: 32,
+                    spreadRadius: 4,
                   ),
                 ],
               ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 稀有度徽章
+                  RarityBadge(rarity: rarity, showLabel: !compact),
+                  const SizedBox(height: DS.spacing16),
+
+                  // 成就图标
+                  _buildIconContainer(),
+                  const SizedBox(height: DS.spacing16),
+
+                  // 成就名称
+                  Text(
+                    widget.event.name,
+                    textAlign: TextAlign.center,
+                    maxLines: compact ? 3 : 4,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: compact ? DS.fontSizeLg : DS.fontSizeXl,
+                      fontWeight: DS.fontWeightBold,
+                      color: colors.text,
+                    ),
+                  ),
+                  const SizedBox(height: DS.spacing8),
+
+                  // 解锁文本
+                  Text(
+                    _getUnlockText(),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: DS.fontSizeBase,
+                      color: colors.text.withValues(alpha: 0.8),
+                    ),
+                  ),
+
+                  // 解锁时间
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: DS.spacing12),
+                    child: Text(
+                      _formatTime(widget.event.unlockedAt),
+                      style: TextStyle(
+                        fontSize: DS.fontSizeXs,
+                        color: colors.text.withValues(alpha: 0.6),
+                      ),
+                    ),
+                  ),
+
+                  // 首次解锁标记
+                  if (widget.event.isFirst)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: DS.spacing12,
+                        vertical: DS.spacing6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: DS.warning.withValues(alpha: 0.3),
+                        borderRadius: DS.borderRadius12,
+                        border: Border.all(
+                          color: DS.warning,
+                        ),
+                      ),
+                      child: Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: DS.spacing4,
+                        children: [
+                          Icon(
+                            Icons.star,
+                            size: DS.iconSizeSm,
+                            color: DS.warning,
+                          ),
+                          Text(
+                            '首位解锁者！',
+                            style: TextStyle(
+                              fontSize: DS.fontSizeXs,
+                              fontWeight: DS.fontWeightBold,
+                              color: DS.warning,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  // 里程碑信息 (P1功能 - 进度里程碑庆祝)
+                  if (widget.milestoneInfo != null)
+                    _buildMilestoneSection(widget.milestoneInfo!),
+
+                  const SizedBox(height: DS.spacing20),
+
+                  // 操作按钮
+                  if (compact)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _buildActionButton(
+                          icon: Icons.close,
+                          label: '关闭',
+                          isPrimary: false,
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                            widget.onClose?.call();
+                          },
+                        ),
+                        const SizedBox(height: DS.spacing12),
+                        _buildActionButton(
+                          icon: Icons.share,
+                          label: '分享',
+                          isPrimary: true,
+                          onPressed: () {
+                            widget.onShare?.call();
+                          },
+                        ),
+                      ],
+                    )
+                  else
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildActionButton(
+                            icon: Icons.close,
+                            label: '关闭',
+                            isPrimary: false,
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                              widget.onClose?.call();
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: DS.spacing12),
+                        Expanded(
+                          child: _buildActionButton(
+                            icon: Icons.share,
+                            label: '分享',
+                            isPrimary: true,
+                            onPressed: () {
+                              widget.onShare?.call();
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
             ),
-
-          // 里程碑信息 (P1功能 - 进度里程碑庆祝)
-          if (widget.milestoneInfo != null)
-            _buildMilestoneSection(widget.milestoneInfo!),
-
-          const SizedBox(height: DS.spacing20),
-
-          // 操作按钮
-          Row(
-            children: [
-              Expanded(
-                child: _buildActionButton(
-                  icon: Icons.close,
-                  label: '关闭',
-                  isPrimary: false,
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    widget.onClose?.call();
-                  },
-                ),
-              ),
-              const SizedBox(width: DS.spacing12),
-              Expanded(
-                child: _buildActionButton(
-                  icon: Icons.share,
-                  label: '分享',
-                  isPrimary: true,
-                  onPressed: () {
-                    widget.onShare?.call();
-                  },
-                ),
-              ),
-            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -538,15 +577,17 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
           ),
           borderRadius: DS.borderRadius12,
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Wrap(
+          alignment: WrapAlignment.center,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: DS.spacing6,
+          runSpacing: DS.spacing4,
           children: [
             Icon(
               icon,
               size: DS.iconSizeSm,
               color: colors.text,
             ),
-            const SizedBox(width: DS.spacing6),
             Text(
               label,
               style: TextStyle(
@@ -658,6 +699,7 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
         builder: (context, child) => Transform.scale(
           scale: _scaleAnimation.value.clamp(0.8, 1.2),
           child: Container(
+            constraints: const BoxConstraints(maxWidth: 280),
             padding: const EdgeInsets.symmetric(
               horizontal: DS.spacing20,
               vertical: DS.spacing10,
@@ -677,15 +719,17 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                 ),
               ],
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
+            child: Wrap(
+              alignment: WrapAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: DS.spacing8,
+              runSpacing: DS.spacing4,
               children: [
                 Icon(
                   Icons.local_fire_department,
                   color: DS.onBrandPrimary,
                   size: 24,
                 ),
-                const SizedBox(width: DS.spacing8),
                 Text(
                   '$comboCount连击！',
                   style: TextStyle(
@@ -694,7 +738,6 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                     color: DS.onBrandPrimary,
                   ),
                 ),
-                const SizedBox(width: DS.spacing4),
                 Text(
                   _getComboText(comboCount),
                   style: TextStyle(
@@ -726,15 +769,17 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
       ),
       child: Column(
         children: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
+          Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: DS.spacing4,
+            runSpacing: DS.spacing4,
             children: [
               Icon(
                 Icons.flag,
                 size: DS.iconSizeSm,
                 color: colors.primary,
               ),
-              const SizedBox(width: DS.spacing4),
               Text(
                 '里程碑达成！',
                 style: TextStyle(

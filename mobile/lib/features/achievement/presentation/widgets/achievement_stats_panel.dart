@@ -31,49 +31,58 @@ class AchievementStatsPanel extends StatelessWidget {
           borderRadius: DS.borderRadius16,
           border: Border.all(color: DS.border),
         ),
-        child: Column(
-          children: [
-            // 顶部统计行
-            Row(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compactStats = constraints.maxWidth < 520;
+            final cards = [
+              _buildStatCard(
+                '总成就',
+                '${stats.unlockedCount}/${stats.totalAchievements}',
+                Icons.emoji_events_outlined,
+                DS.brandPrimary,
+              ),
+              _buildStatCard(
+                '完成率',
+                '${stats.unlockedPercentage.toStringAsFixed(0)}%',
+                Icons.bar_chart,
+                DS.semanticSuccess,
+              ),
+              _buildStatCard(
+                '光子',
+                '${stats.totalPhotons}',
+                Icons.stars,
+                DS.warning,
+              ),
+            ];
+
+            return Column(
               children: [
-                Expanded(
-                  child: _buildStatCard(
-                    '总成就',
-                    '${stats.unlockedCount}/${stats.totalAchievements}',
-                    Icons.emoji_events_outlined,
-                    DS.brandPrimary,
+                if (compactStats)
+                  Column(
+                    children: [
+                      for (var index = 0; index < cards.length; index++) ...[
+                        if (index > 0) const SizedBox(height: DS.spacing10),
+                        cards[index],
+                      ],
+                    ],
+                  )
+                else
+                  Row(
+                    children: [
+                      for (var index = 0; index < cards.length; index++) ...[
+                        if (index > 0) const SizedBox(width: DS.spacing12),
+                        Expanded(child: cards[index]),
+                      ],
+                    ],
                   ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: DS.spacing16),
+                  child: _buildOverallProgressBar(compact: compactStats),
                 ),
-                const SizedBox(width: DS.spacing12),
-                Expanded(
-                  child: _buildStatCard(
-                    '完成率',
-                    '${stats.unlockedPercentage.toStringAsFixed(0)}%',
-                    Icons.bar_chart,
-                    DS.semanticSuccess,
-                  ),
-                ),
-                const SizedBox(width: DS.spacing12),
-                Expanded(
-                  child: _buildStatCard(
-                    '光子',
-                    '${stats.totalPhotons}',
-                    Icons.stars,
-                    DS.warning,
-                  ),
-                ),
+                _buildRarityDistribution(),
               ],
-            ),
-
-            // 进度条
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: DS.spacing16),
-              child: _buildOverallProgressBar(),
-            ),
-
-            // 稀有度分布
-            _buildRarityDistribution(),
-          ],
+            );
+          },
         ),
       );
 
@@ -84,19 +93,19 @@ class AchievementStatsPanel extends StatelessWidget {
           borderRadius: DS.borderRadius12,
           border: Border.all(color: DS.border),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
+        child: Wrap(
+          alignment: WrapAlignment.spaceAround,
+          spacing: DS.spacing12,
+          runSpacing: DS.spacing12,
           children: [
             _buildCompactStatItem(
               '${stats.unlockedCount}/${stats.totalAchievements}',
               '成就',
             ),
-            _buildVerticalDivider(),
             _buildCompactStatItem(
               '${stats.unlockedPercentage.toStringAsFixed(0)}%',
               '完成率',
             ),
-            _buildVerticalDivider(),
             _buildCompactStatItem(
               '${stats.currentStreak}',
               '连胜',
@@ -167,32 +176,54 @@ class AchievementStatsPanel extends StatelessWidget {
         color: DS.border,
       );
 
-  Widget _buildOverallProgressBar() {
+  Widget _buildOverallProgressBar({bool compact = false}) {
     final progress = stats.unlockedPercentage / 100;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              '总体进度',
-              style: TextStyle(
-                fontSize: DS.fontSizeSm,
-                color: DS.textSecondary,
+        if (compact)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '总体进度',
+                style: TextStyle(
+                  fontSize: DS.fontSizeSm,
+                  color: DS.textSecondary,
+                ),
               ),
-            ),
-            Text(
-              '${stats.unlockedCount} / ${stats.totalAchievements}',
-              style: TextStyle(
-                fontSize: DS.fontSizeXs,
-                color: DS.textTertiary,
+              const SizedBox(height: DS.spacing4),
+              Text(
+                '${stats.unlockedCount} / ${stats.totalAchievements}',
+                style: TextStyle(
+                  fontSize: DS.fontSizeXs,
+                  color: DS.textTertiary,
+                ),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: DS.spacing8),
+            ],
+          )
+        else
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '总体进度',
+                style: TextStyle(
+                  fontSize: DS.fontSizeSm,
+                  color: DS.textSecondary,
+                ),
+              ),
+              Text(
+                '${stats.unlockedCount} / ${stats.totalAchievements}',
+                style: TextStyle(
+                  fontSize: DS.fontSizeXs,
+                  color: DS.textTertiary,
+                ),
+              ),
+            ],
+          ),
+        SizedBox(height: compact ? DS.spacing10 : DS.spacing8),
         Container(
           height: 8,
           decoration: BoxDecoration(
@@ -226,7 +257,9 @@ class AchievementStatsPanel extends StatelessWidget {
             ),
           ),
           const SizedBox(height: DS.spacing12),
-          Row(
+          Wrap(
+            spacing: DS.spacing8,
+            runSpacing: DS.spacing8,
             children: [
               _buildRarityBarItem(
                 '普通',
@@ -251,7 +284,6 @@ class AchievementStatsPanel extends StatelessWidget {
                 stats.legendaryCount,
                 DS.error,
               ),
-              const Spacer(),
               if (stats.hiddenFound > 0) _buildHiddenStat(),
             ],
           ),

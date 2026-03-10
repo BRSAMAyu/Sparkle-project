@@ -57,8 +57,8 @@ class _LearningForecastScreenState
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        backgroundColor: DS.deepSpaceStart,
+  Widget build(BuildContext context) => SparklePageScaffold(
+        role: SparklePageRole.content,
         appBar: AppBar(
           leading: SparkleIconButton(
             icon: const Icon(Icons.arrow_back),
@@ -66,10 +66,10 @@ class _LearningForecastScreenState
             variant: ButtonVariant.ghost,
             size: DS.touchTargetMinSize,
           ),
-          backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
+          backgroundColor: Colors.transparent,
           elevation: 0,
-          title: Text('学习预测洞察', style: TextStyle(color: DS.brandPrimary)),
-          iconTheme: IconThemeData(color: DS.brandPrimary),
+          title: Text('学习预测洞察', style: TextStyle(color: DS.textPrimary)),
+          iconTheme: IconThemeData(color: DS.textPrimary),
           actions: [
             SparkleIconButton(
               icon: const Icon(Icons.refresh),
@@ -79,7 +79,7 @@ class _LearningForecastScreenState
             ),
           ],
         ),
-        body: _isLoading
+        child: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : ContentConstraint(
                 child: RefreshIndicator(
@@ -144,27 +144,19 @@ class _LearningForecastScreenState
               ),
       );
 
-  Widget _buildHeader() => Container(
+  Widget _buildHeader() => MaterialStyler(
+        material: AppMaterials.ceramic,
+        borderRadius: DS.borderRadius20,
         padding: const EdgeInsets.all(DS.spacing20),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              DS.brandPrimary,
-              DS.brandSecondary,
-            ],
-          ),
-          borderRadius: BorderRadius.circular(16),
-        ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(DS.md),
               decoration: BoxDecoration(
-                color: DS.brandPrimary.withValues(alpha: 0.2),
+                color: DS.brandPrimary10,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child:
-                  Icon(Icons.auto_graph, color: DS.brandPrimaryConst, size: 32),
+              child: Icon(Icons.auto_graph, color: DS.brandPrimary, size: 30),
             ),
             const SizedBox(width: DS.lg),
             Expanded(
@@ -174,7 +166,7 @@ class _LearningForecastScreenState
                   Text(
                     'AI 预测系统',
                     style: TextStyle(
-                      color: DS.brandPrimaryConst,
+                      color: DS.textPrimary,
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                     ),
@@ -183,7 +175,7 @@ class _LearningForecastScreenState
                   Text(
                     '基于学习数据的智能分析',
                     style: TextStyle(
-                      color: DS.brandPrimary.withValues(alpha: 0.7),
+                      color: DS.textSecondary,
                       fontSize: 14,
                     ),
                   ),
@@ -197,7 +189,7 @@ class _LearningForecastScreenState
   Widget _buildSectionTitle(String title) => Text(
         title,
         style: TextStyle(
-          color: DS.brandPrimaryConst,
+          color: DS.textPrimary,
           fontSize: 18,
           fontWeight: FontWeight.bold,
         ),

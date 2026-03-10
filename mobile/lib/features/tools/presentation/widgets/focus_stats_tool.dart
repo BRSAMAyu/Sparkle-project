@@ -62,6 +62,7 @@ class _FocusStatsToolState extends ConsumerState<FocusStatsTool> {
       title: '专注统计',
       subtitle: '把计时和专注行为沉淀成结构化洞察，方便你判断节奏是否稳定、是否需要调整工作块长度。',
       accentColor: accent,
+      compactHeader: true,
       headerAction: SparkleIconButton(
         icon: const Icon(Icons.refresh_rounded),
         onPressed: _refresh,
@@ -113,7 +114,7 @@ class _FocusStatsToolState extends ConsumerState<FocusStatsTool> {
                   ToolSectionCard(
                     accentColor: accent,
                     title: '本周趋势',
-                    subtitle: '最近 7 天的专注时长分布。',
+                    subtitle: '最近 7 天的专注时长变化。',
                     child: state.dailyBreakdown.isEmpty
                         ? ToolEmptyState(
                             icon: Icons.insights_rounded,
@@ -122,7 +123,7 @@ class _FocusStatsToolState extends ConsumerState<FocusStatsTool> {
                             accentColor: accent,
                           )
                         : SizedBox(
-                            height: 180,
+                            height: 168,
                             child: FocusStatsChart(
                               dailyData: state.dailyBreakdown,
                             ),

@@ -8,13 +8,13 @@ from pydantic import BaseModel, EmailStr, Field, model_validator
 
 # ========== Request Schemas ==========
 
-class UserStatusEnum(str, enum.Enum):
+class UserStatusEnum(enum.StrEnum):
     ONLINE = "online"
     OFFLINE = "offline"
     INVISIBLE = "invisible"
 
 
-class AvatarStatus(str, enum.Enum):
+class AvatarStatus(enum.StrEnum):
     """头像审核状态"""
     APPROVED = "approved"   # 审核通过
     PENDING = "pending"     # 待审核
@@ -98,7 +98,9 @@ class UserProfile(UserBase):
     updated_at: datetime = Field(description="Last update time")
     photon_balance: int = Field(default=0, description="Photon balance")
     equipped_skin: str | None = Field(default=None, description="Equipped skin ID")
+    equipped_skin_source: str | None = Field(default=None, description="Equipped skin source")
     equipped_title: str | None = Field(default=None, description="Equipped title ID")
+    equipped_title_source: str | None = Field(default=None, description="Equipped title source")
     push_preferences: Optional["PushPreferenceResponse"] = Field(default=None, description="Push notification preferences")
 
 class UserFlameStatus(BaseModel):

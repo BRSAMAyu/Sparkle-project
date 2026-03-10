@@ -28,8 +28,9 @@ class _NotesToolState extends State<NotesTool> {
   DateTime? _savedAt;
 
   int get _charCount => _controller.text.trim().length;
-  int get _lineCount =>
-      _controller.text.trim().isEmpty ? 0 : '\n'.allMatches(_controller.text).length + 1;
+  int get _lineCount => _controller.text.trim().isEmpty
+      ? 0
+      : '\n'.allMatches(_controller.text).length + 1;
 
   @override
   void initState() {
@@ -103,7 +104,8 @@ class _NotesToolState extends State<NotesTool> {
       title: '闪念笔记',
       subtitle: '用于快速承接灵感、会议碎片和任务切片。内容会自动保存，适合做短时外脑。',
       accentColor: accent,
-      fillHeight: true,
+      compactHeader: true,
+      fillHeight: false,
       heroChips: [
         ToolHeroChip(
           label: _savedAt == null
@@ -120,79 +122,107 @@ class _NotesToolState extends State<NotesTool> {
       ],
       body: _isLoading
           ? Center(child: CircularProgressIndicator(color: accent))
-          : Column(
-              children: [
-                Wrap(
-                  spacing: DS.spacing12,
-                  runSpacing: DS.spacing12,
+          : LayoutBuilder(
+              builder: (context, constraints) {
+                final compact = constraints.maxWidth < 620;
+                final editorHeight = compact ? 260.0 : 320.0;
+
+                return Column(
                   children: [
-                    ToolMetricCard(
-                      label: '字数',
-                      value: '$_charCount',
-                      accentColor: accent,
-                      icon: Icons.text_fields_rounded,
+                    Wrap(
+                      spacing: DS.spacing12,
+                      runSpacing: DS.spacing12,
+                      children: [
+                        ToolMetricCard(
+                          label: '字数',
+                          value: '$_charCount',
+                          accentColor: accent,
+                          icon: Icons.text_fields_rounded,
+                        ),
+                        ToolMetricCard(
+                          label: '行数',
+                          value: '$_lineCount',
+                          accentColor: accent,
+                          icon: Icons.subject_rounded,
+                        ),
+                      ],
                     ),
-                    ToolMetricCard(
-                      label: '行数',
-                      value: '$_lineCount',
+                    const SizedBox(height: DS.spacing16),
+                    ToolSectionCard(
                       accentColor: accent,
-                      icon: Icons.subject_rounded,
+                      title: '笔记内容',
+                      subtitle: '输入时会自动保存，不需要手动提交。',
+                      child: SizedBox(
+                        height: editorHeight,
+                        child: TextField(
+                          controller: _controller,
+                          maxLines: null,
+                          expands: true,
+                          textAlignVertical: TextAlignVertical.top,
+                          decoration: const InputDecoration(
+                            hintText: '把刚刚闪过的想法先放进来...',
+                            border: InputBorder.none,
+                          ),
+                          style:
+                              Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                    color: DS.textPrimary,
+                                    height: 1.65,
+                                  ),
+                          onChanged: (_) => _saveNotes(),
+                        ),
+                      ),
                     ),
                   ],
-                ),
-                const SizedBox(height: DS.spacing16),
-                Expanded(
-                  child: ToolSectionCard(
-                    accentColor: accent,
-                    fillHeight: true,
-                    title: '笔记内容',
-                    subtitle: '输入时会自动保存，不需要手动提交。',
-                    child: TextField(
-                      controller: _controller,
-                      maxLines: null,
-                      expands: true,
-                      decoration: const InputDecoration(
-                        hintText: '把刚刚闪过的想法先放进来...',
-                        border: InputBorder.none,
-                      ),
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: DS.textPrimary,
-                            height: 1.65,
-                          ),
-                      onChanged: (_) => _saveNotes(),
-                    ),
-                  ),
-                ),
-              ],
+                );
+              },
             ),
-      footer: Row(
-        children: [
-          Expanded(
-            child: SparkleButton(
+      footer: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 620;
+          final actions = <Widget>[
+            SparkleButton(
               label: '清空',
               variant: ButtonVariant.ghost,
               onPressed: _clearNotes,
               icon: const Icon(Icons.delete_outline_rounded),
+              expand: true,
             ),
-          ),
-          const SizedBox(width: DS.spacing12),
-          Expanded(
-            child: SparkleButton(
+            SparkleButton(
               label: '复制内容',
               variant: ButtonVariant.ghost,
               onPressed: _copyNotes,
               icon: const Icon(Icons.copy_rounded),
+              expand: true,
             ),
-          ),
-          const SizedBox(width: DS.spacing12),
-          Expanded(
-            child: SparkleButton(
+            SparkleButton(
               label: '立即保存',
               onPressed: _saveNotes,
               icon: const Icon(Icons.check_rounded),
+              expand: true,
             ),
-          ),
-        ],
+          ];
+
+          if (compact) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (var index = 0; index < actions.length; index++) ...[
+                  if (index > 0) const SizedBox(height: DS.spacing12),
+                  actions[index],
+                ],
+              ],
+            );
+          }
+
+          return Row(
+            children: [
+              for (var index = 0; index < actions.length; index++) ...[
+                if (index > 0) const SizedBox(width: DS.spacing12),
+                Expanded(child: actions[index]),
+              ],
+            ],
+          );
+        },
       ),
     );
   }

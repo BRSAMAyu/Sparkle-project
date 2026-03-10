@@ -16,7 +16,7 @@ class FocusService:
     def _to_utc_naive(ts: datetime.datetime) -> datetime.datetime:
         if ts.tzinfo is None:
             return ts
-        return ts.astimezone(datetime.timezone.utc).replace(tzinfo=None)
+        return ts.astimezone(datetime.UTC).replace(tzinfo=None)
 
     @staticmethod
     async def log_session(
@@ -86,23 +86,35 @@ class FocusService:
 
             achievement_engine = AchievementEngine(db)
 
-            # Check time of day for special achievements
-            hour = start_time.hour if hasattr(start_time, 'hour') else start_time.astimezone().hour
-            event_type = AchievementEvent.STUDY_MINUTES_ACCUMULATED
-
-            if hour >= 23 or hour < 5:
-                # Night study special event
-                event_type = AchievementEvent.NIGHT_STUDY
-            elif 5 <= hour <= 8:
-                # Early bird event
-                event_type = AchievementEvent.EARLY_BIRD
+            base_kwargs = {
+                "study_minutes": duration_minutes,
+                "session_id": str(session.id) if session else None,
+                "session_start_time": start_time,
+            }
 
             unlocked = await achievement_engine.process_event(
                 user_id=str(user_id),
-                event_type=event_type,
-                study_minutes=duration_minutes,
-                session_id=str(session.id) if session else None,
+                event_type=AchievementEvent.STUDY_MINUTES_ACCUMULATED,
+                **base_kwargs,
             )
+
+            hour = start_time.hour if hasattr(start_time, 'hour') else start_time.astimezone().hour
+            special_unlocked = []
+            if hour >= 23 or hour < 5:
+                special_unlocked = await achievement_engine.process_event(
+                    user_id=str(user_id),
+                    event_type=AchievementEvent.NIGHT_STUDY,
+                    **base_kwargs,
+                )
+            elif 5 <= hour < 8:
+                special_unlocked = await achievement_engine.process_event(
+                    user_id=str(user_id),
+                    event_type=AchievementEvent.EARLY_BIRD,
+                    **base_kwargs,
+                )
+
+            if special_unlocked:
+                unlocked.extend(special_unlocked)
 
             if unlocked:
                 unlocked_achievements = unlocked
@@ -367,7 +379,7 @@ class FocusService:
         if task_ids:
             task_stmt = select(Task.id, Task.title).where(Task.id.in_(task_ids))
             task_result = await db.execute(task_stmt)
-            task_title_map = {task_id: title for task_id, title in task_result.all()}
+            task_title_map = dict(task_result.all())
 
         session_details = []
         for session in sessions:

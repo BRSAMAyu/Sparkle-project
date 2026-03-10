@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sparkle/features/shop/data/repositories/shop_repository.dart';
 import 'package:sparkle/shared/entities/shop_model.dart';
 
@@ -13,7 +16,6 @@ final shopRepositoryProvider = Provider<ShopRepository>((ref) {
 // ========== Shop Items State ==========
 
 class ShopItemsState {
-
   ShopItemsState({
     this.items = const [],
     this.isLoading = false,
@@ -30,25 +32,28 @@ class ShopItemsState {
     bool? isLoading,
     String? error,
     Map<String, List<ShopItem>>? itemsByCategory,
-  }) => ShopItemsState(
-      items: items ?? this.items,
-      isLoading: isLoading ?? this.isLoading,
-      error: error ?? this.error,
-      itemsByCategory: itemsByCategory ?? this.itemsByCategory,
-    );
+  }) =>
+      ShopItemsState(
+        items: items ?? this.items,
+        isLoading: isLoading ?? this.isLoading,
+        error: error ?? this.error,
+        itemsByCategory: itemsByCategory ?? this.itemsByCategory,
+      );
 
   /// Get items by type
-  List<ShopItem> getItemsByType(ShopItemType type) => itemsByCategory[type.name] ?? [];
+  List<ShopItem> getItemsByType(ShopItemType type) =>
+      itemsByCategory[type.name] ?? [];
 }
 
 // ========== Shop Items Provider ==========
 
 class ShopItemsNotifier extends StateNotifier<ShopItemsState> {
-  ShopItemsNotifier(this._repository) : super(ShopItemsState()) {
-    loadShopItems();
+  ShopItemsNotifier(this._repository, this._ref) : super(ShopItemsState()) {
+    unawaited(loadShopItems());
   }
 
   final ShopRepository _repository;
+  final Ref _ref;
 
   Future<void> loadShopItems({
     String? itemType,
@@ -95,6 +100,8 @@ class ShopItemsNotifier extends StateNotifier<ShopItemsState> {
       await _repository.purchaseItem(itemId);
       // Refresh items to update ownership status
       await loadShopItems();
+      await _ref.read(inventoryProvider.notifier).refresh();
+      await _ref.read(authProvider.notifier).refreshUser();
       return true;
     } catch (e) {
       state = state.copyWith(
@@ -108,7 +115,7 @@ class ShopItemsNotifier extends StateNotifier<ShopItemsState> {
 final shopItemsProvider =
     StateNotifierProvider<ShopItemsNotifier, ShopItemsState>((ref) {
   final repository = ref.watch(shopRepositoryProvider);
-  return ShopItemsNotifier(repository);
+  return ShopItemsNotifier(repository, ref);
 });
 
 // ========== Selected Shop Item Provider ==========
@@ -119,7 +126,6 @@ final selectedShopItemProvider =
 // ========== Purchase History State ==========
 
 class PurchaseHistoryState {
-
   PurchaseHistoryState({
     this.purchases = const [],
     this.isLoading = false,
@@ -139,13 +145,14 @@ class PurchaseHistoryState {
     String? error,
     bool? hasMore,
     int? currentOffset,
-  }) => PurchaseHistoryState(
-      purchases: purchases ?? this.purchases,
-      isLoading: isLoading ?? this.isLoading,
-      error: error ?? this.error,
-      hasMore: hasMore ?? this.hasMore,
-      currentOffset: currentOffset ?? this.currentOffset,
-    );
+  }) =>
+      PurchaseHistoryState(
+        purchases: purchases ?? this.purchases,
+        isLoading: isLoading ?? this.isLoading,
+        error: error ?? this.error,
+        hasMore: hasMore ?? this.hasMore,
+        currentOffset: currentOffset ?? this.currentOffset,
+      );
 }
 
 // ========== Purchase History Provider ==========
@@ -199,8 +206,7 @@ class PurchaseHistoryNotifier extends StateNotifier<PurchaseHistoryState> {
 }
 
 final purchaseHistoryProvider =
-    StateNotifierProvider<PurchaseHistoryNotifier, PurchaseHistoryState>(
-        (ref) {
+    StateNotifierProvider<PurchaseHistoryNotifier, PurchaseHistoryState>((ref) {
   final repository = ref.watch(shopRepositoryProvider);
   return PurchaseHistoryNotifier(repository);
 });
@@ -208,7 +214,6 @@ final purchaseHistoryProvider =
 // ========== Inventory State ==========
 
 class InventoryState {
-
   InventoryState({
     this.inventory = const {},
     this.isLoading = false,
@@ -222,11 +227,12 @@ class InventoryState {
     Map<String, List<InventoryItem>>? inventory,
     bool? isLoading,
     String? error,
-  }) => InventoryState(
-      inventory: inventory ?? this.inventory,
-      isLoading: isLoading ?? this.isLoading,
-      error: error ?? this.error,
-    );
+  }) =>
+      InventoryState(
+        inventory: inventory ?? this.inventory,
+        isLoading: isLoading ?? this.isLoading,
+        error: error ?? this.error,
+      );
 
   List<InventoryItem> get skins => inventory['skins'] ?? [];
   List<InventoryItem> get titles => inventory['titles'] ?? [];
@@ -237,11 +243,12 @@ class InventoryState {
 // ========== Inventory Provider ==========
 
 class InventoryNotifier extends StateNotifier<InventoryState> {
-  InventoryNotifier(this._repository) : super(InventoryState()) {
-    loadInventory();
+  InventoryNotifier(this._repository, this._ref) : super(InventoryState()) {
+    unawaited(loadInventory());
   }
 
   final ShopRepository _repository;
+  final Ref _ref;
 
   Future<void> loadInventory() async {
     state = state.copyWith(isLoading: true);
@@ -270,6 +277,7 @@ class InventoryNotifier extends StateNotifier<InventoryState> {
       await _repository.equipItem(itemId: itemId, itemType: itemType);
       // Refresh inventory to update equipped status
       await loadInventory();
+      await _ref.read(authProvider.notifier).refreshUser();
       return true;
     } catch (e) {
       state = state.copyWith(
@@ -288,7 +296,7 @@ class InventoryNotifier extends StateNotifier<InventoryState> {
 final inventoryProvider =
     StateNotifierProvider<InventoryNotifier, InventoryState>((ref) {
   final repository = ref.watch(shopRepositoryProvider);
-  return InventoryNotifier(repository);
+  return InventoryNotifier(repository, ref);
 });
 
 // ========== Owned Items Provider ==========

@@ -153,7 +153,8 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
       title: '查词',
       subtitle: '用来做快速词义确认、例句生成和关联词扩展，查询结果可以直接收进本地生词本。',
       accentColor: accent,
-      fillHeight: true,
+      compactHeader: true,
+      fillHeight: false,
       heroChips: [
         ToolHeroChip(
           label: _isInLocalWordbook ? '已在生词本中' : '可加入生词本',
@@ -232,10 +233,10 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
             ),
           ),
           const SizedBox(height: DS.spacing16),
-          Expanded(
+          SizedBox(
+            height: 360,
             child: ToolSectionCard(
               accentColor: accent,
-              fillHeight: true,
               title: '查询结果',
               subtitle: '词义、例句、关联词和模型生成句都在这里。',
               child: result == null
@@ -249,45 +250,90 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Wrap(
-                            spacing: DS.spacing10,
-                            runSpacing: DS.spacing8,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            children: [
-                              ConstrainedBox(
-                                constraints:
-                                    const BoxConstraints(maxWidth: 320),
-                                child: Text(
-                                  result['word'] as String? ?? '',
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .headlineMedium
-                                      ?.copyWith(
-                                        color: DS.textPrimary,
-                                        fontWeight: DS.fontWeightBold,
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              final compact = constraints.maxWidth < 360;
+                              final phonetic = result['phonetic'] as String?;
+                              final partOfSpeech = result['pos'] as String?;
+
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    result['word'] as String? ?? '',
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .headlineMedium
+                                        ?.copyWith(
+                                          color: DS.textPrimary,
+                                          fontWeight: DS.fontWeightBold,
+                                        ),
+                                  ),
+                                  if (phonetic != null || partOfSpeech != null)
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                          top: DS.spacing8),
+                                      child: Wrap(
+                                        spacing: DS.spacing8,
+                                        runSpacing: DS.spacing8,
+                                        crossAxisAlignment:
+                                            WrapCrossAlignment.center,
+                                        children: [
+                                          if (phonetic != null)
+                                            Text(
+                                              phonetic,
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodyMedium
+                                                  ?.copyWith(
+                                                    color: DS.textSecondary,
+                                                    fontStyle: FontStyle.italic,
+                                                  ),
+                                            ),
+                                          if (partOfSpeech != null)
+                                            DecoratedBox(
+                                              decoration: BoxDecoration(
+                                                color: accent.withValues(
+                                                    alpha: 0.12),
+                                                borderRadius:
+                                                    DS.borderRadiusFull,
+                                                border: Border.all(
+                                                  color: accent.withValues(
+                                                      alpha: 0.18),
+                                                ),
+                                              ),
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                  horizontal: DS.spacing8,
+                                                  vertical: DS.spacing6,
+                                                ),
+                                                child: Text(
+                                                  compact
+                                                      ? partOfSpeech
+                                                      : '词性 · $partOfSpeech',
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .labelSmall
+                                                      ?.copyWith(
+                                                        color: accent,
+                                                        fontWeight:
+                                                            DS.fontWeightBold,
+                                                      ),
+                                                ),
+                                              ),
+                                            ),
+                                        ],
                                       ),
-                                ),
-                              ),
-                              if ((result['phonetic'] as String?) != null)
-                                Text(
-                                  result['phonetic'] as String,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodyLarge
-                                      ?.copyWith(
-                                        color: DS.textSecondary,
-                                        fontStyle: FontStyle.italic,
-                                      ),
-                                ),
-                              if ((result['pos'] as String?) != null)
-                                ToolHeroChip(
-                                  label: result['pos'] as String,
-                                  accentColor: accent,
-                                  icon: Icons.sell_rounded,
-                                ),
-                            ],
+                                    ),
+                                ],
+                              );
+                            },
                           ),
                           const SizedBox(height: DS.spacing16),
                           if (definitions != null) ...[
@@ -320,8 +366,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                             ...examples.take(3).map(
                                   (example) => Padding(
                                     padding: const EdgeInsets.only(
-                                      bottom: DS.spacing8,
-                                    ),
+                                        bottom: DS.spacing8),
                                     child: Text(
                                       '• $example',
                                       style: Theme.of(context)

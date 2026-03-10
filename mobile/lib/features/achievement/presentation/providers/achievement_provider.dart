@@ -1,6 +1,9 @@
-import 'package:flutter/foundation.dart';
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart';
 import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sparkle/features/achievement/data/repositories/achievement_repository.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 
@@ -163,7 +166,7 @@ final achievementRepositoryProvider = Provider<AchievementRepository>((ref) {
 /// Main Achievement Provider
 final achievementProvider =
     StateNotifierProvider<AchievementNotifier, AchievementState>(
-  (ref) => AchievementNotifier(ref.watch(achievementRepositoryProvider)),
+  (ref) => AchievementNotifier(ref.watch(achievementRepositoryProvider), ref),
 );
 
 /// Achievement Map Provider
@@ -193,11 +196,13 @@ final titlesProvider = Provider<List<UserTitle>>((ref) {
 // ========== Notifiers ==========
 
 class AchievementNotifier extends StateNotifier<AchievementState> {
-  AchievementNotifier(this._repository) : super(AchievementState.loading()) {
-    loadInitialData();
+  AchievementNotifier(this._repository, this._ref)
+      : super(AchievementState.loading()) {
+    unawaited(loadInitialData());
   }
 
   final AchievementRepository _repository;
+  final Ref _ref;
 
   /// Load all initial achievement data
   Future<void> loadInitialData() async {
@@ -300,6 +305,7 @@ class AchievementNotifier extends StateNotifier<AchievementState> {
       final success = await _repository.equipGalaxySkin(skinId);
       if (success) {
         await refreshGalaxySkins();
+        await _ref.read(authProvider.notifier).refreshUser();
       }
       return success;
     } catch (e) {
@@ -314,6 +320,7 @@ class AchievementNotifier extends StateNotifier<AchievementState> {
       final success = await _repository.equipTitle(titleId);
       if (success) {
         await refreshTitles();
+        await _ref.read(authProvider.notifier).refreshUser();
       }
       return success;
     } catch (e) {
@@ -409,8 +416,9 @@ class AchievementNotifier extends StateNotifier<AchievementState> {
 }
 
 class AchievementMapNotifier extends StateNotifier<AchievementMapState> {
-  AchievementMapNotifier(this._repository) : super(AchievementMapState.loading()) {
-    loadMap();
+  AchievementMapNotifier(this._repository)
+      : super(AchievementMapState.loading()) {
+    unawaited(loadMap());
   }
 
   final AchievementRepository _repository;

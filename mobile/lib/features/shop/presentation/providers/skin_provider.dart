@@ -1,9 +1,15 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/tokens_v2/theme_manager.dart';
 import 'package:sparkle/core/providers/theme_provider.dart';
+import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sparkle/features/shop/data/repositories/shop_repository.dart';
 import 'package:sparkle/features/shop/data/repositories/shop_repository_provider.dart';
+import 'package:sparkle/shared/entities/achievement_model.dart';
+import 'package:sparkle/shared/entities/shop_model.dart';
 
 /// 皮肤应用服务
 ///
@@ -28,72 +34,121 @@ class SkinNotifier extends StateNotifier<Map<String, dynamic>?> {
   final ShopRepository _shopRepository;
   final Ref _ref;
   String? _currentSkinId;
+  String? _currentSkinSource;
+  int _skinChangeVersion = 0;
   ProviderSubscription? _authStateSubscription;
 
   /// 当认证状态变化时，应用用户的装备皮肤
   void _onAuthStateChanged(AuthState authState) {
+    _skinChangeVersion += 1;
+    final version = _skinChangeVersion;
     final user = authState.user;
     if (user != null) {
-      // 用户已登录，应用装备的皮肤
-      _applyUserSkin(user.equippedSkin);
+      unawaited(
+        _applyUserSkin(user.equippedSkin, user.equippedSkinSource, version),
+      );
     } else {
-      // 用户已登出，移除皮肤
-      _themeManager.unequipSkin();
+      unawaited(_clearAppliedSkin(version));
     }
   }
 
   /// 应用用户装备的皮肤
-  Future<void> _applyUserSkin(String? skinId) async {
-    if (skinId == null || skinId == _currentSkinId) return;
+  Future<void> _applyUserSkin(
+    String? skinId,
+    String? source,
+    int version,
+  ) async {
+    if (!mounted || version != _skinChangeVersion) return;
+    if (skinId == null || source == null) {
+      await _clearAppliedSkin(version);
+      return;
+    }
+    if (skinId == _currentSkinId && source == _currentSkinSource) return;
 
     try {
-      // 从商城获取皮肤配置
-      final inventory = await _shopRepository.getInventory();
-      final skins = inventory['skins'] as List<dynamic>? ?? [];
+      Map<String, dynamic>? skinConfig;
 
-      // 查找装备的皮肤
-      final equippedSkin = skins.firstWhere(
-        (item) => item['id'] == skinId,
-        orElse: () => null,
-      );
-
-      if (equippedSkin != null) {
-        final skinConfig = equippedSkin['item_config'] as Map<String, dynamic>?;
-        if (skinConfig != null) {
-          await _themeManager.equipShopSkin(skinId, skinConfig);
-          _currentSkinId = skinId;
-          state = {'skin_id': skinId, 'skin_config': skinConfig};
+      if (source == 'shop') {
+        final inventory = await _shopRepository.getInventory();
+        final skins = inventory['skins'] ?? <InventoryItem>[];
+        InventoryItem? equippedSkin;
+        for (final item in skins) {
+          if (item.id == skinId) {
+            equippedSkin = item;
+            break;
+          }
         }
+        skinConfig = equippedSkin?.itemConfig;
+      } else if (source == 'achievement') {
+        final achievementRepository = _ref.read(achievementRepositoryProvider);
+        final response = await achievementRepository.getGalaxySkins();
+        GalaxySkin? equippedSkin;
+        for (final item in response.skins) {
+          if (item.id == skinId) {
+            equippedSkin = item;
+            break;
+          }
+        }
+        skinConfig = equippedSkin?.skinConfig;
+      }
+
+      if (skinConfig != null) {
+        await _themeManager.equipShopSkin(skinId, skinConfig);
+        if (!mounted || version != _skinChangeVersion) return;
+        _currentSkinId = skinId;
+        _currentSkinSource = source;
+        state = {
+          'skin_id': skinId,
+          'skin_source': source,
+          'skin_config': skinConfig,
+        };
       }
     } catch (e) {
-      // 获取皮肤配置失败，忽略
-      print('Failed to apply skin: $e');
+      if (mounted && version == _skinChangeVersion) {
+        debugPrint('Failed to apply skin: $e');
+      }
     }
+  }
+
+  Future<void> _clearAppliedSkin(int version) async {
+    _currentSkinId = null;
+    _currentSkinSource = null;
+    state = null;
+
+    await _themeManager.unequipSkin();
+    if (!mounted || version != _skinChangeVersion) return;
   }
 
   /// 从商城装备皮肤（购买后调用）
   Future<bool> equipSkinFromShop(String skinId) async {
     try {
       final inventory = await _shopRepository.getInventory();
-      final skins = inventory['skins'] as List<dynamic>? ?? [];
-
-      final skin = skins.firstWhere(
-        (item) => item['id'] == skinId,
-        orElse: () => null,
-      );
+      final skins = inventory['skins'] ?? <InventoryItem>[];
+      InventoryItem? skin;
+      for (final item in skins) {
+        if (item.id == skinId) {
+          skin = item;
+          break;
+        }
+      }
 
       if (skin != null) {
-        final skinConfig = skin['item_config'] as Map<String, dynamic>?;
+        final skinConfig = skin.itemConfig;
         if (skinConfig != null) {
           await _themeManager.equipShopSkin(skinId, skinConfig);
           _currentSkinId = skinId;
-          state = {'skin_id': skinId, 'skin_config': skinConfig};
+          _currentSkinSource = 'shop';
+          state = {
+            'skin_id': skinId,
+            'skin_source': 'shop',
+            'skin_config': skinConfig
+          };
           return true;
         }
       }
       return false;
     } catch (e) {
-      print('Failed to equip skin: $e');
+      debugPrint('Failed to equip skin: $e');
       return false;
     }
   }
@@ -102,6 +157,7 @@ class SkinNotifier extends StateNotifier<Map<String, dynamic>?> {
   Future<void> unequipSkin() async {
     await _themeManager.unequipSkin();
     _currentSkinId = null;
+    _currentSkinSource = null;
     state = null;
   }
 
@@ -113,7 +169,8 @@ class SkinNotifier extends StateNotifier<Map<String, dynamic>?> {
 }
 
 /// 皮肤Provider
-final skinProvider = StateNotifierProvider<SkinNotifier, Map<String, dynamic>?>((ref) {
+final skinProvider =
+    StateNotifierProvider<SkinNotifier, Map<String, dynamic>?>((ref) {
   final themeManager = ref.watch<ThemeManager>(themeManagerProvider);
   final shopRepository = ref.watch<ShopRepository>(shopRepositoryProvider);
 

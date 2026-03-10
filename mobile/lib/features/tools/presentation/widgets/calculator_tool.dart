@@ -101,6 +101,8 @@ class _CalculatorToolState extends State<CalculatorTool> {
       title: '计算器',
       subtitle: '适合任务执行中的快算、表达式验算和连贯多步推导，结果会保留最近记录。',
       accentColor: accent,
+      compactHeader: true,
+      fillHeight: false,
       heroChips: [
         ToolHeroChip(
           label: _history.isEmpty ? '无历史' : '${_history.length} 条历史',
@@ -113,165 +115,178 @@ class _CalculatorToolState extends State<CalculatorTool> {
           icon: Icons.auto_graph_rounded,
         ),
       ],
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            ToolSectionCard(
-              accentColor: accent,
-              title: '表达式',
-              subtitle: '支持括号和连续输入，`ANS` 会回填上一轮计算结果。',
-              child: Column(
-                children: [
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(DS.spacing18),
-                    decoration: BoxDecoration(
-                      color: DS.surfacePrimary,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: DS.borderSubtle),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          _expression.isEmpty ? '0' : _expression,
-                          textAlign: TextAlign.right,
-                          style:
-                              Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                    color: _expression.isEmpty
-                                        ? DS.textSecondary
-                                        : DS.textPrimary,
-                                    fontWeight: DS.fontWeightSemiBold,
-                                  ),
-                        ),
-                        const SizedBox(height: DS.spacing12),
-                        Text(
-                          _result.isEmpty ? '准备计算' : _result,
-                          textAlign: TextAlign.right,
-                          style:
-                              Theme.of(context).textTheme.displaySmall?.copyWith(
-                                    color: _result == 'Error'
-                                        ? DS.error
-                                        : DS.textPrimary,
-                                    fontWeight: DS.fontWeightBold,
-                                  ),
-                        ),
-                      ],
-                    ),
+      body: Column(
+        children: [
+          ToolSectionCard(
+            accentColor: accent,
+            title: '表达式',
+            subtitle: '支持括号和连续输入，`ANS` 会回填上一轮计算结果。',
+            child: Column(
+              children: [
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(DS.spacing18),
+                  decoration: BoxDecoration(
+                    color: DS.surfacePrimary,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: DS.borderSubtle),
                   ),
-                  const SizedBox(height: DS.spacing16),
-                  Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Expanded(
-                        child: SparkleButton(
-                          label: '复制结果',
-                          variant: ButtonVariant.ghost,
-                          onPressed: _copyResult,
-                          icon: const Icon(Icons.copy_rounded),
-                        ),
+                      Text(
+                        _expression.isEmpty ? '0' : _expression,
+                        textAlign: TextAlign.right,
+                        style:
+                            Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                  color: _expression.isEmpty
+                                      ? DS.textSecondary
+                                      : DS.textPrimary,
+                                  fontWeight: DS.fontWeightSemiBold,
+                                ),
                       ),
-                      const SizedBox(width: DS.spacing12),
-                      Expanded(
-                        child: SparkleButton(
-                          label: '计算',
-                          onPressed: _evaluate,
-                          icon: const Icon(Icons.play_arrow_rounded),
-                        ),
+                      const SizedBox(height: DS.spacing12),
+                      Text(
+                        _result.isEmpty ? '准备计算' : _result,
+                        textAlign: TextAlign.right,
+                        style:
+                            Theme.of(context).textTheme.displaySmall?.copyWith(
+                                  color: _result == 'Error'
+                                      ? DS.error
+                                      : DS.textPrimary,
+                                  fontWeight: DS.fontWeightBold,
+                                ),
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: DS.spacing16),
-            ToolSectionCard(
-              accentColor: accent,
-              title: '键盘',
-              subtitle: '数字键和运算键分层展示，减少高频误触。',
-              child: Column(
-                children: [
-                  for (final row in _keyRows) ...[
-                    Row(
-                      children: row.split(' ').map((key) {
-                        final isOperator = const ['/', 'x', '-', '+'].contains(key);
-                        final isDanger = const ['C', 'DEL'].contains(key);
-                        return Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.all(DS.spacing4),
-                            child: _CalculatorKey(
-                              label: key,
-                              accentColor: accent,
-                              isOperator: isOperator,
-                              isDanger: isDanger,
-                              onTap: () => _onPressed(key),
-                            ),
-                          ),
-                        );
-                      }).toList(),
+                ),
+                const SizedBox(height: DS.spacing16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: SparkleButton(
+                        label: '复制结果',
+                        variant: ButtonVariant.ghost,
+                        onPressed: _copyResult,
+                        icon: const Icon(Icons.copy_rounded),
+                      ),
+                    ),
+                    const SizedBox(width: DS.spacing12),
+                    Expanded(
+                      child: SparkleButton(
+                        label: '计算',
+                        onPressed: _evaluate,
+                        icon: const Icon(Icons.play_arrow_rounded),
+                      ),
                     ),
                   ],
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.all(DS.spacing4),
-                          child: _CalculatorKey(
-                            label: '=',
-                            accentColor: accent,
-                            isPrimary: true,
-                            onTap: _evaluate,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-            const SizedBox(height: DS.spacing16),
-            ToolSectionCard(
-              accentColor: accent,
-              title: '最近记录',
-              subtitle: '轻量保留最近 6 次，方便回填和核对。',
-              child: _history.isEmpty
-                  ? ToolEmptyState(
-                      icon: Icons.receipt_long_rounded,
-                      title: '还没有计算历史',
-                      description: '完成一次表达式计算后，最近记录会显示在这里。',
-                      accentColor: accent,
-                    )
-                  : Column(
-                      children: _history
-                          .map(
-                            (entry) => ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              leading: Icon(
-                                Icons.subdirectory_arrow_right_rounded,
-                                color: accent,
-                              ),
-                              title: Text(
-                                entry,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
-                                    ?.copyWith(
-                                      color: DS.textPrimary,
-                                      fontWeight: DS.fontWeightMedium,
-                                    ),
-                              ),
-                              trailing: IconButton(
-                                onPressed: () => setState(() {
-                                  _expression = entry.split(' = ').first;
-                                }),
-                                icon: const Icon(Icons.undo_rounded),
+          ),
+          const SizedBox(height: DS.spacing16),
+          ToolSectionCard(
+            accentColor: accent,
+            title: '键盘',
+            subtitle: '数字键和运算键分层展示，减少高频误触。',
+            child: Column(
+              children: [
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final keyHeight = constraints.maxWidth < 340
+                        ? 38.0
+                        : constraints.maxWidth < 400
+                            ? 42.0
+                            : 48.0;
+                    return Column(
+                      children: [
+                        for (final row in _keyRows)
+                          Row(
+                            children: row.split(' ').map((key) {
+                              final isOperator =
+                                  const ['/', 'x', '-', '+'].contains(key);
+                              final isDanger = const ['C', 'DEL'].contains(key);
+                              return Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(DS.spacing4),
+                                  child: _CalculatorKey(
+                                    label: key,
+                                    accentColor: accent,
+                                    isOperator: isOperator,
+                                    isDanger: isDanger,
+                                    height: keyHeight,
+                                    onTap: () => _onPressed(key),
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.all(DS.spacing4),
+                                child: _CalculatorKey(
+                                  label: '=',
+                                  accentColor: accent,
+                                  isPrimary: true,
+                                  height: keyHeight,
+                                  onTap: _evaluate,
+                                ),
                               ),
                             ),
-                          )
-                          .toList(),
-                    ),
+                          ],
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: DS.spacing16),
+          ToolSectionCard(
+            accentColor: accent,
+            title: '最近记录',
+            subtitle: '轻量保留最近 6 次，方便回填和核对。',
+            child: _history.isEmpty
+                ? ToolEmptyState(
+                    icon: Icons.receipt_long_rounded,
+                    title: '还没有计算历史',
+                    description: '完成一次表达式计算后，最近记录会显示在这里。',
+                    accentColor: accent,
+                  )
+                : Column(
+                    children: _history
+                        .map(
+                          (entry) => ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: Icon(
+                              Icons.subdirectory_arrow_right_rounded,
+                              color: accent,
+                            ),
+                            title: Text(
+                              entry,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                    color: DS.textPrimary,
+                                    fontWeight: DS.fontWeightMedium,
+                                  ),
+                            ),
+                            trailing: IconButton(
+                              onPressed: () => setState(() {
+                                _expression = entry.split(' = ').first;
+                              }),
+                              icon: const Icon(Icons.undo_rounded),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+          ),
+        ],
       ),
     );
   }
@@ -282,6 +297,7 @@ class _CalculatorKey extends StatelessWidget {
     required this.label,
     required this.accentColor,
     required this.onTap,
+    required this.height,
     this.isOperator = false,
     this.isPrimary = false,
     this.isDanger = false,
@@ -290,6 +306,7 @@ class _CalculatorKey extends StatelessWidget {
   final String label;
   final Color accentColor;
   final VoidCallback onTap;
+  final double height;
   final bool isOperator;
   final bool isPrimary;
   final bool isDanger;
@@ -315,7 +332,7 @@ class _CalculatorKey extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(18),
       child: Ink(
-        height: 58,
+        height: height,
         decoration: BoxDecoration(
           color: background,
           borderRadius: BorderRadius.circular(18),

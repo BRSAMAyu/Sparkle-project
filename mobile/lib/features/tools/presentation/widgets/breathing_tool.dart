@@ -191,6 +191,7 @@ class _BreathingToolState extends State<BreathingTool>
       title: '呼吸练习',
       subtitle: '把呼吸节奏做成可执行工具，而不是一次性动画。支持多种模式和不同练习时长，适合在任务间切换状态。',
       accentColor: accent,
+      compactHeader: true,
       heroChips: [
         ToolHeroChip(
           label: _pattern.label,
@@ -198,189 +199,208 @@ class _BreathingToolState extends State<BreathingTool>
           icon: Icons.bubble_chart_rounded,
         ),
         ToolHeroChip(
-          label: _isPlaying ? '$_completedRounds / $_totalRounds 轮' : '${_durations[_selectedDurationIndex]} 分钟',
+          label: _isPlaying
+              ? '$_completedRounds / $_totalRounds 轮'
+              : '${_durations[_selectedDurationIndex]} 分钟',
           accentColor: accent,
           icon: Icons.self_improvement_rounded,
         ),
       ],
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Wrap(
-              spacing: DS.spacing12,
-              runSpacing: DS.spacing12,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ToolSectionCard(
+            accentColor: accent,
+            title: '呼吸舞台',
+            subtitle: '跟着中央指令吸气、停留和呼气。',
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final stageSize = constraints.maxWidth.clamp(180.0, 300.0);
+                return Center(
+                  child: SizedBox(
+                    width: stageSize,
+                    height: stageSize,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Container(
+                          width: stageSize,
+                          height: stageSize,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: accent.withValues(alpha: 0.16),
+                              width: 2,
+                            ),
+                          ),
+                        ),
+                        AnimatedBuilder(
+                          animation: _controller,
+                          builder: (context, child) {
+                            final scale = 0.42 + (_controller.value * 0.58);
+                            return Transform.scale(
+                              scale: scale,
+                              child: Container(
+                                width: stageSize,
+                                height: stageSize,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: RadialGradient(
+                                    colors: [
+                                      accent.withValues(alpha: 0.30),
+                                      accent.withValues(alpha: 0.06),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              _instruction,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleLarge
+                                  ?.copyWith(
+                                    color: DS.textPrimary,
+                                    fontWeight: DS.fontWeightBold,
+                                  ),
+                            ),
+                            const SizedBox(height: DS.spacing8),
+                            Text(
+                              _pattern.description,
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: DS.textSecondary,
+                                    height: 1.4,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: DS.spacing16),
+          Wrap(
+            spacing: DS.spacing12,
+            runSpacing: DS.spacing12,
+            children: [
+              ToolMetricCard(
+                label: '当前节律',
+                value:
+                    '${_pattern.inhale}-${_pattern.hold}-${_pattern.exhale}-${_pattern.rest}',
+                accentColor: accent,
+                icon: Icons.tonality_rounded,
+                caption: '吸 / 停 / 呼 / 停',
+              ),
+              ToolMetricCard(
+                label: '目标轮数',
+                value: '$_totalRounds',
+                accentColor: accent,
+                icon: Icons.repeat_rounded,
+                caption: '按当前时长自动估算',
+              ),
+            ],
+          ),
+          const SizedBox(height: DS.spacing16),
+          ToolSectionCard(
+            accentColor: accent,
+            title: '练习配置',
+            subtitle: '先选模式，再选练习时长。',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ToolMetricCard(
-                  label: '当前节律',
-                  value: '${_pattern.inhale}-${_pattern.hold}-${_pattern.exhale}-${_pattern.rest}',
-                  accentColor: accent,
-                  icon: Icons.tonality_rounded,
-                  caption: '吸 / 停 / 呼 / 停',
+                Wrap(
+                  spacing: DS.spacing10,
+                  runSpacing: DS.spacing10,
+                  children: List.generate(
+                    _patterns.length,
+                    (index) => ToolChoiceChip(
+                      label: _patterns[index].label,
+                      selected: _selectedPatternIndex == index,
+                      onTap: () {
+                        setState(() {
+                          _selectedPatternIndex = index;
+                          _updateTotalRounds();
+                        });
+                      },
+                      accentColor: accent,
+                    ),
+                  ),
                 ),
-                ToolMetricCard(
-                  label: '目标轮数',
-                  value: '$_totalRounds',
-                  accentColor: accent,
-                  icon: Icons.repeat_rounded,
-                  caption: '按当前时长自动估算',
+                const SizedBox(height: DS.spacing16),
+                Wrap(
+                  spacing: DS.spacing10,
+                  runSpacing: DS.spacing10,
+                  children: List.generate(
+                    _durations.length,
+                    (index) => ToolChoiceChip(
+                      label: '${_durations[index]} 分钟',
+                      selected: _selectedDurationIndex == index,
+                      onTap: () {
+                        setState(() {
+                          _selectedDurationIndex = index;
+                          _updateTotalRounds();
+                        });
+                      },
+                      accentColor: accent,
+                      icon: Icons.timer_outlined,
+                    ),
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: DS.spacing16),
-            ToolSectionCard(
-              accentColor: accent,
-              title: '呼吸舞台',
-              subtitle: '跟着中央指令吸气、停留和呼气。',
-              child: Column(
-                children: [
-                  Center(
-                    child: SizedBox(
-                      width: 220,
-                      height: 220,
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          Container(
-                            width: 220,
-                            height: 220,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: accent.withValues(alpha: 0.16),
-                                width: 2,
-                              ),
-                            ),
-                          ),
-                          AnimatedBuilder(
-                            animation: _controller,
-                            builder: (context, child) {
-                              final scale = 0.42 + (_controller.value * 0.58);
-                              return Transform.scale(
-                                scale: scale,
-                                child: Container(
-                                  width: 220,
-                                  height: 220,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    gradient: RadialGradient(
-                                      colors: [
-                                        accent.withValues(alpha: 0.30),
-                                        accent.withValues(alpha: 0.06),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                          Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                _instruction,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .headlineSmall
-                                    ?.copyWith(
-                                      color: DS.textPrimary,
-                                      fontWeight: DS.fontWeightBold,
-                                    ),
-                              ),
-                              const SizedBox(height: DS.spacing8),
-                              Text(
-                                _pattern.description,
-                                textAlign: TextAlign.center,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.copyWith(
-                                      color: DS.textSecondary,
-                                      height: 1.5,
-                                    ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: DS.spacing16),
-            ToolSectionCard(
-              accentColor: accent,
-              title: '练习配置',
-              subtitle: '先选模式，再选练习时长。',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Wrap(
-                    spacing: DS.spacing10,
-                    runSpacing: DS.spacing10,
-                    children: List.generate(
-                      _patterns.length,
-                      (index) => ToolChoiceChip(
-                        label: _patterns[index].label,
-                        selected: _selectedPatternIndex == index,
-                        onTap: () {
-                          setState(() {
-                            _selectedPatternIndex = index;
-                            _updateTotalRounds();
-                          });
-                        },
-                        accentColor: accent,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: DS.spacing16),
-                  Wrap(
-                    spacing: DS.spacing10,
-                    runSpacing: DS.spacing10,
-                    children: List.generate(
-                      _durations.length,
-                      (index) => ToolChoiceChip(
-                        label: '${_durations[index]} 分钟',
-                        selected: _selectedDurationIndex == index,
-                        onTap: () {
-                          setState(() {
-                            _selectedDurationIndex = index;
-                            _updateTotalRounds();
-                          });
-                        },
-                        accentColor: accent,
-                        icon: Icons.timer_outlined,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-      footer: Row(
-        children: [
-          Expanded(
-            child: SparkleButton(
-              label: _isPlaying ? '停止练习' : '开始练习',
-              onPressed: _isPlaying ? _stopBreathing : _startBreathing,
-              icon: Icon(
-                _isPlaying ? Icons.stop_rounded : Icons.play_arrow_rounded,
-              ),
-            ),
-          ),
-          const SizedBox(width: DS.spacing12),
-          Expanded(
-            child: SparkleButton(
-              label: '重置',
-              variant: ButtonVariant.ghost,
-              onPressed: _stopBreathing,
-              icon: const Icon(Icons.refresh_rounded),
-            ),
           ),
         ],
+      ),
+      footer: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 560;
+          final startButton = SparkleButton(
+            label: _isPlaying ? '停止练习' : '开始练习',
+            onPressed: _isPlaying ? _stopBreathing : _startBreathing,
+            icon: Icon(
+              _isPlaying ? Icons.stop_rounded : Icons.play_arrow_rounded,
+            ),
+            expand: true,
+          );
+          final resetButton = SparkleButton(
+            label: '重置',
+            variant: ButtonVariant.ghost,
+            onPressed: _stopBreathing,
+            icon: const Icon(Icons.refresh_rounded),
+            expand: true,
+          );
+
+          if (compact) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                startButton,
+                const SizedBox(height: DS.spacing12),
+                resetButton,
+              ],
+            );
+          }
+
+          return Row(
+            children: [
+              Expanded(child: startButton),
+              const SizedBox(width: DS.spacing12),
+              Expanded(child: resetButton),
+            ],
+          );
+        },
       ),
     );
   }
