@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class PreferenceController2D extends StatefulWidget {
   const PreferenceController2D({
@@ -210,7 +211,7 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
           alignment: Alignment.topCenter,
           child: Padding(
             padding: const EdgeInsets.only(top: labelPadding),
-            child: Text('深度+', style: textStyle),
+            child: Text(context.l10n.learningModeDepthHigh, style: textStyle),
           ),
         ),
         // Depth- at bottom center
@@ -218,7 +219,7 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
           alignment: Alignment.bottomCenter,
           child: Padding(
             padding: const EdgeInsets.only(bottom: labelPadding),
-            child: Text('深度-', style: textStyle),
+            child: Text(context.l10n.learningModeDepthLow, style: textStyle),
           ),
         ),
         // Curiosity- (Focus) at left center
@@ -228,7 +229,8 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
             padding: const EdgeInsets.only(left: labelPadding),
             child: RotatedBox(
               quarterTurns: 3,
-              child: Text('好奇-', style: textStyle),
+              child:
+                  Text(context.l10n.learningModeCuriosityLow, style: textStyle),
             ),
           ),
         ),
@@ -239,7 +241,8 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
             padding: const EdgeInsets.only(right: labelPadding),
             child: RotatedBox(
               quarterTurns: 1,
-              child: Text('好奇+', style: textStyle),
+              child: Text(context.l10n.learningModeCuriosityHigh,
+                  style: textStyle),
             ),
           ),
         ),

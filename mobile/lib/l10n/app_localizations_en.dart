@@ -1892,4 +1892,636 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get emptyStateCreatePlanAction => 'Create plan';
+
+  @override
+  String get voiceInputPermissionTitle => 'Microphone Access Needed';
+
+  @override
+  String get voiceInputPermissionContent =>
+      'Allow microphone access to use voice input.';
+
+  @override
+  String get voiceInputOpenSettings => 'Open Settings';
+
+  @override
+  String get voiceInputNoPermission => 'Microphone permission is required.';
+
+  @override
+  String get voiceInputLoginRequired =>
+      'Please sign in before using voice input.';
+
+  @override
+  String voiceInputStartFailed(Object error) {
+    return 'Couldn\'t start recording: $error';
+  }
+
+  @override
+  String get quickReplyTodayPlanLabel => 'Today plan';
+
+  @override
+  String get quickReplyTodayPlanMessage => 'What\'s my plan for today?';
+
+  @override
+  String get quickReplyReviewPlanLabel => 'Review plan';
+
+  @override
+  String get quickReplyReviewPlanMessage => 'Help me review today\'s plan.';
+
+  @override
+  String get quickReplyStartFocusLabel => 'Start focus';
+
+  @override
+  String get quickReplyStartFocusMessage => 'Start a focus session for me.';
+
+  @override
+  String get quickReplyAnalyzeErrorsLabel => 'Analyze errors';
+
+  @override
+  String get quickReplyAnalyzeErrorsMessage => 'Analyze my recent mistakes.';
+
+  @override
+  String get quickReplyLearningProgressLabel => 'Learning progress';
+
+  @override
+  String get quickReplyLearningProgressMessage =>
+      'How is my learning progress recently?';
+
+  @override
+  String get quickReplyAddErrorLabel => 'Add error';
+
+  @override
+  String get quickReplyAddErrorMessage => 'Help me add a new mistake record.';
+
+  @override
+  String get quickReplyReviewErrorsLabel => 'Review errors';
+
+  @override
+  String get quickReplyReviewErrorsMessage => 'Let\'s review my mistake book.';
+
+  @override
+  String get quickReplyErrorStatsLabel => 'Error stats';
+
+  @override
+  String get quickReplyErrorStatsMessage => 'Show me my mistake statistics.';
+
+  @override
+  String get quickReplyWeakSubjectsLabel => 'Weak areas';
+
+  @override
+  String get quickReplyWeakSubjectsMessage =>
+      'Which subjects are my weakest right now?';
+
+  @override
+  String get quickReplyExploreGalaxyLabel => 'Explore galaxy';
+
+  @override
+  String get quickReplyExploreGalaxyMessage =>
+      'Take me to the knowledge galaxy.';
+
+  @override
+  String get quickReplyAddKnowledgeLabel => 'Add knowledge';
+
+  @override
+  String get quickReplyAddKnowledgeMessage =>
+      'Help me add a new knowledge point.';
+
+  @override
+  String get quickReplyFindGapsLabel => 'Find gaps';
+
+  @override
+  String get quickReplyFindGapsMessage => 'Find gaps in my knowledge graph.';
+
+  @override
+  String get quickReplyGreetingLateNight =>
+      'Still awake? Want me to help you wrap something up?';
+
+  @override
+  String get quickReplyGreetingMorning =>
+      'Good morning. What do you want to start with today?';
+
+  @override
+  String get quickReplyGreetingNoon =>
+      'It\'s noon. Want to tune today\'s rhythm?';
+
+  @override
+  String get quickReplyGreetingAfternoon =>
+      'Good afternoon. Keep pushing or do a quick review?';
+
+  @override
+  String get quickReplyGreetingEvening =>
+      'Good evening. Want to summarize today or plan tomorrow?';
+
+  @override
+  String get quickReplyGreetingNight =>
+      'It\'s late. Want to finish up quickly or unwind a bit?';
+
+  @override
+  String get privateChatDefaultTitle => 'Chat';
+
+  @override
+  String get privateChatEmptyPrompt => 'Start the conversation.';
+
+  @override
+  String get chatDefaultGroupName => 'Group Chat';
+
+  @override
+  String get chatDefaultFriendName => 'Friend';
+
+  @override
+  String get shopTitle => 'Photon Shop';
+
+  @override
+  String get shopCategoryAll => 'All';
+
+  @override
+  String get shopCategorySkin => 'Skins';
+
+  @override
+  String get shopCategoryTitle => 'Titles';
+
+  @override
+  String get shopCategoryConsumable => 'Consumables';
+
+  @override
+  String get shopCategoryBoost => 'Boosts';
+
+  @override
+  String get shopEmpty => 'No items yet';
+
+  @override
+  String shopPurchaseSuccess(Object name) {
+    return 'Purchased $name successfully';
+  }
+
+  @override
+  String get shopPurchaseFailed => 'Purchase failed';
+
+  @override
+  String get purchaseConfirmTitle => 'Confirm Purchase';
+
+  @override
+  String get shopPriceLabel => 'Price';
+
+  @override
+  String get shopBalanceLabel => 'Current Balance';
+
+  @override
+  String get shopBalanceAfterPurchase => 'Balance After Purchase';
+
+  @override
+  String get shopInsufficientPhotons => 'Not enough photons';
+
+  @override
+  String get shopConfirmPurchase => 'Confirm Purchase';
+
+  @override
+  String shopItemSemantics(Object name, Object price) {
+    return '$name, price $price photons';
+  }
+
+  @override
+  String get shopOwned => 'Owned';
+
+  @override
+  String shopLimitedStock(Object count) {
+    return '$count left';
+  }
+
+  @override
+  String get userTitlesEmpty => 'No titles yet';
+
+  @override
+  String get userTitleUnequippedOption => 'No title equipped';
+
+  @override
+  String get notificationCenterTitle => 'Notifications';
+
+  @override
+  String notificationMarkAllRead(Object count) {
+    return 'Mark all as read ($count)';
+  }
+
+  @override
+  String get notificationClearRead => 'Clear read';
+
+  @override
+  String get notificationEmptyTitle => 'No notifications';
+
+  @override
+  String get notificationEmptyDescription =>
+      'New notifications will appear here.';
+
+  @override
+  String get notificationFilterAll => 'All';
+
+  @override
+  String get notificationFilterUnread => 'Unread';
+
+  @override
+  String get notificationFilterRead => 'Read';
+
+  @override
+  String get notificationSourceAll => 'All types';
+
+  @override
+  String get notificationSourceSystem => 'System';
+
+  @override
+  String get notificationSourceIntervention => 'Intervention';
+
+  @override
+  String get notificationMarkedAllRead => 'Marked all notifications as read';
+
+  @override
+  String get notificationClearReadTitle => 'Clear read notifications';
+
+  @override
+  String get notificationClearReadMessage => 'Clear all read notifications?';
+
+  @override
+  String get notificationClearReadSuccess => 'Read notifications cleared';
+
+  @override
+  String get notificationAnalyticsTitle => 'Notification Analytics';
+
+  @override
+  String get notificationAnalyticsNoData => 'No data';
+
+  @override
+  String notificationAnalyticsLoadFailed(Object error) {
+    return 'Failed to load: $error';
+  }
+
+  @override
+  String get notificationAnalyticsSummary => 'Summary';
+
+  @override
+  String get notificationAnalyticsTotalSent => 'Sent';
+
+  @override
+  String get notificationAnalyticsTotalViewed => 'Viewed';
+
+  @override
+  String get notificationAnalyticsTotalClicked => 'Clicked';
+
+  @override
+  String get notificationAnalyticsViewRate => 'View rate';
+
+  @override
+  String get notificationAnalyticsByType => 'By type';
+
+  @override
+  String get notificationAnalyticsSent => 'Sent';
+
+  @override
+  String get notificationAnalyticsViewed => 'Viewed';
+
+  @override
+  String get notificationAnalyticsTrends => 'Trends';
+
+  @override
+  String get notificationAnalyticsNoTrends => 'No trend data';
+
+  @override
+  String get notificationAnalyticsHourlyDistribution => '24-hour distribution';
+
+  @override
+  String get notificationAnalyticsPeriod1d => '1 day';
+
+  @override
+  String get notificationAnalyticsPeriod7d => '7 days';
+
+  @override
+  String get notificationAnalyticsPeriod30d => '30 days';
+
+  @override
+  String get notificationAnalyticsPeriodAll => 'All';
+
+  @override
+  String get intentAnalysisLabel => 'Analyze intents';
+
+  @override
+  String get intentAnalysisInProgress => 'Analyzing...';
+
+  @override
+  String get intentAnalysisMultiIntent => 'Multi-intent';
+
+  @override
+  String intentAnalysisFailed(Object error) {
+    return 'Intent analysis failed: $error';
+  }
+
+  @override
+  String get intentPreviewTitle => 'Intent Analysis';
+
+  @override
+  String get intentPreviewAnalyzing => 'Analyzing intents...';
+
+  @override
+  String get intentPreviewSingleIntent => 'Single intent detected';
+
+  @override
+  String intentPreviewDetectedCount(Object count) {
+    return '$count intents detected:';
+  }
+
+  @override
+  String intentPreviewAssistantRole(Object role) {
+    return 'Assistant: $role';
+  }
+
+  @override
+  String get intentPreviewExecutionPlan => 'Execution plan';
+
+  @override
+  String intentPreviewExecutionPlanWithTime(Object seconds) {
+    return 'Execution plan (~${seconds}s)';
+  }
+
+  @override
+  String get intentPreviewConfirmExecute => 'Confirm and Run';
+
+  @override
+  String get intentPreviewDirectExecute => 'Run directly';
+
+  @override
+  String get intentExecutionFailed => 'Execution failed. Please try again.';
+
+  @override
+  String intentExecutionFailedWithDetail(Object error) {
+    return 'Execution failed: $error';
+  }
+
+  @override
+  String get intentTypeTaskManagement => 'Task management';
+
+  @override
+  String get intentTypeKnowledgeQuery => 'Knowledge query';
+
+  @override
+  String get intentTypeTimePlanning => 'Time planning';
+
+  @override
+  String get intentTypeSocial => 'Social';
+
+  @override
+  String get intentTypeLearning => 'Learning';
+
+  @override
+  String get intentTypeReflection => 'Reflection';
+
+  @override
+  String get intentTypeToolCall => 'Tool call';
+
+  @override
+  String get intentTypeUnknown => 'Unknown';
+
+  @override
+  String get intentAgentGalaxyGuide => 'Galaxy Guide';
+
+  @override
+  String get intentAgentTimeTutor => 'Time Tutor';
+
+  @override
+  String get intentAgentExamOracle => 'Exam Oracle';
+
+  @override
+  String get intentAgentStudyBuddy => 'Study Buddy';
+
+  @override
+  String get avatarSelectTitle => 'Choose an avatar';
+
+  @override
+  String get avatarPresetGeek => 'Geek';
+
+  @override
+  String get avatarPresetArtist => 'Artist';
+
+  @override
+  String get avatarPresetExplorer => 'Explorer';
+
+  @override
+  String get avatarPresetScholar => 'Scholar';
+
+  @override
+  String get avatarPresetEnergy => 'Energy';
+
+  @override
+  String get avatarPresetPet => 'Buddy';
+
+  @override
+  String get statisticsWeeklyGrowthTrend => 'Weekly growth trend';
+
+  @override
+  String statisticsLearningIndex(Object value) {
+    return 'Learning index $value';
+  }
+
+  @override
+  String get learningModeDepthHigh => 'Depth+';
+
+  @override
+  String get learningModeDepthLow => 'Depth-';
+
+  @override
+  String get learningModeCuriosityHigh => 'Curiosity+';
+
+  @override
+  String get learningModeCuriosityLow => 'Curiosity-';
+
+  @override
+  String learningModeDepthValue(Object value) {
+    return 'Depth: $value%';
+  }
+
+  @override
+  String learningModeCuriosityValue(Object value) {
+    return 'Curiosity: $value%';
+  }
+
+  @override
+  String get learningModeSaved => 'Learning preferences saved';
+
+  @override
+  String learningModeSaveFailed(Object error) {
+    return 'Failed to save: $error';
+  }
+
+  @override
+  String get learningModeSettingsTitle => 'Learning Mode Settings';
+
+  @override
+  String get learningModeDragHint =>
+      'Drag the flame to adjust your learning preferences';
+
+  @override
+  String learningModeDepthAxisValue(Object value) {
+    return 'Depth preference (Y axis): $value%';
+  }
+
+  @override
+  String learningModeCuriosityAxisValue(Object value) {
+    return 'Curiosity preference (X axis): $value%';
+  }
+
+  @override
+  String get learningModeSave => 'Save preferences';
+
+  @override
+  String get notificationReceiveSmartPush =>
+      'Receive smart notifications and study reminders';
+
+  @override
+  String get schedulePreferencesHint =>
+      'Set your fragmented time slots to receive proactive task suggestions.';
+
+  @override
+  String get scheduleCommuteTime => 'Commute Time';
+
+  @override
+  String get scheduleLunchBreak => 'Lunch Break';
+
+  @override
+  String get scheduleStartTime => 'Start Time';
+
+  @override
+  String get scheduleEndTime => 'End Time';
+
+  @override
+  String get schedulePreferencesSaved => 'Preferences saved';
+
+  @override
+  String schedulePreferencesSaveFailed(Object error) {
+    return 'Error saving preferences: $error';
+  }
+
+  @override
+  String get syncCenterRetryAll => 'Retry all now';
+
+  @override
+  String get syncCenterRetryAllTriggered => 'Triggered a full retry';
+
+  @override
+  String get syncCenterTabAll => 'All';
+
+  @override
+  String get syncCenterTabFailed => 'Failed';
+
+  @override
+  String get syncCenterTabWaitingAck => 'Waiting Ack';
+
+  @override
+  String get syncCenterTabPending => 'Pending';
+
+  @override
+  String syncCenterLoadFailed(Object error) {
+    return 'Load failed: $error';
+  }
+
+  @override
+  String get syncCenterCopyDiagnostics => 'Copy diagnostics';
+
+  @override
+  String get syncCenterDiagnosticsCopied => 'Diagnostics copied';
+
+  @override
+  String syncCenterDisplayLimit(Object limit) {
+    return 'Showing up to $limit items';
+  }
+
+  @override
+  String get syncCenterRetryFailedTriggered =>
+      'Triggered retry for failed items';
+
+  @override
+  String get syncCenterRetryFailed => 'Retry failed items';
+
+  @override
+  String get syncCenterNeverSynced => 'Not synced yet';
+
+  @override
+  String syncCenterTotalPending(Object count) {
+    return 'Pending items: $count';
+  }
+
+  @override
+  String syncCenterLastSync(Object value) {
+    return 'Last sync: $value';
+  }
+
+  @override
+  String get syncCenterByTopic => 'By topic';
+
+  @override
+  String get syncCenterNoPendingItems => 'No pending items';
+
+  @override
+  String get syncCenterTopicLabel => 'Topic';
+
+  @override
+  String get syncCenterTopicAll => 'All';
+
+  @override
+  String get syncCenterTopicCognitive => 'Cognitive';
+
+  @override
+  String get syncCenterTopicKnowledge => 'Knowledge';
+
+  @override
+  String get syncCenterTopicCollab => 'Collab';
+
+  @override
+  String get syncCenterTopicAnalytics => 'Analytics';
+
+  @override
+  String get syncCenterTopicLegacy => 'Legacy';
+
+  @override
+  String get syncCenterNoRecords => 'No records';
+
+  @override
+  String get syncCenterRetryTriggered => 'Retry triggered';
+
+  @override
+  String get syncCenterTraceCopied => 'Trace ID copied';
+
+  @override
+  String get syncCenterEntityCopied => 'Entity ID copied';
+
+  @override
+  String syncCenterEntityValue(Object entityId, Object entityType) {
+    return '$entityType: $entityId';
+  }
+
+  @override
+  String syncCenterAttemptValue(Object count) {
+    return 'Attempts: $count';
+  }
+
+  @override
+  String syncCenterLastErrorValue(Object value) {
+    return 'Last error: $value';
+  }
+
+  @override
+  String syncCenterNextAttemptValue(Object value) {
+    return 'Next attempt: $value';
+  }
+
+  @override
+  String syncCenterTraceIdValue(Object value) {
+    return 'Trace ID: $value';
+  }
+
+  @override
+  String get syncCenterRetryThis => 'Retry this item';
+
+  @override
+  String get syncCenterStatusPending => 'Pending';
+
+  @override
+  String get syncCenterStatusFailed => 'Failed';
+
+  @override
+  String get syncCenterStatusWaitingAck => 'Waiting Ack';
 }

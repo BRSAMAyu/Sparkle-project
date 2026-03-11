@@ -5,6 +5,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_bubble.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_input.dart';
@@ -76,7 +77,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                   fallbackText: _displayName,
                 ),
               ),
-            Text(_displayName ?? '聊天'),
+            Text(_displayName ?? context.l10n.privateChatDefaultTitle),
           ],
         ),
       ),
@@ -97,10 +98,13 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                             color: DS.neutral300,
                           ),
                           const SizedBox(height: DS.spacing24),
-                          Text('开始对话吧!',
-                              style: TextStyle(
-                                  color: DS.neutral500,
-                                  fontSize: DS.fontSizeBase)),
+                          Text(
+                            context.l10n.privateChatEmptyPrompt,
+                            style: TextStyle(
+                              color: DS.neutral500,
+                              fontSize: DS.fontSizeBase,
+                            ),
+                          ),
                         ],
                       ),
                     );

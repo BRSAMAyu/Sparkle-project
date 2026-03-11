@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/photon/presentation/providers/photon_provider.dart';
 import 'package:sparkle/shared/entities/shop_model.dart';
 
@@ -33,7 +34,7 @@ class _PurchaseConfirmationDialogState
     final rarityColor = _getRarityColor(widget.item.rarity);
 
     return AlertDialog(
-      title: const Text('确认购买'),
+      title: Text(context.l10n.purchaseConfirmTitle),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -111,7 +112,8 @@ class _PurchaseConfirmationDialogState
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('价格：'),
+                      Expanded(child: Text(context.l10n.shopPriceLabel)),
+                      const SizedBox(width: DS.spacing12),
                       Row(
                         children: [
                           Icon(
@@ -144,7 +146,8 @@ class _PurchaseConfirmationDialogState
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('当前余额：'),
+                      Expanded(child: Text(context.l10n.shopBalanceLabel)),
+                      const SizedBox(width: DS.spacing12),
                       Row(
                         children: [
                           Icon(
@@ -167,10 +170,13 @@ class _PurchaseConfirmationDialogState
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        '购买后余额：',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                      Expanded(
+                        child: Text(
+                          context.l10n.shopBalanceAfterPurchase,
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
                       ),
+                      const SizedBox(width: DS.spacing12),
                       Row(
                         children: [
                           Icon(
@@ -214,7 +220,7 @@ class _PurchaseConfirmationDialogState
                       const SizedBox(width: DS.sm),
                       Expanded(
                         child: Text(
-                          '光子不足',
+                          context.l10n.shopInsufficientPhotons,
                           style: TextStyle(
                             color: DS.error,
                             fontWeight: FontWeight.bold,
@@ -230,13 +236,13 @@ class _PurchaseConfirmationDialogState
       ),
       actions: [
         SparkleButton(
-          label: '取消',
+          label: context.l10n.cancel,
           onPressed: _isPurchasing ? () {} : () => Navigator.of(context).pop(),
           variant: ButtonVariant.outline,
           disabled: _isPurchasing,
         ),
         SparkleButton(
-          label: '确认购买',
+          label: context.l10n.shopConfirmPurchase,
           onPressed: () async {
             setState(() {
               _isPurchasing = true;

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/intent/data/models/intent_data.dart';
 import 'package:sparkle/features/intent/data/repositories/intent_repository.dart';
 
@@ -75,7 +76,7 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
             const SizedBox(width: DS.spacing12),
             Expanded(
               child: Text(
-                '意图分析',
+                context.l10n.intentPreviewTitle,
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -95,7 +96,7 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
 
   Widget _buildContent(BuildContext context) {
     if (_isAnalyzing) {
-      return const SizedBox(
+      return SizedBox(
         height: 200,
         child: Center(
           child: Column(
@@ -103,7 +104,7 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
             children: [
               CircularProgressIndicator(),
               SizedBox(height: 16),
-              Text('正在分析意图...'),
+              Text(context.l10n.intentPreviewAnalyzing),
             ],
           ),
         ),
@@ -128,7 +129,10 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
                 ),
               ),
               const SizedBox(height: DS.md),
-              SparkleButton.outline(label: '重试', onPressed: _analyzeIntents),
+              SparkleButton.outline(
+                label: context.l10n.retry,
+                onPressed: _analyzeIntents,
+              ),
             ],
           ),
         ),
@@ -145,7 +149,7 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
               Icon(Icons.info_outline, color: DS.info, size: 48),
               const SizedBox(height: DS.md),
               Text(
-                '识别到单一意图',
+                context.l10n.intentPreviewSingleIntent,
                 style: TextStyle(color: DS.textPrimary),
               ),
               const SizedBox(height: DS.sm),
@@ -171,7 +175,7 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            '识别到 ${_intents.length} 个意图：',
+            context.l10n.intentPreviewDetectedCount(_intents.length),
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w500,
@@ -273,7 +277,9 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
                   ),
                   const SizedBox(width: DS.xs),
                   Text(
-                    '助手: ${_getAgentRoleLabel(intent.agentRole!)}',
+                    context.l10n.intentPreviewAssistantRole(
+                      _getAgentRoleLabel(intent.agentRole!),
+                    ),
                     style: TextStyle(
                       fontSize: 11,
                       color: DS.textSecondary,
@@ -288,7 +294,9 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
 
   Widget _buildExecutionPlan(BuildContext context) {
     final planText = _executionPlan ?? _generateExecutionPlan();
-    final timeText = _estimatedTime != null ? ' (约 ${_estimatedTime!} 秒)' : '';
+    final title = _estimatedTime != null
+        ? context.l10n.intentPreviewExecutionPlanWithTime(_estimatedTime!)
+        : context.l10n.intentPreviewExecutionPlan;
 
     return Container(
       padding: const EdgeInsets.all(DS.spacing12),
@@ -307,7 +315,7 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
               Icon(Icons.schedule, size: 16, color: DS.info),
               const SizedBox(width: DS.sm),
               Text(
-                '执行计划$timeText',
+                title,
                 style: TextStyle(
                   color: DS.info,
                   fontWeight: FontWeight.w500,
@@ -341,7 +349,7 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
           children: [
             Expanded(
               child: SparkleButton.outline(
-                label: '取消',
+                label: context.l10n.cancel,
                 onPressed: () => Navigator.of(context).pop(false),
                 expand: true,
               ),
@@ -349,7 +357,7 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
             const SizedBox(width: DS.md),
             Expanded(
               child: SparkleButton(
-                label: '确认执行',
+                label: context.l10n.intentPreviewConfirmExecute,
                 onPressed: _executeIntents,
                 expand: true,
                 loading: _isExecuting,
@@ -390,41 +398,41 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
   String _getIntentLabel(String type) {
     switch (type) {
       case 'task_management':
-        return '任务管理';
+        return context.l10n.intentTypeTaskManagement;
       case 'knowledge_query':
-        return '知识查询';
+        return context.l10n.intentTypeKnowledgeQuery;
       case 'time_planning':
-        return '时间规划';
+        return context.l10n.intentTypeTimePlanning;
       case 'social':
-        return '社交互动';
+        return context.l10n.intentTypeSocial;
       case 'learning':
-        return '学习内容';
+        return context.l10n.intentTypeLearning;
       case 'reflection':
-        return '复习反思';
+        return context.l10n.intentTypeReflection;
       case 'tool_call':
-        return '工具调用';
+        return context.l10n.intentTypeToolCall;
       default:
-        return '未知';
+        return context.l10n.intentTypeUnknown;
     }
   }
 
   String _getAgentRoleLabel(String role) {
     switch (role) {
       case 'galaxy_guide':
-        return '星图向导';
+        return context.l10n.intentAgentGalaxyGuide;
       case 'time_tutor':
-        return '时间导师';
+        return context.l10n.intentAgentTimeTutor;
       case 'exam_oracle':
-        return '考试预言家';
+        return context.l10n.intentAgentExamOracle;
       case 'study_buddy':
-        return '学习伙伴';
+        return context.l10n.intentAgentStudyBuddy;
       default:
         return role;
     }
   }
 
   String _generateExecutionPlan() {
-    if (_intents.isEmpty) return '直接执行';
+    if (_intents.isEmpty) return context.l10n.intentPreviewDirectExecute;
 
     final buffer = StringBuffer();
     for (var i = 0; i < _intents.length; i++) {
@@ -459,7 +467,7 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
       if (mounted) {
         setState(() {
           _isAnalyzing = false;
-          _errorMessage = '意图分析失败: $e';
+          _errorMessage = context.l10n.intentAnalysisFailed(e.toString());
         });
       }
     }
@@ -485,7 +493,8 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
           widget.onConfirm();
         } else {
           // 执行失败，显示错误
-          final errorMsg = result?.errorMessages ?? '执行失败，请重试';
+          final errorMsg =
+              result?.errorMessages ?? context.l10n.intentExecutionFailed;
           AppFeedback.error(context, errorMsg);
         }
       }
@@ -493,7 +502,10 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
       if (mounted) {
         // 错误时也关闭弹窗
         Navigator.of(context).pop(false);
-        AppFeedback.error(context, '执行失败: $e');
+        AppFeedback.error(
+          context,
+          context.l10n.intentExecutionFailedWithDetail(e.toString()),
+        );
       }
     }
   }

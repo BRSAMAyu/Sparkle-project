@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/notification_center/data/models/notification_analytics_model.dart';
 import 'package:sparkle/features/notification_center/presentation/providers/notification_analytics_provider.dart'
     as providers;
@@ -34,7 +35,7 @@ class _NotificationAnalyticsScreenState
     return SparklePageScaffold(
       role: SparklePageRole.content,
       appBar: AppBar(
-        title: const Text('通知统计'),
+        title: Text(context.l10n.notificationAnalyticsTitle),
         actions: [
           DropdownButton<String>(
             value: state.period,
@@ -44,7 +45,7 @@ class _NotificationAnalyticsScreenState
                 .map(
                   (period) => DropdownMenuItem(
                     value: period.value,
-                    child: Text(period.label),
+                    child: Text(period.localizedLabel(context.l10n)),
                   ),
                 )
                 .toList(),
@@ -63,7 +64,8 @@ class _NotificationAnalyticsScreenState
           : state.error != null
               ? _buildError(state.error!)
               : state.analytics == null
-                  ? const Center(child: Text('暂无数据'))
+                  ? Center(
+                      child: Text(context.l10n.notificationAnalyticsNoData))
                   : _buildContent(state.analytics!),
     );
   }
@@ -74,13 +76,13 @@ class _NotificationAnalyticsScreenState
           children: [
             Icon(Icons.error_outline, size: DS.spacing64, color: DS.error),
             const SizedBox(height: DS.spacing16),
-            Text('加载失败: $error'),
+            Text(context.l10n.notificationAnalyticsLoadFailed(error)),
             const SizedBox(height: DS.spacing16),
             SparkleButton(
               onPressed: () => ref
                   .read(providers.notificationAnalyticsProvider.notifier)
                   .refresh(),
-              label: '重试',
+              label: context.l10n.retry,
             ),
           ],
         ),
@@ -119,7 +121,7 @@ class _NotificationAnalyticsScreenState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '汇总统计',
+            context.l10n.notificationAnalyticsSummary,
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: DS.spacing16),
@@ -127,11 +129,17 @@ class _NotificationAnalyticsScreenState
             children: [
               Expanded(
                   child: _buildStatCard(
-                      '发送总数', '${summary.totalSent}', Icons.send)),
+                context.l10n.notificationAnalyticsTotalSent,
+                '${summary.totalSent}',
+                Icons.send,
+              )),
               const SizedBox(width: DS.spacing12),
               Expanded(
                   child: _buildStatCard(
-                      '查看数', '${summary.totalViewed}', Icons.visibility)),
+                context.l10n.notificationAnalyticsTotalViewed,
+                '${summary.totalViewed}',
+                Icons.visibility,
+              )),
             ],
           ),
           const SizedBox(height: DS.spacing12),
@@ -139,13 +147,17 @@ class _NotificationAnalyticsScreenState
             children: [
               Expanded(
                   child: _buildStatCard(
-                      '点击数', '${summary.totalClicked}', Icons.touch_app)),
+                context.l10n.notificationAnalyticsTotalClicked,
+                '${summary.totalClicked}',
+                Icons.touch_app,
+              )),
               const SizedBox(width: DS.spacing12),
               Expanded(
                   child: _buildStatCard(
-                      '查看率',
-                      '${summary.viewRate.toStringAsFixed(1)}%',
-                      Icons.pie_chart)),
+                context.l10n.notificationAnalyticsViewRate,
+                '${summary.viewRate.toStringAsFixed(1)}%',
+                Icons.pie_chart,
+              )),
             ],
           ),
         ],
@@ -189,7 +201,7 @@ class _NotificationAnalyticsScreenState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '按类型统计',
+            context.l10n.notificationAnalyticsByType,
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: DS.spacing16),
@@ -197,7 +209,9 @@ class _NotificationAnalyticsScreenState
               .map((MapEntry<String, NotificationTypeStats> entry) {
             final stats = entry.value;
             return _buildTypeStatCard(
-              entry.key == 'system' ? '系统通知' : '干预通知',
+              entry.key == 'system'
+                  ? context.l10n.notificationSourceSystem
+                  : context.l10n.notificationSourceIntervention,
               stats.sent,
               stats.viewed,
               stats.viewRate,
@@ -223,7 +237,11 @@ class _NotificationAnalyticsScreenState
             Row(
               children: [
                 Expanded(
-                  child: _buildProgressBar('发送', sent, sent.toDouble()),
+                  child: _buildProgressBar(
+                    context.l10n.notificationAnalyticsSent,
+                    sent,
+                    sent.toDouble(),
+                  ),
                 ),
               ],
             ),
@@ -231,9 +249,20 @@ class _NotificationAnalyticsScreenState
             Row(
               children: [
                 Expanded(
-                  child: _buildProgressBar('查看', viewed, sent.toDouble()),
+                  child: _buildProgressBar(
+                    context.l10n.notificationAnalyticsViewed,
+                    viewed,
+                    sent.toDouble(),
+                  ),
                 ),
               ],
+            ),
+            const SizedBox(height: DS.spacing8),
+            Text(
+              '${context.l10n.notificationAnalyticsViewRate}: ${viewRate.toStringAsFixed(1)}%',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: DS.textSecondary,
+                  ),
             ),
           ],
         ),
@@ -275,7 +304,7 @@ class _NotificationAnalyticsScreenState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '趋势分析',
+            context.l10n.notificationAnalyticsTrends,
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: DS.spacing16),
@@ -289,7 +318,7 @@ class _NotificationAnalyticsScreenState
 
   Widget _buildTrendChart(List<NotificationTrendData> trends) {
     if (trends.isEmpty) {
-      return const Center(child: Text('暂无趋势数据'));
+      return Center(child: Text(context.l10n.notificationAnalyticsNoTrends));
     }
 
     final maxValue =
@@ -305,7 +334,7 @@ class _NotificationAnalyticsScreenState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '24小时分布',
+            context.l10n.notificationAnalyticsHourlyDistribution,
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: DS.spacing16),
@@ -319,7 +348,7 @@ class _NotificationAnalyticsScreenState
 
   Widget _buildHourlyChart(List<int> distribution) {
     if (distribution.isEmpty) {
-      return const Center(child: Text('暂无数据'));
+      return Center(child: Text(context.l10n.notificationAnalyticsNoData));
     }
 
     final maxValue = distribution.reduce((a, b) => a > b ? a : b).toDouble();

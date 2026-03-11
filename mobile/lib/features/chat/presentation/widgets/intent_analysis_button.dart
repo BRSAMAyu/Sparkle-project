@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/chat/presentation/widgets/intent_preview_dialog.dart';
 import 'package:sparkle/features/intent/data/models/intent_data.dart';
 import 'package:sparkle/features/intent/data/repositories/intent_repository.dart';
@@ -43,7 +44,7 @@ class IntentAnalysisButton extends ConsumerWidget {
               ),
               const SizedBox(width: 6),
               Text(
-                '分析意图',
+                context.l10n.intentAnalysisLabel,
                 style: TextStyle(
                   color: Theme.of(context).primaryColor,
                   fontSize: 13,
@@ -114,7 +115,7 @@ class _IntentAnalysisChipState extends ConsumerState<IntentAnalysisChip> {
             ),
             const SizedBox(width: 8),
             Text(
-              '分析中...',
+              context.l10n.intentAnalysisInProgress,
               style: TextStyle(
                 color: Theme.of(context).primaryColor,
                 fontSize: 12,
@@ -147,7 +148,7 @@ class _IntentAnalysisChipState extends ConsumerState<IntentAnalysisChip> {
             ),
             const SizedBox(width: 6),
             Text(
-              '多意图',
+              context.l10n.intentAnalysisMultiIntent,
               style: TextStyle(
                 color: Theme.of(context).primaryColor,
                 fontSize: 12,
@@ -175,7 +176,9 @@ class _IntentAnalysisChipState extends ConsumerState<IntentAnalysisChip> {
       if (mounted) {
         setState(() => _isAnalyzing = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('意图分析失败: $e')),
+          SnackBar(
+            content: Text(context.l10n.intentAnalysisFailed(e.toString())),
+          ),
         );
       }
     }

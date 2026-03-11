@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/auth/auth.dart';
 
 class SchedulePreferencesScreen extends ConsumerStatefulWidget {
@@ -84,12 +85,15 @@ class _SchedulePreferencesScreenState
         'schedule_preferences': newPrefs,
       });
       if (mounted) {
-        AppFeedback.success(context, 'Preferences saved');
+        AppFeedback.success(context, context.l10n.schedulePreferencesSaved);
         Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
-        AppFeedback.error(context, 'Error saving preferences: $e');
+        AppFeedback.error(
+          context,
+          context.l10n.schedulePreferencesSaveFailed(e.toString()),
+        );
       }
     }
   }
@@ -104,7 +108,7 @@ class _SchedulePreferencesScreenState
             icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
           ),
-          title: const Text('Schedule Preferences'),
+          title: Text(context.l10n.schedulePreferences),
           actions: [
             SparkleIconButton(
               variant: ButtonVariant.ghost,
@@ -123,18 +127,18 @@ class _SchedulePreferencesScreenState
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Set your fragmented time slots to receive proactive task suggestions.',
+                    context.l10n.schedulePreferencesHint,
                     style: TextStyle(color: DS.brandPrimary),
                   ),
                   const SizedBox(height: 20),
                   _buildTimeSlot(
-                    'Commute Time',
+                    context.l10n.scheduleCommuteTime,
                     _commuteStartController,
                     _commuteEndController,
                   ),
                   const SizedBox(height: 20),
                   _buildTimeSlot(
-                    'Lunch Break',
+                    context.l10n.scheduleLunchBreak,
                     _lunchStartController,
                     _lunchEndController,
                   ),
@@ -160,10 +164,10 @@ class _SchedulePreferencesScreenState
               Expanded(
                 child: TextFormField(
                   controller: startController,
-                  decoration: const InputDecoration(
-                    labelText: 'Start Time',
-                    border: OutlineInputBorder(),
-                    suffixIcon: Icon(Icons.access_time),
+                  decoration: InputDecoration(
+                    labelText: context.l10n.scheduleStartTime,
+                    border: const OutlineInputBorder(),
+                    suffixIcon: const Icon(Icons.access_time),
                   ),
                   readOnly: true,
                   onTap: () => _selectTime(context, startController),
@@ -173,10 +177,10 @@ class _SchedulePreferencesScreenState
               Expanded(
                 child: TextFormField(
                   controller: endController,
-                  decoration: const InputDecoration(
-                    labelText: 'End Time',
-                    border: OutlineInputBorder(),
-                    suffixIcon: Icon(Icons.access_time),
+                  decoration: InputDecoration(
+                    labelText: context.l10n.scheduleEndTime,
+                    border: const OutlineInputBorder(),
+                    suffixIcon: const Icon(Icons.access_time),
                   ),
                   readOnly: true,
                   onTap: () => _selectTime(context, endController),

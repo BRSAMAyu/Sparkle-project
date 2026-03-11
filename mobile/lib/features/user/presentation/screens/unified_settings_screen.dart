@@ -212,7 +212,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
                       title: Text(l10n.enableNotifications),
-                      subtitle: const Text('接收智能推送和学习提醒'),
+                      subtitle: Text(l10n.notificationReceiveSmartPush),
                       value: pushPrefs.enableCuriosity,
                       onChanged: (v) {
                         ref

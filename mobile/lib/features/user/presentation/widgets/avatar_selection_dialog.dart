@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class AvatarOption {
   const AvatarOption({
@@ -29,37 +30,37 @@ class AvatarSelectionDialog extends StatelessWidget {
       id: 'geek',
       url:
           'https://api.dicebear.com/9.x/bottts/svg?seed=geek&backgroundColor=b6e3f4',
-      label: '极客',
+      label: 'geek',
     ),
     AvatarOption(
       id: 'artist',
       url:
           'https://api.dicebear.com/9.x/avataaars/svg?seed=artist&backgroundColor=ffdfbf',
-      label: '艺术家',
+      label: 'artist',
     ),
     AvatarOption(
       id: 'explorer',
       url:
           'https://api.dicebear.com/9.x/avataaars-neutral/svg?seed=explorer&backgroundColor=c0aede',
-      label: '探险家',
+      label: 'explorer',
     ),
     AvatarOption(
       id: 'scholar',
       url:
           'https://api.dicebear.com/9.x/avataaars-neutral/svg?seed=scholar&backgroundColor=d1d4f9',
-      label: '学者',
+      label: 'scholar',
     ),
     AvatarOption(
       id: 'energy',
       url:
           'https://api.dicebear.com/9.x/big-smile/svg?seed=energy&backgroundColor=ffd5dc',
-      label: '元气',
+      label: 'energy',
     ),
     AvatarOption(
       id: 'pet',
       url:
           'https://api.dicebear.com/9.x/adventurer/svg?seed=pet&backgroundColor=ffdfbf',
-      label: '萌友',
+      label: 'pet',
     ),
   ];
 
@@ -68,7 +69,7 @@ class AvatarSelectionDialog extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return AlertDialog(
-      title: const Text('选择系统头像'),
+      title: Text(context.l10n.avatarSelectTitle),
       shape: const RoundedRectangleBorder(borderRadius: DS.borderRadius16),
       content: SizedBox(
         width: double.maxFinite,
@@ -123,7 +124,7 @@ class AvatarSelectionDialog extends StatelessWidget {
                   ),
                   const SizedBox(height: DS.xs),
                   Text(
-                    option.label,
+                    _localizedLabel(context, option.label),
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight:
@@ -139,8 +140,29 @@ class AvatarSelectionDialog extends StatelessWidget {
       ),
       actions: [
         SparkleButton.ghost(
-            label: '取消', onPressed: () => Navigator.pop(context),),
+          label: context.l10n.cancel,
+          onPressed: () => Navigator.pop(context),
+        ),
       ],
     );
+  }
+
+  String _localizedLabel(BuildContext context, String id) {
+    switch (id) {
+      case 'geek':
+        return context.l10n.avatarPresetGeek;
+      case 'artist':
+        return context.l10n.avatarPresetArtist;
+      case 'explorer':
+        return context.l10n.avatarPresetExplorer;
+      case 'scholar':
+        return context.l10n.avatarPresetScholar;
+      case 'energy':
+        return context.l10n.avatarPresetEnergy;
+      case 'pet':
+        return context.l10n.avatarPresetPet;
+      default:
+        return id;
+    }
   }
 }

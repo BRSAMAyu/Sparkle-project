@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class LearningModeControl extends StatefulWidget {
   const LearningModeControl({
@@ -106,7 +107,7 @@ class _LearningModeControlState extends State<LearningModeControl> {
                           right: 0,
                           child: Center(
                             child: Text(
-                              '深度+',
+                              context.l10n.learningModeDepthHigh,
                               style: TextStyle(
                                 color: isDark ? DS.neutral400 : DS.neutral600,
                                 fontSize: 11,
@@ -121,7 +122,7 @@ class _LearningModeControlState extends State<LearningModeControl> {
                           right: 0,
                           child: Center(
                             child: Text(
-                              '深度-',
+                              context.l10n.learningModeDepthLow,
                               style: TextStyle(
                                 color: isDark ? DS.neutral400 : DS.neutral600,
                                 fontSize: 11,
@@ -138,7 +139,7 @@ class _LearningModeControlState extends State<LearningModeControl> {
                             child: RotatedBox(
                               quarterTurns: 1,
                               child: Text(
-                                '好奇+',
+                                context.l10n.learningModeCuriosityHigh,
                                 style: TextStyle(
                                   color: isDark ? DS.neutral400 : DS.neutral600,
                                   fontSize: 11,
@@ -156,7 +157,7 @@ class _LearningModeControlState extends State<LearningModeControl> {
                             child: RotatedBox(
                               quarterTurns: 3,
                               child: Text(
-                                '好奇-',
+                                context.l10n.learningModeCuriosityLow,
                                 style: TextStyle(
                                   color: isDark ? DS.neutral400 : DS.neutral600,
                                   fontSize: 11,
@@ -206,9 +207,17 @@ class _LearningModeControlState extends State<LearningModeControl> {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _buildInfoChip('深度: ${(_currentDepth * 100).toInt()}%'),
+            _buildInfoChip(
+              context.l10n.learningModeDepthValue(
+                (_currentDepth * 100).toInt(),
+              ),
+            ),
             const SizedBox(width: DS.md),
-            _buildInfoChip('好奇: ${(_currentCuriosity * 100).toInt()}%'),
+            _buildInfoChip(
+              context.l10n.learningModeCuriosityValue(
+                (_currentCuriosity * 100).toInt(),
+              ),
+            ),
           ],
         ),
       ],

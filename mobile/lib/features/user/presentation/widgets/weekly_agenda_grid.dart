@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 enum AgendaType {
   busy, // 1 繁忙
@@ -85,11 +86,11 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
   String _getLabel(AgendaType type) {
     switch (type) {
       case AgendaType.busy:
-        return '繁忙';
+        return context.l10n.agendaBusy;
       case AgendaType.fragmented:
-        return '碎片';
+        return context.l10n.agendaFragmented;
       case AgendaType.relax:
-        return '放松';
+        return context.l10n.agendaRelax;
     }
   }
 
@@ -98,6 +99,15 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     const cellHeight = 32.0; // Increased touch target
+    final weekdays = [
+      MaterialLocalizations.of(context).narrowWeekdays[1],
+      MaterialLocalizations.of(context).narrowWeekdays[2],
+      MaterialLocalizations.of(context).narrowWeekdays[3],
+      MaterialLocalizations.of(context).narrowWeekdays[4],
+      MaterialLocalizations.of(context).narrowWeekdays[5],
+      MaterialLocalizations.of(context).narrowWeekdays[6],
+      MaterialLocalizations.of(context).narrowWeekdays[0],
+    ];
 
     return Column(
       children: [
@@ -166,7 +176,7 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
                 Row(
                   children: [
                     const SizedBox(width: timeLabelWidth),
-                    ...['一', '二', '三', '四', '五', '六', '日'].map(
+                    ...weekdays.map(
                       (day) => Expanded(
                         child: Center(
                           child: Text(

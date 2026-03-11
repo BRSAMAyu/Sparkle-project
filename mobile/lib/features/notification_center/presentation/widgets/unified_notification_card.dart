@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/notification_center/data/models/unified_notification_model.dart';
 
 /// Unified Notification Card Widget
@@ -121,7 +123,8 @@ class UnifiedNotificationCard extends StatelessWidget {
                           ),
                           const SizedBox(width: DS.xs),
                           Text(
-                            notification.relativeTime,
+                            Formatters.formatRelativeTime(
+                                notification.createdAt),
                             style: TextStyle(
                               fontSize: 12,
                               color: DS.textSecondary,
@@ -156,15 +159,15 @@ class UnifiedNotificationCard extends StatelessWidget {
 
   Widget _buildSourceBadge(BuildContext context) {
     var badgeColor = DS.neutral500;
-    var badgeLabel = '通知';
+    var badgeLabel = context.l10n.notificationSourceAll;
 
     switch (notification.sourceType) {
       case 'system':
         badgeColor = DS.info;
-        badgeLabel = '系统';
+        badgeLabel = context.l10n.notificationSourceSystem;
       case 'intervention':
         badgeColor = DS.warning;
-        badgeLabel = '干预';
+        badgeLabel = context.l10n.notificationSourceIntervention;
       default:
     }
 
@@ -224,7 +227,7 @@ class UnifiedNotificationCard extends StatelessWidget {
             Text(notification.content),
             const SizedBox(height: 16),
             Text(
-              notification.relativeTime,
+              Formatters.formatRelativeTime(notification.createdAt),
               style: TextStyle(
                 fontSize: 12,
                 color: DS.textSecondary,
@@ -234,7 +237,7 @@ class UnifiedNotificationCard extends StatelessWidget {
         ),
         actions: [
           SparkleButton.outline(
-            label: '关闭',
+            label: context.l10n.commonClose,
             onPressed: () => Navigator.pop(context),
           ),
         ],
