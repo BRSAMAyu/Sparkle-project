@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/user_preferences_service.dart';
 
 part 'transparency_settings_screen.g.dart';
@@ -18,7 +21,7 @@ class TransparencySettingsScreen extends ConsumerWidget {
     return SparklePageScaffold(
       role: SparklePageRole.settings,
       appBar: AppBar(
-        title: const Text('透明模式设置'),
+        title: Text(context.l10n.transparencySettingsTitle),
       ),
       child: preferences.when(
         data: (prefs) => ContentConstraint(
@@ -29,16 +32,20 @@ class TransparencySettingsScreen extends ConsumerWidget {
               GraphiteCardSurface(
                 surfaceRole: SparkleSurfaceRole.card,
                 child: SwitchListTile(
-                  title: const Text('启用透明模式'),
+                  title: Text(context.l10n.transparencyEnable),
                   subtitle: Text(
-                    '显示AI处理步骤、Agent切换和Token使用情况',
+                    context.l10n.transparencyEnableDesc,
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   value: prefs.enabled,
                   onChanged: (value) {
-                    ref
-                        .read(transparencyPreferencesNotifierProvider.notifier)
-                        .setEnabled(value);
+                    unawaited(
+                      ref
+                          .read(
+                            transparencyPreferencesNotifierProvider.notifier,
+                          )
+                          .setEnabled(value),
+                    );
                   },
                 ),
               ),
@@ -47,7 +54,7 @@ class TransparencySettingsScreen extends ConsumerWidget {
               // Detailed options
               if (prefs.enabled) ...[
                 Text(
-                  '显示选项',
+                  context.l10n.transparencyDisplayOptions,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -58,47 +65,59 @@ class TransparencySettingsScreen extends ConsumerWidget {
                   child: Column(
                     children: [
                       SwitchListTile(
-                        title: const Text('Token使用情况'),
+                        title: Text(context.l10n.transparencyTokenUsage),
                         subtitle: Text(
-                          '显示每次对话的Token消耗和成本估算',
+                          context.l10n.transparencyTokenUsageDesc,
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                         value: prefs.showTokenUsage,
                         onChanged: (value) {
-                          ref
-                              .read(transparencyPreferencesNotifierProvider
-                                  .notifier)
-                              .setShowTokenUsage(value);
+                          unawaited(
+                            ref
+                                .read(
+                                  transparencyPreferencesNotifierProvider
+                                      .notifier,
+                                )
+                                .setShowTokenUsage(value),
+                          );
                         },
                       ),
                       const Divider(height: 1),
                       SwitchListTile(
-                        title: const Text('Agent切换'),
+                        title: Text(context.l10n.transparencyAgentSwitching),
                         subtitle: Text(
-                          '显示不同Agent之间的切换过程',
+                          context.l10n.transparencyAgentSwitchingDesc,
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                         value: prefs.showAgentSwitching,
                         onChanged: (value) {
-                          ref
-                              .read(transparencyPreferencesNotifierProvider
-                                  .notifier)
-                              .setShowAgentSwitching(value);
+                          unawaited(
+                            ref
+                                .read(
+                                  transparencyPreferencesNotifierProvider
+                                      .notifier,
+                                )
+                                .setShowAgentSwitching(value),
+                          );
                         },
                       ),
                       const Divider(height: 1),
                       SwitchListTile(
-                        title: const Text('推理步骤'),
+                        title: Text(context.l10n.transparencyReasoningSteps),
                         subtitle: Text(
-                          '显示LLM的详细推理过程',
+                          context.l10n.transparencyReasoningStepsDesc,
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                         value: prefs.showReasoningSteps,
                         onChanged: (value) {
-                          ref
-                              .read(transparencyPreferencesNotifierProvider
-                                  .notifier)
-                              .setShowReasoningSteps(value);
+                          unawaited(
+                            ref
+                                .read(
+                                  transparencyPreferencesNotifierProvider
+                                      .notifier,
+                                )
+                                .setShowReasoningSteps(value),
+                          );
                         },
                       ),
                     ],
@@ -120,7 +139,7 @@ class TransparencySettingsScreen extends ConsumerWidget {
                         const SizedBox(width: DS.spacing12),
                         Expanded(
                           child: Text(
-                            '启用详细选项可能会略微增加响应延迟',
+                            context.l10n.transparencyWarning,
                             style: Theme.of(context)
                                 .textTheme
                                 .bodyMedium
@@ -145,7 +164,7 @@ class TransparencySettingsScreen extends ConsumerWidget {
               Icon(Icons.error_outline, size: 64, color: DS.error),
               const SizedBox(height: DS.md),
               Text(
-                '加载设置失败',
+                context.l10n.transparencyLoadFailed,
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: DS.sm),

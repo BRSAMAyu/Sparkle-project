@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/user/user_routes.dart';
 import 'package:sparkle/features/user/presentation/widgets/avatar_selection_dialog.dart';
@@ -41,6 +42,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   }
 
   Future<void> _pickAndUploadAvatar() async {
+    final l10n = context.l10n;
     final user = ref.read(currentUserProvider);
     final source = await showModalBottomSheet<String>(
       context: context,
@@ -50,17 +52,17 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           children: [
             ListTile(
               leading: const Icon(Icons.face_retouching_natural_rounded),
-              title: const Text('从系统推荐中选择'),
+              title: Text(l10n.editProfileChooseFromPresets),
               onTap: () => Navigator.pop(context, 'preset'),
             ),
             ListTile(
               leading: const Icon(Icons.camera_alt_rounded),
-              title: const Text('拍照'),
+              title: Text(l10n.editProfileTakePhoto),
               onTap: () => Navigator.pop(context, 'camera'),
             ),
             ListTile(
               leading: const Icon(Icons.photo_library_rounded),
-              title: const Text('从相册选择'),
+              title: Text(l10n.editProfileChooseFromGallery),
               onTap: () => Navigator.pop(context, 'gallery'),
             ),
           ],
@@ -85,11 +87,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       try {
         await ref.read(authProvider.notifier).updateAvatar(selectedUrl);
         if (parentContext.mounted) {
-          AppFeedback.success(parentContext, '头像更新成功');
+          AppFeedback.success(parentContext, l10n.editProfileAvatarUpdated);
         }
       } catch (e) {
         if (parentContext.mounted) {
-          AppFeedback.error(parentContext, '更新失败: $e');
+          AppFeedback.error(parentContext, l10n.editProfileUpdateFailed(e.toString()));
         }
       } finally {
         if (mounted) setState(() => _isLoading = false);
@@ -112,11 +114,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     try {
       await ref.read(authProvider.notifier).updateAvatar(pickedFile.path);
       if (mounted) {
-        AppFeedback.success(context, '头像更新成功');
+        AppFeedback.success(context, l10n.editProfileAvatarUpdated);
       }
     } catch (e) {
       if (mounted) {
-        AppFeedback.error(context, '上传失败: $e');
+        AppFeedback.error(context, l10n.editProfileUploadFailed(e.toString()));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -124,17 +126,18 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   }
 
   Future<void> _saveProfile() async {
+    final l10n = context.l10n;
     final nickname = _nicknameController.text.trim();
     final email = _emailController.text.trim();
 
     if (nickname.isEmpty) {
-      AppFeedback.info(context, '昵称不能为空');
+      AppFeedback.info(context, l10n.editProfileNicknameEmpty);
       return;
     }
 
     if (email.isNotEmpty &&
         !RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
-      AppFeedback.info(context, '请输入有效的邮箱地址');
+      AppFeedback.info(context, l10n.editProfileEmailInvalid);
       return;
     }
 
@@ -147,12 +150,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       });
 
       if (mounted) {
-        AppFeedback.success(context, '资料更新成功');
+        AppFeedback.success(context, l10n.editProfileProfileUpdated);
         Navigator.of(context).pop();
       }
     } catch (e) {
       if (mounted) {
-        AppFeedback.error(context, '更新失败: $e');
+        AppFeedback.error(context, l10n.editProfileUpdateFailed(e.toString()));
       }
     } finally {
       if (mounted) {
@@ -163,6 +166,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final user = ref.watch(currentUserProvider);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
@@ -176,11 +180,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        title: const Text('编辑资料'),
+        title: Text(l10n.editProfile),
         centerTitle: true,
         actions: [
           SparkleButton(
-            label: '保存',
+            label: l10n.editProfileSave,
             variant: ButtonVariant.ghost,
             onPressed: _isLoading
                 ? null
@@ -264,7 +268,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                         ),
                         const SizedBox(width: DS.spacing6),
                         Text(
-                          '新头像正在审核中...',
+                          l10n.editProfileNewAvatarPending,
                           style: TextStyle(
                             fontSize: 12,
                             color: DS.warning,
@@ -277,7 +281,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 ],
                 const SizedBox(height: DS.sm),
                 SparkleButton(
-                  label: '更换头像',
+                  label: l10n.editProfileChangeAvatar,
                   variant: ButtonVariant.ghost,
                   onPressed: _isLoading
                       ? null
@@ -289,30 +293,30 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
                 // Form Fields
                 _buildInputField(
-                  label: '昵称',
+                  label: l10n.editProfileNicknameLabel,
                   controller: _nicknameController,
-                  hint: '请输入昵称',
+                  hint: l10n.editProfileNicknameHint,
                   icon: Icons.person_outline_rounded,
                 ),
                 const SizedBox(height: DS.spacing16),
                 _buildInputField(
-                  label: '邮箱',
+                  label: l10n.editProfileEmailLabel,
                   controller: _emailController,
-                  hint: '请输入邮箱',
+                  hint: l10n.editProfileEmailHint,
                   icon: Icons.email_outlined,
                   keyboardType: TextInputType.emailAddress,
                 ),
                 const SizedBox(height: DS.spacing16),
                 _buildReadOnlyField(
-                  label: '用户名',
+                  label: l10n.editProfileUsernameLabel,
                   value: user?.username ?? '',
                   icon: Icons.badge_outlined,
-                  helperText: '用户名不可修改',
+                  helperText: l10n.editProfileUsernameReadonly,
                 ),
                 const SizedBox(height: DS.spacing24),
 
                 // Security Section
-                _buildSectionHeader(isDark, '账户安全'),
+                _buildSectionHeader(isDark, l10n.editProfileAccountSecurity),
                 const SizedBox(height: DS.spacing12),
                 GraphiteCardSurface(
                   surfaceRole: SparkleSurfaceRole.panel,
@@ -320,10 +324,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   child: ListTile(
                     leading:
                         Icon(Icons.lock_reset_rounded, color: DS.primaryBase),
-                    title: const Text(
-                      '重置密码',
+                    title: Text(
+                      l10n.editProfileResetPassword,
                       style:
-                          TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+                          const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
                     ),
                     trailing: const Icon(Icons.chevron_right_rounded),
                     onTap: () {
@@ -335,7 +339,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 const SizedBox(height: DS.spacing24),
 
                 // Account Info Section
-                _buildSectionHeader(isDark, '账户信息'),
+                _buildSectionHeader(isDark, l10n.editProfileAccountInfo),
                 const SizedBox(height: DS.spacing12),
                 GraphiteCardSurface(
                   surfaceRole: SparkleSurfaceRole.panel,
@@ -343,14 +347,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildInfoRow('火焰等级', 'Lv.${user?.flameLevel ?? 1}'),
+                      _buildInfoRow(l10n.editProfileFlameLevel, 'Lv.${user?.flameLevel ?? 1}'),
                       _buildInfoRow(
-                        '火焰亮度',
+                        l10n.editProfileFlameBrightness,
                         '${((user?.flameBrightness ?? 0.5) * 100).toInt()}%',
                       ),
                       _buildInfoRow(
-                        '账户类型',
-                        user?.id.startsWith('guest') ?? false ? '游客账户' : '正式账户',
+                        l10n.editProfileAccountType,
+                        user?.id.startsWith('guest') ?? false ? l10n.editProfileGuestAccount : l10n.editProfileFullAccount,
                       ),
                     ],
                   ),

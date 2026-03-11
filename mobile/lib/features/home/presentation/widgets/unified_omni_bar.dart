@@ -307,7 +307,9 @@ class _UnifiedOmniBarState extends ConsumerState<UnifiedOmniBar>
         child: Row(
           children: [
             Tooltip(
-              message: _isListening ? '停止录音' : '语音输入',
+              message: _isListening
+                  ? context.l10n.voiceInputStopAction
+                  : context.l10n.voiceInputAction,
               child: SparkleIconButton(
                 icon: Icon(
                   _isListening ? Icons.stop_circle_outlined : Icons.mic,
@@ -316,7 +318,9 @@ class _UnifiedOmniBarState extends ConsumerState<UnifiedOmniBar>
                 ),
                 onPressed: _toggleListening,
                 variant: ButtonVariant.ghost,
-                semanticLabel: _isListening ? '停止录音' : '语音输入',
+                semanticLabel: _isListening
+                    ? context.l10n.voiceInputStopAction
+                    : context.l10n.voiceInputAction,
               ),
             ),
             const SizedBox(width: DS.spacing4),
@@ -335,8 +339,8 @@ class _UnifiedOmniBarState extends ConsumerState<UnifiedOmniBar>
                 ),
                 decoration: InputDecoration(
                   hintText: _isListening
-                      ? 'Listening...'
-                      : (widget.hintText ?? 'Tell me what you think...'),
+                      ? context.l10n.omnibarListeningHint
+                      : (widget.hintText ?? context.l10n.omnibarDefaultHint),
                   hintStyle: context.sparkleTypography.bodyLarge.copyWith(
                     color: _isListening
                         ? accentColor
@@ -381,7 +385,7 @@ class _UnifiedOmniBarState extends ConsumerState<UnifiedOmniBar>
                 onPressed: canSubmit ? _submit : null,
                 disabled: !canSubmit,
                 variant: ButtonVariant.ghost,
-                semanticLabel: '发送',
+                semanticLabel: context.l10n.send,
               ),
           ],
         ),
@@ -434,7 +438,7 @@ class _UnifiedOmniBarState extends ConsumerState<UnifiedOmniBar>
       ref.read(intentPredictionProvider.notifier).onInputCleared();
     } catch (e) {
       if (mounted) {
-        AppFeedback.error(context, '发送失败: $e');
+        AppFeedback.error(context, context.l10n.sendFailedWithError(e));
       }
     } finally {
       if (mounted) {
@@ -482,7 +486,7 @@ class _UnifiedOmniBarState extends ConsumerState<UnifiedOmniBar>
     final authToken = await ref.read(authRepositoryProvider).getAccessToken();
     if (authToken == null) {
       if (mounted) {
-        AppFeedback.error(context, '未登录，请先登录');
+        AppFeedback.error(context, context.l10n.voiceInputLoginRequired);
       }
       return;
     }
@@ -514,7 +518,10 @@ class _UnifiedOmniBarState extends ConsumerState<UnifiedOmniBar>
           _glowController
             ..stop()
             ..reset();
-          AppFeedback.error(context, '语音识别失败: $error');
+          AppFeedback.error(
+            context,
+            context.l10n.voiceInputSpeechFailed(error),
+          );
         },
         onCompleted: () {
           if (!mounted) return;
@@ -535,7 +542,7 @@ class _UnifiedOmniBarState extends ConsumerState<UnifiedOmniBar>
       _glowController
         ..stop()
         ..reset();
-      AppFeedback.error(context, '启动录音失败: $e');
+      AppFeedback.error(context, context.l10n.voiceInputStartFailed(e));
     }
   }
 
@@ -543,7 +550,7 @@ class _UnifiedOmniBarState extends ConsumerState<UnifiedOmniBar>
     final status = await Permission.microphone.request();
     if (!status.isGranted) {
       if (mounted) {
-        AppFeedback.error(context, '需要麦克风权限才能使用语音输入');
+        AppFeedback.error(context, context.l10n.voiceInputNoPermission);
       }
       return false;
     }

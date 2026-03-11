@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_motion.dart';
 import 'package:sparkle/features/reviews/presentation/providers/nightly_review_provider.dart';
 
@@ -63,7 +64,7 @@ class NightlyReviewPanel extends ConsumerWidget {
                       const SizedBox(width: DS.spacing10),
                       Expanded(
                         child: Text(
-                          '今日复盘待完成',
+                          context.l10n.nightlyReviewPending,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: context.sparkleTypography.labelLarge.copyWith(
@@ -81,7 +82,7 @@ class NightlyReviewPanel extends ConsumerWidget {
                             vertical: 2,
                           ),
                           child: Text(
-                            '开始 →',
+                            context.l10n.nightlyReviewStart,
                             style:
                                 context.sparkleTypography.labelLarge.copyWith(
                               color: DS.brandPrimary,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/auth/auth.dart';
 
 class PasswordResetScreen extends ConsumerStatefulWidget {
@@ -33,6 +34,7 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
   Future<void> _handleReset() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final l10n = context.l10n;
     setState(() => _isLoading = true);
     try {
       await ref.read(authProvider.notifier).changePassword(
@@ -40,12 +42,12 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
             _newPasswordController.text,
           );
       if (mounted) {
-        AppFeedback.success(context, '密码修改成功');
+        AppFeedback.success(context, l10n.passwordResetSuccess);
         Navigator.of(context).pop();
       }
     } catch (e) {
       if (mounted) {
-        AppFeedback.error(context, '修改失败: $e');
+        AppFeedback.error(context, l10n.passwordResetFailed(e.toString()));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -54,6 +56,7 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -66,7 +69,7 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        title: const Text('重置密码'),
+        title: Text(l10n.passwordReset),
         centerTitle: true,
       ),
       child: ContentConstraint(
@@ -80,7 +83,7 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    '请确保您的新密码包含至少 8 个字符。',
+                    l10n.passwordResetHint,
                     style: TextStyle(
                       color:
                           isDark ? DS.brandPrimary70 : DS.brandPrimary.shade600,
@@ -89,44 +92,51 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
                   ),
                   const SizedBox(height: DS.spacing24),
                   _buildPasswordField(
-                    label: '当前密码',
+                    label: l10n.passwordResetCurrentLabel,
                     controller: _oldPasswordController,
                     obscureText: _obscureOld,
                     onToggle: () => setState(() => _obscureOld = !_obscureOld),
                     validator: (value) {
-                      if (value == null || value.isEmpty) return '请输入当前密码';
+                      if (value == null || value.isEmpty) {
+                        return l10n.passwordResetCurrentRequired;
+                      }
                       return null;
                     },
                   ),
                   const SizedBox(height: DS.spacing16),
                   _buildPasswordField(
-                    label: '新密码',
+                    label: l10n.passwordResetNewLabel,
                     controller: _newPasswordController,
                     obscureText: _obscureNew,
                     onToggle: () => setState(() => _obscureNew = !_obscureNew),
                     validator: (value) {
-                      if (value == null || value.isEmpty) return '请输入新密码';
-                      if (value.length < 8) return '密码长度至少为 8 位';
+                      if (value == null || value.isEmpty) {
+                        return l10n.passwordResetNewRequired;
+                      }
+                      if (value.length < 8) {
+                        return l10n.passwordResetNewMinLength;
+                      }
                       return null;
                     },
                   ),
                   const SizedBox(height: DS.spacing16),
                   _buildPasswordField(
-                    label: '确认新密码',
+                    label: l10n.passwordResetConfirmLabel,
                     controller: _confirmPasswordController,
                     obscureText: _obscureConfirm,
                     onToggle: () =>
                         setState(() => _obscureConfirm = !_obscureConfirm),
                     validator: (value) {
-                      if (value != _newPasswordController.text)
-                        return '两次输入的密码不一致';
+                      if (value != _newPasswordController.text) {
+                        return l10n.passwordResetConfirmMismatch;
+                      }
                       return null;
                     },
                   ),
                   const SizedBox(height: DS.spacing32),
                   SparkleButton(
                     onPressed: _isLoading ? null : _handleReset,
-                    label: '更新密码',
+                    label: l10n.passwordResetButton,
                     loading: _isLoading,
                     expand: true,
                   ),
