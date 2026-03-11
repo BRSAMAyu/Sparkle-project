@@ -1,6 +1,9 @@
+import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 class StatisticsCard extends StatelessWidget {
   const StatisticsCard({super.key});
@@ -40,7 +43,7 @@ class StatisticsCard extends StatelessWidget {
               ),
               const SizedBox(width: DS.spacing8),
               Text(
-                '本周成长趋势',
+                context.l10n.statisticsWeeklyGrowthTrend,
                 style: TextStyle(
                   fontSize: DS.fontSizeBase,
                   fontWeight: DS.fontWeightSemibold,
@@ -72,12 +75,18 @@ class _WeeklyTrendChart extends StatelessWidget {
   final Color trendAccent;
   final Color trendAccentSoft;
 
-  static const _days = ['一', '二', '三', '四', '五', '六', '日'];
-  static const _dayLabels = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
-
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final locale = I18nService.instance.currentLocale.languageCode;
+    final shortDays = List.generate(
+      7,
+      (index) => DateFormat.E(locale).format(DateTime(2026, 1, 5 + index)),
+    );
+    final longDays = List.generate(
+      7,
+      (index) => DateFormat.EEEE(locale).format(DateTime(2026, 1, 5 + index)),
+    );
     final spots = [
       const FlSpot(0, 3),
       const FlSpot(1, 5),
@@ -100,11 +109,11 @@ class _WeeklyTrendChart extends StatelessWidget {
               sideTitles: SideTitles(
                 showTitles: true,
                 getTitlesWidget: (value, meta) {
-                  if (value.toInt() >= 0 && value.toInt() < _days.length) {
+                  if (value.toInt() >= 0 && value.toInt() < shortDays.length) {
                     return Padding(
                       padding: const EdgeInsets.only(top: 8),
                       child: Text(
-                        _days[value.toInt()],
+                        shortDays[value.toInt()],
                         style: TextStyle(
                           color: DS.textSecondary,
                           fontSize: 10,
@@ -133,7 +142,7 @@ class _WeeklyTrendChart extends StatelessWidget {
               fitInsideVertically: true,
               getTooltipItems: (touchedSpots) => touchedSpots.map((spot) {
                 return LineTooltipItem(
-                  '${_dayLabels[spot.x.toInt()]}\n学习指数 ${spot.y.toStringAsFixed(0)}',
+                  '${longDays[spot.x.toInt()]}\n${context.l10n.statisticsLearningIndex(spot.y.toStringAsFixed(0))}',
                   TextStyle(
                     color: DS.textPrimary,
                     fontSize: 12,

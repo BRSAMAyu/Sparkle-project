@@ -1790,4 +1790,619 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get emptyStateCreatePlanAction => '创建计划';
+
+  @override
+  String get voiceInputPermissionTitle => '需要麦克风权限';
+
+  @override
+  String get voiceInputPermissionContent => '开启麦克风权限后即可使用语音输入。';
+
+  @override
+  String get voiceInputOpenSettings => '去设置';
+
+  @override
+  String get voiceInputNoPermission => '需要麦克风权限才能使用语音输入。';
+
+  @override
+  String get voiceInputLoginRequired => '请先登录后再使用语音输入。';
+
+  @override
+  String voiceInputStartFailed(Object error) {
+    return '开始录音失败：$error';
+  }
+
+  @override
+  String get quickReplyTodayPlanLabel => '今日计划';
+
+  @override
+  String get quickReplyTodayPlanMessage => '我今天的计划是什么？';
+
+  @override
+  String get quickReplyReviewPlanLabel => '复盘计划';
+
+  @override
+  String get quickReplyReviewPlanMessage => '帮我复盘一下今天的计划。';
+
+  @override
+  String get quickReplyStartFocusLabel => '开始专注';
+
+  @override
+  String get quickReplyStartFocusMessage => '帮我开始一次专注。';
+
+  @override
+  String get quickReplyAnalyzeErrorsLabel => '分析错题';
+
+  @override
+  String get quickReplyAnalyzeErrorsMessage => '分析一下我最近的错题。';
+
+  @override
+  String get quickReplyLearningProgressLabel => '学习进度';
+
+  @override
+  String get quickReplyLearningProgressMessage => '我最近的学习进度怎么样？';
+
+  @override
+  String get quickReplyAddErrorLabel => '添加错题';
+
+  @override
+  String get quickReplyAddErrorMessage => '帮我添加一条新的错题记录。';
+
+  @override
+  String get quickReplyReviewErrorsLabel => '复习错题';
+
+  @override
+  String get quickReplyReviewErrorsMessage => '我们来复习一下错题本。';
+
+  @override
+  String get quickReplyErrorStatsLabel => '错题统计';
+
+  @override
+  String get quickReplyErrorStatsMessage => '给我看看错题统计。';
+
+  @override
+  String get quickReplyWeakSubjectsLabel => '薄弱点';
+
+  @override
+  String get quickReplyWeakSubjectsMessage => '我现在最薄弱的科目是什么？';
+
+  @override
+  String get quickReplyExploreGalaxyLabel => '探索星图';
+
+  @override
+  String get quickReplyExploreGalaxyMessage => '带我去看看知识星图。';
+
+  @override
+  String get quickReplyAddKnowledgeLabel => '添加知识点';
+
+  @override
+  String get quickReplyAddKnowledgeMessage => '帮我添加一个新的知识点。';
+
+  @override
+  String get quickReplyFindGapsLabel => '查找缺口';
+
+  @override
+  String get quickReplyFindGapsMessage => '帮我找找知识图谱里的缺口。';
+
+  @override
+  String get quickReplyGreetingLateNight => '还没睡呀？需要我陪你收个尾吗？';
+
+  @override
+  String get quickReplyGreetingMorning => '早上好！今天想从哪件事开始？';
+
+  @override
+  String get quickReplyGreetingNoon => '中午了，想整理一下今天的节奏吗？';
+
+  @override
+  String get quickReplyGreetingAfternoon => '下午好，继续推进还是先复盘一下？';
+
+  @override
+  String get quickReplyGreetingEvening => '晚上好，想做个总结还是安排明天？';
+
+  @override
+  String get quickReplyGreetingNight => '夜深了，想快速收个尾还是放松一下？';
+
+  @override
+  String get privateChatDefaultTitle => '聊天';
+
+  @override
+  String get privateChatEmptyPrompt => '开始对话吧！';
+
+  @override
+  String get chatDefaultGroupName => '群聊';
+
+  @override
+  String get chatDefaultFriendName => '好友';
+
+  @override
+  String get shopTitle => '光子商城';
+
+  @override
+  String get shopCategoryAll => '全部';
+
+  @override
+  String get shopCategorySkin => '皮肤';
+
+  @override
+  String get shopCategoryTitle => '称号';
+
+  @override
+  String get shopCategoryConsumable => '消耗品';
+
+  @override
+  String get shopCategoryBoost => '加成';
+
+  @override
+  String get shopEmpty => '暂无物品';
+
+  @override
+  String shopPurchaseSuccess(Object name) {
+    return '成功购买 $name';
+  }
+
+  @override
+  String get shopPurchaseFailed => '购买失败';
+
+  @override
+  String get purchaseConfirmTitle => '确认购买';
+
+  @override
+  String get shopPriceLabel => '价格';
+
+  @override
+  String get shopBalanceLabel => '当前余额';
+
+  @override
+  String get shopBalanceAfterPurchase => '购买后余额';
+
+  @override
+  String get shopInsufficientPhotons => '光子不足';
+
+  @override
+  String get shopConfirmPurchase => '确认购买';
+
+  @override
+  String shopItemSemantics(Object name, Object price) {
+    return '$name，价格 $price 光子';
+  }
+
+  @override
+  String get shopOwned => '已拥有';
+
+  @override
+  String shopLimitedStock(Object count) {
+    return '限量 $count';
+  }
+
+  @override
+  String get userTitlesEmpty => '暂无称号';
+
+  @override
+  String get userTitleUnequippedOption => '不装备称号';
+
+  @override
+  String get notificationCenterTitle => '通知中心';
+
+  @override
+  String notificationMarkAllRead(Object count) {
+    return '全部已读（$count）';
+  }
+
+  @override
+  String get notificationClearRead => '清除已读';
+
+  @override
+  String get notificationEmptyTitle => '暂无通知';
+
+  @override
+  String get notificationEmptyDescription => '有新通知时会显示在这里。';
+
+  @override
+  String get notificationFilterAll => '全部';
+
+  @override
+  String get notificationFilterUnread => '未读';
+
+  @override
+  String get notificationFilterRead => '已读';
+
+  @override
+  String get notificationSourceAll => '所有类型';
+
+  @override
+  String get notificationSourceSystem => '系统通知';
+
+  @override
+  String get notificationSourceIntervention => '干预通知';
+
+  @override
+  String get notificationMarkedAllRead => '已标记所有通知为已读';
+
+  @override
+  String get notificationClearReadTitle => '清除已读通知';
+
+  @override
+  String get notificationClearReadMessage => '确定要清除所有已读通知吗？';
+
+  @override
+  String get notificationClearReadSuccess => '已清除已读通知';
+
+  @override
+  String get notificationAnalyticsTitle => '通知统计';
+
+  @override
+  String get notificationAnalyticsNoData => '暂无数据';
+
+  @override
+  String notificationAnalyticsLoadFailed(Object error) {
+    return '加载失败：$error';
+  }
+
+  @override
+  String get notificationAnalyticsSummary => '汇总统计';
+
+  @override
+  String get notificationAnalyticsTotalSent => '发送总数';
+
+  @override
+  String get notificationAnalyticsTotalViewed => '查看数';
+
+  @override
+  String get notificationAnalyticsTotalClicked => '点击数';
+
+  @override
+  String get notificationAnalyticsViewRate => '查看率';
+
+  @override
+  String get notificationAnalyticsByType => '按类型统计';
+
+  @override
+  String get notificationAnalyticsSent => '发送';
+
+  @override
+  String get notificationAnalyticsViewed => '查看';
+
+  @override
+  String get notificationAnalyticsTrends => '趋势分析';
+
+  @override
+  String get notificationAnalyticsNoTrends => '暂无趋势数据';
+
+  @override
+  String get notificationAnalyticsHourlyDistribution => '24小时分布';
+
+  @override
+  String get notificationAnalyticsPeriod1d => '1天';
+
+  @override
+  String get notificationAnalyticsPeriod7d => '7天';
+
+  @override
+  String get notificationAnalyticsPeriod30d => '30天';
+
+  @override
+  String get notificationAnalyticsPeriodAll => '全部';
+
+  @override
+  String get intentAnalysisLabel => '分析意图';
+
+  @override
+  String get intentAnalysisInProgress => '分析中...';
+
+  @override
+  String get intentAnalysisMultiIntent => '多意图';
+
+  @override
+  String intentAnalysisFailed(Object error) {
+    return '意图分析失败：$error';
+  }
+
+  @override
+  String get intentPreviewTitle => '意图分析';
+
+  @override
+  String get intentPreviewAnalyzing => '正在分析意图...';
+
+  @override
+  String get intentPreviewSingleIntent => '识别到单一意图';
+
+  @override
+  String intentPreviewDetectedCount(Object count) {
+    return '识别到 $count 个意图：';
+  }
+
+  @override
+  String intentPreviewAssistantRole(Object role) {
+    return '助手：$role';
+  }
+
+  @override
+  String get intentPreviewExecutionPlan => '执行计划';
+
+  @override
+  String intentPreviewExecutionPlanWithTime(Object seconds) {
+    return '执行计划（约 $seconds 秒）';
+  }
+
+  @override
+  String get intentPreviewConfirmExecute => '确认执行';
+
+  @override
+  String get intentPreviewDirectExecute => '直接执行';
+
+  @override
+  String get intentExecutionFailed => '执行失败，请重试';
+
+  @override
+  String intentExecutionFailedWithDetail(Object error) {
+    return '执行失败：$error';
+  }
+
+  @override
+  String get intentTypeTaskManagement => '任务管理';
+
+  @override
+  String get intentTypeKnowledgeQuery => '知识查询';
+
+  @override
+  String get intentTypeTimePlanning => '时间规划';
+
+  @override
+  String get intentTypeSocial => '社交互动';
+
+  @override
+  String get intentTypeLearning => '学习内容';
+
+  @override
+  String get intentTypeReflection => '复习反思';
+
+  @override
+  String get intentTypeToolCall => '工具调用';
+
+  @override
+  String get intentTypeUnknown => '未知';
+
+  @override
+  String get intentAgentGalaxyGuide => '星图向导';
+
+  @override
+  String get intentAgentTimeTutor => '时间导师';
+
+  @override
+  String get intentAgentExamOracle => '考试预言家';
+
+  @override
+  String get intentAgentStudyBuddy => '学习伙伴';
+
+  @override
+  String get avatarSelectTitle => '选择系统头像';
+
+  @override
+  String get avatarPresetGeek => '极客';
+
+  @override
+  String get avatarPresetArtist => '艺术家';
+
+  @override
+  String get avatarPresetExplorer => '探险家';
+
+  @override
+  String get avatarPresetScholar => '学者';
+
+  @override
+  String get avatarPresetEnergy => '元气';
+
+  @override
+  String get avatarPresetPet => '萌友';
+
+  @override
+  String get statisticsWeeklyGrowthTrend => '本周成长趋势';
+
+  @override
+  String statisticsLearningIndex(Object value) {
+    return '学习指数 $value';
+  }
+
+  @override
+  String get learningModeDepthHigh => '深度+';
+
+  @override
+  String get learningModeDepthLow => '深度-';
+
+  @override
+  String get learningModeCuriosityHigh => '好奇+';
+
+  @override
+  String get learningModeCuriosityLow => '好奇-';
+
+  @override
+  String learningModeDepthValue(Object value) {
+    return '深度：$value%';
+  }
+
+  @override
+  String learningModeCuriosityValue(Object value) {
+    return '好奇：$value%';
+  }
+
+  @override
+  String get learningModeSaved => '学习偏好保存成功';
+
+  @override
+  String learningModeSaveFailed(Object error) {
+    return '保存失败：$error';
+  }
+
+  @override
+  String get learningModeSettingsTitle => '学习模式设置';
+
+  @override
+  String get learningModeDragHint => '拖动火苗调整你的学习偏好';
+
+  @override
+  String learningModeDepthAxisValue(Object value) {
+    return '深度偏好（Y轴）：$value%';
+  }
+
+  @override
+  String learningModeCuriosityAxisValue(Object value) {
+    return '好奇心偏好（X轴）：$value%';
+  }
+
+  @override
+  String get learningModeSave => '保存偏好';
+
+  @override
+  String get notificationReceiveSmartPush => '接收智能推送和学习提醒';
+
+  @override
+  String get schedulePreferencesHint => '设置你的碎片时间段，接收主动任务建议。';
+
+  @override
+  String get scheduleCommuteTime => '通勤时间';
+
+  @override
+  String get scheduleLunchBreak => '午休时间';
+
+  @override
+  String get scheduleStartTime => '开始时间';
+
+  @override
+  String get scheduleEndTime => '结束时间';
+
+  @override
+  String get schedulePreferencesSaved => '偏好已保存';
+
+  @override
+  String schedulePreferencesSaveFailed(Object error) {
+    return '保存偏好失败：$error';
+  }
+
+  @override
+  String get syncCenterRetryAll => '立即重试全部';
+
+  @override
+  String get syncCenterRetryAllTriggered => '已触发全量重试';
+
+  @override
+  String get syncCenterTabAll => '全部';
+
+  @override
+  String get syncCenterTabFailed => '失败';
+
+  @override
+  String get syncCenterTabWaitingAck => '等待 ACK';
+
+  @override
+  String get syncCenterTabPending => '待发送';
+
+  @override
+  String syncCenterLoadFailed(Object error) {
+    return '加载失败：$error';
+  }
+
+  @override
+  String get syncCenterCopyDiagnostics => '复制诊断信息';
+
+  @override
+  String get syncCenterDiagnosticsCopied => '已复制诊断信息';
+
+  @override
+  String syncCenterDisplayLimit(Object limit) {
+    return '最多展示 $limit 条';
+  }
+
+  @override
+  String get syncCenterRetryFailedTriggered => '已触发失败重试';
+
+  @override
+  String get syncCenterRetryFailed => '重试失败项';
+
+  @override
+  String get syncCenterNeverSynced => '未同步';
+
+  @override
+  String syncCenterTotalPending(Object count) {
+    return '待同步总数：$count';
+  }
+
+  @override
+  String syncCenterLastSync(Object value) {
+    return '最近同步：$value';
+  }
+
+  @override
+  String get syncCenterByTopic => '按主题统计';
+
+  @override
+  String get syncCenterNoPendingItems => '暂无待同步项';
+
+  @override
+  String get syncCenterTopicLabel => '主题';
+
+  @override
+  String get syncCenterTopicAll => '全部';
+
+  @override
+  String get syncCenterTopicCognitive => '认知碎片';
+
+  @override
+  String get syncCenterTopicKnowledge => '知识图谱';
+
+  @override
+  String get syncCenterTopicCollab => '协同';
+
+  @override
+  String get syncCenterTopicAnalytics => '分析';
+
+  @override
+  String get syncCenterTopicLegacy => 'Legacy';
+
+  @override
+  String get syncCenterNoRecords => '暂无记录';
+
+  @override
+  String get syncCenterRetryTriggered => '已触发重试';
+
+  @override
+  String get syncCenterTraceCopied => '已复制 TraceId';
+
+  @override
+  String get syncCenterEntityCopied => '已复制实体 ID';
+
+  @override
+  String syncCenterEntityValue(Object entityId, Object entityType) {
+    return '$entityType：$entityId';
+  }
+
+  @override
+  String syncCenterAttemptValue(Object count) {
+    return '重试次数：$count';
+  }
+
+  @override
+  String syncCenterLastErrorValue(Object value) {
+    return '最近错误：$value';
+  }
+
+  @override
+  String syncCenterNextAttemptValue(Object value) {
+    return '下次重试：$value';
+  }
+
+  @override
+  String syncCenterTraceIdValue(Object value) {
+    return 'TraceId：$value';
+  }
+
+  @override
+  String get syncCenterRetryThis => '重试此项';
+
+  @override
+  String get syncCenterStatusPending => '待发送';
+
+  @override
+  String get syncCenterStatusFailed => '失败';
+
+  @override
+  String get syncCenterStatusWaitingAck => '等待 ACK';
 }

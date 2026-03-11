@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/notification_center/data/models/unified_notification_model.dart';
 import 'package:sparkle/features/notification_center/presentation/providers/notification_center_provider.dart';
 import 'package:sparkle/features/notification_center/presentation/widgets/notification_filter_chip.dart';
@@ -36,14 +37,44 @@ class _NotificationCenterScreenState
     return SparklePageScaffold(
       role: SparklePageRole.content,
       appBar: AppBar(
-        title: const Text('通知中心'),
+        title: Text(context.l10n.notificationCenterTitle),
         actions: [
           // Mark all as read button
           if (state.unreadCount > 0)
-            SparkleButton.ghost(
+            SparkleIconButton(
               onPressed: _markAllAsRead,
-              icon: const Icon(Icons.done_all, size: DS.iconSizeSm),
-              label: '全部已读 (${state.unreadCount})',
+              icon: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  const Icon(Icons.done_all, size: DS.iconSizeBase),
+                  Positioned(
+                    right: -6,
+                    top: -6,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 1,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primary,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        state.unreadCount > 99 ? '99+' : '${state.unreadCount}',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: Theme.of(context).colorScheme.onPrimary,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              semanticLabel:
+                  context.l10n.notificationMarkAllRead(state.unreadCount),
+              variant: ButtonVariant.ghost,
+              size: DS.touchTargetMinSize,
             ),
 
           // Menu
@@ -54,13 +85,13 @@ class _NotificationCenterScreenState
               }
             },
             itemBuilder: (context) => [
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'clear_read',
                 child: Row(
                   children: [
-                    Icon(Icons.delete_sweep),
-                    SizedBox(width: DS.spacing12),
-                    Text('清除已读'),
+                    const Icon(Icons.delete_sweep),
+                    const SizedBox(width: DS.spacing12),
+                    Text(context.l10n.notificationClearRead),
                   ],
                 ),
               ),
@@ -177,7 +208,7 @@ class _NotificationCenterScreenState
             Icon(Icons.error_outline, size: DS.spacing64, color: DS.error),
             const SizedBox(height: DS.spacing16),
             Text(
-              '加载失败',
+              context.l10n.loadingFailed,
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: DS.spacing8),
@@ -185,7 +216,7 @@ class _NotificationCenterScreenState
             const SizedBox(height: DS.spacing16),
             SparkleButton(
               onPressed: _refresh,
-              label: '重试',
+              label: context.l10n.retry,
             ),
           ],
         ),
@@ -199,14 +230,14 @@ class _NotificationCenterScreenState
                 size: DS.spacing64, color: DS.textTertiary),
             const SizedBox(height: DS.spacing16),
             Text(
-              '暂无通知',
+              context.l10n.notificationEmptyTitle,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     color: DS.textSecondary,
                   ),
             ),
             const SizedBox(height: DS.spacing8),
             Text(
-              '当有新通知时，会显示在这里',
+              context.l10n.notificationEmptyDescription,
               style: TextStyle(color: DS.textTertiary),
             ),
           ],
@@ -244,22 +275,22 @@ class _NotificationCenterScreenState
   String _getFilterLabel(NotificationFilter filter) {
     switch (filter) {
       case NotificationFilter.all:
-        return '全部';
+        return context.l10n.notificationFilterAll;
       case NotificationFilter.unread:
-        return '未读';
+        return context.l10n.notificationFilterUnread;
       case NotificationFilter.read:
-        return '已读';
+        return context.l10n.notificationFilterRead;
     }
   }
 
   String _getSourceFilterLabel(SourceTypeFilter filter) {
     switch (filter) {
       case SourceTypeFilter.all:
-        return '所有类型';
+        return context.l10n.notificationSourceAll;
       case SourceTypeFilter.system:
-        return '系统通知';
+        return context.l10n.notificationSourceSystem;
       case SourceTypeFilter.intervention:
-        return '干预通知';
+        return context.l10n.notificationSourceIntervention;
     }
   }
 
@@ -286,7 +317,7 @@ class _NotificationCenterScreenState
     await ref.read(notificationCenterProvider.notifier).markAllAsRead();
 
     if (mounted) {
-      AppFeedback.success(context, '已标记所有通知为已读');
+      AppFeedback.success(context, context.l10n.notificationMarkedAllRead);
     }
   }
 
@@ -301,16 +332,16 @@ class _NotificationCenterScreenState
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('清除已读通知'),
-        content: const Text('确定要清除所有已读通知吗？'),
+        title: Text(context.l10n.notificationClearReadTitle),
+        content: Text(context.l10n.notificationClearReadMessage),
         actions: [
           SparkleButton.ghost(
             onPressed: () => Navigator.pop(context, false),
-            label: '取消',
+            label: context.l10n.cancel,
           ),
           SparkleButton(
             onPressed: () => Navigator.pop(context, true),
-            label: '确定',
+            label: context.l10n.confirm,
           ),
         ],
       ),
@@ -322,7 +353,7 @@ class _NotificationCenterScreenState
           .clearReadNotifications();
 
       if (mounted) {
-        AppFeedback.success(context, '已清除已读通知');
+        AppFeedback.success(context, context.l10n.notificationClearReadSuccess);
       }
     }
   }
@@ -330,17 +361,4 @@ class _NotificationCenterScreenState
   Future<void> _refresh() async {
     await ref.read(notificationCenterProvider.notifier).refresh();
   }
-}
-
-// Extension for ColorScheme
-extension ColorSchemeExtension on ColorScheme {
-  _CustomColors get colorCode => _CustomColors(this);
-}
-
-class _CustomColors {
-  _CustomColors(this.colorScheme);
-  final ColorScheme colorScheme;
-
-  Color get surface => colorScheme.surface;
-  Color get borderSubtle => colorScheme.outline.withValues(alpha: 0.3);
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 /// 快捷回复选项数据类
 class QuickReply {
@@ -35,88 +36,97 @@ class QuickReplyChips extends StatelessWidget {
   final List<QuickReply>? customReplies;
 
   /// 默认快捷回复列表
-  static const List<QuickReply> defaultReplies = [
-    QuickReply(
-      id: 'today_plan',
-      label: '今天该做什么',
-      message: '根据我的任务和计划，今天应该做什么？',
-      icon: Icons.today,
-    ),
-    QuickReply(
-      id: 'review_plan',
-      label: '帮我安排复习',
-      message: '帮我安排今天的复习计划，重点复习哪些知识点？',
-      icon: Icons.schedule,
-    ),
-    QuickReply(
-      id: 'start_focus',
-      label: '开始专注',
-      message: '我想开始一个 25 分钟的专注学习',
-      icon: Icons.timer,
-    ),
-    QuickReply(
-      id: 'analyze_errors',
-      label: '分析错题',
-      message: '帮我分析最近的错题，找出薄弱环节',
-      icon: Icons.analytics,
-    ),
-    QuickReply(
-      id: 'learning_progress',
-      label: '学习进度',
-      message: '查看我这周的学习进度和完成情况',
-      icon: Icons.trending_up,
-    ),
-  ];
+  static List<QuickReply> get defaultReplies {
+    final l10n = I18nService.instance.l10n;
+    return [
+      QuickReply(
+        id: 'today_plan',
+        label: l10n.quickReplyTodayPlanLabel,
+        message: l10n.quickReplyTodayPlanMessage,
+        icon: Icons.today,
+      ),
+      QuickReply(
+        id: 'review_plan',
+        label: l10n.quickReplyReviewPlanLabel,
+        message: l10n.quickReplyReviewPlanMessage,
+        icon: Icons.schedule,
+      ),
+      QuickReply(
+        id: 'start_focus',
+        label: l10n.quickReplyStartFocusLabel,
+        message: l10n.quickReplyStartFocusMessage,
+        icon: Icons.timer,
+      ),
+      QuickReply(
+        id: 'analyze_errors',
+        label: l10n.quickReplyAnalyzeErrorsLabel,
+        message: l10n.quickReplyAnalyzeErrorsMessage,
+        icon: Icons.analytics,
+      ),
+      QuickReply(
+        id: 'learning_progress',
+        label: l10n.quickReplyLearningProgressLabel,
+        message: l10n.quickReplyLearningProgressMessage,
+        icon: Icons.trending_up,
+      ),
+    ];
+  }
 
   /// 错题相关的快捷回复
-  static const List<QuickReply> errorBookReplies = [
-    QuickReply(
-      id: 'add_error',
-      label: '添加错题',
-      message: '我要添加一道错题',
-      icon: Icons.add_circle_outline,
-    ),
-    QuickReply(
-      id: 'review_errors',
-      label: '开始复习',
-      message: '开始复习今天的错题',
-      icon: Icons.playlist_play,
-    ),
-    QuickReply(
-      id: 'error_stats',
-      label: '错题统计',
-      message: '查看我的错题统计数据',
-      icon: Icons.bar_chart,
-    ),
-    QuickReply(
-      id: 'weak_subjects',
-      label: '薄弱科目',
-      message: '分析我的薄弱科目和高频错误类型',
-      icon: Icons.warning_amber,
-    ),
-  ];
+  static List<QuickReply> get errorBookReplies {
+    final l10n = I18nService.instance.l10n;
+    return [
+      QuickReply(
+        id: 'add_error',
+        label: l10n.quickReplyAddErrorLabel,
+        message: l10n.quickReplyAddErrorMessage,
+        icon: Icons.add_circle_outline,
+      ),
+      QuickReply(
+        id: 'review_errors',
+        label: l10n.quickReplyReviewErrorsLabel,
+        message: l10n.quickReplyReviewErrorsMessage,
+        icon: Icons.playlist_play,
+      ),
+      QuickReply(
+        id: 'error_stats',
+        label: l10n.quickReplyErrorStatsLabel,
+        message: l10n.quickReplyErrorStatsMessage,
+        icon: Icons.bar_chart,
+      ),
+      QuickReply(
+        id: 'weak_subjects',
+        label: l10n.quickReplyWeakSubjectsLabel,
+        message: l10n.quickReplyWeakSubjectsMessage,
+        icon: Icons.warning_amber,
+      ),
+    ];
+  }
 
   /// 知识星图相关的快捷回复
-  static const List<QuickReply> galaxyReplies = [
-    QuickReply(
-      id: 'explore_galaxy',
-      label: '探索星图',
-      message: '查看我的知识星图',
-      icon: Icons.explore,
-    ),
-    QuickReply(
-      id: 'add_knowledge',
-      label: '添加知识点',
-      message: '添加新的知识点到星图',
-      icon: Icons.add_circle,
-    ),
-    QuickReply(
-      id: 'find_gaps',
-      label: '找知识盲区',
-      message: '帮我找出知识星图中的薄弱环节',
-      icon: Icons.search_off,
-    ),
-  ];
+  static List<QuickReply> get galaxyReplies {
+    final l10n = I18nService.instance.l10n;
+    return [
+      QuickReply(
+        id: 'explore_galaxy',
+        label: l10n.quickReplyExploreGalaxyLabel,
+        message: l10n.quickReplyExploreGalaxyMessage,
+        icon: Icons.explore,
+      ),
+      QuickReply(
+        id: 'add_knowledge',
+        label: l10n.quickReplyAddKnowledgeLabel,
+        message: l10n.quickReplyAddKnowledgeMessage,
+        icon: Icons.add_circle,
+      ),
+      QuickReply(
+        id: 'find_gaps',
+        label: l10n.quickReplyFindGapsLabel,
+        message: l10n.quickReplyFindGapsMessage,
+        icon: Icons.search_off,
+      ),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -334,19 +344,20 @@ class QuickReplyManager {
 
   /// 根据时间获取个性化问候语
   static String getGreeting() {
+    final l10n = I18nService.instance.l10n;
     final hour = DateTime.now().hour;
     if (hour < 6) {
-      return '深夜还在学习，注意休息哦 🌙';
+      return l10n.quickReplyGreetingLateNight;
     } else if (hour < 12) {
-      return '早上好！今天要学什么？☀️';
+      return l10n.quickReplyGreetingMorning;
     } else if (hour < 14) {
-      return '中午好！午休后继续加油 ☀️';
+      return l10n.quickReplyGreetingNoon;
     } else if (hour < 18) {
-      return '下午好！保持专注 📚';
+      return l10n.quickReplyGreetingAfternoon;
     } else if (hour < 22) {
-      return '晚上好！今晚的学习计划是？🌆';
+      return l10n.quickReplyGreetingEvening;
     } else {
-      return '夜深了，早点休息吧 🌙';
+      return l10n.quickReplyGreetingNight;
     }
   }
 }

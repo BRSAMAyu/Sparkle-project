@@ -8,6 +8,7 @@ import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/offline/offline_providers.dart';
 import 'package:sparkle/core/offline/sync_engine.dart';
 import 'package:sparkle/core/offline/sync_metadata.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 class SyncCenterStats {
   SyncCenterStats({
@@ -19,6 +20,23 @@ class SyncCenterStats {
   final Map<String, int> pendingByTopic;
   final int totalPending;
   final DateTime? lastSuccessAt;
+}
+
+extension SyncStatusL10n on SyncStatus {
+  String localizedLabel(AppLocalizations l10n) {
+    switch (this) {
+      case SyncStatus.pending:
+        return l10n.syncCenterStatusPending;
+      case SyncStatus.failed:
+        return l10n.syncCenterStatusFailed;
+      case SyncStatus.waitingAck:
+        return l10n.syncCenterStatusWaitingAck;
+      case SyncStatus.synced:
+        return l10n.commonSynced;
+      case SyncStatus.conflict:
+        return l10n.commonWarning;
+    }
+  }
 }
 
 @immutable
@@ -63,9 +81,8 @@ final syncCenterStatsProvider = StreamProvider<SyncCenterStats>((ref) async* {
   }
 });
 
-final syncCenterItemsProvider =
-    StreamProvider.autoDispose.family<List<OutboxItem>, SyncCenterQuery>(
-        (ref, query) async* {
+final syncCenterItemsProvider = StreamProvider.autoDispose
+    .family<List<OutboxItem>, SyncCenterQuery>((ref, query) async* {
   final service = ref.watch(syncCenterServiceProvider);
   yield await service.fetchItems(query);
 
@@ -218,8 +235,8 @@ class SyncCenterService {
     final migrationState =
         prefs.getString(SyncMetadataKeys.cognitiveQueueMigrationStatus) ??
             'unknown';
-    final lastSuccess = prefs.getString(SyncMetadataKeys.lastSuccessAt) ??
-        'unknown';
+    final lastSuccess =
+        prefs.getString(SyncMetadataKeys.lastSuccessAt) ?? 'unknown';
     final lastRetryAction =
         prefs.getString(SyncMetadataKeys.lastRetryAction) ?? 'unknown';
 
@@ -241,11 +258,8 @@ class SyncCenterService {
       const SyncCenterQuery(),
       limit,
     );
-    final traceIds = failedItems
-        .map((e) => e.traceId)
-        .whereType<String>()
-        .take(20)
-        .toList();
+    final traceIds =
+        failedItems.map((e) => e.traceId).whereType<String>().take(20).toList();
 
     final buffer = StringBuffer()
       ..writeln('app_version: unknown')

@@ -3,8 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/offline/sync_center_provider.dart';
+import 'package:sparkle/core/utils/formatters.dart';
 
 class SyncCenterScreen extends ConsumerStatefulWidget {
   const SyncCenterScreen({super.key});
@@ -32,31 +34,35 @@ class _SyncCenterScreenState extends ConsumerState<SyncCenterScreen> {
             icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
           ),
-          title: const Text('同步中心'),
+          title: Text(context.l10n.syncCenter),
           actions: [
             PopupMenuButton<String>(
               onSelected: (value) async {
                 if (value == 'retry_all') {
                   await service.retryAll();
                   if (context.mounted) {
-                    AppFeedback.success(context, '已触发全量重试');
+                    AppFeedback.success(
+                      context,
+                      context.l10n.syncCenterRetryAllTriggered,
+                    );
                   }
                 }
               },
-              itemBuilder: (context) => const [
+              itemBuilder: (context) => [
                 PopupMenuItem(
                   value: 'retry_all',
-                  child: Text('Retry now (force all)'),
+                  child: Text(context.l10n.syncCenterRetryAll),
                 ),
               ],
             ),
           ],
-          bottom: const TabBar(
+          bottom: TabBar(
+            isScrollable: true,
             tabs: [
-              Tab(text: 'All'),
-              Tab(text: 'Failed'),
-              Tab(text: 'WaitingAck'),
-              Tab(text: 'Pending'),
+              Tab(text: context.l10n.syncCenterTabAll),
+              Tab(text: context.l10n.syncCenterTabFailed),
+              Tab(text: context.l10n.syncCenterTabWaitingAck),
+              Tab(text: context.l10n.syncCenterTabPending),
             ],
           ),
         ),
@@ -72,7 +78,9 @@ class _SyncCenterScreenState extends ConsumerState<SyncCenterScreen> {
                     data: (stats) => _StatsView(stats: stats),
                     loading: () =>
                         const Center(child: CircularProgressIndicator()),
-                    error: (error, stackTrace) => Text('加载失败: $error'),
+                    error: (error, stackTrace) => Text(
+                      context.l10n.syncCenterLoadFailed(error.toString()),
+                    ),
                   ),
                 ),
                 const SizedBox(height: DS.spacing16),
@@ -100,11 +108,14 @@ class _SyncCenterScreenState extends ConsumerState<SyncCenterScreen> {
                               ClipboardData(text: diagnostics),
                             );
                             if (context.mounted) {
-                              AppFeedback.success(context, '已复制诊断信息');
+                              AppFeedback.success(
+                                context,
+                                context.l10n.syncCenterDiagnosticsCopied,
+                              );
                             }
                           },
                           icon: const Icon(Icons.copy),
-                          label: 'Copy diagnostics',
+                          label: context.l10n.syncCenterCopyDiagnostics,
                         ),
                       ),
                     ],
@@ -112,7 +123,7 @@ class _SyncCenterScreenState extends ConsumerState<SyncCenterScreen> {
                 ),
                 const SizedBox(height: DS.spacing8),
                 Text(
-                  '最多展示 200 条',
+                  context.l10n.syncCenterDisplayLimit(200),
                   style: TextStyle(fontSize: 12, color: DS.textSecondary),
                 ),
                 const SizedBox(height: DS.spacing8),
@@ -160,11 +171,14 @@ class _SyncCenterScreenState extends ConsumerState<SyncCenterScreen> {
               onPressed: () async {
                 await service.retryFailed();
                 if (context.mounted) {
-                  AppFeedback.success(context, '已触发失败重试');
+                  AppFeedback.success(
+                    context,
+                    context.l10n.syncCenterRetryFailedTriggered,
+                  );
                 }
               },
               icon: const Icon(Icons.sync),
-              label: 'Retry failed',
+              label: context.l10n.syncCenterRetryFailed,
               expand: true,
             ),
           ),
@@ -184,34 +198,34 @@ class _StatsView extends StatelessWidget {
     final topicEntries = stats.pendingByTopic.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
     final lastSuccessLabel = stats.lastSuccessAt != null
-        ? stats.lastSuccessAt!.toLocal().toString()
-        : '未同步';
+        ? Formatters.formatDateTime(stats.lastSuccessAt!.toLocal())
+        : context.l10n.syncCenterNeverSynced;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '待同步总数: ${stats.totalPending}',
+          context.l10n.syncCenterTotalPending(stats.totalPending),
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: DS.spacing8),
         Text(
-          '最近同步: $lastSuccessLabel',
+          context.l10n.syncCenterLastSync(lastSuccessLabel),
           style: TextStyle(fontSize: 12, color: DS.textSecondary),
         ),
         const SizedBox(height: DS.spacing12),
-        const Text(
-          '按主题统计',
+        Text(
+          context.l10n.syncCenterByTopic,
           style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: DS.spacing8),
         if (topicEntries.isEmpty)
-          const Text('暂无待同步项')
+          Text(context.l10n.syncCenterNoPendingItems)
         else
           ...topicEntries.map(
             (entry) => ListTile(
               contentPadding: EdgeInsets.zero,
-              title: Text(_topicLabel(entry.key)),
+              title: Text(_topicLabel(context, entry.key)),
               trailing: Text('${entry.value}'),
             ),
           ),
@@ -219,18 +233,18 @@ class _StatsView extends StatelessWidget {
     );
   }
 
-  String _topicLabel(String topic) {
+  String _topicLabel(BuildContext context, String topic) {
     switch (topic) {
       case 'cognitive':
-        return '认知碎片';
+        return context.l10n.syncCenterTopicCognitive;
       case 'knowledge':
-        return '知识图谱';
+        return context.l10n.syncCenterTopicKnowledge;
       case 'crdt':
-        return '协同';
+        return context.l10n.syncCenterTopicCollab;
       case 'analytics':
-        return '分析';
+        return context.l10n.syncCenterTopicAnalytics;
       case 'legacy':
-        return 'Legacy';
+        return context.l10n.syncCenterTopicLegacy;
       default:
         return topic;
     }
@@ -249,7 +263,7 @@ class _TopicFilter extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(
         children: [
-          const Text('Topic:'),
+          Text(context.l10n.syncCenterTopicLabel),
           const SizedBox(width: DS.spacing8),
           DropdownButton<String>(
             value: value,
@@ -258,13 +272,31 @@ class _TopicFilter extends StatelessWidget {
                 onChanged(next);
               }
             },
-            items: const [
-              DropdownMenuItem(value: 'all', child: Text('All')),
-              DropdownMenuItem(value: 'cognitive', child: Text('认知碎片')),
-              DropdownMenuItem(value: 'knowledge', child: Text('知识图谱')),
-              DropdownMenuItem(value: 'crdt', child: Text('协同')),
-              DropdownMenuItem(value: 'analytics', child: Text('分析')),
-              DropdownMenuItem(value: 'legacy', child: Text('Legacy')),
+            items: [
+              DropdownMenuItem(
+                value: 'all',
+                child: Text(context.l10n.syncCenterTopicAll),
+              ),
+              DropdownMenuItem(
+                value: 'cognitive',
+                child: Text(context.l10n.syncCenterTopicCognitive),
+              ),
+              DropdownMenuItem(
+                value: 'knowledge',
+                child: Text(context.l10n.syncCenterTopicKnowledge),
+              ),
+              DropdownMenuItem(
+                value: 'crdt',
+                child: Text(context.l10n.syncCenterTopicCollab),
+              ),
+              DropdownMenuItem(
+                value: 'analytics',
+                child: Text(context.l10n.syncCenterTopicAnalytics),
+              ),
+              DropdownMenuItem(
+                value: 'legacy',
+                child: Text(context.l10n.syncCenterTopicLegacy),
+              ),
             ],
           ),
         ],
@@ -284,7 +316,7 @@ class _ItemsList extends ConsumerWidget {
     return itemsAsync.when(
       data: (items) {
         if (items.isEmpty) {
-          return const Center(child: Text('暂无记录'));
+          return Center(child: Text(context.l10n.syncCenterNoRecords));
         }
         return ListView.separated(
           itemCount: items.length,
@@ -297,7 +329,9 @@ class _ItemsList extends ConsumerWidget {
                 await service.retryItem(item.id);
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('已触发重试')),
+                    SnackBar(
+                      content: Text(context.l10n.syncCenterRetryTriggered),
+                    ),
                   );
                 }
               },
@@ -307,7 +341,9 @@ class _ItemsList extends ConsumerWidget {
                 await Clipboard.setData(ClipboardData(text: traceId));
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('已复制 TraceId')),
+                    SnackBar(
+                      content: Text(context.l10n.syncCenterTraceCopied),
+                    ),
                   );
                 }
               },
@@ -317,7 +353,9 @@ class _ItemsList extends ConsumerWidget {
                 await Clipboard.setData(ClipboardData(text: entityId));
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('已复制实体 ID')),
+                    SnackBar(
+                      content: Text(context.l10n.syncCenterEntityCopied),
+                    ),
                   );
                 }
               },
@@ -326,7 +364,9 @@ class _ItemsList extends ConsumerWidget {
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stackTrace) => Center(child: Text('加载失败: $error')),
+      error: (error, stackTrace) => Center(
+        child: Text(context.l10n.syncCenterLoadFailed(error.toString())),
+      ),
     );
   }
 }
@@ -348,7 +388,7 @@ class _OutboxItemCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final topic = item.topic ?? 'legacy';
     final opType = item.opType ?? item.type ?? 'unknown';
-    final statusLabel = item.status.name;
+    final statusLabel = item.status.localizedLabel(context.l10n);
     final errorLabel = _errorLabel(item.lastErrorCode);
     final nextAttemptAt = item.nextAttemptAt?.toLocal();
 
@@ -362,7 +402,7 @@ class _OutboxItemCard extends StatelessWidget {
               spacing: DS.spacing8,
               runSpacing: DS.spacing4,
               children: [
-                Chip(label: Text(topic)),
+                Chip(label: Text(_topicLabel(context, topic))),
                 Chip(label: Text(opType)),
                 Chip(label: Text(statusLabel)),
               ],
@@ -372,7 +412,10 @@ class _OutboxItemCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    '${item.entityType ?? 'entity'}: ${item.entityId ?? '-'}',
+                    context.l10n.syncCenterEntityValue(
+                      item.entityType ?? 'entity',
+                      item.entityId ?? '-',
+                    ),
                     style: const TextStyle(fontSize: 12),
                   ),
                 ),
@@ -386,17 +429,21 @@ class _OutboxItemCard extends StatelessWidget {
             ),
             const SizedBox(height: DS.spacing4),
             Text(
-              'attempt: ${item.attemptCount}',
+              context.l10n.syncCenterAttemptValue(item.attemptCount),
               style: const TextStyle(fontSize: 12),
             ),
             const SizedBox(height: DS.spacing4),
             Text(
-              'lastError: $errorLabel',
+              context.l10n.syncCenterLastErrorValue(errorLabel),
               style: const TextStyle(fontSize: 12),
             ),
             const SizedBox(height: DS.spacing4),
             Text(
-              'nextAttempt: ${nextAttemptAt ?? '-'}',
+              context.l10n.syncCenterNextAttemptValue(
+                nextAttemptAt != null
+                    ? Formatters.formatDateTime(nextAttemptAt)
+                    : '-',
+              ),
               style: const TextStyle(fontSize: 12),
             ),
             const SizedBox(height: DS.spacing4),
@@ -404,7 +451,7 @@ class _OutboxItemCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    'traceId: ${item.traceId ?? '-'}',
+                    context.l10n.syncCenterTraceIdValue(item.traceId ?? '-'),
                     style: const TextStyle(fontSize: 12),
                   ),
                 ),
@@ -421,7 +468,7 @@ class _OutboxItemCard extends StatelessWidget {
               children: [
                 SparkleButton(
                   onPressed: onRetry,
-                  label: 'Retry this',
+                  label: context.l10n.syncCenterRetryThis,
                 ),
               ],
             ),
@@ -429,6 +476,23 @@ class _OutboxItemCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _topicLabel(BuildContext context, String topic) {
+    switch (topic) {
+      case 'cognitive':
+        return context.l10n.syncCenterTopicCognitive;
+      case 'knowledge':
+        return context.l10n.syncCenterTopicKnowledge;
+      case 'crdt':
+        return context.l10n.syncCenterTopicCollab;
+      case 'analytics':
+        return context.l10n.syncCenterTopicAnalytics;
+      case 'legacy':
+        return context.l10n.syncCenterTopicLegacy;
+      default:
+        return topic;
+    }
   }
 
   String _errorLabel(String? code) {

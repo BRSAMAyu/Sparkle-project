@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/shop/presentation/providers/title_provider.dart';
 
 /// 用户称号徽章
@@ -64,7 +65,8 @@ class UserTitleBadge extends ConsumerWidget {
 /// 根据称号格式（前缀/后缀）显示名称和称号
 class UsernameWithTitle extends ConsumerWidget {
   const UsernameWithTitle({
-    required this.username, super.key,
+    required this.username,
+    super.key,
     this.userId,
     this.equippedTitleId,
     this.usernameStyle,
@@ -141,7 +143,8 @@ class UsernameWithTitle extends ConsumerWidget {
 /// 显示用户拥有的称号列表，允许装备
 class TitleSelector extends ConsumerWidget {
   const TitleSelector({
-    required this.titles, super.key,
+    required this.titles,
+    super.key,
     this.equippedTitleId,
     this.onEquip,
     this.onUnequip,
@@ -155,8 +158,8 @@ class TitleSelector extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (titles.isEmpty) {
-      return const Center(
-        child: Text('暂无称号'),
+      return Center(
+        child: Text(context.l10n.userTitlesEmpty),
       );
     }
 
@@ -179,10 +182,11 @@ class TitleSelector extends ConsumerWidget {
               onTap: isEquipped ? null : onUnequip,
               child: Center(
                 child: Text(
-                  '不装备称号',
+                  context.l10n.userTitleUnequippedOption,
                   style: TextStyle(
                     color: isEquipped ? DS.brandPrimary : DS.textSecondary,
-                    fontWeight: isEquipped ? FontWeight.bold : FontWeight.normal,
+                    fontWeight:
+                        isEquipped ? FontWeight.bold : FontWeight.normal,
                   ),
                 ),
               ),

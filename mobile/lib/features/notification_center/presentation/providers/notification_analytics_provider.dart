@@ -1,4 +1,5 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/features/notification_center/data/models/notification_analytics_model.dart'
     as model;
 import 'package:sparkle/features/notification_center/data/repositories/notification_center_repository.dart';
@@ -7,7 +8,6 @@ part 'notification_analytics_provider.g.dart';
 
 /// Analytics State
 class NotificationAnalyticsState {
-
   const NotificationAnalyticsState({
     this.analytics,
     this.period = '7d',
@@ -24,12 +24,13 @@ class NotificationAnalyticsState {
     String? period,
     bool? isLoading,
     String? error,
-  }) => NotificationAnalyticsState(
-      analytics: analytics ?? this.analytics,
-      period: period ?? this.period,
-      isLoading: isLoading ?? this.isLoading,
-      error: error,
-    );
+  }) =>
+      NotificationAnalyticsState(
+        analytics: analytics ?? this.analytics,
+        period: period ?? this.period,
+        isLoading: isLoading ?? this.isLoading,
+        error: error,
+      );
 }
 
 /// Notification Analytics Notifier
@@ -78,15 +79,29 @@ class NotificationAnalytics extends _$NotificationAnalytics {
 
 /// Period options
 class AnalyticsPeriod {
-
   const AnalyticsPeriod(this.value, this.label);
   final String value;
-  final String label;
+  final String? label;
 
   static const List<AnalyticsPeriod> all = [
-    AnalyticsPeriod('1d', '1天'),
-    AnalyticsPeriod('7d', '7天'),
-    AnalyticsPeriod('30d', '30天'),
-    AnalyticsPeriod('all', '全部'),
+    AnalyticsPeriod('1d', null),
+    AnalyticsPeriod('7d', null),
+    AnalyticsPeriod('30d', null),
+    AnalyticsPeriod('all', null),
   ];
+
+  String localizedLabel(AppLocalizations l10n) {
+    switch (value) {
+      case '1d':
+        return l10n.notificationAnalyticsPeriod1d;
+      case '7d':
+        return l10n.notificationAnalyticsPeriod7d;
+      case '30d':
+        return l10n.notificationAnalyticsPeriod30d;
+      case 'all':
+        return l10n.notificationAnalyticsPeriodAll;
+      default:
+        return label ?? value;
+    }
+  }
 }

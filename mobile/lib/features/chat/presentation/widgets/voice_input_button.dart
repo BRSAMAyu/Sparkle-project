@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sparkle/core/constants/api_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 import 'package:sparkle/features/chat/data/services/audio_recording_service.dart';
 
@@ -70,15 +71,15 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('需要麦克风权限'),
-        content: const Text('语音输入需要访问您的麦克风。请在设置中授予麦克风权限。'),
+        title: Text(context.l10n.voiceInputPermissionTitle),
+        content: Text(context.l10n.voiceInputPermissionContent),
         actions: [
           SparkleButton.ghost(
-            label: '取消',
+            label: context.l10n.cancel,
             onPressed: () => Navigator.pop(context),
           ),
           SparkleButton.primary(
-            label: '去设置',
+            label: context.l10n.voiceInputOpenSettings,
             onPressed: () {
               Navigator.pop(context);
               openAppSettings();
@@ -96,7 +97,7 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
     // 检查权限
     final hasPermission = await _checkPermissions();
     if (!hasPermission) {
-      widget.onError('没有麦克风权限');
+      widget.onError(context.l10n.voiceInputNoPermission);
       return;
     }
 
@@ -128,7 +129,7 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
           _isProcessing = false;
         });
         _animationController?.reverse();
-        widget.onError('未登录，请先登录');
+        widget.onError(context.l10n.voiceInputLoginRequired);
       }
       return;
     }
@@ -177,7 +178,7 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
           _isProcessing = false;
         });
         _animationController?.reverse();
-        widget.onError('启动录音失败: $e');
+        widget.onError(context.l10n.voiceInputStartFailed(e.toString()));
       }
     }
   }

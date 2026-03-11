@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/shop/presentation/providers/shop_provider.dart';
 import 'package:sparkle/features/shop/presentation/widgets/purchase_confirmation_dialog.dart';
 import 'package:sparkle/features/shop/presentation/widgets/shop_item_card.dart';
@@ -38,16 +39,16 @@ class _ShopScreenState extends ConsumerState<ShopScreen>
     return SparklePageScaffold(
       role: SparklePageRole.content,
       appBar: AppBar(
-        title: const Text('光子商城'),
+        title: Text(context.l10n.shopTitle),
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
-          tabs: const [
-            Tab(text: '全部'),
-            Tab(text: '皮肤'),
-            Tab(text: '称号'),
-            Tab(text: '消耗品'),
-            Tab(text: '加成'),
+          tabs: [
+            Tab(text: context.l10n.shopCategoryAll),
+            Tab(text: context.l10n.shopCategorySkin),
+            Tab(text: context.l10n.shopCategoryTitle),
+            Tab(text: context.l10n.shopCategoryConsumable),
+            Tab(text: context.l10n.shopCategoryBoost),
           ],
         ),
       ),
@@ -93,7 +94,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen>
             ),
             const SizedBox(height: DS.spacing16),
             Text(
-              '暂无物品',
+              context.l10n.shopEmpty,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     color: DS.textSecondary,
                   ),
@@ -132,18 +133,26 @@ class _ShopScreenState extends ConsumerState<ShopScreen>
   void _showPurchaseDialog(ShopItem item) {
     showDialog<void>(
       context: context,
-      builder: (context) => PurchaseConfirmationDialog(
+      builder: (dialogContext) => PurchaseConfirmationDialog(
         item: item,
         onConfirm: () async {
           final success =
               await ref.read(shopItemsProvider.notifier).purchaseItem(item.id);
 
-          if (success && mounted) {
-            Navigator.of(context).pop();
-            AppFeedback.success(context, '成功购买 ${item.name}');
-          } else if (mounted) {
+          if (!mounted) return;
+
+          if (success) {
+            Navigator.of(dialogContext).pop();
+            AppFeedback.success(
+              context,
+              context.l10n.shopPurchaseSuccess(item.name),
+            );
+          } else {
             AppFeedback.error(
-                context, ref.read(shopItemsProvider).error ?? '购买失败');
+              context,
+              ref.read(shopItemsProvider).error ??
+                  context.l10n.shopPurchaseFailed,
+            );
           }
         },
       ),

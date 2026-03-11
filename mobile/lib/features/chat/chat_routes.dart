@@ -1,6 +1,7 @@
 import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/features/chat/presentation/screens/group_chat_screen.dart';
 import 'package:sparkle/features/chat/presentation/screens/private_chat_screen.dart';
@@ -83,8 +84,12 @@ class ChatRoutes {
           path: legacyGroupChat,
           redirect: (context, state) {
             final id = state.pathParameters['id'];
-            final params = _mergeQueryWithDefaultName(state, '群聊');
-            return Uri(path: '/chat/group/$id', queryParameters: params).toString();
+            final params = _mergeQueryWithDefaultName(
+              state,
+              I18nService.instance.l10n.chatDefaultGroupName,
+            );
+            return Uri(path: '/chat/group/$id', queryParameters: params)
+                .toString();
           },
         ),
         // /community/chat/private/:id -> /chat/private/:id
@@ -92,8 +97,12 @@ class ChatRoutes {
           path: legacyPrivateChat,
           redirect: (context, state) {
             final id = state.pathParameters['id'];
-            final params = _mergeQueryWithDefaultName(state, '好友');
-            return Uri(path: '/chat/private/$id', queryParameters: params).toString();
+            final params = _mergeQueryWithDefaultName(
+              state,
+              I18nService.instance.l10n.chatDefaultFriendName,
+            );
+            return Uri(path: '/chat/private/$id', queryParameters: params)
+                .toString();
           },
         ),
         // /community/groups/:id/chat -> /chat/group/:id
@@ -101,8 +110,12 @@ class ChatRoutes {
           path: legacyGroupsChat,
           redirect: (context, state) {
             final id = state.pathParameters['id'];
-            final params = _mergeQueryWithDefaultName(state, '群聊');
-            return Uri(path: '/chat/group/$id', queryParameters: params).toString();
+            final params = _mergeQueryWithDefaultName(
+              state,
+              I18nService.instance.l10n.chatDefaultGroupName,
+            );
+            return Uri(path: '/chat/group/$id', queryParameters: params)
+                .toString();
           },
         ),
         // /community/friends/:id/chat -> /chat/private/:id
@@ -110,8 +123,12 @@ class ChatRoutes {
           path: legacyFriendsChat,
           redirect: (context, state) {
             final id = state.pathParameters['id'];
-            final params = _mergeQueryWithDefaultName(state, '好友');
-            return Uri(path: '/chat/private/$id', queryParameters: params).toString();
+            final params = _mergeQueryWithDefaultName(
+              state,
+              I18nService.instance.l10n.chatDefaultFriendName,
+            );
+            return Uri(path: '/chat/private/$id', queryParameters: params)
+                .toString();
           },
         ),
       ];

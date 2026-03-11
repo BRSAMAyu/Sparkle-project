@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 import 'package:sparkle/features/user/presentation/widgets/preference_controller_2d.dart';
@@ -52,12 +53,13 @@ class _LearningModeScreenState extends ConsumerState<LearningModeScreen> {
       await ref.read(authProvider.notifier).refreshUser();
 
       if (mounted) {
-        AppFeedback.success(context, '学习偏好保存成功！');
+        AppFeedback.success(context, context.l10n.learningModeSaved);
         context.pop(); // Go back to previous screen
       }
     } catch (e) {
       if (mounted) {
-        AppFeedback.error(context, '保存失败: $e');
+        AppFeedback.error(
+            context, context.l10n.learningModeSaveFailed(e.toString()));
       }
     } finally {
       if (mounted) {
@@ -78,7 +80,7 @@ class _LearningModeScreenState extends ConsumerState<LearningModeScreen> {
             icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
           ),
-          title: const Text('学习模式设置'),
+          title: Text(context.l10n.learningModeSettingsTitle),
         ),
         child: ContentConstraint(
           child: SingleChildScrollView(
@@ -89,7 +91,7 @@ class _LearningModeScreenState extends ConsumerState<LearningModeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '拖动火苗调整你的学习偏好',
+                    context.l10n.learningModeDragHint,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: DS.fontWeightMedium,
                         ),
@@ -111,14 +113,18 @@ class _LearningModeScreenState extends ConsumerState<LearningModeScreen> {
                   ),
                   const SizedBox(height: DS.spacing24),
                   Text(
-                    '深度偏好 (Y轴): ${(_currentDepthPreference * 100).toStringAsFixed(0)}%',
+                    context.l10n.learningModeDepthAxisValue(
+                      (_currentDepthPreference * 100).toStringAsFixed(0),
+                    ),
                     style: Theme.of(context)
                         .textTheme
                         .bodyMedium
                         ?.copyWith(color: DS.neutral600),
                   ),
                   Text(
-                    '好奇心偏好 (X轴): ${(_currentCuriosityPreference * 100).toStringAsFixed(0)}%',
+                    context.l10n.learningModeCuriosityAxisValue(
+                      (_currentCuriosityPreference * 100).toStringAsFixed(0),
+                    ),
                     style: Theme.of(context)
                         .textTheme
                         .bodyMedium
@@ -128,7 +134,7 @@ class _LearningModeScreenState extends ConsumerState<LearningModeScreen> {
                   Center(
                     child: SparkleButton(
                       onPressed: _isLoading ? null : _savePreferences,
-                      label: '保存偏好',
+                      label: context.l10n.learningModeSave,
                       loading: _isLoading,
                     ),
                   ),

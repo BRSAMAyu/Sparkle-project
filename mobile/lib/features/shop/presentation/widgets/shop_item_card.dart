@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/utils/theme_utils.dart';
 import 'package:sparkle/shared/entities/shop_model.dart';
 
@@ -23,7 +24,7 @@ class ShopItemCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Semantics(
         button: true,
-        label: '${item.name}，价格 ${item.pricePhotons} 光子',
+        label: context.l10n.shopItemSemantics(item.name, item.pricePhotons),
         child: GestureDetector(
           onTap: onTap,
           child: DecoratedBox(
@@ -99,7 +100,7 @@ class ShopItemCard extends StatelessWidget {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              '已拥有',
+                              context.l10n.shopOwned,
                               style: TextStyle(
                                 color: _badgeTextColor(DS.success),
                                 fontSize: 10,
@@ -151,7 +152,8 @@ class ShopItemCard extends StatelessWidget {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              '限量 ${item.stockQuantity}',
+                              context.l10n
+                                  .shopLimitedStock(item.stockQuantity!),
                               style: TextStyle(
                                 color: _badgeTextColor(
                                   item.stockQuantity! > 0
