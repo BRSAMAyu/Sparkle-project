@@ -15,6 +15,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/utils/formatters.dart';
 
 /// 申诉状态枚举
 enum AppealStatus {
@@ -132,15 +134,6 @@ class _ReviewAppealCardState extends State<ReviewAppealCard>
 
   final List<String> _selectedIssues = [];
 
-  static const _issueOptions = [
-    '审查标准不合理',
-    '评分计算有误',
-    '忽略了重要上下文',
-    '问题描述不准确',
-    '建议不可行',
-    '其他问题',
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -193,35 +186,37 @@ class _ReviewAppealCardState extends State<ReviewAppealCard>
     }
   }
 
-  String _getStatusTitle() {
+  String _getStatusTitle(BuildContext context) {
     final status = widget.appealData?.status ?? AppealStatus.pending;
     switch (status) {
       case AppealStatus.pending:
-        return '申诉待处理';
+        return context.l10n.reviewAppealPendingTitle;
       case AppealStatus.inReview:
-        return '二次审查中';
+        return context.l10n.reviewAppealInReviewTitle;
       case AppealStatus.resolved:
-        return '申诉已通过';
+        return context.l10n.reviewAppealResolvedTitle;
       case AppealStatus.rejected:
-        return '申诉已拒绝';
+        return context.l10n.reviewAppealRejectedTitle;
       case AppealStatus.escalated:
-        return '已升级人工处理';
+        return context.l10n.reviewAppealEscalatedTitle;
     }
   }
 
-  String _getStatusDescription() {
+  String _getStatusDescription(BuildContext context) {
     final status = widget.appealData?.status ?? AppealStatus.pending;
     switch (status) {
       case AppealStatus.pending:
-        return '您的申诉已提交，正在等待处理...';
+        return context.l10n.reviewAppealPendingDesc;
       case AppealStatus.inReview:
-        return '正在使用不同模型进行二次审查...';
+        return context.l10n.reviewAppealInReviewDesc;
       case AppealStatus.resolved:
-        return widget.appealData?.resolution ?? '申诉已通过，原审查结果已更新';
+        return widget.appealData?.resolution ??
+            context.l10n.reviewAppealResolvedDesc;
       case AppealStatus.rejected:
-        return widget.appealData?.resolution ?? '申诉被拒绝，维持原审查结果';
+        return widget.appealData?.resolution ??
+            context.l10n.reviewAppealRejectedDesc;
       case AppealStatus.escalated:
-        return '需要人工审核，请耐心等待';
+        return context.l10n.reviewAppealEscalatedDesc;
     }
   }
 
@@ -297,7 +292,7 @@ class _ReviewAppealCardState extends State<ReviewAppealCard>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              _getStatusTitle(),
+                              _getStatusTitle(context),
                               style: Theme.of(context)
                                   .textTheme
                                   .titleSmall
@@ -307,7 +302,9 @@ class _ReviewAppealCardState extends State<ReviewAppealCard>
                                   ),
                             ),
                             Text(
-                              '申诉 #${widget.appealData!.appealId.substring(0, 8)}',
+                              context.l10n.reviewAppealId(
+                                widget.appealData!.appealId.substring(0, 8),
+                              ),
                               style: Theme.of(context)
                                   .textTheme
                                   .bodySmall
@@ -326,7 +323,7 @@ class _ReviewAppealCardState extends State<ReviewAppealCard>
 
                   // Description
                   Text(
-                    _getStatusDescription(),
+                    _getStatusDescription(context),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: DS.neutral700,
                         ),
@@ -366,7 +363,7 @@ class _ReviewAppealCardState extends State<ReviewAppealCard>
           _buildTimelineItem(
             context,
             icon: Icons.send_rounded,
-            title: '提交申诉',
+            title: context.l10n.reviewAppealTimelineSubmitted,
             subtitle: _formatTime(data.submittedAt),
             isFirst: true,
           ),
@@ -374,8 +371,10 @@ class _ReviewAppealCardState extends State<ReviewAppealCard>
             _buildTimelineItem(
               context,
               icon: Icons.rate_review_rounded,
-              title: '二次审查完成',
-              subtitle: '评分: ${(data.secondaryScore! * 100).toInt()}%',
+              title: context.l10n.reviewAppealTimelineReviewed,
+              subtitle: context.l10n.reviewAppealScore(
+                (data.secondaryScore! * 100).toInt(),
+              ),
             ),
           if (data.resolvedAt != null)
             _buildTimelineItem(
@@ -383,7 +382,9 @@ class _ReviewAppealCardState extends State<ReviewAppealCard>
               icon: data.isApproved
                   ? Icons.check_circle_rounded
                   : Icons.cancel_rounded,
-              title: data.isApproved ? '申诉通过' : '申诉拒绝',
+              title: data.isApproved
+                  ? context.l10n.reviewAppealTimelineApproved
+                  : context.l10n.reviewAppealTimelineRejected,
               subtitle: _formatTime(data.resolvedAt!),
               isLast: true,
               color: data.isApproved ? DS.success : DS.error,
@@ -473,7 +474,7 @@ class _ReviewAppealCardState extends State<ReviewAppealCard>
           ),
           const SizedBox(width: DS.spacing8),
           Text(
-            '二次审查评分: ${(score * 100).toInt()}%',
+            context.l10n.reviewAppealSecondaryScore((score * 100).toInt()),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: DS.neutral800,
                   fontWeight: DS.fontWeightMedium,
@@ -533,7 +534,7 @@ class _ReviewAppealCardState extends State<ReviewAppealCard>
                           const SizedBox(width: DS.spacing12),
                           Expanded(
                             child: Text(
-                              '报告审查问题',
+                              context.l10n.contentReviewAppealDialogTitle,
                               style: Theme.of(context)
                                   .textTheme
                                   .titleSmall
@@ -559,7 +560,7 @@ class _ReviewAppealCardState extends State<ReviewAppealCard>
 
                       // Issue chips
                       Text(
-                        '选择问题类型（可多选）',
+                        context.l10n.contentReviewAppealSelectType,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: DS.neutral600,
                               fontWeight: DS.fontWeightMedium,
@@ -569,11 +570,11 @@ class _ReviewAppealCardState extends State<ReviewAppealCard>
                       Wrap(
                         spacing: DS.spacing8,
                         runSpacing: DS.spacing8,
-                        children: _issueOptions.map((issue) {
+                        children: _issueOptions(context).map((issue) {
                           final isSelected = _selectedIssues.contains(issue);
                           return GestureDetector(
                             onTap: () {
-                              HapticFeedback.selectionClick();
+                              unawaited(HapticFeedback.selectionClick());
                               setState(() {
                                 if (isSelected) {
                                   _selectedIssues.remove(issue);
@@ -621,7 +622,7 @@ class _ReviewAppealCardState extends State<ReviewAppealCard>
 
                       // Reason input
                       Text(
-                        '详细说明',
+                        context.l10n.contentReviewAppealDetail,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: DS.neutral600,
                               fontWeight: DS.fontWeightMedium,
@@ -632,7 +633,7 @@ class _ReviewAppealCardState extends State<ReviewAppealCard>
                         controller: _reasonController,
                         maxLines: 3,
                         decoration: InputDecoration(
-                          hintText: '请描述审查结果存在的问题...',
+                          hintText: context.l10n.contentReviewAppealDetailHint,
                           hintStyle: Theme.of(context)
                               .textTheme
                               .bodySmall
@@ -647,10 +648,11 @@ class _ReviewAppealCardState extends State<ReviewAppealCard>
                         ),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
-                            return '请填写申诉理由';
+                            return context
+                                .l10n.contentReviewAppealDetailRequired;
                           }
                           if (value.trim().length < 10) {
-                            return '请提供更详细的说明（至少10个字符）';
+                            return context.l10n.reviewAppealMinReason;
                           }
                           return null;
                         },
@@ -663,13 +665,15 @@ class _ReviewAppealCardState extends State<ReviewAppealCard>
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           CustomButton.text(
-                            text: '取消',
+                            text: context.l10n.contentReviewCancel,
                             onPressed: widget.onCancelAppeal,
                             size: CustomButtonSize.small,
                           ),
                           const SizedBox(width: DS.spacing8),
                           CustomButton.primary(
-                            text: widget.isSubmitting ? '提交中...' : '提交申诉',
+                            text: widget.isSubmitting
+                                ? context.l10n.commonSubmitting
+                                : context.l10n.contentReviewAppealSubmit,
                             icon: Icons.send_rounded,
                             onPressed:
                                 widget.isSubmitting ? null : _handleSubmit,
@@ -693,7 +697,7 @@ class _ReviewAppealCardState extends State<ReviewAppealCard>
 
     if (_selectedIssues.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请至少选择一个问题类型')),
+        SnackBar(content: Text(context.l10n.contentReviewAppealTypeRequired)),
       );
       return;
     }
@@ -714,23 +718,18 @@ class _ReviewAppealCardState extends State<ReviewAppealCard>
 
   String _formatTime(String isoTime) {
     try {
-      final dt = DateTime.parse(isoTime);
-      final now = DateTime.now();
-      final diff = now.difference(dt);
-
-      if (diff.inMinutes < 1) {
-        return '刚刚';
-      } else if (diff.inHours < 1) {
-        return '${diff.inMinutes}分钟前';
-      } else if (diff.inDays < 1) {
-        return '${diff.inHours}小时前';
-      } else if (diff.inDays < 7) {
-        return '${diff.inDays}天前';
-      } else {
-        return '${dt.month}/${dt.day}';
-      }
+      return Formatters.formatRelativeTime(DateTime.parse(isoTime));
     } catch (_) {
       return isoTime;
     }
   }
+
+  List<String> _issueOptions(BuildContext context) => [
+        context.l10n.contentReviewAppealUnreasonableStandard,
+        context.l10n.contentReviewAppealScoreError,
+        context.l10n.contentReviewAppealContextIgnored,
+        context.l10n.contentReviewAppealDescriptionInaccurate,
+        context.l10n.contentReviewAppealSuggestionNotFeasible,
+        context.l10n.reviewAppealOtherIssue,
+      ];
 }

@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 class PersonaOnboardingScreen extends ConsumerStatefulWidget {
   const PersonaOnboardingScreen({super.key});
@@ -36,11 +38,12 @@ class _PersonaOnboardingScreenState
 
   @override
   Widget build(BuildContext context) {
-    final steps = _buildSteps();
+    final l10n = context.l10n;
+    final steps = _buildSteps(l10n);
     return SparklePageScaffold(
       role: SparklePageRole.settings,
       appBar: AppBar(
-        title: const Text('画像引导'),
+        title: Text(l10n.personaGuide),
       ),
       child: ContentConstraint(
         child: GraphiteCardSurface(
@@ -59,14 +62,14 @@ class _PersonaOnboardingScreenState
               return Row(
                 children: [
                   SparkleButton(
-                    label: isLast ? '完成' : '下一步',
+                    label: isLast ? l10n.personaComplete : l10n.personaNextStep,
                     onPressed: details.onStepContinue,
                     loading: _submitting,
                   ),
                   const SizedBox(width: DS.spacing12),
                   if (_currentStep > 0)
                     SparkleButton(
-                      label: '上一步',
+                      label: l10n.personaPreviousStep,
                       variant: ButtonVariant.ghost,
                       onPressed: details.onStepCancel,
                     ),
@@ -80,25 +83,25 @@ class _PersonaOnboardingScreenState
     );
   }
 
-  List<Step> _buildSteps() => [
+  List<Step> _buildSteps(AppLocalizations l10n) => [
         Step(
-          title: const Text('学习目标'),
+          title: Text(l10n.personaLearningGoal),
           content: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Wrap(
                 spacing: DS.spacing8,
                 children: [
-                  _goalTypeChip('exam', '考试'),
-                  _goalTypeChip('skill', '技能'),
-                  _goalTypeChip('interest', '兴趣'),
+                  _goalTypeChip('exam', l10n.personaGoalTypeExam),
+                  _goalTypeChip('skill', l10n.personaGoalTypeSkill),
+                  _goalTypeChip('interest', l10n.personaGoalTypeInterest),
                 ],
               ),
               const SizedBox(height: DS.spacing12),
               TextField(
                 controller: _goalController,
-                decoration: const InputDecoration(
-                  hintText: '例如：备考期末 / 学会Flutter',
+                decoration: InputDecoration(
+                  hintText: l10n.personaGoalHint,
                 ),
               ),
             ],
@@ -106,24 +109,24 @@ class _PersonaOnboardingScreenState
           isActive: _currentStep >= 0,
         ),
         Step(
-          title: const Text('学习风格'),
+          title: Text(l10n.personaLearningStyle),
           content: Wrap(
             spacing: DS.spacing8,
             children: [
-              _styleChip('balanced', '平衡'),
-              _styleChip('visual', '视觉'),
-              _styleChip('practice', '实践'),
-              _styleChip('logic', '逻辑'),
+              _styleChip('balanced', l10n.personaStyleBalanced),
+              _styleChip('visual', l10n.personaStyleVisual),
+              _styleChip('practice', l10n.personaStylePractice),
+              _styleChip('logic', l10n.personaStyleLogic),
             ],
           ),
           isActive: _currentStep >= 1,
         ),
         Step(
-          title: const Text('每日学习时长'),
+          title: Text(l10n.personaDailyStudyTime),
           content: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('$_studyMinutes 分钟'),
+              Text(l10n.personaMinutes(_studyMinutes.round())),
               Slider(
                 value: _studyMinutes,
                 min: 10,
@@ -136,30 +139,30 @@ class _PersonaOnboardingScreenState
           isActive: _currentStep >= 2,
         ),
         Step(
-          title: const Text('知识水平'),
+          title: Text(l10n.personaKnowledgeLevel),
           content: Wrap(
             spacing: DS.spacing8,
             children: [
-              _levelChip('beginner', '入门'),
-              _levelChip('intermediate', '进阶'),
-              _levelChip('advanced', '高级'),
+              _levelChip('beginner', l10n.personaLevelBeginner),
+              _levelChip('intermediate', l10n.personaLevelIntermediate),
+              _levelChip('advanced', l10n.personaLevelAdvanced),
             ],
           ),
           isActive: _currentStep >= 3,
         ),
         Step(
-          title: const Text('回答偏好'),
+          title: Text(l10n.personaResponsePreference),
           content: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('回答详细程度'),
+              Text(l10n.personaResponseDepth),
               Slider(
                 value: _depthPreference,
                 divisions: 10,
                 onChanged: (v) => setState(() => _depthPreference = v),
               ),
               const SizedBox(height: DS.spacing12),
-              const Text('好奇心扩展程度'),
+              Text(l10n.personaCuriosityExtension),
               Slider(
                 value: _curiosityPreference,
                 divisions: 10,

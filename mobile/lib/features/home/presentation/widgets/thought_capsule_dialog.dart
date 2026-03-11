@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/cognitive_provider.dart';
 
 class ThoughtCapsuleDialog extends ConsumerStatefulWidget {
@@ -30,13 +31,16 @@ class _ThoughtCapsuleDialogState extends ConsumerState<ThoughtCapsuleDialog> {
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('闪念已捕捉 ✨')),
+          SnackBar(content: Text(context.l10n.thoughtCapsuleCaptured)),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('捕捉失败: $e'), backgroundColor: DS.error),
+          SnackBar(
+            content: Text(context.l10n.thoughtCapsuleCaptureFailed(e)),
+            backgroundColor: DS.error,
+          ),
         );
         setState(() => _isSubmitting = false);
       }
@@ -44,74 +48,81 @@ class _ThoughtCapsuleDialogState extends ConsumerState<ThoughtCapsuleDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => Dialog(
-        shape: const RoundedRectangleBorder(borderRadius: DS.borderRadius20),
-        child: Padding(
-          padding: const EdgeInsets.all(DS.spacing20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(DS.sm),
-                    decoration: BoxDecoration(
-                      color: DS.primaryBase.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(Icons.psychology, color: DS.primaryBase),
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
+    return Dialog(
+      shape: const RoundedRectangleBorder(borderRadius: DS.borderRadius20),
+      child: Padding(
+        padding: const EdgeInsets.all(DS.spacing20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(DS.sm),
+                  decoration: BoxDecoration(
+                    color: DS.primaryBase.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
                   ),
-                  const SizedBox(width: DS.spacing12),
-                  Text(
-                    '闪念胶囊',
+                  child: Icon(Icons.psychology, color: DS.primaryBase),
+                ),
+                const SizedBox(width: DS.spacing12),
+                Expanded(
+                  child: Text(
+                    l10n.thoughtCapsuleTitle,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: DS.fontWeightBold,
                         ),
                   ),
-                ],
-              ),
-              const SizedBox(height: DS.spacing16),
-              Text(
-                '此刻是什么拦住了你？或者有什么想吐槽的？',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: DS.neutral600,
-                    ),
-              ),
-              const SizedBox(height: DS.spacing16),
-              TextField(
-                controller: _controller,
-                maxLines: 4,
-                decoration: InputDecoration(
-                  hintText: '输入你的想法...',
-                  border: const OutlineInputBorder(
-                    borderRadius: DS.borderRadius12,
+                ),
+              ],
+            ),
+            const SizedBox(height: DS.spacing16),
+            Text(
+              l10n.thoughtCapsulePrompt,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: DS.neutral600,
                   ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: DS.borderRadius12,
-                    borderSide: BorderSide(color: DS.primaryBase, width: 2),
-                  ),
+            ),
+            const SizedBox(height: DS.spacing16),
+            TextField(
+              controller: _controller,
+              maxLines: 4,
+              decoration: InputDecoration(
+                hintText: l10n.thoughtCapsuleHint,
+                border: const OutlineInputBorder(
+                  borderRadius: DS.borderRadius12,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: DS.borderRadius12,
+                  borderSide: BorderSide(color: DS.primaryBase, width: 2),
                 ),
               ),
-              const SizedBox(height: DS.spacing24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  SparkleButton.ghost(
-                      label: '取消',
-                      onPressed: () => Navigator.of(context).pop(),),
-                  const SizedBox(width: DS.spacing12),
-                  CustomButton.primary(
-                    text: '发送',
-                    icon: Icons.send_rounded,
-                    onPressed: _isSubmitting ? () {} : _submit,
-                    isLoading: _isSubmitting,
-                    size: CustomButtonSize.small,
-                  ),
-                ],
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(height: DS.spacing24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                SparkleButton.ghost(
+                  label: l10n.cancel,
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+                const SizedBox(width: DS.spacing12),
+                CustomButton.primary(
+                  text: l10n.send,
+                  icon: Icons.send_rounded,
+                  onPressed: _isSubmitting ? () {} : _submit,
+                  isLoading: _isSubmitting,
+                  size: CustomButtonSize.small,
+                ),
+              ],
+            ),
+          ],
         ),
-      );
+      ),
+    );
+  }
 }

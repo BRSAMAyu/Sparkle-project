@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
 
 class SystemUpdatesScreen extends ConsumerStatefulWidget {
@@ -12,9 +14,10 @@ class SystemUpdatesScreen extends ConsumerStatefulWidget {
 }
 
 class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
+  static const _allFilter = '__all__';
   final TextEditingController _searchController = TextEditingController();
-  String _categoryFilter = '全部';
-  String _priorityFilter = '全部';
+  String _categoryFilter = _allFilter;
+  String _priorityFilter = _allFilter;
 
   @override
   void dispose() {
@@ -28,12 +31,14 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
     return SparklePageScaffold(
       role: SparklePageRole.settings,
       appBar: AppBar(
-        title: const Text('系统活动'),
+        title: Text(context.l10n.systemUpdates),
       ),
       child: updatesAsync.when(
         data: (items) => ContentConstraint(child: _buildList(context, items)),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('加载失败：$err')),
+        error: (err, stack) => Center(
+          child: Text(context.l10n.systemUpdatesLoadFailed('$err')),
+        ),
       ),
     );
   }
@@ -59,10 +64,10 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildSearchField(),
+                _buildSearchField(context),
                 const SizedBox(height: DS.spacing12),
                 _buildFilterRow(
-                  title: '类型',
+                  title: context.l10n.systemUpdatesTypeFilter,
                   options: categories,
                   selected: _categoryFilter,
                   onSelected: (value) =>
@@ -70,7 +75,7 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
                 ),
                 const SizedBox(height: DS.spacing12),
                 _buildFilterRow(
-                  title: '优先级',
+                  title: context.l10n.systemUpdatesPriorityFilter,
                   options: priorities,
                   selected: _priorityFilter,
                   onSelected: (value) =>
@@ -81,7 +86,7 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
           ),
           const SizedBox(height: DS.spacing16),
           Text(
-            '共 ${filtered.length} 条',
+            context.l10n.systemUpdatesCount(filtered.length),
             style: TextStyle(color: DS.neutral600, fontSize: DS.fontSizeSm),
           ),
           const SizedBox(height: DS.spacing12),
@@ -90,7 +95,7 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
               child: Padding(
                 padding: const EdgeInsets.only(top: DS.spacing32),
                 child: Text(
-                  '暂无系统更新',
+                  context.l10n.systemUpdatesNoItems,
                   style: TextStyle(color: DS.neutral500),
                 ),
               ),
@@ -107,12 +112,12 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
     );
   }
 
-  Widget _buildSearchField() => TextField(
+  Widget _buildSearchField(BuildContext context) => TextField(
         controller: _searchController,
         onChanged: (_) => setState(() {}),
         decoration: InputDecoration(
           prefixIcon: const Icon(Icons.search_rounded),
-          hintText: '搜索标题或描述',
+          hintText: context.l10n.systemUpdatesSearchHint,
           filled: true,
           fillColor: DS.surfaceRoleColor(SparkleSurfaceRole.panel),
           border: OutlineInputBorder(
@@ -124,7 +129,9 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
             borderSide: BorderSide(color: DS.neutral200),
           ),
           contentPadding: const EdgeInsets.symmetric(
-              horizontal: DS.spacing12, vertical: 12),
+            horizontal: DS.spacing12,
+            vertical: 12,
+          ),
         ),
       );
 
@@ -151,7 +158,9 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
             children: options
                 .map(
                   (item) => ChoiceChip(
-                    label: Text(item),
+                    label: Text(
+                      item == _allFilter ? context.l10n.systemUpdatesAll : item,
+                    ),
                     selected: selected == item,
                     selectedColor: DS.primaryBase.withValues(alpha: 0.15),
                     labelStyle: TextStyle(
@@ -166,14 +175,14 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
       );
 
   Widget _buildUpdateCard(Map<String, dynamic> item) {
-    final title = item['title']?.toString() ?? '系统更新';
+    final title = item['title']?.toString() ?? context.l10n.systemUpdates;
     final description = item['description']?.toString() ?? '';
     final category = item['category']?.toString() ?? '';
     final priority = item['priority']?.toString() ?? '';
     final createdAt = _formatTime(item['created_at']);
-    final metadata =
-        (item['metadata'] as Map<dynamic, dynamic>? ?? const <dynamic, dynamic>{})
-            .map<String, dynamic>((key, value) => MapEntry('$key', value));
+    final metadata = (item['metadata'] as Map<dynamic, dynamic>? ??
+            const <dynamic, dynamic>{})
+        .map<String, dynamic>((key, value) => MapEntry('$key', value));
     final evolutionKind = metadata['evolution_kind']?.toString() ?? '';
 
     final priorityStyle = _priorityStyle(priority);
@@ -251,7 +260,9 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
         if (confidence != null) ...[
           const SizedBox(height: DS.spacing8),
           _pill(
-            '置信度 ${((confidence as num).toDouble() * 100).toInt()}%',
+            context.l10n.systemUpdatesConfidence(
+              ((confidence as num).toDouble() * 100).toInt(),
+            ),
             DS.info.withValues(alpha: 0.12),
             DS.info,
           ),
@@ -264,7 +275,8 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
           .where((e) => e.isNotEmpty)
           .toList();
       final oneKeyAdjustment = metadata['one_key_adjustment']?.toString() ?? '';
-      final comparisonHighlight = metadata['comparison_highlight']?.toString() ?? '';
+      final comparisonHighlight =
+          metadata['comparison_highlight']?.toString() ?? '';
       final periodRange = metadata['period_range']?.toString() ?? '';
       final evidenceSummary = metadata['evidence_summary']?.toString() ?? '';
       return [
@@ -280,7 +292,7 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
         if (oneKeyAdjustment.isNotEmpty) ...[
           const SizedBox(height: DS.spacing8),
           Text(
-            '下周继续适配：$oneKeyAdjustment',
+            context.l10n.systemUpdatesNextWeekAdjust(oneKeyAdjustment),
             style: TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeSm),
           ),
         ],
@@ -311,10 +323,9 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
       ];
     }
     if (evolutionKind == 'progress_comparison') {
-      final comparison =
-          (metadata['comparison'] as Map<dynamic, dynamic>? ??
-                  const <dynamic, dynamic>{})
-              .map<String, dynamic>((key, value) => MapEntry('$key', value));
+      final comparison = (metadata['comparison'] as Map<dynamic, dynamic>? ??
+              const <dynamic, dynamic>{})
+          .map<String, dynamic>((key, value) => MapEntry('$key', value));
       final evidenceSummary = metadata['evidence_summary']?.toString() ?? '';
       if (comparison.isEmpty) {
         return const <Widget>[];
@@ -330,12 +341,12 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
         ),
         const SizedBox(height: DS.spacing8),
         Text(
-          '${comparison['before_label'] ?? '之前'}：${comparison['before_value'] ?? '-'}',
+          '${comparison['before_label'] ?? context.l10n.systemUpdatesBeforeLabel}：${comparison['before_value'] ?? '-'}',
           style: TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeSm),
         ),
         const SizedBox(height: DS.spacing4),
         Text(
-          '${comparison['after_label'] ?? '现在'}：${comparison['after_value'] ?? '-'}',
+          '${comparison['after_label'] ?? context.l10n.systemUpdatesAfterLabel}：${comparison['after_value'] ?? '-'}',
           style: TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeSm),
         ),
         if ((comparison['why_it_matters']?.toString() ?? '').isNotEmpty) ...[
@@ -385,7 +396,9 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
         if (alignmentScore != null) ...[
           const SizedBox(height: DS.spacing4),
           Text(
-            '画像对齐度 ${(alignmentScore * 100).toStringAsFixed(0)}%',
+            context.l10n.systemUpdatesAlignmentScore(
+              (alignmentScore * 100).toStringAsFixed(0),
+            ),
             style: TextStyle(
               color: DS.info,
               fontSize: DS.fontSizeXs,
@@ -421,7 +434,7 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
   }
 
   List<String> _collectOptions(List<Map<String, dynamic>> items, String key) {
-    final values = <String>{'全部'};
+    final values = <String>{_allFilter};
     for (final item in items) {
       final value = item[key]?.toString();
       if (value != null && value.isNotEmpty) {
@@ -429,9 +442,10 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
       }
     }
     final sorted = values.toList()..sort();
-    if (sorted.first != '全部' && sorted.contains('全部')) {
-      sorted.remove('全部');
-      sorted.insert(0, '全部');
+    if (sorted.first != _allFilter && sorted.contains(_allFilter)) {
+      sorted
+        ..remove(_allFilter)
+        ..insert(0, _allFilter);
     }
     return sorted;
   }
@@ -444,10 +458,10 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
       final category = item['category']?.toString() ?? '';
       final priority = item['priority']?.toString() ?? '';
 
-      if (_categoryFilter != '全部' && category != _categoryFilter) {
+      if (_categoryFilter != _allFilter && category != _categoryFilter) {
         return false;
       }
-      if (_priorityFilter != '全部' && priority != _priorityFilter) {
+      if (_priorityFilter != _allFilter && priority != _priorityFilter) {
         return false;
       }
       if (keyword.isNotEmpty &&
@@ -503,10 +517,7 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
   String _formatTime(dynamic raw) {
     if (raw is int && raw > 0) {
       final dt = DateTime.fromMillisecondsSinceEpoch(raw * 1000);
-      return '${dt.month.toString().padLeft(2, '0')}-'
-          '${dt.day.toString().padLeft(2, '0')} '
-          '${dt.hour.toString().padLeft(2, '0')}:'
-          '${dt.minute.toString().padLeft(2, '0')}';
+      return Formatters.formatDateTime(dt);
     }
     return '';
   }

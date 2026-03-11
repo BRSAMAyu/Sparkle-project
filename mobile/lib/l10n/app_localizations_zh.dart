@@ -2405,4 +2405,1078 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get syncCenterStatusWaitingAck => '等待 ACK';
+
+  @override
+  String get shareAchievement => '分享成就';
+
+  @override
+  String get sharePreparingCard => '正在准备分享卡片...';
+
+  @override
+  String get shareToSocialMedia => '分享到社交媒体';
+
+  @override
+  String get saveToGallery => '保存到相册';
+
+  @override
+  String get close => '关闭';
+
+  @override
+  String get shareCardGenerateFailed => '分享卡生成失败，请稍后重试';
+
+  @override
+  String shareCardPrepareFailed(Object error) {
+    return '分享卡准备失败: $error';
+  }
+
+  @override
+  String shareFailed(Object error) {
+    return '分享失败: $error';
+  }
+
+  @override
+  String saveFailed(Object error) {
+    return '保存失败: $error';
+  }
+
+  @override
+  String get savedToGallery => '已保存到相册';
+
+  @override
+  String get shareCardUrlEmpty => '分享卡地址为空';
+
+  @override
+  String shareCardDownloadFailed(Object statusCode) {
+    return '下载分享卡失败 ($statusCode)';
+  }
+
+  @override
+  String get noGalleryPermission => '没有相册写入权限';
+
+  @override
+  String get saveResultEmpty => '保存结果为空';
+
+  @override
+  String get gallerySaveFailed => '相册保存失败';
+
+  @override
+  String shareUnlockMessage(Object achievementName) {
+    return '我在 Sparkle 解锁了「$achievementName」';
+  }
+
+  @override
+  String get achievementMilestone => '学习里程碑';
+
+  @override
+  String achievementKnowledgePoints(Object count) {
+    return '$count 个知识点';
+  }
+
+  @override
+  String achievementMilestoneDesc(Object count) {
+    return '恭喜你已掌握 $count 个知识点\n知识之光照亮前行之路';
+  }
+
+  @override
+  String get achievementStreakRecord => '连续学习记录';
+
+  @override
+  String achievementStreakDays(Object days) {
+    return '$days 天';
+  }
+
+  @override
+  String achievementStreakDesc(Object days, Object username) {
+    return '$username 已连续学习 $days 天\n坚持的力量无可阻挡！';
+  }
+
+  @override
+  String get achievementMasteryTitle => '领域精通';
+
+  @override
+  String achievementMasteryPercent(Object percent) {
+    return '$percent% 掌握度';
+  }
+
+  @override
+  String achievementMasteryDesc(Object domain, Object username) {
+    return '$username 在 $domain 领域已达到精通水平\n继续保持！';
+  }
+
+  @override
+  String get achievementTaskComplete => '任务圆满完成';
+
+  @override
+  String achievementTaskCount(Object count) {
+    return '完成 $count 项任务';
+  }
+
+  @override
+  String achievementTaskDesc(Object username) {
+    return '$username 在本次冲刺中表现卓越\n效率之星实至名归！';
+  }
+
+  @override
+  String get personaGuide => '画像引导';
+
+  @override
+  String get personaMyProfile => '我的画像';
+
+  @override
+  String personaLoadFailed(Object error) {
+    return '加载失败：$error';
+  }
+
+  @override
+  String get personaL1Title => 'L1 用户声明';
+
+  @override
+  String get personaL2Title => 'L2 协作校准';
+
+  @override
+  String get personaL3Title => 'L3 系统推断';
+
+  @override
+  String get personaL3Hint => '以下内容来自系统分析，仅供参考';
+
+  @override
+  String get personaPreferences => '偏好';
+
+  @override
+  String get personaGoals => '目标';
+
+  @override
+  String get personaTags => '标签';
+
+  @override
+  String get personaCapabilities => '能力';
+
+  @override
+  String get personaPatterns => '行为模式';
+
+  @override
+  String get personaFragments => '认知碎片';
+
+  @override
+  String get personaNoData => '暂无数据';
+
+  @override
+  String get personaCompleted => '画像已完善，可随时重新填写';
+
+  @override
+  String get personaIncomplete => '完善画像，提升个性化体验';
+
+  @override
+  String get personaRefill => '再次填写';
+
+  @override
+  String get personaStart => '开始';
+
+  @override
+  String get personaLevelEditable => '可编辑';
+
+  @override
+  String get personaLevelWarn => '建议修正';
+
+  @override
+  String get personaLevelReadonly => '只读';
+
+  @override
+  String personaConfidence(Object value) {
+    return '置信度 $value';
+  }
+
+  @override
+  String get personaEdit => '编辑';
+
+  @override
+  String get personaRollback => '回滚';
+
+  @override
+  String get personaSuggestCorrection => '建议修正';
+
+  @override
+  String get personaCorrectionDialogTitle => '建议修正';
+
+  @override
+  String get personaCorrectionHint => '提交后系统会评估并逐步调整画像，可能影响推荐策略。';
+
+  @override
+  String get personaCorrectionValue => '你建议的内容';
+
+  @override
+  String get personaCorrectionReason => '原因（可选）';
+
+  @override
+  String get personaCorrectionSubmitted => '已提交修正建议';
+
+  @override
+  String get personaEditPreference => '编辑偏好';
+
+  @override
+  String get personaNewPreferenceValue => '新的偏好值';
+
+  @override
+  String get personaPleaseEnterValue => '请输入偏好值';
+
+  @override
+  String get personaRollbackTitle => '回滚偏好';
+
+  @override
+  String get personaRollbackConfirm => '将偏好回滚到上一个版本，可能影响推荐效果。';
+
+  @override
+  String get personaConfirmRollback => '确认回滚';
+
+  @override
+  String get personaEditGoal => '编辑目标';
+
+  @override
+  String get personaGoalContent => '目标内容';
+
+  @override
+  String get personaGoalStatus => '状态';
+
+  @override
+  String get personaStatusActive => '进行中';
+
+  @override
+  String get personaStatusCompleted => '已完成';
+
+  @override
+  String get personaStatusPaused => '暂停';
+
+  @override
+  String get personaPleaseEnterGoal => '请输入目标内容';
+
+  @override
+  String get personaLearningGoal => '学习目标';
+
+  @override
+  String get personaGoalTypeExam => '考试';
+
+  @override
+  String get personaGoalTypeSkill => '技能';
+
+  @override
+  String get personaGoalTypeInterest => '兴趣';
+
+  @override
+  String get personaGoalHint => '例如：备考期末 / 学会Flutter';
+
+  @override
+  String get personaLearningStyle => '学习风格';
+
+  @override
+  String get personaStyleBalanced => '平衡';
+
+  @override
+  String get personaStyleVisual => '视觉';
+
+  @override
+  String get personaStylePractice => '实践';
+
+  @override
+  String get personaStyleLogic => '逻辑';
+
+  @override
+  String get personaDailyStudyTime => '每日学习时长';
+
+  @override
+  String personaMinutes(Object minutes) {
+    return '$minutes 分钟';
+  }
+
+  @override
+  String get personaKnowledgeLevel => '知识水平';
+
+  @override
+  String get personaLevelBeginner => '入门';
+
+  @override
+  String get personaLevelIntermediate => '进阶';
+
+  @override
+  String get personaLevelAdvanced => '高级';
+
+  @override
+  String get personaResponsePreference => '回答偏好';
+
+  @override
+  String get personaResponseDepth => '回答详细程度';
+
+  @override
+  String get personaCuriosityExtension => '好奇心扩展程度';
+
+  @override
+  String get personaNextStep => '下一步';
+
+  @override
+  String get personaPreviousStep => '上一步';
+
+  @override
+  String get personaComplete => '完成';
+
+  @override
+  String get editProfile => '编辑资料';
+
+  @override
+  String get editProfileSave => '保存';
+
+  @override
+  String get editProfileChangeAvatar => '更换头像';
+
+  @override
+  String get editProfileChooseFromPresets => '从系统推荐中选择';
+
+  @override
+  String get editProfileTakePhoto => '拍照';
+
+  @override
+  String get editProfileChooseFromGallery => '从相册选择';
+
+  @override
+  String get editProfileAvatarUpdated => '头像更新成功';
+
+  @override
+  String editProfileUpdateFailed(Object error) {
+    return '更新失败: $error';
+  }
+
+  @override
+  String editProfileUploadFailed(Object error) {
+    return '上传失败: $error';
+  }
+
+  @override
+  String get editProfileNicknameLabel => '昵称';
+
+  @override
+  String get editProfileNicknameHint => '请输入昵称';
+
+  @override
+  String get editProfileNicknameEmpty => '昵称不能为空';
+
+  @override
+  String get editProfileEmailLabel => '邮箱';
+
+  @override
+  String get editProfileEmailHint => '请输入邮箱';
+
+  @override
+  String get editProfileEmailInvalid => '请输入有效的邮箱地址';
+
+  @override
+  String get editProfileUsernameLabel => '用户名';
+
+  @override
+  String get editProfileUsernameReadonly => '用户名不可修改';
+
+  @override
+  String get editProfileAccountSecurity => '账户安全';
+
+  @override
+  String get editProfileResetPassword => '重置密码';
+
+  @override
+  String get editProfileAccountInfo => '账户信息';
+
+  @override
+  String get editProfileFlameLevel => '火焰等级';
+
+  @override
+  String get editProfileFlameBrightness => '火焰亮度';
+
+  @override
+  String get editProfileAccountType => '账户类型';
+
+  @override
+  String get editProfileGuestAccount => '游客账户';
+
+  @override
+  String get editProfileFullAccount => '正式账户';
+
+  @override
+  String get editProfileProfileUpdated => '资料更新成功';
+
+  @override
+  String get editProfileNewAvatarPending => '新头像正在审核中...';
+
+  @override
+  String get passwordReset => '重置密码';
+
+  @override
+  String get passwordResetHint => '请确保您的新密码包含至少 8 个字符。';
+
+  @override
+  String get passwordResetCurrentLabel => '当前密码';
+
+  @override
+  String get passwordResetCurrentRequired => '请输入当前密码';
+
+  @override
+  String get passwordResetNewLabel => '新密码';
+
+  @override
+  String get passwordResetNewRequired => '请输入新密码';
+
+  @override
+  String get passwordResetNewMinLength => '密码长度至少为 8 位';
+
+  @override
+  String get passwordResetConfirmLabel => '确认新密码';
+
+  @override
+  String get passwordResetConfirmMismatch => '两次输入的密码不一致';
+
+  @override
+  String get passwordResetButton => '更新密码';
+
+  @override
+  String get passwordResetSuccess => '密码修改成功';
+
+  @override
+  String passwordResetFailed(Object error) {
+    return '修改失败: $error';
+  }
+
+  @override
+  String get smartPushSettings => '智能推送设置';
+
+  @override
+  String get smartPushPersonaSection => '角色设定 (Persona)';
+
+  @override
+  String get smartPushFrequencySection => '频控设置 (每日上限)';
+
+  @override
+  String get smartPushActiveSlotsSection => '活跃时间段 (Active Slots)';
+
+  @override
+  String get smartPushActiveSlotsHint => '仅在这些时间段内发送推送，避开休息时间。';
+
+  @override
+  String get smartPushAddTimeSlot => '添加时间段';
+
+  @override
+  String get smartPushTestNotification => '发送测试通知 (Dev)';
+
+  @override
+  String get smartPushTestNotificationSent => '测试通知已发送 (需退回桌面查看)';
+
+  @override
+  String get smartPushPersonaCoach => '严厉教练';
+
+  @override
+  String get smartPushPersonaCoachDesc => '督促、强调纪律';
+
+  @override
+  String get smartPushPersonaAnime => '二次元助手';
+
+  @override
+  String get smartPushPersonaAnimeDesc => '温柔、卖萌鼓励';
+
+  @override
+  String smartPushFrequencyLabel(Object count) {
+    return '$count 条/天';
+  }
+
+  @override
+  String get smartPushNoSlots => '暂无设置，建议添加活跃时间';
+
+  @override
+  String get smartPushSettingsSaved => '设置已保存';
+
+  @override
+  String smartPushSaveFailed(Object error) {
+    return '保存失败: $error';
+  }
+
+  @override
+  String get themeSettings => '主题设置';
+
+  @override
+  String get themeModeSection => '主题模式';
+
+  @override
+  String get themeModeLight => '浅色';
+
+  @override
+  String get themeModeDark => '深色';
+
+  @override
+  String get themeModeSystem => '跟随系统';
+
+  @override
+  String get brandPresetSection => '品牌预设';
+
+  @override
+  String get highContrastSection => '高对比度模式';
+
+  @override
+  String get highContrastDesc => '增强文字和背景的对比度';
+
+  @override
+  String get resetDefaults => '恢复默认设置';
+
+  @override
+  String get colorPreviewSection => '颜色预览';
+
+  @override
+  String get colorPrimary => '主色';
+
+  @override
+  String get colorSecondary => '次色';
+
+  @override
+  String get colorSuccess => '成功';
+
+  @override
+  String get colorWarning => '警告';
+
+  @override
+  String get colorError => '错误';
+
+  @override
+  String get taskTypeColors => '任务类型颜色';
+
+  @override
+  String get taskTypeLearning => '学习';
+
+  @override
+  String get taskTypeTraining => '训练';
+
+  @override
+  String get taskTypeFix => '修复';
+
+  @override
+  String get taskTypeReflection => '反思';
+
+  @override
+  String get taskTypeSocial => '社交';
+
+  @override
+  String get taskTypePlanning => '规划';
+
+  @override
+  String get themeResetSuccess => '已恢复为默认设置';
+
+  @override
+  String get systemUpdates => '系统活动';
+
+  @override
+  String systemUpdatesLoadFailed(Object error) {
+    return '加载失败：$error';
+  }
+
+  @override
+  String get systemUpdatesSearchHint => '搜索标题或描述';
+
+  @override
+  String get systemUpdatesTypeFilter => '类型';
+
+  @override
+  String get systemUpdatesPriorityFilter => '优先级';
+
+  @override
+  String systemUpdatesCount(Object count) {
+    return '共 $count 条';
+  }
+
+  @override
+  String get systemUpdatesNoItems => '暂无系统更新';
+
+  @override
+  String get systemUpdatesAll => '全部';
+
+  @override
+  String systemUpdatesConfidence(Object value) {
+    return '置信度 $value%';
+  }
+
+  @override
+  String systemUpdatesNextWeekAdjust(Object value) {
+    return '下周继续适配：$value';
+  }
+
+  @override
+  String get systemUpdatesBeforeLabel => '之前';
+
+  @override
+  String get systemUpdatesAfterLabel => '现在';
+
+  @override
+  String systemUpdatesAlignmentScore(Object value) {
+    return '画像对齐度 $value%';
+  }
+
+  @override
+  String get contentReviewCardTitle => '内容审查';
+
+  @override
+  String get contentReviewPassed => '内容已通过审查';
+
+  @override
+  String get contentReviewFailed => '内容未通过审查';
+
+  @override
+  String get contentReviewNeedsRefinement => '内容需要优化';
+
+  @override
+  String get contentReviewScoreLabel => '评分';
+
+  @override
+  String get contentReviewOverallScore => '综合评分';
+
+  @override
+  String get contentReviewMetrics => '评估指标';
+
+  @override
+  String get contentReviewIssues => '发现问题';
+
+  @override
+  String get contentReviewSuggestions => '改进建议';
+
+  @override
+  String get contentReviewCriticalIssues => '严重问题';
+
+  @override
+  String get contentReviewWarnings => '警告';
+
+  @override
+  String get contentReviewTips => '提示';
+
+  @override
+  String get contentReviewAccept => '接受';
+
+  @override
+  String get contentReviewReject => '拒绝';
+
+  @override
+  String get contentReviewRequestManual => '人工审查';
+
+  @override
+  String get contentReviewRegenerate => '重新生成';
+
+  @override
+  String get contentReviewWaitOptimization => '等待优化...';
+
+  @override
+  String get contentReviewOptimizing => '正在优化内容...';
+
+  @override
+  String get contentReviewOptimized => '优化完成';
+
+  @override
+  String get contentReviewOptimizationFailed => '优化失败';
+
+  @override
+  String get contentReviewProcessing => '处理中...';
+
+  @override
+  String get contentReviewAgreePassed => '我认为应该通过';
+
+  @override
+  String get contentReviewDisagreePassed => '我不同意这个结果';
+
+  @override
+  String get contentReviewReportProblem => '报告审查问题';
+
+  @override
+  String get contentReviewOverrideDialogTitle => '覆盖审查决策';
+
+  @override
+  String get contentReviewDisagreeWithResult => '我不同意这个审查结果';
+
+  @override
+  String get contentReviewAgreeShouldPass => '我认为内容应该通过审查';
+
+  @override
+  String get contentReviewReasonHint => '输入您的理由...';
+
+  @override
+  String get contentReviewReasonRequired => '请填写理由';
+
+  @override
+  String get contentReviewAppealDialogTitle => '报告审查问题';
+
+  @override
+  String get contentReviewSelectIssuesHint => '选择问题类型（可多选）';
+
+  @override
+  String get contentReviewDetailHint => '详细说明： ';
+
+  @override
+  String get contentReviewDetailPlaceholder => '请描述审查结果存在的问题...';
+
+  @override
+  String get contentReviewDetailRequired => '请填写详细说明';
+
+  @override
+  String get contentReviewSelectAtLeastOne => '请至少选择一个问题类型';
+
+  @override
+  String get contentReviewIssueUnfairStandards => '审查标准不合理';
+
+  @override
+  String get contentReviewIssueScoreCalculation => '评分计算有误';
+
+  @override
+  String get contentReviewIssueMissingContext => '忽略了重要上下文';
+
+  @override
+  String get contentReviewIssueInaccurateDescription => '问题描述不准确';
+
+  @override
+  String get contentReviewIssueUnfeasibleSuggestion => '建议不可行';
+
+  @override
+  String get contentReviewMetricAccuracy => '准确性';
+
+  @override
+  String get contentReviewMetricCompleteness => '完整性';
+
+  @override
+  String get contentReviewMetricRelevance => '相关性';
+
+  @override
+  String get contentReviewMetricClarity => '清晰度';
+
+  @override
+  String get contentReviewMetricSafety => '安全性';
+
+  @override
+  String get contentReviewMetricFeasibility => '可行性';
+
+  @override
+  String get contentReviewMetricEfficiency => '效率性';
+
+  @override
+  String get contentReviewMetricHelpfulness => '有用性';
+
+  @override
+  String get contentReviewMetricTone => '语气适当';
+
+  @override
+  String get contentReviewScoreExcellent => '优秀';
+
+  @override
+  String get contentReviewScoreGood => '良好';
+
+  @override
+  String get contentReviewScorePass => '及格';
+
+  @override
+  String get contentReviewScoreNeedsWork => '需改进';
+
+  @override
+  String get contentReviewSeverityCritical => '严重';
+
+  @override
+  String get contentReviewSeverityWarning => '警告';
+
+  @override
+  String get contentReviewSeverityInfo => '提示';
+
+  @override
+  String get contentReviewHints => '提示';
+
+  @override
+  String contentReviewSuggestion(Object suggestion) {
+    return '建议: $suggestion';
+  }
+
+  @override
+  String get contentReviewSuggestionDesc => '建议';
+
+  @override
+  String get contentReviewReflectionPending => '等待优化...';
+
+  @override
+  String get contentReviewReflectionInProgress => '正在优化内容...';
+
+  @override
+  String get contentReviewReflectionCompleted => '优化完成';
+
+  @override
+  String get contentReviewReflectionFailed => '优化失败';
+
+  @override
+  String get contentReviewReflectionProcessing => '反思处理中...';
+
+  @override
+  String get contentReviewReflectionPendingShort => '等待优化';
+
+  @override
+  String get contentReviewReflectionInProgressShort => '优化中...';
+
+  @override
+  String get contentReviewReflectionCompletedShort => '已优化';
+
+  @override
+  String get contentReviewReflectionFailedShort => '优化失败';
+
+  @override
+  String get contentReviewReflectionProcessingShort => '处理中';
+
+  @override
+  String get contentReviewManualReview => '人工审查';
+
+  @override
+  String get contentReviewDisagreePass => '不同意通过';
+
+  @override
+  String get contentReviewAgreePass => '我认为应该通过';
+
+  @override
+  String get contentReviewReportIssue => '报告审查问题';
+
+  @override
+  String get contentReviewDisagreePassTitle => '不同意审查通过';
+
+  @override
+  String get contentReviewAgreePassTitle => '我认为内容应该通过审查';
+
+  @override
+  String get contentReviewReasonPrompt => '请说明您的理由：';
+
+  @override
+  String get contentReviewCancel => '取消';
+
+  @override
+  String get contentReviewConfirm => '确认';
+
+  @override
+  String get contentReviewAppealSelectType => '选择问题类型：';
+
+  @override
+  String get contentReviewAppealDetail => '详细说明：';
+
+  @override
+  String get contentReviewAppealDetailHint => '请描述审查结果存在的问题...';
+
+  @override
+  String get contentReviewAppealDetailRequired => '请填写详细说明';
+
+  @override
+  String get contentReviewAppealTypeRequired => '请至少选择一个问题类型';
+
+  @override
+  String get contentReviewAppealUnreasonableStandard => '审查标准不合理';
+
+  @override
+  String get contentReviewAppealScoreError => '评分计算有误';
+
+  @override
+  String get contentReviewAppealContextIgnored => '忽略了重要上下文';
+
+  @override
+  String get contentReviewAppealDescriptionInaccurate => '问题描述不准确';
+
+  @override
+  String get contentReviewAppealSuggestionNotFeasible => '建议不可行';
+
+  @override
+  String get contentReviewAppealSubmit => '提交申诉';
+
+  @override
+  String get commonSubmitting => '提交中...';
+
+  @override
+  String get brandPresetSparkle => 'Sparkle';
+
+  @override
+  String get brandPresetOcean => 'Ocean';
+
+  @override
+  String get brandPresetForest => 'Forest';
+
+  @override
+  String get smartPushDebugTitle => '调试：记忆临界点';
+
+  @override
+  String get smartPushDebugBody => '你的 [线性代数] 正在遗忘，点击立即复习！';
+
+  @override
+  String get reviewAppealPendingTitle => '申诉待处理';
+
+  @override
+  String get reviewAppealPendingDesc => '你的申诉已提交，正在等待处理。';
+
+  @override
+  String get reviewAppealInReviewTitle => '二次审查中';
+
+  @override
+  String get reviewAppealInReviewDesc => '系统正在使用不同模型进行二次审查。';
+
+  @override
+  String get reviewAppealResolvedTitle => '申诉已通过';
+
+  @override
+  String get reviewAppealResolvedDesc => '申诉已通过，原审查结果已更新。';
+
+  @override
+  String get reviewAppealRejectedTitle => '申诉已拒绝';
+
+  @override
+  String get reviewAppealRejectedDesc => '申诉被拒绝，维持原审查结果。';
+
+  @override
+  String get reviewAppealEscalatedTitle => '已升级人工处理';
+
+  @override
+  String get reviewAppealEscalatedDesc => '需要人工审核，请耐心等待。';
+
+  @override
+  String reviewAppealId(Object id) {
+    return '申诉 #$id';
+  }
+
+  @override
+  String get reviewAppealTimelineSubmitted => '提交申诉';
+
+  @override
+  String get reviewAppealTimelineReviewed => '二次审查完成';
+
+  @override
+  String get reviewAppealTimelineApproved => '申诉通过';
+
+  @override
+  String get reviewAppealTimelineRejected => '申诉拒绝';
+
+  @override
+  String reviewAppealScore(Object value) {
+    return '评分：$value%';
+  }
+
+  @override
+  String reviewAppealSecondaryScore(Object value) {
+    return '二次审查评分：$value%';
+  }
+
+  @override
+  String get reviewAppealMinReason => '请提供更详细的说明（至少 10 个字符）';
+
+  @override
+  String get reviewAppealOtherIssue => '其他问题';
+
+  @override
+  String get transparencySettingsTitle => '透明模式设置';
+
+  @override
+  String get transparencyEnable => '启用透明模式';
+
+  @override
+  String get transparencyEnableDesc => '显示 AI 处理步骤、Agent 切换和 Token 使用情况。';
+
+  @override
+  String get transparencyDisplayOptions => '显示选项';
+
+  @override
+  String get transparencyTokenUsage => 'Token 使用情况';
+
+  @override
+  String get transparencyTokenUsageDesc => '显示每次对话的 Token 消耗和成本估算。';
+
+  @override
+  String get transparencyAgentSwitching => 'Agent 切换';
+
+  @override
+  String get transparencyAgentSwitchingDesc => '显示不同 Agent 之间的切换过程。';
+
+  @override
+  String get transparencyReasoningSteps => '推理步骤';
+
+  @override
+  String get transparencyReasoningStepsDesc => '显示模型的详细推理过程。';
+
+  @override
+  String get transparencyWarning => '启用详细透明选项可能会略微增加响应延迟。';
+
+  @override
+  String get transparencyLoadFailed => '加载设置失败';
+
+  @override
+  String get nightlyReviewPending => '今日复盘待完成';
+
+  @override
+  String get nightlyReviewStart => '开始';
+
+  @override
+  String get thoughtCapsuleTitle => '闪念胶囊';
+
+  @override
+  String get thoughtCapsulePrompt => '此刻是什么拦住了你？或者有什么想吐槽的？';
+
+  @override
+  String get thoughtCapsuleHint => '输入你的想法...';
+
+  @override
+  String get thoughtCapsuleCaptured => '闪念已捕捉';
+
+  @override
+  String thoughtCapsuleCaptureFailed(Object error) {
+    return '捕捉失败：$error';
+  }
+
+  @override
+  String get leaderboardTitle => '排行榜';
+
+  @override
+  String get leaderboardGlobal => '全局榜';
+
+  @override
+  String get leaderboardFriends => '好友榜';
+
+  @override
+  String get leaderboardGroup => '群组榜';
+
+  @override
+  String get leaderboardSubject => '学科榜';
+
+  @override
+  String get leaderboardWeekly => '本周榜';
+
+  @override
+  String get leaderboardStreak => '连胜榜';
+
+  @override
+  String leaderboardMyRank(int rank) {
+    return '我的排名：$rank';
+  }
+
+  @override
+  String leaderboardPoints(int value) {
+    return '$value分';
+  }
+
+  @override
+  String leaderboardNoData(Object label) {
+    return '暂无$label数据';
+  }
+
+  @override
+  String get leaderboardLoadFailed => '排行榜加载失败，请重试';
+
+  @override
+  String get omnibarListeningHint => '正在聆听...';
+
+  @override
+  String get omnibarDefaultHint => '告诉我你现在在想什么...';
+
+  @override
+  String get voiceInputAction => '语音输入';
+
+  @override
+  String get voiceInputStopAction => '停止录音';
+
+  @override
+  String voiceInputSpeechFailed(Object error) {
+    return '语音识别失败：$error';
+  }
+
+  @override
+  String sendFailedWithError(Object error) {
+    return '发送失败：$error';
+  }
 }

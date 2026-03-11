@@ -15,6 +15,8 @@ import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/motion.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 /// 内容审查决策类型
 enum ContentReviewDecision {
@@ -49,16 +51,18 @@ class ReviewMetric {
 
   /// 获取本地化名称
   String getDisplayName(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    if (l10n == null) return name;
     final names = {
-      'accuracy': '准确性',
-      'completeness': '完整性',
-      'relevance': '相关性',
-      'clarity': '清晰度',
-      'safety': '安全性',
-      'feasibility': '可行性',
-      'efficiency': '效率性',
-      'helpfulness': '有用性',
-      'tone': '语气适当性',
+      'accuracy': l10n.contentReviewMetricAccuracy,
+      'completeness': l10n.contentReviewMetricCompleteness,
+      'relevance': l10n.contentReviewMetricRelevance,
+      'clarity': l10n.contentReviewMetricClarity,
+      'safety': l10n.contentReviewMetricSafety,
+      'feasibility': l10n.contentReviewMetricFeasibility,
+      'efficiency': l10n.contentReviewMetricEfficiency,
+      'helpfulness': l10n.contentReviewMetricHelpfulness,
+      'tone': l10n.contentReviewMetricTone,
     };
     return names[name] ?? name;
   }
@@ -129,16 +133,18 @@ class ReviewIssue {
   }
 
   /// 获取严重程度标签
-  String getSeverityLabel() {
+  String getSeverityLabel(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    if (l10n == null) return severity;
     switch (severity) {
       case 'critical':
-        return '严重';
+        return l10n.contentReviewSeverityCritical;
       case 'warning':
-        return '警告';
+        return l10n.contentReviewSeverityWarning;
       case 'info':
-        return '提示';
+        return l10n.contentReviewSeverityInfo;
       default:
-        return '';
+        return severity;
     }
   }
 }
@@ -322,35 +328,36 @@ class _ContentReviewCardState extends State<ContentReviewCard>
     }
   }
 
-  String _getDecisionTitle() {
+  String _getDecisionTitle(AppLocalizations l10n) {
     switch (widget.review.decision) {
       case ContentReviewDecision.passed:
-        return '内容已通过审查';
+        return l10n.contentReviewPassed;
       case ContentReviewDecision.failed:
-        return '内容未通过审查';
+        return l10n.contentReviewFailed;
       case ContentReviewDecision.needsRefinement:
-        return '内容需要优化';
+        return l10n.contentReviewNeedsRefinement;
     }
   }
 
-  String _getScoreLabel() =>
+  String _getScoreLabel(AppLocalizations l10n) =>
       widget.review.scoreLabel ??
       (widget.review.overallScore >= 0.9
-          ? '优秀'
+          ? l10n.contentReviewScoreExcellent
           : widget.review.overallScore >= 0.7
-              ? '良好'
+              ? l10n.contentReviewScoreGood
               : widget.review.overallScore >= 0.5
-                  ? '及格'
-                  : '需改进');
+                  ? l10n.contentReviewScorePass
+                  : l10n.contentReviewScoreNeedsWork);
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final color = _getDecisionColor();
     final gradient = _getDecisionGradient();
 
     // 如果已通过且折叠，显示简化版本
     if (widget.collapsed && widget.review.passed) {
-      return _buildCollapsedCard(context, color, gradient);
+      return _buildCollapsedCard(context, color, gradient, l10n);
     }
 
     return SlideTransition(
@@ -388,41 +395,41 @@ class _ContentReviewCardState extends State<ContentReviewCard>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Header
-                    _buildHeader(context, color, gradient),
+                    _buildHeader(context, color, gradient, l10n),
 
                     const SizedBox(height: DS.spacing12),
 
                     // Score bar
-                    _buildScoreBar(context, color),
+                    _buildScoreBar(context, color, l10n),
 
                     // Metrics
                     if (widget.review.metrics.isNotEmpty) ...[
                       const SizedBox(height: DS.spacing12),
-                      _buildMetricsSection(context),
+                      _buildMetricsSection(context, l10n),
                     ],
 
                     // Issues
                     if (widget.review.issues.isNotEmpty) ...[
                       const SizedBox(height: DS.spacing12),
-                      _buildIssuesSection(context),
+                      _buildIssuesSection(context, l10n),
                     ],
 
                     // Suggestions
                     if (widget.review.suggestions.isNotEmpty) ...[
                       const SizedBox(height: DS.spacing12),
-                      _buildSuggestionsSection(context),
+                      _buildSuggestionsSection(context, l10n),
                     ],
 
                     // Reflection status
                     if (widget.review.requiresReflection) ...[
                       const SizedBox(height: DS.spacing12),
-                      _buildReflectionStatus(context),
+                      _buildReflectionStatus(context, l10n),
                     ],
 
                     // Action buttons
                     if (!widget.review.passed) ...[
                       const SizedBox(height: DS.spacing16),
-                      _buildActionButtons(context, color, gradient),
+                      _buildActionButtons(context, color, gradient, l10n),
                     ],
                   ],
                 ),
@@ -438,6 +445,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
     BuildContext context,
     Color color,
     LinearGradient gradient,
+    AppLocalizations l10n,
   ) =>
       Container(
         margin: const EdgeInsets.symmetric(vertical: DS.spacing4),
@@ -461,7 +469,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
             ),
             const SizedBox(width: DS.spacing8),
             Text(
-              '内容已通过审查',
+              l10n.contentReviewPassed,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DS.neutral900,
                     fontWeight: DS.fontWeightMedium,
@@ -469,7 +477,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
             ),
             const Spacer(),
             Text(
-              '$_getScoreLabel()',
+              _getScoreLabel(l10n),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: color,
                     fontWeight: DS.fontWeightSemibold,
@@ -483,6 +491,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
     BuildContext context,
     Color color,
     LinearGradient gradient,
+    AppLocalizations l10n,
   ) =>
       Row(
         children: [
@@ -511,7 +520,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _getDecisionTitle(),
+                  _getDecisionTitle(l10n),
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: DS.fontWeightBold,
                         color: DS.neutral900,
@@ -520,7 +529,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
                 Row(
                   children: [
                     Text(
-                      '$_getScoreLabel()',
+                      _getScoreLabel(l10n),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: color,
                             fontWeight: DS.fontWeightSemibold,
@@ -538,7 +547,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
                           borderRadius: DS.borderRadius8,
                         ),
                         child: Text(
-                          _getReflectionStatusLabel(),
+                          _getReflectionStatusLabel(l10n),
                           style:
                               Theme.of(context).textTheme.labelSmall?.copyWith(
                                     color: color,
@@ -566,7 +575,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
         ],
       );
 
-  Widget _buildScoreBar(BuildContext context, Color color) {
+  Widget _buildScoreBar(BuildContext context, Color color, AppLocalizations l10n) {
     final score = widget.review.overallScore;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -575,7 +584,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              '综合评分',
+              l10n.contentReviewOverallScore,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DS.neutral600,
                   ),
@@ -609,7 +618,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
     );
   }
 
-  Widget _buildMetricsSection(BuildContext context) {
+  Widget _buildMetricsSection(BuildContext context, AppLocalizations l10n) {
     final metrics = widget.review.metrics;
     if (metrics.isEmpty) return const SizedBox.shrink();
 
@@ -617,7 +626,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '评估指标',
+          l10n.contentReviewMetrics,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: DS.neutral600,
                 fontWeight: DS.fontWeightMedium,
@@ -673,7 +682,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
     );
   }
 
-  Widget _buildIssuesSection(BuildContext context) {
+  Widget _buildIssuesSection(BuildContext context, AppLocalizations l10n) {
     final criticalIssues = widget.review.criticalIssues;
     final warningIssues = widget.review.warningIssues;
     final infoIssues = widget.review.infoIssues;
@@ -686,17 +695,17 @@ class _ContentReviewCardState extends State<ContentReviewCard>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (criticalIssues.isNotEmpty) ...[
-          _buildIssueGroup(context, '严重问题', criticalIssues, DS.error),
+          _buildIssueGroup(context, l10n.contentReviewCriticalIssues, criticalIssues, DS.error),
           if (warningIssues.isNotEmpty || infoIssues.isNotEmpty)
             const SizedBox(height: DS.spacing8),
         ],
         if (warningIssues.isNotEmpty) ...[
-          _buildIssueGroup(context, '警告', warningIssues, DS.warning),
+          _buildIssueGroup(context, l10n.contentReviewWarnings, warningIssues, DS.warning),
           if (infoIssues.isNotEmpty) const SizedBox(height: DS.spacing8),
         ],
         if (infoIssues.isNotEmpty &&
             widget.review.decision != ContentReviewDecision.passed)
-          _buildIssueGroup(context, '提示', infoIssues, DS.info),
+          _buildIssueGroup(context, l10n.contentReviewHints, infoIssues, DS.info),
       ],
     );
   }
@@ -706,51 +715,52 @@ class _ContentReviewCardState extends State<ContentReviewCard>
     String title,
     List<ReviewIssue> issues,
     Color color,
-  ) =>
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                _getSeverityIcon(title),
-                size: 14,
-                color: color,
-              ),
-              const SizedBox(width: DS.spacing4),
-              Text(
-                title,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: color,
-                      fontWeight: DS.fontWeightSemibold,
-                    ),
-              ),
-            ],
-          ),
-          const SizedBox(height: DS.spacing6),
-          ...issues
-              .take(3)
-              .map((issue) => _buildIssueItem(context, issue, color)),
-        ],
-      );
+  ) {
+    final l10n = context.l10n;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              _getSeverityIcon(title, l10n),
+              size: 14,
+              color: color,
+            ),
+            const SizedBox(width: DS.spacing4),
+            Text(
+              title,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: color,
+                    fontWeight: DS.fontWeightSemibold,
+                  ),
+            ),
+          ],
+        ),
+        const SizedBox(height: DS.spacing6),
+        ...issues
+            .take(3)
+            .map((issue) => _buildIssueItem(context, issue, color, l10n)),
+      ],
+    );
+  }
 
-  IconData _getSeverityIcon(String title) {
-    switch (title) {
-      case '严重问题':
-        return Icons.error;
-      case '警告':
-        return Icons.warning;
-      case '提示':
-        return Icons.info;
-      default:
-        return Icons.circle;
+  IconData _getSeverityIcon(String title, AppLocalizations l10n) {
+    if (title == l10n.contentReviewCriticalIssues) {
+      return Icons.error;
+    } else if (title == l10n.contentReviewWarnings) {
+      return Icons.warning;
+    } else if (title == l10n.contentReviewHints) {
+      return Icons.info;
     }
+    return Icons.circle;
   }
 
   Widget _buildIssueItem(
     BuildContext context,
     ReviewIssue issue,
     Color color,
+    AppLocalizations l10n,
   ) =>
       Container(
         padding: const EdgeInsets.all(DS.spacing10),
@@ -797,7 +807,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
                   const SizedBox(width: DS.spacing4),
                   Expanded(
                     child: Text(
-                      '建议: ${issue.suggestedFix}',
+                      l10n.contentReviewSuggestion(issue.suggestedFix!),
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                             color: DS.neutral600,
                             fontStyle: FontStyle.italic,
@@ -812,7 +822,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
         ),
       );
 
-  Widget _buildSuggestionsSection(BuildContext context) {
+  Widget _buildSuggestionsSection(BuildContext context, AppLocalizations l10n) {
     final suggestions = widget.review.suggestions;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -826,7 +836,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
             ),
             const SizedBox(width: DS.spacing6),
             Text(
-              '改进建议',
+              l10n.contentReviewSuggestions,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DS.neutral600,
                     fontWeight: DS.fontWeightMedium,
@@ -864,9 +874,9 @@ class _ContentReviewCardState extends State<ContentReviewCard>
     );
   }
 
-  Widget _buildReflectionStatus(BuildContext context) {
+  Widget _buildReflectionStatus(BuildContext context, AppLocalizations l10n) {
     final status = widget.review.reflectionStatus ?? 'unknown';
-    final statusInfo = _getReflectionStatusInfo(status);
+    final statusInfo = _getReflectionStatusInfo(status, l10n);
 
     return Container(
       padding: const EdgeInsets.all(DS.spacing10),
@@ -908,39 +918,39 @@ class _ContentReviewCardState extends State<ContentReviewCard>
     );
   }
 
-  _ReflectionStatusInfo _getReflectionStatusInfo(String status) {
+  _ReflectionStatusInfo _getReflectionStatusInfo(String status, AppLocalizations l10n) {
     switch (status) {
       case 'pending':
         return _ReflectionStatusInfo(
-          label: '等待优化...',
+          label: l10n.contentReviewReflectionPending,
           icon: Icons.schedule_rounded,
           color: DS.info,
           isInProgress: false,
         );
       case 'in_progress':
         return _ReflectionStatusInfo(
-          label: '正在优化内容...',
+          label: l10n.contentReviewReflectionInProgress,
           icon: Icons.autorenew_rounded,
           color: DS.primaryBase,
           isInProgress: true,
         );
       case 'completed':
         return _ReflectionStatusInfo(
-          label: '优化完成',
+          label: l10n.contentReviewReflectionCompleted,
           icon: Icons.check_circle_rounded,
           color: DS.success,
           isInProgress: false,
         );
       case 'failed':
         return _ReflectionStatusInfo(
-          label: '优化失败',
+          label: l10n.contentReviewReflectionFailed,
           icon: Icons.error_rounded,
           color: DS.error,
           isInProgress: false,
         );
       default:
         return _ReflectionStatusInfo(
-          label: '反思处理中...',
+          label: l10n.contentReviewReflectionProcessing,
           icon: Icons.sync_rounded,
           color: DS.neutral600,
           isInProgress: true,
@@ -948,19 +958,19 @@ class _ContentReviewCardState extends State<ContentReviewCard>
     }
   }
 
-  String _getReflectionStatusLabel() {
+  String _getReflectionStatusLabel(AppLocalizations l10n) {
     final status = widget.review.reflectionStatus ?? 'unknown';
     switch (status) {
       case 'pending':
-        return '等待优化';
+        return l10n.contentReviewReflectionPendingShort;
       case 'in_progress':
-        return '优化中...';
+        return l10n.contentReviewReflectionInProgressShort;
       case 'completed':
-        return '已优化';
+        return l10n.contentReviewReflectionCompletedShort;
       case 'failed':
-        return '优化失败';
+        return l10n.contentReviewReflectionFailedShort;
       default:
-        return '处理中';
+        return l10n.contentReviewReflectionProcessingShort;
     }
   }
 
@@ -968,20 +978,21 @@ class _ContentReviewCardState extends State<ContentReviewCard>
     BuildContext context,
     Color color,
     LinearGradient gradient,
+    AppLocalizations l10n,
   ) {
     // 已审查通过的场景
     if (widget.review.decision == ContentReviewDecision.passed) {
       return Row(
         children: [
           CustomButton.text(
-            text: '接受',
+            text: l10n.contentReviewAccept,
             onPressed: widget.onAccept,
             size: CustomButtonSize.small,
           ),
           // Phase 2e: 即使通过，用户仍可以反对
           if (widget.onOverride != null) ...[
             const SizedBox(width: DS.spacing4),
-            _buildMoreActionsMenu(context, color),
+            _buildMoreActionsMenu(context, color, l10n),
           ],
         ],
       );
@@ -992,7 +1003,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
         // 拒绝/重新生成
         if (widget.onReject != null)
           CustomButton.text(
-            text: '重新生成',
+            text: l10n.contentReviewRegenerate,
             icon: Icons.refresh_rounded,
             onPressed: widget.onReject,
             size: CustomButtonSize.small,
@@ -1000,18 +1011,18 @@ class _ContentReviewCardState extends State<ContentReviewCard>
         // 请求人工审查
         if (widget.onRequestReview != null)
           CustomButton.text(
-            text: '人工审查',
+            text: l10n.contentReviewManualReview,
             icon: Icons.support_agent_rounded,
             onPressed: widget.onRequestReview,
             size: CustomButtonSize.small,
           ),
         // Phase 2e: 更多操作菜单（覆盖/申诉）
         if (widget.onOverride != null || widget.onAppeal != null)
-          _buildMoreActionsMenu(context, color),
+          _buildMoreActionsMenu(context, color, l10n),
         // 接受当前内容
         if (widget.onAccept != null)
           CustomButton.primary(
-            text: '接受',
+            text: l10n.contentReviewAccept,
             icon: Icons.check_rounded,
             onPressed: widget.onAccept,
             size: CustomButtonSize.small,
@@ -1022,7 +1033,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
   }
 
   /// Phase 2e: 更多操作菜单
-  Widget _buildMoreActionsMenu(BuildContext context, Color color) =>
+  Widget _buildMoreActionsMenu(BuildContext context, Color color, AppLocalizations l10n) =>
       PopupMenuButton<String>(
         icon: Icon(
           Icons.more_horiz_rounded,
@@ -1030,7 +1041,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
           size: 20,
         ),
         padding: EdgeInsets.zero,
-        onSelected: (value) => _handleMenuAction(context, value),
+        onSelected: (value) => _handleMenuAction(context, value, l10n),
         itemBuilder: (context) => [
           if (widget.onOverride != null)
             PopupMenuItem(
@@ -1046,7 +1057,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
                   ),
                   const SizedBox(width: DS.spacing8),
                   Text(
-                    widget.review.passed ? '不同意通过' : '我认为应该通过',
+                    widget.review.passed ? l10n.contentReviewDisagreePass : l10n.contentReviewAgreePass,
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
@@ -1064,7 +1075,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
                   ),
                   const SizedBox(width: DS.spacing8),
                   Text(
-                    '报告审查问题',
+                    l10n.contentReviewReportIssue,
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
@@ -1073,16 +1084,16 @@ class _ContentReviewCardState extends State<ContentReviewCard>
         ],
       );
 
-  void _handleMenuAction(BuildContext context, String action) {
+  void _handleMenuAction(BuildContext context, String action, AppLocalizations l10n) {
     if (action == 'override') {
-      _showOverrideDialog(context);
+      _showOverrideDialog(context, l10n);
     } else if (action == 'appeal') {
-      _showAppealDialog(context);
+      _showAppealDialog(context, l10n);
     }
   }
 
   /// 显示覆盖决策对话框
-  void _showOverrideDialog(BuildContext context) {
+  void _showOverrideDialog(BuildContext context, AppLocalizations l10n) {
     final reasonController = TextEditingController();
     final currentDecision =
         widget.review.decision == ContentReviewDecision.passed
@@ -1106,14 +1117,14 @@ class _ContentReviewCardState extends State<ContentReviewCard>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              currentDecision == 'passed' ? '不同意审查通过' : '我认为内容应该通过审查',
+              currentDecision == 'passed' ? l10n.contentReviewDisagreePassTitle : l10n.contentReviewAgreePassTitle,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: DS.fontWeightBold,
                   ),
             ),
             const SizedBox(height: DS.spacing12),
             Text(
-              '请说明您的理由：',
+              l10n.contentReviewReasonPrompt,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DS.neutral600,
                   ),
@@ -1123,7 +1134,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
               controller: reasonController,
               maxLines: 3,
               decoration: InputDecoration(
-                hintText: '输入您的理由...',
+                hintText: l10n.contentReviewReasonHint,
                 filled: true,
                 fillColor: DS.neutral100,
                 border: const OutlineInputBorder(
@@ -1137,16 +1148,16 @@ class _ContentReviewCardState extends State<ContentReviewCard>
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 SparkleButton.ghost(
-                  label: '取消',
+                  label: l10n.contentReviewCancel,
                   onPressed: () => Navigator.pop(context),
                 ),
                 const SizedBox(width: DS.spacing8),
                 SparkleButton.primary(
-                  label: '确认',
+                  label: l10n.contentReviewConfirm,
                   onPressed: () async {
                     final reason = reasonController.text.trim();
                     if (reason.isEmpty) {
-                      AppFeedback.error(context, '请填写理由');
+                      AppFeedback.error(context, l10n.contentReviewReasonRequired);
                       return;
                     }
                     Navigator.pop(context);
@@ -1162,15 +1173,15 @@ class _ContentReviewCardState extends State<ContentReviewCard>
   }
 
   /// 显示申诉对话框
-  void _showAppealDialog(BuildContext context) {
+  void _showAppealDialog(BuildContext context, AppLocalizations l10n) {
     final reasonController = TextEditingController();
     final selectedIssues = <String>[];
-    const issueOptions = [
-      '审查标准不合理',
-      '评分计算有误',
-      '忽略了重要上下文',
-      '问题描述不准确',
-      '建议不可行',
+    final issueOptions = [
+      l10n.contentReviewAppealUnreasonableStandard,
+      l10n.contentReviewAppealScoreError,
+      l10n.contentReviewAppealContextIgnored,
+      l10n.contentReviewAppealDescriptionInaccurate,
+      l10n.contentReviewAppealSuggestionNotFeasible,
     ];
 
     showModalBottomSheet<void>(
@@ -1190,14 +1201,14 @@ class _ContentReviewCardState extends State<ContentReviewCard>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '报告审查问题',
+                l10n.contentReviewReportIssue,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: DS.fontWeightBold,
                     ),
               ),
               const SizedBox(height: DS.spacing12),
               Text(
-                '选择问题类型：',
+                l10n.contentReviewAppealSelectType,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: DS.neutral600,
                     ),
@@ -1246,7 +1257,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
               ),
               const SizedBox(height: DS.spacing12),
               Text(
-                '详细说明：',
+                l10n.contentReviewAppealDetail,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: DS.neutral600,
                     ),
@@ -1256,7 +1267,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
                 controller: reasonController,
                 maxLines: 3,
                 decoration: InputDecoration(
-                  hintText: '请描述审查结果存在的问题...',
+                  hintText: l10n.contentReviewAppealDetailHint,
                   filled: true,
                   fillColor: DS.neutral100,
                   border: const OutlineInputBorder(
@@ -1270,20 +1281,20 @@ class _ContentReviewCardState extends State<ContentReviewCard>
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   SparkleButton.ghost(
-                    label: '取消',
+                    label: l10n.contentReviewCancel,
                     onPressed: () => Navigator.pop(context),
                   ),
                   const SizedBox(width: DS.spacing8),
                   SparkleButton.primary(
-                    label: '提交申诉',
+                    label: l10n.contentReviewAppealSubmit,
                     onPressed: () async {
                       final reason = reasonController.text.trim();
                       if (reason.isEmpty) {
-                        AppFeedback.error(context, '请填写详细说明');
+                        AppFeedback.error(context, l10n.contentReviewAppealDetailRequired);
                         return;
                       }
                       if (selectedIssues.isEmpty) {
-                        AppFeedback.error(context, '请至少选择一个问题类型');
+                        AppFeedback.error(context, l10n.contentReviewAppealTypeRequired);
                         return;
                       }
                       Navigator.pop(context);

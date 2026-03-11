@@ -2,28 +2,31 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 import 'package:sparkle/features/user/user_routes.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 class UserPersonaScreen extends ConsumerWidget {
   const UserPersonaScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final profileAsync = ref.watch(transparentProfileProvider);
     final onboardingCompleted = ref.watch(onboardingCompletedProvider);
     return SparklePageScaffold(
       role: SparklePageRole.settings,
       appBar: AppBar(
-        title: const Text('我的画像'),
+        title: Text(l10n.personaMyProfile),
       ),
       child: profileAsync.when(
-        data: (data) => _buildContent(context, ref, data, onboardingCompleted),
+        data: (data) => _buildContent(context, ref, l10n, data, onboardingCompleted),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(
-          child: Text('加载失败：$err'),
+          child: Text(l10n.personaLoadFailed(err.toString())),
         ),
       ),
     );
@@ -32,6 +35,7 @@ class UserPersonaScreen extends ConsumerWidget {
   Widget _buildContent(
     BuildContext context,
     WidgetRef ref,
+    AppLocalizations l10n,
     Map<String, dynamic> data,
     bool completed,
   ) {
@@ -51,41 +55,46 @@ class UserPersonaScreen extends ConsumerWidget {
       child: ListView(
         padding: const EdgeInsets.all(DS.spacing16),
         children: [
-          _buildOnboardingBanner(context, completed),
-          _sectionTitle('L1 用户声明'),
+          _buildOnboardingBanner(context, l10n, completed),
+          _sectionTitle(l10n.personaL1Title),
           _subSectionList(
-            '偏好',
+            l10n.personaPreferences,
             preferences
-                .map((item) => _preferenceRow(ref, context, item))
+                .map((item) => _preferenceRow(ref, context, l10n, item))
                 .toList(),
+            l10n,
           ),
           _subSectionList(
-            '目标',
-            goals.map((item) => _goalRow(ref, context, item)).toList(),
+            l10n.personaGoals,
+            goals.map((item) => _goalRow(ref, context, l10n, item)).toList(),
+            l10n,
           ),
           const SizedBox(height: DS.spacing24),
-          _sectionTitle('L2 协作校准'),
+          _sectionTitle(l10n.personaL2Title),
           _subSectionList(
-            '标签',
+            l10n.personaTags,
             tags
                 .map(
                   (item) => _suggestableRow(
                     ref,
                     context,
+                    l10n: l10n,
                     label: item['value']?.toString() ?? '',
                     metadata: item['metadata'] as Map<String, dynamic>? ?? {},
                     targetType: 'persona_tag',
                   ),
                 )
                 .toList(),
+            l10n,
           ),
           _subSectionList(
-            '能力',
+            l10n.personaCapabilities,
             capabilities
                 .map(
                   (item) => _suggestableRow(
                     ref,
                     context,
+                    l10n: l10n,
                     label: '${item['key']}: ${item['value']}',
                     metadata: item['metadata'] as Map<String, dynamic>? ?? {},
                     targetType: 'persona_capability',
@@ -93,30 +102,33 @@ class UserPersonaScreen extends ConsumerWidget {
                   ),
                 )
                 .toList(),
+            l10n,
           ),
           const SizedBox(height: DS.spacing24),
-          _sectionTitle('L3 系统推断'),
+          _sectionTitle(l10n.personaL3Title),
           Padding(
             padding: const EdgeInsets.only(bottom: DS.spacing8),
             child: Text(
-              '以下内容来自系统分析，仅供参考',
+              l10n.personaL3Hint,
               style: TextStyle(color: DS.neutral500, fontSize: DS.fontSizeSm),
             ),
           ),
           _subSectionList(
-            '行为模式',
-            patterns.map(_readonlyRow).toList(),
+            l10n.personaPatterns,
+            patterns.map((item) => _readonlyRow(l10n, item)).toList(),
+            l10n,
           ),
           _subSectionList(
-            '认知碎片',
-            fragments.map(_readonlyRow).toList(),
+            l10n.personaFragments,
+            fragments.map((item) => _readonlyRow(l10n, item)).toList(),
+            l10n,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildOnboardingBanner(BuildContext context, bool completed) =>
+  Widget _buildOnboardingBanner(BuildContext context, AppLocalizations l10n, bool completed) =>
       Padding(
         padding: const EdgeInsets.only(bottom: DS.spacing16),
         child: GraphiteCardSurface(
@@ -131,7 +143,7 @@ class UserPersonaScreen extends ConsumerWidget {
               const SizedBox(width: DS.spacing12),
               Expanded(
                 child: Text(
-                  completed ? '画像已完善，可随时重新填写' : '完善画像，提升个性化体验',
+                  completed ? l10n.personaCompleted : l10n.personaIncomplete,
                   style: TextStyle(
                     color: DS.textPrimary,
                     fontWeight: DS.fontWeightSemibold,
@@ -142,7 +154,7 @@ class UserPersonaScreen extends ConsumerWidget {
                 onPressed: () {
                   context.push(UserRoutes.personaOnboarding);
                 },
-                label: completed ? '再次填写' : '开始',
+                label: completed ? l10n.personaRefill : l10n.personaStart,
               ),
             ],
           ),
@@ -161,7 +173,7 @@ class UserPersonaScreen extends ConsumerWidget {
         ),
       );
 
-  Widget _subSectionList(String title, List<Widget> items) => Padding(
+  Widget _subSectionList(String title, List<Widget> items, AppLocalizations l10n) => Padding(
         padding: const EdgeInsets.only(bottom: DS.spacing16),
         child: GraphiteCardSurface(
           surfaceRole: SparkleSurfaceRole.card,
@@ -179,7 +191,7 @@ class UserPersonaScreen extends ConsumerWidget {
               const SizedBox(height: DS.spacing8),
               if (items.isEmpty)
                 Text(
-                  '暂无数据',
+                  l10n.personaNoData,
                   style: TextStyle(color: DS.neutral500),
                 )
               else
@@ -192,6 +204,7 @@ class UserPersonaScreen extends ConsumerWidget {
   Widget _preferenceRow(
     WidgetRef ref,
     BuildContext context,
+    AppLocalizations l10n,
     Map<String, dynamic> item,
   ) {
     final key = item['key']?.toString() ?? 'unknown';
@@ -203,18 +216,18 @@ class UserPersonaScreen extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
-          child: _metadataRow('$key: ${_formatValue(value)}', meta),
+          child: _metadataRow(l10n, '$key: ${_formatValue(value)}', meta),
         ),
         if (canEdit)
           SparkleButton.ghost(
             onPressed: () =>
-                _openEditPreferenceDialog(ref, context, key, value),
-            label: '编辑',
+                _openEditPreferenceDialog(ref, context, l10n, key, value),
+            label: l10n.personaEdit,
           ),
         if (canRollback)
           SparkleButton.ghost(
-            onPressed: () => _confirmRollback(ref, context, key),
-            label: '回滚',
+            onPressed: () => _confirmRollback(ref, context, l10n, key),
+            label: l10n.personaRollback,
           ),
       ],
     );
@@ -223,10 +236,11 @@ class UserPersonaScreen extends ConsumerWidget {
   Widget _goalRow(
     WidgetRef ref,
     BuildContext context,
+    AppLocalizations l10n,
     Map<String, dynamic> item,
   ) {
     final title =
-        item['title']?.toString() ?? item['value']?.toString() ?? '目标';
+        item['title']?.toString() ?? item['value']?.toString() ?? l10n.personaGoals;
     final status = item['status']?.toString() ?? 'unknown';
     final meta = item['metadata'] as Map<String, dynamic>? ?? {};
     final goalId = item['id']?.toString();
@@ -234,13 +248,13 @@ class UserPersonaScreen extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
-          child: _metadataRow('$title ($status)', meta),
+          child: _metadataRow(l10n, '$title ($status)', meta),
         ),
         if (goalId != null)
           SparkleButton.ghost(
             onPressed: () =>
-                _openEditGoalDialog(ref, context, goalId, title, status),
-            label: '编辑',
+                _openEditGoalDialog(ref, context, l10n, goalId, title, status),
+            label: l10n.personaEdit,
           ),
       ],
     );
@@ -253,21 +267,21 @@ class UserPersonaScreen extends ConsumerWidget {
     return value?.toString() ?? '';
   }
 
-  Widget _levelChip(String level) {
+  Widget _levelChip(AppLocalizations l10n, String level) {
     String label;
     Color bg;
     Color fg;
     switch (level) {
       case 'editable':
-        label = '可编辑';
+        label = l10n.personaLevelEditable;
         bg = DS.primaryBase.withValues(alpha: 0.12);
         fg = DS.primaryBase;
       case 'warn':
-        label = '建议修正';
+        label = l10n.personaLevelWarn;
         bg = DS.warning.withValues(alpha: 0.12);
         fg = DS.warning;
       default:
-        label = '只读';
+        label = l10n.personaLevelReadonly;
         bg = DS.neutral100;
         fg = DS.neutral600;
     }
@@ -288,7 +302,7 @@ class UserPersonaScreen extends ConsumerWidget {
     );
   }
 
-  Widget _metadataRow(String label, Map<String, dynamic> metadata) {
+  Widget _metadataRow(AppLocalizations l10n, String label, Map<String, dynamic> metadata) {
     final reason = metadata['reason']?.toString() ?? '';
     final level = metadata['level']?.toString() ?? 'readonly';
     final confidence = metadata['confidence'];
@@ -307,14 +321,14 @@ class UserPersonaScreen extends ConsumerWidget {
                 child:
                     Text('• $label', style: TextStyle(color: DS.textPrimary)),
               ),
-              _levelChip(level),
+              _levelChip(l10n, level),
             ],
           ),
           if (confidenceLabel != null && confidenceLabel.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(left: DS.spacing16, top: 2),
               child: Text(
-                '置信度 $confidenceLabel',
+                l10n.personaConfidence(confidenceLabel),
                 style: TextStyle(color: DS.neutral500, fontSize: DS.fontSizeSm),
               ),
             ),
@@ -331,18 +345,19 @@ class UserPersonaScreen extends ConsumerWidget {
     );
   }
 
-  Widget _readonlyRow(Map<String, dynamic> item) {
+  Widget _readonlyRow(AppLocalizations l10n, Map<String, dynamic> item) {
     final label = item['name']?.toString() ??
         item['content']?.toString() ??
         item['value']?.toString() ??
-        '条目';
+        l10n.personaNoData;
     final meta = item['metadata'] as Map<String, dynamic>? ?? {};
-    return _metadataRow(label, meta);
+    return _metadataRow(l10n, label, meta);
   }
 
   Widget _suggestableRow(
     WidgetRef ref,
     BuildContext context, {
+    required AppLocalizations l10n,
     required String label,
     required Map<String, dynamic> metadata,
     required String targetType,
@@ -356,18 +371,19 @@ class UserPersonaScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            child: _metadataRow(label, metadata),
+            child: _metadataRow(l10n, label, metadata),
           ),
           if (canSuggest)
             SparkleButton.ghost(
               onPressed: () => _openSuggestionDialog(
                 ref,
                 context,
+                l10n: l10n,
                 targetType: targetType,
                 fieldName: fieldName,
                 label: label,
               ),
-              label: '建议修正',
+              label: l10n.personaSuggestCorrection,
             ),
         ],
       ),
@@ -377,6 +393,7 @@ class UserPersonaScreen extends ConsumerWidget {
   Future<void> _openSuggestionDialog(
     WidgetRef ref,
     BuildContext context, {
+    required AppLocalizations l10n,
     required String targetType,
     required String label,
     String? fieldName,
@@ -387,28 +404,28 @@ class UserPersonaScreen extends ConsumerWidget {
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('建议修正'),
+        title: Text(l10n.personaCorrectionDialogTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(label),
             const SizedBox(height: DS.spacing8),
             Text(
-              '提交后系统会评估并逐步调整画像，可能影响推荐策略。',
+              l10n.personaCorrectionHint,
               style: TextStyle(color: DS.neutral500, fontSize: DS.fontSizeSm),
             ),
             const SizedBox(height: DS.spacing12),
             TextField(
               controller: controller,
-              decoration: const InputDecoration(
-                labelText: '你建议的内容',
+              decoration: InputDecoration(
+                labelText: l10n.personaCorrectionValue,
               ),
             ),
             const SizedBox(height: DS.spacing12),
             TextField(
               controller: reasonController,
-              decoration: const InputDecoration(
-                labelText: '原因（可选）',
+              decoration: InputDecoration(
+                labelText: l10n.personaCorrectionReason,
               ),
             ),
           ],
@@ -416,7 +433,7 @@ class UserPersonaScreen extends ConsumerWidget {
         actions: [
           SparkleButton.ghost(
             onPressed: () => Navigator.of(context).pop(),
-            label: '取消',
+            label: l10n.cancel,
           ),
           SparkleButton(
             onPressed: () async {
@@ -427,13 +444,13 @@ class UserPersonaScreen extends ConsumerWidget {
                 'reason': reasonController.text.trim(),
               });
               if (context.mounted) {
-                AppFeedback.success(context, '已提交修正建议');
+                AppFeedback.success(context, l10n.personaCorrectionSubmitted);
               }
               if (context.mounted) {
                 Navigator.of(context).pop();
               }
             },
-            label: '提交',
+            label: l10n.confirm,
           ),
         ],
       ),
@@ -443,6 +460,7 @@ class UserPersonaScreen extends ConsumerWidget {
   Future<void> _openEditPreferenceDialog(
     WidgetRef ref,
     BuildContext context,
+    AppLocalizations l10n,
     String prefKey,
     dynamic currentValue,
   ) async {
@@ -451,7 +469,7 @@ class UserPersonaScreen extends ConsumerWidget {
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('编辑偏好'),
+        title: Text(l10n.personaEditPreference),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -459,21 +477,21 @@ class UserPersonaScreen extends ConsumerWidget {
             const SizedBox(height: DS.spacing12),
             TextField(
               controller: controller,
-              decoration: const InputDecoration(labelText: '新的偏好值'),
+              decoration: InputDecoration(labelText: l10n.personaNewPreferenceValue),
             ),
           ],
         ),
         actions: [
           SparkleButton.ghost(
             onPressed: () => Navigator.of(context).pop(),
-            label: '取消',
+            label: l10n.cancel,
           ),
           SparkleButton(
             onPressed: () async {
               final nextValue = controller.text.trim();
               if (nextValue.isEmpty) {
                 if (context.mounted) {
-                  AppFeedback.info(context, '请输入偏好值');
+                  AppFeedback.info(context, l10n.personaPleaseEnterValue);
                 }
                 return;
               }
@@ -486,7 +504,7 @@ class UserPersonaScreen extends ConsumerWidget {
                 Navigator.of(context).pop();
               }
             },
-            label: '保存',
+            label: l10n.confirm,
           ),
         ],
       ),
@@ -496,22 +514,23 @@ class UserPersonaScreen extends ConsumerWidget {
   Future<void> _confirmRollback(
     WidgetRef ref,
     BuildContext context,
+    AppLocalizations l10n,
     String prefKey,
   ) async {
     final repo = ref.read(userRepositoryProvider);
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('回滚偏好'),
-        content: const Text('将偏好回滚到上一个版本，可能影响推荐效果。'),
+        title: Text(l10n.personaRollbackTitle),
+        content: Text(l10n.personaRollbackConfirm),
         actions: [
           SparkleButton.ghost(
             onPressed: () => Navigator.of(context).pop(false),
-            label: '取消',
+            label: l10n.cancel,
           ),
           SparkleButton.destructive(
             onPressed: () => Navigator.of(context).pop(true),
-            label: '确认回滚',
+            label: l10n.personaConfirmRollback,
           ),
         ],
       ),
@@ -525,6 +544,7 @@ class UserPersonaScreen extends ConsumerWidget {
   Future<void> _openEditGoalDialog(
     WidgetRef ref,
     BuildContext context,
+    AppLocalizations l10n,
     String goalId,
     String title,
     String status,
@@ -537,22 +557,22 @@ class UserPersonaScreen extends ConsumerWidget {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('编辑目标'),
+          title: Text(l10n.personaEditGoal),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: controller,
-                decoration: const InputDecoration(labelText: '目标内容'),
+                decoration: InputDecoration(labelText: l10n.personaGoalContent),
               ),
               const SizedBox(height: DS.spacing12),
               DropdownButtonFormField<String>(
                 initialValue: nextStatus,
-                decoration: const InputDecoration(labelText: '状态'),
-                items: const [
-                  DropdownMenuItem(value: 'active', child: Text('进行中')),
-                  DropdownMenuItem(value: 'completed', child: Text('已完成')),
-                  DropdownMenuItem(value: 'paused', child: Text('暂停')),
+                decoration: InputDecoration(labelText: l10n.personaGoalStatus),
+                items: [
+                  DropdownMenuItem(value: 'active', child: Text(l10n.personaStatusActive)),
+                  DropdownMenuItem(value: 'completed', child: Text(l10n.personaStatusCompleted)),
+                  DropdownMenuItem(value: 'paused', child: Text(l10n.personaStatusPaused)),
                 ],
                 onChanged: (value) {
                   if (value != null) {
@@ -567,14 +587,14 @@ class UserPersonaScreen extends ConsumerWidget {
           actions: [
             SparkleButton.ghost(
               onPressed: () => Navigator.of(context).pop(),
-              label: '取消',
+              label: l10n.cancel,
             ),
             SparkleButton(
               onPressed: () async {
                 final nextTitle = controller.text.trim();
                 if (nextTitle.isEmpty) {
                   if (context.mounted) {
-                    AppFeedback.info(context, '请输入目标内容');
+                    AppFeedback.info(context, l10n.personaPleaseEnterGoal);
                   }
                   return;
                 }
@@ -588,7 +608,7 @@ class UserPersonaScreen extends ConsumerWidget {
                   Navigator.of(context).pop();
                 }
               },
-              label: '保存',
+              label: l10n.confirm,
             ),
           ],
         ),

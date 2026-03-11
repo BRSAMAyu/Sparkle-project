@@ -2524,4 +2524,1117 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get syncCenterStatusWaitingAck => 'Waiting Ack';
+
+  @override
+  String get shareAchievement => 'Share Achievement';
+
+  @override
+  String get sharePreparingCard => 'Preparing share card...';
+
+  @override
+  String get shareToSocialMedia => 'Share to Social Media';
+
+  @override
+  String get saveToGallery => 'Save to Gallery';
+
+  @override
+  String get close => 'Close';
+
+  @override
+  String get shareCardGenerateFailed =>
+      'Failed to generate share card, please try again later';
+
+  @override
+  String shareCardPrepareFailed(Object error) {
+    return 'Failed to prepare share card: $error';
+  }
+
+  @override
+  String shareFailed(Object error) {
+    return 'Share failed: $error';
+  }
+
+  @override
+  String saveFailed(Object error) {
+    return 'Save failed: $error';
+  }
+
+  @override
+  String get savedToGallery => 'Saved to gallery';
+
+  @override
+  String get shareCardUrlEmpty => 'Share card URL is empty';
+
+  @override
+  String shareCardDownloadFailed(Object statusCode) {
+    return 'Failed to download share card ($statusCode)';
+  }
+
+  @override
+  String get noGalleryPermission => 'No gallery write permission';
+
+  @override
+  String get saveResultEmpty => 'Save result is empty';
+
+  @override
+  String get gallerySaveFailed => 'Gallery save failed';
+
+  @override
+  String shareUnlockMessage(Object achievementName) {
+    return 'I unlocked \"$achievementName\" in Sparkle!';
+  }
+
+  @override
+  String get achievementMilestone => 'Learning Milestone';
+
+  @override
+  String achievementKnowledgePoints(Object count) {
+    return '$count knowledge points';
+  }
+
+  @override
+  String achievementMilestoneDesc(Object count) {
+    return 'Congratulations on mastering $count knowledge points!\nThe light of knowledge illuminates your path forward';
+  }
+
+  @override
+  String get achievementStreakRecord => 'Streak Record';
+
+  @override
+  String achievementStreakDays(Object days) {
+    return '$days days';
+  }
+
+  @override
+  String achievementStreakDesc(Object days, Object username) {
+    return '$username has been learning for $days consecutive days\nThe power of persistence is unstoppable!';
+  }
+
+  @override
+  String get achievementMasteryTitle => 'Domain Mastery';
+
+  @override
+  String achievementMasteryPercent(Object percent) {
+    return '$percent% mastery';
+  }
+
+  @override
+  String achievementMasteryDesc(Object domain, Object username) {
+    return '$username has reached mastery level in $domain\nKeep it up!';
+  }
+
+  @override
+  String get achievementTaskComplete => 'Mission Accomplished';
+
+  @override
+  String achievementTaskCount(Object count) {
+    return 'Completed $count tasks';
+  }
+
+  @override
+  String achievementTaskDesc(Object username) {
+    return '$username performed excellently in this sprint\nYou truly deserve the efficiency star!';
+  }
+
+  @override
+  String get personaGuide => 'Persona Guide';
+
+  @override
+  String get personaMyProfile => 'My Profile';
+
+  @override
+  String personaLoadFailed(Object error) {
+    return 'Load failed: $error';
+  }
+
+  @override
+  String get personaL1Title => 'L1 User Declaration';
+
+  @override
+  String get personaL2Title => 'L2 Collaborative Calibration';
+
+  @override
+  String get personaL3Title => 'L3 System Inference';
+
+  @override
+  String get personaL3Hint =>
+      'The following content is from system analysis, for reference only';
+
+  @override
+  String get personaPreferences => 'Preferences';
+
+  @override
+  String get personaGoals => 'Goals';
+
+  @override
+  String get personaTags => 'Tags';
+
+  @override
+  String get personaCapabilities => 'Capabilities';
+
+  @override
+  String get personaPatterns => 'Behavior Patterns';
+
+  @override
+  String get personaFragments => 'Cognitive Fragments';
+
+  @override
+  String get personaNoData => 'No data';
+
+  @override
+  String get personaCompleted => 'Profile is complete, you can refill anytime';
+
+  @override
+  String get personaIncomplete =>
+      'Complete your profile to enhance personalization';
+
+  @override
+  String get personaRefill => 'Refill';
+
+  @override
+  String get personaStart => 'Start';
+
+  @override
+  String get personaLevelEditable => 'Editable';
+
+  @override
+  String get personaLevelWarn => 'Suggested Correction';
+
+  @override
+  String get personaLevelReadonly => 'Read Only';
+
+  @override
+  String personaConfidence(Object value) {
+    return 'Confidence $value';
+  }
+
+  @override
+  String get personaEdit => 'Edit';
+
+  @override
+  String get personaRollback => 'Rollback';
+
+  @override
+  String get personaSuggestCorrection => 'Suggest Correction';
+
+  @override
+  String get personaCorrectionDialogTitle => 'Suggest Correction';
+
+  @override
+  String get personaCorrectionHint =>
+      'After submission, the system will evaluate and gradually adjust the profile, which may affect recommendation strategies.';
+
+  @override
+  String get personaCorrectionValue => 'Your suggested content';
+
+  @override
+  String get personaCorrectionReason => 'Reason (optional)';
+
+  @override
+  String get personaCorrectionSubmitted => 'Correction suggestion submitted';
+
+  @override
+  String get personaEditPreference => 'Edit Preference';
+
+  @override
+  String get personaNewPreferenceValue => 'New preference value';
+
+  @override
+  String get personaPleaseEnterValue => 'Please enter a value';
+
+  @override
+  String get personaRollbackTitle => 'Rollback Preference';
+
+  @override
+  String get personaRollbackConfirm =>
+      'Roll back preference to previous version, may affect recommendation effectiveness.';
+
+  @override
+  String get personaConfirmRollback => 'Confirm Rollback';
+
+  @override
+  String get personaEditGoal => 'Edit Goal';
+
+  @override
+  String get personaGoalContent => 'Goal content';
+
+  @override
+  String get personaGoalStatus => 'Status';
+
+  @override
+  String get personaStatusActive => 'Active';
+
+  @override
+  String get personaStatusCompleted => 'Completed';
+
+  @override
+  String get personaStatusPaused => 'Paused';
+
+  @override
+  String get personaPleaseEnterGoal => 'Please enter goal content';
+
+  @override
+  String get personaLearningGoal => 'Learning Goal';
+
+  @override
+  String get personaGoalTypeExam => 'Exam';
+
+  @override
+  String get personaGoalTypeSkill => 'Skill';
+
+  @override
+  String get personaGoalTypeInterest => 'Interest';
+
+  @override
+  String get personaGoalHint => 'e.g., Final exam prep / Learn Flutter';
+
+  @override
+  String get personaLearningStyle => 'Learning Style';
+
+  @override
+  String get personaStyleBalanced => 'Balanced';
+
+  @override
+  String get personaStyleVisual => 'Visual';
+
+  @override
+  String get personaStylePractice => 'Practice';
+
+  @override
+  String get personaStyleLogic => 'Logic';
+
+  @override
+  String get personaDailyStudyTime => 'Daily Study Time';
+
+  @override
+  String personaMinutes(Object minutes) {
+    return '$minutes minutes';
+  }
+
+  @override
+  String get personaKnowledgeLevel => 'Knowledge Level';
+
+  @override
+  String get personaLevelBeginner => 'Beginner';
+
+  @override
+  String get personaLevelIntermediate => 'Intermediate';
+
+  @override
+  String get personaLevelAdvanced => 'Advanced';
+
+  @override
+  String get personaResponsePreference => 'Response Preference';
+
+  @override
+  String get personaResponseDepth => 'Response detail level';
+
+  @override
+  String get personaCuriosityExtension => 'Curiosity extension level';
+
+  @override
+  String get personaNextStep => 'Next';
+
+  @override
+  String get personaPreviousStep => 'Previous';
+
+  @override
+  String get personaComplete => 'Complete';
+
+  @override
+  String get editProfile => 'Edit Profile';
+
+  @override
+  String get editProfileSave => 'Save';
+
+  @override
+  String get editProfileChangeAvatar => 'Change Avatar';
+
+  @override
+  String get editProfileChooseFromPresets => 'Choose from presets';
+
+  @override
+  String get editProfileTakePhoto => 'Take photo';
+
+  @override
+  String get editProfileChooseFromGallery => 'Choose from gallery';
+
+  @override
+  String get editProfileAvatarUpdated => 'Avatar updated successfully';
+
+  @override
+  String editProfileUpdateFailed(Object error) {
+    return 'Update failed: $error';
+  }
+
+  @override
+  String editProfileUploadFailed(Object error) {
+    return 'Upload failed: $error';
+  }
+
+  @override
+  String get editProfileNicknameLabel => 'Nickname';
+
+  @override
+  String get editProfileNicknameHint => 'Enter your nickname';
+
+  @override
+  String get editProfileNicknameEmpty => 'Nickname cannot be empty';
+
+  @override
+  String get editProfileEmailLabel => 'Email';
+
+  @override
+  String get editProfileEmailHint => 'Enter your email';
+
+  @override
+  String get editProfileEmailInvalid => 'Please enter a valid email address';
+
+  @override
+  String get editProfileUsernameLabel => 'Username';
+
+  @override
+  String get editProfileUsernameReadonly => 'Username cannot be changed';
+
+  @override
+  String get editProfileAccountSecurity => 'Account Security';
+
+  @override
+  String get editProfileResetPassword => 'Reset Password';
+
+  @override
+  String get editProfileAccountInfo => 'Account Information';
+
+  @override
+  String get editProfileFlameLevel => 'Flame Level';
+
+  @override
+  String get editProfileFlameBrightness => 'Flame Brightness';
+
+  @override
+  String get editProfileAccountType => 'Account Type';
+
+  @override
+  String get editProfileGuestAccount => 'Guest Account';
+
+  @override
+  String get editProfileFullAccount => 'Full Account';
+
+  @override
+  String get editProfileProfileUpdated => 'Profile updated successfully';
+
+  @override
+  String get editProfileNewAvatarPending => 'New avatar is under review...';
+
+  @override
+  String get passwordReset => 'Reset Password';
+
+  @override
+  String get passwordResetHint =>
+      'Please ensure your new password contains at least 8 characters.';
+
+  @override
+  String get passwordResetCurrentLabel => 'Current Password';
+
+  @override
+  String get passwordResetCurrentRequired => 'Please enter current password';
+
+  @override
+  String get passwordResetNewLabel => 'New Password';
+
+  @override
+  String get passwordResetNewRequired => 'Please enter new password';
+
+  @override
+  String get passwordResetNewMinLength =>
+      'Password must be at least 8 characters';
+
+  @override
+  String get passwordResetConfirmLabel => 'Confirm New Password';
+
+  @override
+  String get passwordResetConfirmMismatch => 'Passwords do not match';
+
+  @override
+  String get passwordResetButton => 'Update Password';
+
+  @override
+  String get passwordResetSuccess => 'Password changed successfully';
+
+  @override
+  String passwordResetFailed(Object error) {
+    return 'Change failed: $error';
+  }
+
+  @override
+  String get smartPushSettings => 'Smart Push Settings';
+
+  @override
+  String get smartPushPersonaSection => 'Persona Settings';
+
+  @override
+  String get smartPushFrequencySection => 'Frequency Settings (Daily Cap)';
+
+  @override
+  String get smartPushActiveSlotsSection => 'Active Time Slots';
+
+  @override
+  String get smartPushActiveSlotsHint =>
+      'Push notifications only during these time slots, avoiding rest times.';
+
+  @override
+  String get smartPushAddTimeSlot => 'Add Time Slot';
+
+  @override
+  String get smartPushTestNotification => 'Send Test Notification (Dev)';
+
+  @override
+  String get smartPushTestNotificationSent =>
+      'Test notification sent (check notification center)';
+
+  @override
+  String get smartPushPersonaCoach => 'Strict Coach';
+
+  @override
+  String get smartPushPersonaCoachDesc => 'Discipline, emphasis on rigor';
+
+  @override
+  String get smartPushPersonaAnime => 'Anime Assistant';
+
+  @override
+  String get smartPushPersonaAnimeDesc => 'Gentle, cute encouragement';
+
+  @override
+  String smartPushFrequencyLabel(Object count) {
+    return '$count per day';
+  }
+
+  @override
+  String get smartPushNoSlots => 'No slots set, suggest adding active times';
+
+  @override
+  String get smartPushSettingsSaved => 'Settings saved';
+
+  @override
+  String smartPushSaveFailed(Object error) {
+    return 'Save failed: $error';
+  }
+
+  @override
+  String get themeSettings => 'Theme Settings';
+
+  @override
+  String get themeModeSection => 'Theme Mode';
+
+  @override
+  String get themeModeLight => 'Light';
+
+  @override
+  String get themeModeDark => 'Dark';
+
+  @override
+  String get themeModeSystem => 'System';
+
+  @override
+  String get brandPresetSection => 'Brand Preset';
+
+  @override
+  String get highContrastSection => 'High Contrast Mode';
+
+  @override
+  String get highContrastDesc => 'Enhance text and background contrast';
+
+  @override
+  String get resetDefaults => 'Reset to Defaults';
+
+  @override
+  String get colorPreviewSection => 'Color Preview';
+
+  @override
+  String get colorPrimary => 'Primary';
+
+  @override
+  String get colorSecondary => 'Secondary';
+
+  @override
+  String get colorSuccess => 'Success';
+
+  @override
+  String get colorWarning => 'Warning';
+
+  @override
+  String get colorError => 'Error';
+
+  @override
+  String get taskTypeColors => 'Task Type Colors';
+
+  @override
+  String get taskTypeLearning => 'Learning';
+
+  @override
+  String get taskTypeTraining => 'Training';
+
+  @override
+  String get taskTypeFix => 'Fix';
+
+  @override
+  String get taskTypeReflection => 'Reflection';
+
+  @override
+  String get taskTypeSocial => 'Social';
+
+  @override
+  String get taskTypePlanning => 'Planning';
+
+  @override
+  String get themeResetSuccess => 'Restored to default settings';
+
+  @override
+  String get systemUpdates => 'System Activity';
+
+  @override
+  String systemUpdatesLoadFailed(Object error) {
+    return 'Load failed: $error';
+  }
+
+  @override
+  String get systemUpdatesSearchHint => 'Search title or description';
+
+  @override
+  String get systemUpdatesTypeFilter => 'Type';
+
+  @override
+  String get systemUpdatesPriorityFilter => 'Priority';
+
+  @override
+  String systemUpdatesCount(Object count) {
+    return 'Total $count items';
+  }
+
+  @override
+  String get systemUpdatesNoItems => 'No system updates';
+
+  @override
+  String get systemUpdatesAll => 'All';
+
+  @override
+  String systemUpdatesConfidence(Object value) {
+    return 'Confidence $value%';
+  }
+
+  @override
+  String systemUpdatesNextWeekAdjust(Object value) {
+    return 'Next week continue adapting: $value';
+  }
+
+  @override
+  String get systemUpdatesBeforeLabel => 'Before';
+
+  @override
+  String get systemUpdatesAfterLabel => 'Now';
+
+  @override
+  String systemUpdatesAlignmentScore(Object value) {
+    return 'Persona alignment $value%';
+  }
+
+  @override
+  String get contentReviewCardTitle => 'Content Review';
+
+  @override
+  String get contentReviewPassed => 'Content Passed Review';
+
+  @override
+  String get contentReviewFailed => 'Content Failed Review';
+
+  @override
+  String get contentReviewNeedsRefinement => 'Content Needs Refinement';
+
+  @override
+  String get contentReviewScoreLabel => 'Score';
+
+  @override
+  String get contentReviewOverallScore => 'Overall Score';
+
+  @override
+  String get contentReviewMetrics => 'Evaluation Metrics';
+
+  @override
+  String get contentReviewIssues => 'Issues Found';
+
+  @override
+  String get contentReviewSuggestions => 'Improvement Suggestions';
+
+  @override
+  String get contentReviewCriticalIssues => 'Critical Issues';
+
+  @override
+  String get contentReviewWarnings => 'Warnings';
+
+  @override
+  String get contentReviewTips => 'Tips';
+
+  @override
+  String get contentReviewAccept => 'Accept';
+
+  @override
+  String get contentReviewReject => 'Reject';
+
+  @override
+  String get contentReviewRequestManual => 'Request Manual Review';
+
+  @override
+  String get contentReviewRegenerate => 'Regenerate';
+
+  @override
+  String get contentReviewWaitOptimization => 'Waiting for optimization...';
+
+  @override
+  String get contentReviewOptimizing => 'Optimizing content...';
+
+  @override
+  String get contentReviewOptimized => 'Optimization complete';
+
+  @override
+  String get contentReviewOptimizationFailed => 'Optimization failed';
+
+  @override
+  String get contentReviewProcessing => 'Processing...';
+
+  @override
+  String get contentReviewAgreePassed => 'I agree it should pass';
+
+  @override
+  String get contentReviewDisagreePassed => 'I disagree with this result';
+
+  @override
+  String get contentReviewReportProblem => 'Report Review Problem';
+
+  @override
+  String get contentReviewOverrideDialogTitle => 'Override Review Decision';
+
+  @override
+  String get contentReviewDisagreeWithResult =>
+      'I disagree with this review result';
+
+  @override
+  String get contentReviewAgreeShouldPass =>
+      'I think the content should pass review';
+
+  @override
+  String get contentReviewReasonHint => 'Enter your reason...';
+
+  @override
+  String get contentReviewReasonRequired => 'Please provide a reason';
+
+  @override
+  String get contentReviewAppealDialogTitle => 'Report Review Problem';
+
+  @override
+  String get contentReviewSelectIssuesHint =>
+      'Select issue types (multiple allowed)';
+
+  @override
+  String get contentReviewDetailHint => 'Detailed explanation:';
+
+  @override
+  String get contentReviewDetailPlaceholder =>
+      'Please describe what\'s wrong with the review...';
+
+  @override
+  String get contentReviewDetailRequired =>
+      'Please provide a detailed explanation';
+
+  @override
+  String get contentReviewSelectAtLeastOne =>
+      'Please select at least one issue type';
+
+  @override
+  String get contentReviewIssueUnfairStandards => 'Review standards are unfair';
+
+  @override
+  String get contentReviewIssueScoreCalculation =>
+      'Score calculation is incorrect';
+
+  @override
+  String get contentReviewIssueMissingContext => 'Important context was missed';
+
+  @override
+  String get contentReviewIssueInaccurateDescription =>
+      'Description is inaccurate';
+
+  @override
+  String get contentReviewIssueUnfeasibleSuggestion =>
+      'Suggestion is not feasible';
+
+  @override
+  String get contentReviewMetricAccuracy => 'Accuracy';
+
+  @override
+  String get contentReviewMetricCompleteness => 'Completeness';
+
+  @override
+  String get contentReviewMetricRelevance => 'Relevance';
+
+  @override
+  String get contentReviewMetricClarity => 'Clarity';
+
+  @override
+  String get contentReviewMetricSafety => 'Safety';
+
+  @override
+  String get contentReviewMetricFeasibility => 'Feasibility';
+
+  @override
+  String get contentReviewMetricEfficiency => 'Efficiency';
+
+  @override
+  String get contentReviewMetricHelpfulness => 'Helpfulness';
+
+  @override
+  String get contentReviewMetricTone => 'Tone appropriateness';
+
+  @override
+  String get contentReviewScoreExcellent => 'Excellent';
+
+  @override
+  String get contentReviewScoreGood => 'Good';
+
+  @override
+  String get contentReviewScorePass => 'Pass';
+
+  @override
+  String get contentReviewScoreNeedsWork => 'Needs Work';
+
+  @override
+  String get contentReviewSeverityCritical => 'Critical';
+
+  @override
+  String get contentReviewSeverityWarning => 'Warning';
+
+  @override
+  String get contentReviewSeverityInfo => 'Info';
+
+  @override
+  String get contentReviewHints => 'Hints';
+
+  @override
+  String contentReviewSuggestion(Object suggestion) {
+    return 'Suggestion: $suggestion';
+  }
+
+  @override
+  String get contentReviewSuggestionDesc => 'Suggestion';
+
+  @override
+  String get contentReviewReflectionPending => 'Waiting for optimization...';
+
+  @override
+  String get contentReviewReflectionInProgress => 'Optimizing content...';
+
+  @override
+  String get contentReviewReflectionCompleted => 'Optimization completed';
+
+  @override
+  String get contentReviewReflectionFailed => 'Optimization failed';
+
+  @override
+  String get contentReviewReflectionProcessing => 'Processing reflection...';
+
+  @override
+  String get contentReviewReflectionPendingShort => 'Waiting';
+
+  @override
+  String get contentReviewReflectionInProgressShort => 'Optimizing...';
+
+  @override
+  String get contentReviewReflectionCompletedShort => 'Optimized';
+
+  @override
+  String get contentReviewReflectionFailedShort => 'Failed';
+
+  @override
+  String get contentReviewReflectionProcessingShort => 'Processing';
+
+  @override
+  String get contentReviewManualReview => 'Manual Review';
+
+  @override
+  String get contentReviewDisagreePass => 'I disagree with this result';
+
+  @override
+  String get contentReviewAgreePass => 'I think it should pass';
+
+  @override
+  String get contentReviewReportIssue => 'Report review issue';
+
+  @override
+  String get contentReviewDisagreePassTitle => 'Disagree with approval';
+
+  @override
+  String get contentReviewAgreePassTitle =>
+      'I think content should pass review';
+
+  @override
+  String get contentReviewReasonPrompt => 'Please explain your reason:';
+
+  @override
+  String get contentReviewCancel => 'Cancel';
+
+  @override
+  String get contentReviewConfirm => 'Confirm';
+
+  @override
+  String get contentReviewAppealSelectType => 'Select issue type:';
+
+  @override
+  String get contentReviewAppealDetail => 'Detailed explanation:';
+
+  @override
+  String get contentReviewAppealDetailHint =>
+      'Please describe the issues with the review result...';
+
+  @override
+  String get contentReviewAppealDetailRequired =>
+      'Please provide a detailed explanation';
+
+  @override
+  String get contentReviewAppealTypeRequired =>
+      'Please select at least one issue type';
+
+  @override
+  String get contentReviewAppealUnreasonableStandard =>
+      'Unreasonable review standards';
+
+  @override
+  String get contentReviewAppealScoreError => 'Score calculation error';
+
+  @override
+  String get contentReviewAppealContextIgnored => 'Important context ignored';
+
+  @override
+  String get contentReviewAppealDescriptionInaccurate =>
+      'Inaccurate problem description';
+
+  @override
+  String get contentReviewAppealSuggestionNotFeasible =>
+      'Suggestion not feasible';
+
+  @override
+  String get contentReviewAppealSubmit => 'Submit Appeal';
+
+  @override
+  String get commonSubmitting => 'Submitting...';
+
+  @override
+  String get brandPresetSparkle => 'Sparkle';
+
+  @override
+  String get brandPresetOcean => 'Ocean';
+
+  @override
+  String get brandPresetForest => 'Forest';
+
+  @override
+  String get smartPushDebugTitle => 'Debug: Memory Threshold';
+
+  @override
+  String get smartPushDebugBody =>
+      'Your [Linear Algebra] is fading, tap to review now!';
+
+  @override
+  String get reviewAppealPendingTitle => 'Appeal pending';
+
+  @override
+  String get reviewAppealPendingDesc =>
+      'Your appeal has been submitted and is waiting to be processed.';
+
+  @override
+  String get reviewAppealInReviewTitle => 'Second review in progress';
+
+  @override
+  String get reviewAppealInReviewDesc =>
+      'A different model is conducting a second review.';
+
+  @override
+  String get reviewAppealResolvedTitle => 'Appeal approved';
+
+  @override
+  String get reviewAppealResolvedDesc =>
+      'Your appeal was approved and the original review result has been updated.';
+
+  @override
+  String get reviewAppealRejectedTitle => 'Appeal rejected';
+
+  @override
+  String get reviewAppealRejectedDesc =>
+      'Your appeal was rejected and the original review result remains unchanged.';
+
+  @override
+  String get reviewAppealEscalatedTitle => 'Escalated to manual handling';
+
+  @override
+  String get reviewAppealEscalatedDesc =>
+      'Manual review is required. Please wait patiently.';
+
+  @override
+  String reviewAppealId(Object id) {
+    return 'Appeal #$id';
+  }
+
+  @override
+  String get reviewAppealTimelineSubmitted => 'Appeal submitted';
+
+  @override
+  String get reviewAppealTimelineReviewed => 'Second review completed';
+
+  @override
+  String get reviewAppealTimelineApproved => 'Appeal approved';
+
+  @override
+  String get reviewAppealTimelineRejected => 'Appeal rejected';
+
+  @override
+  String reviewAppealScore(Object value) {
+    return 'Score: $value%';
+  }
+
+  @override
+  String reviewAppealSecondaryScore(Object value) {
+    return 'Second review score: $value%';
+  }
+
+  @override
+  String get reviewAppealMinReason =>
+      'Please provide more detail (at least 10 characters)';
+
+  @override
+  String get reviewAppealOtherIssue => 'Other issue';
+
+  @override
+  String get transparencySettingsTitle => 'Transparency Settings';
+
+  @override
+  String get transparencyEnable => 'Enable transparency mode';
+
+  @override
+  String get transparencyEnableDesc =>
+      'Show AI processing steps, agent switches, and token usage.';
+
+  @override
+  String get transparencyDisplayOptions => 'Display options';
+
+  @override
+  String get transparencyTokenUsage => 'Token usage';
+
+  @override
+  String get transparencyTokenUsageDesc =>
+      'Show token consumption and estimated cost for each conversation.';
+
+  @override
+  String get transparencyAgentSwitching => 'Agent switching';
+
+  @override
+  String get transparencyAgentSwitchingDesc =>
+      'Show how the system switches between different agents.';
+
+  @override
+  String get transparencyReasoningSteps => 'Reasoning steps';
+
+  @override
+  String get transparencyReasoningStepsDesc =>
+      'Show the model\'s detailed reasoning steps.';
+
+  @override
+  String get transparencyWarning =>
+      'Detailed transparency may slightly increase response latency.';
+
+  @override
+  String get transparencyLoadFailed => 'Failed to load settings';
+
+  @override
+  String get nightlyReviewPending => 'Tonight\'s review is still waiting';
+
+  @override
+  String get nightlyReviewStart => 'Start';
+
+  @override
+  String get thoughtCapsuleTitle => 'Thought Capsule';
+
+  @override
+  String get thoughtCapsulePrompt =>
+      'What\'s blocking you right now, or what do you want to vent about?';
+
+  @override
+  String get thoughtCapsuleHint => 'Write down your thought...';
+
+  @override
+  String get thoughtCapsuleCaptured => 'Thought captured';
+
+  @override
+  String thoughtCapsuleCaptureFailed(Object error) {
+    return 'Capture failed: $error';
+  }
+
+  @override
+  String get leaderboardTitle => 'Leaderboard';
+
+  @override
+  String get leaderboardGlobal => 'Global';
+
+  @override
+  String get leaderboardFriends => 'Friends';
+
+  @override
+  String get leaderboardGroup => 'Groups';
+
+  @override
+  String get leaderboardSubject => 'Subjects';
+
+  @override
+  String get leaderboardWeekly => 'Weekly';
+
+  @override
+  String get leaderboardStreak => 'Streak';
+
+  @override
+  String leaderboardMyRank(int rank) {
+    return 'My rank: $rank';
+  }
+
+  @override
+  String leaderboardPoints(int value) {
+    return '$value pts';
+  }
+
+  @override
+  String leaderboardNoData(Object label) {
+    return 'No $label data yet';
+  }
+
+  @override
+  String get leaderboardLoadFailed =>
+      'Failed to load leaderboard. Please try again.';
+
+  @override
+  String get omnibarListeningHint => 'Listening...';
+
+  @override
+  String get omnibarDefaultHint => 'Tell me what you think...';
+
+  @override
+  String get voiceInputAction => 'Voice input';
+
+  @override
+  String get voiceInputStopAction => 'Stop recording';
+
+  @override
+  String voiceInputSpeechFailed(Object error) {
+    return 'Speech recognition failed: $error';
+  }
+
+  @override
+  String sendFailedWithError(Object error) {
+    return 'Failed to send: $error';
+  }
 }

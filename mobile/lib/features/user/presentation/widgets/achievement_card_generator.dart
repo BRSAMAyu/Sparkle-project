@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// 成就卡片生成器 - 生成用于分享的精美卡片
 class AchievementCardGenerator extends StatelessWidget {
@@ -47,6 +48,7 @@ class _MilestoneCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final nodeCount = data['node_count'] as int? ?? 0;
     final username = data['username'] as String? ?? 'Sparkle User';
     final date = data['date'] as String? ?? '2024.01.01';
@@ -95,7 +97,7 @@ class _MilestoneCard extends StatelessWidget {
 
                 // Achievement title
                 Text(
-                  '学习里程碑',
+                  l10n.achievementMilestone,
                   style: TextStyle(
                     color: DS.brandPrimaryConst,
                     fontSize: 48,
@@ -120,7 +122,7 @@ class _MilestoneCard extends StatelessWidget {
                     ),
                   ),
                   child: Text(
-                    '$nodeCount 个知识点',
+                    l10n.achievementKnowledgePoints(nodeCount),
                     style: TextStyle(
                       color: DS.brandPrimaryConst,
                       fontSize: 72,
@@ -132,7 +134,7 @@ class _MilestoneCard extends StatelessWidget {
 
                 // Description
                 Text(
-                  '恭喜你已掌握 $nodeCount 个知识点\n知识之光照亮前行之路',
+                  l10n.achievementMilestoneDesc(nodeCount),
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: DS.brandPrimary.withValues(alpha: 0.9),
@@ -229,6 +231,7 @@ class _StreakRecordCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final streakDays = data['streak_days'] as int? ?? 30;
     final username = data['username'] as String? ?? 'Sparkle User';
 
@@ -274,7 +277,7 @@ class _StreakRecordCard extends StatelessWidget {
             const SizedBox(height: 60),
 
             Text(
-              '连续学习记录',
+              l10n.achievementStreakRecord,
               style: TextStyle(
                 color: DS.brandPrimaryConst,
                 fontSize: 48,
@@ -284,7 +287,7 @@ class _StreakRecordCard extends StatelessWidget {
             const SizedBox(height: 40),
 
             Text(
-              '$streakDays 天',
+              l10n.achievementStreakDays(streakDays),
               style: TextStyle(
                 color: DS.brandPrimaryConst,
                 fontSize: 120,
@@ -294,7 +297,7 @@ class _StreakRecordCard extends StatelessWidget {
             const SizedBox(height: 40),
 
             Text(
-              '$username 已连续学习 $streakDays 天\n坚持的力量无可阻挡！',
+              l10n.achievementStreakDesc(username, streakDays),
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: DS.brandPrimaryConst,
@@ -316,7 +319,8 @@ class _MasteryAchievementCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final domain = data['domain'] as String? ?? '数学';
+    final l10n = context.l10n;
+    final domain = data['domain'] as String? ?? 'Math';
     final masteryPercent = data['mastery_percent'] as int? ?? 90;
     final username = data['username'] as String? ?? 'Sparkle User';
 
@@ -362,7 +366,7 @@ class _MasteryAchievementCard extends StatelessWidget {
             const SizedBox(height: 60),
 
             Text(
-              '领域精通',
+              l10n.achievementMasteryTitle,
               style: TextStyle(
                 color: DS.brandPrimaryConst,
                 fontSize: 48,
@@ -382,7 +386,7 @@ class _MasteryAchievementCard extends StatelessWidget {
             const SizedBox(height: 20),
 
             Text(
-              '$masteryPercent% 掌握度',
+              l10n.achievementMasteryPercent(masteryPercent),
               style: TextStyle(
                 color: DS.brandPrimaryConst,
                 fontSize: 48,
@@ -391,7 +395,7 @@ class _MasteryAchievementCard extends StatelessWidget {
             const SizedBox(height: 40),
 
             Text(
-              '$username 在 $domain 领域已达到精通水平\n继续保持！',
+              l10n.achievementMasteryDesc(username, domain),
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: DS.brandPrimaryConst,
@@ -413,6 +417,7 @@ class _TaskCompletionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final taskCount = data['task_count'] as int? ?? 20;
     final sprintName = data['sprint_name'] as String? ?? 'Sprint #1';
     final username = data['username'] as String? ?? 'Sparkle User';
@@ -459,7 +464,7 @@ class _TaskCompletionCard extends StatelessWidget {
             const SizedBox(height: 60),
 
             Text(
-              '任务圆满完成',
+              l10n.achievementTaskComplete,
               style: TextStyle(
                 color: DS.brandPrimaryConst,
                 fontSize: 48,
@@ -479,7 +484,7 @@ class _TaskCompletionCard extends StatelessWidget {
             const SizedBox(height: 20),
 
             Text(
-              '完成 $taskCount 项任务',
+              l10n.achievementTaskCount(taskCount),
               style: TextStyle(
                 color: DS.brandPrimaryConst,
                 fontSize: 72,
@@ -489,7 +494,7 @@ class _TaskCompletionCard extends StatelessWidget {
             const SizedBox(height: 40),
 
             Text(
-              '$username 在本次冲刺中表现卓越\n效率之星实至名归！',
+              l10n.achievementTaskDesc(username),
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: DS.brandPrimaryConst,

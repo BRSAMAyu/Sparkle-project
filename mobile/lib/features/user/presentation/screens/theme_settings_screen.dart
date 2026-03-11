@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/providers/theme_provider.dart';
 
 /// Theme Settings Screen - 主题设置屏幕
@@ -26,11 +29,10 @@ class ThemeSettingsScreen extends ConsumerWidget {
       appBar: AppBar(
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
-          size: DS.touchTargetMinSize,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        title: const Text('主题设置'),
+        title: Text(context.l10n.themeSettings),
         elevation: 0,
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         foregroundColor: Theme.of(context).textTheme.titleLarge?.color,
@@ -69,9 +71,12 @@ class ThemeSettingsScreen extends ConsumerWidget {
                 GraphiteCardSurface(
                   child: _ResetButton(
                     onPressed: () {
-                      themeManager.reset();
+                      unawaited(themeManager.reset());
                       if (context.mounted) {
-                        AppFeedback.success(context, '已恢复为默认设置');
+                        AppFeedback.success(
+                          context,
+                          context.l10n.themeResetSuccess,
+                        );
                       }
                     },
                   ),
@@ -104,7 +109,7 @@ class _ThemeModeSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '主题模式',
+            context.l10n.themeModeSection,
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: DS.md),
@@ -129,7 +134,11 @@ class _SegmentedThemeButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const modes = AppThemeMode.values;
-    final modeLabels = ['浅色', '深色', '跟随系统'];
+    final modeLabels = [
+      context.l10n.themeModeLight,
+      context.l10n.themeModeDark,
+      context.l10n.themeModeSystem,
+    ];
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -204,7 +213,7 @@ class _BrandPresetSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '品牌预设',
+            context.l10n.brandPresetSection,
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: DS.md),
@@ -213,8 +222,11 @@ class _BrandPresetSection extends StatelessWidget {
             runSpacing: DS.md,
             children: BrandPreset.values.map((preset) {
               final isSelected = currentPreset == preset;
-              final presetName = preset.name.substring(0, 1).toUpperCase() +
-                  preset.name.substring(1);
+              final presetName = switch (preset) {
+                BrandPreset.sparkle => context.l10n.brandPresetSparkle,
+                BrandPreset.ocean => context.l10n.brandPresetOcean,
+                BrandPreset.forest => context.l10n.brandPresetForest,
+              };
 
               return GestureDetector(
                 onTap: () => onPresetChanged(preset),
@@ -262,33 +274,31 @@ class _HighContrastSection extends StatelessWidget {
   final void Function(bool) onToggled;
 
   @override
-  Widget build(BuildContext context) => Container(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '高对比度模式',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: DS.xs),
-                Text(
-                  '增强文字和背景的对比度',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: DS.textSecondary,
-                      ),
-                ),
-              ],
-            ),
-            Switch(
-              value: highContrast,
-              onChanged: onToggled,
-              activeThumbColor: DS.brandPrimary,
-            ),
-          ],
-        ),
+  Widget build(BuildContext context) => Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                context.l10n.highContrastSection,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: DS.xs),
+              Text(
+                context.l10n.highContrastDesc,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: DS.textSecondary,
+                    ),
+              ),
+            ],
+          ),
+          Switch(
+            value: highContrast,
+            onChanged: onToggled,
+            activeThumbColor: DS.brandPrimary,
+          ),
+        ],
       );
 }
 
@@ -303,7 +313,7 @@ class _ResetButton extends StatelessWidget {
         width: double.infinity,
         child: SparkleButton.outline(
           onPressed: onPressed,
-          label: '恢复默认设置',
+          label: context.l10n.resetDefaults,
           expand: true,
         ),
       );
@@ -322,7 +332,7 @@ class _ColorPreviewSection extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '颜色预览',
+          context.l10n.colorPreviewSection,
           style: Theme.of(context).textTheme.titleMedium,
         ),
         const SizedBox(height: DS.md),
@@ -332,14 +342,14 @@ class _ColorPreviewSection extends ConsumerWidget {
             Expanded(
               child: _ColorBox(
                 color: colors.brandPrimary,
-                label: '主色',
+                label: context.l10n.colorPrimary,
               ),
             ),
             const SizedBox(width: DS.md),
             Expanded(
               child: _ColorBox(
                 color: colors.brandSecondary,
-                label: '次色',
+                label: context.l10n.colorSecondary,
               ),
             ),
           ],
@@ -351,21 +361,21 @@ class _ColorPreviewSection extends ConsumerWidget {
             Expanded(
               child: _ColorBox(
                 color: colors.semanticSuccess,
-                label: '成功',
+                label: context.l10n.colorSuccess,
               ),
             ),
             const SizedBox(width: DS.md),
             Expanded(
               child: _ColorBox(
                 color: colors.semanticWarning,
-                label: '警告',
+                label: context.l10n.colorWarning,
               ),
             ),
             const SizedBox(width: DS.md),
             Expanded(
               child: _ColorBox(
                 color: colors.semanticError,
-                label: '错误',
+                label: context.l10n.colorError,
               ),
             ),
           ],
@@ -373,7 +383,7 @@ class _ColorPreviewSection extends ConsumerWidget {
         const SizedBox(height: DS.md),
         // Task Type Colors
         Text(
-          '任务类型颜色',
+          context.l10n.taskTypeColors,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
@@ -383,12 +393,36 @@ class _ColorPreviewSection extends ConsumerWidget {
           spacing: DS.md,
           runSpacing: DS.md,
           children: [
-            _ColorBox(color: colors.taskLearning, label: '学习', size: 60),
-            _ColorBox(color: colors.taskTraining, label: '训练', size: 60),
-            _ColorBox(color: colors.taskErrorFix, label: '修复', size: 60),
-            _ColorBox(color: colors.taskReflection, label: '反思', size: 60),
-            _ColorBox(color: colors.taskSocial, label: '社交', size: 60),
-            _ColorBox(color: colors.taskPlanning, label: '规划', size: 60),
+            _ColorBox(
+              color: colors.taskLearning,
+              label: context.l10n.taskTypeLearning,
+              size: 60,
+            ),
+            _ColorBox(
+              color: colors.taskTraining,
+              label: context.l10n.taskTypeTraining,
+              size: 60,
+            ),
+            _ColorBox(
+              color: colors.taskErrorFix,
+              label: context.l10n.taskTypeFix,
+              size: 60,
+            ),
+            _ColorBox(
+              color: colors.taskReflection,
+              label: context.l10n.taskTypeReflection,
+              size: 60,
+            ),
+            _ColorBox(
+              color: colors.taskSocial,
+              label: context.l10n.taskTypeSocial,
+              size: 60,
+            ),
+            _ColorBox(
+              color: colors.taskPlanning,
+              label: context.l10n.taskTypePlanning,
+              size: 60,
+            ),
           ],
         ),
       ],

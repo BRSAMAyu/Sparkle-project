@@ -1,12 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 
 class SmartPushSettingsScreen extends ConsumerStatefulWidget {
@@ -49,6 +53,7 @@ class _SmartPushSettingsScreenState
   }
 
   Future<void> _savePreferences() async {
+    final l10n = context.l10n;
     setState(() => _isLoading = true);
     try {
       final prefs = PushPreferences(
@@ -63,19 +68,21 @@ class _SmartPushSettingsScreenState
       await ref.read(authProvider.notifier).refreshUser();
 
       // Also update push preferences provider
-      ref.read(pushPreferencesProvider.notifier).updatePreferences(
-            personaType: _persona,
-            dailyCap: _dailyCap,
-            activeSlots: _activeSlots,
-          );
+      unawaited(
+        ref.read(pushPreferencesProvider.notifier).updatePreferences(
+              personaType: _persona,
+              dailyCap: _dailyCap,
+              activeSlots: _activeSlots,
+            ),
+      );
 
       if (mounted) {
-        AppFeedback.success(context, '设置已保存');
+        AppFeedback.success(context, l10n.smartPushSettingsSaved);
       }
     } catch (e) {
       _logger.e('Failed to save push settings: $e');
       if (mounted) {
-        AppFeedback.error(context, '保存失败: $e');
+        AppFeedback.error(context, l10n.smartPushSaveFailed(e.toString()));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -120,101 +127,107 @@ class _SmartPushSettingsScreenState
   }
 
   @override
-  Widget build(BuildContext context) => SparklePageScaffold(
-        role: SparklePageRole.settings,
-        appBar: AppBar(
-          leading: SparkleIconButton(
-            variant: ButtonVariant.ghost,
-            size: DS.touchTargetMinSize,
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => context.pop(),
-          ),
-          title: const Text('智能推送设置'),
-          actions: [
-            if (_isLoading)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.only(right: DS.spacing16),
-                  child: SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return SparklePageScaffold(
+      role: SparklePageRole.settings,
+      appBar: AppBar(
+        leading: SparkleIconButton(
+          variant: ButtonVariant.ghost,
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
+        title: Text(l10n.smartPushSettings),
+        actions: [
+          if (_isLoading)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.only(right: DS.spacing16),
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
                 ),
-              )
-            else
-              SparkleIconButton(
-                variant: ButtonVariant.ghost,
-                size: DS.touchTargetMinSize,
-                icon: const Icon(Icons.save),
-                onPressed: _savePreferences,
               ),
+            )
+          else
+            SparkleIconButton(
+              variant: ButtonVariant.ghost,
+              icon: const Icon(Icons.save),
+              onPressed: _savePreferences,
+            ),
+        ],
+      ),
+      child: ContentConstraint(
+        child: ListView(
+          padding: const EdgeInsets.all(DS.lg),
+          children: [
+            GraphiteCardSurface(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildSectionTitle(l10n.smartPushPersonaSection),
+                  const SizedBox(height: DS.sm),
+                  _buildPersonaSelector(l10n),
+                  const SizedBox(height: DS.xl),
+                  _buildSectionTitle(l10n.smartPushFrequencySection),
+                  _buildFrequencySlider(l10n),
+                ],
+              ),
+            ),
+            const SizedBox(height: DS.spacing20),
+            GraphiteCardSurface(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildSectionTitle(l10n.smartPushActiveSlotsSection),
+                  Text(
+                    l10n.smartPushActiveSlotsHint,
+                    style: TextStyle(
+                      color: DS.brandPrimaryConst,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: DS.sm),
+                  _buildActiveSlotsList(l10n),
+                  const SizedBox(height: DS.sm),
+                  SparkleButton(
+                    onPressed: _addSlot,
+                    icon: const Icon(Icons.add),
+                    label: l10n.smartPushAddTimeSlot,
+                    expand: true,
+                  ),
+                  const SizedBox(height: DS.spacing24),
+                  const Divider(),
+                  const SizedBox(height: DS.spacing16),
+                  Center(
+                    child: SparkleButton.ghost(
+                      onPressed: () {
+                        unawaited(
+                          ref.read(notificationServiceProvider).showSmartPush(
+                            title: l10n.smartPushDebugTitle,
+                            body: l10n.smartPushDebugBody,
+                            payload: {'taskId': 'debug_123'},
+                          ),
+                        );
+                        AppFeedback.info(
+                          context,
+                          l10n.smartPushTestNotificationSent,
+                        );
+                      },
+                      icon: const Icon(Icons.bug_report),
+                      label: l10n.smartPushTestNotification,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: DS.spacing20),
           ],
         ),
-        child: ContentConstraint(
-          child: ListView(
-            padding: const EdgeInsets.all(DS.lg),
-            children: [
-              GraphiteCardSurface(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildSectionTitle('角色设定 (Persona)'),
-                    const SizedBox(height: DS.sm),
-                    _buildPersonaSelector(),
-                    const SizedBox(height: DS.xl),
-                    _buildSectionTitle('频控设置 (每日上限)'),
-                    _buildFrequencySlider(),
-                  ],
-                ),
-              ),
-              const SizedBox(height: DS.spacing20),
-              GraphiteCardSurface(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildSectionTitle('活跃时间段 (Active Slots)'),
-                    Text(
-                      '仅在这些时间段内发送推送，避开休息时间。',
-                      style: TextStyle(
-                        color: DS.brandPrimaryConst,
-                        fontSize: 12,
-                      ),
-                    ),
-                    const SizedBox(height: DS.sm),
-                    _buildActiveSlotsList(),
-                    const SizedBox(height: DS.sm),
-                    SparkleButton(
-                      onPressed: _addSlot,
-                      icon: const Icon(Icons.add),
-                      label: '添加时间段',
-                      expand: true,
-                    ),
-                    const SizedBox(height: DS.spacing24),
-                    const Divider(),
-                    const SizedBox(height: DS.spacing16),
-                    Center(
-                      child: SparkleButton.ghost(
-                        onPressed: () {
-                          ref.read(notificationServiceProvider).showSmartPush(
-                            title: '⚡ 调试：记忆临界点',
-                            body: '你的 [线性代数] 正在遗忘，点击立即复习！',
-                            payload: {'taskId': 'debug_123'},
-                          );
-                          AppFeedback.info(context, '测试通知已发送 (需退回桌面查看)');
-                        },
-                        icon: const Icon(Icons.bug_report),
-                        label: '发送测试通知 (Dev)',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: DS.spacing20),
-            ],
-          ),
-        ),
-      );
+      ),
+    );
+  }
 
   Widget _buildSectionTitle(String title) => Text(
         title,
@@ -224,23 +237,23 @@ class _SmartPushSettingsScreenState
             ?.copyWith(fontWeight: FontWeight.bold),
       );
 
-  Widget _buildPersonaSelector() => Row(
+  Widget _buildPersonaSelector(AppLocalizations l10n) => Row(
         children: [
           Expanded(
             child: _buildPersonaChip(
               value: 'coach',
-              label: '严厉教练',
+              label: l10n.smartPushPersonaCoach,
               icon: Icons.sports_kabaddi,
-              description: '督促、强调纪律',
+              description: l10n.smartPushPersonaCoachDesc,
             ),
           ),
           const SizedBox(width: DS.md),
           Expanded(
             child: _buildPersonaChip(
               value: 'anime',
-              label: '二次元助手',
+              label: l10n.smartPushPersonaAnime,
               icon: Icons.face_retouching_natural,
-              description: '温柔、卖萌鼓励',
+              description: l10n.smartPushPersonaAnimeDesc,
             ),
           ),
         ],
@@ -292,20 +305,20 @@ class _SmartPushSettingsScreenState
     );
   }
 
-  Widget _buildFrequencySlider() => Column(
+  Widget _buildFrequencySlider(AppLocalizations l10n) => Column(
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('3条/天'),
+              Text(l10n.smartPushFrequencyLabel(3)),
               Text(
-                '$_dailyCap条',
+                l10n.smartPushFrequencyLabel(_dailyCap),
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
                 ),
               ),
-              const Text('10条/天'),
+              Text(l10n.smartPushFrequencyLabel(10)),
             ],
           ),
           Slider(
@@ -313,17 +326,17 @@ class _SmartPushSettingsScreenState
             min: 3,
             max: 10,
             divisions: 7,
-            label: '$_dailyCap 条',
+            label: l10n.smartPushFrequencyLabel(_dailyCap),
             onChanged: (val) => setState(() => _dailyCap = val.toInt()),
           ),
         ],
       );
 
-  Widget _buildActiveSlotsList() {
+  Widget _buildActiveSlotsList(AppLocalizations l10n) {
     if (_activeSlots.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: DS.spacing16),
-        child: Center(child: Text('暂无设置，建议添加活跃时间')),
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: DS.spacing16),
+        child: Center(child: Text(l10n.smartPushNoSlots)),
       );
     }
 

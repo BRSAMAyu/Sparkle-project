@@ -9,6 +9,8 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:sparkle/core/constants/api_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 
 typedef AchievementShareCardDownloader = Future<File> Function(
@@ -67,7 +69,7 @@ class _AchievementShareDialogState extends State<AchievementShareDialog> {
     try {
       final shareCard = await widget.shareCardFuture;
       if (shareCard == null) {
-        throw Exception('分享卡生成失败，请稍后重试');
+        throw Exception(context.l10n.shareCardGenerateFailed);
       }
 
       final downloader = widget.downloadCard ?? _downloadCardToTempFile;
@@ -86,7 +88,7 @@ class _AchievementShareDialogState extends State<AchievementShareDialog> {
         _errorMessage = e.toString();
       });
       if (mounted) {
-        _showError('分享卡准备失败: $e');
+        _showError(context.l10n.shareCardPrepareFailed(e.toString()));
       }
     }
   }
@@ -105,7 +107,7 @@ class _AchievementShareDialogState extends State<AchievementShareDialog> {
       final shareFile = widget.shareFile ?? _shareFile;
       await shareFile(_imageFile!, _shareCard!);
     } catch (e) {
-      _showError('分享失败: $e');
+      _showError(context.l10n.shareFailed(e.toString()));
     }
   }
 
@@ -116,10 +118,10 @@ class _AchievementShareDialogState extends State<AchievementShareDialog> {
       final saveFile = widget.saveFileToGallery ?? _saveImageToGallery;
       await saveFile(_imageFile!, _shareCard!);
       if (mounted && widget.showFeedback) {
-        AppFeedback.success(context, '已保存到相册');
+        AppFeedback.success(context, context.l10n.savedToGallery);
       }
     } catch (e) {
-      _showError('保存失败: $e');
+      _showError(context.l10n.saveFailed(e.toString()));
     }
   }
 
@@ -138,7 +140,7 @@ class _AchievementShareDialogState extends State<AchievementShareDialog> {
                   Icon(Icons.share, color: DS.brandPrimaryConst, size: 28),
                   const SizedBox(width: DS.md),
                   Text(
-                    '分享成就',
+                    context.l10n.shareAchievement,
                     style: TextStyle(
                       color: DS.textPrimary,
                       fontSize: 24,
@@ -160,7 +162,7 @@ class _AchievementShareDialogState extends State<AchievementShareDialog> {
                         const CircularProgressIndicator(),
                         const SizedBox(height: DS.lg),
                         Text(
-                          '正在准备分享卡片...',
+                          context.l10n.sharePreparingCard,
                           style: TextStyle(color: DS.textSecondary),
                         ),
                       ],
@@ -205,14 +207,14 @@ class _AchievementShareDialogState extends State<AchievementShareDialog> {
               if (_imageFile != null) ...[
                 _buildShareButton(
                   icon: Icons.share,
-                  label: '分享到社交媒体',
+                  label: context.l10n.shareToSocialMedia,
                   color: DS.brandPrimaryConst,
                   onTap: _shareToSocial,
                 ),
                 const SizedBox(height: DS.md),
                 _buildShareButton(
                   icon: Icons.save_alt,
-                  label: '保存到相册',
+                  label: context.l10n.saveToGallery,
                   color: DS.success,
                   onTap: _saveToGallery,
                 ),
@@ -222,7 +224,7 @@ class _AchievementShareDialogState extends State<AchievementShareDialog> {
 
               // Close button
               SparkleButton(
-                label: '关闭',
+                label: context.l10n.close,
                 variant: ButtonVariant.ghost,
                 onPressed: () => Navigator.of(context).pop(),
               ),
@@ -296,12 +298,12 @@ void showAchievementShareDialog(
 Future<File> _downloadCardToTempFile(AchievementShareCard shareCard) async {
   final resolvedUrl = _resolveCardUrl(shareCard.cardUrl);
   if (resolvedUrl.isEmpty) {
-    throw Exception('分享卡地址为空');
+    throw Exception(S.shareCardUrlEmpty);
   }
 
   final response = await http.get(Uri.parse(resolvedUrl));
   if (response.statusCode < 200 || response.statusCode >= 300) {
-    throw Exception('下载分享卡失败 (${response.statusCode})');
+    throw Exception(S.shareCardDownloadFailed(response.statusCode));
   }
 
   final tempDir = await getTemporaryDirectory();
@@ -316,7 +318,7 @@ Future<void> _shareFile(File file, AchievementShareCard shareCard) async {
   await SharePlus.instance.share(
     ShareParams(
       files: [XFile(file.path)],
-      text: '我在 Sparkle 解锁了「${shareCard.achievement.name}」',
+      text: S.shareUnlockMessage(shareCard.achievement.name),
     ),
   );
 }
@@ -329,12 +331,12 @@ Future<void> _saveImageToGallery(
   if (!photoStatus.isGranted && !photoStatus.isLimited && Platform.isAndroid) {
     final storageStatus = await Permission.storage.request();
     if (!storageStatus.isGranted) {
-      throw Exception('没有相册写入权限');
+      throw Exception(S.noGalleryPermission);
     }
   } else if (!photoStatus.isGranted &&
       !photoStatus.isLimited &&
       Platform.isIOS) {
-    throw Exception('没有相册写入权限');
+    throw Exception(S.noGalleryPermission);
   }
 
   final result = await ImageGallerySaver.saveFile(
@@ -342,13 +344,13 @@ Future<void> _saveImageToGallery(
     name: 'sparkle_${shareCard.achievement.id}',
   );
   if (result == null) {
-    throw Exception('保存结果为空');
+    throw Exception(S.saveResultEmpty);
   }
 
   if (result is Map) {
     final isSuccess = result['isSuccess'] == true || result['success'] == true;
     if (!isSuccess) {
-      throw Exception('相册保存失败');
+      throw Exception(S.gallerySaveFailed);
     }
   }
 }

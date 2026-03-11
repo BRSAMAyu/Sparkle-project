@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sparkle/core/constants/api_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 import 'package:sparkle/features/chat/data/services/audio_recording_service.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/cognitive_provider.dart';
@@ -98,7 +99,7 @@ class _OmniBarState extends ConsumerState<OmniBar>
       }
     } catch (e) {
       if (mounted) {
-        AppFeedback.error(context, '发送失败: $e');
+        AppFeedback.error(context, context.l10n.sendFailedWithError(e));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -169,6 +170,7 @@ class _OmniBarState extends ConsumerState<OmniBar>
   @override
   Widget build(BuildContext context) {
     final enterToSend = ref.watch(enterToSendProvider);
+    final l10n = context.l10n;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -236,8 +238,8 @@ class _OmniBarState extends ConsumerState<OmniBar>
                   ),
                   decoration: InputDecoration(
                     hintText: _isListening
-                        ? 'Listening...'
-                        : (widget.hintText ?? 'Tell me what you think...'),
+                        ? l10n.omnibarListeningHint
+                        : (widget.hintText ?? l10n.omnibarDefaultHint),
                     hintStyle: context.sparkleTypography.bodyLarge.copyWith(
                       color: _isListening
                           ? accentColor
@@ -264,7 +266,7 @@ class _OmniBarState extends ConsumerState<OmniBar>
                 )
               else if (_controller.text.isEmpty && !_isListening)
                 Tooltip(
-                  message: '语音输入',
+                  message: l10n.voiceInputAction,
                   child: SparkleIconButton(
                     icon: Icon(
                       Icons.mic,
@@ -273,7 +275,7 @@ class _OmniBarState extends ConsumerState<OmniBar>
                     ),
                     onPressed: _toggleListening,
                     variant: ButtonVariant.ghost,
-                    size: DS.touchTargetMinSize,
+                    semanticLabel: l10n.voiceInputAction,
                   ),
                 )
               else
@@ -293,7 +295,8 @@ class _OmniBarState extends ConsumerState<OmniBar>
                   ),
                   onPressed: _isListening ? _toggleListening : _submit,
                   variant: ButtonVariant.ghost,
-                  size: DS.touchTargetMinSize,
+                  semanticLabel:
+                      _isListening ? l10n.voiceInputStopAction : l10n.send,
                 ),
             ],
           ),
@@ -308,7 +311,7 @@ class _OmniBarState extends ConsumerState<OmniBar>
     final status = await Permission.microphone.request();
     if (!status.isGranted) {
       if (mounted) {
-        AppFeedback.error(context, '需要麦克风权限才能使用语音输入');
+        AppFeedback.error(context, context.l10n.voiceInputNoPermission);
       }
       return false;
     }
@@ -322,8 +325,9 @@ class _OmniBarState extends ConsumerState<OmniBar>
       setState(() {
         _isListening = false;
       });
-      _glowController.stop();
-      _glowController.reset();
+      _glowController
+        ..stop()
+        ..reset();
       return;
     }
 
@@ -337,7 +341,7 @@ class _OmniBarState extends ConsumerState<OmniBar>
     final authToken = await ref.read(authRepositoryProvider).getAccessToken();
     if (authToken == null) {
       if (mounted) {
-        AppFeedback.error(context, '未登录，请先登录');
+        AppFeedback.error(context, context.l10n.voiceInputLoginRequired);
       }
       return;
     }
@@ -368,9 +372,13 @@ class _OmniBarState extends ConsumerState<OmniBar>
             setState(() {
               _isListening = false;
             });
-            _glowController.stop();
-            _glowController.reset();
-            AppFeedback.error(context, '语音识别失败: $error');
+            _glowController
+              ..stop()
+              ..reset();
+            AppFeedback.error(
+              context,
+              context.l10n.voiceInputSpeechFailed(error),
+            );
           }
         },
         onCompleted: () {
@@ -378,8 +386,9 @@ class _OmniBarState extends ConsumerState<OmniBar>
             setState(() {
               _isListening = false;
             });
-            _glowController.stop();
-            _glowController.reset();
+            _glowController
+              ..stop()
+              ..reset();
           }
         },
         maxDuration: const Duration(seconds: 30),
@@ -389,9 +398,10 @@ class _OmniBarState extends ConsumerState<OmniBar>
         setState(() {
           _isListening = false;
         });
-        _glowController.stop();
-        _glowController.reset();
-        AppFeedback.error(context, '启动录音失败: $e');
+        _glowController
+          ..stop()
+          ..reset();
+        AppFeedback.error(context, context.l10n.voiceInputStartFailed(e));
       }
     }
   }

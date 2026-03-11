@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/leaderboard/presentation/providers/leaderboard_provider.dart';
 
 /// Leaderboard Screen
@@ -51,9 +52,10 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
     return SparklePageScaffold(
       role: SparklePageRole.content,
       appBar: AppBar(
-        title: const Text('排行榜'),
+        title: Text(context.l10n.leaderboardTitle),
         bottom: TabBar(
           controller: _tabController,
+          isScrollable: true,
           tabs: _tabs.map((type) => Tab(text: _getTabLabel(type))).toList(),
         ),
         actions: [
@@ -252,17 +254,22 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
       ),
       child: Row(
         children: [
-          Text(
-            '我的排名: ${leaderboard.myRank}',
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
+          Expanded(
+            child: Text(
+              context.l10n.leaderboardMyRank(leaderboard.myRank!),
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
           const Spacer(),
           Text(
             leaderboard.myScore != null
-                ? '${leaderboard.myScore!.toInt()}分'
+                ? context.l10n.leaderboardPoints(
+                    leaderboard.myScore!.toInt(),
+                  )
                 : '-',
             style: const TextStyle(
               fontSize: 16,
@@ -325,7 +332,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
             ),
             const SizedBox(height: DS.spacing16),
             Text(
-              '暂无${_getTabLabel(type)}数据',
+              context.l10n.leaderboardNoData(_getTabLabel(type)),
               style: TextStyle(
                 fontSize: 16,
                 color: DS.textSecondary,
@@ -341,9 +348,9 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
           children: [
             Icon(Icons.error_outline, size: 64, color: DS.error),
             const SizedBox(height: DS.spacing16),
-            const Text(
-              '加载失败，请重试',
-              style: TextStyle(fontSize: 16),
+            Text(
+              context.l10n.leaderboardLoadFailed,
+              style: const TextStyle(fontSize: 16),
             ),
             const SizedBox(height: DS.spacing8),
             SparkleButton.primary(
@@ -352,7 +359,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
                   ref.read(leaderboardProvider.notifier).loadAllLeaderboards(),
                 );
               },
-              label: '重试',
+              label: context.l10n.retry,
             ),
           ],
         ),
@@ -368,17 +375,17 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
   String _getTabLabel(LeaderboardType type) {
     switch (type) {
       case LeaderboardType.global:
-        return '全局榜';
+        return context.l10n.leaderboardGlobal;
       case LeaderboardType.friends:
-        return '好友榜';
+        return context.l10n.leaderboardFriends;
       case LeaderboardType.group:
-        return '群组榜';
+        return context.l10n.leaderboardGroup;
       case LeaderboardType.subject:
-        return '学科榜';
+        return context.l10n.leaderboardSubject;
       case LeaderboardType.weekly:
-        return '本周榜';
+        return context.l10n.leaderboardWeekly;
       case LeaderboardType.streak:
-        return '连胜榜';
+        return context.l10n.leaderboardStreak;
     }
   }
 
