@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 const String expertChatModePrefix = 'expert::';
 
@@ -10,16 +11,12 @@ const String expertChatModePrefix = 'expert::';
 abstract class ChatMode {
   ChatMode({
     required this.apiValue,
-    required this.label,
     required this.icon,
     required this.color,
   });
 
   /// API value sent to the backend
   final String apiValue;
-
-  /// Display label shown in the UI
-  final String label;
 
   /// Icon displayed for this mode
   final IconData icon;
@@ -38,7 +35,7 @@ abstract class ChatMode {
           .join(' ');
       return ChatModeExpert(
         expertId: expertId,
-        expertName: expertName.isEmpty ? expertId : expertName,
+        displayName: expertName.isEmpty ? expertId : expertName,
       );
     }
     return chatModeValues.firstWhere(
@@ -52,24 +49,49 @@ abstract class ChatMode {
 
   /// Get description text for the mode
   String get description {
+    final l10n = I18nService.instance.l10n;
     switch (apiValue) {
       case 'standard':
-        return '使用标准 AI 对话模式';
+        return l10n.chatModeStandardDesc;
       case 'deep_analysis':
-        return '多专家协作深度解析问题';
+        return l10n.chatModeDeepAnalysisDesc;
       case 'study_plan':
-        return '任务分解与学习计划协作';
+        return l10n.chatModeStudyPlanDesc;
       case 'error_diagnosis':
-        return '错题诊断与分析循环';
+        return l10n.chatModeErrorDiagnosisDesc;
       case 'expert_auto':
-        return '自动选择最合适专家并协作';
+        return l10n.chatModeExpertAutoDesc;
       default:
         if (apiValue.startsWith(expertChatModePrefix)) {
-          return '专家直达模式';
+          return l10n.chatModeExpertDirectDesc;
         }
         return '';
     }
   }
+
+  /// Display label shown in the UI
+  String get label {
+    final l10n = I18nService.instance.l10n;
+    switch (apiValue) {
+      case 'standard':
+        return l10n.chatModeStandard;
+      case 'deep_analysis':
+        return l10n.chatModeDeepAnalysis;
+      case 'study_plan':
+        return l10n.chatModeStudyPlan;
+      case 'error_diagnosis':
+        return l10n.chatModeErrorDiagnosis;
+      case 'expert_auto':
+        return l10n.chatModeExpertAuto;
+      default:
+        if (apiValue.startsWith(expertChatModePrefix)) {
+          return expertName ?? apiValue.substring(expertChatModePrefix.length);
+        }
+        return apiValue;
+    }
+  }
+
+  String? get expertName => null;
 
   /// Get the gradient for this mode
   LinearGradient get gradient => LinearGradient(
@@ -97,7 +119,6 @@ class ChatModeStandard extends ChatMode {
   ChatModeStandard()
       : super(
           apiValue: 'standard',
-          label: '标准对话',
           icon: Icons.chat_bubble_outline,
           color: DS.brandPrimaryConst,
         );
@@ -107,7 +128,6 @@ class ChatModeDeepAnalysis extends ChatMode {
   ChatModeDeepAnalysis()
       : super(
           apiValue: 'deep_analysis',
-          label: '深度解析',
           icon: Icons.psychology,
           color: const Color(0xFF9C27B0),
         );
@@ -117,7 +137,6 @@ class ChatModeStudyPlan extends ChatMode {
   ChatModeStudyPlan()
       : super(
           apiValue: 'study_plan',
-          label: '学习计划',
           icon: Icons.calendar_month,
           color: DS.successAccent,
         );
@@ -127,7 +146,6 @@ class ChatModeErrorDiagnosis extends ChatMode {
   ChatModeErrorDiagnosis()
       : super(
           apiValue: 'error_diagnosis',
-          label: '错题分析',
           icon: Icons.quiz,
           color: DS.errorAccent,
         );
@@ -137,7 +155,6 @@ class ChatModeExpertAuto extends ChatMode {
   ChatModeExpertAuto()
       : super(
           apiValue: 'expert_auto',
-          label: '专家自动',
           icon: Icons.auto_awesome_mosaic,
           color: const Color(0xFF00897B),
         );
@@ -146,16 +163,18 @@ class ChatModeExpertAuto extends ChatMode {
 class ChatModeExpert extends ChatMode {
   ChatModeExpert({
     required this.expertId,
-    required this.expertName,
+    required this.displayName,
   }) : super(
           apiValue: '$expertChatModePrefix$expertId',
-          label: expertName,
           icon: Icons.person_search,
           color: const Color(0xFF1565C0),
         );
 
   final String expertId;
-  final String expertName;
+  final String displayName;
+
+  @override
+  String? get expertName => displayName;
 }
 
 /// All available chat modes

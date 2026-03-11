@@ -185,6 +185,30 @@ class ToolDefinition {
         return l10n.toolsDocumentCleanerTitle;
       case 'toolsDocumentCleanerDesc':
         return l10n.toolsDocumentCleanerDesc;
+      case 'toolsFocusModeTitle':
+        return l10n.toolsFocusModeTitle;
+      case 'toolsFocusModeDesc':
+        return l10n.toolsFocusModeDesc;
+      case 'toolsPomodoroTitle':
+        return l10n.toolsPomodoroTitle;
+      case 'toolsPomodoroDesc':
+        return l10n.toolsPomodoroDesc;
+      case 'toolsErrorBookTitle':
+        return l10n.toolsErrorBookTitle;
+      case 'toolsErrorBookDesc':
+        return l10n.toolsErrorBookDesc;
+      case 'toolsReviewPlanTitle':
+        return l10n.toolsReviewPlanTitle;
+      case 'toolsReviewPlanDesc':
+        return l10n.toolsReviewPlanDesc;
+      case 'toolsLearningForecastTitle':
+        return l10n.toolsLearningForecastTitle;
+      case 'toolsLearningForecastDesc':
+        return l10n.toolsLearningForecastDesc;
+      case 'toolsCognitivePatternsTitle':
+        return l10n.toolsCognitivePatternsTitle;
+      case 'toolsCognitivePatternsDesc':
+        return l10n.toolsCognitivePatternsDesc;
       case 'toolsPatternListTitle':
         return l10n.toolsPatternListTitle;
       case 'toolsPatternListDesc':

@@ -585,6 +585,42 @@ class AppLocalizationsZh extends AppLocalizations {
   String get toolsSearchPlaceholder => '搜索工具...';
 
   @override
+  String get toolsFocusModeTitle => '专注模式';
+
+  @override
+  String get toolsFocusModeDesc => '进入任务专注主界面';
+
+  @override
+  String get toolsPomodoroTitle => '番茄钟';
+
+  @override
+  String get toolsPomodoroDesc => '25分钟工作周期';
+
+  @override
+  String get toolsErrorBookTitle => '错题本';
+
+  @override
+  String get toolsErrorBookDesc => '浏览与管理错题记录';
+
+  @override
+  String get toolsReviewPlanTitle => '复习计划';
+
+  @override
+  String get toolsReviewPlanDesc => '进入今日复习计划页';
+
+  @override
+  String get toolsLearningForecastTitle => '学习预测';
+
+  @override
+  String get toolsLearningForecastDesc => '查看学习趋势与风险';
+
+  @override
+  String get toolsCognitivePatternsTitle => '认知模式';
+
+  @override
+  String get toolsCognitivePatternsDesc => '查看行为定式与认知洞察';
+
+  @override
   String get chatModeStandard => '标准模式';
 
   @override
@@ -595,6 +631,48 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatModeAnalytical => '分析模式';
+
+  @override
+  String get chatModeStandardDesc => '标准 AI 对话模式';
+
+  @override
+  String get chatModeDeepAnalysis => '深度分析';
+
+  @override
+  String get chatModeDeepAnalysisDesc => '多专家协作分析';
+
+  @override
+  String get chatModeStudyPlan => '学习计划';
+
+  @override
+  String get chatModeStudyPlanDesc => '任务拆解与学习计划';
+
+  @override
+  String get chatModeErrorDiagnosis => '错误诊断';
+
+  @override
+  String get chatModeErrorDiagnosisDesc => '错误诊断与分析闭环';
+
+  @override
+  String get chatModeExpertAuto => '专家自动';
+
+  @override
+  String get chatModeExpertAutoDesc => '自动选择最佳专家';
+
+  @override
+  String get chatModeExpertDirect => '专家直连';
+
+  @override
+  String get chatModeExpertDirectDesc => '直连专家咨询';
+
+  @override
+  String get chatModeSelectorTitle => '选择 AI 协作模式';
+
+  @override
+  String get aiCollabModeTitle => 'AI 协作';
+
+  @override
+  String get switchAgentModeSemantics => '切换 Agent 模式';
 
   @override
   String chatDagLayerProgress(Object current, Object total) {
@@ -980,6 +1058,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get focusStatsWeek => '本周';
 
   @override
+  String get focusStatsMonth => '本月';
+
+  @override
   String get focusStatsTotal => '总计';
 
   @override
@@ -1008,6 +1089,46 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get focusStatsScreenTitle => '专注统计';
+
+  @override
+  String get focusStatsTrendTitle => '专注趋势';
+
+  @override
+  String focusStatsHeatmapRange(Object days) {
+    return '活跃热力图（$days天）';
+  }
+
+  @override
+  String get focusStatsRecentSessionsTitle => '最近会话';
+
+  @override
+  String get focusStatsNoSessions => '暂无专注记录';
+
+  @override
+  String get focusStatsLoadMore => '查看更多';
+
+  @override
+  String focusStatsDurationTooltip(Object minutes) {
+    return '专注时长：$minutes分钟';
+  }
+
+  @override
+  String get focusStatsLegendLow => '低';
+
+  @override
+  String get focusStatsLegendHigh => '高';
+
+  @override
+  String get focusStatsPomodoroLabel => '番茄';
+
+  @override
+  String get focusStatsStopwatchLabel => '正计';
+
+  @override
+  String get focusSelectTaskTitle => '选择专注任务';
+
+  @override
   String get focusReadyPrompt => '准备好开始专注了吗？';
 
   @override
@@ -1034,6 +1155,158 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get focusCoachTitle => 'AI专注教练';
+
+  @override
+  String focusCoachSummary(Object minutes, Object task) {
+    return '任务：$task · 已专注 $minutes 分钟';
+  }
+
+  @override
+  String get focusCoachPromptBreakdown => '拆解接下来15分钟';
+
+  @override
+  String get focusCoachPromptRefocus => '分心提醒';
+
+  @override
+  String get focusCoachPromptNextAction => '下一步行动';
+
+  @override
+  String focusCoachPromptBreakdownMessage(Object task) {
+    return '请根据任务「$task」，帮我拆解接下来15分钟的专注计划。';
+  }
+
+  @override
+  String get focusCoachPromptRefocusMessage => '我刚刚有些分心，请给我一句简短的回归提示。';
+
+  @override
+  String get focusCoachPromptNextActionMessage => '请总结当前任务的下一步行动，保持简洁明确。';
+
+  @override
+  String get focusCoachEmpty => '需要帮助就问我。';
+
+  @override
+  String get focusCoachHint => '问我：如何保持专注、拆解步骤...';
+
+  @override
+  String get focusCandidateTitle => '智能建议';
+
+  @override
+  String get focusCandidateSubtitle => '基于你的学习状态预测';
+
+  @override
+  String get focusCandidateFooterHint => '轻扫关闭 · 不感兴趣可以忽略';
+
+  @override
+  String get focusCandidateDismiss => '不感兴趣';
+
+  @override
+  String get focusCandidateAccept => '试试看';
+
+  @override
+  String focusInterruptionDetected(Object count) {
+    return '检测到分心行为（第 $count 次）';
+  }
+
+  @override
+  String get focusMindfulnessTitle => '正念模式';
+
+  @override
+  String focusLoadFailed(Object error) {
+    return '加载失败：$error';
+  }
+
+  @override
+  String get focusReturnToTask => '返回任务';
+
+  @override
+  String get focusReturnToTaskTitle => '返回任务执行';
+
+  @override
+  String get focusReturnToTaskMessage => '专注记录会暂停，并返回任务执行页面。';
+
+  @override
+  String get focusReturnToTaskConfirm => '确认返回';
+
+  @override
+  String get focusExitMindfulness => '退出正念模式';
+
+  @override
+  String get focusDockMindfulness => '正念模式';
+
+  @override
+  String get focusDockToolbox => '工具箱';
+
+  @override
+  String get focusReflectionTitle => '专注结束';
+
+  @override
+  String get focusReflectionPrompt => '这次专注的感觉如何？';
+
+  @override
+  String get focusReflectionNoteHint => '有什么值得记录的吗？（可选）';
+
+  @override
+  String get focusReflectionSaved => '复盘已保存到 Cognitive Prism';
+
+  @override
+  String focusReflectionSaveFailed(Object error) {
+    return '保存失败：$error';
+  }
+
+  @override
+  String focusReflectionSummary(Object feeling, Object note) {
+    return '专注复盘：本次状态 $feeling。\n$note';
+  }
+
+  @override
+  String get focusReflectionMoodFlow => '🔥 心流';
+
+  @override
+  String get focusReflectionMoodFocused => '🙂 专注';
+
+  @override
+  String get focusReflectionMoodOkay => '😐 一般';
+
+  @override
+  String get focusReflectionMoodDistracted => '😖 分心';
+
+  @override
+  String get focusReflectionMoodTired => '😫 疲惫';
+
+  @override
+  String get focusExitTitleStep1 => '确定要退出正念模式吗？';
+
+  @override
+  String get focusExitTitleStep2 => '即将退出';
+
+  @override
+  String get focusExitTitleStep3 => '最后确认';
+
+  @override
+  String get focusExitMessageStep1 => '你正处于专注状态，退出可能会影响专注效果。';
+
+  @override
+  String focusExitMessageStep2(Object minutes) {
+    return '你已经专注了 $minutes 分钟，确定要离开吗？';
+  }
+
+  @override
+  String get focusExitMessageStep3 => '再坚持一下！放弃会中断你的专注记录。';
+
+  @override
+  String get focusExitCancelStep1 => '继续专注';
+
+  @override
+  String get focusExitConfirmStep1 => '确认退出';
+
+  @override
+  String get focusExitConfirmStep2 => '继续退出';
+
+  @override
+  String get focusExitConfirmStep3 => '确定退出';
+
+  @override
   String get streakTitle => '连续学习';
 
   @override
@@ -1048,9 +1321,15 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get streakMaxLabel => '最高';
+
+  @override
   String streakMax(Object count) {
     return '最高$count';
   }
+
+  @override
+  String get streakTotalLabel => '累计';
 
   @override
   String streakTotal(Object count) {
@@ -1406,6 +1685,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get commonSeeAll => '查看全部';
 
   @override
+  String get operationPreview => '操作预览：';
+
+  @override
   String get commonShowLess => '收起';
 
   @override
@@ -1461,4 +1743,51 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get commonOperationWarning => '操作可能未成功';
+
+  @override
+  String get emptyStateNoTasksTitle => '还没有任务';
+
+  @override
+  String get emptyStateNoTasksDescription => '创建你的第一个学习任务，马上开始。';
+
+  @override
+  String get emptyStateNoChatsTitle => 'Sparkle 已就绪';
+
+  @override
+  String get emptyStateNoChatsDescription => '随时开口，我们开始对话。';
+
+  @override
+  String get emptyStateNoPlansTitle => '还没有学习计划';
+
+  @override
+  String get emptyStateNoPlansDescription => '制定一个计划，让 AI 帮你规划路线。';
+
+  @override
+  String get emptyStateNoErrorsTitle => '状态不错';
+
+  @override
+  String get emptyStateNoErrorsDescription => '你还没有错题记录。';
+
+  @override
+  String get emptyStateNoResultsTitle => '没有找到结果';
+
+  @override
+  String get emptyStateNoResultsDescription => '试试其他关键词。';
+
+  @override
+  String emptyStateNoResultsQuery(Object query) {
+    return '没有找到与“$query”相关的内容';
+  }
+
+  @override
+  String get emptyStateGeneralTitle => '这里还没有内容';
+
+  @override
+  String get emptyStateGeneralDescription => '先添加一些内容吧。';
+
+  @override
+  String get emptyStateStartChatAction => '开始对话';
+
+  @override
+  String get emptyStateCreatePlanAction => '创建计划';
 }

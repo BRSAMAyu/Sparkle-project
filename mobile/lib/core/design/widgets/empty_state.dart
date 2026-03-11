@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// 空状态场景类型
 enum EmptyStateType {
@@ -21,6 +22,7 @@ class EmptyState extends StatelessWidget {
     this.type = EmptyStateType.general,
     this.title,
     this.description,
+    this.searchQuery,
     this.icon,
     this.actionText,
     this.onAction,
@@ -36,10 +38,7 @@ class EmptyState extends StatelessWidget {
       EmptyState(
         key: key,
         type: EmptyStateType.noTasks,
-        title: '还没有任务',
-        description: '创建您的第一个学习任务，开启高效学习之旅',
         icon: Icons.task_alt_rounded,
-        actionText: '创建任务',
         onAction: onCreateTask,
       );
 
@@ -51,10 +50,7 @@ class EmptyState extends StatelessWidget {
       EmptyState(
         key: key,
         type: EmptyStateType.noChats,
-        title: '我是你的 AI 导师 Sparkle',
-        description: '有什么可以帮你？',
         icon: Icons.chat_bubble_outline_rounded,
-        actionText: '开始对话',
         onAction: onStartChat,
       );
 
@@ -66,10 +62,7 @@ class EmptyState extends StatelessWidget {
       EmptyState(
         key: key,
         type: EmptyStateType.noPlans,
-        title: '还没有学习计划',
-        description: '制定学习计划，让AI帮您规划学习路线',
         icon: Icons.calendar_today_rounded,
-        actionText: '创建计划',
         onAction: onCreatePlan,
       );
 
@@ -80,8 +73,6 @@ class EmptyState extends StatelessWidget {
       EmptyState(
         key: key,
         type: EmptyStateType.noErrors,
-        title: '太棒了！',
-        description: '您还没有错题记录，继续保持',
         icon: Icons.emoji_events_rounded,
       );
 
@@ -93,10 +84,8 @@ class EmptyState extends StatelessWidget {
       EmptyState(
         key: key,
         type: EmptyStateType.noResults,
-        title: '没有找到结果',
-        description:
-            searchQuery != null ? '没有找到与"$searchQuery"相关的内容' : '请尝试其他搜索关键词',
         icon: Icons.search_off_rounded,
+        searchQuery: searchQuery,
       );
 
   /// 空状态类型
@@ -107,6 +96,9 @@ class EmptyState extends StatelessWidget {
 
   /// 描述
   final String? description;
+
+  /// 搜索关键词
+  final String? searchQuery;
 
   /// 图标
   final IconData? icon;
@@ -123,37 +115,57 @@ class EmptyState extends StatelessWidget {
   /// 是否显示图标
   final bool showIcon;
 
-  String _getDefaultTitle() {
+  String _getDefaultTitle(BuildContext context) {
+    final l10n = context.l10n;
     switch (type) {
       case EmptyStateType.noTasks:
-        return '还没有任务';
+        return l10n.emptyStateNoTasksTitle;
       case EmptyStateType.noChats:
-        return '还没有对话';
+        return l10n.emptyStateNoChatsTitle;
       case EmptyStateType.noPlans:
-        return '还没有学习计划';
+        return l10n.emptyStateNoPlansTitle;
       case EmptyStateType.noErrors:
-        return '太棒了！';
+        return l10n.emptyStateNoErrorsTitle;
       case EmptyStateType.noResults:
-        return '没有找到结果';
+        return l10n.emptyStateNoResultsTitle;
       case EmptyStateType.general:
-        return '这里还没有内容';
+        return l10n.emptyStateGeneralTitle;
     }
   }
 
-  String _getDefaultDescription() {
+  String _getDefaultDescription(BuildContext context) {
+    final l10n = context.l10n;
     switch (type) {
       case EmptyStateType.noTasks:
-        return '创建您的第一个学习任务';
+        return l10n.emptyStateNoTasksDescription;
       case EmptyStateType.noChats:
-        return '开始与AI助手对话';
+        return l10n.emptyStateNoChatsDescription;
       case EmptyStateType.noPlans:
-        return '制定您的学习计划';
+        return l10n.emptyStateNoPlansDescription;
       case EmptyStateType.noErrors:
-        return '您还没有错题记录';
+        return l10n.emptyStateNoErrorsDescription;
       case EmptyStateType.noResults:
-        return '请尝试其他搜索关键词';
+        return searchQuery != null
+            ? l10n.emptyStateNoResultsQuery(searchQuery!)
+            : l10n.emptyStateNoResultsDescription;
       case EmptyStateType.general:
-        return '快去添加内容吧';
+        return l10n.emptyStateGeneralDescription;
+    }
+  }
+
+  String? _getDefaultActionText(BuildContext context) {
+    final l10n = context.l10n;
+    switch (type) {
+      case EmptyStateType.noTasks:
+        return l10n.taskAddNew;
+      case EmptyStateType.noChats:
+        return l10n.emptyStateStartChatAction;
+      case EmptyStateType.noPlans:
+        return l10n.emptyStateCreatePlanAction;
+      case EmptyStateType.noErrors:
+      case EmptyStateType.noResults:
+      case EmptyStateType.general:
+        return null;
     }
   }
 
@@ -209,7 +221,7 @@ class EmptyState extends StatelessWidget {
               if (showIcon) const SizedBox(height: DS.spacing24),
               // 标题
               Text(
-                title ?? _getDefaultTitle(),
+                title ?? _getDefaultTitle(context),
                 style: TextStyle(
                   fontSize: DS.fontSize2xl,
                   fontWeight: DS.fontWeightBold,
@@ -220,7 +232,7 @@ class EmptyState extends StatelessWidget {
               const SizedBox(height: DS.spacing12),
               // 描述
               Text(
-                description ?? _getDefaultDescription(),
+                description ?? _getDefaultDescription(context),
                 style: TextStyle(
                   fontSize: DS.fontSizeBase,
                   color: DS.neutral600,
@@ -230,11 +242,12 @@ class EmptyState extends StatelessWidget {
               ),
               // 操作按钮
               if (customAction != null ||
-                  (actionText != null && onAction != null)) ...[
+                  ((actionText ?? _getDefaultActionText(context)) != null &&
+                      onAction != null)) ...[
                 const SizedBox(height: DS.spacing32),
                 customAction ??
                     CustomButton.primary(
-                      text: actionText!,
+                      text: actionText ?? _getDefaultActionText(context)!,
                       onPressed: onAction,
                       icon: _getActionIcon(),
                     ),

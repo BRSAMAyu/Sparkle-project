@@ -353,13 +353,13 @@ class _StreakIndicatorFullState extends State<_StreakIndicatorFull>
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 _buildStatItem(
-                  l10n.streakMax(widget.streakStats.maxStreak).split(' ')[0],
+                  l10n.streakMaxLabel,
                   l10n.streakDays(widget.streakStats.maxStreak),
                   Icons.emoji_events,
                 ),
                 const SizedBox(width: DS.spacing12),
                 _buildStatItem(
-                  l10n.streakTotal(widget.streakStats.totalCheckinDays).split(' ')[0],
+                  l10n.streakTotalLabel,
                   l10n.streakDays(widget.streakStats.totalCheckinDays),
                   Icons.calendar_today,
                 ),

@@ -26,7 +26,7 @@ class FocusMainScreen extends ConsumerWidget {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        title: const Text('选择专注任务'),
+        title: Text(context.l10n.focusSelectTaskTitle),
       ),
       safeArea: false,
       child: SafeArea(
@@ -172,7 +172,7 @@ class FocusMainScreen extends ConsumerWidget {
             final dummyTask = TaskModel(
               id: 'quick_focus_${DateTime.now().millisecondsSinceEpoch}',
               userId: '',
-              title: '快速专注',
+              title: context.l10n.focusQuickStart,
               type: TaskType.learning,
               estimatedMinutes: 25,
               difficulty: 1,

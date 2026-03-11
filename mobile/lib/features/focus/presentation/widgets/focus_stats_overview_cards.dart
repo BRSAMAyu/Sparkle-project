@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/utils/formatters.dart';
 
 /// Overview cards showing key statistics
 class FocusStatsOverviewCards extends StatelessWidget {
@@ -17,48 +19,60 @@ class FocusStatsOverviewCards extends StatelessWidget {
   final int? longestStreak;
 
   @override
-  Widget build(BuildContext context) => Row(
-        children: [
-          Expanded(
-            child: _StatCard(
-              icon: Icons.today,
-              iconColor: DS.prismPurple,
-              label: '今日专注',
-              value: _formatDuration(todayMinutes),
-            ),
-          ),
-          const SizedBox(width: DS.md),
-          Expanded(
-            child: _StatCard(
-              icon: Icons.calendar_view_week,
-              iconColor: DS.brandPrimary,
-              label: '本周累计',
-              value: _formatDuration(weekTotalMinutes),
-            ),
-          ),
-          const SizedBox(width: DS.md),
-          Expanded(
-            child: _StatCard(
-              icon: Icons.local_fire_department,
-              iconColor: DS.warning,
-              label: '连续天数',
-              value: '$streakDays天',
-              subtitle: longestStreak != null && longestStreak! > 0
-                  ? '最长$longestStreak天'
-                  : null,
-            ),
-          ),
-        ],
-      );
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final cards = [
+      _StatCard(
+        icon: Icons.today,
+        iconColor: DS.prismPurple,
+        label: l10n.focusStatsToday,
+        value: _formatDuration(todayMinutes),
+      ),
+      _StatCard(
+        icon: Icons.calendar_view_week,
+        iconColor: DS.brandPrimary,
+        label: l10n.focusStatsWeek,
+        value: _formatDuration(weekTotalMinutes),
+      ),
+      _StatCard(
+        icon: Icons.local_fire_department,
+        iconColor: DS.warning,
+        label: l10n.streakTitle,
+        value: l10n.streakDays(streakDays),
+        subtitle: longestStreak != null && longestStreak! > 0
+            ? l10n.streakMax(longestStreak!)
+            : null,
+      ),
+    ];
 
-  String _formatDuration(int minutes) {
-    final hours = minutes ~/ 60;
-    final mins = minutes % 60;
-    if (hours > 0) {
-      return '${hours}h ${mins}m';
-    }
-    return '${mins}m';
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final useColumn = constraints.maxWidth < 520;
+        if (useColumn) {
+          return Column(
+            children: [
+              for (var i = 0; i < cards.length; i++) ...[
+                cards[i],
+                if (i != cards.length - 1) const SizedBox(height: DS.md),
+              ],
+            ],
+          );
+        }
+
+        return Row(
+          children: [
+            for (var i = 0; i < cards.length; i++) ...[
+              Expanded(child: cards[i]),
+              if (i != cards.length - 1) const SizedBox(width: DS.md),
+            ],
+          ],
+        );
+      },
+    );
   }
+
+  String _formatDuration(int minutes) =>
+      Formatters.formatFocusDuration(Duration(minutes: minutes));
 }
 
 class _StatCard extends StatelessWidget {

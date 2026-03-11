@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/focus/presentation/providers/focus_statistics_provider.dart';
 
 /// Period toggle switch for statistics view (Today/Week/Month)
@@ -15,6 +16,7 @@ class FocusStatsPeriodToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final animationDuration = context.reduceMotion ? Duration.zero : DS.normal;
     return Container(
       padding: const EdgeInsets.all(DS.xs),
@@ -29,7 +31,7 @@ class FocusStatsPeriodToggle extends StatelessWidget {
           return Semantics(
             button: true,
             selected: isSelected,
-            label: p.label,
+            label: p.label(l10n),
             child: Material(
               color: DS.surfacePrimary.withValues(alpha: 0),
               borderRadius: BorderRadius.circular(DS.sm),
@@ -52,7 +54,7 @@ class FocusStatsPeriodToggle extends StatelessWidget {
                     borderRadius: BorderRadius.circular(DS.sm),
                   ),
                   child: Text(
-                    p.label,
+                    p.label(l10n),
                     style: TextStyle(
                       color: isSelected ? DS.textOnPrimary : DS.neutral600,
                       fontSize: 13,

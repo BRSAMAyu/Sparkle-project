@@ -27,9 +27,9 @@ class KnowledgeCard extends StatelessWidget {
         onTap: () {
           // 导航到知识星图页面，如果有节点ID则聚焦到该节点
           if (nodeId != null) {
-            context.push('/galaxy?nodeId=$nodeId');
+            context.go('/galaxy?nodeId=$nodeId');
           } else {
-            context.push('/galaxy');
+            context.go('/galaxy');
           }
         },
         borderRadius: BorderRadius.circular(12),
@@ -40,8 +40,10 @@ class KnowledgeCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Icon(Icons.lightbulb_outline,
-                      color: context.colors.brandPrimary,),
+                  Icon(
+                    Icons.lightbulb_outline,
+                    color: context.colors.brandPrimary,
+                  ),
                   SizedBox(width: context.space.sm),
                   Expanded(
                     child: Text(
@@ -86,7 +88,7 @@ class KnowledgeCard extends StatelessWidget {
                 child: TextButton.icon(
                   onPressed: () {
                     // 导航到知识星图页面
-                    context.push('/galaxy');
+                    context.go('/galaxy');
                   },
                   icon: const Icon(Icons.arrow_forward_ios, size: 16),
                   label: const Text('查看详情'),

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/chat/data/models/chat_mode.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/expert_catalog_provider.dart';
@@ -32,7 +33,7 @@ class MultiAgentBar extends ConsumerWidget {
           .take(6)
           .map((expert) => ChatModeExpert(
                 expertId: expert.id,
-                expertName: expert.displayName,
+                displayName: expert.displayName,
               ))
           .toList(),
       loading: () => <ChatMode>[],
@@ -62,7 +63,7 @@ class MultiAgentBar extends ConsumerWidget {
             ),
             const SizedBox(width: DS.spacing8),
             Text(
-              'AI协作模式',
+              context.l10n.aiCollabModeTitle,
               style: TextStyle(
                 color: isDark ? DS.neutral100 : DS.neutral900,
                 fontSize: DS.fontSizeSm,
@@ -103,7 +104,7 @@ class MultiAgentBar extends ConsumerWidget {
     ref.read(chatModeNotifierProvider.notifier).setMode(mode);
     ref.read(lastMultiAgentModeProvider.notifier).state = mode;
     // Navigate to chat
-    unawaited(context.push('/chat'));
+    context.go('/chat');
   }
 }
 

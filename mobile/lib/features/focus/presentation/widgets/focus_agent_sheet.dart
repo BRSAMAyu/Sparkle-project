@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_bubble.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_input.dart';
 import 'package:sparkle/features/focus/presentation/providers/mindfulness_provider.dart';
@@ -17,6 +18,7 @@ class FocusAgentSheet extends ConsumerWidget {
     final chatState = ref.watch(taskChatProvider(task.id));
     final mindfulness = ref.watch(mindfulnessProvider);
     final elapsedMinutes = (mindfulness.elapsedSeconds / 60).floor();
+    final l10n = context.l10n;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(DS.lg, DS.md, DS.lg, DS.lg),
@@ -43,19 +45,26 @@ class FocusAgentSheet extends ConsumerWidget {
                   gradient: DS.secondaryGradient,
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Icons.auto_awesome,
-                    color: DS.brandPrimaryConst, size: 18,),
+                child: Icon(
+                  Icons.auto_awesome,
+                  color: DS.brandPrimaryConst,
+                  size: 18,
+                ),
               ),
               const SizedBox(width: DS.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('AI专注教练',
-                        style: TextStyle(
-                            fontWeight: DS.fontWeightBold, fontSize: 16,),),
                     Text(
-                      '任务：${task.title} · 已专注$elapsedMinutes分钟',
+                      l10n.focusCoachTitle,
+                      style: const TextStyle(
+                        fontWeight: DS.fontWeightBold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    Text(
+                      l10n.focusCoachSummary(task.title, elapsedMinutes),
                       style: TextStyle(color: DS.neutral500, fontSize: 12),
                     ),
                   ],
@@ -71,27 +80,27 @@ class FocusAgentSheet extends ConsumerWidget {
               runSpacing: DS.xs,
               children: [
                 _QuickPromptChip(
-                  label: '拆解接下来15分钟',
+                  label: l10n.focusCoachPromptBreakdown,
                   onTap: () => _sendPrompt(
                     ref,
                     task,
-                    '请根据任务「${task.title}」，帮我拆解接下来15分钟的专注计划。',
+                    l10n.focusCoachPromptBreakdownMessage(task.title),
                   ),
                 ),
                 _QuickPromptChip(
-                  label: '分心提醒',
+                  label: l10n.focusCoachPromptRefocus,
                   onTap: () => _sendPrompt(
                     ref,
                     task,
-                    '我刚刚有些分心，请给我一句简短的回归提示。',
+                    l10n.focusCoachPromptRefocusMessage,
                   ),
                 ),
                 _QuickPromptChip(
-                  label: '下一步行动',
+                  label: l10n.focusCoachPromptNextAction,
                   onTap: () => _sendPrompt(
                     ref,
                     task,
-                    '请总结当前任务的下一步行动，保持简洁明确。',
+                    l10n.focusCoachPromptNextActionMessage,
                   ),
                 ),
               ],
@@ -102,7 +111,7 @@ class FocusAgentSheet extends ConsumerWidget {
             child: chatState.messages.isEmpty
                 ? Center(
                     child: Text(
-                      '需要帮助就问我！',
+                      l10n.focusCoachEmpty,
                       style: TextStyle(color: DS.neutral500),
                     ),
                   )
@@ -125,7 +134,7 @@ class FocusAgentSheet extends ConsumerWidget {
             ),
           ChatInput(
             enabled: !chatState.isLoading,
-            hintText: '问我：如何保持专注、拆解步骤...',
+            hintText: l10n.focusCoachHint,
             onSend: (text, {replyToId}) => _sendPrompt(ref, task, text),
           ),
         ],
@@ -147,7 +156,8 @@ class _QuickPromptChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ActionChip(
-        label: Text(label, style: TextStyle(fontSize: 12, color: DS.primaryBase)),
+        label:
+            Text(label, style: TextStyle(fontSize: 12, color: DS.primaryBase)),
         backgroundColor: DS.primaryBase.withValues(alpha: 0.08),
         side: BorderSide(color: DS.primaryBase.withValues(alpha: 0.2)),
         onPressed: onTap,

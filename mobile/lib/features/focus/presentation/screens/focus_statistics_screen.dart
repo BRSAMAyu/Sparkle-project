@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/focus/presentation/providers/focus_statistics_provider.dart'
     as feature;
 import 'package:sparkle/features/focus/presentation/widgets/focus_stats_chart.dart';
@@ -41,11 +42,12 @@ class _FocusStatisticsScreenState extends ConsumerState<FocusStatisticsScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(feature.focusStatisticsProvider);
+    final l10n = context.l10n;
 
     return SparklePageScaffold(
       role: SparklePageRole.content,
       appBar: AppBar(
-        title: const Text('专注统计'),
+        title: Text(l10n.focusStatsScreenTitle),
         actions: [
           SparkleIconButton(
             variant: ButtonVariant.ghost,
@@ -95,9 +97,10 @@ class _FocusStatisticsScreenState extends ConsumerState<FocusStatisticsScreen> {
 
                 // Chart Section
                 _buildSection(
-                  title: '专注趋势',
+                  title: l10n.focusStatsTrendTitle,
                   child: FocusStatsChart(
                     dailyData: state.dailyBreakdown,
+                    period: state.period,
                   ),
                 ),
 
@@ -105,7 +108,7 @@ class _FocusStatisticsScreenState extends ConsumerState<FocusStatisticsScreen> {
 
                 // Heatmap Section
                 _buildSection(
-                  title: '活跃热力图 (90天)',
+                  title: l10n.focusStatsHeatmapRange(90),
                   child: FocusStatsHeatmap(
                     data: state.heatmapData,
                   ),
@@ -115,7 +118,7 @@ class _FocusStatisticsScreenState extends ConsumerState<FocusStatisticsScreen> {
 
                 // Session History
                 _buildSection(
-                  title: '最近会话',
+                  title: l10n.focusStatsRecentSessionsTitle,
                   child: FocusStatsSessionList(
                     sessions: state.sessionHistory,
                     hasMore: state.sessionHistory.length >= 20,
@@ -143,6 +146,19 @@ class _FocusStatisticsScreenState extends ConsumerState<FocusStatisticsScreen> {
       GraphiteCardSurface(
         surfaceRole: SparkleSurfaceRole.card,
         padding: const EdgeInsets.all(DS.lg),
-        child: child,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: DS.md),
+            child,
+          ],
+        ),
       );
 }

@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sparkle/core/constants/api_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 import 'package:sparkle/features/chat/data/models/chat_mode.dart';
 import 'package:sparkle/features/chat/data/models/expert_catalog_model.dart';
@@ -202,7 +203,7 @@ class _UnifiedOmniBarState extends ConsumerState<UnifiedOmniBar>
           .map(
             (ExpertCatalogExpert expert) => ChatModeExpert(
               expertId: expert.id,
-              expertName: expert.displayName,
+              displayName: expert.displayName,
             ),
           )
           .toList(),
@@ -447,7 +448,7 @@ class _UnifiedOmniBarState extends ConsumerState<UnifiedOmniBar>
     switch (type) {
       case 'CHAT':
         if (mounted) {
-          unawaited(context.push('/chat'));
+          context.go('/chat');
         }
         return;
       case 'TASK':
@@ -574,7 +575,7 @@ class _UnifiedOmniBarState extends ConsumerState<UnifiedOmniBar>
     }
 
     if (mounted) {
-      unawaited(context.push('/chat'));
+      context.go('/chat');
     }
   }
 
@@ -685,7 +686,7 @@ class _AgentToggleButton extends StatelessWidget {
 
     return Semantics(
       button: true,
-      label: '切换 Agent 模式',
+      label: context.l10n.switchAgentModeSemantics,
       child: GestureDetector(
         onTap: onTap,
         child: AnimatedContainer(

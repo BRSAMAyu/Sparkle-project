@@ -478,7 +478,7 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
     }
 
     // Otherwise, navigate to chat screen first, then send message
-    GoRouter.of(context).push('/chat');
+    GoRouter.of(context).go('/chat');
 
     // Wait for navigation to complete, then send message
     await Future<void>.delayed(const Duration(milliseconds: 300));

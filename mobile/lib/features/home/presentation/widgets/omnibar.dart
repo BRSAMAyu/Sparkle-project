@@ -110,7 +110,7 @@ class _OmniBarState extends ConsumerState<OmniBar>
     switch (type) {
       case 'CHAT':
         if (mounted) {
-          unawaited(context.push('/chat'));
+          context.go('/chat');
         }
         return;
       case 'TASK':

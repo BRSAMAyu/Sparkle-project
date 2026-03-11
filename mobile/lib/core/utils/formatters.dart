@@ -41,39 +41,33 @@ class Formatters {
 
   /// Format time in 24-hour format
   static String formatTime24(DateTime dateTime) {
-    return DateFormat.Hm().format(dateTime);
+    final locale = I18nService.instance.currentLocale.languageCode;
+    return DateFormat.Hm(locale).format(dateTime);
   }
 
   /// Format relative time (e.g., "2 hours ago", "in 3 days")
   static String formatRelativeTime(DateTime dateTime) {
     final now = DateTime.now();
-    final difference = now.difference(dateTime);
     final isFuture = dateTime.isAfter(now);
+    final difference = isFuture ? dateTime.difference(now) : now.difference(dateTime);
+    final l10n = I18nService.instance.l10n;
 
     if (difference.inDays > 365) {
       final years = (difference.inDays / 365).floor();
-      return isFuture
-          ? _plural('time.years.in', years)
-          : _plural('time.years.ago', years);
+      return isFuture ? l10n.timeInYears(years) : l10n.timeYearsAgo(years);
     } else if (difference.inDays > 30) {
       final months = (difference.inDays / 30).floor();
-      return isFuture
-          ? _plural('time.months.in', months)
-          : _plural('time.months.ago', months);
+      return isFuture ? l10n.timeInMonths(months) : l10n.timeMonthsAgo(months);
     } else if (difference.inDays > 0) {
-      return isFuture
-          ? _plural('time.days.in', difference.inDays)
-          : _plural('time.days.ago', difference.inDays);
+      return isFuture ? l10n.timeInDays(difference.inDays) : l10n.timeDaysAgo(difference.inDays);
     } else if (difference.inHours > 0) {
-      return isFuture
-          ? _plural('time.hours.in', difference.inHours)
-          : _plural('time.hours.ago', difference.inHours);
+      return isFuture ? l10n.timeInHours(difference.inHours) : l10n.timeHoursAgo(difference.inHours);
     } else if (difference.inMinutes > 0) {
       return isFuture
-          ? _plural('time.minutes.in', difference.inMinutes)
-          : _plural('time.minutes.ago', difference.inMinutes);
+          ? l10n.timeInMinutes(difference.inMinutes)
+          : l10n.timeMinutesAgo(difference.inMinutes);
     } else {
-      return I18nService.instance.isEnglish ? 'Just now' : '刚刚';
+      return l10n.timeJustNow;
     }
   }
 
@@ -161,34 +155,4 @@ class Formatters {
     return NumberFormat.currency(locale: locale, symbol: symbol).format(amount);
   }
 
-  // ============== Helper Methods ==============
-
-  static String _plural(String key, int count) {
-    // Simple plural handling - will be replaced by ARB ICU messages
-    final isChinese = I18nService.instance.isChinese;
-    switch (key) {
-      case 'time.years.ago':
-        return isChinese ? '$count年前' : '$count year${count != 1 ? 's' : ''} ago';
-      case 'time.years.in':
-        return isChinese ? '$count年后' : 'in $count year${count != 1 ? 's' : ''}';
-      case 'time.months.ago':
-        return isChinese ? '$count个月前' : '$count month${count != 1 ? 's' : ''} ago';
-      case 'time.months.in':
-        return isChinese ? '$count个月后' : 'in $count month${count != 1 ? 's' : ''}';
-      case 'time.days.ago':
-        return isChinese ? '$count天前' : '$count day${count != 1 ? 's' : ''} ago';
-      case 'time.days.in':
-        return isChinese ? '$count天后' : 'in $count day${count != 1 ? 's' : ''}';
-      case 'time.hours.ago':
-        return isChinese ? '$count小时前' : '$count hour${count != 1 ? 's' : ''} ago';
-      case 'time.hours.in':
-        return isChinese ? '$count小时后' : 'in $count hour${count != 1 ? 's' : ''}';
-      case 'time.minutes.ago':
-        return isChinese ? '$count分钟前' : '$count minute${count != 1 ? 's' : ''} ago';
-      case 'time.minutes.in':
-        return isChinese ? '$count分钟后' : 'in $count minute${count != 1 ? 's' : ''}';
-      default:
-        return '$count';
-    }
-  }
 }
