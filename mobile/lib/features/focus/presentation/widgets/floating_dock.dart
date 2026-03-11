@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// FocusFloatingDock - 专注模式悬浮窗
 /// 支持边缘吸附、自动隐藏、点击展开菜单
@@ -149,16 +150,16 @@ class _FocusFloatingDockState extends State<FocusFloatingDock>
 
           // Menu Items
           _buildMenuItem(
+            context: context,
             icon: Icons.self_improvement,
-            label: '正念模式',
             onTap: () {
               _toggleExpand();
               widget.onMindfulnessTap?.call();
             },
           ),
           _buildMenuItem(
+            context: context,
             icon: Icons.grid_view,
-            label: '工具箱',
             onTap: () {
               _toggleExpand();
               widget.onToolsTap?.call();
@@ -168,8 +169,8 @@ class _FocusFloatingDockState extends State<FocusFloatingDock>
       );
 
   Widget _buildMenuItem({
+    required BuildContext context,
     required IconData icon,
-    required String label,
     required VoidCallback onTap,
   }) =>
       InkWell(
@@ -181,7 +182,9 @@ class _FocusFloatingDockState extends State<FocusFloatingDock>
               Icon(icon, color: DS.brandPrimaryConst, size: 20),
               const SizedBox(width: DS.md),
               Text(
-                label,
+                icon == Icons.self_improvement
+                    ? context.l10n.focusDockMindfulness
+                    : context.l10n.focusDockToolbox,
                 style: TextStyle(
                   color: DS.brandPrimaryConst,
                   fontWeight: FontWeight.w500,

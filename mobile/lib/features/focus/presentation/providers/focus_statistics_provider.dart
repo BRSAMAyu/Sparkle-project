@@ -7,6 +7,7 @@ import 'package:sparkle/core/providers/persistent_state_notifier.dart';
 import 'package:sparkle/features/focus/data/models/focus_session_model.dart';
 import 'package:sparkle/features/focus/data/repositories/focus_repository.dart';
 import 'package:sparkle/features/focus/data/repositories/focus_statistics_repository.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 part 'focus_statistics_provider.g.dart';
 
@@ -16,14 +17,14 @@ enum StatsViewPeriod {
   week,
   month;
 
-  String get label {
+  String label(AppLocalizations l10n) {
     switch (this) {
       case StatsViewPeriod.today:
-        return '今日';
+        return l10n.focusStatsToday;
       case StatsViewPeriod.week:
-        return '本周';
+        return l10n.focusStatsWeek;
       case StatsViewPeriod.month:
-        return '本月';
+        return l10n.focusStatsMonth;
     }
   }
 }
@@ -117,8 +118,8 @@ class FocusStatisticsState {
             {};
       case StatsViewPeriod.month:
         return (monthlyData?['focus_type_distribution']
-                as Map<String, dynamic>?)
-            ?.cast<String, int>() ??
+                    as Map<String, dynamic>?)
+                ?.cast<String, int>() ??
             {};
     }
   }
@@ -136,20 +137,21 @@ class FocusStatisticsState {
     Map<DateTime, double>? heatmapData,
     int? streakDays,
     int? longestStreak,
-  }) => FocusStatisticsState(
-      period: period ?? this.period,
-      isLoading: isLoading ?? this.isLoading,
-      isRefreshing: isRefreshing ?? this.isRefreshing,
-      errorMessage: errorMessage ?? this.errorMessage,
-      todayMinutes: todayMinutes ?? this.todayMinutes,
-      todaySessionCount: todaySessionCount ?? this.todaySessionCount,
-      weeklyData: weeklyData ?? this.weeklyData,
-      monthlyData: monthlyData ?? this.monthlyData,
-      sessionHistory: sessionHistory ?? this.sessionHistory,
-      heatmapData: heatmapData ?? this.heatmapData,
-      streakDays: streakDays ?? this.streakDays,
-      longestStreak: longestStreak ?? this.longestStreak,
-    );
+  }) =>
+      FocusStatisticsState(
+        period: period ?? this.period,
+        isLoading: isLoading ?? this.isLoading,
+        isRefreshing: isRefreshing ?? this.isRefreshing,
+        errorMessage: errorMessage ?? this.errorMessage,
+        todayMinutes: todayMinutes ?? this.todayMinutes,
+        todaySessionCount: todaySessionCount ?? this.todaySessionCount,
+        weeklyData: weeklyData ?? this.weeklyData,
+        monthlyData: monthlyData ?? this.monthlyData,
+        sessionHistory: sessionHistory ?? this.sessionHistory,
+        heatmapData: heatmapData ?? this.heatmapData,
+        streakDays: streakDays ?? this.streakDays,
+        longestStreak: longestStreak ?? this.longestStreak,
+      );
 }
 
 /// Focus statistics provider
@@ -370,17 +372,21 @@ class FocusStatistics extends _$FocusStatistics {
       // Fallback to local data
       if (_localRepo != null) {
         final localSessions = await _localRepo!.getSessionHistory(limit: limit);
-        final details = localSessions.map((s) => FocusSessionDetail(
-            id: s.id.toString(),
-            startTime: s.startTime,
-            endTime: s.endTime,
-            durationMinutes: s.durationMinutes,
-            focusType: s.focusType,
-            status: s.status,
-            taskId: s.taskId,
-            taskTitle: s.taskTitle,
-            whiteNoiseType: int.tryParse(s.whiteNoiseType ?? ''),
-          ),).toList();
+        final details = localSessions
+            .map(
+              (s) => FocusSessionDetail(
+                id: s.id.toString(),
+                startTime: s.startTime,
+                endTime: s.endTime,
+                durationMinutes: s.durationMinutes,
+                focusType: s.focusType,
+                status: s.status,
+                taskId: s.taskId,
+                taskTitle: s.taskTitle,
+                whiteNoiseType: int.tryParse(s.whiteNoiseType ?? ''),
+              ),
+            )
+            .toList();
         state = state.copyWith(sessionHistory: details);
       }
     } catch (e) {
@@ -492,7 +498,8 @@ FocusStatisticsRepository localStatisticsRepo(Ref ref) {
 ///
 /// Persists the user's selected statistics view period (today/week/month).
 final statsViewPeriodProvider =
-    StateNotifierProvider<StatsViewPeriodNotifier, StatsViewPeriod>((ref) => StatsViewPeriodNotifier());
+    StateNotifierProvider<StatsViewPeriodNotifier, StatsViewPeriod>(
+        (ref) => StatsViewPeriodNotifier());
 
 /// Notifier for the stats view period
 class StatsViewPeriodNotifier extends EnumPersistentNotifier<StatsViewPeriod> {

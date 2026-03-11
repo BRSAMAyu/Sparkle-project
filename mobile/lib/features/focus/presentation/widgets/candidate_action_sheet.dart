@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/network/dio_provider.dart';
 import 'package:sparkle/features/focus/data/models/candidate_action_model.dart';
 import 'package:sparkle/features/focus/data/services/candidate_feedback_service.dart';
@@ -41,6 +42,7 @@ class _CandidateActionSheetState extends ConsumerState<CandidateActionSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     // Filter out dismissed candidates
     final visibleCandidates = widget.candidates
         .where((c) => !_dismissedCandidates.contains(c.id))
@@ -92,15 +94,15 @@ class _CandidateActionSheetState extends ConsumerState<CandidateActionSheet> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      '智能建议',
+                    Text(
+                      l10n.focusCandidateTitle,
                       style: TextStyle(
                         fontWeight: DS.fontWeightBold,
                         fontSize: 16,
                       ),
                     ),
                     Text(
-                      '基于你的学习状态预测',
+                      l10n.focusCandidateSubtitle,
                       style: TextStyle(color: DS.neutral500, fontSize: 12),
                     ),
                   ],
@@ -136,7 +138,7 @@ class _CandidateActionSheetState extends ConsumerState<CandidateActionSheet> {
 
           // Footer hint
           Text(
-            '轻扫关闭 · 不感兴趣可以忽略',
+            l10n.focusCandidateFooterHint,
             style: TextStyle(
               color: DS.neutral400,
               fontSize: 11,
@@ -185,6 +187,7 @@ class _CandidateCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = Color(candidate.getColorValue());
+    final l10n = context.l10n;
 
     return Container(
       margin: const EdgeInsets.only(bottom: DS.md),
@@ -238,13 +241,13 @@ class _CandidateCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               SparkleButton(
-                label: '不感兴趣',
+                label: l10n.focusCandidateDismiss,
                 variant: ButtonVariant.ghost,
                 onPressed: onDismiss,
               ),
               const SizedBox(width: DS.sm),
               SparkleButton(
-                label: '试试看',
+                label: l10n.focusCandidateAccept,
                 onPressed: onAccept,
                 icon: Icon(Icons.play_arrow_rounded, color: color),
               ),

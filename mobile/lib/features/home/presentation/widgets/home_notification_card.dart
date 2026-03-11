@@ -30,7 +30,7 @@ class HomeNotificationCard extends ConsumerWidget {
                 ? '99+ 条未读消息'
                 : '$unreadMessageCount 条未读消息',
             actionLabel: '查看',
-            onTap: () => context.push('/community'),
+            onTap: () => context.go('/community'),
           ),
         ),
       );

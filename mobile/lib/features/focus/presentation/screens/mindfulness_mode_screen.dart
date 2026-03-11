@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/focus/presentation/providers/mindfulness_provider.dart';
 import 'package:sparkle/features/focus/presentation/widgets/exit_confirmation_dialog.dart';
 import 'package:sparkle/features/focus/presentation/widgets/flip_clock.dart';
@@ -152,7 +153,7 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
             const SizedBox(width: DS.md),
             Expanded(
               child: Text(
-                '检测到分心行为 (第 ${state.interruptionCount} 次)',
+                context.l10n.focusInterruptionDetected(state.interruptionCount),
                 style: TextStyle(color: DS.brandPrimary),
               ),
             ),
@@ -317,7 +318,11 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
         role: SparklePageRole.immersive,
         safeArea: false,
         child: Center(
-            child: Text('加载失败: $err', style: TextStyle(color: DS.textPrimary))),
+          child: Text(
+            context.l10n.focusLoadFailed(err.toString()),
+            style: TextStyle(color: DS.textPrimary),
+          ),
+        ),
       ),
     );
   }
@@ -340,7 +345,7 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
                 ),
                 const SizedBox(width: DS.sm),
                 Text(
-                  '正念模式',
+                  context.l10n.focusMindfulnessTitle,
                   style: TextStyle(
                     color: DS.textSecondary,
                     fontSize: 14,
@@ -371,7 +376,7 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
       );
 
   Widget _buildBackToTaskButton() => SparkleButton(
-        label: '返回任务',
+        label: context.l10n.focusReturnToTask,
         variant: ButtonVariant.ghost,
         icon: const Icon(Icons.arrow_back_rounded, size: 18),
         onPressed: () {
@@ -390,7 +395,7 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '返回任务执行',
+                context.l10n.focusReturnToTaskTitle,
                 style: DS.titleLarge.copyWith(
                   color: DS.textPrimary,
                   fontWeight: FontWeight.w700,
@@ -398,7 +403,7 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
               ),
               const SizedBox(height: DS.spacing8),
               Text(
-                '专注记录会暂停，并返回任务执行页面。',
+                context.l10n.focusReturnToTaskMessage,
                 style: DS.bodyMedium.copyWith(color: DS.textSecondary),
               ),
               const SizedBox(height: DS.spacing20),
@@ -406,7 +411,7 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
                 children: [
                   Expanded(
                     child: SparkleButton(
-                      label: '取消',
+                      label: context.l10n.cancel,
                       variant: ButtonVariant.ghost,
                       onPressed: () => Navigator.of(context).pop(false),
                     ),
@@ -414,7 +419,7 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
                   const SizedBox(width: DS.spacing12),
                   Expanded(
                     child: SparkleButton(
-                      label: '确认返回',
+                      label: context.l10n.focusReturnToTaskConfirm,
                       onPressed: () => Navigator.of(context).pop(true),
                     ),
                   ),
@@ -537,7 +542,7 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
   Widget _buildExitButton() => Padding(
         padding: const EdgeInsets.all(DS.xl),
         child: SparkleButton(
-          label: '退出正念模式',
+          label: context.l10n.focusExitMindfulness,
           variant: ButtonVariant.ghost,
           icon: const Icon(Icons.exit_to_app_rounded, size: 18),
           onPressed: _handleExit,

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/chat/data/models/chat_mode.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/expert_catalog_provider.dart';
@@ -25,7 +26,7 @@ class ChatModeSelectorSheet extends ConsumerWidget {
           .where((expert) => expert.enabled)
           .map((expert) => ChatModeExpert(
                 expertId: expert.id,
-                expertName: expert.displayName,
+                displayName: expert.displayName,
               ))
           .toList(),
       loading: () => <ChatMode>[],
@@ -69,7 +70,7 @@ class ChatModeSelectorSheet extends ConsumerWidget {
                   ),
                   const SizedBox(width: DS.spacing12),
                   Text(
-                    '选择AI协作模式',
+                    context.l10n.chatModeSelectorTitle,
                     style: TextStyle(
                       fontSize: DS.fontSizeLg,
                       fontWeight: DS.fontWeightBold,
@@ -90,40 +91,53 @@ class ChatModeSelectorSheet extends ConsumerWidget {
             const Divider(height: 1),
 
             // Mode options
-            ...ChatMode.values.map(
-              (mode) => _ModeListTile(
-                mode: mode,
-                isSelected: currentMode == mode,
-                isDark: isDark,
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.7,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ...ChatMode.values.map(
+                      (mode) => _ModeListTile(
+                        mode: mode,
+                        isSelected: currentMode == mode,
+                        isDark: isDark,
+                      ),
+                    ),
+                    if (expertModes.isNotEmpty) ...[
+                      const SizedBox(height: DS.spacing8),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: DS.spacing20,
+                        ),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            context.l10n.chatModeExpertDirect,
+                            style: TextStyle(
+                              fontSize: DS.fontSizeXs,
+                              fontWeight: DS.fontWeightSemibold,
+                              color: DS.neutral500,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: DS.spacing8),
+                      ...expertModes.map(
+                        (mode) => _ModeListTile(
+                          mode: mode,
+                          isSelected: currentMode == mode,
+                          isDark: isDark,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: DS.spacing16),
+                  ],
+                ),
               ),
             ),
-            if (expertModes.isNotEmpty) ...[
-              const SizedBox(height: DS.spacing8),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: DS.spacing20),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    '专家直达',
-                    style: TextStyle(
-                      fontSize: DS.fontSizeXs,
-                      fontWeight: DS.fontWeightSemibold,
-                      color: DS.neutral500,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: DS.spacing8),
-              ...expertModes.map(
-                (mode) => _ModeListTile(
-                  mode: mode,
-                  isSelected: currentMode == mode,
-                  isDark: isDark,
-                ),
-              ),
-            ],
-
-            const SizedBox(height: DS.spacing16),
           ],
         ),
       ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// 退出确认步骤
 enum ExitStep { first, second, third }
@@ -198,46 +199,50 @@ class _ExitConfirmationDialogState extends State<ExitConfirmationDialog>
   }
 
   String _getTitle() {
+    final l10n = context.l10n;
     switch (_currentStep) {
       case ExitStep.first:
-        return '确定要退出正念模式吗？';
+        return l10n.focusExitTitleStep1;
       case ExitStep.second:
-        return '即将退出';
+        return l10n.focusExitTitleStep2;
       case ExitStep.third:
-        return '最后确认';
+        return l10n.focusExitTitleStep3;
     }
   }
 
   String _getMessage() {
+    final l10n = context.l10n;
     switch (_currentStep) {
       case ExitStep.first:
-        return '你正处于专注状态，退出可能会影响专注效果。';
+        return l10n.focusExitMessageStep1;
       case ExitStep.second:
-        return '你已经专注了 ${widget.elapsedMinutes} 分钟，确定要离开吗？';
+        return l10n.focusExitMessageStep2(widget.elapsedMinutes);
       case ExitStep.third:
-        return '再坚持一下！放弃会中断你的专注记录。';
+        return l10n.focusExitMessageStep3;
     }
   }
 
   String _getCancelText() {
+    final l10n = context.l10n;
     switch (_currentStep) {
       case ExitStep.first:
-        return '继续专注';
+        return l10n.focusExitCancelStep1;
       case ExitStep.second:
-        return '返回';
+        return l10n.back;
       case ExitStep.third:
-        return '取消';
+        return l10n.cancel;
     }
   }
 
   String _getConfirmText() {
+    final l10n = context.l10n;
     switch (_currentStep) {
       case ExitStep.first:
-        return '确认退出';
+        return l10n.focusExitConfirmStep1;
       case ExitStep.second:
-        return '继续退出';
+        return l10n.focusExitConfirmStep2;
       case ExitStep.third:
-        return '确定退出';
+        return l10n.focusExitConfirmStep3;
     }
   }
 }

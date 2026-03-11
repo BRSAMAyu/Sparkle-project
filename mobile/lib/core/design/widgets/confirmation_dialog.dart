@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// 确认操作对话框 (用于高风险操作)
 class ConfirmationDialog extends StatelessWidget {
@@ -27,7 +28,7 @@ class ConfirmationDialog extends StatelessWidget {
               if (previewData != null && previewData!.isNotEmpty) ...[
                 const SizedBox(height: DS.lg),
                 Text(
-                  '操作预览:',
+                  context.l10n.operationPreview,
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
                 const SizedBox(height: DS.sm),
@@ -50,8 +51,11 @@ class ConfirmationDialog extends StatelessWidget {
           ),
         ),
         actions: <Widget>[
-          SparkleButton.ghost(label: '取消', onPressed: onCancel),
-          SparkleButton.primary(label: '确认', onPressed: onConfirm),
+          SparkleButton.ghost(label: context.l10n.cancel, onPressed: onCancel),
+          SparkleButton.primary(
+            label: context.l10n.confirm,
+            onPressed: onConfirm,
+          ),
         ],
       );
 

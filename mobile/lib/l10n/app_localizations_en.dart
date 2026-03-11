@@ -599,6 +599,43 @@ class AppLocalizationsEn extends AppLocalizations {
   String get toolsSearchPlaceholder => 'Search tools...';
 
   @override
+  String get toolsFocusModeTitle => 'Focus Mode';
+
+  @override
+  String get toolsFocusModeDesc => 'Enter task focus interface';
+
+  @override
+  String get toolsPomodoroTitle => 'Pomodoro Timer';
+
+  @override
+  String get toolsPomodoroDesc => '25-minute work cycles';
+
+  @override
+  String get toolsErrorBookTitle => 'Error Book';
+
+  @override
+  String get toolsErrorBookDesc => 'Browse and manage error records';
+
+  @override
+  String get toolsReviewPlanTitle => 'Review Plan';
+
+  @override
+  String get toolsReviewPlanDesc => 'View today\'s review plan';
+
+  @override
+  String get toolsLearningForecastTitle => 'Learning Forecast';
+
+  @override
+  String get toolsLearningForecastDesc => 'View learning trends and risks';
+
+  @override
+  String get toolsCognitivePatternsTitle => 'Cognitive Patterns';
+
+  @override
+  String get toolsCognitivePatternsDesc =>
+      'View behavior patterns and insights';
+
+  @override
   String get chatModeStandard => 'Standard';
 
   @override
@@ -609,6 +646,48 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatModeAnalytical => 'Analytical';
+
+  @override
+  String get chatModeStandardDesc => 'Standard AI conversation mode';
+
+  @override
+  String get chatModeDeepAnalysis => 'Deep Analysis';
+
+  @override
+  String get chatModeDeepAnalysisDesc => 'Multi-expert collaborative analysis';
+
+  @override
+  String get chatModeStudyPlan => 'Study Plan';
+
+  @override
+  String get chatModeStudyPlanDesc => 'Task breakdown and learning plan';
+
+  @override
+  String get chatModeErrorDiagnosis => 'Error Diagnosis';
+
+  @override
+  String get chatModeErrorDiagnosisDesc => 'Error diagnosis and analysis loop';
+
+  @override
+  String get chatModeExpertAuto => 'Expert Auto';
+
+  @override
+  String get chatModeExpertAutoDesc => 'Auto-select best expert';
+
+  @override
+  String get chatModeExpertDirect => 'Expert Direct';
+
+  @override
+  String get chatModeExpertDirectDesc => 'Direct expert consultation';
+
+  @override
+  String get chatModeSelectorTitle => 'Choose AI Collaboration Mode';
+
+  @override
+  String get aiCollabModeTitle => 'AI Collaboration';
+
+  @override
+  String get switchAgentModeSemantics => 'Switch agent mode';
 
   @override
   String chatDagLayerProgress(Object current, Object total) {
@@ -995,6 +1074,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get focusStatsWeek => 'This Week';
 
   @override
+  String get focusStatsMonth => 'This Month';
+
+  @override
   String get focusStatsTotal => 'Total';
 
   @override
@@ -1023,6 +1105,46 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get focusStatsScreenTitle => 'Focus Statistics';
+
+  @override
+  String get focusStatsTrendTitle => 'Focus Trend';
+
+  @override
+  String focusStatsHeatmapRange(Object days) {
+    return 'Activity Heatmap ($days days)';
+  }
+
+  @override
+  String get focusStatsRecentSessionsTitle => 'Recent Sessions';
+
+  @override
+  String get focusStatsNoSessions => 'No focus sessions yet';
+
+  @override
+  String get focusStatsLoadMore => 'Load more';
+
+  @override
+  String focusStatsDurationTooltip(Object minutes) {
+    return 'Focus duration: $minutes minutes';
+  }
+
+  @override
+  String get focusStatsLegendLow => 'Low';
+
+  @override
+  String get focusStatsLegendHigh => 'High';
+
+  @override
+  String get focusStatsPomodoroLabel => 'Pomodoro';
+
+  @override
+  String get focusStatsStopwatchLabel => 'Timer';
+
+  @override
+  String get focusSelectTaskTitle => 'Select Focus Task';
+
+  @override
   String get focusReadyPrompt => 'Ready to focus?';
 
   @override
@@ -1049,6 +1171,166 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get focusCoachTitle => 'AI Focus Coach';
+
+  @override
+  String focusCoachSummary(Object minutes, Object task) {
+    return 'Task: $task · Focused for $minutes min';
+  }
+
+  @override
+  String get focusCoachPromptBreakdown => 'Plan the next 15 min';
+
+  @override
+  String get focusCoachPromptRefocus => 'Refocus me';
+
+  @override
+  String get focusCoachPromptNextAction => 'Next action';
+
+  @override
+  String focusCoachPromptBreakdownMessage(Object task) {
+    return 'Based on the task \"$task\", help me break down the next 15 minutes of focus.';
+  }
+
+  @override
+  String get focusCoachPromptRefocusMessage =>
+      'I just got distracted. Give me one short prompt to get back on track.';
+
+  @override
+  String get focusCoachPromptNextActionMessage =>
+      'Summarize the next action for this task in a concise and clear way.';
+
+  @override
+  String get focusCoachEmpty => 'Ask whenever you need help.';
+
+  @override
+  String get focusCoachHint =>
+      'Ask me how to stay focused or break down the next steps...';
+
+  @override
+  String get focusCandidateTitle => 'Smart Suggestions';
+
+  @override
+  String get focusCandidateSubtitle =>
+      'Predicted from your current learning state';
+
+  @override
+  String get focusCandidateFooterHint =>
+      'Swipe down to close · Ignore anything that isn\'t useful';
+
+  @override
+  String get focusCandidateDismiss => 'Not interested';
+
+  @override
+  String get focusCandidateAccept => 'Try it';
+
+  @override
+  String focusInterruptionDetected(Object count) {
+    return 'Distraction detected (#$count)';
+  }
+
+  @override
+  String get focusMindfulnessTitle => 'Mindfulness';
+
+  @override
+  String focusLoadFailed(Object error) {
+    return 'Failed to load: $error';
+  }
+
+  @override
+  String get focusReturnToTask => 'Back to Task';
+
+  @override
+  String get focusReturnToTaskTitle => 'Return to Task';
+
+  @override
+  String get focusReturnToTaskMessage =>
+      'Your focus record will pause and you\'ll return to the task execution screen.';
+
+  @override
+  String get focusReturnToTaskConfirm => 'Return';
+
+  @override
+  String get focusExitMindfulness => 'Exit Mindfulness';
+
+  @override
+  String get focusDockMindfulness => 'Mindfulness';
+
+  @override
+  String get focusDockToolbox => 'Toolbox';
+
+  @override
+  String get focusReflectionTitle => 'Focus Complete';
+
+  @override
+  String get focusReflectionPrompt => 'How did this focus session feel?';
+
+  @override
+  String get focusReflectionNoteHint => 'Anything worth noting? (Optional)';
+
+  @override
+  String get focusReflectionSaved => 'Reflection saved to Cognitive Prism';
+
+  @override
+  String focusReflectionSaveFailed(Object error) {
+    return 'Failed to save: $error';
+  }
+
+  @override
+  String focusReflectionSummary(Object feeling, Object note) {
+    return 'Focus reflection: status $feeling.\n$note';
+  }
+
+  @override
+  String get focusReflectionMoodFlow => '🔥 Flow';
+
+  @override
+  String get focusReflectionMoodFocused => '🙂 Focused';
+
+  @override
+  String get focusReflectionMoodOkay => '😐 Okay';
+
+  @override
+  String get focusReflectionMoodDistracted => '😖 Distracted';
+
+  @override
+  String get focusReflectionMoodTired => '😫 Tired';
+
+  @override
+  String get focusExitTitleStep1 => 'Exit mindfulness mode?';
+
+  @override
+  String get focusExitTitleStep2 => 'About to leave';
+
+  @override
+  String get focusExitTitleStep3 => 'Final confirmation';
+
+  @override
+  String get focusExitMessageStep1 =>
+      'You\'re in a focus state. Exiting now may break your momentum.';
+
+  @override
+  String focusExitMessageStep2(Object minutes) {
+    return 'You\'ve focused for $minutes minutes. Are you sure you want to leave?';
+  }
+
+  @override
+  String get focusExitMessageStep3 =>
+      'Try to stay with it a bit longer. Leaving now will interrupt your focus record.';
+
+  @override
+  String get focusExitCancelStep1 => 'Keep focusing';
+
+  @override
+  String get focusExitConfirmStep1 => 'Exit';
+
+  @override
+  String get focusExitConfirmStep2 => 'Continue exit';
+
+  @override
+  String get focusExitConfirmStep3 => 'Confirm exit';
+
+  @override
   String get streakTitle => 'Learning Streak';
 
   @override
@@ -1063,9 +1345,15 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get streakMaxLabel => 'Best';
+
+  @override
   String streakMax(Object count) {
     return 'Best $count';
   }
+
+  @override
+  String get streakTotalLabel => 'Total';
 
   @override
   String streakTotal(Object count) {
@@ -1495,6 +1783,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonSeeAll => 'See all';
 
   @override
+  String get operationPreview => 'Operation preview:';
+
+  @override
   String get commonShowLess => 'Show less';
 
   @override
@@ -1550,4 +1841,55 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get commonOperationWarning => 'Operation may not have succeeded';
+
+  @override
+  String get emptyStateNoTasksTitle => 'No tasks yet';
+
+  @override
+  String get emptyStateNoTasksDescription =>
+      'Create your first learning task and get started.';
+
+  @override
+  String get emptyStateNoChatsTitle => 'Sparkle is ready';
+
+  @override
+  String get emptyStateNoChatsDescription =>
+      'Ask anything and start the conversation.';
+
+  @override
+  String get emptyStateNoPlansTitle => 'No study plans yet';
+
+  @override
+  String get emptyStateNoPlansDescription =>
+      'Create a plan and let AI help map the route.';
+
+  @override
+  String get emptyStateNoErrorsTitle => 'Looking good';
+
+  @override
+  String get emptyStateNoErrorsDescription =>
+      'You don\'t have any error records yet.';
+
+  @override
+  String get emptyStateNoResultsTitle => 'No results found';
+
+  @override
+  String get emptyStateNoResultsDescription => 'Try a different keyword.';
+
+  @override
+  String emptyStateNoResultsQuery(Object query) {
+    return 'No results related to \"$query\"';
+  }
+
+  @override
+  String get emptyStateGeneralTitle => 'Nothing here yet';
+
+  @override
+  String get emptyStateGeneralDescription => 'Add something to get started.';
+
+  @override
+  String get emptyStateStartChatAction => 'Start chat';
+
+  @override
+  String get emptyStateCreatePlanAction => 'Create plan';
 }

@@ -1238,6 +1238,78 @@ abstract class AppLocalizations {
   /// **'搜索工具...'**
   String get toolsSearchPlaceholder;
 
+  /// No description provided for @toolsFocusModeTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'专注模式'**
+  String get toolsFocusModeTitle;
+
+  /// No description provided for @toolsFocusModeDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'进入任务专注主界面'**
+  String get toolsFocusModeDesc;
+
+  /// No description provided for @toolsPomodoroTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'番茄钟'**
+  String get toolsPomodoroTitle;
+
+  /// No description provided for @toolsPomodoroDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'25分钟工作周期'**
+  String get toolsPomodoroDesc;
+
+  /// No description provided for @toolsErrorBookTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'错题本'**
+  String get toolsErrorBookTitle;
+
+  /// No description provided for @toolsErrorBookDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'浏览与管理错题记录'**
+  String get toolsErrorBookDesc;
+
+  /// No description provided for @toolsReviewPlanTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'复习计划'**
+  String get toolsReviewPlanTitle;
+
+  /// No description provided for @toolsReviewPlanDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'进入今日复习计划页'**
+  String get toolsReviewPlanDesc;
+
+  /// No description provided for @toolsLearningForecastTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习预测'**
+  String get toolsLearningForecastTitle;
+
+  /// No description provided for @toolsLearningForecastDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看学习趋势与风险'**
+  String get toolsLearningForecastDesc;
+
+  /// No description provided for @toolsCognitivePatternsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'认知模式'**
+  String get toolsCognitivePatternsTitle;
+
+  /// No description provided for @toolsCognitivePatternsDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看行为定式与认知洞察'**
+  String get toolsCognitivePatternsDesc;
+
   /// No description provided for @chatModeStandard.
   ///
   /// In zh, this message translates to:
@@ -1261,6 +1333,90 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'分析模式'**
   String get chatModeAnalytical;
+
+  /// No description provided for @chatModeStandardDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'标准 AI 对话模式'**
+  String get chatModeStandardDesc;
+
+  /// No description provided for @chatModeDeepAnalysis.
+  ///
+  /// In zh, this message translates to:
+  /// **'深度分析'**
+  String get chatModeDeepAnalysis;
+
+  /// No description provided for @chatModeDeepAnalysisDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'多专家协作分析'**
+  String get chatModeDeepAnalysisDesc;
+
+  /// No description provided for @chatModeStudyPlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习计划'**
+  String get chatModeStudyPlan;
+
+  /// No description provided for @chatModeStudyPlanDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务拆解与学习计划'**
+  String get chatModeStudyPlanDesc;
+
+  /// No description provided for @chatModeErrorDiagnosis.
+  ///
+  /// In zh, this message translates to:
+  /// **'错误诊断'**
+  String get chatModeErrorDiagnosis;
+
+  /// No description provided for @chatModeErrorDiagnosisDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'错误诊断与分析闭环'**
+  String get chatModeErrorDiagnosisDesc;
+
+  /// No description provided for @chatModeExpertAuto.
+  ///
+  /// In zh, this message translates to:
+  /// **'专家自动'**
+  String get chatModeExpertAuto;
+
+  /// No description provided for @chatModeExpertAutoDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'自动选择最佳专家'**
+  String get chatModeExpertAutoDesc;
+
+  /// No description provided for @chatModeExpertDirect.
+  ///
+  /// In zh, this message translates to:
+  /// **'专家直连'**
+  String get chatModeExpertDirect;
+
+  /// No description provided for @chatModeExpertDirectDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'直连专家咨询'**
+  String get chatModeExpertDirectDesc;
+
+  /// No description provided for @chatModeSelectorTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择 AI 协作模式'**
+  String get chatModeSelectorTitle;
+
+  /// No description provided for @aiCollabModeTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 协作'**
+  String get aiCollabModeTitle;
+
+  /// No description provided for @switchAgentModeSemantics.
+  ///
+  /// In zh, this message translates to:
+  /// **'切换 Agent 模式'**
+  String get switchAgentModeSemantics;
 
   /// No description provided for @chatDagLayerProgress.
   ///
@@ -1982,6 +2138,12 @@ abstract class AppLocalizations {
   /// **'本周'**
   String get focusStatsWeek;
 
+  /// No description provided for @focusStatsMonth.
+  ///
+  /// In zh, this message translates to:
+  /// **'本月'**
+  String get focusStatsMonth;
+
   /// No description provided for @focusStatsTotal.
   ///
   /// In zh, this message translates to:
@@ -2017,6 +2179,78 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'最佳：{time}'**
   String focusStatsBestDay(Object time);
+
+  /// No description provided for @focusStatsScreenTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'专注统计'**
+  String get focusStatsScreenTitle;
+
+  /// No description provided for @focusStatsTrendTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'专注趋势'**
+  String get focusStatsTrendTitle;
+
+  /// No description provided for @focusStatsHeatmapRange.
+  ///
+  /// In zh, this message translates to:
+  /// **'活跃热力图（{days}天）'**
+  String focusStatsHeatmapRange(Object days);
+
+  /// No description provided for @focusStatsRecentSessionsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近会话'**
+  String get focusStatsRecentSessionsTitle;
+
+  /// No description provided for @focusStatsNoSessions.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无专注记录'**
+  String get focusStatsNoSessions;
+
+  /// No description provided for @focusStatsLoadMore.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看更多'**
+  String get focusStatsLoadMore;
+
+  /// No description provided for @focusStatsDurationTooltip.
+  ///
+  /// In zh, this message translates to:
+  /// **'专注时长：{minutes}分钟'**
+  String focusStatsDurationTooltip(Object minutes);
+
+  /// No description provided for @focusStatsLegendLow.
+  ///
+  /// In zh, this message translates to:
+  /// **'低'**
+  String get focusStatsLegendLow;
+
+  /// No description provided for @focusStatsLegendHigh.
+  ///
+  /// In zh, this message translates to:
+  /// **'高'**
+  String get focusStatsLegendHigh;
+
+  /// No description provided for @focusStatsPomodoroLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'番茄'**
+  String get focusStatsPomodoroLabel;
+
+  /// No description provided for @focusStatsStopwatchLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'正计'**
+  String get focusStatsStopwatchLabel;
+
+  /// No description provided for @focusSelectTaskTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择专注任务'**
+  String get focusSelectTaskTitle;
 
   /// No description provided for @focusReadyPrompt.
   ///
@@ -2066,6 +2300,282 @@ abstract class AppLocalizations {
   /// **'预计 {minutes} 分钟'**
   String focusEstimated(Object minutes);
 
+  /// No description provided for @focusCoachTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI专注教练'**
+  String get focusCoachTitle;
+
+  /// No description provided for @focusCoachSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务：{task} · 已专注 {minutes} 分钟'**
+  String focusCoachSummary(Object minutes, Object task);
+
+  /// No description provided for @focusCoachPromptBreakdown.
+  ///
+  /// In zh, this message translates to:
+  /// **'拆解接下来15分钟'**
+  String get focusCoachPromptBreakdown;
+
+  /// No description provided for @focusCoachPromptRefocus.
+  ///
+  /// In zh, this message translates to:
+  /// **'分心提醒'**
+  String get focusCoachPromptRefocus;
+
+  /// No description provided for @focusCoachPromptNextAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'下一步行动'**
+  String get focusCoachPromptNextAction;
+
+  /// No description provided for @focusCoachPromptBreakdownMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'请根据任务「{task}」，帮我拆解接下来15分钟的专注计划。'**
+  String focusCoachPromptBreakdownMessage(Object task);
+
+  /// No description provided for @focusCoachPromptRefocusMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'我刚刚有些分心，请给我一句简短的回归提示。'**
+  String get focusCoachPromptRefocusMessage;
+
+  /// No description provided for @focusCoachPromptNextActionMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'请总结当前任务的下一步行动，保持简洁明确。'**
+  String get focusCoachPromptNextActionMessage;
+
+  /// No description provided for @focusCoachEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'需要帮助就问我。'**
+  String get focusCoachEmpty;
+
+  /// No description provided for @focusCoachHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'问我：如何保持专注、拆解步骤...'**
+  String get focusCoachHint;
+
+  /// No description provided for @focusCandidateTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'智能建议'**
+  String get focusCandidateTitle;
+
+  /// No description provided for @focusCandidateSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'基于你的学习状态预测'**
+  String get focusCandidateSubtitle;
+
+  /// No description provided for @focusCandidateFooterHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'轻扫关闭 · 不感兴趣可以忽略'**
+  String get focusCandidateFooterHint;
+
+  /// No description provided for @focusCandidateDismiss.
+  ///
+  /// In zh, this message translates to:
+  /// **'不感兴趣'**
+  String get focusCandidateDismiss;
+
+  /// No description provided for @focusCandidateAccept.
+  ///
+  /// In zh, this message translates to:
+  /// **'试试看'**
+  String get focusCandidateAccept;
+
+  /// No description provided for @focusInterruptionDetected.
+  ///
+  /// In zh, this message translates to:
+  /// **'检测到分心行为（第 {count} 次）'**
+  String focusInterruptionDetected(Object count);
+
+  /// No description provided for @focusMindfulnessTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'正念模式'**
+  String get focusMindfulnessTitle;
+
+  /// No description provided for @focusLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载失败：{error}'**
+  String focusLoadFailed(Object error);
+
+  /// No description provided for @focusReturnToTask.
+  ///
+  /// In zh, this message translates to:
+  /// **'返回任务'**
+  String get focusReturnToTask;
+
+  /// No description provided for @focusReturnToTaskTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'返回任务执行'**
+  String get focusReturnToTaskTitle;
+
+  /// No description provided for @focusReturnToTaskMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'专注记录会暂停，并返回任务执行页面。'**
+  String get focusReturnToTaskMessage;
+
+  /// No description provided for @focusReturnToTaskConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认返回'**
+  String get focusReturnToTaskConfirm;
+
+  /// No description provided for @focusExitMindfulness.
+  ///
+  /// In zh, this message translates to:
+  /// **'退出正念模式'**
+  String get focusExitMindfulness;
+
+  /// No description provided for @focusDockMindfulness.
+  ///
+  /// In zh, this message translates to:
+  /// **'正念模式'**
+  String get focusDockMindfulness;
+
+  /// No description provided for @focusDockToolbox.
+  ///
+  /// In zh, this message translates to:
+  /// **'工具箱'**
+  String get focusDockToolbox;
+
+  /// No description provided for @focusReflectionTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'专注结束'**
+  String get focusReflectionTitle;
+
+  /// No description provided for @focusReflectionPrompt.
+  ///
+  /// In zh, this message translates to:
+  /// **'这次专注的感觉如何？'**
+  String get focusReflectionPrompt;
+
+  /// No description provided for @focusReflectionNoteHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'有什么值得记录的吗？（可选）'**
+  String get focusReflectionNoteHint;
+
+  /// No description provided for @focusReflectionSaved.
+  ///
+  /// In zh, this message translates to:
+  /// **'复盘已保存到 Cognitive Prism'**
+  String get focusReflectionSaved;
+
+  /// No description provided for @focusReflectionSaveFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存失败：{error}'**
+  String focusReflectionSaveFailed(Object error);
+
+  /// No description provided for @focusReflectionSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'专注复盘：本次状态 {feeling}。\n{note}'**
+  String focusReflectionSummary(Object feeling, Object note);
+
+  /// No description provided for @focusReflectionMoodFlow.
+  ///
+  /// In zh, this message translates to:
+  /// **'🔥 心流'**
+  String get focusReflectionMoodFlow;
+
+  /// No description provided for @focusReflectionMoodFocused.
+  ///
+  /// In zh, this message translates to:
+  /// **'🙂 专注'**
+  String get focusReflectionMoodFocused;
+
+  /// No description provided for @focusReflectionMoodOkay.
+  ///
+  /// In zh, this message translates to:
+  /// **'😐 一般'**
+  String get focusReflectionMoodOkay;
+
+  /// No description provided for @focusReflectionMoodDistracted.
+  ///
+  /// In zh, this message translates to:
+  /// **'😖 分心'**
+  String get focusReflectionMoodDistracted;
+
+  /// No description provided for @focusReflectionMoodTired.
+  ///
+  /// In zh, this message translates to:
+  /// **'😫 疲惫'**
+  String get focusReflectionMoodTired;
+
+  /// No description provided for @focusExitTitleStep1.
+  ///
+  /// In zh, this message translates to:
+  /// **'确定要退出正念模式吗？'**
+  String get focusExitTitleStep1;
+
+  /// No description provided for @focusExitTitleStep2.
+  ///
+  /// In zh, this message translates to:
+  /// **'即将退出'**
+  String get focusExitTitleStep2;
+
+  /// No description provided for @focusExitTitleStep3.
+  ///
+  /// In zh, this message translates to:
+  /// **'最后确认'**
+  String get focusExitTitleStep3;
+
+  /// No description provided for @focusExitMessageStep1.
+  ///
+  /// In zh, this message translates to:
+  /// **'你正处于专注状态，退出可能会影响专注效果。'**
+  String get focusExitMessageStep1;
+
+  /// No description provided for @focusExitMessageStep2.
+  ///
+  /// In zh, this message translates to:
+  /// **'你已经专注了 {minutes} 分钟，确定要离开吗？'**
+  String focusExitMessageStep2(Object minutes);
+
+  /// No description provided for @focusExitMessageStep3.
+  ///
+  /// In zh, this message translates to:
+  /// **'再坚持一下！放弃会中断你的专注记录。'**
+  String get focusExitMessageStep3;
+
+  /// No description provided for @focusExitCancelStep1.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续专注'**
+  String get focusExitCancelStep1;
+
+  /// No description provided for @focusExitConfirmStep1.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认退出'**
+  String get focusExitConfirmStep1;
+
+  /// No description provided for @focusExitConfirmStep2.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续退出'**
+  String get focusExitConfirmStep2;
+
+  /// No description provided for @focusExitConfirmStep3.
+  ///
+  /// In zh, this message translates to:
+  /// **'确定退出'**
+  String get focusExitConfirmStep3;
+
   /// No description provided for @streakTitle.
   ///
   /// In zh, this message translates to:
@@ -2078,11 +2588,23 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{1天} other{{count}天}}'**
   String streakDays(num count);
 
+  /// No description provided for @streakMaxLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'最高'**
+  String get streakMaxLabel;
+
   /// No description provided for @streakMax.
   ///
   /// In zh, this message translates to:
   /// **'最高{count}'**
   String streakMax(Object count);
+
+  /// No description provided for @streakTotalLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'累计'**
+  String get streakTotalLabel;
 
   /// No description provided for @streakTotal.
   ///
@@ -2672,6 +3194,12 @@ abstract class AppLocalizations {
   /// **'查看全部'**
   String get commonSeeAll;
 
+  /// No description provided for @operationPreview.
+  ///
+  /// In zh, this message translates to:
+  /// **'操作预览：'**
+  String get operationPreview;
+
   /// No description provided for @commonShowLess.
   ///
   /// In zh, this message translates to:
@@ -2785,6 +3313,96 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'操作可能未成功'**
   String get commonOperationWarning;
+
+  /// No description provided for @emptyStateNoTasksTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有任务'**
+  String get emptyStateNoTasksTitle;
+
+  /// No description provided for @emptyStateNoTasksDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建你的第一个学习任务，马上开始。'**
+  String get emptyStateNoTasksDescription;
+
+  /// No description provided for @emptyStateNoChatsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sparkle 已就绪'**
+  String get emptyStateNoChatsTitle;
+
+  /// No description provided for @emptyStateNoChatsDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'随时开口，我们开始对话。'**
+  String get emptyStateNoChatsDescription;
+
+  /// No description provided for @emptyStateNoPlansTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有学习计划'**
+  String get emptyStateNoPlansTitle;
+
+  /// No description provided for @emptyStateNoPlansDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'制定一个计划，让 AI 帮你规划路线。'**
+  String get emptyStateNoPlansDescription;
+
+  /// No description provided for @emptyStateNoErrorsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'状态不错'**
+  String get emptyStateNoErrorsTitle;
+
+  /// No description provided for @emptyStateNoErrorsDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'你还没有错题记录。'**
+  String get emptyStateNoErrorsDescription;
+
+  /// No description provided for @emptyStateNoResultsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有找到结果'**
+  String get emptyStateNoResultsTitle;
+
+  /// No description provided for @emptyStateNoResultsDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'试试其他关键词。'**
+  String get emptyStateNoResultsDescription;
+
+  /// No description provided for @emptyStateNoResultsQuery.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有找到与“{query}”相关的内容'**
+  String emptyStateNoResultsQuery(Object query);
+
+  /// No description provided for @emptyStateGeneralTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'这里还没有内容'**
+  String get emptyStateGeneralTitle;
+
+  /// No description provided for @emptyStateGeneralDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'先添加一些内容吧。'**
+  String get emptyStateGeneralDescription;
+
+  /// No description provided for @emptyStateStartChatAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始对话'**
+  String get emptyStateStartChatAction;
+
+  /// No description provided for @emptyStateCreatePlanAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建计划'**
+  String get emptyStateCreatePlanAction;
 }
 
 class _AppLocalizationsDelegate

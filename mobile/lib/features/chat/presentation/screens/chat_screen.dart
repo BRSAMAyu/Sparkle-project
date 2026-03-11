@@ -34,6 +34,14 @@ class ChatScreen extends ConsumerStatefulWidget {
 }
 
 class _ChatScreenState extends ConsumerState<ChatScreen> {
+  static const Set<String> _shellRootPaths = {
+    '/home',
+    '/galaxy',
+    '/chat',
+    '/community',
+    '/profile',
+  };
+
   final ScrollController _scrollController = ScrollController();
   bool _showContextControls = false;
 
@@ -80,10 +88,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           if (!mounted) {
             return;
           }
-          if (next == 'navigation_ready' && message != null && message.isNotEmpty) {
-            unawaited(context.push(message));
+          if (next == 'navigation_ready' &&
+              message != null &&
+              message.isNotEmpty) {
             final notifier = ref.read(chatProvider.notifier);
             notifier.state = notifier.state.copyWith(clearActionFeedback: true);
+            unawaited(_navigateFromAction(message));
             return;
           }
           if (message != null) {
@@ -629,16 +639,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                             size: DS.iconSizeXs,
                                           )
                                         : null,
-                                    onTap: () {
-                                      Navigator.pop(context);
-                                      unawaited(
-                                        ref
-                                            .read(chatProvider.notifier)
-                                            .loadConversationHistory(
-                                              session['id'] as String,
-                                            ),
-                                      );
-                                    },
+                                    onTap: () => unawaited(
+                                      _handleHistorySessionTap(
+                                          context, session),
+                                    ),
                                   ),
                                 ),
                               );
@@ -655,6 +659,64 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         },
       ),
     );
+  }
+
+  Future<void> _navigateFromAction(String route) async {
+    if (!mounted || route.isEmpty || !route.startsWith('/')) {
+      return;
+    }
+
+    final router = GoRouter.of(context);
+    final targetUri = Uri.tryParse(route);
+    if (targetUri == null) {
+      AppFeedback.error(context, '无法识别跳转地址');
+      return;
+    }
+
+    final currentUri = router.routerDelegate.currentConfiguration.uri;
+    if (currentUri.toString() == targetUri.toString()) {
+      return;
+    }
+
+    try {
+      if (_shellRootPaths.contains(targetUri.path)) {
+        router.go(route);
+        return;
+      }
+      await router.push(route);
+    } catch (_) {
+      if (mounted) {
+        AppFeedback.error(context, '页面跳转失败，请重试');
+      }
+    }
+  }
+
+  Future<void> _handleHistorySessionTap(
+    BuildContext sheetContext,
+    Map<String, dynamic> session,
+  ) async {
+    Navigator.of(sheetContext).pop();
+
+    final sessionId = session['id']?.toString() ?? '';
+    if (sessionId.isEmpty) {
+      AppFeedback.error(context, '会话数据异常，请重试');
+      return;
+    }
+
+    final currentSessionId = ref.read(chatProvider).conversationId;
+    if (currentSessionId == sessionId) {
+      return;
+    }
+
+    await ref.read(chatProvider.notifier).loadConversationHistory(sessionId);
+    if (!mounted) {
+      return;
+    }
+
+    final loadError = ref.read(chatProvider).error;
+    if (loadError != null && loadError.isNotEmpty) {
+      AppFeedback.error(context, loadError);
+    }
   }
 
   Widget _buildQuickActions(BuildContext context) => Center(

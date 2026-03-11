@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/focus/data/models/focus_session_model.dart';
 
 /// List of recent focus sessions
@@ -19,12 +21,13 @@ class FocusStatsSessionList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     if (sessions.isEmpty && !isLoading) {
       return SizedBox(
         height: 120,
         child: Center(
           child: Text(
-            '暂无专注记录',
+            l10n.focusStatsNoSessions,
             style: TextStyle(color: DS.neutral400),
           ),
         ),
@@ -34,20 +37,6 @@ class FocusStatsSessionList extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Icon(Icons.history, color: DS.brandPrimary.shade600, size: 20),
-            const SizedBox(width: DS.sm),
-            const Text(
-              '最近会话',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: DS.md),
         ...sessions.map((session) => _SessionItem(session: session)),
         if (hasMore && onLoadMore != null)
           TextButton.icon(
@@ -59,7 +48,8 @@ class FocusStatsSessionList extends StatelessWidget {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.expand_more, size: 18),
-            label: Text(isLoading ? '加载中...' : '查看更多'),
+            label:
+                Text(isLoading ? l10n.commonLoading : l10n.focusStatsLoadMore),
             style: TextButton.styleFrom(
               foregroundColor: DS.brandPrimary,
             ),
@@ -77,7 +67,8 @@ class _SessionItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isCompleted = session.status == 'completed';
-    final timeAgo = _getTimeAgo(session.startTime);
+    final timeAgo = _getTimeAgo(context, session.startTime);
+    final l10n = context.l10n;
 
     return Container(
       margin: const EdgeInsets.only(bottom: DS.sm),
@@ -100,14 +91,17 @@ class _SessionItem extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  session.taskTitle ?? '自由专注',
+                  session.taskTitle ?? l10n.focusFreeFocus,
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
                 const SizedBox(height: DS.xs),
-                Row(
+                Wrap(
+                  spacing: DS.sm,
+                  runSpacing: DS.xs,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Icon(
                       Icons.timer_outlined,
@@ -116,13 +110,12 @@ class _SessionItem extends StatelessWidget {
                     ),
                     const SizedBox(width: DS.xs),
                     Text(
-                      '${session.durationMinutes}分钟',
+                      l10n.focusStatsMinutes(session.durationMinutes),
                       style: TextStyle(
                         fontSize: 12,
                         color: DS.neutral500,
                       ),
                     ),
-                    const SizedBox(width: DS.sm),
                     Text(
                       timeAgo,
                       style: TextStyle(
@@ -135,7 +128,7 @@ class _SessionItem extends StatelessWidget {
               ],
             ),
           ),
-          _buildFocusTypeBadge(session.focusType),
+          _buildFocusTypeBadge(context, session.focusType),
         ],
       ),
     );
@@ -157,8 +150,11 @@ class _SessionItem extends StatelessWidget {
         ),
       );
 
-  Widget _buildFocusTypeBadge(String focusType) {
+  Widget _buildFocusTypeBadge(BuildContext context, String focusType) {
     final isPomodoro = focusType == 'pomodoro';
+    final label = isPomodoro
+        ? context.l10n.focusStatsPomodoroLabel
+        : context.l10n.focusStatsStopwatchLabel;
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: DS.sm,
@@ -170,7 +166,7 @@ class _SessionItem extends StatelessWidget {
         borderRadius: BorderRadius.circular(DS.sm),
       ),
       child: Text(
-        isPomodoro ? '番茄' : '正计',
+        label,
         style: TextStyle(
           fontSize: 11,
           color: isPomodoro ? DS.prismPurple : DS.neutral600,
@@ -180,20 +176,20 @@ class _SessionItem extends StatelessWidget {
     );
   }
 
-  String _getTimeAgo(DateTime dateTime) {
+  String _getTimeAgo(BuildContext context, DateTime dateTime) {
     final now = DateTime.now();
     final difference = now.difference(dateTime);
 
     if (difference.inMinutes < 60) {
-      return '${difference.inMinutes}分钟前';
+      return context.l10n.timeMinutesAgo(difference.inMinutes);
     } else if (difference.inHours < 24) {
-      return '${difference.inHours}小时前';
+      return context.l10n.timeHoursAgo(difference.inHours);
     } else if (difference.inDays == 1) {
-      return '昨天';
+      return context.l10n.timeYesterday;
     } else if (difference.inDays < 7) {
-      return '${difference.inDays}天前';
+      return context.l10n.timeDaysAgo(difference.inDays);
     } else {
-      return '${dateTime.month}/${dateTime.day}';
+      return Formatters.formatDateShort(dateTime);
     }
   }
 }
