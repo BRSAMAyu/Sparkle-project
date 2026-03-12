@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/cognitive_provider.dart';
 
 class BlockingInterceptorDialog extends ConsumerStatefulWidget {
@@ -24,19 +25,19 @@ class _BlockingInterceptorDialogState
   String? _selectedReason;
   bool _isSubmitting = false;
 
-  final List<String> _reasons = [
-    '高估了自己的效率',
-    '中途被消息打断',
-    '追求完美导致卡壳',
-    '任务太难不知道怎么做',
-    '心情不好不想做',
-  ];
+  List<String> _reasons(BuildContext context) => [
+        context.l10n.blockingReasonEfficiency,
+        context.l10n.blockingReasonInterrupted,
+        context.l10n.blockingReasonPerfectionism,
+        context.l10n.blockingReasonTooHard,
+        context.l10n.blockingReasonNoMood,
+      ];
 
   Future<void> _submit() async {
     final content = _selectedReason ?? _controller.text.trim();
     if (content.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请选择原因或输入想法')),
+        SnackBar(content: Text(context.l10n.blockingSelectReason)),
       );
       return;
     }
@@ -64,7 +65,10 @@ class _BlockingInterceptorDialogState
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('提交失败: $e'), backgroundColor: DS.error),
+          SnackBar(
+            content: Text(context.l10n.submitFailedWithError(e)),
+            backgroundColor: DS.error,
+          ),
         );
         setState(() => _isSubmitting = false);
       }
@@ -73,10 +77,12 @@ class _BlockingInterceptorDialogState
 
   @override
   Widget build(BuildContext context) {
-    final selectedReason = _selectedReason == null ||
-            !_reasons.contains(_selectedReason)
-        ? 'other'
-        : _selectedReason;
+    final l10n = context.l10n;
+    final reasons = _reasons(context);
+    final selectedReason =
+        _selectedReason == null || !reasons.contains(_selectedReason)
+            ? 'other'
+            : _selectedReason;
 
     return Dialog(
       shape: const RoundedRectangleBorder(borderRadius: DS.borderRadius20),
@@ -87,90 +93,87 @@ class _BlockingInterceptorDialogState
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-                Row(
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(DS.sm),
+                    decoration: BoxDecoration(
+                      color: DS.warning.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.block, color: DS.warning),
+                  ),
+                  const SizedBox(width: DS.spacing12),
+                  Expanded(
+                    child: Text(
+                      l10n.blockingTitle,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: DS.fontWeightBold,
+                          ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: DS.spacing16),
+              Text(
+                l10n.blockingDescription,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: DS.neutral600,
+                    ),
+              ),
+              const SizedBox(height: DS.spacing20),
+              RadioGroup<String>(
+                groupValue: selectedReason,
+                onChanged: (value) => setState(() => _selectedReason = value),
+                child: Column(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(DS.sm),
-                      decoration: BoxDecoration(
-                        color: DS.warning.withValues(alpha: 0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(Icons.block, color: DS.warning),
-                    ),
-                    const SizedBox(width: DS.spacing12),
-                    Expanded(
-                      child: Text(
-                        '遇到阻碍了吗？',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: DS.fontWeightBold,
-                            ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: DS.spacing16),
-                Text(
-                  '记录下原因，AI 会帮你分析行为定式，下次做得更好。',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: DS.neutral600,
-                      ),
-                ),
-                const SizedBox(height: DS.spacing20),
-
-                RadioGroup<String>(
-                  groupValue: selectedReason,
-                  onChanged: (value) =>
-                      setState(() => _selectedReason = value),
-                  child: Column(
-                    children: [
-                      // Preset Options
-                      ..._reasons.map(
-                        (reason) => RadioListTile<String>(
-                          title: Text(reason),
-                          value: reason,
-                          contentPadding: EdgeInsets.zero,
-                          activeColor: DS.primaryBase,
-                        ),
-                      ),
-
-                      // Other/Custom Input
-                      RadioListTile<String>(
-                        title: const Text('其他原因...'),
-                        value: 'other',
+                    // Preset Options
+                    ...reasons.map(
+                      (reason) => RadioListTile<String>(
+                        title: Text(reason),
+                        value: reason,
                         contentPadding: EdgeInsets.zero,
                         activeColor: DS.primaryBase,
                       ),
-                    ],
-                  ),
-                ),
-
-                if (_selectedReason == 'other')
-                  TextField(
-                    controller: _controller,
-                    decoration: const InputDecoration(
-                      hintText: '请输入具体原因',
-                      isDense: true,
                     ),
-                  ),
 
-                const SizedBox(height: DS.spacing24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    SparkleButton.ghost(
-                        label: '取消',
-                        onPressed: () => Navigator.of(context).pop(),),
-                    const SizedBox(width: DS.spacing12),
-                    CustomButton.primary(
-                      text: '确认放弃',
-                      icon: Icons.check,
-                      onPressed: _isSubmitting ? () {} : _submit,
-                      isLoading: _isSubmitting,
-                      size: CustomButtonSize.small,
-                      customGradient: DS.warningGradient, // Orange/Red warning
+                    // Other/Custom Input
+                    RadioListTile<String>(
+                      title: Text(l10n.blockingOtherReason),
+                      value: 'other',
+                      contentPadding: EdgeInsets.zero,
+                      activeColor: DS.primaryBase,
                     ),
                   ],
                 ),
+              ),
+              if (_selectedReason == 'other')
+                TextField(
+                  controller: _controller,
+                  decoration: InputDecoration(
+                    hintText: l10n.blockingReasonHint,
+                    isDense: true,
+                  ),
+                ),
+              const SizedBox(height: DS.spacing24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  SparkleButton.ghost(
+                    label: l10n.cancel,
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                  const SizedBox(width: DS.spacing12),
+                  CustomButton.primary(
+                    text: l10n.blockingConfirmAbandon,
+                    icon: Icons.check,
+                    onPressed: _isSubmitting ? () {} : _submit,
+                    isLoading: _isSubmitting,
+                    size: CustomButtonSize.small,
+                    customGradient: DS.warningGradient, // Orange/Red warning
+                  ),
+                ],
+              ),
             ],
           ),
         ),

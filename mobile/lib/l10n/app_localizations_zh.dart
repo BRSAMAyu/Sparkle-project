@@ -3479,4 +3479,528 @@ class AppLocalizationsZh extends AppLocalizations {
   String sendFailedWithError(Object error) {
     return '发送失败：$error';
   }
+
+  @override
+  String submitFailedWithError(Object error) {
+    return '提交失败：$error';
+  }
+
+  @override
+  String loadingFailedWithError(Object error) {
+    return '加载失败：$error';
+  }
+
+  @override
+  String get delete => '删除';
+
+  @override
+  String get blockingReasonEfficiency => '高估了自己的效率';
+
+  @override
+  String get blockingReasonInterrupted => '中途被消息打断';
+
+  @override
+  String get blockingReasonPerfectionism => '追求完美导致卡壳';
+
+  @override
+  String get blockingReasonTooHard => '任务太难，不知道怎么开始';
+
+  @override
+  String get blockingReasonNoMood => '心情不好，不想做';
+
+  @override
+  String get blockingSelectReason => '请选择原因或输入想法';
+
+  @override
+  String get blockingTitle => '遇到阻碍了吗？';
+
+  @override
+  String get blockingDescription => '记录下原因，AI 会帮你分析行为定式，下次做得更好。';
+
+  @override
+  String get blockingOtherReason => '其他原因...';
+
+  @override
+  String get blockingReasonHint => '请输入具体原因';
+
+  @override
+  String get blockingConfirmAbandon => '确认放弃';
+
+  @override
+  String get subtaskAddHint => '添加子任务...';
+
+  @override
+  String get subtaskAddTooltip => '添加子任务';
+
+  @override
+  String get subtaskEmpty => '暂无子任务';
+
+  @override
+  String get taskFeedbackSubmitted => '反馈已提交';
+
+  @override
+  String get taskFeedbackPreferenceUpdated => '偏好已更新';
+
+  @override
+  String get taskFeedbackView => '查看';
+
+  @override
+  String get taskFeedbackPreferenceDialogTitle => '偏好更新';
+
+  @override
+  String taskFeedbackDepthPreference(Object value) {
+    return '深度偏好：$value';
+  }
+
+  @override
+  String taskFeedbackDifficultyPreference(Object value) {
+    return '难度偏好：$value';
+  }
+
+  @override
+  String get taskFeedbackPreferenceDialogDesc => '这些偏好将用于个性化推荐你的下一步学习内容。';
+
+  @override
+  String get taskFeedbackGotIt => '知道了';
+
+  @override
+  String get taskFeedbackCompletedTitle => '任务完成！';
+
+  @override
+  String get taskFeedbackCompletedSubtitle => '任务已完成，继续保持。';
+
+  @override
+  String get taskFeedbackBrightness => '亮度';
+
+  @override
+  String get taskFeedbackStreak => '连胜';
+
+  @override
+  String taskFeedbackStreakDays(int count) {
+    return '$count天';
+  }
+
+  @override
+  String get taskFeedbackOptionalRating => '满意度评分（选填）';
+
+  @override
+  String get taskFeedbackDifficultyQuestion => '这次的难度感觉怎么样？';
+
+  @override
+  String get taskFeedbackCategoryJustRight => '刚好';
+
+  @override
+  String get taskFeedbackCategoryStillHard => '还是难';
+
+  @override
+  String get taskFeedbackCategoryTooEasy => '太简单';
+
+  @override
+  String get taskFeedbackOptionalComment => '有什么想说的？（选填）';
+
+  @override
+  String get taskFeedbackCommentHint => '记录一些心得...';
+
+  @override
+  String get taskFeedbackNextSteps => '下一步建议';
+
+  @override
+  String get taskFeedbackSkip => '跳过';
+
+  @override
+  String get taskFeedbackComplete => '完成';
+
+  @override
+  String taskFeedbackReason(Object reason) {
+    return '理由：$reason';
+  }
+
+  @override
+  String get communityQuote => '引用';
+
+  @override
+  String get communityCopy => '复制';
+
+  @override
+  String get communityCopiedToClipboard => '已复制到剪贴板';
+
+  @override
+  String get communityThreadReply => '串联回复';
+
+  @override
+  String get communityEdit => '编辑';
+
+  @override
+  String get communityRevoke => '撤回';
+
+  @override
+  String get communityRevokedOwnMessage => '你撤回了一条消息';
+
+  @override
+  String communityRevokedUserMessage(Object sender) {
+    return '$sender撤回了一条消息';
+  }
+
+  @override
+  String get communityMemberFallback => '成员';
+
+  @override
+  String communityReadByCount(int count) {
+    return '$count人已读';
+  }
+
+  @override
+  String get communityQuotedMessageFallback => '引用的消息';
+
+  @override
+  String get communityDailyCheckIn => '每日打卡';
+
+  @override
+  String get communityDurationLabel => '时长';
+
+  @override
+  String get communityFlameLabel => '火花';
+
+  @override
+  String get communityStreakLabel => '连胜';
+
+  @override
+  String get communitySharedTask => '分享了一个任务';
+
+  @override
+  String get shareResourceTitle => '分享到社群';
+
+  @override
+  String get shareResourceTabFriends => '好友';
+
+  @override
+  String get shareResourceTabGroups => '群组';
+
+  @override
+  String get shareResourceCommentHint => '添加分享留言（可选）';
+
+  @override
+  String get shareResourceNow => '立即分享';
+
+  @override
+  String get shareResourceNoFriends => '暂无好友';
+
+  @override
+  String get shareResourceNoGroups => '暂无群组';
+
+  @override
+  String shareResourceGroupMembers(int count) {
+    return '$count名成员';
+  }
+
+  @override
+  String get shareResourceSelectTarget => '请选择好友或群组';
+
+  @override
+  String get shareResourceSuccess => '分享成功';
+
+  @override
+  String shareResourceFailed(Object error) {
+    return '分享失败：$error';
+  }
+
+  @override
+  String get threadDiscussion => '线程讨论';
+
+  @override
+  String get threadReplyHint => '回复线程...';
+
+  @override
+  String get calendarSetDueDateTitle => '设置任务截止日期';
+
+  @override
+  String calendarSetDueDateMessage(Object task, Object date) {
+    return '将“$task”设为 $date 到期？';
+  }
+
+  @override
+  String get calendarTitle => '日程与日历';
+
+  @override
+  String get calendarMonthView => '月视图';
+
+  @override
+  String get calendarTwoWeekView => '双周';
+
+  @override
+  String get calendarYearView => '年视图';
+
+  @override
+  String calendarDayScheduleTitle(Object date) {
+    return '$date 日程';
+  }
+
+  @override
+  String get calendarViewDetails => '查看详情';
+
+  @override
+  String get calendarNoEvents => '暂无日程';
+
+  @override
+  String get calendarAllDay => '全天';
+
+  @override
+  String get calendarCreateEvent => '新建日程';
+
+  @override
+  String get calendarSave => '保存';
+
+  @override
+  String get calendarTitleHint => '标题';
+
+  @override
+  String get calendarLocationHint => '地点';
+
+  @override
+  String get calendarDescriptionHint => '描述';
+
+  @override
+  String get calendarStartTime => '开始时间';
+
+  @override
+  String get calendarEndTime => '结束时间';
+
+  @override
+  String get calendarReminder => '提醒';
+
+  @override
+  String get calendarReminderAtStart => '日程开始时';
+
+  @override
+  String calendarReminderMinutes(int count) {
+    return '$count分钟前';
+  }
+
+  @override
+  String calendarReminderHours(int count) {
+    return '$count小时前';
+  }
+
+  @override
+  String calendarReminderDays(int count) {
+    return '$count天前';
+  }
+
+  @override
+  String get calendarRepeat => '重复';
+
+  @override
+  String get calendarRepeatNone => '不重复';
+
+  @override
+  String get calendarRepeatDaily => '每天';
+
+  @override
+  String get calendarRepeatWeekly => '每周';
+
+  @override
+  String get calendarRepeatMonthly => '每月';
+
+  @override
+  String get calendarTitleRequired => '请输入标题';
+
+  @override
+  String get dailyDetailEventsSection => '日程事件';
+
+  @override
+  String get dailyDetailTasksSection => '任务清单';
+
+  @override
+  String get dailyDetailFlame => '火花强度';
+
+  @override
+  String get dailyDetailFocusTime => '专注时长';
+
+  @override
+  String get dailyDetailTasksDone => '完成任务';
+
+  @override
+  String get dailyDetailPrismTitle => '当日认知棱镜';
+
+  @override
+  String get dailyDetailPrismFallback => '今日思维清晰，状态良好';
+
+  @override
+  String get dailyDetailNoTasks => '暂无任务';
+
+  @override
+  String get onboardingSkip => '跳过';
+
+  @override
+  String get onboardingGetStarted => '开始使用';
+
+  @override
+  String get onboardingNext => '下一步';
+
+  @override
+  String get onboardingWelcomeTitle => '欢迎来到 Sparkle';
+
+  @override
+  String get onboardingWelcomeSubtitle => '你的 AI 学习助手\n让知识点亮智慧之光';
+
+  @override
+  String get onboardingFeatureGalaxy => '知识星图';
+
+  @override
+  String get onboardingFeatureGalaxyDesc => '可视化学习网络';
+
+  @override
+  String get onboardingFeatureChat => 'AI 对话';
+
+  @override
+  String get onboardingFeatureChatDesc => '智能学习伙伴';
+
+  @override
+  String get onboardingFeatureTasks => '智能任务';
+
+  @override
+  String get onboardingFeatureTasksDesc => '个性化学习计划';
+
+  @override
+  String get onboardingArchitectureTitle => '系统架构';
+
+  @override
+  String get onboardingArchitectureSubtitle => '了解 Sparkle 如何工作';
+
+  @override
+  String get onboardingGalaxyTitle => '知识星图';
+
+  @override
+  String get onboardingGalaxyDescription => '将你的知识可视化为一张星图';
+
+  @override
+  String get onboardingGalaxyFeature1 => '6大知识星域：理性、造物、灵感、文明、生活、精神';
+
+  @override
+  String get onboardingGalaxyFeature2 => '实时衰减预测：了解知识遗忘曲线';
+
+  @override
+  String get onboardingGalaxyFeature3 => '交互式时间机器：预测未来学习状态';
+
+  @override
+  String get onboardingGalaxyFeature4 => '智能推荐：基于知识图谱的学习路径';
+
+  @override
+  String get onboardingChatTitle => 'AI 对话';
+
+  @override
+  String get onboardingChatDescription => '你的智能学习伙伴';
+
+  @override
+  String get onboardingChatFeature1 => '多智能体协作：数学、代码、写作、科学专家';
+
+  @override
+  String get onboardingChatFeature2 => 'GraphRAG 检索：实时显示知识检索过程';
+
+  @override
+  String get onboardingChatFeature3 => '上下文理解：记住你的学习历史';
+
+  @override
+  String get onboardingChatFeature4 => '工具调用：执行任务、查询知识、管理计划';
+
+  @override
+  String get onboardingTasksTitle => '智能任务';
+
+  @override
+  String get onboardingTasksDescription => '个性化学习计划';
+
+  @override
+  String get onboardingTasksFeature1 => '6种任务类型：学习、训练、纠错、反思、社交、规划';
+
+  @override
+  String get onboardingTasksFeature2 => '智能推送：基于学习状态的提醒';
+
+  @override
+  String get onboardingTasksFeature3 => 'Sprint 计划：短期冲刺目标';
+
+  @override
+  String get onboardingTasksFeature4 => 'Growth Plan：长期成长规划';
+
+  @override
+  String get onboardingPersonalizationTitle => '个性化设置';
+
+  @override
+  String get onboardingPersonalizationSubtitle => '让 Sparkle 更懂你';
+
+  @override
+  String get onboardingSettingReminders => '学习提醒';
+
+  @override
+  String get onboardingSettingRemindersDesc => '在最佳时间推送学习建议';
+
+  @override
+  String get onboardingSettingAnalytics => '学习分析';
+
+  @override
+  String get onboardingSettingAnalyticsDesc => '生成个性化学习报告';
+
+  @override
+  String get onboardingSettingAssistant => 'AI 助手';
+
+  @override
+  String get onboardingSettingAssistantDesc => '自动创建学习任务';
+
+  @override
+  String get onboardingChatDemo1 => '你好！我能帮你什么？';
+
+  @override
+  String get onboardingChatDemo2 => '解释一下微积分的基本原理';
+
+  @override
+  String get onboardingChatDemo3 => '微积分研究函数的变化率...';
+
+  @override
+  String get onboardingTaskTypeLearning => '学习任务';
+
+  @override
+  String get onboardingTaskTypePractice => '训练任务';
+
+  @override
+  String get onboardingTaskTypeReflection => '反思任务';
+
+  @override
+  String get onboardingTaskDemo1 => '完成微积分第一章';
+
+  @override
+  String get onboardingTaskDemo2 => '完成10道练习题';
+
+  @override
+  String get onboardingTaskDemo3 => '总结本周学习收获';
+
+  @override
+  String get onboardingArchitectureStep1Title => '移动端';
+
+  @override
+  String get onboardingArchitectureStep1Desc => 'Flutter 跨平台应用\n提供流畅的用户体验';
+
+  @override
+  String get onboardingArchitectureStep2Title => 'WebSocket 连接';
+
+  @override
+  String get onboardingArchitectureStep2Desc => 'Go Gateway 提供实时双向通信\n高性能、低延迟';
+
+  @override
+  String get onboardingArchitectureStep3Title => 'AI 引擎';
+
+  @override
+  String get onboardingArchitectureStep3Desc =>
+      'Python Agent Engine\n强大的推理和工具调用能力';
+
+  @override
+  String get onboardingArchitectureStep4Title => '数据存储';
+
+  @override
+  String get onboardingArchitectureStep4Desc =>
+      'PostgreSQL + pgvector\n向量检索 + 图谱存储';
+
+  @override
+  String get onboardingArchitectureStep5Title => '完整链路';
+
+  @override
+  String get onboardingArchitectureStep5Desc => '从提问到回答\n毫秒级响应体验';
 }

@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/task/data/models/next_action.dart';
 import 'package:sparkle/features/task/data/models/task_completion_result.dart';
 import 'package:sparkle/features/task/data/models/task_feedback_response.dart';
@@ -43,10 +46,12 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
 
   void _recordSkipIfNeeded() {
     if (!_hasRecordedSkip && widget.result.nextActions.isNotEmpty) {
-      ref.read(taskListProvider.notifier).recordNextActionsSkip(
-            widget.taskId,
-            widget.result.nextActions,
-          );
+      unawaited(
+        ref.read(taskListProvider.notifier).recordNextActionsSkip(
+              widget.taskId,
+              widget.result.nextActions,
+            ),
+      );
     }
   }
 
@@ -83,7 +88,8 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
   void _showFeedbackSuccess(TaskFeedbackResponse? response) {
     if (!mounted) return;
 
-    final message = response?.message ?? '反馈已提交';
+    final l10n = context.l10n;
+    final message = response?.message ?? l10n.taskFeedbackSubmitted;
     final hasPreferenceUpdates = response?.preferenceUpdates != null;
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -103,7 +109,7 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
                   borderRadius: DS.borderRadius4,
                 ),
                 child: Text(
-                  '偏好已更新',
+                  l10n.taskFeedbackPreferenceUpdated,
                   style: TextStyle(
                     fontSize: 10,
                     color: DS.semanticSuccess,
@@ -119,7 +125,7 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
         duration: const Duration(seconds: 3),
         action: response?.preferenceUpdates != null
             ? SnackBarAction(
-                label: '查看',
+                label: l10n.taskFeedbackView,
                 textColor: DS.semanticSuccess,
                 onPressed: () {
                   _showPreferenceDetailDialog(response!.preferenceUpdates!);
@@ -132,38 +138,49 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
 
   void _showPreferenceDetailDialog(PreferenceUpdates updates) {
     if (!mounted) return;
+    final l10n = context.l10n;
 
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('偏好更新'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (updates.depthPreference != null) ...[
-              Text('深度偏好: ${_formatDelta(updates.depthPreference)}'),
-              const SizedBox(height: DS.sm),
-            ],
-            if (updates.difficultyPreference != null) ...[
-              Text('难度偏好: ${_formatDelta(updates.difficultyPreference)}'),
-            ],
-            const SizedBox(height: DS.spacing16),
-            Text(
-              '这些偏好将用于个性化推荐你的下一步学习内容。',
-              style: TextStyle(
-                fontSize: DS.fontSizeSm,
-                color: DS.textSecondary,
+    unawaited(
+      showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(l10n.taskFeedbackPreferenceDialogTitle),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (updates.depthPreference != null) ...[
+                Text(
+                  l10n.taskFeedbackDepthPreference(
+                    _formatDelta(updates.depthPreference),
+                  ),
+                ),
+                const SizedBox(height: DS.sm),
+              ],
+              if (updates.difficultyPreference != null) ...[
+                Text(
+                  l10n.taskFeedbackDifficultyPreference(
+                    _formatDelta(updates.difficultyPreference),
+                  ),
+                ),
+              ],
+              const SizedBox(height: DS.spacing16),
+              Text(
+                l10n.taskFeedbackPreferenceDialogDesc,
+                style: TextStyle(
+                  fontSize: DS.fontSizeSm,
+                  color: DS.textSecondary,
+                ),
               ),
+            ],
+          ),
+          actions: [
+            SparkleButton.ghost(
+              label: l10n.taskFeedbackGotIt,
+              onPressed: () => Navigator.of(context).pop(),
             ),
           ],
         ),
-        actions: [
-          SparkleButton.ghost(
-            label: '知道了',
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-        ],
       ),
     );
   }
@@ -179,13 +196,15 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
     _hasRecordedSkip = true;
 
     // Record the selection with displayedActionsCount
-    ref.read(taskListProvider.notifier).recordNextActionSelection(
-          widget.taskId,
-          action,
-          position,
-          true,
-          widget.result.nextActions.length,
-        );
+    unawaited(
+      ref.read(taskListProvider.notifier).recordNextActionSelection(
+            widget.taskId,
+            action,
+            position,
+            true,
+            widget.result.nextActions.length,
+          ),
+    );
 
     widget.onClose();
     if (action.existingTaskId != null) {
@@ -202,6 +221,7 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     return Dialog(
       shape: const RoundedRectangleBorder(borderRadius: DS.borderRadius20),
@@ -212,229 +232,241 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
           child: Padding(
             padding: const EdgeInsets.only(top: DS.spacing4),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Header
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(DS.sm),
-                    decoration: BoxDecoration(
-                      color: DS.surfaceSecondary,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: DS.borderSubtle),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Header
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(DS.sm),
+                      decoration: BoxDecoration(
+                        color: DS.surfaceSecondary,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: DS.borderSubtle),
+                      ),
+                      child: Icon(
+                        Icons.auto_awesome,
+                        color: DS.primaryBase,
+                        size: 24,
+                      ),
                     ),
-                    child: Icon(
-                      Icons.auto_awesome,
-                      color: DS.primaryBase,
-                      size: 24,
+                    const SizedBox(width: DS.spacing12),
+                    Text(
+                      l10n.taskFeedbackCompletedTitle,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: DS.fontWeightBold,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: DS.spacing12),
-                  Text(
-                    '任务完成!',
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: DS.fontWeightBold,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: DS.spacing20),
+                  ],
+                ),
+                const SizedBox(height: DS.spacing20),
 
-              // Scrollable content
-              Flexible(
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // AI Feedback Content
-                      if (widget.result.feedback != null)
-                        Container(
-                          constraints: const BoxConstraints(maxHeight: 200),
-                          child: SingleChildScrollView(
-                            child: MarkdownBody(
-                              data: widget.result.feedback!,
-                              styleSheet: MarkdownStyleSheet(
-                                p: theme.textTheme.bodyMedium?.copyWith(
-                                  fontSize: DS.fontSizeBase,
-                                  height: 1.5,
-                                ),
-                                strong: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: DS.primaryDark,
+                // Scrollable content
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // AI Feedback Content
+                        if (widget.result.feedback != null)
+                          Container(
+                            constraints: const BoxConstraints(maxHeight: 200),
+                            child: SingleChildScrollView(
+                              child: MarkdownBody(
+                                data: widget.result.feedback!,
+                                styleSheet: MarkdownStyleSheet(
+                                  p: theme.textTheme.bodyMedium?.copyWith(
+                                    fontSize: DS.fontSizeBase,
+                                    height: 1.5,
+                                  ),
+                                  strong: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: DS.primaryDark,
+                                  ),
                                 ),
                               ),
                             ),
+                          )
+                        else
+                          Text(
+                            l10n.taskFeedbackCompletedSubtitle,
+                            style: theme.textTheme.bodyMedium,
                           ),
-                        )
-                      else
-                        Text('任务已完成！继续保持。', style: theme.textTheme.bodyMedium),
 
-                      const SizedBox(height: DS.spacing20),
-
-                      // Stats Updates
-                      if (widget.result.flameUpdate != null ||
-                          widget.result.statsUpdate != null)
-                        Container(
-                          padding: const EdgeInsets.all(DS.spacing12),
-                          decoration: BoxDecoration(
-                            color: DS.neutral50,
-                            borderRadius: DS.borderRadius12,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            children: [
-                              if (widget.result.flameUpdate != null)
-                                _StatItem(
-                                  icon: Icons.local_fire_department,
-                                  color: DS.brandPrimaryConst,
-                                  value:
-                                      "+${widget.result.flameUpdate!['brightness_change'] ?? widget.result.flameUpdate!['level']}%",
-                                  label: '亮度',
-                                ),
-                              if (widget.result.statsUpdate != null)
-                                _StatItem(
-                                  icon: Icons.emoji_events,
-                                  color: DS.rarityRare,
-                                  value:
-                                      "${widget.result.statsUpdate!['streak_days']}天",
-                                  label: '连胜',
-                                ),
-                            ],
-                          ),
-                        ),
-
-                      const SizedBox(height: DS.spacing20),
-
-                      // Satisfaction Rating (Optional)
-                      Text(
-                        '满意度评分 (选填)',
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color: DS.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: DS.xs),
-                      _StarRating(
-                        rating: _rating,
-                        onRatingChanged: (rating) =>
-                            setState(() => _rating = rating),
-                      ),
-
-                      const SizedBox(height: DS.spacing16),
-
-                      Text(
-                        '这次的难度感觉怎么样？',
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color: DS.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: DS.xs),
-                      Wrap(
-                        spacing: DS.spacing8,
-                        runSpacing: DS.spacing8,
-                        children: [
-                          _FeedbackCategoryChip(
-                            label: '刚好',
-                            selected: _selectedCategory == 'just_right',
-                            onTap: () => setState(() => _selectedCategory = 'just_right'),
-                          ),
-                          _FeedbackCategoryChip(
-                            label: '还是难',
-                            selected: _selectedCategory == 'too_difficult',
-                            onTap: () => setState(() => _selectedCategory = 'too_difficult'),
-                          ),
-                          _FeedbackCategoryChip(
-                            label: '太简单',
-                            selected: _selectedCategory == 'too_easy',
-                            onTap: () => setState(() => _selectedCategory = 'too_easy'),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: DS.spacing16),
-
-                      // Text Feedback (Optional)
-                      Text(
-                        '有什么想说的? (选填)',
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color: DS.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: DS.xs),
-                      TextField(
-                        controller: _feedbackController,
-                        maxLines: 3,
-                        decoration: InputDecoration(
-                          hintText: '记录一些心得...',
-                          border: OutlineInputBorder(
-                            borderRadius: DS.borderRadius8,
-                            borderSide: BorderSide(color: DS.neutral300),
-                          ),
-                          filled: true,
-                          fillColor: DS.neutral50,
-                          contentPadding: const EdgeInsets.all(DS.spacing12),
-                        ),
-                      ),
-
-                      // Next Actions Section
-                      if (widget.result.nextActions.isNotEmpty) ...[
                         const SizedBox(height: DS.spacing20),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.arrow_forward,
-                              size: 18,
-                              color: DS.brandPrimaryConst,
+
+                        // Stats Updates
+                        if (widget.result.flameUpdate != null ||
+                            widget.result.statsUpdate != null)
+                          Container(
+                            padding: const EdgeInsets.all(DS.spacing12),
+                            decoration: BoxDecoration(
+                              color: DS.neutral50,
+                              borderRadius: DS.borderRadius12,
                             ),
-                            const SizedBox(width: DS.xs),
-                            Text(
-                              '下一步建议',
-                              style: theme.textTheme.titleSmall?.copyWith(
-                                fontWeight: DS.fontWeightBold,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceAround,
+                              children: [
+                                if (widget.result.flameUpdate != null)
+                                  _StatItem(
+                                    icon: Icons.local_fire_department,
+                                    color: DS.brandPrimaryConst,
+                                    value:
+                                        "+${widget.result.flameUpdate!['brightness_change'] ?? widget.result.flameUpdate!['level']}%",
+                                    label: l10n.taskFeedbackBrightness,
+                                  ),
+                                if (widget.result.statsUpdate != null)
+                                  _StatItem(
+                                    icon: Icons.emoji_events,
+                                    color: DS.rarityRare,
+                                    value: l10n.taskFeedbackStreakDays(
+                                      (widget.result.statsUpdate!['streak_days']
+                                              as num)
+                                          .toInt(),
+                                    ),
+                                    label: l10n.taskFeedbackStreak,
+                                  ),
+                              ],
+                            ),
+                          ),
+
+                        const SizedBox(height: DS.spacing20),
+
+                        // Satisfaction Rating (Optional)
+                        Text(
+                          l10n.taskFeedbackOptionalRating,
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: DS.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: DS.xs),
+                        _StarRating(
+                          rating: _rating,
+                          onRatingChanged: (rating) =>
+                              setState(() => _rating = rating),
+                        ),
+
+                        const SizedBox(height: DS.spacing16),
+
+                        Text(
+                          l10n.taskFeedbackDifficultyQuestion,
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: DS.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: DS.xs),
+                        Wrap(
+                          spacing: DS.spacing8,
+                          runSpacing: DS.spacing8,
+                          children: [
+                            _FeedbackCategoryChip(
+                              label: l10n.taskFeedbackCategoryJustRight,
+                              selected: _selectedCategory == 'just_right',
+                              onTap: () => setState(
+                                () => _selectedCategory = 'just_right',
+                              ),
+                            ),
+                            _FeedbackCategoryChip(
+                              label: l10n.taskFeedbackCategoryStillHard,
+                              selected: _selectedCategory == 'too_difficult',
+                              onTap: () => setState(
+                                () => _selectedCategory = 'too_difficult',
+                              ),
+                            ),
+                            _FeedbackCategoryChip(
+                              label: l10n.taskFeedbackCategoryTooEasy,
+                              selected: _selectedCategory == 'too_easy',
+                              onTap: () => setState(
+                                () => _selectedCategory = 'too_easy',
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: DS.sm),
-                        ...widget.result.nextActions.asMap().entries.map(
-                              (entry) => _NextActionCard(
-                                action: entry.value,
-                                position: entry.key,
-                                onTap: () =>
-                                    _handleNextAction(entry.value, entry.key),
-                              ),
+
+                        const SizedBox(height: DS.spacing16),
+
+                        // Text Feedback (Optional)
+                        Text(
+                          l10n.taskFeedbackOptionalComment,
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: DS.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: DS.xs),
+                        TextField(
+                          controller: _feedbackController,
+                          maxLines: 3,
+                          decoration: InputDecoration(
+                            hintText: l10n.taskFeedbackCommentHint,
+                            border: OutlineInputBorder(
+                              borderRadius: DS.borderRadius8,
+                              borderSide: BorderSide(color: DS.neutral300),
                             ),
+                            filled: true,
+                            fillColor: DS.neutral50,
+                            contentPadding: const EdgeInsets.all(DS.spacing12),
+                          ),
+                        ),
+
+                        // Next Actions Section
+                        if (widget.result.nextActions.isNotEmpty) ...[
+                          const SizedBox(height: DS.spacing20),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.arrow_forward,
+                                size: 18,
+                                color: DS.brandPrimaryConst,
+                              ),
+                              const SizedBox(width: DS.xs),
+                              Text(
+                                l10n.taskFeedbackNextSteps,
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  fontWeight: DS.fontWeightBold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: DS.sm),
+                          ...widget.result.nextActions.asMap().entries.map(
+                                (entry) => _NextActionCard(
+                                  action: entry.value,
+                                  position: entry.key,
+                                  onTap: () =>
+                                      _handleNextAction(entry.value, entry.key),
+                                ),
+                              ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ),
-              ),
 
-              const SizedBox(height: DS.spacing24),
+                const SizedBox(height: DS.spacing24),
 
-              // Bottom Buttons
-              Row(
-                children: [
-                  Expanded(
-                    child: SparkleButton.ghost(
-                      label: '跳过',
-                      onPressed: widget.onClose,
+                // Bottom Buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: SparkleButton.ghost(
+                        label: l10n.taskFeedbackSkip,
+                        onPressed: widget.onClose,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: DS.spacing12),
-                  Expanded(
-                    flex: 2,
-                    child: CustomButton.primary(
-                      text: '完成',
-                      onPressed: _handleSubmit,
+                    const SizedBox(width: DS.spacing12),
+                    Expanded(
+                      flex: 2,
+                      child: CustomButton.primary(
+                        text: l10n.taskFeedbackComplete,
+                        onPressed: _handleSubmit,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -485,32 +517,33 @@ class _FeedbackCategoryChip extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: DS.borderRadius20,
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing12,
-          vertical: DS.spacing8,
-        ),
-        decoration: BoxDecoration(
-          color: selected ? DS.primaryBase.withValues(alpha: 0.12) : DS.neutral50,
-          borderRadius: DS.borderRadius20,
-          border: Border.all(
-            color: selected ? DS.primaryBase : DS.neutral300,
+  Widget build(BuildContext context) => InkWell(
+        borderRadius: DS.borderRadius20,
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing12,
+            vertical: DS.spacing8,
+          ),
+          decoration: BoxDecoration(
+            color: selected
+                ? DS.primaryBase.withValues(alpha: 0.12)
+                : DS.neutral50,
+            borderRadius: DS.borderRadius20,
+            border: Border.all(
+              color: selected ? DS.primaryBase : DS.neutral300,
+            ),
+          ),
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: selected ? DS.primaryBase : DS.textSecondary,
+                  fontWeight:
+                      selected ? DS.fontWeightSemibold : DS.fontWeightMedium,
+                ),
           ),
         ),
-        child: Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: selected ? DS.primaryBase : DS.textSecondary,
-                fontWeight: selected ? DS.fontWeightSemibold : DS.fontWeightMedium,
-              ),
-        ),
-      ),
-    );
-  }
+      );
 }
 
 class _NextActionCard extends StatelessWidget {
@@ -641,7 +674,7 @@ class _NextActionCard extends StatelessWidget {
                     if (action.reason.isNotEmpty) ...[
                       const SizedBox(height: 4),
                       Text(
-                        '理由: ${action.reason}',
+                        context.l10n.taskFeedbackReason(action.reason),
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: DS.textTertiary,
                           fontSize: 10,

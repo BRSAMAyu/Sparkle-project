@@ -6529,6 +6529,990 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'发送失败：{error}'**
   String sendFailedWithError(Object error);
+
+  /// No description provided for @submitFailedWithError.
+  ///
+  /// In zh, this message translates to:
+  /// **'提交失败：{error}'**
+  String submitFailedWithError(Object error);
+
+  /// No description provided for @loadingFailedWithError.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载失败：{error}'**
+  String loadingFailedWithError(Object error);
+
+  /// No description provided for @delete.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除'**
+  String get delete;
+
+  /// No description provided for @blockingReasonEfficiency.
+  ///
+  /// In zh, this message translates to:
+  /// **'高估了自己的效率'**
+  String get blockingReasonEfficiency;
+
+  /// No description provided for @blockingReasonInterrupted.
+  ///
+  /// In zh, this message translates to:
+  /// **'中途被消息打断'**
+  String get blockingReasonInterrupted;
+
+  /// No description provided for @blockingReasonPerfectionism.
+  ///
+  /// In zh, this message translates to:
+  /// **'追求完美导致卡壳'**
+  String get blockingReasonPerfectionism;
+
+  /// No description provided for @blockingReasonTooHard.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务太难，不知道怎么开始'**
+  String get blockingReasonTooHard;
+
+  /// No description provided for @blockingReasonNoMood.
+  ///
+  /// In zh, this message translates to:
+  /// **'心情不好，不想做'**
+  String get blockingReasonNoMood;
+
+  /// No description provided for @blockingSelectReason.
+  ///
+  /// In zh, this message translates to:
+  /// **'请选择原因或输入想法'**
+  String get blockingSelectReason;
+
+  /// No description provided for @blockingTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'遇到阻碍了吗？'**
+  String get blockingTitle;
+
+  /// No description provided for @blockingDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'记录下原因，AI 会帮你分析行为定式，下次做得更好。'**
+  String get blockingDescription;
+
+  /// No description provided for @blockingOtherReason.
+  ///
+  /// In zh, this message translates to:
+  /// **'其他原因...'**
+  String get blockingOtherReason;
+
+  /// No description provided for @blockingReasonHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入具体原因'**
+  String get blockingReasonHint;
+
+  /// No description provided for @blockingConfirmAbandon.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认放弃'**
+  String get blockingConfirmAbandon;
+
+  /// No description provided for @subtaskAddHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加子任务...'**
+  String get subtaskAddHint;
+
+  /// No description provided for @subtaskAddTooltip.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加子任务'**
+  String get subtaskAddTooltip;
+
+  /// No description provided for @subtaskEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无子任务'**
+  String get subtaskEmpty;
+
+  /// No description provided for @taskFeedbackSubmitted.
+  ///
+  /// In zh, this message translates to:
+  /// **'反馈已提交'**
+  String get taskFeedbackSubmitted;
+
+  /// No description provided for @taskFeedbackPreferenceUpdated.
+  ///
+  /// In zh, this message translates to:
+  /// **'偏好已更新'**
+  String get taskFeedbackPreferenceUpdated;
+
+  /// No description provided for @taskFeedbackView.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看'**
+  String get taskFeedbackView;
+
+  /// No description provided for @taskFeedbackPreferenceDialogTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'偏好更新'**
+  String get taskFeedbackPreferenceDialogTitle;
+
+  /// No description provided for @taskFeedbackDepthPreference.
+  ///
+  /// In zh, this message translates to:
+  /// **'深度偏好：{value}'**
+  String taskFeedbackDepthPreference(Object value);
+
+  /// No description provided for @taskFeedbackDifficultyPreference.
+  ///
+  /// In zh, this message translates to:
+  /// **'难度偏好：{value}'**
+  String taskFeedbackDifficultyPreference(Object value);
+
+  /// No description provided for @taskFeedbackPreferenceDialogDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'这些偏好将用于个性化推荐你的下一步学习内容。'**
+  String get taskFeedbackPreferenceDialogDesc;
+
+  /// No description provided for @taskFeedbackGotIt.
+  ///
+  /// In zh, this message translates to:
+  /// **'知道了'**
+  String get taskFeedbackGotIt;
+
+  /// No description provided for @taskFeedbackCompletedTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务完成！'**
+  String get taskFeedbackCompletedTitle;
+
+  /// No description provided for @taskFeedbackCompletedSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务已完成，继续保持。'**
+  String get taskFeedbackCompletedSubtitle;
+
+  /// No description provided for @taskFeedbackBrightness.
+  ///
+  /// In zh, this message translates to:
+  /// **'亮度'**
+  String get taskFeedbackBrightness;
+
+  /// No description provided for @taskFeedbackStreak.
+  ///
+  /// In zh, this message translates to:
+  /// **'连胜'**
+  String get taskFeedbackStreak;
+
+  /// No description provided for @taskFeedbackStreakDays.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count}天'**
+  String taskFeedbackStreakDays(int count);
+
+  /// No description provided for @taskFeedbackOptionalRating.
+  ///
+  /// In zh, this message translates to:
+  /// **'满意度评分（选填）'**
+  String get taskFeedbackOptionalRating;
+
+  /// No description provided for @taskFeedbackDifficultyQuestion.
+  ///
+  /// In zh, this message translates to:
+  /// **'这次的难度感觉怎么样？'**
+  String get taskFeedbackDifficultyQuestion;
+
+  /// No description provided for @taskFeedbackCategoryJustRight.
+  ///
+  /// In zh, this message translates to:
+  /// **'刚好'**
+  String get taskFeedbackCategoryJustRight;
+
+  /// No description provided for @taskFeedbackCategoryStillHard.
+  ///
+  /// In zh, this message translates to:
+  /// **'还是难'**
+  String get taskFeedbackCategoryStillHard;
+
+  /// No description provided for @taskFeedbackCategoryTooEasy.
+  ///
+  /// In zh, this message translates to:
+  /// **'太简单'**
+  String get taskFeedbackCategoryTooEasy;
+
+  /// No description provided for @taskFeedbackOptionalComment.
+  ///
+  /// In zh, this message translates to:
+  /// **'有什么想说的？（选填）'**
+  String get taskFeedbackOptionalComment;
+
+  /// No description provided for @taskFeedbackCommentHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'记录一些心得...'**
+  String get taskFeedbackCommentHint;
+
+  /// No description provided for @taskFeedbackNextSteps.
+  ///
+  /// In zh, this message translates to:
+  /// **'下一步建议'**
+  String get taskFeedbackNextSteps;
+
+  /// No description provided for @taskFeedbackSkip.
+  ///
+  /// In zh, this message translates to:
+  /// **'跳过'**
+  String get taskFeedbackSkip;
+
+  /// No description provided for @taskFeedbackComplete.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成'**
+  String get taskFeedbackComplete;
+
+  /// No description provided for @taskFeedbackReason.
+  ///
+  /// In zh, this message translates to:
+  /// **'理由：{reason}'**
+  String taskFeedbackReason(Object reason);
+
+  /// No description provided for @communityQuote.
+  ///
+  /// In zh, this message translates to:
+  /// **'引用'**
+  String get communityQuote;
+
+  /// No description provided for @communityCopy.
+  ///
+  /// In zh, this message translates to:
+  /// **'复制'**
+  String get communityCopy;
+
+  /// No description provided for @communityCopiedToClipboard.
+  ///
+  /// In zh, this message translates to:
+  /// **'已复制到剪贴板'**
+  String get communityCopiedToClipboard;
+
+  /// No description provided for @communityThreadReply.
+  ///
+  /// In zh, this message translates to:
+  /// **'串联回复'**
+  String get communityThreadReply;
+
+  /// No description provided for @communityEdit.
+  ///
+  /// In zh, this message translates to:
+  /// **'编辑'**
+  String get communityEdit;
+
+  /// No description provided for @communityRevoke.
+  ///
+  /// In zh, this message translates to:
+  /// **'撤回'**
+  String get communityRevoke;
+
+  /// No description provided for @communityRevokedOwnMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'你撤回了一条消息'**
+  String get communityRevokedOwnMessage;
+
+  /// No description provided for @communityRevokedUserMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'{sender}撤回了一条消息'**
+  String communityRevokedUserMessage(Object sender);
+
+  /// No description provided for @communityMemberFallback.
+  ///
+  /// In zh, this message translates to:
+  /// **'成员'**
+  String get communityMemberFallback;
+
+  /// No description provided for @communityReadByCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count}人已读'**
+  String communityReadByCount(int count);
+
+  /// No description provided for @communityQuotedMessageFallback.
+  ///
+  /// In zh, this message translates to:
+  /// **'引用的消息'**
+  String get communityQuotedMessageFallback;
+
+  /// No description provided for @communityDailyCheckIn.
+  ///
+  /// In zh, this message translates to:
+  /// **'每日打卡'**
+  String get communityDailyCheckIn;
+
+  /// No description provided for @communityDurationLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'时长'**
+  String get communityDurationLabel;
+
+  /// No description provided for @communityFlameLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'火花'**
+  String get communityFlameLabel;
+
+  /// No description provided for @communityStreakLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'连胜'**
+  String get communityStreakLabel;
+
+  /// No description provided for @communitySharedTask.
+  ///
+  /// In zh, this message translates to:
+  /// **'分享了一个任务'**
+  String get communitySharedTask;
+
+  /// No description provided for @shareResourceTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'分享到社群'**
+  String get shareResourceTitle;
+
+  /// No description provided for @shareResourceTabFriends.
+  ///
+  /// In zh, this message translates to:
+  /// **'好友'**
+  String get shareResourceTabFriends;
+
+  /// No description provided for @shareResourceTabGroups.
+  ///
+  /// In zh, this message translates to:
+  /// **'群组'**
+  String get shareResourceTabGroups;
+
+  /// No description provided for @shareResourceCommentHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加分享留言（可选）'**
+  String get shareResourceCommentHint;
+
+  /// No description provided for @shareResourceNow.
+  ///
+  /// In zh, this message translates to:
+  /// **'立即分享'**
+  String get shareResourceNow;
+
+  /// No description provided for @shareResourceNoFriends.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无好友'**
+  String get shareResourceNoFriends;
+
+  /// No description provided for @shareResourceNoGroups.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无群组'**
+  String get shareResourceNoGroups;
+
+  /// No description provided for @shareResourceGroupMembers.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count}名成员'**
+  String shareResourceGroupMembers(int count);
+
+  /// No description provided for @shareResourceSelectTarget.
+  ///
+  /// In zh, this message translates to:
+  /// **'请选择好友或群组'**
+  String get shareResourceSelectTarget;
+
+  /// No description provided for @shareResourceSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'分享成功'**
+  String get shareResourceSuccess;
+
+  /// No description provided for @shareResourceFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'分享失败：{error}'**
+  String shareResourceFailed(Object error);
+
+  /// No description provided for @threadDiscussion.
+  ///
+  /// In zh, this message translates to:
+  /// **'线程讨论'**
+  String get threadDiscussion;
+
+  /// No description provided for @threadReplyHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'回复线程...'**
+  String get threadReplyHint;
+
+  /// No description provided for @calendarSetDueDateTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'设置任务截止日期'**
+  String get calendarSetDueDateTitle;
+
+  /// No description provided for @calendarSetDueDateMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'将“{task}”设为 {date} 到期？'**
+  String calendarSetDueDateMessage(Object task, Object date);
+
+  /// No description provided for @calendarTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'日程与日历'**
+  String get calendarTitle;
+
+  /// No description provided for @calendarMonthView.
+  ///
+  /// In zh, this message translates to:
+  /// **'月视图'**
+  String get calendarMonthView;
+
+  /// No description provided for @calendarTwoWeekView.
+  ///
+  /// In zh, this message translates to:
+  /// **'双周'**
+  String get calendarTwoWeekView;
+
+  /// No description provided for @calendarYearView.
+  ///
+  /// In zh, this message translates to:
+  /// **'年视图'**
+  String get calendarYearView;
+
+  /// No description provided for @calendarDayScheduleTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'{date} 日程'**
+  String calendarDayScheduleTitle(Object date);
+
+  /// No description provided for @calendarViewDetails.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看详情'**
+  String get calendarViewDetails;
+
+  /// No description provided for @calendarNoEvents.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无日程'**
+  String get calendarNoEvents;
+
+  /// No description provided for @calendarAllDay.
+  ///
+  /// In zh, this message translates to:
+  /// **'全天'**
+  String get calendarAllDay;
+
+  /// No description provided for @calendarCreateEvent.
+  ///
+  /// In zh, this message translates to:
+  /// **'新建日程'**
+  String get calendarCreateEvent;
+
+  /// No description provided for @calendarSave.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存'**
+  String get calendarSave;
+
+  /// No description provided for @calendarTitleHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'标题'**
+  String get calendarTitleHint;
+
+  /// No description provided for @calendarLocationHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'地点'**
+  String get calendarLocationHint;
+
+  /// No description provided for @calendarDescriptionHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'描述'**
+  String get calendarDescriptionHint;
+
+  /// No description provided for @calendarStartTime.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始时间'**
+  String get calendarStartTime;
+
+  /// No description provided for @calendarEndTime.
+  ///
+  /// In zh, this message translates to:
+  /// **'结束时间'**
+  String get calendarEndTime;
+
+  /// No description provided for @calendarReminder.
+  ///
+  /// In zh, this message translates to:
+  /// **'提醒'**
+  String get calendarReminder;
+
+  /// No description provided for @calendarReminderAtStart.
+  ///
+  /// In zh, this message translates to:
+  /// **'日程开始时'**
+  String get calendarReminderAtStart;
+
+  /// No description provided for @calendarReminderMinutes.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count}分钟前'**
+  String calendarReminderMinutes(int count);
+
+  /// No description provided for @calendarReminderHours.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count}小时前'**
+  String calendarReminderHours(int count);
+
+  /// No description provided for @calendarReminderDays.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count}天前'**
+  String calendarReminderDays(int count);
+
+  /// No description provided for @calendarRepeat.
+  ///
+  /// In zh, this message translates to:
+  /// **'重复'**
+  String get calendarRepeat;
+
+  /// No description provided for @calendarRepeatNone.
+  ///
+  /// In zh, this message translates to:
+  /// **'不重复'**
+  String get calendarRepeatNone;
+
+  /// No description provided for @calendarRepeatDaily.
+  ///
+  /// In zh, this message translates to:
+  /// **'每天'**
+  String get calendarRepeatDaily;
+
+  /// No description provided for @calendarRepeatWeekly.
+  ///
+  /// In zh, this message translates to:
+  /// **'每周'**
+  String get calendarRepeatWeekly;
+
+  /// No description provided for @calendarRepeatMonthly.
+  ///
+  /// In zh, this message translates to:
+  /// **'每月'**
+  String get calendarRepeatMonthly;
+
+  /// No description provided for @calendarTitleRequired.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入标题'**
+  String get calendarTitleRequired;
+
+  /// No description provided for @dailyDetailEventsSection.
+  ///
+  /// In zh, this message translates to:
+  /// **'日程事件'**
+  String get dailyDetailEventsSection;
+
+  /// No description provided for @dailyDetailTasksSection.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务清单'**
+  String get dailyDetailTasksSection;
+
+  /// No description provided for @dailyDetailFlame.
+  ///
+  /// In zh, this message translates to:
+  /// **'火花强度'**
+  String get dailyDetailFlame;
+
+  /// No description provided for @dailyDetailFocusTime.
+  ///
+  /// In zh, this message translates to:
+  /// **'专注时长'**
+  String get dailyDetailFocusTime;
+
+  /// No description provided for @dailyDetailTasksDone.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成任务'**
+  String get dailyDetailTasksDone;
+
+  /// No description provided for @dailyDetailPrismTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'当日认知棱镜'**
+  String get dailyDetailPrismTitle;
+
+  /// No description provided for @dailyDetailPrismFallback.
+  ///
+  /// In zh, this message translates to:
+  /// **'今日思维清晰，状态良好'**
+  String get dailyDetailPrismFallback;
+
+  /// No description provided for @dailyDetailNoTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无任务'**
+  String get dailyDetailNoTasks;
+
+  /// No description provided for @onboardingSkip.
+  ///
+  /// In zh, this message translates to:
+  /// **'跳过'**
+  String get onboardingSkip;
+
+  /// No description provided for @onboardingGetStarted.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始使用'**
+  String get onboardingGetStarted;
+
+  /// No description provided for @onboardingNext.
+  ///
+  /// In zh, this message translates to:
+  /// **'下一步'**
+  String get onboardingNext;
+
+  /// No description provided for @onboardingWelcomeTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'欢迎来到 Sparkle'**
+  String get onboardingWelcomeTitle;
+
+  /// No description provided for @onboardingWelcomeSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'你的 AI 学习助手\n让知识点亮智慧之光'**
+  String get onboardingWelcomeSubtitle;
+
+  /// No description provided for @onboardingFeatureGalaxy.
+  ///
+  /// In zh, this message translates to:
+  /// **'知识星图'**
+  String get onboardingFeatureGalaxy;
+
+  /// No description provided for @onboardingFeatureGalaxyDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'可视化学习网络'**
+  String get onboardingFeatureGalaxyDesc;
+
+  /// No description provided for @onboardingFeatureChat.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 对话'**
+  String get onboardingFeatureChat;
+
+  /// No description provided for @onboardingFeatureChatDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'智能学习伙伴'**
+  String get onboardingFeatureChatDesc;
+
+  /// No description provided for @onboardingFeatureTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'智能任务'**
+  String get onboardingFeatureTasks;
+
+  /// No description provided for @onboardingFeatureTasksDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'个性化学习计划'**
+  String get onboardingFeatureTasksDesc;
+
+  /// No description provided for @onboardingArchitectureTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'系统架构'**
+  String get onboardingArchitectureTitle;
+
+  /// No description provided for @onboardingArchitectureSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'了解 Sparkle 如何工作'**
+  String get onboardingArchitectureSubtitle;
+
+  /// No description provided for @onboardingGalaxyTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'知识星图'**
+  String get onboardingGalaxyTitle;
+
+  /// No description provided for @onboardingGalaxyDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'将你的知识可视化为一张星图'**
+  String get onboardingGalaxyDescription;
+
+  /// No description provided for @onboardingGalaxyFeature1.
+  ///
+  /// In zh, this message translates to:
+  /// **'6大知识星域：理性、造物、灵感、文明、生活、精神'**
+  String get onboardingGalaxyFeature1;
+
+  /// No description provided for @onboardingGalaxyFeature2.
+  ///
+  /// In zh, this message translates to:
+  /// **'实时衰减预测：了解知识遗忘曲线'**
+  String get onboardingGalaxyFeature2;
+
+  /// No description provided for @onboardingGalaxyFeature3.
+  ///
+  /// In zh, this message translates to:
+  /// **'交互式时间机器：预测未来学习状态'**
+  String get onboardingGalaxyFeature3;
+
+  /// No description provided for @onboardingGalaxyFeature4.
+  ///
+  /// In zh, this message translates to:
+  /// **'智能推荐：基于知识图谱的学习路径'**
+  String get onboardingGalaxyFeature4;
+
+  /// No description provided for @onboardingChatTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 对话'**
+  String get onboardingChatTitle;
+
+  /// No description provided for @onboardingChatDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'你的智能学习伙伴'**
+  String get onboardingChatDescription;
+
+  /// No description provided for @onboardingChatFeature1.
+  ///
+  /// In zh, this message translates to:
+  /// **'多智能体协作：数学、代码、写作、科学专家'**
+  String get onboardingChatFeature1;
+
+  /// No description provided for @onboardingChatFeature2.
+  ///
+  /// In zh, this message translates to:
+  /// **'GraphRAG 检索：实时显示知识检索过程'**
+  String get onboardingChatFeature2;
+
+  /// No description provided for @onboardingChatFeature3.
+  ///
+  /// In zh, this message translates to:
+  /// **'上下文理解：记住你的学习历史'**
+  String get onboardingChatFeature3;
+
+  /// No description provided for @onboardingChatFeature4.
+  ///
+  /// In zh, this message translates to:
+  /// **'工具调用：执行任务、查询知识、管理计划'**
+  String get onboardingChatFeature4;
+
+  /// No description provided for @onboardingTasksTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'智能任务'**
+  String get onboardingTasksTitle;
+
+  /// No description provided for @onboardingTasksDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'个性化学习计划'**
+  String get onboardingTasksDescription;
+
+  /// No description provided for @onboardingTasksFeature1.
+  ///
+  /// In zh, this message translates to:
+  /// **'6种任务类型：学习、训练、纠错、反思、社交、规划'**
+  String get onboardingTasksFeature1;
+
+  /// No description provided for @onboardingTasksFeature2.
+  ///
+  /// In zh, this message translates to:
+  /// **'智能推送：基于学习状态的提醒'**
+  String get onboardingTasksFeature2;
+
+  /// No description provided for @onboardingTasksFeature3.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sprint 计划：短期冲刺目标'**
+  String get onboardingTasksFeature3;
+
+  /// No description provided for @onboardingTasksFeature4.
+  ///
+  /// In zh, this message translates to:
+  /// **'Growth Plan：长期成长规划'**
+  String get onboardingTasksFeature4;
+
+  /// No description provided for @onboardingPersonalizationTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'个性化设置'**
+  String get onboardingPersonalizationTitle;
+
+  /// No description provided for @onboardingPersonalizationSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'让 Sparkle 更懂你'**
+  String get onboardingPersonalizationSubtitle;
+
+  /// No description provided for @onboardingSettingReminders.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习提醒'**
+  String get onboardingSettingReminders;
+
+  /// No description provided for @onboardingSettingRemindersDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'在最佳时间推送学习建议'**
+  String get onboardingSettingRemindersDesc;
+
+  /// No description provided for @onboardingSettingAnalytics.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习分析'**
+  String get onboardingSettingAnalytics;
+
+  /// No description provided for @onboardingSettingAnalyticsDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成个性化学习报告'**
+  String get onboardingSettingAnalyticsDesc;
+
+  /// No description provided for @onboardingSettingAssistant.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 助手'**
+  String get onboardingSettingAssistant;
+
+  /// No description provided for @onboardingSettingAssistantDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'自动创建学习任务'**
+  String get onboardingSettingAssistantDesc;
+
+  /// No description provided for @onboardingChatDemo1.
+  ///
+  /// In zh, this message translates to:
+  /// **'你好！我能帮你什么？'**
+  String get onboardingChatDemo1;
+
+  /// No description provided for @onboardingChatDemo2.
+  ///
+  /// In zh, this message translates to:
+  /// **'解释一下微积分的基本原理'**
+  String get onboardingChatDemo2;
+
+  /// No description provided for @onboardingChatDemo3.
+  ///
+  /// In zh, this message translates to:
+  /// **'微积分研究函数的变化率...'**
+  String get onboardingChatDemo3;
+
+  /// No description provided for @onboardingTaskTypeLearning.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习任务'**
+  String get onboardingTaskTypeLearning;
+
+  /// No description provided for @onboardingTaskTypePractice.
+  ///
+  /// In zh, this message translates to:
+  /// **'训练任务'**
+  String get onboardingTaskTypePractice;
+
+  /// No description provided for @onboardingTaskTypeReflection.
+  ///
+  /// In zh, this message translates to:
+  /// **'反思任务'**
+  String get onboardingTaskTypeReflection;
+
+  /// No description provided for @onboardingTaskDemo1.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成微积分第一章'**
+  String get onboardingTaskDemo1;
+
+  /// No description provided for @onboardingTaskDemo2.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成10道练习题'**
+  String get onboardingTaskDemo2;
+
+  /// No description provided for @onboardingTaskDemo3.
+  ///
+  /// In zh, this message translates to:
+  /// **'总结本周学习收获'**
+  String get onboardingTaskDemo3;
+
+  /// No description provided for @onboardingArchitectureStep1Title.
+  ///
+  /// In zh, this message translates to:
+  /// **'移动端'**
+  String get onboardingArchitectureStep1Title;
+
+  /// No description provided for @onboardingArchitectureStep1Desc.
+  ///
+  /// In zh, this message translates to:
+  /// **'Flutter 跨平台应用\n提供流畅的用户体验'**
+  String get onboardingArchitectureStep1Desc;
+
+  /// No description provided for @onboardingArchitectureStep2Title.
+  ///
+  /// In zh, this message translates to:
+  /// **'WebSocket 连接'**
+  String get onboardingArchitectureStep2Title;
+
+  /// No description provided for @onboardingArchitectureStep2Desc.
+  ///
+  /// In zh, this message translates to:
+  /// **'Go Gateway 提供实时双向通信\n高性能、低延迟'**
+  String get onboardingArchitectureStep2Desc;
+
+  /// No description provided for @onboardingArchitectureStep3Title.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 引擎'**
+  String get onboardingArchitectureStep3Title;
+
+  /// No description provided for @onboardingArchitectureStep3Desc.
+  ///
+  /// In zh, this message translates to:
+  /// **'Python Agent Engine\n强大的推理和工具调用能力'**
+  String get onboardingArchitectureStep3Desc;
+
+  /// No description provided for @onboardingArchitectureStep4Title.
+  ///
+  /// In zh, this message translates to:
+  /// **'数据存储'**
+  String get onboardingArchitectureStep4Title;
+
+  /// No description provided for @onboardingArchitectureStep4Desc.
+  ///
+  /// In zh, this message translates to:
+  /// **'PostgreSQL + pgvector\n向量检索 + 图谱存储'**
+  String get onboardingArchitectureStep4Desc;
+
+  /// No description provided for @onboardingArchitectureStep5Title.
+  ///
+  /// In zh, this message translates to:
+  /// **'完整链路'**
+  String get onboardingArchitectureStep5Title;
+
+  /// No description provided for @onboardingArchitectureStep5Desc.
+  ///
+  /// In zh, this message translates to:
+  /// **'从提问到回答\n毫秒级响应体验'**
+  String get onboardingArchitectureStep5Desc;
 }
 
 class _AppLocalizationsDelegate

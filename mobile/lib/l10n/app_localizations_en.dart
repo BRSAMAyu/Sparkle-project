@@ -3637,4 +3637,561 @@ class AppLocalizationsEn extends AppLocalizations {
   String sendFailedWithError(Object error) {
     return 'Failed to send: $error';
   }
+
+  @override
+  String submitFailedWithError(Object error) {
+    return 'Submission failed: $error';
+  }
+
+  @override
+  String loadingFailedWithError(Object error) {
+    return 'Loading failed: $error';
+  }
+
+  @override
+  String get delete => 'Delete';
+
+  @override
+  String get blockingReasonEfficiency =>
+      'I misjudged how much I could get done';
+
+  @override
+  String get blockingReasonInterrupted => 'I got interrupted halfway through';
+
+  @override
+  String get blockingReasonPerfectionism => 'Perfectionism made me freeze up';
+
+  @override
+  String get blockingReasonTooHard =>
+      'It felt too hard and I didn\'t know how to start';
+
+  @override
+  String get blockingReasonNoMood => 'I wasn\'t in the right headspace';
+
+  @override
+  String get blockingSelectReason =>
+      'Choose a reason or write your own thought';
+
+  @override
+  String get blockingTitle => 'Hit a roadblock?';
+
+  @override
+  String get blockingDescription =>
+      'Capture what got in the way. AI will look for patterns and help you do better next time.';
+
+  @override
+  String get blockingOtherReason => 'Something else...';
+
+  @override
+  String get blockingReasonHint => 'Describe what happened';
+
+  @override
+  String get blockingConfirmAbandon => 'Stop this task';
+
+  @override
+  String get subtaskAddHint => 'Add a subtask...';
+
+  @override
+  String get subtaskAddTooltip => 'Add subtask';
+
+  @override
+  String get subtaskEmpty => 'No subtasks yet';
+
+  @override
+  String get taskFeedbackSubmitted => 'Feedback submitted';
+
+  @override
+  String get taskFeedbackPreferenceUpdated => 'Preferences updated';
+
+  @override
+  String get taskFeedbackView => 'View';
+
+  @override
+  String get taskFeedbackPreferenceDialogTitle => 'Preference updates';
+
+  @override
+  String taskFeedbackDepthPreference(Object value) {
+    return 'Depth preference: $value';
+  }
+
+  @override
+  String taskFeedbackDifficultyPreference(Object value) {
+    return 'Difficulty preference: $value';
+  }
+
+  @override
+  String get taskFeedbackPreferenceDialogDesc =>
+      'These preferences will help personalize what you should learn next.';
+
+  @override
+  String get taskFeedbackGotIt => 'Got it';
+
+  @override
+  String get taskFeedbackCompletedTitle => 'Task completed';
+
+  @override
+  String get taskFeedbackCompletedSubtitle =>
+      'Nice work. Keep the momentum going.';
+
+  @override
+  String get taskFeedbackBrightness => 'Glow';
+
+  @override
+  String get taskFeedbackStreak => 'Streak';
+
+  @override
+  String taskFeedbackStreakDays(int count) {
+    return '$count days';
+  }
+
+  @override
+  String get taskFeedbackOptionalRating => 'Satisfaction rating (optional)';
+
+  @override
+  String get taskFeedbackDifficultyQuestion =>
+      'How did the difficulty feel this time?';
+
+  @override
+  String get taskFeedbackCategoryJustRight => 'Just right';
+
+  @override
+  String get taskFeedbackCategoryStillHard => 'Still hard';
+
+  @override
+  String get taskFeedbackCategoryTooEasy => 'Too easy';
+
+  @override
+  String get taskFeedbackOptionalComment => 'Anything else to add? (optional)';
+
+  @override
+  String get taskFeedbackCommentHint => 'Write down a quick reflection...';
+
+  @override
+  String get taskFeedbackNextSteps => 'Suggested next steps';
+
+  @override
+  String get taskFeedbackSkip => 'Skip';
+
+  @override
+  String get taskFeedbackComplete => 'Done';
+
+  @override
+  String taskFeedbackReason(Object reason) {
+    return 'Why: $reason';
+  }
+
+  @override
+  String get communityQuote => 'Quote';
+
+  @override
+  String get communityCopy => 'Copy';
+
+  @override
+  String get communityCopiedToClipboard => 'Copied to clipboard';
+
+  @override
+  String get communityThreadReply => 'Reply in thread';
+
+  @override
+  String get communityEdit => 'Edit';
+
+  @override
+  String get communityRevoke => 'Recall';
+
+  @override
+  String get communityRevokedOwnMessage => 'You recalled a message';
+
+  @override
+  String communityRevokedUserMessage(Object sender) {
+    return '$sender recalled a message';
+  }
+
+  @override
+  String get communityMemberFallback => 'Member';
+
+  @override
+  String communityReadByCount(int count) {
+    return '$count read';
+  }
+
+  @override
+  String get communityQuotedMessageFallback => 'Quoted message';
+
+  @override
+  String get communityDailyCheckIn => 'Daily check-in';
+
+  @override
+  String get communityDurationLabel => 'Duration';
+
+  @override
+  String get communityFlameLabel => 'Flame';
+
+  @override
+  String get communityStreakLabel => 'Streak';
+
+  @override
+  String get communitySharedTask => 'Shared a task';
+
+  @override
+  String get shareResourceTitle => 'Share with community';
+
+  @override
+  String get shareResourceTabFriends => 'Friends';
+
+  @override
+  String get shareResourceTabGroups => 'Groups';
+
+  @override
+  String get shareResourceCommentHint => 'Add a note (optional)';
+
+  @override
+  String get shareResourceNow => 'Share now';
+
+  @override
+  String get shareResourceNoFriends => 'No friends yet';
+
+  @override
+  String get shareResourceNoGroups => 'No groups yet';
+
+  @override
+  String shareResourceGroupMembers(int count) {
+    return '$count members';
+  }
+
+  @override
+  String get shareResourceSelectTarget => 'Choose a friend or group first';
+
+  @override
+  String get shareResourceSuccess => 'Shared successfully';
+
+  @override
+  String shareResourceFailed(Object error) {
+    return 'Sharing failed: $error';
+  }
+
+  @override
+  String get threadDiscussion => 'Thread';
+
+  @override
+  String get threadReplyHint => 'Reply to thread...';
+
+  @override
+  String get calendarSetDueDateTitle => 'Set task due date';
+
+  @override
+  String calendarSetDueDateMessage(Object task, Object date) {
+    return 'Set \"$task\" to be due on $date?';
+  }
+
+  @override
+  String get calendarTitle => 'Calendar';
+
+  @override
+  String get calendarMonthView => 'Month';
+
+  @override
+  String get calendarTwoWeekView => '2 weeks';
+
+  @override
+  String get calendarYearView => 'Year';
+
+  @override
+  String calendarDayScheduleTitle(Object date) {
+    return '$date schedule';
+  }
+
+  @override
+  String get calendarViewDetails => 'View details';
+
+  @override
+  String get calendarNoEvents => 'No events yet';
+
+  @override
+  String get calendarAllDay => 'All day';
+
+  @override
+  String get calendarCreateEvent => 'New event';
+
+  @override
+  String get calendarSave => 'Save';
+
+  @override
+  String get calendarTitleHint => 'Title';
+
+  @override
+  String get calendarLocationHint => 'Location';
+
+  @override
+  String get calendarDescriptionHint => 'Description';
+
+  @override
+  String get calendarStartTime => 'Start time';
+
+  @override
+  String get calendarEndTime => 'End time';
+
+  @override
+  String get calendarReminder => 'Reminder';
+
+  @override
+  String get calendarReminderAtStart => 'At start time';
+
+  @override
+  String calendarReminderMinutes(int count) {
+    return '$count min before';
+  }
+
+  @override
+  String calendarReminderHours(int count) {
+    return '$count hour before';
+  }
+
+  @override
+  String calendarReminderDays(int count) {
+    return '$count day before';
+  }
+
+  @override
+  String get calendarRepeat => 'Repeat';
+
+  @override
+  String get calendarRepeatNone => 'Never';
+
+  @override
+  String get calendarRepeatDaily => 'Daily';
+
+  @override
+  String get calendarRepeatWeekly => 'Weekly';
+
+  @override
+  String get calendarRepeatMonthly => 'Monthly';
+
+  @override
+  String get calendarTitleRequired => 'Please enter a title';
+
+  @override
+  String get dailyDetailEventsSection => 'Events';
+
+  @override
+  String get dailyDetailTasksSection => 'Tasks';
+
+  @override
+  String get dailyDetailFlame => 'Flame';
+
+  @override
+  String get dailyDetailFocusTime => 'Focus time';
+
+  @override
+  String get dailyDetailTasksDone => 'Tasks done';
+
+  @override
+  String get dailyDetailPrismTitle => 'Today\'s prism snapshot';
+
+  @override
+  String get dailyDetailPrismFallback =>
+      'Your thinking feels clear and steady today.';
+
+  @override
+  String get dailyDetailNoTasks => 'No tasks yet';
+
+  @override
+  String get onboardingSkip => 'Skip';
+
+  @override
+  String get onboardingGetStarted => 'Get started';
+
+  @override
+  String get onboardingNext => 'Next';
+
+  @override
+  String get onboardingWelcomeTitle => 'Welcome to Sparkle';
+
+  @override
+  String get onboardingWelcomeSubtitle =>
+      'Your AI learning companion\nthat helps knowledge turn into momentum.';
+
+  @override
+  String get onboardingFeatureGalaxy => 'Knowledge Galaxy';
+
+  @override
+  String get onboardingFeatureGalaxyDesc => 'A visual map of what you know';
+
+  @override
+  String get onboardingFeatureChat => 'AI Chat';
+
+  @override
+  String get onboardingFeatureChatDesc =>
+      'A study partner that thinks with you';
+
+  @override
+  String get onboardingFeatureTasks => 'Smart Tasks';
+
+  @override
+  String get onboardingFeatureTasksDesc =>
+      'Adaptive plans built around your rhythm';
+
+  @override
+  String get onboardingArchitectureTitle => 'How It Works';
+
+  @override
+  String get onboardingArchitectureSubtitle =>
+      'A quick look at how Sparkle comes together';
+
+  @override
+  String get onboardingGalaxyTitle => 'Knowledge Galaxy';
+
+  @override
+  String get onboardingGalaxyDescription =>
+      'Turn what you know into a living map you can explore.';
+
+  @override
+  String get onboardingGalaxyFeature1 =>
+      'Six learning realms to organize different kinds of knowledge';
+
+  @override
+  String get onboardingGalaxyFeature2 =>
+      'Live decay prediction so you can spot forgetting early';
+
+  @override
+  String get onboardingGalaxyFeature3 =>
+      'A time-machine view to preview future learning states';
+
+  @override
+  String get onboardingGalaxyFeature4 =>
+      'Smarter path suggestions based on your knowledge graph';
+
+  @override
+  String get onboardingChatTitle => 'AI Chat';
+
+  @override
+  String get onboardingChatDescription =>
+      'A learning partner that adapts to you.';
+
+  @override
+  String get onboardingChatFeature1 =>
+      'Multi-agent collaboration across math, code, writing, and science';
+
+  @override
+  String get onboardingChatFeature2 =>
+      'GraphRAG retrieval with visible reasoning context';
+
+  @override
+  String get onboardingChatFeature3 =>
+      'Context memory that keeps up with your learning history';
+
+  @override
+  String get onboardingChatFeature4 =>
+      'Tool use for tasks, knowledge lookup, and planning';
+
+  @override
+  String get onboardingTasksTitle => 'Smart Tasks';
+
+  @override
+  String get onboardingTasksDescription =>
+      'Personalized plans that keep learning moving forward.';
+
+  @override
+  String get onboardingTasksFeature1 =>
+      'Six task types covering learning, practice, correction, reflection, social, and planning';
+
+  @override
+  String get onboardingTasksFeature2 =>
+      'Smart reminders based on your current study state';
+
+  @override
+  String get onboardingTasksFeature3 => 'Sprint plans for short-term push';
+
+  @override
+  String get onboardingTasksFeature4 => 'Growth plans for long-term progress';
+
+  @override
+  String get onboardingPersonalizationTitle => 'Personalization';
+
+  @override
+  String get onboardingPersonalizationSubtitle =>
+      'Help Sparkle understand you better';
+
+  @override
+  String get onboardingSettingReminders => 'Study reminders';
+
+  @override
+  String get onboardingSettingRemindersDesc =>
+      'Get helpful nudges at the right moment';
+
+  @override
+  String get onboardingSettingAnalytics => 'Learning insights';
+
+  @override
+  String get onboardingSettingAnalyticsDesc =>
+      'Generate reports tailored to your learning patterns';
+
+  @override
+  String get onboardingSettingAssistant => 'AI assistant';
+
+  @override
+  String get onboardingSettingAssistantDesc =>
+      'Create learning tasks automatically';
+
+  @override
+  String get onboardingChatDemo1 => 'Hi. What would you like help with?';
+
+  @override
+  String get onboardingChatDemo2 => 'Explain the basic idea behind calculus';
+
+  @override
+  String get onboardingChatDemo3 =>
+      'Calculus studies how quantities change over time...';
+
+  @override
+  String get onboardingTaskTypeLearning => 'Learning task';
+
+  @override
+  String get onboardingTaskTypePractice => 'Practice task';
+
+  @override
+  String get onboardingTaskTypeReflection => 'Reflection task';
+
+  @override
+  String get onboardingTaskDemo1 => 'Finish chapter one of calculus';
+
+  @override
+  String get onboardingTaskDemo2 => 'Solve ten practice questions';
+
+  @override
+  String get onboardingTaskDemo3 => 'Summarize what you learned this week';
+
+  @override
+  String get onboardingArchitectureStep1Title => 'Mobile app';
+
+  @override
+  String get onboardingArchitectureStep1Desc =>
+      'A cross-platform Flutter app built for a smooth daily experience';
+
+  @override
+  String get onboardingArchitectureStep2Title => 'WebSocket link';
+
+  @override
+  String get onboardingArchitectureStep2Desc =>
+      'The Go gateway keeps communication real-time, fast, and reliable';
+
+  @override
+  String get onboardingArchitectureStep3Title => 'AI engine';
+
+  @override
+  String get onboardingArchitectureStep3Desc =>
+      'The Python agent engine handles reasoning and tool orchestration';
+
+  @override
+  String get onboardingArchitectureStep4Title => 'Data layer';
+
+  @override
+  String get onboardingArchitectureStep4Desc =>
+      'PostgreSQL plus pgvector for structured data and semantic retrieval';
+
+  @override
+  String get onboardingArchitectureStep5Title => 'End-to-end flow';
+
+  @override
+  String get onboardingArchitectureStep5Desc =>
+      'From question to answer, the whole loop is designed to feel immediate';
 }

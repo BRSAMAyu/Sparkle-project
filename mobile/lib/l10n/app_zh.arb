@@ -1186,5 +1186,257 @@
     "placeholders": {
       "error": {}
     }
-  }
+  },
+  "submitFailedWithError": "提交失败：{error}",
+  "@submitFailedWithError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "loadingFailedWithError": "加载失败：{error}",
+  "@loadingFailedWithError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "delete": "删除",
+  "blockingReasonEfficiency": "高估了自己的效率",
+  "blockingReasonInterrupted": "中途被消息打断",
+  "blockingReasonPerfectionism": "追求完美导致卡壳",
+  "blockingReasonTooHard": "任务太难，不知道怎么开始",
+  "blockingReasonNoMood": "心情不好，不想做",
+  "blockingSelectReason": "请选择原因或输入想法",
+  "blockingTitle": "遇到阻碍了吗？",
+  "blockingDescription": "记录下原因，AI 会帮你分析行为定式，下次做得更好。",
+  "blockingOtherReason": "其他原因...",
+  "blockingReasonHint": "请输入具体原因",
+  "blockingConfirmAbandon": "确认放弃",
+  "subtaskAddHint": "添加子任务...",
+  "subtaskAddTooltip": "添加子任务",
+  "subtaskEmpty": "暂无子任务",
+  "taskFeedbackSubmitted": "反馈已提交",
+  "taskFeedbackPreferenceUpdated": "偏好已更新",
+  "taskFeedbackView": "查看",
+  "taskFeedbackPreferenceDialogTitle": "偏好更新",
+  "taskFeedbackDepthPreference": "深度偏好：{value}",
+  "@taskFeedbackDepthPreference": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "taskFeedbackDifficultyPreference": "难度偏好：{value}",
+  "@taskFeedbackDifficultyPreference": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "taskFeedbackPreferenceDialogDesc": "这些偏好将用于个性化推荐你的下一步学习内容。",
+  "taskFeedbackGotIt": "知道了",
+  "taskFeedbackCompletedTitle": "任务完成！",
+  "taskFeedbackCompletedSubtitle": "任务已完成，继续保持。",
+  "taskFeedbackBrightness": "亮度",
+  "taskFeedbackStreak": "连胜",
+  "taskFeedbackStreakDays": "{count}天",
+  "@taskFeedbackStreakDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "taskFeedbackOptionalRating": "满意度评分（选填）",
+  "taskFeedbackDifficultyQuestion": "这次的难度感觉怎么样？",
+  "taskFeedbackCategoryJustRight": "刚好",
+  "taskFeedbackCategoryStillHard": "还是难",
+  "taskFeedbackCategoryTooEasy": "太简单",
+  "taskFeedbackOptionalComment": "有什么想说的？（选填）",
+  "taskFeedbackCommentHint": "记录一些心得...",
+  "taskFeedbackNextSteps": "下一步建议",
+  "taskFeedbackSkip": "跳过",
+  "taskFeedbackComplete": "完成",
+  "taskFeedbackReason": "理由：{reason}",
+  "@taskFeedbackReason": {
+    "placeholders": {
+      "reason": {}
+    }
+  },
+  "communityQuote": "引用",
+  "communityCopy": "复制",
+  "communityCopiedToClipboard": "已复制到剪贴板",
+  "communityThreadReply": "串联回复",
+  "communityEdit": "编辑",
+  "communityRevoke": "撤回",
+  "communityRevokedOwnMessage": "你撤回了一条消息",
+  "communityRevokedUserMessage": "{sender}撤回了一条消息",
+  "@communityRevokedUserMessage": {
+    "placeholders": {
+      "sender": {}
+    }
+  },
+  "communityMemberFallback": "成员",
+  "communityReadByCount": "{count}人已读",
+  "@communityReadByCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "communityQuotedMessageFallback": "引用的消息",
+  "communityDailyCheckIn": "每日打卡",
+  "communityDurationLabel": "时长",
+  "communityFlameLabel": "火花",
+  "communityStreakLabel": "连胜",
+  "communitySharedTask": "分享了一个任务",
+  "shareResourceTitle": "分享到社群",
+  "shareResourceTabFriends": "好友",
+  "shareResourceTabGroups": "群组",
+  "shareResourceCommentHint": "添加分享留言（可选）",
+  "shareResourceNow": "立即分享",
+  "shareResourceNoFriends": "暂无好友",
+  "shareResourceNoGroups": "暂无群组",
+  "shareResourceGroupMembers": "{count}名成员",
+  "@shareResourceGroupMembers": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "shareResourceSelectTarget": "请选择好友或群组",
+  "shareResourceSuccess": "分享成功",
+  "shareResourceFailed": "分享失败：{error}",
+  "@shareResourceFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "threadDiscussion": "线程讨论",
+  "threadReplyHint": "回复线程...",
+  "calendarSetDueDateTitle": "设置任务截止日期",
+  "calendarSetDueDateMessage": "将“{task}”设为 {date} 到期？",
+  "@calendarSetDueDateMessage": {
+    "placeholders": {
+      "task": {},
+      "date": {}
+    }
+  },
+  "calendarTitle": "日程与日历",
+  "calendarMonthView": "月视图",
+  "calendarTwoWeekView": "双周",
+  "calendarYearView": "年视图",
+  "calendarDayScheduleTitle": "{date} 日程",
+  "@calendarDayScheduleTitle": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "calendarViewDetails": "查看详情",
+  "calendarNoEvents": "暂无日程",
+  "calendarAllDay": "全天",
+  "calendarCreateEvent": "新建日程",
+  "calendarSave": "保存",
+  "calendarTitleHint": "标题",
+  "calendarLocationHint": "地点",
+  "calendarDescriptionHint": "描述",
+  "calendarStartTime": "开始时间",
+  "calendarEndTime": "结束时间",
+  "calendarReminder": "提醒",
+  "calendarReminderAtStart": "日程开始时",
+  "calendarReminderMinutes": "{count}分钟前",
+  "@calendarReminderMinutes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "calendarReminderHours": "{count}小时前",
+  "@calendarReminderHours": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "calendarReminderDays": "{count}天前",
+  "@calendarReminderDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "calendarRepeat": "重复",
+  "calendarRepeatNone": "不重复",
+  "calendarRepeatDaily": "每天",
+  "calendarRepeatWeekly": "每周",
+  "calendarRepeatMonthly": "每月",
+  "calendarTitleRequired": "请输入标题",
+  "dailyDetailEventsSection": "日程事件",
+  "dailyDetailTasksSection": "任务清单",
+  "dailyDetailFlame": "火花强度",
+  "dailyDetailFocusTime": "专注时长",
+  "dailyDetailTasksDone": "完成任务",
+  "dailyDetailPrismTitle": "当日认知棱镜",
+  "dailyDetailPrismFallback": "今日思维清晰，状态良好",
+  "dailyDetailNoTasks": "暂无任务",
+  "onboardingSkip": "跳过",
+  "onboardingGetStarted": "开始使用",
+  "onboardingNext": "下一步",
+  "onboardingWelcomeTitle": "欢迎来到 Sparkle",
+  "onboardingWelcomeSubtitle": "你的 AI 学习助手\n让知识点亮智慧之光",
+  "onboardingFeatureGalaxy": "知识星图",
+  "onboardingFeatureGalaxyDesc": "可视化学习网络",
+  "onboardingFeatureChat": "AI 对话",
+  "onboardingFeatureChatDesc": "智能学习伙伴",
+  "onboardingFeatureTasks": "智能任务",
+  "onboardingFeatureTasksDesc": "个性化学习计划",
+  "onboardingArchitectureTitle": "系统架构",
+  "onboardingArchitectureSubtitle": "了解 Sparkle 如何工作",
+  "onboardingGalaxyTitle": "知识星图",
+  "onboardingGalaxyDescription": "将你的知识可视化为一张星图",
+  "onboardingGalaxyFeature1": "6大知识星域：理性、造物、灵感、文明、生活、精神",
+  "onboardingGalaxyFeature2": "实时衰减预测：了解知识遗忘曲线",
+  "onboardingGalaxyFeature3": "交互式时间机器：预测未来学习状态",
+  "onboardingGalaxyFeature4": "智能推荐：基于知识图谱的学习路径",
+  "onboardingChatTitle": "AI 对话",
+  "onboardingChatDescription": "你的智能学习伙伴",
+  "onboardingChatFeature1": "多智能体协作：数学、代码、写作、科学专家",
+  "onboardingChatFeature2": "GraphRAG 检索：实时显示知识检索过程",
+  "onboardingChatFeature3": "上下文理解：记住你的学习历史",
+  "onboardingChatFeature4": "工具调用：执行任务、查询知识、管理计划",
+  "onboardingTasksTitle": "智能任务",
+  "onboardingTasksDescription": "个性化学习计划",
+  "onboardingTasksFeature1": "6种任务类型：学习、训练、纠错、反思、社交、规划",
+  "onboardingTasksFeature2": "智能推送：基于学习状态的提醒",
+  "onboardingTasksFeature3": "Sprint 计划：短期冲刺目标",
+  "onboardingTasksFeature4": "Growth Plan：长期成长规划",
+  "onboardingPersonalizationTitle": "个性化设置",
+  "onboardingPersonalizationSubtitle": "让 Sparkle 更懂你",
+  "onboardingSettingReminders": "学习提醒",
+  "onboardingSettingRemindersDesc": "在最佳时间推送学习建议",
+  "onboardingSettingAnalytics": "学习分析",
+  "onboardingSettingAnalyticsDesc": "生成个性化学习报告",
+  "onboardingSettingAssistant": "AI 助手",
+  "onboardingSettingAssistantDesc": "自动创建学习任务",
+  "onboardingChatDemo1": "你好！我能帮你什么？",
+  "onboardingChatDemo2": "解释一下微积分的基本原理",
+  "onboardingChatDemo3": "微积分研究函数的变化率...",
+  "onboardingTaskTypeLearning": "学习任务",
+  "onboardingTaskTypePractice": "训练任务",
+  "onboardingTaskTypeReflection": "反思任务",
+  "onboardingTaskDemo1": "完成微积分第一章",
+  "onboardingTaskDemo2": "完成10道练习题",
+  "onboardingTaskDemo3": "总结本周学习收获",
+  "onboardingArchitectureStep1Title": "移动端",
+  "onboardingArchitectureStep1Desc": "Flutter 跨平台应用\n提供流畅的用户体验",
+  "onboardingArchitectureStep2Title": "WebSocket 连接",
+  "onboardingArchitectureStep2Desc": "Go Gateway 提供实时双向通信\n高性能、低延迟",
+  "onboardingArchitectureStep3Title": "AI 引擎",
+  "onboardingArchitectureStep3Desc": "Python Agent Engine\n强大的推理和工具调用能力",
+  "onboardingArchitectureStep4Title": "数据存储",
+  "onboardingArchitectureStep4Desc": "PostgreSQL + pgvector\n向量检索 + 图谱存储",
+  "onboardingArchitectureStep5Title": "完整链路",
+  "onboardingArchitectureStep5Desc": "从提问到回答\n毫秒级响应体验"
 }

@@ -1186,5 +1186,257 @@
     "placeholders": {
       "error": {}
     }
-  }
+  },
+  "submitFailedWithError": "Submission failed: {error}",
+  "@submitFailedWithError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "loadingFailedWithError": "Loading failed: {error}",
+  "@loadingFailedWithError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "delete": "Delete",
+  "blockingReasonEfficiency": "I misjudged how much I could get done",
+  "blockingReasonInterrupted": "I got interrupted halfway through",
+  "blockingReasonPerfectionism": "Perfectionism made me freeze up",
+  "blockingReasonTooHard": "It felt too hard and I didn't know how to start",
+  "blockingReasonNoMood": "I wasn't in the right headspace",
+  "blockingSelectReason": "Choose a reason or write your own thought",
+  "blockingTitle": "Hit a roadblock?",
+  "blockingDescription": "Capture what got in the way. AI will look for patterns and help you do better next time.",
+  "blockingOtherReason": "Something else...",
+  "blockingReasonHint": "Describe what happened",
+  "blockingConfirmAbandon": "Stop this task",
+  "subtaskAddHint": "Add a subtask...",
+  "subtaskAddTooltip": "Add subtask",
+  "subtaskEmpty": "No subtasks yet",
+  "taskFeedbackSubmitted": "Feedback submitted",
+  "taskFeedbackPreferenceUpdated": "Preferences updated",
+  "taskFeedbackView": "View",
+  "taskFeedbackPreferenceDialogTitle": "Preference updates",
+  "taskFeedbackDepthPreference": "Depth preference: {value}",
+  "@taskFeedbackDepthPreference": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "taskFeedbackDifficultyPreference": "Difficulty preference: {value}",
+  "@taskFeedbackDifficultyPreference": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "taskFeedbackPreferenceDialogDesc": "These preferences will help personalize what you should learn next.",
+  "taskFeedbackGotIt": "Got it",
+  "taskFeedbackCompletedTitle": "Task completed",
+  "taskFeedbackCompletedSubtitle": "Nice work. Keep the momentum going.",
+  "taskFeedbackBrightness": "Glow",
+  "taskFeedbackStreak": "Streak",
+  "taskFeedbackStreakDays": "{count} days",
+  "@taskFeedbackStreakDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "taskFeedbackOptionalRating": "Satisfaction rating (optional)",
+  "taskFeedbackDifficultyQuestion": "How did the difficulty feel this time?",
+  "taskFeedbackCategoryJustRight": "Just right",
+  "taskFeedbackCategoryStillHard": "Still hard",
+  "taskFeedbackCategoryTooEasy": "Too easy",
+  "taskFeedbackOptionalComment": "Anything else to add? (optional)",
+  "taskFeedbackCommentHint": "Write down a quick reflection...",
+  "taskFeedbackNextSteps": "Suggested next steps",
+  "taskFeedbackSkip": "Skip",
+  "taskFeedbackComplete": "Done",
+  "taskFeedbackReason": "Why: {reason}",
+  "@taskFeedbackReason": {
+    "placeholders": {
+      "reason": {}
+    }
+  },
+  "communityQuote": "Quote",
+  "communityCopy": "Copy",
+  "communityCopiedToClipboard": "Copied to clipboard",
+  "communityThreadReply": "Reply in thread",
+  "communityEdit": "Edit",
+  "communityRevoke": "Recall",
+  "communityRevokedOwnMessage": "You recalled a message",
+  "communityRevokedUserMessage": "{sender} recalled a message",
+  "@communityRevokedUserMessage": {
+    "placeholders": {
+      "sender": {}
+    }
+  },
+  "communityMemberFallback": "Member",
+  "communityReadByCount": "{count} read",
+  "@communityReadByCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "communityQuotedMessageFallback": "Quoted message",
+  "communityDailyCheckIn": "Daily check-in",
+  "communityDurationLabel": "Duration",
+  "communityFlameLabel": "Flame",
+  "communityStreakLabel": "Streak",
+  "communitySharedTask": "Shared a task",
+  "shareResourceTitle": "Share with community",
+  "shareResourceTabFriends": "Friends",
+  "shareResourceTabGroups": "Groups",
+  "shareResourceCommentHint": "Add a note (optional)",
+  "shareResourceNow": "Share now",
+  "shareResourceNoFriends": "No friends yet",
+  "shareResourceNoGroups": "No groups yet",
+  "shareResourceGroupMembers": "{count} members",
+  "@shareResourceGroupMembers": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "shareResourceSelectTarget": "Choose a friend or group first",
+  "shareResourceSuccess": "Shared successfully",
+  "shareResourceFailed": "Sharing failed: {error}",
+  "@shareResourceFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "threadDiscussion": "Thread",
+  "threadReplyHint": "Reply to thread...",
+  "calendarSetDueDateTitle": "Set task due date",
+  "calendarSetDueDateMessage": "Set \"{task}\" to be due on {date}?",
+  "@calendarSetDueDateMessage": {
+    "placeholders": {
+      "task": {},
+      "date": {}
+    }
+  },
+  "calendarTitle": "Calendar",
+  "calendarMonthView": "Month",
+  "calendarTwoWeekView": "2 weeks",
+  "calendarYearView": "Year",
+  "calendarDayScheduleTitle": "{date} schedule",
+  "@calendarDayScheduleTitle": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "calendarViewDetails": "View details",
+  "calendarNoEvents": "No events yet",
+  "calendarAllDay": "All day",
+  "calendarCreateEvent": "New event",
+  "calendarSave": "Save",
+  "calendarTitleHint": "Title",
+  "calendarLocationHint": "Location",
+  "calendarDescriptionHint": "Description",
+  "calendarStartTime": "Start time",
+  "calendarEndTime": "End time",
+  "calendarReminder": "Reminder",
+  "calendarReminderAtStart": "At start time",
+  "calendarReminderMinutes": "{count} min before",
+  "@calendarReminderMinutes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "calendarReminderHours": "{count} hour before",
+  "@calendarReminderHours": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "calendarReminderDays": "{count} day before",
+  "@calendarReminderDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "calendarRepeat": "Repeat",
+  "calendarRepeatNone": "Never",
+  "calendarRepeatDaily": "Daily",
+  "calendarRepeatWeekly": "Weekly",
+  "calendarRepeatMonthly": "Monthly",
+  "calendarTitleRequired": "Please enter a title",
+  "dailyDetailEventsSection": "Events",
+  "dailyDetailTasksSection": "Tasks",
+  "dailyDetailFlame": "Flame",
+  "dailyDetailFocusTime": "Focus time",
+  "dailyDetailTasksDone": "Tasks done",
+  "dailyDetailPrismTitle": "Today's prism snapshot",
+  "dailyDetailPrismFallback": "Your thinking feels clear and steady today.",
+  "dailyDetailNoTasks": "No tasks yet",
+  "onboardingSkip": "Skip",
+  "onboardingGetStarted": "Get started",
+  "onboardingNext": "Next",
+  "onboardingWelcomeTitle": "Welcome to Sparkle",
+  "onboardingWelcomeSubtitle": "Your AI learning companion\nthat helps knowledge turn into momentum.",
+  "onboardingFeatureGalaxy": "Knowledge Galaxy",
+  "onboardingFeatureGalaxyDesc": "A visual map of what you know",
+  "onboardingFeatureChat": "AI Chat",
+  "onboardingFeatureChatDesc": "A study partner that thinks with you",
+  "onboardingFeatureTasks": "Smart Tasks",
+  "onboardingFeatureTasksDesc": "Adaptive plans built around your rhythm",
+  "onboardingArchitectureTitle": "How It Works",
+  "onboardingArchitectureSubtitle": "A quick look at how Sparkle comes together",
+  "onboardingGalaxyTitle": "Knowledge Galaxy",
+  "onboardingGalaxyDescription": "Turn what you know into a living map you can explore.",
+  "onboardingGalaxyFeature1": "Six learning realms to organize different kinds of knowledge",
+  "onboardingGalaxyFeature2": "Live decay prediction so you can spot forgetting early",
+  "onboardingGalaxyFeature3": "A time-machine view to preview future learning states",
+  "onboardingGalaxyFeature4": "Smarter path suggestions based on your knowledge graph",
+  "onboardingChatTitle": "AI Chat",
+  "onboardingChatDescription": "A learning partner that adapts to you.",
+  "onboardingChatFeature1": "Multi-agent collaboration across math, code, writing, and science",
+  "onboardingChatFeature2": "GraphRAG retrieval with visible reasoning context",
+  "onboardingChatFeature3": "Context memory that keeps up with your learning history",
+  "onboardingChatFeature4": "Tool use for tasks, knowledge lookup, and planning",
+  "onboardingTasksTitle": "Smart Tasks",
+  "onboardingTasksDescription": "Personalized plans that keep learning moving forward.",
+  "onboardingTasksFeature1": "Six task types covering learning, practice, correction, reflection, social, and planning",
+  "onboardingTasksFeature2": "Smart reminders based on your current study state",
+  "onboardingTasksFeature3": "Sprint plans for short-term push",
+  "onboardingTasksFeature4": "Growth plans for long-term progress",
+  "onboardingPersonalizationTitle": "Personalization",
+  "onboardingPersonalizationSubtitle": "Help Sparkle understand you better",
+  "onboardingSettingReminders": "Study reminders",
+  "onboardingSettingRemindersDesc": "Get helpful nudges at the right moment",
+  "onboardingSettingAnalytics": "Learning insights",
+  "onboardingSettingAnalyticsDesc": "Generate reports tailored to your learning patterns",
+  "onboardingSettingAssistant": "AI assistant",
+  "onboardingSettingAssistantDesc": "Create learning tasks automatically",
+  "onboardingChatDemo1": "Hi. What would you like help with?",
+  "onboardingChatDemo2": "Explain the basic idea behind calculus",
+  "onboardingChatDemo3": "Calculus studies how quantities change over time...",
+  "onboardingTaskTypeLearning": "Learning task",
+  "onboardingTaskTypePractice": "Practice task",
+  "onboardingTaskTypeReflection": "Reflection task",
+  "onboardingTaskDemo1": "Finish chapter one of calculus",
+  "onboardingTaskDemo2": "Solve ten practice questions",
+  "onboardingTaskDemo3": "Summarize what you learned this week",
+  "onboardingArchitectureStep1Title": "Mobile app",
+  "onboardingArchitectureStep1Desc": "A cross-platform Flutter app built for a smooth daily experience",
+  "onboardingArchitectureStep2Title": "WebSocket link",
+  "onboardingArchitectureStep2Desc": "The Go gateway keeps communication real-time, fast, and reliable",
+  "onboardingArchitectureStep3Title": "AI engine",
+  "onboardingArchitectureStep3Desc": "The Python agent engine handles reasoning and tool orchestration",
+  "onboardingArchitectureStep4Title": "Data layer",
+  "onboardingArchitectureStep4Desc": "PostgreSQL plus pgvector for structured data and semantic retrieval",
+  "onboardingArchitectureStep5Title": "End-to-end flow",
+  "onboardingArchitectureStep5Desc": "From question to answer, the whole loop is designed to feel immediate"
 }

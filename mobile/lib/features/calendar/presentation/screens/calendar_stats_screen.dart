@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/lunar_service.dart';
+import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/calendar/data/models/calendar_event_model.dart';
 import 'package:sparkle/features/calendar/calendar_routes.dart';
 import 'package:sparkle/features/calendar/presentation/providers/calendar_provider.dart';
@@ -53,6 +55,12 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
   DateTime? _selectedDay;
   final LunarService _lunarService = LunarService();
 
+  String _formatMonthLabel(int month) => DateFormat.MMM(context.l10n.localeName)
+      .format(DateTime(_focusedDay.year, month));
+
+  String _formatMonthDay(DateTime date) =>
+      DateFormat.MMMd(context.l10n.localeName).format(date);
+
   @override
   void initState() {
     super.initState();
@@ -73,18 +81,24 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: DS.surfaceBase,
-        title: Text('设置任务截止日期', style: TextStyle(color: DS.brandPrimary)),
+        title: Text(
+          context.l10n.calendarSetDueDateTitle,
+          style: TextStyle(color: DS.brandPrimary),
+        ),
         content: Text(
-          '将「${task.title}」设为${newDueDate.month}月${newDueDate.day}日到期?',
+          context.l10n.calendarSetDueDateMessage(
+            task.title,
+            _formatMonthDay(newDueDate),
+          ),
           style: TextStyle(color: DS.brandPrimary70),
         ),
         actions: [
           SparkleButton.ghost(
-            label: '取消',
+            label: context.l10n.cancel,
             onPressed: () => Navigator.pop(context, false),
           ),
           SparkleButton.primary(
-            label: '确认',
+            label: context.l10n.contentReviewConfirm,
             onPressed: () => Navigator.pop(context, true),
           ),
         ],
@@ -173,7 +187,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
               size: DS.touchTargetMinSize,
             ),
             Text(
-              '日程与日历',
+              context.l10n.calendarTitle,
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -183,7 +197,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
             const Spacer(),
             // Year display
             Text(
-              DateFormat('yyyy年').format(_focusedDay),
+              DateFormat.y(context.l10n.localeName).format(_focusedDay),
               style: TextStyle(color: DS.brandPrimary54, fontSize: 16),
             ),
           ],
@@ -196,10 +210,19 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 16),
       width: double.infinity,
       child: SegmentedButton<CalendarViewMode>(
-        segments: const [
-          ButtonSegment(value: CalendarViewMode.month, label: Text('月视图')),
-          ButtonSegment(value: CalendarViewMode.twoWeeks, label: Text('双周')),
-          ButtonSegment(value: CalendarViewMode.year, label: Text('年视图')),
+        segments: [
+          ButtonSegment(
+            value: CalendarViewMode.month,
+            label: Text(context.l10n.calendarMonthView),
+          ),
+          ButtonSegment(
+            value: CalendarViewMode.twoWeeks,
+            label: Text(context.l10n.calendarTwoWeekView),
+          ),
+          ButtonSegment(
+            value: CalendarViewMode.year,
+            label: Text(context.l10n.calendarYearView),
+          ),
         ],
         selected: {_viewMode},
         onSelectionChanged: (Set<CalendarViewMode> newSelection) {
@@ -284,7 +307,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 4.0),
                       child: Text(
-                        '${index + 1}月',
+                        _formatMonthLabel(index + 1),
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
@@ -617,14 +640,16 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '${DateFormat('MM月dd日').format(_selectedDay ?? _focusedDay)} 日程',
+                context.l10n.calendarDayScheduleTitle(
+                  _formatMonthDay(_selectedDay ?? _focusedDay),
+                ),
                 style: TextStyle(
                   color: DS.brandPrimary70Const,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               SparkleButton.ghost(
-                label: '查看详情',
+                label: context.l10n.calendarViewDetails,
                 onPressed: () {
                   context.push(
                     '${CalendarRoutes.dailyDetail}?date=${(_selectedDay ?? _focusedDay).toIso8601String()}',
@@ -639,7 +664,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
           child: events.isEmpty
               ? Center(
                   child: Text(
-                    '暂无日程',
+                    context.l10n.calendarNoEvents,
                     style: TextStyle(color: DS.brandPrimary.withAlpha(100)),
                   ),
                 )
@@ -685,8 +710,8 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                           ),
                           subtitle: Text(
                             event.isAllDay
-                                ? '全天'
-                                : DateFormat('HH:mm').format(event.startTime),
+                                ? context.l10n.calendarAllDay
+                                : Formatters.formatTime24(event.startTime),
                             style: TextStyle(color: DS.brandPrimary54),
                           ),
                           trailing: event.recurrenceRule != null
@@ -789,7 +814,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '新建日程',
+                  context.l10n.calendarCreateEvent,
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -797,7 +822,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
                   ),
                 ),
                 SparkleButton.primary(
-                  label: '保存',
+                  label: context.l10n.calendarSave,
                   onPressed: _saveEvent,
                 ),
               ],
@@ -807,7 +832,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
               controller: _titleController,
               style: TextStyle(color: DS.brandPrimary),
               decoration: InputDecoration(
-                hintText: '标题',
+                hintText: context.l10n.calendarTitleHint,
                 hintStyle: TextStyle(color: DS.brandPrimary38),
                 prefixIcon: Icon(Icons.title, color: DS.brandPrimary70),
                 border: InputBorder.none,
@@ -826,7 +851,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
               controller: _locationController,
               style: TextStyle(color: DS.brandPrimary),
               decoration: InputDecoration(
-                hintText: '地点',
+                hintText: context.l10n.calendarLocationHint,
                 hintStyle: TextStyle(color: DS.brandPrimary38),
                 prefixIcon:
                     Icon(Icons.location_on_outlined, color: DS.brandPrimary70),
@@ -840,7 +865,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
               controller: _descController,
               style: TextStyle(color: DS.brandPrimary),
               decoration: InputDecoration(
-                hintText: '描述',
+                hintText: context.l10n.calendarDescriptionHint,
                 hintStyle: TextStyle(color: DS.brandPrimary38),
                 prefixIcon:
                     Icon(Icons.description_outlined, color: DS.brandPrimary70),
@@ -870,11 +895,11 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '开始时间',
+                      context.l10n.calendarStartTime,
                       style: TextStyle(color: DS.brandPrimary54, fontSize: 12),
                     ),
                     Text(
-                      DateFormat('MM-dd HH:mm').format(_startTime),
+                      Formatters.formatDateTime(_startTime),
                       style: TextStyle(
                         color: DS.brandPrimaryConst,
                         fontWeight: FontWeight.bold,
@@ -901,11 +926,11 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '结束时间',
+                      context.l10n.calendarEndTime,
                       style: TextStyle(color: DS.brandPrimary54, fontSize: 12),
                     ),
                     Text(
-                      DateFormat('MM-dd HH:mm').format(_endTime),
+                      Formatters.formatDateTime(_endTime),
                       style: TextStyle(
                         color: DS.brandPrimaryConst,
                         fontWeight: FontWeight.bold,
@@ -922,43 +947,81 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
   Widget _buildOptionsRow() => Column(
         children: [
           SwitchListTile(
-            title: Text('全天', style: TextStyle(color: DS.brandPrimary)),
+            title: Text(
+              context.l10n.calendarAllDay,
+              style: TextStyle(color: DS.brandPrimary),
+            ),
             value: _isAllDay,
             onChanged: (val) => setState(() => _isAllDay = val),
             activeThumbColor: DS.primaryBase,
             contentPadding: EdgeInsets.zero,
           ),
           ListTile(
-            title: Text('提醒', style: TextStyle(color: DS.brandPrimary)),
+            title: Text(
+              context.l10n.calendarReminder,
+              style: TextStyle(color: DS.brandPrimary),
+            ),
             trailing: DropdownButton<int>(
               value: _reminderMinutes,
               dropdownColor: DS.surfaceTertiary,
               style: TextStyle(color: DS.brandPrimary),
               underline: Container(),
-              items: const [
-                DropdownMenuItem(value: 0, child: Text('日程开始时')),
-                DropdownMenuItem(value: 5, child: Text('5分钟前')),
-                DropdownMenuItem(value: 15, child: Text('15分钟前')),
-                DropdownMenuItem(value: 30, child: Text('30分钟前')),
-                DropdownMenuItem(value: 60, child: Text('1小时前')),
-                DropdownMenuItem(value: 1440, child: Text('1天前')),
+              items: [
+                DropdownMenuItem(
+                  value: 0,
+                  child: Text(context.l10n.calendarReminderAtStart),
+                ),
+                DropdownMenuItem(
+                  value: 5,
+                  child: Text(context.l10n.calendarReminderMinutes(5)),
+                ),
+                DropdownMenuItem(
+                  value: 15,
+                  child: Text(context.l10n.calendarReminderMinutes(15)),
+                ),
+                DropdownMenuItem(
+                  value: 30,
+                  child: Text(context.l10n.calendarReminderMinutes(30)),
+                ),
+                DropdownMenuItem(
+                  value: 60,
+                  child: Text(context.l10n.calendarReminderHours(1)),
+                ),
+                DropdownMenuItem(
+                  value: 1440,
+                  child: Text(context.l10n.calendarReminderDays(1)),
+                ),
               ],
               onChanged: (val) => setState(() => _reminderMinutes = val!),
             ),
             contentPadding: EdgeInsets.zero,
           ),
           ListTile(
-            title: Text('重复', style: TextStyle(color: DS.brandPrimary)),
+            title: Text(
+              context.l10n.calendarRepeat,
+              style: TextStyle(color: DS.brandPrimary),
+            ),
             trailing: DropdownButton<String?>(
               value: _recurrenceRule,
               dropdownColor: DS.surfaceTertiary,
               style: TextStyle(color: DS.brandPrimary),
               underline: Container(),
-              items: const [
-                DropdownMenuItem(child: Text('不重复')),
-                DropdownMenuItem(value: 'daily', child: Text('每天')),
-                DropdownMenuItem(value: 'weekly', child: Text('每周')),
-                DropdownMenuItem(value: 'monthly', child: Text('每月')),
+              items: [
+                DropdownMenuItem(
+                  child: Text(context.l10n.calendarRepeatNone),
+                ),
+                DropdownMenuItem(
+                  value: 'daily',
+                  child: Text(context.l10n.calendarRepeatDaily),
+                ),
+                DropdownMenuItem(
+                  value: 'weekly',
+                  child: Text(context.l10n.calendarRepeatWeekly),
+                ),
+                DropdownMenuItem(
+                  value: 'monthly',
+                  child: Text(context.l10n.calendarRepeatMonthly),
+                ),
               ],
               onChanged: (val) => setState(() => _recurrenceRule = val),
             ),
@@ -1030,7 +1093,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
 
   void _saveEvent() {
     if (_titleController.text.isEmpty) {
-      AppFeedback.info(context, '请输入标题');
+      AppFeedback.info(context, context.l10n.calendarTitleRequired);
       return;
     }
 

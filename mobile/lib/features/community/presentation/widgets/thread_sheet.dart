@@ -1,15 +1,21 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_input.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
 import 'package:sparkle/features/community/presentation/widgets/group_chat_bubble.dart';
 
 class ThreadSheet extends ConsumerStatefulWidget {
-  const ThreadSheet(
-      {required this.groupId, required this.rootMessage, super.key,});
+  const ThreadSheet({
+    required this.groupId,
+    required this.rootMessage,
+    super.key,
+  });
 
   final String groupId;
   final MessageInfo rootMessage;
@@ -25,7 +31,7 @@ class _ThreadSheetState extends ConsumerState<ThreadSheet> {
   @override
   void initState() {
     super.initState();
-    _loadThread();
+    unawaited(_loadThread());
   }
 
   Future<void> _loadThread() async {
@@ -65,7 +71,10 @@ class _ThreadSheetState extends ConsumerState<ThreadSheet> {
                 ),
               ),
               const SizedBox(height: DS.sm),
-              Text('线程讨论', style: Theme.of(context).textTheme.titleMedium),
+              Text(
+                context.l10n.threadDiscussion,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
               const SizedBox(height: DS.md),
               Expanded(
                 child: _loading
@@ -80,22 +89,25 @@ class _ThreadSheetState extends ConsumerState<ThreadSheet> {
                             groupId: widget.groupId,
                             onRevoke: (msg) => ref
                                 .read(
-                                    groupChatProvider(widget.groupId).notifier,)
+                                  groupChatProvider(widget.groupId).notifier,
+                                )
                                 .revokeMessage(msg.id),
                             onEdit: (msg, content) => ref
                                 .read(
-                                    groupChatProvider(widget.groupId).notifier,)
+                                  groupChatProvider(widget.groupId).notifier,
+                                )
                                 .editMessage(msg.id, content),
                             onReaction: (msg, emoji) => ref
                                 .read(
-                                    groupChatProvider(widget.groupId).notifier,)
+                                  groupChatProvider(widget.groupId).notifier,
+                                )
                                 .toggleReaction(msg.id, emoji),
                           );
                         },
                       ),
               ),
               ChatInput(
-                hintText: '回复线程...',
+                hintText: context.l10n.threadReplyHint,
                 onSend: (text, {replyToId}) => _sendReply(text),
               ),
             ],

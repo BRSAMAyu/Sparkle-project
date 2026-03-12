@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/shared/entities/subtask_model.dart';
 
 /// Provider for subtask list state
@@ -65,32 +66,20 @@ class _SubtaskListWidgetState extends ConsumerState<SubtaskListWidget> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    // This widget is designed to be used with a parent-provided subtask list
-    // The parent should manage the subtask state
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Progress indicator
-        _buildProgressIndicator(),
-        const SizedBox(height: DS.md),
-        // Quick add input (if not read-only)
-        if (!widget.readOnly && widget.onSubtaskAdd != null)
-          _buildQuickAddInput(),
-        const SizedBox(height: DS.md),
-        // Subtask list
-        _buildSubtaskList(),
-      ],
-    );
-  }
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildProgressIndicator(),
+          const SizedBox(height: DS.md),
+          if (!widget.readOnly && widget.onSubtaskAdd != null)
+            _buildQuickAddInput(),
+          const SizedBox(height: DS.md),
+          _buildSubtaskList(),
+        ],
+      );
 
   Widget _buildProgressIndicator() => Consumer(
-        builder: (context, ref, child) {
-          // Get subtasks from parent state (will be passed through parameters)
-          // For now, this is a placeholder - in real use, we'd get state from a provider
-          return const SizedBox.shrink();
-        },
+        builder: (context, ref, child) => const SizedBox.shrink(),
       );
 
   Widget _buildQuickAddInput() => Row(
@@ -100,7 +89,7 @@ class _SubtaskListWidgetState extends ConsumerState<SubtaskListWidget> {
               controller: _titleController,
               style: TextStyle(color: DS.brandPrimaryConst, fontSize: 14),
               decoration: InputDecoration(
-                hintText: '添加子任务...',
+                hintText: context.l10n.subtaskAddHint,
                 hintStyle:
                     TextStyle(color: DS.brandPrimary38Const, fontSize: 14),
                 border: InputBorder.none,
@@ -122,7 +111,7 @@ class _SubtaskListWidgetState extends ConsumerState<SubtaskListWidget> {
           ),
           const SizedBox(width: DS.sm),
           Tooltip(
-            message: '添加子任务',
+            message: context.l10n.subtaskAddTooltip,
             child: SparkleIconButton(
               variant: ButtonVariant.ghost,
               size: 36,
@@ -142,11 +131,7 @@ class _SubtaskListWidgetState extends ConsumerState<SubtaskListWidget> {
       );
 
   Widget _buildSubtaskList() => Consumer(
-        builder: (context, ref, child) {
-          // This will be populated by parent state
-          // For now, show empty state
-          return _buildEmptyState();
-        },
+        builder: (context, ref, child) => _buildEmptyState(),
       );
 
   Widget _buildEmptyState() => Container(
@@ -161,7 +146,7 @@ class _SubtaskListWidgetState extends ConsumerState<SubtaskListWidget> {
             ),
             const SizedBox(height: DS.sm),
             Text(
-              '暂无子任务',
+              context.l10n.subtaskEmpty,
               style: TextStyle(
                 color: DS.brandPrimary54,
                 fontSize: 14,
@@ -240,12 +225,15 @@ class SubtaskItemWidget extends StatelessWidget {
             children: [
               Icon(Icons.drag_handle, color: DS.brandPrimary38Const, size: 20),
               Tooltip(
-                message: '删除',
+                message: context.l10n.delete,
                 child: SparkleIconButton(
                   variant: ButtonVariant.ghost,
                   size: 32,
-                  icon: Icon(Icons.close,
-                      color: DS.brandPrimary38Const, size: 18),
+                  icon: Icon(
+                    Icons.close,
+                    color: DS.brandPrimary38Const,
+                    size: 18,
+                  ),
                   onPressed: onDelete,
                 ),
               ),
