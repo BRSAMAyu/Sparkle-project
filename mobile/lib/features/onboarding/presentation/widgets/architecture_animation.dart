@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// 架构可视化动画 - 必杀技 C
 ///
@@ -171,28 +172,28 @@ class _ArchitectureAnimationState extends State<ArchitectureAnimation>
   Widget _buildStepDescription() {
     final steps = [
       {
-        'title': '移动端',
-        'description': 'Flutter 跨平台应用\n提供流畅的用户体验',
+        'title': context.l10n.onboardingArchitectureStep1Title,
+        'description': context.l10n.onboardingArchitectureStep1Desc,
         'icon': Icons.phone_android,
       },
       {
-        'title': 'WebSocket 连接',
-        'description': 'Go Gateway 提供实时双向通信\n高性能、低延迟',
+        'title': context.l10n.onboardingArchitectureStep2Title,
+        'description': context.l10n.onboardingArchitectureStep2Desc,
         'icon': Icons.swap_horiz,
       },
       {
-        'title': 'AI 引擎',
-        'description': 'Python Agent Engine\n强大的推理和工具调用能力',
+        'title': context.l10n.onboardingArchitectureStep3Title,
+        'description': context.l10n.onboardingArchitectureStep3Desc,
         'icon': Icons.psychology,
       },
       {
-        'title': '数据存储',
-        'description': 'PostgreSQL + pgvector\n向量检索 + 图谱存储',
+        'title': context.l10n.onboardingArchitectureStep4Title,
+        'description': context.l10n.onboardingArchitectureStep4Desc,
         'icon': Icons.storage,
       },
       {
-        'title': '完整链路',
-        'description': '从提问到回答\n毫秒级响应体验',
+        'title': context.l10n.onboardingArchitectureStep5Title,
+        'description': context.l10n.onboardingArchitectureStep5Desc,
         'icon': Icons.rocket_launch,
       },
     ];
@@ -367,8 +368,9 @@ class _ArchitecturePainter extends CustomPainter {
     final rect = Rect.fromCenter(center: position, width: 200, height: 80);
     final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(12));
 
-    canvas.drawRRect(rrect, paint);
-    canvas.drawRRect(rrect, borderPaint);
+    canvas
+      ..drawRRect(rrect, paint)
+      ..drawRRect(rrect, borderPaint);
 
     // Draw label
     final textPainter = TextPainter(
@@ -383,15 +385,13 @@ class _ArchitecturePainter extends CustomPainter {
       textAlign: TextAlign.center,
       textDirection: TextDirection.ltr,
     );
-
-    textPainter.layout();
-    textPainter.paint(
-      canvas,
-      Offset(
-        position.dx - textPainter.width / 2,
-        position.dy - textPainter.height / 2,
-      ),
+    final textOffset = Offset(
+      position.dx - textPainter.width / 2,
+      position.dy - textPainter.height / 2,
     );
+    textPainter
+      ..layout()
+      ..paint(canvas, textOffset);
   }
 
   void _drawConnection(

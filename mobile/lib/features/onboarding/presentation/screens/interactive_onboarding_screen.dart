@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/onboarding/presentation/widgets/architecture_animation.dart';
 
 /// 交互式引导流程 - Week 7
@@ -38,9 +41,11 @@ class _InteractiveOnboardingScreenState
 
   void _nextPage() {
     if (_currentPage < _totalPages - 1) {
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
+      unawaited(
+        _pageController.nextPage(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        ),
       );
     } else {
       widget.onComplete();
@@ -62,7 +67,7 @@ class _InteractiveOnboardingScreenState
                 Align(
                   alignment: Alignment.topRight,
                   child: SparkleButton.ghost(
-                    label: '跳过',
+                    label: context.l10n.onboardingSkip,
                     onPressed: _skipAll,
                   ),
                 ),
@@ -73,7 +78,7 @@ class _InteractiveOnboardingScreenState
                   controller: _pageController,
                   onPageChanged: (index) {
                     setState(() => _currentPage = index);
-                    HapticFeedback.lightImpact();
+                    unawaited(HapticFeedback.lightImpact());
                   },
                   children: [
                     _buildWelcomePage(),
@@ -112,7 +117,9 @@ class _InteractiveOnboardingScreenState
 
                     // Next/Done button
                     SparkleButton.primary(
-                      label: _currentPage == _totalPages - 1 ? '开始使用' : '下一步',
+                      label: _currentPage == _totalPages - 1
+                          ? context.l10n.onboardingGetStarted
+                          : context.l10n.onboardingNext,
                       onPressed: _nextPage,
                     ),
                   ],
@@ -167,7 +174,7 @@ class _InteractiveOnboardingScreenState
 
             // Title
             Text(
-              '欢迎来到 Sparkle',
+              context.l10n.onboardingWelcomeTitle,
               style: TextStyle(
                 color: DS.brandPrimaryConst,
                 fontSize: 32,
@@ -178,7 +185,7 @@ class _InteractiveOnboardingScreenState
 
             // Subtitle
             Text(
-              '你的 AI 学习助手\n让知识点亮智慧之光',
+              context.l10n.onboardingWelcomeSubtitle,
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: DS.brandPrimary.withValues(alpha: 0.8),
@@ -190,20 +197,20 @@ class _InteractiveOnboardingScreenState
             // Features preview
             _buildFeaturePreview(
               Icons.auto_graph,
-              '知识星图',
-              '可视化学习网络',
+              context.l10n.onboardingFeatureGalaxy,
+              context.l10n.onboardingFeatureGalaxyDesc,
             ),
             const SizedBox(height: DS.lg),
             _buildFeaturePreview(
               Icons.psychology,
-              'AI 对话',
-              '智能学习伙伴',
+              context.l10n.onboardingFeatureChat,
+              context.l10n.onboardingFeatureChatDesc,
             ),
             const SizedBox(height: DS.lg),
             _buildFeaturePreview(
               Icons.task_alt,
-              '智能任务',
-              '个性化学习计划',
+              context.l10n.onboardingFeatureTasks,
+              context.l10n.onboardingFeatureTasksDesc,
             ),
           ],
         ),
@@ -265,7 +272,7 @@ class _InteractiveOnboardingScreenState
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              '系统架构',
+              context.l10n.onboardingArchitectureTitle,
               style: TextStyle(
                 color: DS.brandPrimaryConst,
                 fontSize: 28,
@@ -274,7 +281,7 @@ class _InteractiveOnboardingScreenState
             ),
             const SizedBox(height: DS.lg),
             Text(
-              '了解 Sparkle 如何工作',
+              context.l10n.onboardingArchitectureSubtitle,
               style: TextStyle(
                 color: DS.brandPrimary.withValues(alpha: 0.8),
                 fontSize: 16,
@@ -292,13 +299,13 @@ class _InteractiveOnboardingScreenState
   Widget _buildGalaxyFeaturePage() => _buildFeaturePage(
         icon: Icons.auto_graph,
         iconGradient: [DS.brandPrimary.shade400, DS.info],
-        title: '知识星图',
-        description: '将你的知识可视化为一张星图',
+        title: context.l10n.onboardingGalaxyTitle,
+        description: context.l10n.onboardingGalaxyDescription,
         features: [
-          '6大知识星域：理性、造物、灵感、文明、生活、精神',
-          '实时衰减预测：了解知识遗忘曲线',
-          '交互式时间机器：预测未来学习状态',
-          '智能推荐：基于知识图谱的学习路径',
+          context.l10n.onboardingGalaxyFeature1,
+          context.l10n.onboardingGalaxyFeature2,
+          context.l10n.onboardingGalaxyFeature3,
+          context.l10n.onboardingGalaxyFeature4,
         ],
         demoWidget: _buildGalaxyDemo(),
       );
@@ -307,13 +314,13 @@ class _InteractiveOnboardingScreenState
   Widget _buildChatFeaturePage() => _buildFeaturePage(
         icon: Icons.psychology,
         iconGradient: [DS.prismPurple, DS.error],
-        title: 'AI 对话',
-        description: '你的智能学习伙伴',
+        title: context.l10n.onboardingChatTitle,
+        description: context.l10n.onboardingChatDescription,
         features: [
-          '多智能体协作：数学、代码、写作、科学专家',
-          'GraphRAG 检索：实时显示知识检索过程',
-          '上下文理解：记住你的学习历史',
-          '工具调用：执行任务、查询知识、管理计划',
+          context.l10n.onboardingChatFeature1,
+          context.l10n.onboardingChatFeature2,
+          context.l10n.onboardingChatFeature3,
+          context.l10n.onboardingChatFeature4,
         ],
         demoWidget: _buildChatDemo(),
       );
@@ -322,13 +329,13 @@ class _InteractiveOnboardingScreenState
   Widget _buildTaskFeaturePage() => _buildFeaturePage(
         icon: Icons.task_alt,
         iconGradient: [DS.success.shade400, Colors.teal.shade400],
-        title: '智能任务',
-        description: '个性化学习计划',
+        title: context.l10n.onboardingTasksTitle,
+        description: context.l10n.onboardingTasksDescription,
         features: [
-          '6种任务类型：学习、训练、纠错、反思、社交、规划',
-          '智能推送：基于学习状态的提醒',
-          'Sprint 计划：短期冲刺目标',
-          'Growth Plan：长期成长规划',
+          context.l10n.onboardingTasksFeature1,
+          context.l10n.onboardingTasksFeature2,
+          context.l10n.onboardingTasksFeature3,
+          context.l10n.onboardingTasksFeature4,
         ],
         demoWidget: _buildTaskDemo(),
       );
@@ -347,7 +354,7 @@ class _InteractiveOnboardingScreenState
             const SizedBox(height: DS.xxl),
 
             Text(
-              '个性化设置',
+              context.l10n.onboardingPersonalizationTitle,
               style: TextStyle(
                 color: DS.brandPrimaryConst,
                 fontSize: 28,
@@ -356,7 +363,7 @@ class _InteractiveOnboardingScreenState
             ),
             const SizedBox(height: DS.lg),
             Text(
-              '让 Sparkle 更懂你',
+              context.l10n.onboardingPersonalizationSubtitle,
               style: TextStyle(
                 color: DS.brandPrimary.withValues(alpha: 0.8),
                 fontSize: 16,
@@ -367,22 +374,22 @@ class _InteractiveOnboardingScreenState
             // Settings options
             _buildSettingOption(
               icon: Icons.notifications_active,
-              title: '学习提醒',
-              description: '在最佳时间推送学习建议',
+              title: context.l10n.onboardingSettingReminders,
+              description: context.l10n.onboardingSettingRemindersDesc,
               value: true,
             ),
             const SizedBox(height: DS.lg),
             _buildSettingOption(
               icon: Icons.analytics,
-              title: '学习分析',
-              description: '生成个性化学习报告',
+              title: context.l10n.onboardingSettingAnalytics,
+              description: context.l10n.onboardingSettingAnalyticsDesc,
               value: true,
             ),
             const SizedBox(height: DS.lg),
             _buildSettingOption(
               icon: Icons.auto_awesome,
-              title: 'AI 助手',
-              description: '自动创建学习任务',
+              title: context.l10n.onboardingSettingAssistant,
+              description: context.l10n.onboardingSettingAssistantDesc,
               value: true,
             ),
           ],
@@ -549,11 +556,11 @@ class _InteractiveOnboardingScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildChatMessage('你好！我能帮你什么？', true),
+            _buildChatMessage(context.l10n.onboardingChatDemo1, true),
             const SizedBox(height: DS.sm),
-            _buildChatMessage('解释一下微积分的基本原理', false),
+            _buildChatMessage(context.l10n.onboardingChatDemo2, false),
             const SizedBox(height: DS.sm),
-            _buildChatMessage('微积分研究函数的变化率...', true),
+            _buildChatMessage(context.l10n.onboardingChatDemo3, true),
           ],
         ),
       );
@@ -584,11 +591,23 @@ class _InteractiveOnboardingScreenState
         ),
         child: Column(
           children: [
-            _buildTaskItem('学习任务', '完成微积分第一章', DS.brandPrimary),
+            _buildTaskItem(
+              context.l10n.onboardingTaskTypeLearning,
+              context.l10n.onboardingTaskDemo1,
+              DS.brandPrimary,
+            ),
             const SizedBox(height: DS.sm),
-            _buildTaskItem('训练任务', '完成10道练习题', DS.success),
+            _buildTaskItem(
+              context.l10n.onboardingTaskTypePractice,
+              context.l10n.onboardingTaskDemo2,
+              DS.success,
+            ),
             const SizedBox(height: DS.sm),
-            _buildTaskItem('反思任务', '总结本周学习收获', DS.prismPurple),
+            _buildTaskItem(
+              context.l10n.onboardingTaskTypeReflection,
+              context.l10n.onboardingTaskDemo3,
+              DS.prismPurple,
+            ),
           ],
         ),
       );

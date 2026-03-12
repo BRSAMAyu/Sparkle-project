@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/lunar_service.dart';
+import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/calendar/data/models/calendar_event_model.dart';
 import 'package:sparkle/features/calendar/presentation/providers/calendar_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
@@ -40,7 +42,7 @@ class DailyDetailScreen extends ConsumerWidget {
           variant: ButtonVariant.ghost,
           size: DS.touchTargetMinSize,
         ),
-        title: Text(DateFormat('MM月dd日').format(date)),
+        title: Text(DateFormat.MMMd(context.l10n.localeName).format(date)),
         centerTitle: true,
       ),
       child: ContentConstraint(
@@ -62,13 +64,21 @@ class DailyDetailScreen extends ConsumerWidget {
               const SizedBox(height: DS.spacing20),
 
               // 4. Events Section
-              _buildSectionTitle(context, '日程事件', Icons.event),
+              _buildSectionTitle(
+                context,
+                context.l10n.dailyDetailEventsSection,
+                Icons.event,
+              ),
               const SizedBox(height: DS.spacing10),
               _buildEventList(context, events),
               const SizedBox(height: DS.spacing20),
 
               // 5. Tasks Section
-              _buildSectionTitle(context, '任务清单', Icons.check_circle_outline),
+              _buildSectionTitle(
+                context,
+                context.l10n.dailyDetailTasksSection,
+                Icons.check_circle_outline,
+              ),
               const SizedBox(height: DS.spacing10),
               _buildTaskList(context, dayTasks),
             ],
@@ -122,7 +132,7 @@ class DailyDetailScreen extends ConsumerWidget {
         children: [
           Expanded(
             child: _buildMetricCard(
-              label: '火花强度',
+              label: context.l10n.dailyDetailFlame,
               value: '${state.flame.level}',
               icon: Icons.local_fire_department,
               color: DS.warningAccent,
@@ -131,7 +141,7 @@ class DailyDetailScreen extends ConsumerWidget {
           const SizedBox(width: DS.md),
           Expanded(
             child: _buildMetricCard(
-              label: '专注时长',
+              label: context.l10n.dailyDetailFocusTime,
               value: '${state.flame.todayFocusMinutes}m',
               icon: Icons.timer,
               color: DS.brandPrimaryAccent,
@@ -140,7 +150,7 @@ class DailyDetailScreen extends ConsumerWidget {
           const SizedBox(width: DS.md),
           Expanded(
             child: _buildMetricCard(
-              label: '完成任务',
+              label: context.l10n.dailyDetailTasksDone,
               value: '${state.flame.tasksCompleted}',
               icon: Icons.task_alt,
               color: DS.successAccent,
@@ -200,7 +210,7 @@ class DailyDetailScreen extends ConsumerWidget {
               Icon(Icons.diamond_outlined, color: DS.prismPurple, size: 20),
               const SizedBox(width: DS.smConst),
               Text(
-                '当日认知棱镜',
+                context.l10n.dailyDetailPrismTitle,
                 style: TextStyle(
                   color: DS.brandPrimaryConst,
                   fontWeight: FontWeight.bold,
@@ -210,7 +220,8 @@ class DailyDetailScreen extends ConsumerWidget {
           ),
           const SizedBox(height: DS.md),
           Text(
-            state.cognitive.weeklyPattern ?? '今日思维清晰，状态良好',
+            state.cognitive.weeklyPattern ??
+                context.l10n.dailyDetailPrismFallback,
             style: TextStyle(color: DS.brandPrimaryConst, fontSize: 15),
           ),
           if (state.cognitive.description != null) ...[
@@ -250,7 +261,7 @@ class DailyDetailScreen extends ConsumerWidget {
     List<CalendarEventModel> events,
   ) {
     if (events.isEmpty) {
-      return _buildEmptyState('暂无日程');
+      return _buildEmptyState(context.l10n.calendarNoEvents);
     }
     return ListView.builder(
       shrinkWrap: true,
@@ -285,8 +296,8 @@ class DailyDetailScreen extends ConsumerWidget {
                     const SizedBox(height: DS.xs),
                     Text(
                       event.isAllDay
-                          ? '全天'
-                          : '${DateFormat('HH:mm').format(event.startTime)} - ${DateFormat('HH:mm').format(event.endTime)}',
+                          ? context.l10n.calendarAllDay
+                          : '${Formatters.formatTime24(event.startTime)} - ${Formatters.formatTime24(event.endTime)}',
                       style: TextStyle(color: DS.brandPrimary54, fontSize: 12),
                     ),
                   ],
@@ -307,7 +318,7 @@ class DailyDetailScreen extends ConsumerWidget {
 
   Widget _buildTaskList(BuildContext context, List<TaskModel> tasks) {
     if (tasks.isEmpty) {
-      return _buildEmptyState('暂无任务');
+      return _buildEmptyState(context.l10n.dailyDetailNoTasks);
     }
     return ListView.builder(
       shrinkWrap: true,

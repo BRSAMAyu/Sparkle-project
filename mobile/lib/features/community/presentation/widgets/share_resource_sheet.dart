@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/repositories/community_share_repository.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
@@ -71,6 +72,7 @@ class _ShareResourceSheetState extends ConsumerState<ShareResourceSheet>
   Widget build(BuildContext context) {
     final friendsState = ref.watch(friendsProvider);
     final groupsState = ref.watch(myGroupsProvider);
+    final l10n = context.l10n;
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -101,7 +103,7 @@ class _ShareResourceSheetState extends ConsumerState<ShareResourceSheet>
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  '分享到社群',
+                  l10n.shareResourceTitle,
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
               ),
@@ -111,9 +113,9 @@ class _ShareResourceSheetState extends ConsumerState<ShareResourceSheet>
               TabBar(
                 controller: _tabController,
                 labelColor: DS.brandPrimary,
-                tabs: const [
-                  Tab(text: '好友'),
-                  Tab(text: '群组'),
+                tabs: [
+                  Tab(text: l10n.shareResourceTabFriends),
+                  Tab(text: l10n.shareResourceTabGroups),
                 ],
               ),
               SizedBox(
@@ -130,16 +132,16 @@ class _ShareResourceSheetState extends ConsumerState<ShareResourceSheet>
               TextField(
                 controller: _commentController,
                 maxLines: 2,
-                decoration: const InputDecoration(
-                  hintText: '添加分享留言（可选）',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  hintText: l10n.shareResourceCommentHint,
+                  border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: DS.md),
               SizedBox(
                 width: double.infinity,
                 child: SparkleButton(
-                  label: '立即分享',
+                  label: l10n.shareResourceNow,
                   onPressed: _isSharing ? null : _share,
                   loading: _isSharing,
                   expand: true,
@@ -183,7 +185,7 @@ class _ShareResourceSheetState extends ConsumerState<ShareResourceSheet>
   Widget _buildFriendsList(AsyncValue<List<FriendshipInfo>> state) =>
       state.when(
         data: (friends) => friends.isEmpty
-            ? _buildEmpty('暂无好友')
+            ? _buildEmpty(context.l10n.shareResourceNoFriends)
             : ListView.separated(
                 itemCount: friends.length,
                 separatorBuilder: (_, __) => const Divider(height: 1),
@@ -211,12 +213,12 @@ class _ShareResourceSheetState extends ConsumerState<ShareResourceSheet>
                 },
               ),
         loading: () => const Center(child: LoadingIndicator()),
-        error: (e, _) => _buildEmpty('加载失败: $e'),
+        error: (e, _) => _buildEmpty(context.l10n.loadingFailedWithError(e)),
       );
 
   Widget _buildGroupsList(AsyncValue<List<GroupListItem>> state) => state.when(
         data: (groups) => groups.isEmpty
-            ? _buildEmpty('暂无群组')
+            ? _buildEmpty(context.l10n.shareResourceNoGroups)
             : ListView.separated(
                 itemCount: groups.length,
                 separatorBuilder: (_, __) => const Divider(height: 1),
@@ -230,7 +232,9 @@ class _ShareResourceSheetState extends ConsumerState<ShareResourceSheet>
                       child: const Icon(Icons.groups, size: 16),
                     ),
                     title: Text(group.name),
-                    subtitle: Text('${group.memberCount} members'),
+                    subtitle: Text(
+                      context.l10n.shareResourceGroupMembers(group.memberCount),
+                    ),
                     trailing: Icon(
                       isSelected ? Icons.check_circle : Icons.circle_outlined,
                       color: isSelected ? DS.brandPrimary : DS.neutral400,
@@ -245,7 +249,7 @@ class _ShareResourceSheetState extends ConsumerState<ShareResourceSheet>
                 },
               ),
         loading: () => const Center(child: LoadingIndicator()),
-        error: (e, _) => _buildEmpty('加载失败: $e'),
+        error: (e, _) => _buildEmpty(context.l10n.loadingFailedWithError(e)),
       );
 
   Widget _buildEmpty(String message) => Center(
@@ -257,7 +261,7 @@ class _ShareResourceSheetState extends ConsumerState<ShareResourceSheet>
 
   Future<void> _share() async {
     if (_selectedGroupId == null && _selectedUserId == null) {
-      AppFeedback.info(context, '请选择好友或群组');
+      AppFeedback.info(context, context.l10n.shareResourceSelectTarget);
       return;
     }
 
@@ -275,10 +279,10 @@ class _ShareResourceSheetState extends ConsumerState<ShareResourceSheet>
 
       if (!mounted) return;
       Navigator.pop(context);
-      AppFeedback.success(context, '分享成功');
+      AppFeedback.success(context, context.l10n.shareResourceSuccess);
     } catch (e) {
       if (!mounted) return;
-      AppFeedback.error(context, '分享失败: $e');
+      AppFeedback.error(context, context.l10n.shareResourceFailed(e));
     } finally {
       if (mounted) {
         setState(() => _isSharing = false);

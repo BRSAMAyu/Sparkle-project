@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/chat/presentation/widgets/file_message_bubble.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
@@ -55,7 +58,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
       CurvedAnimation(parent: _controller, curve: Curves.easeOut),
     );
 
-    _controller.forward();
+    unawaited(_controller.forward());
   }
 
   @override
@@ -66,81 +69,89 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
 
   void _showContextMenu(BuildContext context, bool isMe) {
     if (widget.message.isRevoked) return;
+    final l10n = context.l10n;
 
     // Allow revocation within 24 hours for own messages
     final canRevoke = isMe &&
         DateTime.now().difference(widget.message.createdAt).inHours < 24;
 
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
-      builder: (context) => DecoratedBox(
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (widget.onQuote != null)
+    unawaited(
+      showModalBottomSheet<void>(
+        context: context,
+        backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
+        builder: (context) => DecoratedBox(
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (widget.onQuote != null)
+                  ListTile(
+                    leading: const Icon(Icons.format_quote_rounded),
+                    title: Text(l10n.communityQuote),
+                    onTap: () {
+                      Navigator.pop(context);
+                      widget.onQuote!(widget.message);
+                    },
+                  ),
                 ListTile(
-                  leading: const Icon(Icons.format_quote_rounded),
-                  title: const Text('引用'),
+                  leading: const Icon(Icons.copy_rounded),
+                  title: Text(l10n.communityCopy),
                   onTap: () {
+                    unawaited(
+                      Clipboard.setData(
+                        ClipboardData(text: widget.message.content ?? ''),
+                      ),
+                    );
                     Navigator.pop(context);
-                    widget.onQuote!(widget.message);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(l10n.communityCopiedToClipboard),
+                        duration: const Duration(seconds: 1),
+                      ),
+                    );
                   },
                 ),
-              ListTile(
-                leading: const Icon(Icons.copy_rounded),
-                title: const Text('复制'),
-                onTap: () {
-                  Clipboard.setData(
-                    ClipboardData(text: widget.message.content ?? ''),
-                  );
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('已复制到剪贴板'),
-                      duration: Duration(seconds: 1),
+                if (widget.onThread != null)
+                  ListTile(
+                    leading: const Icon(Icons.forum_outlined),
+                    title: Text(l10n.communityThreadReply),
+                    onTap: () {
+                      Navigator.pop(context);
+                      widget.onThread!(widget.message);
+                    },
+                  ),
+                if (isMe &&
+                    widget.onEdit != null &&
+                    widget.message.messageType == MessageType.text)
+                  ListTile(
+                    leading: const Icon(Icons.edit_rounded),
+                    title: Text(l10n.communityEdit),
+                    onTap: () {
+                      Navigator.pop(context);
+                      // Trigger edit flow (implementation dependent, but typically shows input)
+                      // For now, we assume onEdit is called with new content from some dialog
+                      // widget.onEdit!(widget.message, newContent);
+                    },
+                  ),
+                if (canRevoke && widget.onRevoke != null)
+                  ListTile(
+                    leading: Icon(Icons.undo_rounded, color: DS.error),
+                    title: Text(
+                      l10n.communityRevoke,
+                      style: TextStyle(color: DS.error),
                     ),
-                  );
-                },
-              ),
-              if (widget.onThread != null)
-                ListTile(
-                  leading: const Icon(Icons.forum_outlined),
-                  title: const Text('串联回复'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    widget.onThread!(widget.message);
-                  },
-                ),
-              if (isMe &&
-                  widget.onEdit != null &&
-                  widget.message.messageType == MessageType.text)
-                ListTile(
-                  leading: const Icon(Icons.edit_rounded),
-                  title: const Text('编辑'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    // Trigger edit flow (implementation dependent, but typically shows input)
-                    // For now, we assume onEdit is called with new content from some dialog
-                    // widget.onEdit!(widget.message, newContent);
-                  },
-                ),
-              if (canRevoke && widget.onRevoke != null)
-                ListTile(
-                  leading: Icon(Icons.undo_rounded, color: DS.error),
-                  title: Text('撤回', style: TextStyle(color: DS.error)),
-                  onTap: () {
-                    Navigator.pop(context);
-                    widget.onRevoke!(widget.message);
-                  },
-                ),
-              const SizedBox(height: DS.sm),
-            ],
+                    onTap: () {
+                      Navigator.pop(context);
+                      widget.onRevoke!(widget.message);
+                    },
+                  ),
+                const SizedBox(height: DS.sm),
+              ],
+            ),
           ),
         ),
       ),
@@ -162,8 +173,11 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
             padding: const EdgeInsets.symmetric(vertical: 12),
             child: Text(
               isMe
-                  ? '你撤回了一条消息'
-                  : '${widget.message.sender?.displayName ?? "成员"}撤回了一条消息',
+                  ? context.l10n.communityRevokedOwnMessage
+                  : context.l10n.communityRevokedUserMessage(
+                      widget.message.sender?.displayName ??
+                          context.l10n.communityMemberFallback,
+                    ),
               style: TextStyle(fontSize: 12, color: DS.neutral400),
             ),
           ),
@@ -316,7 +330,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
           ),
         ] else ...[
           Text(
-            '${readBy.length}人已读',
+            context.l10n.communityReadByCount(readBy.length),
             style: TextStyle(fontSize: 10, color: DS.info),
           ),
         ],
@@ -389,8 +403,10 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
 
   Widget _buildQuotePreview(BuildContext context, bool isMe) {
     final quoted = widget.message.quotedMessage;
-    final quotedContent = quoted?.content ?? '引用的消息';
-    final quotedSender = quoted?.sender?.displayName ?? '成员';
+    final quotedContent =
+        quoted?.content ?? context.l10n.communityQuotedMessageFallback;
+    final quotedSender =
+        quoted?.sender?.displayName ?? context.l10n.communityMemberFallback;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -510,7 +526,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                     ),
                     const SizedBox(width: DS.sm),
                     Text(
-                      'Daily Check-in',
+                      context.l10n.communityDailyCheckIn,
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
@@ -523,10 +539,22 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildCheckinStat('Duration', '${duration}m', isMe),
-                    _buildCheckinStat('Flame', '+$flame', isMe),
+                    _buildCheckinStat(
+                      context.l10n.communityDurationLabel,
+                      '${duration}m',
+                      isMe,
+                    ),
+                    _buildCheckinStat(
+                      context.l10n.communityFlameLabel,
+                      '+$flame',
+                      isMe,
+                    ),
                     if (streak > 0)
-                      _buildCheckinStat('Streak', '$streak 🔥', isMe),
+                      _buildCheckinStat(
+                        context.l10n.communityStreakLabel,
+                        '$streak 🔥',
+                        isMe,
+                      ),
                   ],
                 ),
                 if (widget.message.content != null &&
@@ -602,7 +630,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
             const SizedBox(width: DS.sm),
             Flexible(
               child: Text(
-                widget.message.content ?? 'Shared a task',
+                widget.message.content ?? context.l10n.communitySharedTask,
                 style: TextStyle(
                   color: isMe ? Colors.white : DS.textPrimary,
                 ),
