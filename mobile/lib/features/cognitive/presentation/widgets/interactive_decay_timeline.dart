@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// 必杀技 B: 交互式知识衰减时间线
 ///
@@ -68,7 +70,7 @@ class _InteractiveDecayTimelineState extends State<InteractiveDecayTimeline>
 
     // 触觉反馈（每10天）
     if (value % 10 == 0) {
-      HapticFeedback.selectionClick();
+      unawaited(HapticFeedback.selectionClick());
     }
 
     // 通知父组件更新预测数据
@@ -78,9 +80,9 @@ class _InteractiveDecayTimelineState extends State<InteractiveDecayTimeline>
   void _onSimulateReview() {
     if (widget.selectedNodeIds.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('请先在 Galaxy 中选择要复习的节点'),
-          duration: Duration(seconds: 2),
+        SnackBar(
+          content: Text(context.l10n.cognitiveSelectGalaxyNodes),
+          duration: const Duration(seconds: 2),
         ),
       );
       return;
@@ -91,12 +93,10 @@ class _InteractiveDecayTimelineState extends State<InteractiveDecayTimeline>
     });
 
     // 动画效果
-    _interventionController.forward().then((_) {
-      _interventionController.reverse();
-    });
+    unawaited(_playInterventionAnimation());
 
     // 触觉反馈
-    HapticFeedback.mediumImpact();
+    unawaited(HapticFeedback.mediumImpact());
 
     // 调用干预模拟
     widget.onSimulateIntervention(
@@ -105,18 +105,26 @@ class _InteractiveDecayTimelineState extends State<InteractiveDecayTimeline>
     );
 
     // 1秒后重置状态
-    Future.delayed(const Duration(seconds: 1), () {
-      if (mounted) {
-        setState(() {
-          _isSimulating = false;
-        });
-      }
-    });
+    unawaited(
+      Future.delayed(const Duration(seconds: 1), () {
+        if (mounted) {
+          setState(() {
+            _isSimulating = false;
+          });
+        }
+      }),
+    );
+  }
+
+  Future<void> _playInterventionAnimation() async {
+    await _interventionController.forward();
+    await _interventionController.reverse();
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -152,7 +160,7 @@ class _InteractiveDecayTimelineState extends State<InteractiveDecayTimeline>
               ),
               const SizedBox(width: DS.sm),
               Text(
-                '知识时光机',
+                l10n.cognitiveTimeMachine,
                 style: theme.textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
@@ -188,7 +196,7 @@ class _InteractiveDecayTimelineState extends State<InteractiveDecayTimeline>
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
-          '未来 ${_currentDays.round()} 天',
+          context.l10n.cognitiveFutureDays(_currentDays.round()),
           style: TextStyle(
             color: Theme.of(context).colorScheme.onPrimaryContainer,
             fontWeight: FontWeight.w600,
@@ -216,7 +224,7 @@ class _InteractiveDecayTimelineState extends State<InteractiveDecayTimeline>
               value: _currentDays,
               max: 90,
               divisions: 18, // 每5天一个刻度
-              label: '${_currentDays.round()} 天后',
+              label: context.l10n.cognitiveDaysLater(_currentDays.round()),
               onChanged: _onSliderChanged,
             ),
           ),
@@ -227,10 +235,10 @@ class _InteractiveDecayTimelineState extends State<InteractiveDecayTimeline>
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildTickLabel('今天', theme),
-                _buildTickLabel('30天', theme),
-                _buildTickLabel('60天', theme),
-                _buildTickLabel('90天', theme),
+                _buildTickLabel(context.l10n.cognitiveToday, theme),
+                _buildTickLabel(context.l10n.cognitiveDayTick(30), theme),
+                _buildTickLabel(context.l10n.cognitiveDayTick(60), theme),
+                _buildTickLabel(context.l10n.cognitiveDayTick(90), theme),
               ],
             ),
           ),
@@ -259,21 +267,21 @@ class _InteractiveDecayTimelineState extends State<InteractiveDecayTimeline>
         children: [
           _buildStatusItem(
             icon: Icons.wb_sunny,
-            label: '健康',
+            label: context.l10n.cognitiveHealthy,
             color: DS.success,
             description: '>60%',
             theme: theme,
           ),
           _buildStatusItem(
             icon: Icons.wb_cloudy,
-            label: '衰减中',
+            label: context.l10n.cognitiveDecaying,
             color: DS.brandPrimaryConst,
             description: '20-60%',
             theme: theme,
           ),
           _buildStatusItem(
             icon: Icons.warning_amber,
-            label: '危险',
+            label: context.l10n.cognitiveRisk,
             color: DS.error,
             description: '<20%',
             theme: theme,
@@ -331,8 +339,10 @@ class _InteractiveDecayTimelineState extends State<InteractiveDecayTimeline>
                     : const Icon(Icons.auto_fix_high),
                 label: Text(
                   _isSimulating
-                      ? '模拟中...'
-                      : '如果现在复习？ (${widget.selectedNodeIds.length} 个节点)',
+                      ? context.l10n.cognitiveSimulating
+                      : context.l10n.cognitiveReviewNow(
+                          widget.selectedNodeIds.length,
+                        ),
                   style: const TextStyle(
                     fontWeight: FontWeight.w600,
                   ),

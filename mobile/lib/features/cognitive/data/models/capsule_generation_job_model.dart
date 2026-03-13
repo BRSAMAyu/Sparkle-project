@@ -1,13 +1,14 @@
 import 'package:json_annotation/json_annotation.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 part 'capsule_generation_job_model.g.dart';
 
 /// 生成任务状态
 enum JobStatus {
-  pending('pending', '等待中', '⏳'),
-  generating('generating', '生成中', '🔄'),
-  completed('completed', '已完成', '✅'),
-  failed('failed', '失败', '❌');
+  pending('pending', 'Pending', '⏳'),
+  generating('generating', 'Generating', '🔄'),
+  completed('completed', 'Completed', '✅'),
+  failed('failed', 'Failed', '❌');
 
   const JobStatus(this.value, this.label, this.emoji);
 
@@ -23,10 +24,10 @@ enum JobStatus {
 
 /// 生成类型
 enum GenerationType {
-  daily('daily', '每日胶囊'),
-  weekly('weekly', '每周胶囊'),
-  manual('manual', '手动生成'),
-  pushTriggered('push_triggered', '推送触发');
+  daily('daily', 'Daily capsule'),
+  weekly('weekly', 'Weekly capsule'),
+  manual('manual', 'Manual'),
+  pushTriggered('push_triggered', 'Push-triggered');
 
   const GenerationType(this.value, this.label);
 
@@ -118,4 +119,32 @@ class CapsuleGenerationJobModel {
 
   /// 状态emoji
   String get statusEmoji => statusEnum.emoji;
+
+  String get statusLabel {
+    final l10n = I18nService.instance.l10n;
+    switch (statusEnum) {
+      case JobStatus.pending:
+        return l10n.capsuleJobStatusPending;
+      case JobStatus.generating:
+        return l10n.capsuleJobStatusGenerating;
+      case JobStatus.completed:
+        return l10n.capsuleJobStatusCompleted;
+      case JobStatus.failed:
+        return l10n.capsuleJobStatusFailed;
+    }
+  }
+
+  String get generationTypeLabel {
+    final l10n = I18nService.instance.l10n;
+    switch (typeEnum) {
+      case GenerationType.daily:
+        return l10n.capsuleGenerationTypeDaily;
+      case GenerationType.weekly:
+        return l10n.capsuleGenerationTypeWeekly;
+      case GenerationType.manual:
+        return l10n.capsuleGenerationTypeManual;
+      case GenerationType.pushTriggered:
+        return l10n.capsuleGenerationTypePushTriggered;
+    }
+  }
 }

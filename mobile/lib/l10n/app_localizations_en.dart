@@ -4194,4 +4194,340 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get onboardingArchitectureStep5Desc =>
       'From question to answer, the whole loop is designed to feel immediate';
+
+  @override
+  String get capsuleQualityUnrated => 'Unrated';
+
+  @override
+  String get capsuleQualityExcellent => 'Excellent';
+
+  @override
+  String get capsuleQualityGood => 'Good';
+
+  @override
+  String get capsuleQualityFair => 'Fair';
+
+  @override
+  String get capsuleQualityNeedsWork => 'Needs work';
+
+  @override
+  String get capsuleJobStatusPending => 'Pending';
+
+  @override
+  String get capsuleJobStatusGenerating => 'Generating';
+
+  @override
+  String get capsuleJobStatusCompleted => 'Completed';
+
+  @override
+  String get capsuleJobStatusFailed => 'Failed';
+
+  @override
+  String get capsuleGenerationTypeDaily => 'Daily capsule';
+
+  @override
+  String get capsuleGenerationTypeWeekly => 'Weekly capsule';
+
+  @override
+  String get capsuleGenerationTypeManual => 'Manual run';
+
+  @override
+  String get capsuleGenerationTypePushTriggered => 'Push-triggered';
+
+  @override
+  String get capsuleFeedbackTooLong => 'Too long';
+
+  @override
+  String get capsuleFeedbackTooShort => 'Too short';
+
+  @override
+  String get capsuleFeedbackJustRight => 'Just right';
+
+  @override
+  String get capsuleFeedbackTooComplex => 'Too complex';
+
+  @override
+  String get capsuleFeedbackTooSimple => 'Too simple';
+
+  @override
+  String get capsuleFeedbackIrrelevant => 'Irrelevant';
+
+  @override
+  String get capsuleFeedbackOther => 'Other';
+
+  @override
+  String get capsuleDepthShallow => 'Light';
+
+  @override
+  String get capsuleDepthMedium => 'Balanced';
+
+  @override
+  String get capsuleDepthDeep => 'Deep';
+
+  @override
+  String get cognitiveSelectGalaxyNodes =>
+      'Select the nodes you want to review in Galaxy first';
+
+  @override
+  String get cognitiveTimeMachine => 'Knowledge Time Machine';
+
+  @override
+  String cognitiveFutureDays(int count) {
+    return 'Next $count days';
+  }
+
+  @override
+  String cognitiveDaysLater(int count) {
+    return 'In $count days';
+  }
+
+  @override
+  String get cognitiveToday => 'Today';
+
+  @override
+  String cognitiveDayTick(int count) {
+    return '${count}d';
+  }
+
+  @override
+  String get cognitiveHealthy => 'Healthy';
+
+  @override
+  String get cognitiveDecaying => 'Decaying';
+
+  @override
+  String get cognitiveRisk => 'At risk';
+
+  @override
+  String get cognitiveSimulating => 'Simulating...';
+
+  @override
+  String cognitiveReviewNow(int count) {
+    return 'Review now? ($count nodes)';
+  }
+
+  @override
+  String get prismCognitivePatterns => 'Cognitive patterns';
+
+  @override
+  String get prismEmotionalPatterns => 'Emotional patterns';
+
+  @override
+  String get prismExecutionPatterns => 'Execution patterns';
+
+  @override
+  String get prismTitle => 'Cognitive Prism';
+
+  @override
+  String get prismNoData => 'No behavior pattern data yet';
+
+  @override
+  String get prismHint =>
+      'Keep learning and reflecting. The prism will build a clearer picture of your study patterns over time.';
+
+  @override
+  String prismTotalPatterns(int count) {
+    return '$count patterns';
+  }
+
+  @override
+  String get capsuleScreenTitle => 'Curiosity Capsules';
+
+  @override
+  String capsuleCurrentTab(int count) {
+    return 'Current $count';
+  }
+
+  @override
+  String capsuleArchiveTab(int count) {
+    return 'Archive $count';
+  }
+
+  @override
+  String get capsuleArchiveEmpty => 'No archived capsules yet';
+
+  @override
+  String get capsuleEmptyTitle => 'No new curiosity capsule today';
+
+  @override
+  String get capsuleEmptySubtitle =>
+      'Keep learning and new ideas will keep showing up.';
+
+  @override
+  String get capsuleGenerationPreviewTitle => 'Generation preview';
+
+  @override
+  String get capsuleGenerationPreviewCountLabel => 'Estimated output';
+
+  @override
+  String capsuleGenerationPreviewCount(int count) {
+    return '$count capsules';
+  }
+
+  @override
+  String get capsuleGenerationPreviewDepthLabel => 'Depth';
+
+  @override
+  String get capsuleGenerationPreviewModelLabel => 'Model';
+
+  @override
+  String get patternCardSolutionLabel => 'Breakout idea';
+
+  @override
+  String patternCardCreatedAt(String date) {
+    return 'Created on $date';
+  }
+
+  @override
+  String get capsuleDetailTitle => 'Capsule Details';
+
+  @override
+  String get capsuleMissing => 'Capsule not found';
+
+  @override
+  String capsuleLoadFailed(String error) {
+    return 'Failed to load: $error';
+  }
+
+  @override
+  String capsuleQualityLabel(String rating) {
+    return 'Quality: $rating';
+  }
+
+  @override
+  String capsuleFeedbackCount(int count) {
+    return '$count feedback';
+  }
+
+  @override
+  String capsuleShareCount(int count) {
+    return '$count shares';
+  }
+
+  @override
+  String get capsuleSubmitFeedback => 'Send feedback';
+
+  @override
+  String get capsuleShare => 'Share capsule';
+
+  @override
+  String get capsuleCopyLink => 'Copy link';
+
+  @override
+  String get capsuleShareToGroup => 'Share to group';
+
+  @override
+  String get capsuleRateFirst => 'Please rate it first';
+
+  @override
+  String get capsuleFeedbackThanks => 'Thanks for the feedback';
+
+  @override
+  String capsuleSubmitFailed(String error) {
+    return 'Submit failed: $error';
+  }
+
+  @override
+  String get capsuleFeedbackQuestion => 'Was this capsule helpful?';
+
+  @override
+  String get capsuleFeedbackHint => 'Add a note if you want';
+
+  @override
+  String get capsuleSubmit => 'Submit';
+
+  @override
+  String get capsuleJobsTitle => 'Generation Jobs';
+
+  @override
+  String get capsuleNoJobs => 'No generation jobs yet';
+
+  @override
+  String get capsuleNoJobsSubtitle =>
+      'Adjust your preferences in Settings and generate capsules there.';
+
+  @override
+  String capsuleGeneratingProgress(int progress) {
+    return 'Generating... $progress%';
+  }
+
+  @override
+  String capsuleDepthPercent(int percent) {
+    return 'Depth: $percent%';
+  }
+
+  @override
+  String capsuleCuriosityPercent(int percent) {
+    return 'Curiosity: $percent%';
+  }
+
+  @override
+  String capsuleRequestedCount(int count) {
+    return 'Requested: $count';
+  }
+
+  @override
+  String capsuleActualCount(int count) {
+    return 'Generated: $count';
+  }
+
+  @override
+  String capsuleChipLabel(String id) {
+    return 'Capsule $id';
+  }
+
+  @override
+  String get commonRetry => 'Retry';
+
+  @override
+  String get capsuleViewCapsules => 'View capsules';
+
+  @override
+  String get capsuleNewDiscovery => 'New discovery';
+
+  @override
+  String get capsuleRestoreCurrent => 'Move back to current';
+
+  @override
+  String get capsuleArchiveAction => 'Archive this capsule';
+
+  @override
+  String get capsuleRestored => 'Moved back to your current list';
+
+  @override
+  String get capsuleArchivedInfo =>
+      'Archived. You can find it later in History.';
+
+  @override
+  String get patternListTitle => 'Cognitive Prism';
+
+  @override
+  String get patternListEmptyTitle => 'No real behavior patterns yet';
+
+  @override
+  String get patternListEmptySubtitle =>
+      'Keep logging thoughts and reviewing your work. This space will turn those signals into meaningful patterns.';
+
+  @override
+  String get patternArchived => 'Resolved';
+
+  @override
+  String get patternTakeAction => 'Act on it';
+
+  @override
+  String patternDiscoveredOn(String date) {
+    return 'Discovered on $date';
+  }
+
+  @override
+  String get patternTypeCognitive => 'Cognitive bias';
+
+  @override
+  String get patternTypeEmotional => 'Emotional pattern';
+
+  @override
+  String get patternTypeExecution => 'Execution habit';
+
+  @override
+  String get patternTypeDefault => 'Behavior pattern';
 }

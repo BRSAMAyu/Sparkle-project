@@ -15,6 +15,7 @@ import 'package:sparkle/core/offline/sync_center_provider.dart';
 import 'package:sparkle/core/offline/sync_engine.dart';
 import 'package:sparkle/core/services/websocket_service.dart';
 import 'package:sparkle/features/user/presentation/screens/sync_center_screen.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -76,6 +77,9 @@ void main() {
           ),
         ],
         child: const MaterialApp(
+          locale: Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: SyncCenterScreen(),
         ),
       ),
@@ -83,10 +87,10 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('待同步总数: 3'), findsOneWidget);
+    expect(find.text('待同步总数：3'), findsOneWidget);
     expect(find.text('认知碎片'), findsOneWidget);
     expect(find.text('知识图谱'), findsOneWidget);
-    expect(find.text('Retry failed'), findsOneWidget);
+    expect(find.text('重试失败项'), findsOneWidget);
 
     await streamController.close();
     await itemsController.close();

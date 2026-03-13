@@ -1,10 +1,13 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/services/demo_data_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/cognitive/data/models/behavior_pattern_model.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/cognitive_provider.dart';
 
@@ -26,7 +29,7 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
     // 🔧 Riverpod修复：使用addPostFrameCallback在widget构建完成后加载数据
     // 避免在build过程中修改provider状态
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadPatterns();
+      unawaited(_loadPatterns());
     });
   }
 
@@ -81,11 +84,10 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
               onPressed: () => context.pop(),
               icon: const Icon(Icons.arrow_back_ios_rounded),
               variant: ButtonVariant.ghost,
-              size: DS.touchTargetMinSize,
             ),
             Expanded(
               child: Text(
-                '认知棱镜',
+                context.l10n.patternListTitle,
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -130,7 +132,7 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
             ),
             const SizedBox(height: DS.xl),
             Text(
-              '还没有生成真实行为定式',
+              context.l10n.patternListEmptyTitle,
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -139,7 +141,7 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
             ),
             const SizedBox(height: DS.sm),
             Text(
-              '继续记录想法和复盘后，这里会自动生成真实洞察。\n先看下面的示例卡，页面结构不会再是空白。',
+              context.l10n.patternListEmptySubtitle,
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
@@ -147,13 +149,6 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
                 height: 1.5,
               ),
             ),
-            const SizedBox(height: DS.spacing24),
-            ...DemoDataService().demoBehaviorPatterns.take(2).map(
-                  (pattern) => Padding(
-                    padding: const EdgeInsets.only(bottom: DS.spacing16),
-                    child: _PatternCard(pattern: pattern),
-                  ),
-                ),
           ],
         ),
       );
@@ -239,7 +234,7 @@ class _PatternCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          '已克服',
+                          context.l10n.patternArchived,
                           style: TextStyle(
                             fontSize: 10,
                             color: DS.success,
@@ -303,10 +298,10 @@ class _PatternCard extends StatelessWidget {
                   Align(
                     alignment: Alignment.centerRight,
                     child: SparkleButton.ghost(
-                      label: '立即行动',
+                      label: context.l10n.patternTakeAction,
                       onPressed: () {
                         // Smart routing based on pattern type could be added here
-                        context.push('/focus');
+                        unawaited(context.push('/focus'));
                       },
                       icon: const Icon(Icons.arrow_forward),
                     ),
@@ -316,7 +311,9 @@ class _PatternCard extends StatelessWidget {
                 // Date
                 const SizedBox(height: DS.md),
                 Text(
-                  '发现于 ${_formatDate(pattern.createdAt)}',
+                  context.l10n.patternDiscoveredOn(
+                    Formatters.formatDateShort(pattern.createdAt),
+                  ),
                   style: TextStyle(
                     fontSize: 11,
                     color: DS.brandPrimary.withAlpha(100),
@@ -357,15 +354,13 @@ class _PatternCard extends StatelessWidget {
   String _getTypeLabel(String type) {
     switch (type) {
       case 'cognitive':
-        return '认知偏差';
+        return I18nService.instance.l10n.patternTypeCognitive;
       case 'emotional':
-        return '情绪模式';
+        return I18nService.instance.l10n.patternTypeEmotional;
       case 'execution':
-        return '执行习惯';
+        return I18nService.instance.l10n.patternTypeExecution;
       default:
-        return '行为模式';
+        return I18nService.instance.l10n.patternTypeDefault;
     }
   }
-
-  String _formatDate(DateTime date) => '${date.month}月${date.day}日';
 }

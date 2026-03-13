@@ -1438,5 +1438,248 @@
   "onboardingArchitectureStep4Title": "数据存储",
   "onboardingArchitectureStep4Desc": "PostgreSQL + pgvector\n向量检索 + 图谱存储",
   "onboardingArchitectureStep5Title": "完整链路",
-  "onboardingArchitectureStep5Desc": "从提问到回答\n毫秒级响应体验"
+  "onboardingArchitectureStep5Desc": "从提问到回答\n毫秒级响应体验",
+  "capsuleQualityUnrated": "未评级",
+  "capsuleQualityExcellent": "优秀",
+  "capsuleQualityGood": "良好",
+  "capsuleQualityFair": "一般",
+  "capsuleQualityNeedsWork": "待改进",
+  "capsuleJobStatusPending": "等待中",
+  "capsuleJobStatusGenerating": "生成中",
+  "capsuleJobStatusCompleted": "已完成",
+  "capsuleJobStatusFailed": "失败",
+  "capsuleGenerationTypeDaily": "每日胶囊",
+  "capsuleGenerationTypeWeekly": "每周胶囊",
+  "capsuleGenerationTypeManual": "手动生成",
+  "capsuleGenerationTypePushTriggered": "推送触发",
+  "capsuleFeedbackTooLong": "太长了",
+  "capsuleFeedbackTooShort": "太短了",
+  "capsuleFeedbackJustRight": "刚刚好",
+  "capsuleFeedbackTooComplex": "太复杂",
+  "capsuleFeedbackTooSimple": "太简单",
+  "capsuleFeedbackIrrelevant": "不相关",
+  "capsuleFeedbackOther": "其他",
+  "capsuleDepthShallow": "浅度",
+  "capsuleDepthMedium": "中度",
+  "capsuleDepthDeep": "深度",
+  "cognitiveSelectGalaxyNodes": "请先在 Galaxy 中选择要复习的节点",
+  "cognitiveTimeMachine": "知识时光机",
+  "cognitiveFutureDays": "未来 {count} 天",
+  "@cognitiveFutureDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cognitiveDaysLater": "{count} 天后",
+  "@cognitiveDaysLater": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cognitiveToday": "今天",
+  "cognitiveDayTick": "{count}天",
+  "@cognitiveDayTick": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cognitiveHealthy": "健康",
+  "cognitiveDecaying": "衰减中",
+  "cognitiveRisk": "危险",
+  "cognitiveSimulating": "模拟中...",
+  "cognitiveReviewNow": "如果现在复习？（{count} 个节点）",
+  "@cognitiveReviewNow": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "prismCognitivePatterns": "认知模式",
+  "prismEmotionalPatterns": "情绪模式",
+  "prismExecutionPatterns": "执行模式",
+  "prismTitle": "认知棱镜",
+  "prismNoData": "暂无行为模式数据",
+  "prismHint": "继续学习和复盘后，认知棱镜会越来越准确地识别你的学习模式。",
+  "prismTotalPatterns": "共 {count} 个模式",
+  "@prismTotalPatterns": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "capsuleScreenTitle": "好奇心胶囊",
+  "capsuleCurrentTab": "当前胶囊 {count}",
+  "@capsuleCurrentTab": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "capsuleArchiveTab": "历史归档 {count}",
+  "@capsuleArchiveTab": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "capsuleArchiveEmpty": "还没有归档胶囊",
+  "capsuleEmptyTitle": "今天还没有新的好奇心胶囊",
+  "capsuleEmptySubtitle": "继续学习，激发更多灵感吧！",
+  "capsuleGenerationPreviewTitle": "生成预览",
+  "capsuleGenerationPreviewCountLabel": "预计生成",
+  "capsuleGenerationPreviewCount": "{count} 个胶囊",
+  "@capsuleGenerationPreviewCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "capsuleGenerationPreviewDepthLabel": "深度级别",
+  "capsuleGenerationPreviewModelLabel": "使用模型",
+  "patternCardSolutionLabel": "破解咒语",
+  "patternCardCreatedAt": "创建于：{date}",
+  "@patternCardCreatedAt": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "capsuleDetailTitle": "胶囊详情",
+  "capsuleMissing": "胶囊不存在",
+  "capsuleLoadFailed": "加载失败：{error}",
+  "@capsuleLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "capsuleQualityLabel": "质量评分：{rating}",
+  "@capsuleQualityLabel": {
+    "placeholders": {
+      "rating": {
+        "type": "String"
+      }
+    }
+  },
+  "capsuleFeedbackCount": "{count} 反馈",
+  "@capsuleFeedbackCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "capsuleShareCount": "{count} 分享",
+  "@capsuleShareCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "capsuleSubmitFeedback": "提交反馈",
+  "capsuleShare": "分享胶囊",
+  "capsuleCopyLink": "复制链接",
+  "capsuleShareToGroup": "分享到群组",
+  "capsuleRateFirst": "请先评分",
+  "capsuleFeedbackThanks": "感谢你的反馈",
+  "capsuleSubmitFailed": "提交失败：{error}",
+  "@capsuleSubmitFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "capsuleFeedbackQuestion": "这个胶囊对你有帮助吗？",
+  "capsuleFeedbackHint": "说说你的想法（可选）",
+  "capsuleSubmit": "提交",
+  "capsuleJobsTitle": "生成任务",
+  "capsuleNoJobs": "还没有生成任务",
+  "capsuleNoJobsSubtitle": "在设置页面调整偏好并生成胶囊",
+  "capsuleGeneratingProgress": "生成中... {progress}%",
+  "@capsuleGeneratingProgress": {
+    "placeholders": {
+      "progress": {
+        "type": "int"
+      }
+    }
+  },
+  "capsuleDepthPercent": "深度：{percent}%",
+  "@capsuleDepthPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "capsuleCuriosityPercent": "好奇：{percent}%",
+  "@capsuleCuriosityPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "capsuleRequestedCount": "请求数量：{count}",
+  "@capsuleRequestedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "capsuleActualCount": "实际数量：{count}",
+  "@capsuleActualCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "capsuleChipLabel": "胶囊 {id}",
+  "@capsuleChipLabel": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "commonRetry": "重试",
+  "capsuleViewCapsules": "查看胶囊",
+  "capsuleNewDiscovery": "新发现",
+  "capsuleRestoreCurrent": "恢复到当前列表",
+  "capsuleArchiveAction": "归档这条胶囊",
+  "capsuleRestored": "已恢复到当前列表",
+  "capsuleArchivedInfo": "已归档，可在历史中查看",
+  "patternListTitle": "认知棱镜",
+  "patternListEmptyTitle": "还没有生成真实行为定式",
+  "patternListEmptySubtitle": "继续记录想法和复盘后，这里会把这些信号整理成真正有用的行为模式。",
+  "patternArchived": "已克服",
+  "patternTakeAction": "立即行动",
+  "patternDiscoveredOn": "发现于 {date}",
+  "@patternDiscoveredOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "patternTypeCognitive": "认知偏差",
+  "patternTypeEmotional": "情绪模式",
+  "patternTypeExecution": "执行习惯",
+  "patternTypeDefault": "行为模式"
 }

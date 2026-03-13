@@ -1,4 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 part 'capsule_stats_model.g.dart';
 
@@ -42,5 +43,6 @@ class CapsuleStatsModel {
 
   /// 平均评分显示
   String get averageRatingDisplay =>
-      averageRatingGiven?.toStringAsFixed(1) ?? '暂无';
+      averageRatingGiven?.toStringAsFixed(1) ??
+      I18nService.instance.l10n.commonNoData;
 }

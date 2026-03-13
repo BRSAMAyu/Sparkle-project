@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/cognitive/data/models/curiosity_capsule_model.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/capsule_provider.dart';
 
@@ -31,11 +35,13 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
   void initState() {
     super.initState();
     // Load capsule detail
-    Future.microtask(() {
-      ref
-          .read(capsuleDetailProvider(widget.capsuleId).notifier)
-          .fetchDetail(widget.capsuleId);
-    });
+    unawaited(
+      Future.microtask(
+        () => ref
+            .read(capsuleDetailProvider(widget.capsuleId).notifier)
+            .fetchDetail(widget.capsuleId),
+      ),
+    );
   }
 
   @override
@@ -47,6 +53,7 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final detailState = ref.watch(capsuleDetailProvider(widget.capsuleId));
+    final l10n = context.l10n;
 
     return Scaffold(
       appBar: AppBar(
@@ -54,9 +61,8 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
           variant: ButtonVariant.ghost,
-          size: DS.touchTargetMinSize,
         ),
-        title: const Text('胶囊详情'),
+        title: Text(l10n.capsuleDetailTitle),
         backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
         elevation: 0,
         actions: [
@@ -71,7 +77,6 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
                   variant: capsule?.isFavorite ?? false
                       ? ButtonVariant.destructive
                       : ButtonVariant.ghost,
-                  size: DS.touchTargetMinSize,
                 ),
               ) ??
               const SizedBox.shrink(),
@@ -81,12 +86,13 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
         child: detailState.when(
           data: (capsule) {
             if (capsule == null) {
-              return const Center(child: Text('胶囊不存在'));
+              return Center(child: Text(l10n.capsuleMissing));
             }
             return _buildContent(capsule);
           },
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, stack) => Center(child: Text('加载失败: $err')),
+          error: (err, stack) =>
+              Center(child: Text(l10n.capsuleLoadFailed('$err'))),
         ),
       ),
     );
@@ -94,6 +100,7 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
 
   Widget _buildContent(CuriosityCapsuleModel capsule) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = context.l10n;
 
     return SingleChildScrollView(
       padding: EdgeInsets.zero,
@@ -121,7 +128,7 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
                   Text(capsule.depthEmoji),
                   const SizedBox(width: DS.sm),
                   Text(
-                    capsule.depthLevelEnum.label,
+                    capsule.depthLabel,
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       color: isDark ? DS.textPrimary : DS.textPrimary,
@@ -146,20 +153,29 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
           Row(
             children: [
               if (capsule.generationMethod != null) ...[
-                Icon(Icons.psychology_outlined,
-                    size: 14, color: DS.textSecondary),
+                Icon(
+                  Icons.psychology_outlined,
+                  size: 14,
+                  color: DS.textSecondary,
+                ),
                 const SizedBox(width: 4),
                 Text(
                   capsule.generationMethod!,
-                  style: TextStyle(fontSize: 12, color: DS.textSecondary),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: DS.textSecondary,
+                  ),
                 ),
                 const SizedBox(width: DS.spacing16),
               ],
-              Icon(Icons.calendar_today_outlined,
-                  size: 14, color: DS.textSecondary),
+              Icon(
+                Icons.calendar_today_outlined,
+                size: 14,
+                color: DS.textSecondary,
+              ),
               const SizedBox(width: 4),
               Text(
-                _formatDate(capsule.createdAt),
+                Formatters.formatRelativeTime(capsule.createdAt),
                 style: TextStyle(fontSize: 12, color: DS.textSecondary),
               ),
             ],
@@ -171,14 +187,16 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
             data: capsule.content,
             styleSheet: MarkdownStyleSheet(
               p: TextStyle(
-                  fontSize: 16,
-                  color: isDark ? DS.textPrimary : DS.textPrimary),
+                fontSize: 16,
+                color: isDark ? DS.textPrimary : DS.textPrimary,
+              ),
               h1: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               h2: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               h3: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               strong: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? DS.textPrimary : DS.textPrimary),
+                fontWeight: FontWeight.bold,
+                color: isDark ? DS.textPrimary : DS.textPrimary,
+              ),
               blockquote: TextStyle(
                 color: isDark ? DS.textSecondary : DS.textSecondary,
                 fontStyle: FontStyle.italic,
@@ -214,7 +232,7 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
             Row(
               children: [
                 Text(
-                  '质量评分: ${capsule.qualityRating}',
+                  l10n.capsuleQualityLabel(capsule.qualityRating),
                   style: TextStyle(
                     fontSize: 14,
                     color: DS.textSecondary,
@@ -241,13 +259,17 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
             children: [
               Icon(Icons.favorite_border, size: 16, color: DS.textSecondary),
               const SizedBox(width: 4),
-              Text('${capsule.feedbackCount} 反馈',
-                  style: TextStyle(fontSize: 12, color: DS.textSecondary)),
+              Text(
+                l10n.capsuleFeedbackCount(capsule.feedbackCount),
+                style: TextStyle(fontSize: 12, color: DS.textSecondary),
+              ),
               const SizedBox(width: DS.spacing16),
               Icon(Icons.share_outlined, size: 16, color: DS.textSecondary),
               const SizedBox(width: 4),
-              Text('${capsule.shareCount} 分享',
-                  style: TextStyle(fontSize: 12, color: DS.textSecondary)),
+              Text(
+                l10n.capsuleShareCount(capsule.shareCount),
+                style: TextStyle(fontSize: 12, color: DS.textSecondary),
+              ),
             ],
           ),
           const SizedBox(height: DS.spacing32),
@@ -258,7 +280,7 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
             child: OutlinedButton.icon(
               onPressed: () => _showFeedbackSheet(capsule),
               icon: const Icon(Icons.rate_review_outlined),
-              label: const Text('提交反馈'),
+              label: Text(l10n.capsuleSubmitFeedback),
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: DS.spacing16),
                 side: BorderSide(color: DS.primaryBase),
@@ -273,7 +295,7 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
             child: OutlinedButton.icon(
               onPressed: () => _showShareSheet(capsule),
               icon: const Icon(Icons.share_outlined),
-              label: const Text('分享胶囊'),
+              label: Text(l10n.capsuleShare),
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: DS.spacing16),
               ),
@@ -284,65 +306,54 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
     );
   }
 
-  String _formatDate(DateTime date) {
-    final now = DateTime.now();
-    final diff = now.difference(date);
-
-    if (diff.inDays == 0) {
-      return '今天';
-    } else if (diff.inDays == 1) {
-      return '昨天';
-    } else if (diff.inDays < 7) {
-      return '${diff.inDays} 天前';
-    } else {
-      return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-    }
-  }
-
   void _toggleFavorite(CuriosityCapsuleModel? capsule) {
     if (capsule == null) return;
-    ref.read(capsuleProvider.notifier).toggleFavorite(capsule.id);
+    unawaited(ref.read(capsuleProvider.notifier).toggleFavorite(capsule.id));
   }
 
   void _showFeedbackSheet(CuriosityCapsuleModel capsule) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => _FeedbackBottomSheet(
-        capsule: capsule,
-        ratingController: _feedbackCommentController,
-        selectedRating: _selectedRating,
-        isSubmitting: _isSubmitting,
-        onRatingChanged: (rating) => setState(() => _selectedRating = rating),
-        onSubmit: () => _submitFeedback(capsule),
+    unawaited(
+      showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        builder: (context) => _FeedbackBottomSheet(
+          capsule: capsule,
+          ratingController: _feedbackCommentController,
+          selectedRating: _selectedRating,
+          isSubmitting: _isSubmitting,
+          onRatingChanged: (rating) => setState(() => _selectedRating = rating),
+          onSubmit: () => _submitFeedback(capsule),
+        ),
       ),
     );
   }
 
   void _showShareSheet(CuriosityCapsuleModel capsule) {
-    showModalBottomSheet<void>(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.link),
-              title: const Text('复制链接'),
-              onTap: () {
-                // TODO: 实现复制链接
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.group_outlined),
-              title: const Text('分享到群组'),
-              onTap: () {
-                // TODO: 实现分享到群组
-                Navigator.pop(context);
-              },
-            ),
-          ],
+    unawaited(
+      showModalBottomSheet<void>(
+        context: context,
+        builder: (context) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.link),
+                title: Text(context.l10n.capsuleCopyLink),
+                onTap: () {
+                  // TODO: 实现复制链接
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.group_outlined),
+                title: Text(context.l10n.capsuleShareToGroup),
+                onTap: () {
+                  // TODO: 实现分享到群组
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -350,7 +361,7 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
 
   Future<void> _submitFeedback(CuriosityCapsuleModel capsule) async {
     if (_selectedRating == null) {
-      AppFeedback.info(context, '请先评分');
+      AppFeedback.info(context, context.l10n.capsuleRateFirst);
       return;
     }
 
@@ -369,11 +380,11 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
 
       if (mounted) {
         Navigator.pop(context);
-        AppFeedback.success(context, '感谢您的反馈！');
+        AppFeedback.success(context, context.l10n.capsuleFeedbackThanks);
       }
     } catch (e) {
       if (mounted) {
-        AppFeedback.error(context, '提交失败: $e');
+        AppFeedback.error(context, context.l10n.capsuleSubmitFailed('$e'));
       }
     } finally {
       if (mounted) {
@@ -403,6 +414,7 @@ class _FeedbackBottomSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = context.l10n;
 
     return Padding(
       padding: EdgeInsets.only(
@@ -418,9 +430,9 @@ class _FeedbackBottomSheet extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                '提交反馈',
-                style: TextStyle(
+              Text(
+                l10n.capsuleSubmitFeedback,
+                style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
@@ -429,7 +441,6 @@ class _FeedbackBottomSheet extends StatelessWidget {
                 icon: const Icon(Icons.close),
                 onPressed: () => Navigator.pop(context),
                 variant: ButtonVariant.ghost,
-                size: DS.touchTargetMinSize,
               ),
             ],
           ),
@@ -437,7 +448,7 @@ class _FeedbackBottomSheet extends StatelessWidget {
 
           // 评分
           Text(
-            '这个胶囊对你有帮助吗？',
+            l10n.capsuleFeedbackQuestion,
             style: TextStyle(fontSize: 14, color: DS.textSecondary),
           ),
           const SizedBox(height: DS.spacing8),
@@ -468,7 +479,7 @@ class _FeedbackBottomSheet extends StatelessWidget {
             controller: ratingController,
             maxLines: 3,
             decoration: InputDecoration(
-              hintText: '说说你的想法（可选）',
+              hintText: l10n.capsuleFeedbackHint,
               border: const OutlineInputBorder(
                 borderRadius: DS.borderRadius8,
               ),
@@ -482,9 +493,8 @@ class _FeedbackBottomSheet extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: SparkleButton(
-              label: '提交',
+              label: l10n.capsuleSubmit,
               onPressed: onSubmit,
-              variant: ButtonVariant.primary,
               loading: isSubmitting,
               disabled: isSubmitting,
               expand: true,

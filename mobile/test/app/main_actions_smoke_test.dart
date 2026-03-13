@@ -145,7 +145,7 @@ void main() {
       await tester.enterText(find.byType(TextField).at(0), '联调昵称');
       await tester.enterText(
           find.byType(TextField).at(1), 'integration@example.com');
-      await tester.tap(find.text('保存'));
+      await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();
 
       expect(authNotifier.lastProfileUpdate, isNotNull);
@@ -292,7 +292,7 @@ void main() {
       await tester.enterText(find.byType(TextField).at(0), '联调日程');
       await tester.enterText(find.byType(TextField).at(1), 'Sparkle HQ');
       await tester.enterText(find.byType(TextField).at(2), '验证日历保存链路');
-      await tester.tap(find.text('保存'));
+      await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();
 
       expect(repository.addedEvents, hasLength(1));

@@ -72,61 +72,78 @@ class _SyncCenterScreenState extends ConsumerState<SyncCenterScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                GraphiteCardSurface(
-                  surfaceRole: SparkleSurfaceRole.card,
-                  child: statsAsync.when(
-                    data: (stats) => _StatsView(stats: stats),
-                    loading: () =>
-                        const Center(child: CircularProgressIndicator()),
-                    error: (error, stackTrace) => Text(
-                      context.l10n.syncCenterLoadFailed(error.toString()),
+                Flexible(
+                  fit: FlexFit.loose,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        GraphiteCardSurface(
+                          surfaceRole: SparkleSurfaceRole.card,
+                          child: statsAsync.when(
+                            data: (stats) => _StatsView(stats: stats),
+                            loading: () =>
+                                const Center(child: CircularProgressIndicator()),
+                            error: (error, stackTrace) => Text(
+                              context.l10n.syncCenterLoadFailed(
+                                error.toString(),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: DS.spacing16),
+                        GraphiteCardSurface(
+                          surfaceRole: SparkleSurfaceRole.card,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _TopicFilter(
+                                value: _topicFilter,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _topicFilter = value;
+                                  });
+                                },
+                              ),
+                              const SizedBox(height: DS.spacing8),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: SparkleButton.ghost(
+                                  onPressed: () async {
+                                    final diagnostics =
+                                        await service.buildDiagnostics();
+                                    await Clipboard.setData(
+                                      ClipboardData(text: diagnostics),
+                                    );
+                                    if (context.mounted) {
+                                      AppFeedback.success(
+                                        context,
+                                        context.l10n.syncCenterDiagnosticsCopied,
+                                      );
+                                    }
+                                  },
+                                  icon: const Icon(Icons.copy),
+                                  label:
+                                      context.l10n.syncCenterCopyDiagnostics,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: DS.spacing8),
+                        Text(
+                          context.l10n.syncCenterDisplayLimit(200),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: DS.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: DS.spacing8),
+                      ],
                     ),
                   ),
                 ),
-                const SizedBox(height: DS.spacing16),
-                GraphiteCardSurface(
-                  surfaceRole: SparkleSurfaceRole.card,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _TopicFilter(
-                        value: _topicFilter,
-                        onChanged: (value) {
-                          setState(() {
-                            _topicFilter = value;
-                          });
-                        },
-                      ),
-                      const SizedBox(height: DS.spacing8),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: SparkleButton.ghost(
-                          onPressed: () async {
-                            final diagnostics =
-                                await service.buildDiagnostics();
-                            await Clipboard.setData(
-                              ClipboardData(text: diagnostics),
-                            );
-                            if (context.mounted) {
-                              AppFeedback.success(
-                                context,
-                                context.l10n.syncCenterDiagnosticsCopied,
-                              );
-                            }
-                          },
-                          icon: const Icon(Icons.copy),
-                          label: context.l10n.syncCenterCopyDiagnostics,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: DS.spacing8),
-                Text(
-                  context.l10n.syncCenterDisplayLimit(200),
-                  style: TextStyle(fontSize: 12, color: DS.textSecondary),
-                ),
-                const SizedBox(height: DS.spacing8),
                 Expanded(
                   child: TabBarView(
                     children: [

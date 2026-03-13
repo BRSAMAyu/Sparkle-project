@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/cognitive/data/models/curiosity_capsule_model.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/capsule_archive_provider.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/capsule_provider.dart';
@@ -86,7 +89,7 @@ class CuriosityCapsuleCard extends ConsumerWidget {
             subtitle: capsule.isRead
                 ? null
                 : Text(
-                    'New Discovery',
+                    context.l10n.capsuleNewDiscovery,
                     style: context.sparkleTypography.labelSmall.copyWith(
                       color: context.sparkleColors.brandPrimary,
                       fontWeight: FontWeight.bold,
@@ -95,7 +98,9 @@ class CuriosityCapsuleCard extends ConsumerWidget {
 
             onExpansionChanged: (expanded) {
               if (expanded && !capsule.isRead) {
-                ref.read(capsuleProvider.notifier).markAsRead(capsule.id);
+                unawaited(
+                  ref.read(capsuleProvider.notifier).markAsRead(capsule.id),
+                );
               }
             },
 
@@ -135,7 +140,9 @@ class CuriosityCapsuleCard extends ConsumerWidget {
                     Align(
                       alignment: Alignment.centerRight,
                       child: SparkleButton(
-                        label: archived ? '恢复到当前列表' : '归档这条胶囊',
+                        label: archived
+                            ? context.l10n.capsuleRestoreCurrent
+                            : context.l10n.capsuleArchiveAction,
                         variant: ButtonVariant.ghost,
                         onPressed: () {
                           ref
@@ -143,7 +150,9 @@ class CuriosityCapsuleCard extends ConsumerWidget {
                               .toggleArchive(capsule.id);
                           AppFeedback.info(
                             context,
-                            archived ? '已恢复到当前列表' : '已归档，可在历史中查看',
+                            archived
+                                ? context.l10n.capsuleRestored
+                                : context.l10n.capsuleArchivedInfo,
                           );
                         },
                         icon: Icon(

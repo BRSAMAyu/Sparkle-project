@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// 胶囊生成预览卡片
 ///
@@ -18,13 +19,13 @@ class CapsuleGenerationPreview extends StatelessWidget {
   final double curiosityPreference;
 
   /// 根据深度偏好获取深度级别
-  (String label, String emoji, String model) get _depthLevel {
+  (String Function(BuildContext) label, String emoji, String model) get _depthLevel {
     if (depthPreference < 0.3) {
-      return ('浅度', '⚡', 'MIMO');
+      return ((context) => context.l10n.capsuleDepthShallow, '⚡', 'MIMO');
     } else if (depthPreference < 0.7) {
-      return ('中度', '💡', 'GLM-4.7');
+      return ((context) => context.l10n.capsuleDepthMedium, '💡', 'GLM-4.7');
     } else {
-      return ('深度', '🔬', 'DeepSeek R1');
+      return ((context) => context.l10n.capsuleDepthDeep, '🔬', 'DeepSeek R1');
     }
   }
 
@@ -42,7 +43,8 @@ class CapsuleGenerationPreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final (depthLabel, depthEmoji, modelName) = _depthLevel;
+    final (depthLabelBuilder, depthEmoji, modelName) = _depthLevel;
+    final depthLabel = depthLabelBuilder(context);
     final expectedCount = _expectedCount;
 
     return Container(
@@ -67,7 +69,7 @@ class CapsuleGenerationPreview extends StatelessWidget {
               ),
               const SizedBox(width: DS.sm),
               Text(
-                '生成预览',
+                context.l10n.capsuleGenerationPreviewTitle,
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -82,8 +84,8 @@ class CapsuleGenerationPreview extends StatelessWidget {
           _buildPreviewRow(
             context,
             icon: Icons.library_books_outlined,
-            label: '预计生成',
-            value: '$expectedCount 个胶囊',
+            label: context.l10n.capsuleGenerationPreviewCountLabel,
+            value: context.l10n.capsuleGenerationPreviewCount(expectedCount),
             color: DS.info,
           ),
           const SizedBox(height: DS.md),
@@ -92,7 +94,7 @@ class CapsuleGenerationPreview extends StatelessWidget {
           _buildPreviewRow(
             context,
             icon: Icons.timeline_outlined,
-            label: '深度级别',
+            label: context.l10n.capsuleGenerationPreviewDepthLabel,
             value: '$depthEmoji $depthLabel',
             color: DS.warning,
           ),
@@ -102,7 +104,7 @@ class CapsuleGenerationPreview extends StatelessWidget {
           _buildPreviewRow(
             context,
             icon: Icons.psychology_outlined,
-            label: '使用模型',
+            label: context.l10n.capsuleGenerationPreviewModelLabel,
             value: modelName,
             color: DS.success,
           ),

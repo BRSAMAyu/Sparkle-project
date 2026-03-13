@@ -4003,4 +4003,334 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get onboardingArchitectureStep5Desc => '从提问到回答\n毫秒级响应体验';
+
+  @override
+  String get capsuleQualityUnrated => '未评级';
+
+  @override
+  String get capsuleQualityExcellent => '优秀';
+
+  @override
+  String get capsuleQualityGood => '良好';
+
+  @override
+  String get capsuleQualityFair => '一般';
+
+  @override
+  String get capsuleQualityNeedsWork => '待改进';
+
+  @override
+  String get capsuleJobStatusPending => '等待中';
+
+  @override
+  String get capsuleJobStatusGenerating => '生成中';
+
+  @override
+  String get capsuleJobStatusCompleted => '已完成';
+
+  @override
+  String get capsuleJobStatusFailed => '失败';
+
+  @override
+  String get capsuleGenerationTypeDaily => '每日胶囊';
+
+  @override
+  String get capsuleGenerationTypeWeekly => '每周胶囊';
+
+  @override
+  String get capsuleGenerationTypeManual => '手动生成';
+
+  @override
+  String get capsuleGenerationTypePushTriggered => '推送触发';
+
+  @override
+  String get capsuleFeedbackTooLong => '太长了';
+
+  @override
+  String get capsuleFeedbackTooShort => '太短了';
+
+  @override
+  String get capsuleFeedbackJustRight => '刚刚好';
+
+  @override
+  String get capsuleFeedbackTooComplex => '太复杂';
+
+  @override
+  String get capsuleFeedbackTooSimple => '太简单';
+
+  @override
+  String get capsuleFeedbackIrrelevant => '不相关';
+
+  @override
+  String get capsuleFeedbackOther => '其他';
+
+  @override
+  String get capsuleDepthShallow => '浅度';
+
+  @override
+  String get capsuleDepthMedium => '中度';
+
+  @override
+  String get capsuleDepthDeep => '深度';
+
+  @override
+  String get cognitiveSelectGalaxyNodes => '请先在 Galaxy 中选择要复习的节点';
+
+  @override
+  String get cognitiveTimeMachine => '知识时光机';
+
+  @override
+  String cognitiveFutureDays(int count) {
+    return '未来 $count 天';
+  }
+
+  @override
+  String cognitiveDaysLater(int count) {
+    return '$count 天后';
+  }
+
+  @override
+  String get cognitiveToday => '今天';
+
+  @override
+  String cognitiveDayTick(int count) {
+    return '$count天';
+  }
+
+  @override
+  String get cognitiveHealthy => '健康';
+
+  @override
+  String get cognitiveDecaying => '衰减中';
+
+  @override
+  String get cognitiveRisk => '危险';
+
+  @override
+  String get cognitiveSimulating => '模拟中...';
+
+  @override
+  String cognitiveReviewNow(int count) {
+    return '如果现在复习？（$count 个节点）';
+  }
+
+  @override
+  String get prismCognitivePatterns => '认知模式';
+
+  @override
+  String get prismEmotionalPatterns => '情绪模式';
+
+  @override
+  String get prismExecutionPatterns => '执行模式';
+
+  @override
+  String get prismTitle => '认知棱镜';
+
+  @override
+  String get prismNoData => '暂无行为模式数据';
+
+  @override
+  String get prismHint => '继续学习和复盘后，认知棱镜会越来越准确地识别你的学习模式。';
+
+  @override
+  String prismTotalPatterns(int count) {
+    return '共 $count 个模式';
+  }
+
+  @override
+  String get capsuleScreenTitle => '好奇心胶囊';
+
+  @override
+  String capsuleCurrentTab(int count) {
+    return '当前胶囊 $count';
+  }
+
+  @override
+  String capsuleArchiveTab(int count) {
+    return '历史归档 $count';
+  }
+
+  @override
+  String get capsuleArchiveEmpty => '还没有归档胶囊';
+
+  @override
+  String get capsuleEmptyTitle => '今天还没有新的好奇心胶囊';
+
+  @override
+  String get capsuleEmptySubtitle => '继续学习，激发更多灵感吧！';
+
+  @override
+  String get capsuleGenerationPreviewTitle => '生成预览';
+
+  @override
+  String get capsuleGenerationPreviewCountLabel => '预计生成';
+
+  @override
+  String capsuleGenerationPreviewCount(int count) {
+    return '$count 个胶囊';
+  }
+
+  @override
+  String get capsuleGenerationPreviewDepthLabel => '深度级别';
+
+  @override
+  String get capsuleGenerationPreviewModelLabel => '使用模型';
+
+  @override
+  String get patternCardSolutionLabel => '破解咒语';
+
+  @override
+  String patternCardCreatedAt(String date) {
+    return '创建于：$date';
+  }
+
+  @override
+  String get capsuleDetailTitle => '胶囊详情';
+
+  @override
+  String get capsuleMissing => '胶囊不存在';
+
+  @override
+  String capsuleLoadFailed(String error) {
+    return '加载失败：$error';
+  }
+
+  @override
+  String capsuleQualityLabel(String rating) {
+    return '质量评分：$rating';
+  }
+
+  @override
+  String capsuleFeedbackCount(int count) {
+    return '$count 反馈';
+  }
+
+  @override
+  String capsuleShareCount(int count) {
+    return '$count 分享';
+  }
+
+  @override
+  String get capsuleSubmitFeedback => '提交反馈';
+
+  @override
+  String get capsuleShare => '分享胶囊';
+
+  @override
+  String get capsuleCopyLink => '复制链接';
+
+  @override
+  String get capsuleShareToGroup => '分享到群组';
+
+  @override
+  String get capsuleRateFirst => '请先评分';
+
+  @override
+  String get capsuleFeedbackThanks => '感谢你的反馈';
+
+  @override
+  String capsuleSubmitFailed(String error) {
+    return '提交失败：$error';
+  }
+
+  @override
+  String get capsuleFeedbackQuestion => '这个胶囊对你有帮助吗？';
+
+  @override
+  String get capsuleFeedbackHint => '说说你的想法（可选）';
+
+  @override
+  String get capsuleSubmit => '提交';
+
+  @override
+  String get capsuleJobsTitle => '生成任务';
+
+  @override
+  String get capsuleNoJobs => '还没有生成任务';
+
+  @override
+  String get capsuleNoJobsSubtitle => '在设置页面调整偏好并生成胶囊';
+
+  @override
+  String capsuleGeneratingProgress(int progress) {
+    return '生成中... $progress%';
+  }
+
+  @override
+  String capsuleDepthPercent(int percent) {
+    return '深度：$percent%';
+  }
+
+  @override
+  String capsuleCuriosityPercent(int percent) {
+    return '好奇：$percent%';
+  }
+
+  @override
+  String capsuleRequestedCount(int count) {
+    return '请求数量：$count';
+  }
+
+  @override
+  String capsuleActualCount(int count) {
+    return '实际数量：$count';
+  }
+
+  @override
+  String capsuleChipLabel(String id) {
+    return '胶囊 $id';
+  }
+
+  @override
+  String get commonRetry => '重试';
+
+  @override
+  String get capsuleViewCapsules => '查看胶囊';
+
+  @override
+  String get capsuleNewDiscovery => '新发现';
+
+  @override
+  String get capsuleRestoreCurrent => '恢复到当前列表';
+
+  @override
+  String get capsuleArchiveAction => '归档这条胶囊';
+
+  @override
+  String get capsuleRestored => '已恢复到当前列表';
+
+  @override
+  String get capsuleArchivedInfo => '已归档，可在历史中查看';
+
+  @override
+  String get patternListTitle => '认知棱镜';
+
+  @override
+  String get patternListEmptyTitle => '还没有生成真实行为定式';
+
+  @override
+  String get patternListEmptySubtitle => '继续记录想法和复盘后，这里会把这些信号整理成真正有用的行为模式。';
+
+  @override
+  String get patternArchived => '已克服';
+
+  @override
+  String get patternTakeAction => '立即行动';
+
+  @override
+  String patternDiscoveredOn(String date) {
+    return '发现于 $date';
+  }
+
+  @override
+  String get patternTypeCognitive => '认知偏差';
+
+  @override
+  String get patternTypeEmotional => '情绪模式';
+
+  @override
+  String get patternTypeExecution => '执行习惯';
+
+  @override
+  String get patternTypeDefault => '行为模式';
 }

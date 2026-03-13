@@ -7513,6 +7513,582 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'从提问到回答\n毫秒级响应体验'**
   String get onboardingArchitectureStep5Desc;
+
+  /// No description provided for @capsuleQualityUnrated.
+  ///
+  /// In zh, this message translates to:
+  /// **'未评级'**
+  String get capsuleQualityUnrated;
+
+  /// No description provided for @capsuleQualityExcellent.
+  ///
+  /// In zh, this message translates to:
+  /// **'优秀'**
+  String get capsuleQualityExcellent;
+
+  /// No description provided for @capsuleQualityGood.
+  ///
+  /// In zh, this message translates to:
+  /// **'良好'**
+  String get capsuleQualityGood;
+
+  /// No description provided for @capsuleQualityFair.
+  ///
+  /// In zh, this message translates to:
+  /// **'一般'**
+  String get capsuleQualityFair;
+
+  /// No description provided for @capsuleQualityNeedsWork.
+  ///
+  /// In zh, this message translates to:
+  /// **'待改进'**
+  String get capsuleQualityNeedsWork;
+
+  /// No description provided for @capsuleJobStatusPending.
+  ///
+  /// In zh, this message translates to:
+  /// **'等待中'**
+  String get capsuleJobStatusPending;
+
+  /// No description provided for @capsuleJobStatusGenerating.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成中'**
+  String get capsuleJobStatusGenerating;
+
+  /// No description provided for @capsuleJobStatusCompleted.
+  ///
+  /// In zh, this message translates to:
+  /// **'已完成'**
+  String get capsuleJobStatusCompleted;
+
+  /// No description provided for @capsuleJobStatusFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'失败'**
+  String get capsuleJobStatusFailed;
+
+  /// No description provided for @capsuleGenerationTypeDaily.
+  ///
+  /// In zh, this message translates to:
+  /// **'每日胶囊'**
+  String get capsuleGenerationTypeDaily;
+
+  /// No description provided for @capsuleGenerationTypeWeekly.
+  ///
+  /// In zh, this message translates to:
+  /// **'每周胶囊'**
+  String get capsuleGenerationTypeWeekly;
+
+  /// No description provided for @capsuleGenerationTypeManual.
+  ///
+  /// In zh, this message translates to:
+  /// **'手动生成'**
+  String get capsuleGenerationTypeManual;
+
+  /// No description provided for @capsuleGenerationTypePushTriggered.
+  ///
+  /// In zh, this message translates to:
+  /// **'推送触发'**
+  String get capsuleGenerationTypePushTriggered;
+
+  /// No description provided for @capsuleFeedbackTooLong.
+  ///
+  /// In zh, this message translates to:
+  /// **'太长了'**
+  String get capsuleFeedbackTooLong;
+
+  /// No description provided for @capsuleFeedbackTooShort.
+  ///
+  /// In zh, this message translates to:
+  /// **'太短了'**
+  String get capsuleFeedbackTooShort;
+
+  /// No description provided for @capsuleFeedbackJustRight.
+  ///
+  /// In zh, this message translates to:
+  /// **'刚刚好'**
+  String get capsuleFeedbackJustRight;
+
+  /// No description provided for @capsuleFeedbackTooComplex.
+  ///
+  /// In zh, this message translates to:
+  /// **'太复杂'**
+  String get capsuleFeedbackTooComplex;
+
+  /// No description provided for @capsuleFeedbackTooSimple.
+  ///
+  /// In zh, this message translates to:
+  /// **'太简单'**
+  String get capsuleFeedbackTooSimple;
+
+  /// No description provided for @capsuleFeedbackIrrelevant.
+  ///
+  /// In zh, this message translates to:
+  /// **'不相关'**
+  String get capsuleFeedbackIrrelevant;
+
+  /// No description provided for @capsuleFeedbackOther.
+  ///
+  /// In zh, this message translates to:
+  /// **'其他'**
+  String get capsuleFeedbackOther;
+
+  /// No description provided for @capsuleDepthShallow.
+  ///
+  /// In zh, this message translates to:
+  /// **'浅度'**
+  String get capsuleDepthShallow;
+
+  /// No description provided for @capsuleDepthMedium.
+  ///
+  /// In zh, this message translates to:
+  /// **'中度'**
+  String get capsuleDepthMedium;
+
+  /// No description provided for @capsuleDepthDeep.
+  ///
+  /// In zh, this message translates to:
+  /// **'深度'**
+  String get capsuleDepthDeep;
+
+  /// No description provided for @cognitiveSelectGalaxyNodes.
+  ///
+  /// In zh, this message translates to:
+  /// **'请先在 Galaxy 中选择要复习的节点'**
+  String get cognitiveSelectGalaxyNodes;
+
+  /// No description provided for @cognitiveTimeMachine.
+  ///
+  /// In zh, this message translates to:
+  /// **'知识时光机'**
+  String get cognitiveTimeMachine;
+
+  /// No description provided for @cognitiveFutureDays.
+  ///
+  /// In zh, this message translates to:
+  /// **'未来 {count} 天'**
+  String cognitiveFutureDays(int count);
+
+  /// No description provided for @cognitiveDaysLater.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 天后'**
+  String cognitiveDaysLater(int count);
+
+  /// No description provided for @cognitiveToday.
+  ///
+  /// In zh, this message translates to:
+  /// **'今天'**
+  String get cognitiveToday;
+
+  /// No description provided for @cognitiveDayTick.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count}天'**
+  String cognitiveDayTick(int count);
+
+  /// No description provided for @cognitiveHealthy.
+  ///
+  /// In zh, this message translates to:
+  /// **'健康'**
+  String get cognitiveHealthy;
+
+  /// No description provided for @cognitiveDecaying.
+  ///
+  /// In zh, this message translates to:
+  /// **'衰减中'**
+  String get cognitiveDecaying;
+
+  /// No description provided for @cognitiveRisk.
+  ///
+  /// In zh, this message translates to:
+  /// **'危险'**
+  String get cognitiveRisk;
+
+  /// No description provided for @cognitiveSimulating.
+  ///
+  /// In zh, this message translates to:
+  /// **'模拟中...'**
+  String get cognitiveSimulating;
+
+  /// No description provided for @cognitiveReviewNow.
+  ///
+  /// In zh, this message translates to:
+  /// **'如果现在复习？（{count} 个节点）'**
+  String cognitiveReviewNow(int count);
+
+  /// No description provided for @prismCognitivePatterns.
+  ///
+  /// In zh, this message translates to:
+  /// **'认知模式'**
+  String get prismCognitivePatterns;
+
+  /// No description provided for @prismEmotionalPatterns.
+  ///
+  /// In zh, this message translates to:
+  /// **'情绪模式'**
+  String get prismEmotionalPatterns;
+
+  /// No description provided for @prismExecutionPatterns.
+  ///
+  /// In zh, this message translates to:
+  /// **'执行模式'**
+  String get prismExecutionPatterns;
+
+  /// No description provided for @prismTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'认知棱镜'**
+  String get prismTitle;
+
+  /// No description provided for @prismNoData.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无行为模式数据'**
+  String get prismNoData;
+
+  /// No description provided for @prismHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续学习和复盘后，认知棱镜会越来越准确地识别你的学习模式。'**
+  String get prismHint;
+
+  /// No description provided for @prismTotalPatterns.
+  ///
+  /// In zh, this message translates to:
+  /// **'共 {count} 个模式'**
+  String prismTotalPatterns(int count);
+
+  /// No description provided for @capsuleScreenTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'好奇心胶囊'**
+  String get capsuleScreenTitle;
+
+  /// No description provided for @capsuleCurrentTab.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前胶囊 {count}'**
+  String capsuleCurrentTab(int count);
+
+  /// No description provided for @capsuleArchiveTab.
+  ///
+  /// In zh, this message translates to:
+  /// **'历史归档 {count}'**
+  String capsuleArchiveTab(int count);
+
+  /// No description provided for @capsuleArchiveEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有归档胶囊'**
+  String get capsuleArchiveEmpty;
+
+  /// No description provided for @capsuleEmptyTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'今天还没有新的好奇心胶囊'**
+  String get capsuleEmptyTitle;
+
+  /// No description provided for @capsuleEmptySubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续学习，激发更多灵感吧！'**
+  String get capsuleEmptySubtitle;
+
+  /// No description provided for @capsuleGenerationPreviewTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成预览'**
+  String get capsuleGenerationPreviewTitle;
+
+  /// No description provided for @capsuleGenerationPreviewCountLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'预计生成'**
+  String get capsuleGenerationPreviewCountLabel;
+
+  /// No description provided for @capsuleGenerationPreviewCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 个胶囊'**
+  String capsuleGenerationPreviewCount(int count);
+
+  /// No description provided for @capsuleGenerationPreviewDepthLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'深度级别'**
+  String get capsuleGenerationPreviewDepthLabel;
+
+  /// No description provided for @capsuleGenerationPreviewModelLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'使用模型'**
+  String get capsuleGenerationPreviewModelLabel;
+
+  /// No description provided for @patternCardSolutionLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'破解咒语'**
+  String get patternCardSolutionLabel;
+
+  /// No description provided for @patternCardCreatedAt.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建于：{date}'**
+  String patternCardCreatedAt(String date);
+
+  /// No description provided for @capsuleDetailTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'胶囊详情'**
+  String get capsuleDetailTitle;
+
+  /// No description provided for @capsuleMissing.
+  ///
+  /// In zh, this message translates to:
+  /// **'胶囊不存在'**
+  String get capsuleMissing;
+
+  /// No description provided for @capsuleLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载失败：{error}'**
+  String capsuleLoadFailed(String error);
+
+  /// No description provided for @capsuleQualityLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'质量评分：{rating}'**
+  String capsuleQualityLabel(String rating);
+
+  /// No description provided for @capsuleFeedbackCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 反馈'**
+  String capsuleFeedbackCount(int count);
+
+  /// No description provided for @capsuleShareCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 分享'**
+  String capsuleShareCount(int count);
+
+  /// No description provided for @capsuleSubmitFeedback.
+  ///
+  /// In zh, this message translates to:
+  /// **'提交反馈'**
+  String get capsuleSubmitFeedback;
+
+  /// No description provided for @capsuleShare.
+  ///
+  /// In zh, this message translates to:
+  /// **'分享胶囊'**
+  String get capsuleShare;
+
+  /// No description provided for @capsuleCopyLink.
+  ///
+  /// In zh, this message translates to:
+  /// **'复制链接'**
+  String get capsuleCopyLink;
+
+  /// No description provided for @capsuleShareToGroup.
+  ///
+  /// In zh, this message translates to:
+  /// **'分享到群组'**
+  String get capsuleShareToGroup;
+
+  /// No description provided for @capsuleRateFirst.
+  ///
+  /// In zh, this message translates to:
+  /// **'请先评分'**
+  String get capsuleRateFirst;
+
+  /// No description provided for @capsuleFeedbackThanks.
+  ///
+  /// In zh, this message translates to:
+  /// **'感谢你的反馈'**
+  String get capsuleFeedbackThanks;
+
+  /// No description provided for @capsuleSubmitFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'提交失败：{error}'**
+  String capsuleSubmitFailed(String error);
+
+  /// No description provided for @capsuleFeedbackQuestion.
+  ///
+  /// In zh, this message translates to:
+  /// **'这个胶囊对你有帮助吗？'**
+  String get capsuleFeedbackQuestion;
+
+  /// No description provided for @capsuleFeedbackHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'说说你的想法（可选）'**
+  String get capsuleFeedbackHint;
+
+  /// No description provided for @capsuleSubmit.
+  ///
+  /// In zh, this message translates to:
+  /// **'提交'**
+  String get capsuleSubmit;
+
+  /// No description provided for @capsuleJobsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成任务'**
+  String get capsuleJobsTitle;
+
+  /// No description provided for @capsuleNoJobs.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有生成任务'**
+  String get capsuleNoJobs;
+
+  /// No description provided for @capsuleNoJobsSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'在设置页面调整偏好并生成胶囊'**
+  String get capsuleNoJobsSubtitle;
+
+  /// No description provided for @capsuleGeneratingProgress.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成中... {progress}%'**
+  String capsuleGeneratingProgress(int progress);
+
+  /// No description provided for @capsuleDepthPercent.
+  ///
+  /// In zh, this message translates to:
+  /// **'深度：{percent}%'**
+  String capsuleDepthPercent(int percent);
+
+  /// No description provided for @capsuleCuriosityPercent.
+  ///
+  /// In zh, this message translates to:
+  /// **'好奇：{percent}%'**
+  String capsuleCuriosityPercent(int percent);
+
+  /// No description provided for @capsuleRequestedCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'请求数量：{count}'**
+  String capsuleRequestedCount(int count);
+
+  /// No description provided for @capsuleActualCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'实际数量：{count}'**
+  String capsuleActualCount(int count);
+
+  /// No description provided for @capsuleChipLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'胶囊 {id}'**
+  String capsuleChipLabel(String id);
+
+  /// No description provided for @commonRetry.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试'**
+  String get commonRetry;
+
+  /// No description provided for @capsuleViewCapsules.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看胶囊'**
+  String get capsuleViewCapsules;
+
+  /// No description provided for @capsuleNewDiscovery.
+  ///
+  /// In zh, this message translates to:
+  /// **'新发现'**
+  String get capsuleNewDiscovery;
+
+  /// No description provided for @capsuleRestoreCurrent.
+  ///
+  /// In zh, this message translates to:
+  /// **'恢复到当前列表'**
+  String get capsuleRestoreCurrent;
+
+  /// No description provided for @capsuleArchiveAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'归档这条胶囊'**
+  String get capsuleArchiveAction;
+
+  /// No description provided for @capsuleRestored.
+  ///
+  /// In zh, this message translates to:
+  /// **'已恢复到当前列表'**
+  String get capsuleRestored;
+
+  /// No description provided for @capsuleArchivedInfo.
+  ///
+  /// In zh, this message translates to:
+  /// **'已归档，可在历史中查看'**
+  String get capsuleArchivedInfo;
+
+  /// No description provided for @patternListTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'认知棱镜'**
+  String get patternListTitle;
+
+  /// No description provided for @patternListEmptyTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有生成真实行为定式'**
+  String get patternListEmptyTitle;
+
+  /// No description provided for @patternListEmptySubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续记录想法和复盘后，这里会把这些信号整理成真正有用的行为模式。'**
+  String get patternListEmptySubtitle;
+
+  /// No description provided for @patternArchived.
+  ///
+  /// In zh, this message translates to:
+  /// **'已克服'**
+  String get patternArchived;
+
+  /// No description provided for @patternTakeAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'立即行动'**
+  String get patternTakeAction;
+
+  /// No description provided for @patternDiscoveredOn.
+  ///
+  /// In zh, this message translates to:
+  /// **'发现于 {date}'**
+  String patternDiscoveredOn(String date);
+
+  /// No description provided for @patternTypeCognitive.
+  ///
+  /// In zh, this message translates to:
+  /// **'认知偏差'**
+  String get patternTypeCognitive;
+
+  /// No description provided for @patternTypeEmotional.
+  ///
+  /// In zh, this message translates to:
+  /// **'情绪模式'**
+  String get patternTypeEmotional;
+
+  /// No description provided for @patternTypeExecution.
+  ///
+  /// In zh, this message translates to:
+  /// **'执行习惯'**
+  String get patternTypeExecution;
+
+  /// No description provided for @patternTypeDefault.
+  ///
+  /// In zh, this message translates to:
+  /// **'行为模式'**
+  String get patternTypeDefault;
 }
 
 class _AppLocalizationsDelegate

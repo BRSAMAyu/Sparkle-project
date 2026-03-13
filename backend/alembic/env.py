@@ -120,6 +120,13 @@ def run_migrations_online() -> None:
 
     with connectable.connect() as connection:
         _ensure_alembic_version_table(connection)
+        # _ensure_alembic_version_table() can open an implicit transaction via
+        # inspector/create_all. Commit it before Alembic starts its own
+        # migration transaction; otherwise SQLAlchemy will roll everything back
+        # when the connection closes even though the migration log looks
+        # successful.
+        if connection.in_transaction():
+            connection.commit()
         context.configure(
             connection=connection,
             target_metadata=target_metadata,

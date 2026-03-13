@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/cognitive/data/models/capsule_generation_job_model.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/capsule_provider.dart';
 
@@ -20,14 +24,17 @@ class _CapsuleJobsScreenState extends ConsumerState<CapsuleJobsScreen> {
   void initState() {
     super.initState();
     // Load jobs on init
-    Future.microtask(() {
-      ref.read(generationJobsProvider.notifier).fetchJobs();
-    });
+    unawaited(
+      Future.microtask(
+        () => ref.read(generationJobsProvider.notifier).fetchJobs(),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final jobsState = ref.watch(generationJobsProvider);
+    final l10n = context.l10n;
 
     return Scaffold(
       appBar: AppBar(
@@ -35,17 +42,15 @@ class _CapsuleJobsScreenState extends ConsumerState<CapsuleJobsScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
           variant: ButtonVariant.ghost,
-          size: DS.touchTargetMinSize,
         ),
-        title: const Text('生成任务'),
+        title: Text(l10n.capsuleJobsTitle),
         actions: [
           SparkleIconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
-              ref.read(generationJobsProvider.notifier).fetchJobs();
+              unawaited(ref.read(generationJobsProvider.notifier).fetchJobs());
             },
             variant: ButtonVariant.ghost,
-            size: DS.touchTargetMinSize,
           ),
         ],
       ),
@@ -69,13 +74,15 @@ class _CapsuleJobsScreenState extends ConsumerState<CapsuleJobsScreen> {
                   ),
                 ),
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, stack) => Center(child: Text('加载失败: $err')),
+          error: (err, stack) =>
+              Center(child: Text(l10n.capsuleLoadFailed('$err'))),
         ),
       ),
     );
   }
 
-  Widget _buildEmptyState() => Center(
+  Widget _buildEmptyState() => Builder(
+        builder: (context) => Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -86,16 +93,17 @@ class _CapsuleJobsScreenState extends ConsumerState<CapsuleJobsScreen> {
             ),
             const SizedBox(height: DS.lg),
             Text(
-              '还没有生成任务',
+              context.l10n.capsuleNoJobs,
               style: TextStyle(color: DS.textPrimary, fontSize: 16),
             ),
             const SizedBox(height: DS.sm),
             Text(
-              '在设置页面调整偏好并生成胶囊',
+              context.l10n.capsuleNoJobsSubtitle,
               style: TextStyle(color: DS.textSecondary, fontSize: 14),
             ),
           ],
         ),
+      ),
       );
 }
 
@@ -107,6 +115,7 @@ class _JobCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = context.l10n;
 
     return Container(
       margin: const EdgeInsets.only(bottom: DS.spacing16),
@@ -139,7 +148,7 @@ class _JobCard extends StatelessWidget {
                     Text(job.statusEmoji),
                     const SizedBox(width: 4),
                     Text(
-                      job.statusEnum.label,
+                      job.statusLabel,
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -160,7 +169,7 @@ class _JobCard extends StatelessWidget {
                   borderRadius: DS.borderRadius8,
                 ),
                 child: Text(
-                  job.typeEnum.label,
+                  job.generationTypeLabel,
                   style: TextStyle(
                     fontSize: 12,
                     color: DS.textSecondary,
@@ -169,7 +178,7 @@ class _JobCard extends StatelessWidget {
               ),
               const Spacer(),
               Text(
-                _formatTime(job.createdAt),
+                Formatters.formatRelativeTime(job.createdAt),
                 style: TextStyle(fontSize: 12, color: DS.textSecondary),
               ),
             ],
@@ -185,7 +194,7 @@ class _JobCard extends StatelessWidget {
             ),
             const SizedBox(height: DS.spacing8),
             Text(
-              '生成中... ${job.progressPercent}%',
+              l10n.capsuleGeneratingProgress(job.progressPercent),
               style: TextStyle(fontSize: 12, color: DS.textSecondary),
             ),
             const SizedBox(height: DS.spacing12),
@@ -197,14 +206,16 @@ class _JobCard extends StatelessWidget {
               Icon(Icons.timeline_outlined, size: 14, color: DS.info),
               const SizedBox(width: 4),
               Text(
-                '深度: ${(job.depthPreference * 100).toInt()}%',
+                l10n.capsuleDepthPercent((job.depthPreference * 100).toInt()),
                 style: TextStyle(fontSize: 12, color: DS.textSecondary),
               ),
               const SizedBox(width: DS.spacing16),
               Icon(Icons.lightbulb_outline, size: 14, color: DS.warning),
               const SizedBox(width: 4),
               Text(
-                '好奇: ${(job.curiosityPreference * 100).toInt()}%',
+                l10n.capsuleCuriosityPercent(
+                  (job.curiosityPreference * 100).toInt(),
+                ),
                 style: TextStyle(fontSize: 12, color: DS.textSecondary),
               ),
             ],
@@ -215,13 +226,13 @@ class _JobCard extends StatelessWidget {
           Row(
             children: [
               Text(
-                '请求数量: ${job.requestedCount}',
+                l10n.capsuleRequestedCount(job.requestedCount),
                 style: TextStyle(fontSize: 12, color: DS.textSecondary),
               ),
               const SizedBox(width: DS.spacing16),
               if (job.actualCount != null)
                 Text(
-                  '实际数量: ${job.actualCount}',
+                  l10n.capsuleActualCount(job.actualCount!),
                   style: TextStyle(
                     fontSize: 12,
                     color: job.isCompleted ? DS.success : DS.textSecondary,
@@ -266,7 +277,7 @@ class _JobCard extends StatelessWidget {
               children: job.capsuleIds!
                   .map(
                     (id) => RawChip(
-                      label: Text('胶囊 $id'),
+                      label: Text(l10n.capsuleChipLabel(id)),
                       avatar: const Icon(Icons.check_circle_outline, size: 16),
                       backgroundColor: isDark ? DS.neutral700 : DS.neutral200,
                       onPressed: () {
@@ -285,7 +296,7 @@ class _JobCard extends StatelessWidget {
               if (job.isFailed)
                 Expanded(
                   child: SparkleButton.outline(
-                    label: '重试',
+                    label: l10n.commonRetry,
                     onPressed: () {
                       // TODO: 重试
                     },
@@ -298,7 +309,7 @@ class _JobCard extends StatelessWidget {
                   job.capsuleIds!.isNotEmpty)
                 Expanded(
                   child: SparkleButton.primary(
-                    label: '查看胶囊',
+                    label: l10n.capsuleViewCapsules,
                     onPressed: () {
                       // TODO: 查看生成的胶囊
                     },
@@ -325,20 +336,4 @@ class _JobCard extends StatelessWidget {
     }
   }
 
-  String _formatTime(DateTime time) {
-    final now = DateTime.now();
-    final diff = now.difference(time);
-
-    if (diff.inMinutes < 1) {
-      return '刚刚';
-    } else if (diff.inHours < 1) {
-      return '${diff.inMinutes} 分钟前';
-    } else if (diff.inDays < 1) {
-      return '${diff.inHours} 小时前';
-    } else if (diff.inDays < 7) {
-      return '${diff.inDays} 天前';
-    } else {
-      return '${time.month}-${time.day}';
-    }
-  }
 }
