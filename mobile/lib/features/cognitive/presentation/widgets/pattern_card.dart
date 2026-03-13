@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/cognitive/data/models/behavior_pattern_model.dart';
 
 class PatternCard extends StatelessWidget {
@@ -95,7 +97,8 @@ class PatternCard extends StatelessWidget {
                     const SizedBox(width: DS.spacing12),
                     Expanded(
                       child: MarkdownBody(
-                        data: '**破解咒语**: ${pattern.solutionText!}',
+                        data:
+                            '**${context.l10n.patternCardSolutionLabel}**: ${pattern.solutionText!}',
                         styleSheet: MarkdownStyleSheet(
                           p: theme.textTheme.bodyMedium?.copyWith(
                             color: isDark ? DS.neutral200 : DS.neutral800,
@@ -117,7 +120,9 @@ class PatternCard extends StatelessWidget {
             Align(
               alignment: Alignment.bottomRight,
               child: Text(
-                '创建于: ${pattern.createdAt.toLocal().toString().split(' ')[0]}',
+                context.l10n.patternCardCreatedAt(
+                  Formatters.formatDateShort(pattern.createdAt),
+                ),
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: DS.neutral500,
                 ),

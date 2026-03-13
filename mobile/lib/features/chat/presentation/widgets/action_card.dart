@@ -1755,13 +1755,23 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             runSpacing: DS.spacing8,
             children: retryOptions
                 .map(
-                  (item) => InkWell(
-                    onTap: () => unawaited(
-                      widget.onWidgetAction?.call(
-                        item['type']?.toString() ?? 'prompt',
-                        item,
+                  (item) {
+                    final nestedPayload = item['payload'];
+                    final actionPayload = nestedPayload is Map
+                        ? <String, dynamic>{
+                            ...Map<String, dynamic>.from(nestedPayload),
+                            'label': item['label'],
+                            'type': item['type'],
+                          }
+                        : item;
+
+                    return InkWell(
+                      onTap: () => unawaited(
+                        widget.onWidgetAction?.call(
+                          item['type']?.toString() ?? 'prompt',
+                          actionPayload,
+                        ),
                       ),
-                    ),
                     borderRadius: DS.borderRadius20,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
@@ -1781,7 +1791,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                         ),
                       ),
                     ),
-                  ),
+                  );
+                  },
                 )
                 .toList(),
           ),

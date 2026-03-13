@@ -34,6 +34,8 @@ void main() {
       ),
     );
 
+    await tester.tap(find.text('展开'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('继续追问细节'));
     await tester.pump();
 
@@ -66,6 +68,8 @@ void main() {
       ),
     );
 
+    await tester.tap(find.text('展开'));
+    await tester.pumpAndSettle();
     expect(find.text('可信度高'), findsOneWidget);
     expect(find.text('本轮已完成'), findsOneWidget);
     expect(find.text('为什么这样回答'), findsOneWidget);

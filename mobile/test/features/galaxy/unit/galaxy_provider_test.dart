@@ -48,6 +48,13 @@ class FakeEnhancedGalaxyRepository implements EnhancedGalaxyRepository {
       NetworkResult.success(null);
 
   @override
+  Future<NetworkResult<void>> updateNodePosition(
+    String nodeId,
+    Offset position,
+  ) async =>
+      updateNodePositions(<String, Offset>{nodeId: position});
+
+  @override
   Stream<SSEEvent> getGalaxyEventsStream({String? lastEventId}) => eventsStream;
 
   @override

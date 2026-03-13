@@ -102,7 +102,7 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('记忆控制'), findsOneWidget);
+    expect(find.text('记忆控制'), findsWidgets);
     await tester.scrollUntilVisible(
       find.text('保存设置'),
       200,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// Prism 行为模式卡片 - 用于聊天界面展示工具返回的行为分析结果
 ///
@@ -56,7 +57,7 @@ class PrismBehaviorCard extends StatelessWidget {
             if (cognitive.isNotEmpty) ...[
               _buildPatternSection(
                 context,
-                '认知模式',
+                context.l10n.prismCognitivePatterns,
                 cognitive,
                 DS.prismBlue,
                 Icons.psychology,
@@ -67,7 +68,7 @@ class PrismBehaviorCard extends StatelessWidget {
             if (emotional.isNotEmpty) ...[
               _buildPatternSection(
                 context,
-                '情绪模式',
+                context.l10n.prismEmotionalPatterns,
                 emotional,
                 DS.prismPurple,
                 Icons.sentiment_neutral,
@@ -78,7 +79,7 @@ class PrismBehaviorCard extends StatelessWidget {
             if (execution.isNotEmpty) ...[
               _buildPatternSection(
                 context,
-                '执行模式',
+                context.l10n.prismExecutionPatterns,
                 execution,
                 DS.prismGreen,
                 Icons.run_circle_outlined,
@@ -103,7 +104,7 @@ class PrismBehaviorCard extends StatelessWidget {
                   Icon(Icons.psychology_outlined, color: DS.prismPurple),
                   const SizedBox(width: DS.sm),
                   Text(
-                    '认知棱镜',
+                    context.l10n.prismTitle,
                     style: context.sparkleTypography.labelLarge.copyWith(
                       fontWeight: DS.fontWeightSemibold,
                     ),
@@ -112,12 +113,12 @@ class PrismBehaviorCard extends StatelessWidget {
               ),
               const SizedBox(height: DS.sm),
               Text(
-                message ?? '暂无行为模式数据',
+                message ?? context.l10n.prismNoData,
                 style: TextStyle(color: DS.textSecondary),
               ),
               const SizedBox(height: DS.sm),
               Text(
-                '继续学习后，认知棱镜会越来越准确地了解你的学习模式',
+                context.l10n.prismHint,
                 style: TextStyle(
                   color: DS.textTertiary,
                   fontSize: DS.fontSizeSm,
@@ -147,7 +148,7 @@ class PrismBehaviorCard extends StatelessWidget {
           ),
           const SizedBox(width: DS.sm),
           Text(
-            '认知棱镜',
+            context.l10n.prismTitle,
             style: context.sparkleTypography.labelLarge.copyWith(
               fontWeight: DS.fontWeightSemibold,
             ),
@@ -163,7 +164,7 @@ class PrismBehaviorCard extends StatelessWidget {
               borderRadius: DS.borderRadius4,
             ),
             child: Text(
-              '共 $count 个模式',
+              context.l10n.prismTotalPatterns(count),
               style: TextStyle(
                 color: DS.prismPurple,
                 fontSize: DS.fontSizeXs,
@@ -197,7 +198,7 @@ class PrismBehaviorCard extends StatelessWidget {
               ),
               const SizedBox(width: DS.xs),
               Container(
-                padding: EdgeInsets.symmetric(
+                padding: const EdgeInsets.symmetric(
                   horizontal: DS.spacing6,
                   vertical: DS.spacing4 / 2,
                 ),
@@ -255,7 +256,7 @@ class PrismBehaviorCard extends StatelessWidget {
               ),
               if (confidenceScore != null)
                 Container(
-                  padding: EdgeInsets.symmetric(
+                  padding: const EdgeInsets.symmetric(
                     horizontal: DS.spacing6,
                     vertical: DS.spacing4 / 2,
                   ),

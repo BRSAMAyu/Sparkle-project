@@ -416,7 +416,17 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
   }
 
   void _openDetail(BuildContext context, MemoryDetailArgs args) {
-    context.push(MemoryRoutes.detail, extra: args);
+    final router = GoRouter.maybeOf(context);
+    if (router != null) {
+      context.push(MemoryRoutes.detail, extra: args);
+      return;
+    }
+
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => MemoryDetailScreen(args: args),
+      ),
+    );
   }
 
   String _formatUpdated(DateTime? value) {

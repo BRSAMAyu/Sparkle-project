@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/cognitive/data/models/curiosity_capsule_model.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/capsule_archive_provider.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/capsule_provider.dart';
@@ -15,6 +16,7 @@ class CuriosityCapsuleScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final capsuleState = ref.watch(capsuleProvider);
     final archiveState = ref.watch(capsuleArchiveProvider);
+    final l10n = context.l10n;
 
     return SparklePageScaffold(
       role: SparklePageRole.content,
@@ -23,9 +25,8 @@ class CuriosityCapsuleScreen extends ConsumerWidget {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
           variant: ButtonVariant.ghost,
-          size: DS.touchTargetMinSize,
         ),
-        title: const Text('好奇心胶囊'),
+        title: Text(l10n.capsuleScreenTitle),
       ),
       child: capsuleState.when(
         data: (capsules) {
@@ -66,8 +67,8 @@ class CuriosityCapsuleScreen extends ConsumerWidget {
                         borderRadius: DS.borderRadius16,
                       ),
                       tabs: [
-                        Tab(text: '当前胶囊 ${activeCapsules.length}'),
-                        Tab(text: '历史归档 ${archivedCapsules.length}'),
+                        Tab(text: l10n.capsuleCurrentTab(activeCapsules.length)),
+                        Tab(text: l10n.capsuleArchiveTab(archivedCapsules.length)),
                       ],
                     ),
                   ),
@@ -86,7 +87,7 @@ class CuriosityCapsuleScreen extends ConsumerWidget {
                           capsules: archivedCapsules,
                           highlightId: highlightId,
                           archived: true,
-                          emptyMessage: '还没有归档胶囊',
+                          emptyMessage: l10n.capsuleArchiveEmpty,
                         ),
                       ],
                     ),
@@ -97,12 +98,13 @@ class CuriosityCapsuleScreen extends ConsumerWidget {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('加载失败: $err')),
+        error: (err, stack) => Center(child: Text(l10n.capsuleLoadFailed('$err'))),
       ),
     );
   }
 
-  Widget _buildEmptyState() => Center(
+  Widget _buildEmptyState() => Builder(
+        builder: (context) => Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -113,16 +115,17 @@ class CuriosityCapsuleScreen extends ConsumerWidget {
             ),
             const SizedBox(height: DS.lg),
             Text(
-              '今天还没有新的好奇心胶囊',
+              context.l10n.capsuleEmptyTitle,
               style: TextStyle(color: DS.textPrimary, fontSize: 16),
             ),
             const SizedBox(height: DS.sm),
             Text(
-              '继续学习，激发更多灵感吧！',
+              context.l10n.capsuleEmptySubtitle,
               style: TextStyle(color: DS.textSecondary, fontSize: 14),
             ),
           ],
         ),
+      ),
       );
 }
 
@@ -131,13 +134,13 @@ class _CapsuleList extends StatelessWidget {
     required this.capsules,
     this.highlightId,
     this.archived = false,
-    this.emptyMessage = '今天还没有新的好奇心胶囊',
+    this.emptyMessage,
   });
 
   final List<CuriosityCapsuleModel> capsules;
   final String? highlightId;
   final bool archived;
-  final String emptyMessage;
+  final String? emptyMessage;
 
   @override
   Widget build(BuildContext context) {
@@ -149,7 +152,7 @@ class _CapsuleList extends StatelessWidget {
             height: 360,
             child: Center(
               child: Text(
-                emptyMessage,
+                emptyMessage ?? context.l10n.capsuleEmptyTitle,
                 style: TextStyle(color: DS.textSecondary, fontSize: 14),
               ),
             ),

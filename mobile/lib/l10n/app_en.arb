@@ -1438,5 +1438,248 @@
   "onboardingArchitectureStep4Title": "Data layer",
   "onboardingArchitectureStep4Desc": "PostgreSQL plus pgvector for structured data and semantic retrieval",
   "onboardingArchitectureStep5Title": "End-to-end flow",
-  "onboardingArchitectureStep5Desc": "From question to answer, the whole loop is designed to feel immediate"
+  "onboardingArchitectureStep5Desc": "From question to answer, the whole loop is designed to feel immediate",
+  "capsuleQualityUnrated": "Unrated",
+  "capsuleQualityExcellent": "Excellent",
+  "capsuleQualityGood": "Good",
+  "capsuleQualityFair": "Fair",
+  "capsuleQualityNeedsWork": "Needs work",
+  "capsuleJobStatusPending": "Pending",
+  "capsuleJobStatusGenerating": "Generating",
+  "capsuleJobStatusCompleted": "Completed",
+  "capsuleJobStatusFailed": "Failed",
+  "capsuleGenerationTypeDaily": "Daily capsule",
+  "capsuleGenerationTypeWeekly": "Weekly capsule",
+  "capsuleGenerationTypeManual": "Manual run",
+  "capsuleGenerationTypePushTriggered": "Push-triggered",
+  "capsuleFeedbackTooLong": "Too long",
+  "capsuleFeedbackTooShort": "Too short",
+  "capsuleFeedbackJustRight": "Just right",
+  "capsuleFeedbackTooComplex": "Too complex",
+  "capsuleFeedbackTooSimple": "Too simple",
+  "capsuleFeedbackIrrelevant": "Irrelevant",
+  "capsuleFeedbackOther": "Other",
+  "capsuleDepthShallow": "Light",
+  "capsuleDepthMedium": "Balanced",
+  "capsuleDepthDeep": "Deep",
+  "cognitiveSelectGalaxyNodes": "Select the nodes you want to review in Galaxy first",
+  "cognitiveTimeMachine": "Knowledge Time Machine",
+  "cognitiveFutureDays": "Next {count} days",
+  "@cognitiveFutureDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cognitiveDaysLater": "In {count} days",
+  "@cognitiveDaysLater": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cognitiveToday": "Today",
+  "cognitiveDayTick": "{count}d",
+  "@cognitiveDayTick": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cognitiveHealthy": "Healthy",
+  "cognitiveDecaying": "Decaying",
+  "cognitiveRisk": "At risk",
+  "cognitiveSimulating": "Simulating...",
+  "cognitiveReviewNow": "Review now? ({count} nodes)",
+  "@cognitiveReviewNow": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "prismCognitivePatterns": "Cognitive patterns",
+  "prismEmotionalPatterns": "Emotional patterns",
+  "prismExecutionPatterns": "Execution patterns",
+  "prismTitle": "Cognitive Prism",
+  "prismNoData": "No behavior pattern data yet",
+  "prismHint": "Keep learning and reflecting. The prism will build a clearer picture of your study patterns over time.",
+  "prismTotalPatterns": "{count} patterns",
+  "@prismTotalPatterns": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "capsuleScreenTitle": "Curiosity Capsules",
+  "capsuleCurrentTab": "Current {count}",
+  "@capsuleCurrentTab": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "capsuleArchiveTab": "Archive {count}",
+  "@capsuleArchiveTab": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "capsuleArchiveEmpty": "No archived capsules yet",
+  "capsuleEmptyTitle": "No new curiosity capsule today",
+  "capsuleEmptySubtitle": "Keep learning and new ideas will keep showing up.",
+  "capsuleGenerationPreviewTitle": "Generation preview",
+  "capsuleGenerationPreviewCountLabel": "Estimated output",
+  "capsuleGenerationPreviewCount": "{count} capsules",
+  "@capsuleGenerationPreviewCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "capsuleGenerationPreviewDepthLabel": "Depth",
+  "capsuleGenerationPreviewModelLabel": "Model",
+  "patternCardSolutionLabel": "Breakout idea",
+  "patternCardCreatedAt": "Created on {date}",
+  "@patternCardCreatedAt": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "capsuleDetailTitle": "Capsule Details",
+  "capsuleMissing": "Capsule not found",
+  "capsuleLoadFailed": "Failed to load: {error}",
+  "@capsuleLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "capsuleQualityLabel": "Quality: {rating}",
+  "@capsuleQualityLabel": {
+    "placeholders": {
+      "rating": {
+        "type": "String"
+      }
+    }
+  },
+  "capsuleFeedbackCount": "{count} feedback",
+  "@capsuleFeedbackCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "capsuleShareCount": "{count} shares",
+  "@capsuleShareCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "capsuleSubmitFeedback": "Send feedback",
+  "capsuleShare": "Share capsule",
+  "capsuleCopyLink": "Copy link",
+  "capsuleShareToGroup": "Share to group",
+  "capsuleRateFirst": "Please rate it first",
+  "capsuleFeedbackThanks": "Thanks for the feedback",
+  "capsuleSubmitFailed": "Submit failed: {error}",
+  "@capsuleSubmitFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "capsuleFeedbackQuestion": "Was this capsule helpful?",
+  "capsuleFeedbackHint": "Add a note if you want",
+  "capsuleSubmit": "Submit",
+  "capsuleJobsTitle": "Generation Jobs",
+  "capsuleNoJobs": "No generation jobs yet",
+  "capsuleNoJobsSubtitle": "Adjust your preferences in Settings and generate capsules there.",
+  "capsuleGeneratingProgress": "Generating... {progress}%",
+  "@capsuleGeneratingProgress": {
+    "placeholders": {
+      "progress": {
+        "type": "int"
+      }
+    }
+  },
+  "capsuleDepthPercent": "Depth: {percent}%",
+  "@capsuleDepthPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "capsuleCuriosityPercent": "Curiosity: {percent}%",
+  "@capsuleCuriosityPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "capsuleRequestedCount": "Requested: {count}",
+  "@capsuleRequestedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "capsuleActualCount": "Generated: {count}",
+  "@capsuleActualCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "capsuleChipLabel": "Capsule {id}",
+  "@capsuleChipLabel": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "commonRetry": "Retry",
+  "capsuleViewCapsules": "View capsules",
+  "capsuleNewDiscovery": "New discovery",
+  "capsuleRestoreCurrent": "Move back to current",
+  "capsuleArchiveAction": "Archive this capsule",
+  "capsuleRestored": "Moved back to your current list",
+  "capsuleArchivedInfo": "Archived. You can find it later in History.",
+  "patternListTitle": "Cognitive Prism",
+  "patternListEmptyTitle": "No real behavior patterns yet",
+  "patternListEmptySubtitle": "Keep logging thoughts and reviewing your work. This space will turn those signals into meaningful patterns.",
+  "patternArchived": "Resolved",
+  "patternTakeAction": "Act on it",
+  "patternDiscoveredOn": "Discovered on {date}",
+  "@patternDiscoveredOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "patternTypeCognitive": "Cognitive bias",
+  "patternTypeEmotional": "Emotional pattern",
+  "patternTypeExecution": "Execution habit",
+  "patternTypeDefault": "Behavior pattern"
 }

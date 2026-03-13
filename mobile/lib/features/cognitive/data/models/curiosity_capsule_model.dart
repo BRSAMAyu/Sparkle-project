@@ -1,12 +1,13 @@
 import 'package:json_annotation/json_annotation.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 part 'curiosity_capsule_model.g.dart';
 
 /// 胶囊深度级别
 enum CapsuleDepthLevel {
-  shallow('shallow', '浅度', '⚡'),
-  medium('medium', '中度', '💡'),
-  deep('deep', '深度', '🔬');
+  shallow('shallow', 'Light', '⚡'),
+  medium('medium', 'Balanced', '💡'),
+  deep('deep', 'Deep', '🔬');
 
   const CapsuleDepthLevel(this.value, this.label, this.emoji);
 
@@ -86,13 +87,27 @@ class CuriosityCapsuleModel {
   /// 获取深度级别emoji
   String get depthEmoji => depthLevelEnum.emoji;
 
+  /// 获取本地化深度级别
+  String get depthLabel {
+    final l10n = I18nService.instance.l10n;
+    switch (depthLevelEnum) {
+      case CapsuleDepthLevel.shallow:
+        return l10n.capsuleDepthShallow;
+      case CapsuleDepthLevel.medium:
+        return l10n.capsuleDepthMedium;
+      case CapsuleDepthLevel.deep:
+        return l10n.capsuleDepthDeep;
+    }
+  }
+
   /// 质量评级
   String get qualityRating {
-    if (qualityScore == null) return '未评级';
-    if (qualityScore! >= 0.8) return '优秀';
-    if (qualityScore! >= 0.6) return '良好';
-    if (qualityScore! >= 0.4) return '一般';
-    return '待改进';
+    final l10n = I18nService.instance.l10n;
+    if (qualityScore == null) return l10n.capsuleQualityUnrated;
+    if (qualityScore! >= 0.8) return l10n.capsuleQualityExcellent;
+    if (qualityScore! >= 0.6) return l10n.capsuleQualityGood;
+    if (qualityScore! >= 0.4) return l10n.capsuleQualityFair;
+    return l10n.capsuleQualityNeedsWork;
   }
 
   /// 复制对象并修改部分字段

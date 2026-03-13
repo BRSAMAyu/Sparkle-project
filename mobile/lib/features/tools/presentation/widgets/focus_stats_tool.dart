@@ -126,6 +126,7 @@ class _FocusStatsToolState extends ConsumerState<FocusStatsTool> {
                             height: 168,
                             child: FocusStatsChart(
                               dailyData: state.dailyBreakdown,
+                              period: feature.StatsViewPeriod.week,
                             ),
                           ),
                   ),
