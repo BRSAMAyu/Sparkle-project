@@ -68,6 +68,49 @@ class UserRepository {
     return ApiResponseParser.unwrapMap(response.data, action: 'fetchTransparentProfile');
   }
 
+  Future<Map<String, dynamic>> fetchProfileContext() async {
+    if (DemoDataService.isDemoMode) {
+      return {
+        'preferences': <String, dynamic>{},
+        'preference_version': 0,
+        'knowledge_summary': {
+          'overall_mastery': 0.0,
+          'weak_spots': <dynamic>[],
+          'recent_mastery_changes': <dynamic>[],
+          'active_learning_subjects': <dynamic>[],
+        },
+        'cognitive_summary': {
+          'active_patterns': <dynamic>[],
+          'dominant_pattern_type': null,
+          'risk_signals': <dynamic>[],
+        },
+      };
+    }
+    final response =
+        await _apiClient.get<Map<String, dynamic>>('/profile/context');
+    return ApiResponseParser.unwrapMap(response.data, action: 'fetchProfileContext');
+  }
+
+  Future<List<Map<String, dynamic>>> fetchInferredPreferences() async {
+    if (DemoDataService.isDemoMode) {
+      return [];
+    }
+    final response =
+        await _apiClient.get<List<dynamic>>('/profile/inferred-preferences');
+    final items = response.data ?? <dynamic>[];
+    return items.whereType<Map<String, dynamic>>().toList();
+  }
+
+  Future<List<Map<String, dynamic>>> fetchActivePolicies() async {
+    if (DemoDataService.isDemoMode) {
+      return [];
+    }
+    final response =
+        await _apiClient.get<List<dynamic>>('/profile/active-policies');
+    final items = response.data ?? <dynamic>[];
+    return items.whereType<Map<String, dynamic>>().toList();
+  }
+
   Future<void> submitOnboarding(Map<String, dynamic> payload) async {
     if (DemoDataService.isDemoMode) {
       return;
@@ -141,6 +184,34 @@ class UserRepository {
       data: {
         'pref_key': prefKey,
       },
+    );
+  }
+
+  Future<void> overrideInferredPreference({
+    required String key,
+    required dynamic value,
+    String? reason,
+  }) async {
+    if (DemoDataService.isDemoMode) {
+      return;
+    }
+    await _apiClient.post<Map<String, dynamic>>(
+      '/profile/override-inferred',
+      data: {
+        'key': key,
+        'value': value,
+        if (reason != null && reason.isNotEmpty) 'reason': reason,
+      },
+    );
+  }
+
+  Future<void> resetInferredOverride(String key) async {
+    if (DemoDataService.isDemoMode) {
+      return;
+    }
+    await _apiClient.post<Map<String, dynamic>>(
+      '/profile/reset-override',
+      data: {'key': key},
     );
   }
 

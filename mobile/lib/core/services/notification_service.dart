@@ -5,6 +5,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart';
+import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -12,9 +14,10 @@ import 'package:timezone/timezone.dart' as tz;
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 class NotificationService {
-  NotificationService() {
+  NotificationService(this._ref) {
     unawaited(_initialize());
   }
+  final Ref _ref;
   final FlutterLocalNotificationsPlugin _notificationsPlugin =
       FlutterLocalNotificationsPlugin();
   final Logger _logger = Logger();
@@ -104,7 +107,13 @@ class NotificationService {
             ? decodedPayload
             : <String, dynamic>{};
 
-        if (details.actionId == 'START_NOW') {
+        final actionId = details.actionId;
+        final interactionAction = _mapInteractionAction(actionId);
+        if (interactionAction != null) {
+          unawaited(_reportPushInteraction(interactionAction, payload));
+        }
+
+        if (actionId == 'START_NOW') {
           // Navigate to Task Execution
           // Since we are inside a callback, we might need the context or router
           // We use the global navigatorKey context if available
@@ -117,10 +126,10 @@ class NotificationService {
                   .pushNamed('taskExecution', pathParameters: {'id': taskId}),);
             }
           }
-        } else if (details.actionId == 'SNOOZE') {
+        } else if (actionId == 'SNOOZE') {
           // Handle Snooze API call
           _handleSnooze(payload);
-        } else if (details.actionId == 'DISMISS') {
+        } else if (actionId == 'DISMISS') {
           // Handle Dismiss API call
           _handleDismiss(payload);
         }
@@ -138,6 +147,45 @@ class NotificationService {
   void _handleDismiss(Map<String, dynamic> payload) {
     // TODO: Call API to dismiss
     _logger.i('Dismissing notification: $payload');
+  }
+
+  String? _mapInteractionAction(String? actionId) {
+    if (actionId == null) {
+      return 'opened';
+    }
+    switch (actionId) {
+      case 'START_NOW':
+        return 'opened';
+      case 'SNOOZE':
+      case 'DISMISS':
+        return 'dismissed';
+      default:
+        return null;
+    }
+  }
+
+  Future<void> _reportPushInteraction(
+    String action,
+    Map<String, dynamic> payload,
+  ) async {
+    final pushId = payload['push_id'] ?? payload['pushId'] ?? payload['pushID'];
+    if (pushId == null) {
+      _logger.w('Push interaction missing push_id: $payload');
+      return;
+    }
+    try {
+      final apiClient = _ref.read(apiClientProvider);
+      await apiClient.post<void>(
+        ApiEndpoints.pushInteraction,
+        data: <String, dynamic>{
+          'push_id': pushId,
+          'action': action,
+          'timestamp': DateTime.now().toUtc().toIso8601String(),
+        },
+      );
+    } catch (e) {
+      _logger.w('Failed to report push interaction: $e');
+    }
   }
 
   Future<void> showSmartPush({
@@ -231,4 +279,4 @@ class NotificationService {
 }
 
 final notificationServiceProvider =
-    Provider<NotificationService>((ref) => NotificationService());
+    Provider<NotificationService>((ref) => NotificationService(ref));

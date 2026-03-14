@@ -1,7 +1,16 @@
 """
 策略配置数据类 - 各模块的个性化参数
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+
+
+@dataclass
+class PolicyExplanation:
+    """Human-readable explanation for an applied policy."""
+
+    signal: str
+    effect: str
+    source_pattern: str
 
 
 @dataclass
@@ -15,6 +24,7 @@ class LLMProfile:
     should_provide_examples: bool
     exploration_level: str
     tone: str
+    applied_policies: list[PolicyExplanation] = field(default_factory=list)
 
 
 @dataclass
@@ -30,6 +40,7 @@ class PushPolicyProfile:
     active_hours: list[int]
     timezone: str
     preference_version: int
+    applied_policies: list[PolicyExplanation] = field(default_factory=list)
 
 
 @dataclass
@@ -42,3 +53,4 @@ class TaskPlanProfile:
     exploration_ratio: float
     review_priority: str
     fragmented_time_slots: list[dict]
+    applied_policies: list[PolicyExplanation] = field(default_factory=list)

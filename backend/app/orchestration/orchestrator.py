@@ -110,6 +110,7 @@ from app.orchestration.transparency_data_generator import StepType, Transparency
 from app.orchestration.ux_envelope import ux_envelope_builder
 from app.orchestration.validator import RequestValidator
 from app.routing.tool_preference_router import ToolPreferenceRouter
+from app.services.chat_signal_collector import ChatSignalCollector
 from app.services.focus_service import focus_service
 from app.services.llm_service import llm_service
 from app.services.plan_progress_service import PlanProgressService
@@ -4330,6 +4331,32 @@ class ChatOrchestrator:
                         )
                     with tracer.start_as_current_span("orchestrator.cache_response"):
                         await self._cache_response(session_id, request_id, final_response_data)
+                    try:
+                        turn_index = 1
+                        if isinstance(conversation_context, dict):
+                            messages = conversation_context.get("messages")
+                            if isinstance(messages, list):
+                                user_count = sum(
+                                    1 for msg in messages
+                                    if isinstance(msg, dict) and msg.get("role") == "user"
+                                )
+                                turn_index = user_count
+                                if user_message and (not messages or messages[-1].get("role") != "user"):
+                                    turn_index += 1
+                        collector = ChatSignalCollector(self.redis)
+                        task = asyncio.create_task(
+                            collector.collect_signals(
+                                user_id=uuid.UUID(str(user_id)),
+                                user_message=user_message,
+                                ai_response=str(final_response_data.get("message") or ""),
+                                conversation_id=session_id,
+                                turn_index=turn_index,
+                                timestamp=_utcnow(),
+                            )
+                        )
+                        self._track_task(task)
+                    except Exception as exc:
+                        logger.warning("Failed to schedule chat signal collection: %s", exc)
                     if executable_plan and executable_plan.collaboration_mode != "single":
                         await self.observability.log_collaboration_end(
                             user_id=user_id,

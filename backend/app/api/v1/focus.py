@@ -63,7 +63,6 @@ async def log_focus_session(
             FocusType(data.focus_type),
             FocusStatus(data.status)
         )
-        await db.commit()
 
         session = result["session"]
         rewards = result["rewards"]

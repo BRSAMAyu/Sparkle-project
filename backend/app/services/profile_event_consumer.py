@@ -6,11 +6,15 @@ import asyncio
 import json
 from datetime import UTC, datetime
 from typing import Any
+from uuid import UUID
 
 from loguru import logger
 
 from app.core.cache import cache_service
 from app.core.event_bus import EventBus
+from app.db.session import AsyncSessionLocal
+from app.services.error_book_signal_processor import ErrorBookSignalProcessor
+from app.services.focus_signal_processor import FocusSignalProcessor
 from app.services.personalization.engine import invalidate_personalization_cache
 from app.services.system_update_service import SystemUpdateService, build_system_update
 
@@ -54,6 +58,10 @@ class ProfileEventConsumer:
             await self._handle_knowledge_updated(event)
         elif event_type == "behavior.pattern.updated":
             await self._handle_behavior_pattern_updated(event)
+        elif event_type == "focus.session.completed":
+            await self._handle_focus_session_completed(event)
+        elif event_type in {"error_created", "error.created"}:
+            await self._handle_error_created(event)
 
     async def _handle_preference_updated(self, event: dict):
         try:
@@ -117,6 +125,28 @@ class ProfileEventConsumer:
             await self._invalidate_profile_context_cache(user_id)
         except Exception as exc:
             logger.error(f"Failed to handle behavior pattern update event: {exc}")
+
+    async def _handle_focus_session_completed(self, event: dict) -> None:
+        try:
+            user_id = self._normalize_user_id(event.get("user_id"))
+            if not user_id:
+                return
+            async with AsyncSessionLocal() as db:
+                processor = FocusSignalProcessor(db, self.redis)
+                await processor.process_focus_event(UUID(user_id))
+        except Exception as exc:
+            logger.error(f"Failed to handle focus session event: {exc}")
+
+    async def _handle_error_created(self, event: dict) -> None:
+        try:
+            user_id = self._normalize_user_id(event.get("user_id"))
+            if not user_id:
+                return
+            async with AsyncSessionLocal() as db:
+                processor = ErrorBookSignalProcessor(db, self.redis)
+                await processor.process_error_created(UUID(user_id))
+        except Exception as exc:
+            logger.error(f"Failed to handle error created event: {exc}")
 
     async def _invalidate_context_cache(self, user_id: str) -> None:
         if not self.redis:

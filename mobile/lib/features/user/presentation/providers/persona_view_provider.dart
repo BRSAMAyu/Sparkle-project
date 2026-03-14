@@ -12,3 +12,15 @@ final systemUpdatesProvider =
   final repo = ref.watch(userRepositoryProvider);
   return repo.fetchSystemUpdates();
 });
+
+final inferredPreferencesProvider =
+    FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final repo = ref.watch(userRepositoryProvider);
+  return repo.fetchInferredPreferences();
+});
+
+final activePoliciesProvider =
+    FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final repo = ref.watch(userRepositoryProvider);
+  return repo.fetchActivePolicies();
+});

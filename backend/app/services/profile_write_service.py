@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
 from typing import Any
 from uuid import UUID
 
@@ -34,6 +35,7 @@ class ProfileWriteService:
         self.redis = redis
         self.pref_service = PreferenceService(db, redis)
         self.memory_service = MemoryService(db)
+        self._override_backup_key_prefix = "user:profile:override_backup"
 
     async def set_explicit_preference(
         self,
@@ -149,6 +151,106 @@ class ProfileWriteService:
         )
         return result
 
+    async def update_inferred_preference(
+        self,
+        *,
+        user_id: UUID,
+        updates: dict[str, Any],
+        source: str = "ai_inferred",
+    ) -> int:
+        """写入推断偏好并发布事件。返回新版本号。"""
+        if not updates:
+            prefs = await self.pref_service.get_preferences(user_id)
+            return prefs.version or 0
+        prefs = await self.pref_service.update_inferred(user_id, updates)
+        await self._publish_preference_updated_event(
+            user_id=user_id,
+            pref_keys=list(updates.keys()),
+            preference_version=prefs.version or 0,
+            source=source,
+        )
+        return prefs.version or 0
+
+    async def remove_inferred_preference(
+        self,
+        *,
+        user_id: UUID,
+        pref_key: str,
+    ) -> ProfileWriteResult:
+        prefs = await self.pref_service.delete_inferred_key(user_id, pref_key)
+        result = ProfileWriteResult(preference_version=prefs.version or 0)
+        await self._publish_preference_deleted_event(
+            user_id=user_id,
+            pref_key=pref_key,
+            preference_version=result.preference_version,
+        )
+        return result
+
+    async def override_inferred_preference(
+        self,
+        *,
+        user_id: UUID,
+        pref_key: str,
+        pref_value: Any,
+        evidence_refs: list[dict[str, Any]],
+        source: str = "user_override",
+    ) -> ProfileWriteResult:
+        prefs = await self.pref_service.get_preferences(user_id)
+        if prefs.inferred and pref_key in prefs.inferred:
+            await self._backup_inferred_value(user_id, pref_key, prefs.inferred[pref_key], prefs.last_inferred_update)
+
+        result = await self.set_explicit_preference(
+            user_id=user_id,
+            pref_key=pref_key,
+            pref_value=pref_value,
+            evidence_refs=evidence_refs,
+            source_type="user_state",
+            source=source,
+        )
+        if prefs.inferred and pref_key in prefs.inferred:
+            await self.remove_inferred_preference(user_id=user_id, pref_key=pref_key)
+        return result
+
+    async def reset_override_preference(
+        self,
+        *,
+        user_id: UUID,
+        pref_key: str,
+        restore_source: str = "reset_override",
+    ) -> ProfileWriteResult:
+        result = await self.remove_explicit_preference(
+            user_id=user_id,
+            pref_key=pref_key,
+            reason="reset_override",
+        )
+        backup = await self._load_inferred_backup(user_id, pref_key)
+        if backup is not None:
+            await self.update_inferred_preference(
+                user_id=user_id,
+                updates={pref_key: backup},
+                source=restore_source,
+            )
+            await self._delete_inferred_backup(user_id, pref_key)
+        return result
+
+    async def list_inferred_backups(self, user_id: UUID) -> dict[str, dict[str, Any]]:
+        if not self.redis:
+            return {}
+        try:
+            raw_map = await self.redis.hgetall(self._override_backup_key(user_id))
+        except Exception as exc:
+            logger.warning("Failed to list inferred backups for %s: %s", user_id, exc)
+            return {}
+        backups: dict[str, dict[str, Any]] = {}
+        for key, raw in (raw_map or {}).items():
+            try:
+                payload = json.loads(raw)
+            except Exception:
+                continue
+            if isinstance(payload, dict):
+                backups[str(key)] = payload
+        return backups
+
     async def _sync_legacy_fields(
         self,
         user_id: UUID,
@@ -256,3 +358,54 @@ class ProfileWriteService:
         if set(pref_value.keys()) == {"value"}:
             return pref_value.get("value")
         return pref_value
+
+    def _override_backup_key(self, user_id: UUID) -> str:
+        return f"{self._override_backup_key_prefix}:{user_id}"
+
+    async def _backup_inferred_value(
+        self,
+        user_id: UUID,
+        pref_key: str,
+        value: Any,
+        updated_at: Any,
+    ) -> None:
+        if not self.redis:
+            return
+        payload = {
+            "value": value,
+            "updated_at": updated_at.isoformat() if updated_at is not None else None,
+        }
+        try:
+            await self.redis.hset(
+                self._override_backup_key(user_id),
+                pref_key,
+                json.dumps(payload, ensure_ascii=True),
+            )
+        except Exception as exc:
+            logger.warning("Failed to backup inferred preference %s: %s", pref_key, exc)
+
+    async def _load_inferred_backup(self, user_id: UUID, pref_key: str) -> Any | None:
+        if not self.redis:
+            return None
+        try:
+            raw = await self.redis.hget(self._override_backup_key(user_id), pref_key)
+        except Exception as exc:
+            logger.warning("Failed to load inferred backup %s: %s", pref_key, exc)
+            return None
+        if not raw:
+            return None
+        try:
+            payload = json.loads(raw)
+        except Exception:
+            return None
+        if isinstance(payload, dict):
+            return payload.get("value")
+        return None
+
+    async def _delete_inferred_backup(self, user_id: UUID, pref_key: str) -> None:
+        if not self.redis:
+            return
+        try:
+            await self.redis.hdel(self._override_backup_key(user_id), pref_key)
+        except Exception as exc:
+            logger.warning("Failed to delete inferred backup %s: %s", pref_key, exc)

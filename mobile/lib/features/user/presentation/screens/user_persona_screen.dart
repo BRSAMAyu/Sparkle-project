@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,6 +7,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
+import 'package:sparkle/features/user/presentation/providers/profile_context_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 import 'package:sparkle/features/user/user_routes.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
@@ -16,6 +19,9 @@ class UserPersonaScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final profileAsync = ref.watch(transparentProfileProvider);
+    ref.watch(profileContextProvider);
+    final inferredAsync = ref.watch(inferredPreferencesProvider);
+    final policiesAsync = ref.watch(activePoliciesProvider);
     final onboardingCompleted = ref.watch(onboardingCompletedProvider);
     return SparklePageScaffold(
       role: SparklePageRole.settings,
@@ -23,7 +29,21 @@ class UserPersonaScreen extends ConsumerWidget {
         title: Text(l10n.personaMyProfile),
       ),
       child: profileAsync.when(
-        data: (data) => _buildContent(context, ref, l10n, data, onboardingCompleted),
+        data: (data) => _buildContent(
+          context,
+          ref,
+          l10n,
+          data,
+          onboardingCompleted,
+          inferredAsync.maybeWhen(
+            data: (items) => items,
+            orElse: () => const <Map<String, dynamic>>[],
+          ),
+          policiesAsync.maybeWhen(
+            data: (items) => items,
+            orElse: () => const <Map<String, dynamic>>[],
+          ),
+        ),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(
           child: Text(l10n.personaLoadFailed(err.toString())),
@@ -38,6 +58,8 @@ class UserPersonaScreen extends ConsumerWidget {
     AppLocalizations l10n,
     Map<String, dynamic> data,
     bool completed,
+    List<Map<String, dynamic>> inferredPreferences,
+    List<Map<String, dynamic>> activePolicies,
   ) {
     final layer1 = data['layer_1'] as Map<String, dynamic>? ?? {};
     final layer2 = data['layer_2'] as Map<String, dynamic>? ?? {};
@@ -67,6 +89,22 @@ class UserPersonaScreen extends ConsumerWidget {
           _subSectionList(
             l10n.personaGoals,
             goals.map((item) => _goalRow(ref, context, l10n, item)).toList(),
+            l10n,
+          ),
+          const SizedBox(height: DS.spacing24),
+          _sectionTitle('System Inference'),
+          _subSectionList(
+            'Inferred Preferences',
+            inferredPreferences
+                .map((item) => _inferredPreferenceRow(ref, context, l10n, item))
+                .toList(),
+            l10n,
+          ),
+          _subSectionList(
+            'Active Policies',
+            activePolicies
+                .map((item) => _policyRow(l10n, item))
+                .toList(),
             l10n,
           ),
           const SizedBox(height: DS.spacing24),
@@ -128,6 +166,69 @@ class UserPersonaScreen extends ConsumerWidget {
     );
   }
 
+  Widget _inferredPreferenceRow(
+    WidgetRef ref,
+    BuildContext context,
+    AppLocalizations l10n,
+    Map<String, dynamic> item,
+  ) {
+    final key = item['key']?.toString() ?? 'unknown';
+    final value = item['value'];
+    final explanation = item['explanation']?.toString() ?? '';
+    final source = item['source']?.toString() ?? 'system';
+    final adjustable = item['adjustable'] == true;
+    final overridden = item['overridden'] == true;
+    final metadata = <String, dynamic>{
+      'level': adjustable ? 'editable' : 'readonly',
+      'reason': explanation.isNotEmpty ? explanation : 'Inferred from recent behavior.',
+      'confidence': null,
+    };
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: _metadataRow(
+            l10n,
+            '$key: ${_formatValue(value)} (${overridden ? 'override' : source})',
+            metadata,
+          ),
+        ),
+        if (adjustable)
+          SparkleButton.ghost(
+            onPressed: () => _openOverrideInferredDialog(
+              ref,
+              context,
+              key,
+              value,
+            ),
+            label: overridden ? 'Update' : 'Adjust',
+          ),
+        if (overridden)
+          SparkleButton.ghost(
+            onPressed: () => _resetOverride(ref, context, key),
+            label: 'Reset',
+          ),
+      ],
+    );
+  }
+
+  Widget _policyRow(AppLocalizations l10n, Map<String, dynamic> item) {
+    final signal = item['signal']?.toString() ?? 'policy';
+    final effect = item['effect']?.toString() ?? '';
+    final sourcePattern = item['source_pattern']?.toString() ?? '';
+    return _metadataRow(
+      l10n,
+      '$signal: $effect',
+      <String, dynamic>{
+        'level': 'readonly',
+        'reason': sourcePattern.isNotEmpty
+            ? 'Source pattern: $sourcePattern'
+            : 'Currently active strategy.',
+        'confidence': null,
+      },
+    );
+  }
+
   Widget _buildOnboardingBanner(BuildContext context, AppLocalizations l10n, bool completed) =>
       Padding(
         padding: const EdgeInsets.only(bottom: DS.spacing16),
@@ -152,7 +253,7 @@ class UserPersonaScreen extends ConsumerWidget {
               ),
               SparkleButton.ghost(
                 onPressed: () {
-                  context.push(UserRoutes.personaOnboarding);
+                  unawaited(context.push(UserRoutes.personaOnboarding));
                 },
                 label: completed ? l10n.personaRefill : l10n.personaStart,
               ),
@@ -500,6 +601,9 @@ class UserPersonaScreen extends ConsumerWidget {
                 value: nextValue,
               );
               ref.invalidate(transparentProfileProvider);
+              ref.invalidate(profileContextProvider);
+              ref.invalidate(inferredPreferencesProvider);
+              ref.invalidate(activePoliciesProvider);
               if (context.mounted) {
                 Navigator.of(context).pop();
               }
@@ -538,6 +642,9 @@ class UserPersonaScreen extends ConsumerWidget {
     if (result ?? false) {
       await repo.rollbackTransparentPreference(prefKey);
       ref.invalidate(transparentProfileProvider);
+      ref.invalidate(profileContextProvider);
+      ref.invalidate(inferredPreferencesProvider);
+      ref.invalidate(activePoliciesProvider);
     }
   }
 
@@ -604,6 +711,8 @@ class UserPersonaScreen extends ConsumerWidget {
                   status: nextStatus,
                 );
                 ref.invalidate(transparentProfileProvider);
+                ref.invalidate(profileContextProvider);
+                ref.invalidate(activePoliciesProvider);
                 if (context.mounted) {
                   Navigator.of(context).pop();
                 }
@@ -646,5 +755,76 @@ class UserPersonaScreen extends ConsumerWidget {
     }
 
     return const <Map<String, dynamic>>[];
+  }
+
+  Future<void> _openOverrideInferredDialog(
+    WidgetRef ref,
+    BuildContext context,
+    String key,
+    dynamic currentValue,
+  ) async {
+    final controller = TextEditingController(text: _formatValue(currentValue));
+    final repo = ref.read(userRepositoryProvider);
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Adjust inferred preference'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(key),
+            const SizedBox(height: DS.spacing12),
+            TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                labelText: 'New value',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          SparkleButton.ghost(
+            onPressed: () => Navigator.of(context).pop(),
+            label: context.l10n.cancel,
+          ),
+          SparkleButton(
+            onPressed: () async {
+              final nextValue = controller.text.trim();
+              if (nextValue.isEmpty) {
+                if (context.mounted) {
+                  AppFeedback.info(context, 'Please enter a value');
+                }
+                return;
+              }
+              await repo.overrideInferredPreference(
+                key: key,
+                value: nextValue,
+              );
+              ref.invalidate(transparentProfileProvider);
+              ref.invalidate(profileContextProvider);
+              ref.invalidate(inferredPreferencesProvider);
+              ref.invalidate(activePoliciesProvider);
+              if (context.mounted) {
+                Navigator.of(context).pop();
+              }
+            },
+            label: context.l10n.confirm,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _resetOverride(
+    WidgetRef ref,
+    BuildContext context,
+    String key,
+  ) async {
+    final repo = ref.read(userRepositoryProvider);
+    await repo.resetInferredOverride(key);
+    ref.invalidate(transparentProfileProvider);
+    ref.invalidate(profileContextProvider);
+    ref.invalidate(inferredPreferencesProvider);
+    ref.invalidate(activePoliciesProvider);
   }
 }

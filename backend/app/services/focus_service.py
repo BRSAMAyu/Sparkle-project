@@ -5,10 +5,15 @@ from uuid import UUID
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.event_bus import event_bus
 from app.models.focus import FocusSession, FocusStatus, FocusType
 from app.models.task import Task, TaskStatus
 from app.models.user import User
 from app.services.llm_service import llm_service
+
+
+def _utcnow() -> datetime.datetime:
+    return datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
 
 
 class FocusService:
@@ -123,6 +128,21 @@ class FocusService:
             import logging
             logging.warning(f"Achievement processing failed: {e}")
         # ============================================
+
+        await db.commit()
+        await db.refresh(session)
+        try:
+            await event_bus.publish("focus.session.completed", {
+                "event_type": "focus.session.completed",
+                "user_id": str(user_id),
+                "duration_minutes": session.duration_minutes,
+                "started_at": session.start_time.isoformat(),
+                "completed": session.status == FocusStatus.COMPLETED,
+                "timestamp": _utcnow().isoformat(),
+            })
+        except Exception as e:
+            import logging
+            logging.warning(f"Focus session event publish failed: {e}")
 
         return {
             "session": session,
