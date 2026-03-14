@@ -4,7 +4,7 @@ Community Schemas - 好友、群组、消息、任务相关的请求/响应模�
 """
 from datetime import datetime
 from enum import Enum
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
@@ -192,6 +192,32 @@ class GroupListItem(BaseModel):
         from_attributes = True
 
 
+# ============ 群组推荐 ============
+
+class GroupRecommendationReason(BaseModel):
+    """推荐理由"""
+    type: str = Field(description="理由类型")
+    data: dict[str, Any] | None = Field(default=None, description="理由数据")
+
+
+class GroupRecommendationItem(BaseModel):
+    """群组推荐项"""
+    group: GroupListItem = Field(description="群组信息")
+    score: float = Field(ge=0, le=1, description="推荐分数")
+    reasons: list[GroupRecommendationReason] = Field(
+        default_factory=list, description="推荐理由",
+    )
+    requires_approval: bool = Field(default=False, description="是否需要审批")
+
+
+class GroupRecommendationFeedbackRequest(BaseModel):
+    """群组推荐反馈"""
+    group_id: UUID = Field(description="群组ID")
+    action: Literal["view", "dismiss", "join"] = Field(description="反馈动作")
+    source: Literal["list", "discover"] = Field(description="来源位置")
+    reason_types: list[str] | None = Field(default=None, description="展示的理由类型")
+
+
 # ============ 群成员 Schemas ============
 
 class GroupMemberInfo(BaseModel):
@@ -256,6 +282,8 @@ class MessageInfo(BaseSchema):
     is_revoked: bool = Field(default=False, description="是否已撤回")
     revoked_at: datetime | None = Field(default=None, description="撤回时间")
     edited_at: datetime | None = Field(default=None, description="编辑时间")
+    read_by: list[UUID] | None = Field(default=None, description="已读用户ID列表")
+    read_by_users: list[UserBrief] | None = Field(default=None, description="已读用户信息")
     quoted_message: Optional['MessageInfo'] = Field(default=None, description="引用消息详情")
 
 
@@ -270,6 +298,19 @@ class MessageReactionUpdate(BaseModel):
     """更新消息表情反应"""
     emoji: str = Field(min_length=1, max_length=12, description="表情")
     action: ReactionActionEnum = Field(default=ReactionActionEnum.ADD, description="添加/移除")
+
+
+class GroupMessageReadRequest(BaseModel):
+    """批量标记群消息已读"""
+
+    up_to_message_id: UUID = Field(description="已读到的消息ID（含）")
+
+
+class GroupMessageReadResponse(BaseModel):
+    """群消息已读结果"""
+
+    updated_count: int = Field(description="新增已读回执数量")
+    up_to_message_id: UUID = Field(description="已读到的消息ID")
 
 
 # ============ 群文件 Schemas ============

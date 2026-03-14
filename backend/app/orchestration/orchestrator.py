@@ -1294,6 +1294,8 @@ class ChatOrchestrator:
             # Fetch aggregated context (cached)
             cognitive_context = await context_orchestrator.get_user_context(user_id)
 
+            profile_context_payload = None
+
             # Map CognitiveContext to legacy dict format for backward compatibility
             # In future, we should use CognitiveContext object directly in prompt builder
 
@@ -1342,10 +1344,17 @@ class ChatOrchestrator:
                     experiment_cohort=experiment_cohort,
                 )
 
+                if getattr(cognitive_context, "profile_context", None):
+                    profile_context_payload = cognitive_context.profile_context
+
                 return {
                     "user_context": user_context_data, # Legacy field
                     "analytics_summary": cognitive_context.engagement_metrics or {},
-                    "preferences": cognitive_context.preferences,
+                    "preferences": (
+                        profile_context_payload.get("preferences")
+                        if isinstance(profile_context_payload, dict)
+                        else cognitive_context.preferences
+                    ),
                     "next_actions": cognitive_context.active_tasks,
                     "active_plans": active_plans,
                     "focus_stats": cognitive_context.focus_stats,
@@ -1356,6 +1365,7 @@ class ChatOrchestrator:
                     "returning_context": returning_context,
                     "understanding_depth": understanding_depth,
                     "profile": profile_payload,
+                    "profile_context": profile_context_payload,
 
                     # New field for full context injection
                     "cognitive_context": cognitive_context.model_dump(exclude={'user_id', 'timestamp'}),
@@ -3591,9 +3601,10 @@ class ChatOrchestrator:
                 user_id=user_id,
             )
             if not validation_result.is_valid:
-                await stream_callback(agent_service_pb2.ChatResponse(
-                    delta=f"\n\n⚠️ 计划验证失败: {validation_result.failure_reason}"
-                ))
+                logger.warning(
+                    "LangGraph validation failed, falling back to direct mode: %s",
+                    validation_result.failure_reason,
+                )
                 await self.observability.log_validation_failed(
                     user_id=user_id,
                     session_id=session_id,
@@ -3601,7 +3612,8 @@ class ChatOrchestrator:
                     failure_reason=validation_result.failure_reason,
                 )
                 await self.langgraph_breaker.on_failure("validation_failed")
-                return route_decision, executable_plan, snapshot, True
+                route_decision.execution_mode = "direct"
+                return route_decision, None, snapshot, False
             if validation_result.warnings:
                 state.context_data["knowledge_readiness_warnings"] = validation_result.warnings
                 for warning in validation_result.warnings[:3]:

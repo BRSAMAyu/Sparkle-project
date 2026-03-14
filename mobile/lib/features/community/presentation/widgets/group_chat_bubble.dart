@@ -279,6 +279,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
 
   Widget _buildReadByIndicator() {
     final readBy = widget.message.readBy ?? [];
+    final readByUsers = widget.message.readByUsers ?? const <UserBrief>[];
     if (readBy.isEmpty) return const SizedBox.shrink();
 
     final displayCount = readBy.length > 5 ? 5 : readBy.length;
@@ -307,7 +308,10 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                     ),
                     child: ClipOval(
                       child: Image.network(
-                        'https://api.dicebear.com/9.x/avataaars/png?seed=${readBy[i]}',
+                        _readAvatarUrl(
+                          readerId: readBy[i],
+                          readByUsers: readByUsers,
+                        ),
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => Center(
                           child: Text(
@@ -336,6 +340,18 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
         ],
       ],
     );
+  }
+
+  String _readAvatarUrl({
+    required String readerId,
+    required List<UserBrief> readByUsers,
+  }) {
+    for (final user in readByUsers) {
+      if (user.id == readerId && (user.avatarUrl?.trim().isNotEmpty ?? false)) {
+        return user.avatarUrl!;
+      }
+    }
+    return 'https://api.dicebear.com/9.x/avataaars/png?seed=$readerId';
   }
 
   Widget _buildContent(BuildContext context, bool isMe) {

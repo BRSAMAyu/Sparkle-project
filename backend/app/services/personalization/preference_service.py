@@ -89,6 +89,20 @@ class PreferenceService:
         await self._invalidate_cache(user_id)
         return self._fill_defaults(prefs)
 
+    async def delete_explicit_key(self, user_id: UUID, pref_key: str) -> UserPreferencesCenter:
+        """删除显式偏好键并递增版本"""
+        prefs = await self._get_or_create(user_id)
+        if prefs.explicit is None:
+            prefs.explicit = {}
+        if pref_key in prefs.explicit:
+            prefs.explicit.pop(pref_key, None)
+            prefs.version = (prefs.version or 0) + 1
+            prefs.last_explicit_update = _utcnow()
+            prefs.updated_at = _utcnow()
+            await self.db.commit()
+            await self._invalidate_cache(user_id)
+        return self._fill_defaults(prefs)
+
     async def update_inferred(self, user_id: UUID, updates: dict) -> UserPreferencesCenter:
         """
         更新推断偏好并递增版本（带乐观锁并发保护）

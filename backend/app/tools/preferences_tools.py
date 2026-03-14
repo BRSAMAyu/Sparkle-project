@@ -7,8 +7,7 @@ from loguru import logger
 from pydantic import BaseModel, Field
 
 from app.core.memory_constants import PREFERENCE_KEYS
-from app.services.memory_service import MemoryService
-from app.services.personalization.preference_service import PreferenceService
+from app.services.profile_write_service import ProfileWriteService
 from app.tools.base import BaseTool, ToolCategory, ToolResult
 
 
@@ -52,30 +51,21 @@ class UpdateUserPreferenceTool(BaseTool):
             if not isinstance(pref_value, dict):
                 pref_value = {"value": pref_value}
 
-            memory_service = MemoryService(db_session)
+            profile_write_service = ProfileWriteService(db_session)
             evidence_ref = {
                 "type": "user_state",
                 "id": f"user_confirmed:{pref_key}:{uuid4()}",
                 "schema_version": "v1",
             }
-            record = await memory_service.upsert_preference(
+            write_result = await profile_write_service.set_explicit_preference(
                 user_id=UUID(user_id),
                 pref_key=pref_key,
                 pref_value=pref_value,
                 evidence_refs=[evidence_ref],
                 confidence=params.confidence,
                 source_type="user_state",
+                source="manual_edit",
             )
-
-            explicit_updated = False
-            if pref_key in {"depth_preference", "curiosity_preference"}:
-                value = pref_value.get("value")
-                if isinstance(value, (int, float)):
-                    value = float(value)
-                    value = max(0.0, min(1.0, value))
-                    pref_service = PreferenceService(db_session)
-                    await pref_service.update_explicit(UUID(user_id), {pref_key: value})
-                    explicit_updated = True
 
             try:
                 from app.services.system_update_service import SystemUpdateService, build_system_update
@@ -101,8 +91,10 @@ class UpdateUserPreferenceTool(BaseTool):
                 data={
                     "pref_key": pref_key,
                     "pref_value": pref_value,
-                    "explicit_updated": explicit_updated,
-                    "record_id": str(record.id) if record else None,
+                    "explicit_updated": True,
+                    "record_id": write_result.history_record_id,
+                    "preference_version": write_result.preference_version,
+                    "history_version": write_result.history_version,
                 },
             )
         except Exception as exc:

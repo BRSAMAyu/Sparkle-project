@@ -646,7 +646,15 @@ async def get_user_context(db: AsyncSession, user_id: UUID, payload: dict[str, A
                 focus_mode=focus_mode,
                 route_intent=route_intent or intent,
             )
-            return pack.to_prompt_context()
+            prompt_context = pack.to_prompt_context()
+            try:
+                from app.services.profile_context_service import ProfileContextService
+
+                profile_context = await ProfileContextService(db, cache_service.redis).get_profile_context(user_id)
+                prompt_context["profile_context"] = profile_context.to_prompt_context()
+            except Exception as exc:
+                logger.warning(f"Failed to attach profile context: {exc}")
+            return prompt_context
 
         # 0. 获取 Analytics Summary
         analytics_service = AnalyticsService(db)
@@ -673,10 +681,18 @@ async def get_user_context(db: AsyncSession, user_id: UUID, payload: dict[str, A
             except Exception:
                 explicit = {}
 
-            context["learning_preferences"] = {
-                "depth_preference": explicit.get("depth_preference", user.depth_preference),
-                "curiosity_preference": explicit.get("curiosity_preference", user.curiosity_preference),
-            }
+        context["learning_preferences"] = {
+            "depth_preference": explicit.get("depth_preference", user.depth_preference),
+            "curiosity_preference": explicit.get("curiosity_preference", user.curiosity_preference),
+        }
+
+        try:
+            from app.services.profile_context_service import ProfileContextService
+
+            profile_context = await ProfileContextService(db, cache_service.redis).get_profile_context(user_id)
+            context["profile_context"] = profile_context.to_prompt_context()
+        except Exception as exc:
+            logger.warning(f"Failed to attach profile context: {exc}")
 
         # 2. 获取近期任务（最近7天）
         seven_days_ago = _utcnow() - timedelta(days=7)

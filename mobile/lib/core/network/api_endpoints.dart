@@ -105,6 +105,10 @@ class ApiEndpoints {
 
   // Community - Groups
   static const String groups = '/community/groups';
+  static const String groupsRecommendations =
+      '/community/groups/recommendations';
+  static const String groupsRecommendationsFeedback =
+      '/community/groups/recommendations/feedback';
   static const String groupsSearch = '/community/groups/search';
   static String group(String id) => '/community/groups/$id';
   static String groupJoin(String id) => '/community/groups/$id/join';
@@ -125,6 +129,8 @@ class ApiEndpoints {
       '/community/groups/$groupId/messages/$messageId';
   static String groupMessageReactions(String groupId, String messageId) =>
       '/community/groups/$groupId/messages/$messageId/reactions';
+  static String groupMessagesRead(String groupId) =>
+      '/community/groups/$groupId/messages/read';
   static String groupThreadMessages(String groupId, String threadRootId) =>
       '/community/groups/$groupId/threads/$threadRootId';
   static String groupMessagesSearch(String groupId) =>

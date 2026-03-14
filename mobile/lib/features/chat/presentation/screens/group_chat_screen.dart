@@ -158,9 +158,12 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
           SparkleIconButton(
             icon: const Icon(Icons.info_outline),
             onPressed: () {
-              // Assuming we might be deep linked, ensuring we can go to details
-              // Actually we came from details usually.
-              // But let's allow going to details if we are just in chat view
+              unawaited(
+                context.push(
+                  CommunityRoutes.groupDetail
+                      .replaceFirst(':id', widget.groupId),
+                ),
+              );
             },
             variant: ButtonVariant.ghost,
             size: DS.touchTargetMinSize,

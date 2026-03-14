@@ -20,7 +20,7 @@ from app.schemas.user import (
     UserProfile,
     UserUpdate,
 )
-from app.services.personalization.preference_service import PreferenceService
+from app.services.profile_write_service import ProfileWriteService
 from app.utils.helpers import save_upload_file
 
 router = APIRouter()
@@ -96,22 +96,27 @@ async def update_me(
             raise HTTPException(status_code=400, detail="Email already registered")
         current_user.email = obj_in.email
 
-    if obj_in.depth_preference is not None:
-        current_user.depth_preference = obj_in.depth_preference
-    if obj_in.curiosity_preference is not None:
-        current_user.curiosity_preference = obj_in.curiosity_preference
-
     pref_updates = {}
     if obj_in.depth_preference is not None:
         pref_updates["depth_preference"] = obj_in.depth_preference
     if obj_in.curiosity_preference is not None:
         pref_updates["curiosity_preference"] = obj_in.curiosity_preference
-    if pref_updates:
-        pref_service = PreferenceService(db, cache_service.redis)
-        await pref_service.update_explicit(current_user.id, pref_updates)
 
     db.add(current_user)
     await db.commit()
+    if pref_updates:
+        profile_write_service = ProfileWriteService(db, cache_service.redis)
+        for pref_key, pref_value in pref_updates.items():
+            await profile_write_service.set_explicit_preference(
+                user_id=current_user.id,
+                pref_key=pref_key,
+                pref_value={"value": pref_value},
+                evidence_refs=[
+                    {"type": "user_state", "id": "profile_edit", "schema_version": "profile_edit.v1"}
+                ],
+                source_type="user_state",
+                source="manual_edit",
+            )
     await db.refresh(current_user)
 
     # Load push_preferences for response
@@ -267,20 +272,24 @@ async def update_my_preferences(
     """
     Update current user's depth and curiosity preferences
     """
-    current_user.depth_preference = preferences.learning_depth
-    current_user.curiosity_preference = preferences.curiosity_level
-
-    pref_service = PreferenceService(db, cache_service.redis)
-    await pref_service.update_explicit(
-        current_user.id,
-        {
-            "depth_preference": preferences.learning_depth,
-            "curiosity_preference": preferences.curiosity_level,
+    profile_write_service = ProfileWriteService(db, cache_service.redis)
+    await profile_write_service.set_explicit_preferences(
+        user_id=current_user.id,
+        updates={
+            "depth_preference": {"value": preferences.learning_depth},
+            "curiosity_preference": {"value": preferences.curiosity_level},
         },
+        evidence_refs_by_key={
+            "depth_preference": [
+                {"type": "user_state", "id": "preferences_api", "schema_version": "preferences_api.v1"}
+            ],
+            "curiosity_preference": [
+                {"type": "user_state", "id": "preferences_api", "schema_version": "preferences_api.v1"}
+            ],
+        },
+        source_type="user_state",
+        source="manual_edit",
     )
-
-    db.add(current_user)
-    await db.commit()
     await db.refresh(current_user)
 
     # Load push_preferences for response
@@ -373,39 +382,35 @@ async def update_push_preference(
     """
     Update current user's push notification preferences
     """
-    from sqlalchemy import select
+    updates: dict[str, Any] = {}
+    if payload.enable_curiosity is not None:
+        updates["enable_curiosity_push"] = payload.enable_curiosity
+    if payload.persona_type is not None:
+        updates["persona_type"] = payload.persona_type
+    if payload.daily_cap is not None:
+        updates["daily_cap"] = payload.daily_cap
+    if payload.active_slots is not None:
+        updates["active_slots"] = payload.active_slots
+    if payload.timezone is not None:
+        updates["timezone"] = payload.timezone
 
-    # Fetch or create push preference
+    if updates:
+        profile_write_service = ProfileWriteService(db, cache_service.redis)
+        await profile_write_service.set_explicit_preferences(
+            user_id=current_user.id,
+            updates=updates,
+            evidence_refs_by_key={
+                key: [{"type": "user_state", "id": "push_preference", "schema_version": "push_preference.v1"}]
+                for key in updates
+            },
+            source_type="user_state",
+            source="manual_edit",
+        )
+
     result = await db.execute(
         select(PushPreference).where(PushPreference.user_id == current_user.id)
     )
     push_pref = result.scalar_one_or_none()
-
-    if not push_pref:
-        push_pref = PushPreference(
-            user_id=current_user.id,
-            enable_curiosity=payload.enable_curiosity if payload.enable_curiosity is not None else True,
-            persona_type=payload.persona_type if payload.persona_type is not None else "coach",
-            daily_cap=payload.daily_cap if payload.daily_cap is not None else 5,
-            active_slots=payload.active_slots if payload.active_slots is not None else [],
-            timezone=payload.timezone if payload.timezone is not None else "Asia/Shanghai"
-        )
-        db.add(push_pref)
-    else:
-        # Update fields if provided
-        if payload.enable_curiosity is not None:
-            push_pref.enable_curiosity = payload.enable_curiosity
-        if payload.persona_type is not None:
-            push_pref.persona_type = payload.persona_type
-        if payload.daily_cap is not None:
-            push_pref.daily_cap = payload.daily_cap
-        if payload.active_slots is not None:
-            push_pref.active_slots = payload.active_slots
-        if payload.timezone is not None:
-            push_pref.timezone = payload.timezone
-
-    await db.commit()
-    await db.refresh(push_pref)
 
     return PushPreferenceResponse(
         enable_curiosity=push_pref.enable_curiosity,
@@ -425,10 +430,17 @@ async def update_schedule_preferences(
     """
     Update current user's weekly schedule preferences (time slots grid)
     """
-    current_user.schedule_preferences = schedule_prefs
-
-    db.add(current_user)
-    await db.commit()
+    profile_write_service = ProfileWriteService(db, cache_service.redis)
+    await profile_write_service.set_explicit_preference(
+        user_id=current_user.id,
+        pref_key="schedule_preferences",
+        pref_value=schedule_prefs,
+        evidence_refs=[
+            {"type": "user_state", "id": "schedule_preferences", "schema_version": "schedule_preferences.v1"}
+        ],
+        source_type="user_state",
+        source="manual_edit",
+    )
     await db.refresh(current_user)
 
     # Load push_preferences for response

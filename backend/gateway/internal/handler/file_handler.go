@@ -170,7 +170,10 @@ func (h *FileHandler) PrepareUpload(c *gin.Context) {
 		objectKey,
 	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create file record"})
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":  "failed to create file record",
+			"detail": err.Error(),
+		})
 		return
 	}
 
@@ -182,7 +185,10 @@ func (h *FileHandler) PrepareUpload(c *gin.Context) {
 		h.storage.MaxUploadSize(),
 	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate upload url"})
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":  "failed to generate upload url",
+			"detail": err.Error(),
+		})
 		return
 	}
 

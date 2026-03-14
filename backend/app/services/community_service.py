@@ -17,9 +17,11 @@ from app.models.community import (
     Group,
     GroupMember,
     GroupMessage,
+    GroupMessageRead,
     GroupRole,
     GroupTask,
     GroupTaskClaim,
+    GroupType,
     MessageType,
 )
 from app.models.plan import Plan, PlanType
@@ -628,8 +630,9 @@ class GroupMessageService:
         # Re-fetch with relationships to ensure reply_to is loaded
         stmt = select(GroupMessage).options(
             selectinload(GroupMessage.sender),
-            selectinload(GroupMessage.reply_to).selectinload(GroupMessage.sender)
-        ).where(GroupMessage.id == message.id)
+            selectinload(GroupMessage.reply_to).selectinload(GroupMessage.sender),
+            selectinload(GroupMessage.read_receipts).selectinload(GroupMessageRead.user),
+        ).where(GroupMessage.id == message.id).execution_options(populate_existing=True)
 
         result = await db.execute(stmt)
         return result.scalar_one()
@@ -669,8 +672,9 @@ class GroupMessageService:
 
         stmt = select(GroupMessage).options(
             selectinload(GroupMessage.sender),
-            selectinload(GroupMessage.reply_to).selectinload(GroupMessage.sender)
-        ).where(GroupMessage.id == msg.id)
+            selectinload(GroupMessage.reply_to).selectinload(GroupMessage.sender),
+            selectinload(GroupMessage.read_receipts).selectinload(GroupMessageRead.user),
+        ).where(GroupMessage.id == msg.id).execution_options(populate_existing=True)
         result = await db.execute(stmt)
         return result.scalar_one()
 
@@ -718,8 +722,9 @@ class GroupMessageService:
 
         stmt = select(GroupMessage).options(
             selectinload(GroupMessage.sender),
-            selectinload(GroupMessage.reply_to).selectinload(GroupMessage.sender)
-        ).where(GroupMessage.id == msg.id)
+            selectinload(GroupMessage.reply_to).selectinload(GroupMessage.sender),
+            selectinload(GroupMessage.read_receipts).selectinload(GroupMessageRead.user),
+        ).where(GroupMessage.id == msg.id).execution_options(populate_existing=True)
         result = await db.execute(stmt)
         return result.scalar_one()
 
@@ -767,8 +772,9 @@ class GroupMessageService:
 
         stmt = select(GroupMessage).options(
             selectinload(GroupMessage.sender),
-            selectinload(GroupMessage.reply_to).selectinload(GroupMessage.sender)
-        ).where(GroupMessage.id == msg.id)
+            selectinload(GroupMessage.reply_to).selectinload(GroupMessage.sender),
+            selectinload(GroupMessage.read_receipts).selectinload(GroupMessageRead.user),
+        ).where(GroupMessage.id == msg.id).execution_options(populate_existing=True)
         result = await db.execute(stmt)
         return result.scalar_one()
 
@@ -793,8 +799,9 @@ class GroupMessageService:
 
         root_stmt = select(GroupMessage).options(
             selectinload(GroupMessage.sender),
-            selectinload(GroupMessage.reply_to).selectinload(GroupMessage.sender)
-        ).where(GroupMessage.id == thread_root_id)
+            selectinload(GroupMessage.reply_to).selectinload(GroupMessage.sender),
+            selectinload(GroupMessage.read_receipts).selectinload(GroupMessageRead.user),
+        ).where(GroupMessage.id == thread_root_id).execution_options(populate_existing=True)
         root_result = await db.execute(root_stmt)
         root = root_result.scalar_one_or_none()
         if not root or root.group_id != group_id or root.is_deleted:
@@ -808,8 +815,9 @@ class GroupMessageService:
             GroupMessage.not_deleted_filter()
         ).options(
             selectinload(GroupMessage.sender),
-            selectinload(GroupMessage.reply_to).selectinload(GroupMessage.sender)
-        ).order_by(GroupMessage.created_at.asc()).limit(limit)
+            selectinload(GroupMessage.reply_to).selectinload(GroupMessage.sender),
+            selectinload(GroupMessage.read_receipts).selectinload(GroupMessageRead.user),
+        ).order_by(GroupMessage.created_at.asc()).limit(limit).execution_options(populate_existing=True)
 
         result = await db.execute(query)
         replies = [msg for msg in result.scalars().all() if _is_visible_to(msg.content_data, user_id)]
@@ -840,8 +848,9 @@ class GroupMessageService:
             GroupMessage.content.ilike(f"%{keyword}%")
         ).options(
             selectinload(GroupMessage.sender),
-            selectinload(GroupMessage.reply_to).selectinload(GroupMessage.sender)
-        ).order_by(desc(GroupMessage.created_at)).limit(limit)
+            selectinload(GroupMessage.reply_to).selectinload(GroupMessage.sender),
+            selectinload(GroupMessage.read_receipts).selectinload(GroupMessageRead.user),
+        ).order_by(desc(GroupMessage.created_at)).limit(limit).execution_options(populate_existing=True)
 
         result = await db.execute(query)
         return [msg for msg in result.scalars().all() if _is_visible_to(msg.content_data, user_id)]
@@ -871,8 +880,9 @@ class GroupMessageService:
             GroupMessage.not_deleted_filter()
         ).options(
             selectinload(GroupMessage.sender),
-            selectinload(GroupMessage.reply_to).selectinload(GroupMessage.sender)
-        ).order_by(desc(GroupMessage.created_at))
+            selectinload(GroupMessage.reply_to).selectinload(GroupMessage.sender),
+            selectinload(GroupMessage.read_receipts).selectinload(GroupMessageRead.user),
+        ).order_by(desc(GroupMessage.created_at)).execution_options(populate_existing=True)
 
         if before_id:
             # 获取before_id对应消息的创建时间
@@ -884,6 +894,81 @@ class GroupMessageService:
         result = await db.execute(query)
         messages = list(result.scalars().all())
         return [msg for msg in messages if _is_visible_to(msg.content_data, user_id)]
+
+    @staticmethod
+    async def mark_as_read(
+        db: AsyncSession,
+        group_id: UUID,
+        user_id: UUID,
+        up_to_message_id: UUID,
+    ) -> tuple[int, GroupMessage]:
+        """标记群消息已读到某条消息。"""
+        membership_result = await db.execute(
+            select(GroupMember).where(
+                GroupMember.group_id == group_id,
+                GroupMember.user_id == user_id,
+                GroupMember.not_deleted_filter(),
+            )
+        )
+        if not membership_result.scalar_one_or_none():
+            raise ValueError("不是群组成员，无法标记已读")
+
+        target_stmt = (
+            select(GroupMessage)
+            .options(
+                selectinload(GroupMessage.sender),
+                selectinload(GroupMessage.reply_to).selectinload(GroupMessage.sender),
+                selectinload(GroupMessage.read_receipts).selectinload(GroupMessageRead.user),
+            )
+            .where(
+                GroupMessage.id == up_to_message_id,
+                GroupMessage.group_id == group_id,
+                GroupMessage.not_deleted_filter(),
+            )
+        )
+        target_result = await db.execute(target_stmt)
+        target_message = target_result.scalar_one_or_none()
+        if not target_message:
+            raise ValueError("消息不存在")
+        if not _is_visible_to(target_message.content_data, user_id):
+            raise ValueError("消息不可见")
+
+        messages_stmt = (
+            select(GroupMessage)
+            .options(
+                selectinload(GroupMessage.read_receipts).selectinload(GroupMessageRead.user),
+            )
+            .where(
+                GroupMessage.group_id == group_id,
+                GroupMessage.created_at <= target_message.created_at,
+                GroupMessage.not_deleted_filter(),
+            )
+            .order_by(GroupMessage.created_at.asc())
+        )
+        messages_result = await db.execute(messages_stmt)
+        updated_count = 0
+        for message in messages_result.scalars().all():
+            if message.sender_id == user_id:
+                continue
+            if not _is_visible_to(message.content_data, user_id):
+                continue
+            already_read = any(receipt.user_id == user_id for receipt in message.read_receipts)
+            if already_read:
+                continue
+            db.add(
+                GroupMessageRead(
+                    message_id=message.id,
+                    user_id=user_id,
+                    read_at=_utcnow(),
+                )
+            )
+            updated_count += 1
+
+        await db.flush()
+        refreshed_target = await db.execute(
+            target_stmt.execution_options(populate_existing=True)
+        )
+        return updated_count, refreshed_target.scalar_one()
 
     @staticmethod
     async def send_system_message(

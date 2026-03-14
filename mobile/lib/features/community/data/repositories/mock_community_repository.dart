@@ -790,6 +790,50 @@ class MockCommunityRepository implements CommunityRepository {
   }
 
   @override
+  Future<List<GroupRecommendationItem>> getGroupRecommendations({
+    int limit = 20,
+    int cursor = 0,
+  }) async {
+    final items = _mockGroups
+        .where((group) => group.isPublic)
+        .skip(cursor)
+        .take(limit)
+        .map(
+          (group) => GroupRecommendationItem(
+            group: GroupListItem(
+              id: group.id,
+              name: group.name,
+              type: group.type,
+              memberCount: group.memberCount,
+              totalFlamePower: group.totalFlamePower,
+              focusTags: group.focusTags,
+            ),
+            score: 0.6,
+            reasons: [
+              GroupRecommendationReason(
+                type: 'trending',
+                data: {'msg_7d': 42},
+              ),
+            ],
+            requiresApproval: group.joinRequiresApproval,
+          ),
+        )
+        .toList();
+    return items;
+  }
+
+  @override
+  Future<void> sendGroupRecommendationFeedback({
+    required String groupId,
+    required String action,
+    required String source,
+    List<String>? reasonTypes,
+  }) async {
+    // Mock implementation - do nothing
+    return;
+  }
+
+  @override
   Future<List<GroupMemberInfo>> getGroupMembers(String groupId) async {
     // Mock implementation - return empty list
     return [];

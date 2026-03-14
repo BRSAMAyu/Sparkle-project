@@ -8,14 +8,15 @@ from uuid import UUID
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.profile_context import ProfileContext
 from app.models.cognitive import BehaviorPattern, CognitiveFragment
 from app.models.compliance import PersonaSnapshot
 from app.models.galaxy import UserNodeStatus
 
 
-class PersonaService:
+class ProfileSnapshotService:
     """
-    用户画像快照服务 (PersonaTool)
+    用户画像快照服务 (Profile Snapshot)
     """
 
     def __init__(self, db: AsyncSession, redis_client=None):
@@ -24,23 +25,44 @@ class PersonaService:
         self.persona_version = os.getenv("PERSONA_VERSION", "v3.1")
         self.audit_secret = os.getenv("PERSONA_AUDIT_SECRET", "persona-audit-secret")
 
-    async def get_snapshot(self, user_id: UUID, purpose: str) -> dict[str, Any]:
+    async def build_profile_snapshot(
+        self,
+        user_id: UUID,
+        purpose: str,
+        profile_context: ProfileContext | None = None,
+    ) -> dict[str, Any]:
         cache_key = f"persona:snapshot:{user_id}:{purpose}"
         if self.redis:
             cached = await self.redis.get(cache_key)
             if cached:
                 return json.loads(cached)
 
-        snapshot = await self._build_snapshot(user_id, purpose)
+        snapshot = await self._build_snapshot(user_id, purpose, profile_context=profile_context)
         if self.redis:
             await self.redis.setex(cache_key, 300, json.dumps(snapshot, ensure_ascii=False))
 
         await self._persist_snapshot(user_id, snapshot)
         return snapshot
 
-    async def _build_snapshot(self, user_id: UUID, purpose: str) -> dict[str, Any]:
-        tags = await self._collect_tags(user_id)
-        capabilities = await self._collect_capabilities(user_id)
+    async def get_snapshot(self, user_id: UUID, purpose: str) -> dict[str, Any]:
+        """Backward-compatible alias for legacy callers."""
+        return await self.build_profile_snapshot(user_id, purpose)
+
+    async def _build_snapshot(
+        self,
+        user_id: UUID,
+        purpose: str,
+        profile_context: ProfileContext | None = None,
+    ) -> dict[str, Any]:
+        if profile_context is not None:
+            tags = [pattern.pattern_name for pattern in profile_context.cognitive_summary.active_patterns]
+            capabilities = {
+                "mastery_avg": float(profile_context.knowledge_summary.overall_mastery or 0.0),
+                "active_subjects": profile_context.knowledge_summary.active_learning_subjects,
+            }
+        else:
+            tags = await self._collect_tags(user_id)
+            capabilities = await self._collect_capabilities(user_id)
         last_update_event_id = await self._get_last_event_id(user_id)
 
         audit_token = self._sign_audit_token(user_id, last_update_event_id)
@@ -117,3 +139,7 @@ class PersonaService:
         )
         self.db.add(record)
         await self.db.commit()
+
+
+# Backward-compatible alias
+PersonaService = ProfileSnapshotService
