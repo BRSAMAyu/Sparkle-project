@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
+from app.core.cache import cache_service
 from app.config import settings
 from app.core.memory_constants import PREFERENCE_KEYS
 from app.models.user import User
@@ -22,7 +23,7 @@ async def get_memory_settings(
     current_user: User = Depends(get_current_user),
 ):
     # _ensure_memory_controls_enabled()
-    service = MemorySettingsService(db)
+    service = MemorySettingsService(db, cache_service.redis)
     record = await service.get_or_create(current_user.id)
     return _serialize_settings(record)
 
@@ -43,7 +44,7 @@ async def update_memory_settings(
                 detail=f"blocked_pref_keys invalid: {sorted(invalid)}",
             )
 
-    service = MemorySettingsService(db)
+    service = MemorySettingsService(db, cache_service.redis)
     record = await service.update_settings(current_user.id, payload.model_dump())
     return _serialize_settings(record)
 

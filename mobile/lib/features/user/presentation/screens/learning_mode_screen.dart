@@ -6,6 +6,7 @@ import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 import 'package:sparkle/features/user/presentation/widgets/preference_controller_2d.dart';
+import 'package:sparkle/features/user/user_routes.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 
 class LearningModeScreen extends ConsumerStatefulWidget {
@@ -54,7 +55,7 @@ class _LearningModeScreenState extends ConsumerState<LearningModeScreen> {
 
       if (mounted) {
         AppFeedback.success(context, context.l10n.learningModeSaved);
-        context.pop(); // Go back to previous screen
+        UserRoutes.popOrGoProfile(context);
       }
     } catch (e) {
       if (mounted) {

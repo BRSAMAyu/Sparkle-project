@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user import PushPreference, User
 from app.core.event_bus import ProfilePreferenceDeleted, ProfilePreferenceUpdated, event_bus
+from app.services.memory_policy_evaluator import MemoryPolicyEvaluator
 from app.services.memory_service import MemoryService
 from app.services.personalization.preference_service import PreferenceService
 
@@ -162,10 +163,48 @@ class ProfileWriteService:
         if not updates:
             prefs = await self.pref_service.get_preferences(user_id)
             return prefs.version or 0
-        prefs = await self.pref_service.update_inferred(user_id, updates)
+
+        evaluator = MemoryPolicyEvaluator(self.db)
+        filtered_updates: dict[str, Any] = {}
+        for key, value in updates.items():
+            decision = await evaluator.evaluate(
+                user_id=user_id,
+                kind="preference",
+                pref_key=key,
+                source_type="ai_inferred",
+            )
+            if decision.allowed:
+                filtered_updates[key] = value
+            else:
+                logger.debug("Inferred pref %s blocked by memory policy: %s", key, decision.reason)
+
+        if not filtered_updates:
+            prefs = await self.pref_service.get_preferences(user_id)
+            return prefs.version or 0
+
+        prefs = await self.pref_service.update_inferred(user_id, filtered_updates)
+
+        for key, value in filtered_updates.items():
+            try:
+                await self.memory_service.upsert_preference(
+                    user_id=user_id,
+                    pref_key=key,
+                    pref_value={"value": value, "source": source},
+                    evidence_refs=[{"type": "ai_inferred", "id": source}],
+                    confidence=0.6,
+                    source_type="ai_inferred",
+                )
+            except Exception as exc:
+                logger.warning(
+                    "Inferred preference history write failed user_id=%s pref_key=%s error=%s",
+                    user_id,
+                    key,
+                    exc,
+                )
+
         await self._publish_preference_updated_event(
             user_id=user_id,
-            pref_keys=list(updates.keys()),
+            pref_keys=list(filtered_updates.keys()),
             preference_version=prefs.version or 0,
             source=source,
         )
@@ -183,6 +222,36 @@ class ProfileWriteService:
             user_id=user_id,
             pref_key=pref_key,
             preference_version=result.preference_version,
+        )
+        return result
+
+    async def remove_inferred_keys(
+        self,
+        *,
+        user_id: UUID,
+        keys: list[str],
+        source: str = "memory_settings_sync",
+    ) -> ProfileWriteResult:
+        if not keys:
+            prefs = await self.pref_service.get_preferences(user_id)
+            return ProfileWriteResult(preference_version=prefs.version or 0)
+
+        prefs = await self.pref_service.get_preferences(user_id)
+        current_inferred = dict(prefs.inferred or {})
+        removed_keys = [key for key in keys if key in current_inferred]
+        if not removed_keys:
+            return ProfileWriteResult(preference_version=prefs.version or 0)
+
+        for key in removed_keys:
+            current_inferred.pop(key, None)
+
+        updated = await self.pref_service.update_inferred_raw(user_id, current_inferred)
+        result = ProfileWriteResult(preference_version=updated.version or 0)
+        await self._publish_preference_updated_event(
+            user_id=user_id,
+            pref_keys=removed_keys,
+            preference_version=result.preference_version,
+            source=source,
         )
         return result
 

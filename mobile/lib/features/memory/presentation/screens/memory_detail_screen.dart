@@ -22,6 +22,14 @@ class MemoryDetailArgs {
         preference: item,
       );
 
+  factory MemoryDetailArgs.preferenceKey(String prefKey) => MemoryDetailArgs._(
+        MemoryDetailType.preference,
+        prefKey,
+        false,
+        const <EvidenceRefModel>[],
+        prefKey: prefKey,
+      );
+
   factory MemoryDetailArgs.goal(MemoryGoalItem item) => MemoryDetailArgs._(
         MemoryDetailType.goal,
         item.title,
@@ -129,6 +137,15 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
       }
       setState(() {
         _history = items;
+        if (_preference == null && items.isNotEmpty) {
+          _preference = _preferenceFromHistory(items.first);
+          _confidence = _preference?.confidence;
+          _correctionCount = _preference?.correctionCount ?? _correctionCount;
+          _evidenceScore = _preference?.evidenceScore ?? _evidenceScore;
+          _retractedAt = _preference?.retractedAt ?? _retractedAt;
+          _refs = List<EvidenceRefModel>.from(items.first.evidenceRefs);
+          _evidenceMissing = items.first.evidenceMissing;
+        }
         _loadingHistory = false;
       });
     } catch (e) {
@@ -512,6 +529,23 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
       const SnackBar(content: Text('Revert 功能尚未启用')),
     );
   }
+
+  MemoryPreferenceItem _preferenceFromHistory(
+    MemoryPreferenceHistoryItem item,
+  ) =>
+      MemoryPreferenceItem(
+        id: item.id,
+        prefKey: item.prefKey,
+        prefValue: item.prefValue,
+        version: item.version,
+        confidence: item.confidence,
+        updatedAt: item.updatedAt,
+        evidenceMissing: item.evidenceMissing,
+        evidenceRefs: item.evidenceRefs,
+        evidenceScore: item.evidenceScore,
+        correctionCount: item.correctionCount,
+        retractedAt: item.retractedAt,
+      );
 
   Widget _buildWhyMemorySection() {
     final budget = _preference?.prefValue is Map

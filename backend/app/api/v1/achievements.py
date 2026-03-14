@@ -359,9 +359,16 @@ async def list_galaxy_skins(
             current_user.equipped_skin_source == EquipmentSource.ACHIEVEMENT
             and current_user.equipped_skin == skin.id
         )
-
         skin_list.append(GalaxySkinDetail(
-            **skin.__dict__,
+            id=skin.id,
+            name=skin.name,
+            description=skin.description,
+            preview_url=skin.preview_url,
+            rarity=skin.rarity,
+            sort_order=skin.sort_order,
+            unlock_type=skin.unlock_type,
+            unlock_requirement=skin.unlock_requirement or {},
+            skin_config=skin.skin_config or {},
             is_unlocked=is_unlocked,
             is_equipped=is_equipped
         ))
@@ -414,7 +421,7 @@ async def list_user_titles(
     from app.schemas.achievement import UserTitleResponse
     equipped_title = current_user.equipped_title if current_user.equipped_title_source == EquipmentSource.ACHIEVEMENT else None
     title_list = [
-        UserTitleResponse.model_validate(title).model_copy(
+        UserTitleResponse.model_validate(title, from_attributes=True).model_copy(
             update={
                 "is_equipped": (
                     current_user.equipped_title_source == EquipmentSource.ACHIEVEMENT

@@ -441,9 +441,7 @@ async def guest_login(
             "token_type": "bearer"
         },
         "user": {
-            "id": str(user.id),
-            "username": user.username,
-            "nickname": user.nickname,
-            "is_guest": True
-        }
+            **UserProfile.model_validate(user).model_dump(mode="json"),
+            "is_guest": True,
+        },
     }

@@ -25,6 +25,15 @@ class MemoryRoutes {
   static const String settings = '/memory/settings';
   static const String detail = '/memory/detail';
 
+  static void popOrGoPanel(BuildContext context, {String fallback = panel}) {
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      context.pop();
+      return;
+    }
+    context.go(fallback);
+  }
+
   static List<RouteBase> get routes => [
         GoRoute(
           path: panel,

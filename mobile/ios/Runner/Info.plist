@@ -62,6 +62,16 @@
 	</dict>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>需要连接到本地开发服务器以进行API调试和数据同步</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>需要使用麦克风来录制语音输入、语音消息与口语练习内容</string>
+	<key>NSCameraUsageDescription</key>
+	<string>需要使用相机来拍摄头像、上传图片和完成相关学习互动</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>需要访问照片以便选择头像、上传图片以及分享学习内容</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>需要保存图片到相册，用于导出学习成果与分享卡片</string>
+	<key>NSUserNotificationsUsageDescription</key>
+	<string>需要通知权限以发送任务提醒、学习计划进度和重要消息</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

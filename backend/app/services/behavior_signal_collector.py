@@ -4,6 +4,7 @@ BehaviorSignalCollector - aggregate implicit behavior into cognitive fragments.
 from __future__ import annotations
 
 import json
+from statistics import median
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
@@ -18,6 +19,7 @@ from app.models.task_feedback import TaskFeedback, TaskFeedbackCategory
 from app.orchestration.adaptive_replanner import AdaptiveReplanner
 from app.services.cognitive_service import CognitiveService
 from app.services.plan_state_service import PlanStateService
+from app.services.profile_write_service import ProfileWriteService
 
 
 def _utcnow() -> datetime:
@@ -34,12 +36,15 @@ class BehaviorSignalCollector:
     INACTIVITY_DAYS = 3
     OVERRUN_RATIO = 1.5
     OVERRUN_STREAK = 3
+    INFERRED_WINDOW_DAYS = 14
+    INFERRED_AGGREGATION_STEP = 5
 
     def __init__(self, db: AsyncSession, redis=None):
         self.db = db
         self.redis = redis
         self.cognitive_service = CognitiveService(db)
         self.plan_state_service = PlanStateService(db, redis)
+        self.profile_write_service = ProfileWriteService(db, redis)
 
     async def handle_task_feedback_event(self, event: dict) -> None:
         user_id = UUID(str(event["user_id"]))
@@ -51,6 +56,7 @@ class BehaviorSignalCollector:
 
         await self._maybe_emit_inactivity_signal(user_id)
         await self._maybe_emit_pattern_adjustment(user_id)
+        await self._maybe_update_task_inferred_preferences(user_id)
 
     async def handle_task_abandoned_event(self, event: dict) -> None:
         user_id = UUID(str(event["user_id"]))
@@ -85,6 +91,7 @@ class BehaviorSignalCollector:
         user_id = UUID(str(event["user_id"]))
         await self._maybe_emit_overrun_pattern(user_id)
         await self._maybe_emit_inactivity_signal(user_id)
+        await self._maybe_update_task_inferred_preferences(user_id)
 
     async def handle_plan_replanned_event(self, event: dict) -> None:
         user_id = UUID(str(event["user_id"]))
@@ -282,3 +289,127 @@ class BehaviorSignalCollector:
     @staticmethod
     def _cooldown_key(user_id: UUID, signal_key: str) -> str:
         return f"behavior:auto:cooldown:{user_id}:{signal_key}"
+
+    async def _maybe_update_task_inferred_preferences(self, user_id: UUID) -> None:
+        if self.redis:
+            counter_key = self._task_signal_counter_key(user_id)
+            try:
+                count = int(await self.redis.incr(counter_key))
+                await self.redis.expire(counter_key, int(timedelta(days=self.INFERRED_WINDOW_DAYS).total_seconds()))
+                if count % self.INFERRED_AGGREGATION_STEP != 0:
+                    return
+            except Exception as exc:
+                logger.warning("Task inferred counter failed for %s: %s", user_id, exc)
+
+        updates = await self._build_task_inferred_updates(user_id)
+        if not updates:
+            return
+        try:
+            await self.profile_write_service.update_inferred_preference(
+                user_id=user_id,
+                updates=updates,
+                source="ai_inferred",
+            )
+        except Exception as exc:
+            logger.warning("Failed to update task inferred preferences for %s: %s", user_id, exc)
+
+    async def _build_task_inferred_updates(self, user_id: UUID) -> dict[str, object]:
+        cutoff = _utcnow() - timedelta(days=self.INFERRED_WINDOW_DAYS)
+        task_result = await self.db.execute(
+            select(Task)
+            .where(
+                Task.user_id == user_id,
+                Task.status == TaskStatus.COMPLETED,
+                Task.completed_at.is_not(None),
+                Task.completed_at >= cutoff,
+            )
+            .order_by(desc(Task.completed_at))
+        )
+        tasks = list(task_result.scalars().all())
+        if not tasks:
+            return {}
+
+        ratios: list[float] = []
+        note_lengths: list[int] = []
+        for task in tasks:
+            estimated = int(task.estimated_minutes or 0)
+            actual = int(task.actual_minutes or 0)
+            if estimated > 0 and actual > 0:
+                ratios.append(abs(actual - estimated) / estimated)
+            note = (task.user_note or "").strip()
+            if note:
+                note_lengths.append(len(note))
+
+        feedback_result = await self.db.execute(
+            select(TaskFeedback)
+            .where(
+                TaskFeedback.user_id == user_id,
+                TaskFeedback.created_at >= cutoff,
+            )
+            .order_by(desc(TaskFeedback.created_at))
+        )
+        feedbacks = list(feedback_result.scalars().all())
+        difficulty_feedback_ratio = self._difficulty_feedback_ratio(feedbacks)
+
+        if not note_lengths:
+            note_lengths = [
+                len((feedback.feedback_text or "").strip())
+                for feedback in feedbacks
+                if (feedback.feedback_text or "").strip()
+            ]
+
+        avg_note_length = (sum(note_lengths) / len(note_lengths)) if note_lengths else 0.0
+        if avg_note_length > 50:
+            reflection_depth = "deep"
+        elif avg_note_length > 0:
+            reflection_depth = "light"
+        else:
+            reflection_depth = "none"
+
+        updates: dict[str, object] = {
+            "task_reflection_depth": reflection_depth,
+            "difficulty_feedback_ratio": difficulty_feedback_ratio,
+        }
+        if ratios:
+            updates["task_difficulty_accuracy"] = round(float(median(ratios)), 3)
+
+        try:
+            prefs = await self.profile_write_service.pref_service.get_preferences(user_id)
+            inferred = prefs.inferred or {}
+        except Exception:
+            return updates
+
+        filtered: dict[str, object] = {}
+        for key, value in updates.items():
+            if inferred.get(key) != value:
+                filtered[key] = value
+        return filtered
+
+    @staticmethod
+    def _difficulty_feedback_ratio(feedbacks: list[TaskFeedback]) -> dict[str, float]:
+        if not feedbacks:
+            return {"too_hard": 0.0, "too_easy": 0.0, "just_right": 0.0}
+
+        total = len(feedbacks)
+        buckets = {
+            "too_hard": 0,
+            "too_easy": 0,
+            "just_right": 0,
+        }
+        for feedback in feedbacks:
+            category = str(feedback.category or "").strip().lower()
+            if category == TaskFeedbackCategory.TOO_DIFFICULT.value:
+                buckets["too_hard"] += 1
+            elif category == TaskFeedbackCategory.TOO_EASY.value:
+                buckets["too_easy"] += 1
+            elif category == TaskFeedbackCategory.JUST_RIGHT.value:
+                buckets["just_right"] += 1
+
+        return {
+            key: round(count / total, 3)
+            for key, count in buckets.items()
+        }
+
+    @staticmethod
+    def _task_signal_counter_key(user_id: UUID) -> str:
+        return f"behavior:task_inferred_counter:{user_id}"

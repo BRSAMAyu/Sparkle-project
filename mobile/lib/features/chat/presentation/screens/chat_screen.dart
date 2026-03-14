@@ -949,7 +949,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             ),
           if (showExpandedContext) ...[
             const PlanSelectorPill(),
-            const SizedBox(height: DS.spacing12),
+            const SizedBox(height: DS.spacing18),
             const ChatModeSelectorPill(),
           ],
           if (showExpandedContext) const IntentPredictionBar(showIdle: false),

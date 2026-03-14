@@ -6,6 +6,17 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+const _detailContentFontFallback = <String>[
+  'PingFang SC',
+  'Hiragino Sans GB',
+  'Heiti SC',
+  'Noto Sans SC',
+  'Noto Sans CJK SC',
+  'Source Han Sans SC',
+  'Microsoft YaHei',
+  'Arial Unicode MS',
+];
+
 /// 消息详情放大视图
 /// 全屏显示消息内容，支持滚动和复制
 class MessageDetailView extends StatelessWidget {
@@ -184,6 +195,7 @@ class MessageDetailView extends StatelessWidget {
           fontSize: 16,
           height: 1.6,
           color: DS.textPrimary,
+          fontFamilyFallback: _detailContentFontFallback,
         ),
       );
     }
@@ -195,6 +207,7 @@ class MessageDetailView extends StatelessWidget {
           fontSize: 16,
           height: 1.6,
           color: DS.textPrimary,
+          fontFamilyFallback: _detailContentFontFallback,
         ),
       );
     }
@@ -208,24 +221,28 @@ class MessageDetailView extends StatelessWidget {
           fontSize: 16,
           height: 1.6,
           color: DS.textPrimary,
+          fontFamilyFallback: _detailContentFontFallback,
         ),
         h1: TextStyle(
           fontSize: 24,
           fontWeight: FontWeight.bold,
           color: DS.textPrimary,
           height: 1.4,
+          fontFamilyFallback: _detailContentFontFallback,
         ),
         h2: TextStyle(
           fontSize: 20,
           fontWeight: FontWeight.bold,
           color: DS.textPrimary,
           height: 1.4,
+          fontFamilyFallback: _detailContentFontFallback,
         ),
         h3: TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.w600,
           color: DS.textPrimary,
           height: 1.4,
+          fontFamilyFallback: _detailContentFontFallback,
         ),
         code: TextStyle(
           fontSize: 14,
@@ -245,6 +262,7 @@ class MessageDetailView extends StatelessWidget {
         blockquote: TextStyle(
           color: DS.textSecondary,
           fontStyle: FontStyle.italic,
+          fontFamilyFallback: _detailContentFontFallback,
         ),
         blockquoteDecoration: BoxDecoration(
           color: DS.surfaceTertiary.withValues(alpha: 0.35),
@@ -258,10 +276,12 @@ class MessageDetailView extends StatelessWidget {
         ),
         listBullet: TextStyle(
           color: DS.textPrimary,
+          fontFamilyFallback: _detailContentFontFallback,
         ),
         a: TextStyle(
           color: DS.primaryBase,
           decoration: TextDecoration.underline,
+          fontFamilyFallback: _detailContentFontFallback,
         ),
       ),
       onTapLink: (text, href, title) {

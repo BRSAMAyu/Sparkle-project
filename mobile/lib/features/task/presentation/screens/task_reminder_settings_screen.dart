@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_permission_dialog.dart';
 import 'package:sparkle/core/services/task_notification_scheduler.dart'
     show TaskReminderConfig, taskNotificationSchedulerProvider;
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
@@ -31,20 +32,34 @@ class _TaskReminderSettingsScreenState
     final plugin = FlutterLocalNotificationsPlugin();
     final android = plugin.resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>();
+    final ios = plugin.resolvePlatformSpecificImplementation<
+        IOSFlutterLocalNotificationsPlugin>();
     if (android != null) {
       final granted = await android.areNotificationsEnabled();
       if ((granted ?? false) == false && mounted) {
-        _showPermissionDialog();
+        final requested = await _requestNotificationPermission();
+        if (!requested && mounted) {
+          _showPermissionDialog();
+        }
       }
       return granted ?? false;
+    }
+    if (ios != null) {
+      final requested = await _requestNotificationPermission();
+      if (!requested && mounted) {
+        _showPermissionDialog();
+      }
+      return requested;
     }
     return true;
   }
 
-  Future<void> _requestNotificationPermission() async {
+  Future<bool> _requestNotificationPermission() async {
     final plugin = FlutterLocalNotificationsPlugin();
     final android = plugin.resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>();
+    final ios = plugin.resolvePlatformSpecificImplementation<
+        IOSFlutterLocalNotificationsPlugin>();
     if (android != null) {
       final granted = await android.requestNotificationsPermission();
       if ((granted ?? false) == false && mounted) {
@@ -52,30 +67,30 @@ class _TaskReminderSettingsScreenState
           AppFeedback.warning(context, '通知权限被拒绝，您将无法收到任务提醒');
         }
       }
+      return granted ?? false;
     }
+    if (ios != null) {
+      final granted = await ios.requestPermissions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+      if ((granted ?? false) == false && mounted) {
+        if (context.mounted) {
+          AppFeedback.warning(context, '通知权限被拒绝，您将无法收到任务提醒');
+        }
+      }
+      return granted ?? false;
+    }
+    return true;
   }
 
   void _showPermissionDialog() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      showDialog<void>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('开启通知权限'),
-          content: const Text('为了在任务到期前提醒您，请允许发送通知'),
-          actions: [
-            SparkleButton(
-              label: '取消',
-              variant: ButtonVariant.ghost,
-              onPressed: () => Navigator.pop(context),
-            ),
-            SparkleButton(
-              label: '去设置',
-              onPressed: () {
-                Navigator.pop(context);
-                unawaited(_requestNotificationPermission());
-              },
-            ),
-          ],
+      unawaited(
+        showAppPermissionDialog(
+          context,
+          permission: AppPermissionKind.notifications,
         ),
       );
     });

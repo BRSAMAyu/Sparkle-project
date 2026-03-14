@@ -80,12 +80,12 @@ class GroupRecommendationCard extends StatelessWidget {
                             group.name,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: context.typo.titleSmall,
+                            style: Theme.of(context).textTheme.titleMedium,
                           ),
                           SizedBox(height: context.space.xs),
                           Text(
                             '${group.memberCount} members | ${group.totalFlamePower} flame',
-                            style: context.typo.bodySmall
+                            style: context.typo.bodyMedium
                                 .copyWith(color: DS.textSecondary),
                           ),
                         ],
@@ -124,7 +124,7 @@ class GroupRecommendationCard extends StatelessWidget {
                       Expanded(
                         child: Text(
                           group.focusTags.take(2).join(' / '),
-                          style: context.typo.bodySmall
+                          style: context.typo.bodyMedium
                               .copyWith(color: DS.textSecondary),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,

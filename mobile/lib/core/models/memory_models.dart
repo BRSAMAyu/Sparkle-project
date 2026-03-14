@@ -40,6 +40,10 @@ class MemoryPreferenceItem {
     this.confidence,
     this.updatedAt,
     this.retractedAt,
+    this.sourceLabel,
+    this.sourceType,
+    this.explanation,
+    this.adjustable = false,
   });
 
   factory MemoryPreferenceItem.fromJson(Map<String, dynamic> json) =>
@@ -55,6 +59,10 @@ class MemoryPreferenceItem {
         evidenceScore: (json['evidence_score'] as num?)?.toDouble() ?? 0.0,
         correctionCount: json['correction_count'] as int? ?? 0,
         retractedAt: _parseDate(json['retracted_at']),
+        sourceLabel: json['source_label'] as String?,
+        sourceType: json['source_type'] as String?,
+        explanation: json['explanation'] as String?,
+        adjustable: json['adjustable'] as bool? ?? false,
       );
 
   final String id;
@@ -68,6 +76,10 @@ class MemoryPreferenceItem {
   final double evidenceScore;
   final int correctionCount;
   final DateTime? retractedAt;
+  final String? sourceLabel;
+  final String? sourceType;
+  final String? explanation;
+  final bool adjustable;
 }
 
 class MemoryPreferenceHistoryItem {

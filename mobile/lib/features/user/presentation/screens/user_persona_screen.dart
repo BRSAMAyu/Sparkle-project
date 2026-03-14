@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/features/memory/memory.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/profile_context_provider.dart';
@@ -12,17 +13,42 @@ import 'package:sparkle/features/user/presentation/providers/settings_provider.d
 import 'package:sparkle/features/user/user_routes.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
-class UserPersonaScreen extends ConsumerWidget {
-  const UserPersonaScreen({super.key});
+class UserPersonaScreen extends ConsumerStatefulWidget {
+  const UserPersonaScreen({
+    super.key,
+    this.initialOverrideKey,
+  });
+
+  final String? initialOverrideKey;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<UserPersonaScreen> createState() => _UserPersonaScreenState();
+}
+
+class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
+  final ScrollController _scrollController = ScrollController();
+  final Map<String, GlobalKey> _inferredItemKeys = <String, GlobalKey>{};
+  String? _handledInitialOverrideKey;
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = context.l10n;
     final profileAsync = ref.watch(transparentProfileProvider);
     ref.watch(profileContextProvider);
     final inferredAsync = ref.watch(inferredPreferencesProvider);
     final policiesAsync = ref.watch(activePoliciesProvider);
     final onboardingCompleted = ref.watch(onboardingCompletedProvider);
+    final inferredItems = inferredAsync.maybeWhen(
+      data: (items) => items,
+      orElse: () => const <Map<String, dynamic>>[],
+    );
+    _maybeHandleInitialOverride(context, ref, inferredItems);
     return SparklePageScaffold(
       role: SparklePageRole.settings,
       appBar: AppBar(
@@ -35,10 +61,7 @@ class UserPersonaScreen extends ConsumerWidget {
           l10n,
           data,
           onboardingCompleted,
-          inferredAsync.maybeWhen(
-            data: (items) => items,
-            orElse: () => const <Map<String, dynamic>>[],
-          ),
+          inferredItems,
           policiesAsync.maybeWhen(
             data: (items) => items,
             orElse: () => const <Map<String, dynamic>>[],
@@ -75,6 +98,7 @@ class UserPersonaScreen extends ConsumerWidget {
 
     return ContentConstraint(
       child: ListView(
+        controller: _scrollController,
         padding: const EdgeInsets.all(DS.spacing16),
         children: [
           _buildOnboardingBanner(context, l10n, completed),
@@ -183,33 +207,96 @@ class UserPersonaScreen extends ConsumerWidget {
       'reason': explanation.isNotEmpty ? explanation : 'Inferred from recent behavior.',
       'confidence': null,
     };
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: _metadataRow(
-            l10n,
-            '$key: ${_formatValue(value)} (${overridden ? 'override' : source})',
-            metadata,
-          ),
-        ),
-        if (adjustable)
-          SparkleButton.ghost(
-            onPressed: () => _openOverrideInferredDialog(
-              ref,
-              context,
-              key,
-              value,
+    return KeyedSubtree(
+      key: _itemKeyFor(key),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: _metadataRow(
+              l10n,
+              '$key: ${_formatValue(value)} (${overridden ? 'override' : source})',
+              metadata,
             ),
-            label: overridden ? 'Update' : 'Adjust',
           ),
-        if (overridden)
-          SparkleButton.ghost(
-            onPressed: () => _resetOverride(ref, context, key),
-            label: 'Reset',
+          const SizedBox(width: DS.spacing8),
+          SizedBox(
+            width: 88,
+            child: Wrap(
+              alignment: WrapAlignment.end,
+              runSpacing: DS.spacing8,
+              children: [
+                SparkleButton.ghost(
+                  onPressed: () => context.push(
+                    MemoryRoutes.detail,
+                    extra: MemoryDetailArgs.preferenceKey(key),
+                  ),
+                  label: 'History',
+                ),
+                if (adjustable)
+                  SparkleButton.ghost(
+                    onPressed: () => _openOverrideInferredDialog(
+                      ref,
+                      context,
+                      key,
+                      value,
+                    ),
+                    label: overridden ? 'Update' : 'Adjust',
+                  ),
+                if (overridden)
+                  SparkleButton.ghost(
+                    onPressed: () => _resetOverride(ref, context, key),
+                    label: 'Reset',
+                  ),
+              ],
+            ),
           ),
-      ],
+        ],
+      ),
     );
+  }
+
+  GlobalKey _itemKeyFor(String key) =>
+      _inferredItemKeys.putIfAbsent(key, GlobalKey.new);
+
+  void _maybeHandleInitialOverride(
+    BuildContext context,
+    WidgetRef ref,
+    List<Map<String, dynamic>> inferredItems,
+  ) {
+    final key = widget.initialOverrideKey;
+    if (key == null || key.isEmpty || _handledInitialOverrideKey == key) {
+      return;
+    }
+    Map<String, dynamic>? match;
+    for (final item in inferredItems) {
+      if (item['key']?.toString() == key) {
+        match = item;
+        break;
+      }
+    }
+    if (match == null) {
+      return;
+    }
+    _handledInitialOverrideKey = key;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final targetContext = _itemKeyFor(key).currentContext;
+      if (targetContext != null) {
+        await Scrollable.ensureVisible(
+          targetContext,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOutCubic,
+        );
+      }
+      if (!mounted) {
+        return;
+      }
+      final matchedItem = match;
+      if (matchedItem == null) {
+        return;
+      }
+      await _openOverrideInferredDialog(ref, context, key, matchedItem['value']);
+    });
   }
 
   Widget _policyRow(AppLocalizations l10n, Map<String, dynamic> item) {

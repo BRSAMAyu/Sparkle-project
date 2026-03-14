@@ -25,6 +25,7 @@ class UnifiedSettingsScreen extends ConsumerStatefulWidget {
 
 class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   bool _isGenerating = false;
+  bool _weeklyAgendaExpanded = false;
 
   @override
   Widget build(BuildContext context) {
@@ -35,6 +36,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     final systemUpdateLevel = ref.watch(systemUpdateLevelProvider);
     final learningPrefs = ref.watch(learningPreferencesProvider);
     final pushPrefs = ref.watch(pushPreferencesProvider);
+    final weeklyAgenda = ref.watch(weeklyAgendaProvider);
 
     return SparklePageScaffold(
       role: SparklePageRole.settings,
@@ -138,21 +140,10 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                     const SizedBox(height: DS.spacing32),
                     _buildSectionHeader(Icons.schedule, l10n.weeklyAgenda),
                     const SizedBox(height: DS.spacing16),
-                    Text(
-                      l10n.selectTimeSlots,
-                      style: TextStyle(
-                        color: DS.brandPrimaryConst,
-                        fontSize: DS.fontSizeSm,
-                      ),
-                    ),
-                    const SizedBox(height: DS.spacing16),
-                    WeeklyAgendaGrid(
-                      initialData: ref.watch(weeklyAgendaProvider),
-                      onChanged: (data) {
-                        ref
-                            .read(weeklyAgendaProvider.notifier)
-                            .updateAgenda(data);
-                      },
+                    _buildWeeklyAgendaSection(
+                      context,
+                      l10n,
+                      weeklyAgenda,
                     ),
                   ],
                 ),
@@ -415,4 +406,106 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
           ),
         ],
       );
+
+  Widget _buildWeeklyAgendaSection(
+    BuildContext context,
+    AppLocalizations l10n,
+    Map<String, dynamic>? weeklyAgenda,
+  ) {
+    final summary = _buildWeeklyAgendaSummary(weeklyAgenda);
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+      decoration: BoxDecoration(
+        color: DS.surfaceTertiary.withValues(alpha: 0.28),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: DS.borderSubtle),
+      ),
+      child: Column(
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: () {
+              setState(() {
+                _weeklyAgendaExpanded = !_weeklyAgendaExpanded;
+              });
+            },
+            child: Padding(
+              padding: const EdgeInsets.all(DS.spacing16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.selectTimeSlots,
+                          style: DS.labelLarge.copyWith(
+                            color: DS.textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: DS.xs),
+                        Text(
+                          summary,
+                          style: DS.bodySmall.copyWith(
+                            color: DS.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  AnimatedRotation(
+                    turns: _weeklyAgendaExpanded ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 220),
+                    child: Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      color: DS.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          AnimatedCrossFade(
+            duration: const Duration(milliseconds: 220),
+            firstChild: const SizedBox.shrink(),
+            secondChild: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                DS.spacing16,
+                0,
+                DS.spacing16,
+                DS.spacing16,
+              ),
+              child: WeeklyAgendaGrid(
+                initialData: weeklyAgenda,
+                onChanged: (data) {
+                  ref.read(weeklyAgendaProvider.notifier).updateAgenda(data);
+                },
+              ),
+            ),
+            crossFadeState: _weeklyAgendaExpanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _buildWeeklyAgendaSummary(Map<String, dynamic>? weeklyAgenda) {
+    final rawGrid = weeklyAgenda?['grid'];
+    if (rawGrid is! List || rawGrid.isEmpty) {
+      return '默认收起，点击后展开 24 小时编辑网格。';
+    }
+
+    final busyCount = rawGrid.where((slot) => slot == 'busy').length;
+    final fragmentedCount =
+        rawGrid.where((slot) => slot == 'fragmented').length;
+    final activeCount = busyCount + fragmentedCount;
+    if (activeCount == 0) {
+      return '当前未标记时间段，点击后开始编辑。';
+    }
+    return '已标记 $activeCount 个时间段，繁忙 $busyCount，碎片 $fragmentedCount。';
+  }
 }

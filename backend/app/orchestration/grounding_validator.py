@@ -89,8 +89,8 @@ class GroundingValidator:
 
         # === Phase 1 检查 ===
 
-        # 1. Schema version check (support v1.0, v2.0, and v3.0)
-        if plan.schema_version not in ["1.0", "2.0", "3.0", "4.0"]:
+        # 1. Schema version check
+        if plan.schema_version not in ["1.0", "2.0", "3.0", "4.0", "5.0"]:
             return ValidationResult(
                 is_valid=False,
                 failure_reason=f"Unsupported schema version: {plan.schema_version}"

@@ -22,6 +22,7 @@ from app.services.memory_policy_evaluator import MemoryPolicyEvaluator
 from app.services.system_update_service import SystemUpdateService, build_system_update
 
 ALLOWED_EVIDENCE_TYPES = {
+    "ai_inferred",
     "event",
     "user_state",
     "error",

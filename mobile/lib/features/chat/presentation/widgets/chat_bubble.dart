@@ -15,6 +15,17 @@ import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/presentation/providers/community_agent_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+const _chatContentFontFallback = <String>[
+  'PingFang SC',
+  'Hiragino Sans GB',
+  'Heiti SC',
+  'Noto Sans SC',
+  'Noto Sans CJK SC',
+  'Source Han Sans SC',
+  'Microsoft YaHei',
+  'Arial Unicode MS',
+];
+
 class ChatBubble extends StatefulWidget {
   const ChatBubble({
     required this.message,
@@ -478,6 +489,8 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                                       : DS.chatBubbleOtherText,
                                                   fontSize: 16,
                                                   height: 1.5,
+                                                  fontFamilyFallback:
+                                                      _chatContentFontFallback,
                                                 ),
                                               );
 
@@ -527,33 +540,33 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                 ),
                               ),
                             ..._actionableWidgets.map(
-                                (w) {
-                                  final actionable = (w.data['id'] ??
-                                          w.data['tool_result_id'] ??
-                                          w.data['intervention_id'] ??
-                                          w.data['request_id']) !=
-                                      null;
-                                  return Padding(
-                                    padding: const EdgeInsets.only(
-                                      top: 8.0,
-                                      right: 8.0,
-                                      left: 8.0,
-                                    ),
-                                    child: ActionCard(
-                                      action: w,
-                                      onConfirm: actionable &&
-                                              widget.onActionConfirm != null
-                                          ? () => widget.onActionConfirm!(w)
-                                          : null,
-                                      onDismiss: actionable &&
-                                              widget.onActionDismiss != null
-                                          ? () => widget.onActionDismiss!(w)
-                                          : null,
-                                      onWidgetAction: widget.onWidgetAction,
-                                    ),
-                                  );
-                                },
-                              ),
+                              (w) {
+                                final actionable = (w.data['id'] ??
+                                        w.data['tool_result_id'] ??
+                                        w.data['intervention_id'] ??
+                                        w.data['request_id']) !=
+                                    null;
+                                return Padding(
+                                  padding: const EdgeInsets.only(
+                                    top: 8.0,
+                                    right: 8.0,
+                                    left: 8.0,
+                                  ),
+                                  child: ActionCard(
+                                    action: w,
+                                    onConfirm: actionable &&
+                                            widget.onActionConfirm != null
+                                        ? () => widget.onActionConfirm!(w)
+                                        : null,
+                                    onDismiss: actionable &&
+                                            widget.onActionDismiss != null
+                                        ? () => widget.onActionDismiss!(w)
+                                        : null,
+                                    onWidgetAction: widget.onWidgetAction,
+                                  ),
+                                );
+                              },
+                            ),
                           ],
                         ),
                         if (_showHeart) _buildHeartAnimation(context),
@@ -792,11 +805,13 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
           color: isUser ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
           fontSize: 16,
           height: 1.4,
+          fontFamilyFallback: _chatContentFontFallback,
         ),
         h1: TextStyle(
           color: isUser ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
           fontSize: 24,
           fontWeight: FontWeight.bold,
+          fontFamilyFallback: _chatContentFontFallback,
         ),
         code: TextStyle(
           backgroundColor: isUser
@@ -815,6 +830,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
         a: TextStyle(
           color: isUser ? DS.chatBubbleUserText : DS.brandPrimary,
           decoration: TextDecoration.underline,
+          fontFamilyFallback: _chatContentFontFallback,
         ),
       );
 

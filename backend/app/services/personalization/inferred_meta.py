@@ -26,6 +26,11 @@ INFERRED_META: dict[str, InferredFieldMeta] = {
         explanation_template="Your recent chat activity is concentrated around {hours_text}.",
         adjustable=False,
     ),
+    "checkin_regularity": InferredFieldMeta(
+        source="streak_stats",
+        explanation_template="Across your full account history, you have checked in on about {value_pct:.0f}% of days.",
+        adjustable=False,
+    ),
     "community_engagement_level": InferredFieldMeta(
         source="community",
         explanation_template="Based on recent community activity, your engagement level is {value}.",
@@ -61,6 +66,11 @@ INFERRED_META: dict[str, InferredFieldMeta] = {
         explanation_template="Your 14-day error density score is {value:.2f}; when it is high, the system slows the learning pace.",
         adjustable=False,
     ),
+    "difficulty_feedback_ratio": InferredFieldMeta(
+        source="task_feedback",
+        explanation_template="Recent task difficulty feedback is distributed as {dict_text}.",
+        adjustable=False,
+    ),
     "focus_completion_rate": InferredFieldMeta(
         source="focus_sessions",
         explanation_template="Your recent focus-session completion rate is about {value_pct:.0f}%.",
@@ -71,6 +81,16 @@ INFERRED_META: dict[str, InferredFieldMeta] = {
         explanation_template="Pushes are often ignored around {hours_text}, so those hours are treated as quieter windows.",
         adjustable=True,
     ),
+    "knowledge_expansion_satisfaction": InferredFieldMeta(
+        source="galaxy_feedback",
+        explanation_template="Your recent knowledge-expansion satisfaction is about {value_pct:.0f}%.",
+        adjustable=False,
+    ),
+    "motivation_type": InferredFieldMeta(
+        source="streak_stats",
+        explanation_template="Your recent check-in pattern looks more like a {value} motivation style.",
+        adjustable=False,
+    ),
     "peak_focus_hours": InferredFieldMeta(
         source="focus_sessions",
         explanation_template="Your strongest focus hours recently are {hours_text}.",
@@ -79,6 +99,11 @@ INFERRED_META: dict[str, InferredFieldMeta] = {
     "preferred_focus_duration": InferredFieldMeta(
         source="focus_sessions",
         explanation_template="Based on completed focus sessions in the last 14 days, your median focus duration is {value} minutes.",
+        adjustable=True,
+    ),
+    "preferred_expansion_depth": InferredFieldMeta(
+        source="galaxy_feedback",
+        explanation_template="Based on your recent knowledge-expansion ratings, the system inferred a {value} expansion depth preference.",
         adjustable=True,
     ),
     "push_receptivity": InferredFieldMeta(
@@ -102,10 +127,40 @@ INFERRED_META: dict[str, InferredFieldMeta] = {
         explanation_template="Recent chat behavior suggests a response satisfaction rate of about {value_pct:.0f}%.",
         adjustable=False,
     ),
+    "review_accuracy": InferredFieldMeta(
+        source="learning_assets",
+        explanation_template="Your active learning assets currently show about {value_pct:.0f}% review accuracy.",
+        adjustable=False,
+    ),
+    "review_engagement": InferredFieldMeta(
+        source="learning_assets",
+        explanation_template="About {value_pct:.0f}% of your active learning assets have review activity.",
+        adjustable=False,
+    ),
     "social_learning_preference": InferredFieldMeta(
         source="community",
         explanation_template="Your recent community behavior suggests a {value_pct:.0f}% leaning toward social learning.",
         adjustable=True,
+    ),
+    "streak_consistency": InferredFieldMeta(
+        source="streak_stats",
+        explanation_template="Your current streak consistency is about {value_pct:.0f}% relative to your best streak.",
+        adjustable=False,
+    ),
+    "task_difficulty_accuracy": InferredFieldMeta(
+        source="task_feedback",
+        explanation_template="Recent tasks show a median estimate drift of {value_pct:.0f}%.",
+        adjustable=False,
+    ),
+    "task_reflection_depth": InferredFieldMeta(
+        source="task_feedback",
+        explanation_template="Your recent task reflections look {value} in depth.",
+        adjustable=True,
+    ),
+    "vocabulary_retention_style": InferredFieldMeta(
+        source="learning_assets",
+        explanation_template="Your current vocabulary retention style looks {value}.",
+        adjustable=False,
     ),
 }
 
@@ -122,6 +177,7 @@ def build_inferred_explanation(key: str, value: Any, related_values: dict[str, A
         "ignore_rate_pct": _safe_percent(1 - float(value)) if isinstance(value, (int, float)) else 0.0,
         "hours_text": _format_hours(related_values.get(key, value)),
         "list_text": _format_list(value),
+        "dict_text": _format_dict(value),
     }
     try:
         return meta.explanation_template.format(**context)
@@ -153,3 +209,15 @@ def _safe_percent(value: Any) -> float:
     if not isinstance(value, (int, float)):
         return 0.0
     return float(value) * 100.0
+
+
+def _format_dict(value: Any) -> str:
+    if not isinstance(value, dict) or not value:
+        return "none"
+    parts: list[str] = []
+    for key, raw in list(value.items())[:5]:
+        if isinstance(raw, (int, float)):
+            parts.append(f"{key} {float(raw) * 100:.0f}%")
+        else:
+            parts.append(f"{key} {raw}")
+    return ", ".join(parts) if parts else "none"

@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
-from sqlalchemy import desc, func, or_, select
+from sqlalchemy import desc, func, inspect, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.community import Friendship, FriendshipStatus, Group, GroupMember, GroupMessage, GroupType
@@ -112,6 +112,9 @@ class GroupRecommendationService:
         user_id: UUID,
         feedback: GroupRecommendationFeedbackRequest,
     ) -> None:
+        if not await cls._table_exists(db, UserItemInteraction.__tablename__):
+            return
+
         interaction = UserItemInteraction(
             user_id=user_id,
             item_id=feedback.group_id,
@@ -136,6 +139,9 @@ class GroupRecommendationService:
         db: AsyncSession,
         user_id: UUID,
     ) -> RecommendationCache | None:
+        if not await cls._table_exists(db, RecommendationCache.__tablename__):
+            return None
+
         query = select(RecommendationCache).where(
             RecommendationCache.user_id == user_id,
             RecommendationCache.recommendation_type == cls.RECOMMENDATION_TYPE,
@@ -152,6 +158,9 @@ class GroupRecommendationService:
         user_id: UUID,
         items: list[GroupRecommendationItem],
     ) -> None:
+        if not await cls._table_exists(db, RecommendationCache.__tablename__):
+            return
+
         cache = RecommendationCache(
             user_id=user_id,
             recommendation_type=cls.RECOMMENDATION_TYPE,
@@ -164,6 +173,9 @@ class GroupRecommendationService:
 
     @classmethod
     async def _clear_cache(cls, db: AsyncSession, user_id: UUID) -> None:
+        if not await cls._table_exists(db, RecommendationCache.__tablename__):
+            return
+
         result = await db.execute(
             select(RecommendationCache).where(
                 RecommendationCache.user_id == user_id,
@@ -306,6 +318,9 @@ class GroupRecommendationService:
         user_id: UUID,
         now: datetime,
     ) -> set[UUID]:
+        if not await cls._table_exists(db, UserItemInteraction.__tablename__):
+            return set()
+
         result = await db.execute(
             select(UserItemInteraction.item_id).where(
                 UserItemInteraction.user_id == user_id,
@@ -317,6 +332,13 @@ class GroupRecommendationService:
             ),
         )
         return {row[0] for row in result.all()}
+
+    @staticmethod
+    async def _table_exists(db: AsyncSession, table_name: str) -> bool:
+        connection = await db.connection()
+        return await connection.run_sync(
+            lambda sync_conn: inspect(sync_conn).has_table(table_name),
+        )
 
     @staticmethod
     async def _get_friend_ids(db: AsyncSession, user_id: UUID) -> set[UUID]:

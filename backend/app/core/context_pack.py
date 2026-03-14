@@ -41,6 +41,7 @@ from app.services.ltm_rollout_service import LtmRolloutService
 from app.services.memory_conflict_resolver import MemoryConflictResolver
 from app.services.memory_rank_policy_service import MemoryRankPolicyService
 from app.services.memory_service import MemoryService
+from app.services.personalization.preference_service import PreferenceService
 
 
 def _utcnow() -> datetime:
@@ -397,6 +398,7 @@ class ContextPackBuilder:
     ) -> None:
         self.db = db
         self.memory_service = MemoryService(db)
+        self.preference_service = PreferenceService(db, redis)
         self.scheduler = scheduler or ContextBudgetScheduler(db=db)
         self.redis = redis
 
@@ -583,6 +585,24 @@ class ContextPackBuilder:
         pref_scores = {entry.item.pref_key: entry.score for entry in ranked_preferences}
         goal_scores = {str(entry.item.id): entry.score for entry in ranked_goals}
         episodic_scores = {str(entry.item.id): entry.score for entry in ranked_episodic}
+
+        profile_prefs = await self.preference_service.get_preferences(user_id)
+        profile_keys = set((profile_prefs.explicit or {}).keys()) | set((profile_prefs.inferred or {}).keys())
+        if profile_keys:
+            ranked_preferences = [
+                entry for entry in ranked_preferences
+                if entry.item.pref_key not in profile_keys
+            ]
+            preferences = {
+                key: value
+                for key, value in preferences.items()
+                if key not in profile_keys
+            }
+            pref_scores = {
+                key: score
+                for key, score in pref_scores.items()
+                if key not in profile_keys
+            }
 
         pref_budget = budgets.get("preferences", 0)
         goals_budget = budgets.get("goals", 0)

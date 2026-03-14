@@ -9,6 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.business_metrics import MEMORY_SETTINGS_UPDATE_TOTAL
 from app.models.user_memory_settings import UserMemorySettings
+from app.services.memory_policy_evaluator import MemoryPolicyEvaluator
+from app.services.profile_write_service import ProfileWriteService
 
 DEFAULT_SETTINGS: dict[str, Any] = {
     "enabled": True,
@@ -22,8 +24,9 @@ DEFAULT_SETTINGS: dict[str, Any] = {
 
 
 class MemorySettingsService:
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncSession, redis=None):
         self.db = db
+        self.redis = redis
 
     async def get_or_create(self, user_id: UUID) -> UserMemorySettings:
         record = await self._get_settings(user_id)
@@ -51,6 +54,22 @@ class MemorySettingsService:
 
         await self.db.commit()
         await self.db.refresh(record)
+
+        newly_blocked = set(record.blocked_pref_keys or []) - set(before.get("blocked_pref_keys", []))
+        if newly_blocked:
+            related_keys = sorted(
+                {
+                    candidate
+                    for key in newly_blocked
+                    for candidate in MemoryPolicyEvaluator.expand_blocked_preference_key(key)
+                }
+            )
+            profile_write_service = ProfileWriteService(self.db, self.redis)
+            await profile_write_service.remove_inferred_keys(
+                user_id=user_id,
+                keys=related_keys,
+            )
+
         diff = _diff_snapshot(before, _snapshot(record))
         if diff:
             MEMORY_SETTINGS_UPDATE_TOTAL.inc()

@@ -10,6 +10,12 @@ from .profiles import LLMProfile, PolicyExplanation, PushPolicyProfile, TaskPlan
 from .runtime_context_service import RuntimeContextService
 
 
+def _as_float(value) -> float | None:
+    if isinstance(value, (int, float)):
+        return float(value)
+    return None
+
+
 class PersonalizationEngine:
     """
     个性化引擎 - 偏好到策略的映射中心
@@ -94,12 +100,9 @@ class PersonalizationEngine:
 - 如果 exploration=focused，严格围绕用户问题，不发散
 """
         error_density = inferred.get("error_density_score")
-        if isinstance(error_density, (int, float)) and error_density >= 0.7:
-            system_additions += "\n- 用户近期错题密度较高，请放慢节奏，确认理解后再推进。"
-        policy_signals = self._collect_policy_signals(resolved_context)
-        signal_sources = self._collect_policy_signal_sources(resolved_context)
         applied_policies: list[PolicyExplanation] = []
         if isinstance(error_density, (int, float)) and error_density >= 0.7:
+            system_additions += "\n- 用户近期错题密度较高，请放慢节奏，确认理解后再推进。"
             applied_policies.append(
                 PolicyExplanation(
                     signal="llm.pacing.slow_down_for_error_density",
@@ -107,6 +110,46 @@ class PersonalizationEngine:
                     source_pattern="error_book",
                 )
             )
+        if explicit.get("preferred_expansion_depth", inferred.get("preferred_expansion_depth")) == "shallow":
+            system_additions += "\n- 当扩展相关知识时，优先给出核心结论，避免展开过多旁支细节。"
+            applied_policies.append(
+                PolicyExplanation(
+                    signal="llm.expansion.reduce_detail",
+                    effect="Knowledge expansions are kept concise because recent expansion feedback prefers shallower depth.",
+                    source_pattern="galaxy_feedback",
+                )
+            )
+        streak_consistency = _as_float(explicit.get("streak_consistency", inferred.get("streak_consistency")))
+        motivation_type = explicit.get("motivation_type", inferred.get("motivation_type"))
+        if streak_consistency is not None and streak_consistency >= 0.8:
+            system_additions += "\n- 用户近期保持了很强的连续性，请在反馈中明确肯定这种坚持。"
+            applied_policies.append(
+                PolicyExplanation(
+                    signal="llm.motivation.praise_consistency",
+                    effect="Responses explicitly acknowledge the user's recent consistency streak.",
+                    source_pattern="streak_stats",
+                )
+            )
+        elif motivation_type == "streak_driven":
+            system_additions += "\n- 用户对连续性反馈较敏感，适度强调今天继续完成的小闭环。"
+            applied_policies.append(
+                PolicyExplanation(
+                    signal="llm.motivation.protect_streak",
+                    effect="Responses frame progress in a way that helps preserve the user's study streak.",
+                    source_pattern="streak_stats",
+                )
+            )
+        if explicit.get("task_reflection_depth", inferred.get("task_reflection_depth")) == "deep":
+            system_additions += "\n- 用户愿意做较深的任务反思，可适度鼓励其继续总结原因与下一步改进。"
+            applied_policies.append(
+                PolicyExplanation(
+                    signal="llm.reflection.encourage_depth",
+                    effect="Responses encourage the user to keep up their deeper task reflections.",
+                    source_pattern="task_feedback",
+                )
+            )
+        policy_signals = self._collect_policy_signals(resolved_context)
+        signal_sources = self._collect_policy_signal_sources(resolved_context)
         policy_instructions = self._build_llm_policy_instructions(policy_signals)
         if policy_instructions:
             system_additions += f"\n## 行为策略适配\n{policy_instructions}\n"
@@ -194,6 +237,17 @@ class PersonalizationEngine:
                     signal="push.community.reduce_frequency",
                     effect="Community-related push pressure was reduced because community engagement is currently passive.",
                     source_pattern="community",
+                )
+            )
+        streak_consistency = _as_float(explicit.get("streak_consistency", inferred.get("streak_consistency")))
+        motivation_type = explicit.get("motivation_type", inferred.get("motivation_type"))
+        if motivation_type == "streak_driven" and streak_consistency is not None and streak_consistency < 0.85:
+            min_interval = max(30, int(min_interval * 0.85))
+            applied_policies.append(
+                PolicyExplanation(
+                    signal="push.streak.send_recovery_reminders",
+                    effect="Reminder spacing was tightened slightly to reduce the risk of breaking your current study streak.",
+                    source_pattern="streak_stats",
                 )
             )
 
@@ -298,6 +352,26 @@ class PersonalizationEngine:
                     signal="task.review.raise_priority_for_recurring_errors",
                     effect="Review priority was raised and exploration was reduced because recurring error tags were detected.",
                     source_pattern="error_book",
+                )
+            )
+        if explicit.get("vocabulary_retention_style", inferred.get("vocabulary_retention_style")) == "passive":
+            review_priority = "high"
+            exploration_ratio = max(0.05, exploration_ratio * 0.7)
+            applied_policies.append(
+                PolicyExplanation(
+                    signal="task.review.raise_priority_for_passive_retention",
+                    effect="Review work was prioritized because active learning assets show a passive retention pattern.",
+                    source_pattern="learning_assets",
+                )
+            )
+        difficulty_accuracy = _as_float(explicit.get("task_difficulty_accuracy", inferred.get("task_difficulty_accuracy")))
+        if difficulty_accuracy is not None and difficulty_accuracy > 0.5:
+            focus_duration = max(5, int(focus_duration * 1.3))
+            applied_policies.append(
+                PolicyExplanation(
+                    signal="task.time_estimate.add_buffer_for_low_accuracy",
+                    effect="Task duration was padded because recent estimates have drifted far from actual time spent.",
+                    source_pattern="task_feedback",
                 )
             )
 

@@ -7,6 +7,7 @@ Provides endpoints for managing learning assets:
 - List and filter assets
 - Record suggestion feedback
 """
+import asyncio
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -15,13 +16,15 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
-from app.db.session import get_db
+from app.core.cache import cache_service
+from app.db.session import AsyncSessionLocal, get_db
 from app.models.learning_assets import (
     AssetKind,
     AssetStatus,
     UserSuggestionResponse,
 )
 from app.models.user import User
+from app.services.asset_review_signal_processor import AssetReviewSignalProcessor
 from app.services.learning_asset_service import learning_asset_service
 
 router = APIRouter(prefix="/assets", tags=["assets"])
@@ -132,6 +135,8 @@ async def create_asset(
         )
 
         await db.commit()
+        if initial_status == AssetStatus.ACTIVE:
+            asyncio.create_task(_refresh_asset_review_signals(current_user.id))
 
         logger.info(f"Created asset {asset.id} for user {current_user.id}")
 
@@ -172,6 +177,7 @@ async def activate_asset(
 
     asset = await learning_asset_service.activate_asset(db, asset)
     await db.commit()
+    asyncio.create_task(_refresh_asset_review_signals(current_user.id))
 
     logger.info(f"Activated asset {asset_id} for user {current_user.id}")
 
@@ -203,6 +209,7 @@ async def archive_asset(
 
     asset = await learning_asset_service.archive_asset(db, asset, reason="user_archive")
     await db.commit()
+    asyncio.create_task(_refresh_asset_review_signals(current_user.id))
 
     logger.info(f"Archived asset {asset_id} for user {current_user.id}")
 
@@ -288,6 +295,7 @@ async def delete_asset(
 
     asset.soft_delete()
     await db.commit()
+    asyncio.create_task(_refresh_asset_review_signals(current_user.id))
 
     logger.info(f"Deleted asset {asset_id} for user {current_user.id}")
 
@@ -334,6 +342,7 @@ async def record_suggestion_feedback(
             asset_id=asset_uuid,
         )
         await db.commit()
+        asyncio.create_task(_refresh_asset_review_signals(current_user.id))
 
         return {"success": True, "message": f"Feedback recorded: {response.value}"}
 
@@ -364,3 +373,12 @@ def _asset_to_response(asset) -> AssetResponse:
         created_at=asset.created_at.isoformat(),
         updated_at=asset.updated_at.isoformat(),
     )
+
+
+async def _refresh_asset_review_signals(user_id: UUID) -> None:
+    try:
+        async with AsyncSessionLocal() as db:
+            processor = AssetReviewSignalProcessor(db, cache_service.redis)
+            await processor.process_assets(user_id)
+    except Exception as exc:
+        logger.warning(f"Failed to refresh asset review signals for {user_id}: {exc}")

@@ -16,6 +16,10 @@ class MemoryPolicyDecision:
 
 
 class MemoryPolicyEvaluator:
+    _ALIAS_MAP = {
+        "preferred_focus_duration": "focus_duration_preference",
+    }
+
     def __init__(self, db: AsyncSession):
         self.db = db
 
@@ -41,8 +45,10 @@ class MemoryPolicyEvaluator:
             return MemoryPolicyDecision(allowed=False, reason="episodic_disabled")
 
         blocked_pref_keys = settings_record.blocked_pref_keys or []
-        if kind == "preference" and pref_key and pref_key in blocked_pref_keys:
-            return MemoryPolicyDecision(allowed=False, reason="pref_key_blocked")
+        if kind == "preference" and pref_key:
+            candidate_keys = self._candidate_preference_keys(pref_key)
+            if any(key in blocked_pref_keys for key in candidate_keys):
+                return MemoryPolicyDecision(allowed=False, reason="pref_key_blocked")
 
         blocked_sources = settings_record.blocked_sources or []
         if source_type and source_type in blocked_sources:
@@ -58,3 +64,23 @@ class MemoryPolicyEvaluator:
             )
         )
         return result.scalar_one_or_none()
+
+    @staticmethod
+    def _candidate_preference_keys(pref_key: str) -> set[str]:
+        keys = {pref_key}
+        if pref_key.endswith("_signal"):
+            keys.add(pref_key.removesuffix("_signal"))
+        alias = MemoryPolicyEvaluator._ALIAS_MAP.get(pref_key)
+        if alias:
+            keys.add(alias)
+        return keys
+
+    @staticmethod
+    def expand_blocked_preference_key(pref_key: str) -> set[str]:
+        keys = MemoryPolicyEvaluator._candidate_preference_keys(pref_key)
+        if not pref_key.endswith("_signal"):
+            keys.add(f"{pref_key}_signal")
+        for inferred_key, explicit_key in MemoryPolicyEvaluator._ALIAS_MAP.items():
+            if pref_key == explicit_key:
+                keys.add(inferred_key)
+        return keys

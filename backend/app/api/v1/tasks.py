@@ -168,6 +168,73 @@ async def get_micro_task_recommendations(
     micro_tasks = [r for r in recommendations if r.estimated_minutes <= 15]
     return [TaskRecommendationResponse(**r.__dict__) for r in micro_tasks[:limit]]
 
+
+@router.get("/today", response_model=list[TaskDetail])
+async def get_today_tasks(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return tasks relevant for today."""
+    today = date.today()
+    query = (
+        select(Task)
+        .where(
+            Task.user_id == current_user.id,
+            Task.status.in_([TaskStatus.PENDING, TaskStatus.IN_PROGRESS, TaskStatus.COMPLETED]),
+        )
+        .where(
+            (Task.due_date.is_(None))
+            | (Task.due_date <= today)
+            | (Task.completed_at.is_not(None)),
+        )
+        .order_by(desc(Task.priority), desc(Task.updated_at))
+        .limit(50)
+    )
+    result = await db.execute(query)
+    return [TaskDetail.model_validate(task) for task in result.scalars().all()]
+
+
+@router.get("/recommended", response_model=list[TaskDetail])
+async def get_recommended_tasks(
+    limit: int = Query(5, ge=1, le=20, description="Recommendation count"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return a lightweight recommendation list for the dashboard."""
+    today = date.today()
+    query = (
+        select(Task)
+        .where(
+            Task.user_id == current_user.id,
+            Task.status.in_([TaskStatus.PENDING, TaskStatus.IN_PROGRESS]),
+        )
+        .order_by(
+            Task.due_date.is_(None),
+            Task.due_date.asc(),
+            desc(Task.priority),
+            desc(Task.updated_at),
+        )
+        .limit(limit)
+    )
+    result = await db.execute(query)
+    tasks = result.scalars().all()
+
+    if len(tasks) < limit:
+        fallback_query = (
+            select(Task)
+            .where(
+                Task.user_id == current_user.id,
+                Task.status == TaskStatus.COMPLETED,
+                Task.updated_at >= today,
+            )
+            .order_by(desc(Task.updated_at))
+            .limit(limit - len(tasks))
+        )
+        fallback_result = await db.execute(fallback_query)
+        tasks.extend(fallback_result.scalars().all())
+
+    return [TaskDetail.model_validate(task) for task in tasks[:limit]]
+
 @router.get("/{task_id}", response_model=dict[str, Any])
 async def get_task(
     task_id: UUID = Path(..., description="Task ID"),

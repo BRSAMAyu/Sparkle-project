@@ -2,17 +2,22 @@
 知识拓展服务 (Expansion Service)
 使用 LLM 自动拓展知识星图
 """
+import asyncio
 import json
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
-from sqlalchemy import and_, func, select
+from loguru import logger
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.core.cache import cache_service
 from app.core.llm_client import llm_client
+from app.db.session import AsyncSessionLocal
 from app.models.galaxy import ExpansionFeedback, KnowledgeNode, NodeExpansionQueue, NodeRelation, UserNodeStatus
 from app.services.embedding_service import embedding_service
+from app.services.galaxy_feedback_signal_processor import GalaxyFeedbackSignalProcessor
 
 
 def _utcnow() -> datetime:
@@ -409,6 +414,7 @@ relation_to_trigger 可选值: prerequisite (前置知识), related (相关), ap
         )
         self.db.add(feedback)
         await self.db.commit()
+        asyncio.create_task(_refresh_galaxy_feedback_signals(user_id))
         return feedback.id
 
     async def _find_existing_node(self, name: str) -> KnowledgeNode | None:
@@ -416,7 +422,6 @@ relation_to_trigger 可选值: prerequisite (前置知识), related (相关), ap
         query = select(KnowledgeNode).where(KnowledgeNode.name == name)
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
-
     async def _ensure_relation(self, source_id: UUID, target_id: UUID, item: dict):
         """确保关系存在"""
         query = select(NodeRelation).where(
@@ -518,5 +523,10 @@ relation_to_trigger 可选值: prerequisite (前置知识), related (相关), ap
         return res.scalar_one_or_none() is not None
 
 
-# 导入 or_ 函数
-from sqlalchemy import or_
+async def _refresh_galaxy_feedback_signals(user_id: UUID) -> None:
+    try:
+        async with AsyncSessionLocal() as db:
+            processor = GalaxyFeedbackSignalProcessor(db, cache_service.redis)
+            await processor.process_feedback(user_id)
+    except Exception as exc:
+        logger.warning("Failed to refresh galaxy feedback signals for {}: {}", user_id, exc)

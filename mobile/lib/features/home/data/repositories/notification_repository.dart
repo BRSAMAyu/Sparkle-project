@@ -51,7 +51,7 @@ class NotificationRepository {
     }
 
     final response = await _apiClient.get<dynamic>(
-      '/notifications/',
+      '/notifications',
       queryParameters: {
         'skip': skip,
         'limit': limit,
@@ -59,7 +59,8 @@ class NotificationRepository {
       },
     );
 
-    final data = ApiResponseParser.unwrapList(response.data, action: 'getNotifications');
+    final data =
+        ApiResponseParser.unwrapList(response.data, action: 'getNotifications');
     return data
         .map((e) => NotificationModel.fromJson(e as Map<String, dynamic>))
         .toList();

@@ -117,6 +117,17 @@ class PreferenceService:
             await self._invalidate_cache(user_id)
         return self._fill_defaults(prefs)
 
+    async def update_inferred_raw(self, user_id: UUID, inferred: dict) -> UserPreferencesCenter:
+        """以完整快照替换推断偏好并递增版本"""
+        prefs = await self._get_or_create(user_id)
+        prefs.inferred = dict(inferred or {})
+        prefs.version = (prefs.version or 0) + 1
+        prefs.last_inferred_update = _utcnow()
+        prefs.updated_at = _utcnow()
+        await self.db.commit()
+        await self._invalidate_cache(user_id)
+        return self._fill_defaults(prefs)
+
     async def update_inferred(self, user_id: UUID, updates: dict) -> UserPreferencesCenter:
         """
         更新推断偏好并递增版本（带乐观锁并发保护）

@@ -104,6 +104,14 @@ from app.models.plan import Plan, PlanStage, PlanType
 from app.models.plan_execution_record import PlanExecutionRecord
 from app.models.plan_state import PlanState, PlanStateStatus
 from app.models.response_feedback import ResponseFeedback
+from app.models.recommendation import (
+    ItemSimilarity,
+    LeaderboardSnapshot,
+    RecommendationCache,
+    UserItemInteraction,
+    UserLearningProfile,
+    UserSimilarity,
+)
 from app.models.review_system import (
     ArbitrationCase,
     ArbitrationDecision,
@@ -223,6 +231,12 @@ __all__ = [
     "BehavioralOutcome",
     "InterventionTemplate",
     "ResponseFeedback",
+    "UserSimilarity",
+    "ItemSimilarity",
+    "UserItemInteraction",
+    "UserLearningProfile",
+    "RecommendationCache",
+    "LeaderboardSnapshot",
     "MemoryPreference",
     "MemoryGoal",
     "EpisodicMemory",

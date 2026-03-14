@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sparkle/core/constants/api_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_permission_dialog.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 import 'package:sparkle/features/chat/data/services/audio_recording_service.dart';
@@ -309,13 +310,23 @@ class _OmniBarState extends ConsumerState<OmniBar>
 
   Future<bool> _checkPermissions() async {
     final status = await Permission.microphone.request();
-    if (!status.isGranted) {
+    if (status.isGranted) {
+      return true;
+    }
+    if (mounted &&
+        (status.isPermanentlyDenied ||
+            status.isRestricted ||
+            status.isDenied)) {
+      await showAppPermissionDialog(
+        context,
+        permission: AppPermissionKind.microphone,
+      );
+    } else if (mounted) {
       if (mounted) {
         AppFeedback.error(context, context.l10n.voiceInputNoPermission);
       }
-      return false;
     }
-    return true;
+    return false;
   }
 
   Future<void> _toggleListening() async {

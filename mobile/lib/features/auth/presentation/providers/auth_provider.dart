@@ -4,7 +4,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
+import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
+
+const _demoGuestModePreferenceKey = 'demo_guest_mode_enabled';
 
 // 1. AuthState Class
 class AuthState {
@@ -35,23 +38,42 @@ class AuthState {
 
 // 2. AuthNotifier Class
 class AuthNotifier extends StateNotifier<AuthState> {
-  AuthNotifier(this._authRepository) : super(AuthState()) {
+  AuthNotifier(this._ref, this._authRepository) : super(AuthState()) {
     unawaited(checkAuthStatus());
   }
+  final Ref _ref;
   final AuthRepository _authRepository;
 
   Future<void> checkAuthStatus() async {
     state = state.copyWith(isLoading: true);
     try {
+      final prefs = _ref.read(sharedPreferencesProvider);
+      DemoDataService.isDemoMode = prefs.getBool(_demoGuestModePreferenceKey) ??
+          DemoDataService.isDemoMode;
+
       final isLoggedIn = await _authRepository.isLoggedIn();
       if (isLoggedIn) {
-        final user = await _authRepository.getCurrentUser();
-        state =
-            state.copyWith(isLoading: false, isAuthenticated: true, user: user);
+        try {
+          final user = await _authRepository.getCurrentUser();
+          state = state.copyWith(
+            isLoading: false,
+            isAuthenticated: true,
+            user: user,
+          );
+        } catch (e) {
+          debugPrint('⚠️ Stored auth state invalid, clearing tokens: $e');
+          await _authRepository.logout();
+          state = state.copyWith(
+            isLoading: false,
+            isAuthenticated: false,
+            error: e.toString(),
+          );
+        }
       } else {
         state = state.copyWith(isLoading: false, isAuthenticated: false);
       }
     } catch (e) {
+      await _authRepository.logout();
       state = state.copyWith(
         isLoading: false,
         isAuthenticated: false,
@@ -63,6 +85,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> login(String usernameOrEmail, String password) async {
     state = state.copyWith(isLoading: true);
     try {
+      DemoDataService.isDemoMode = false;
+      await _ref
+          .read(sharedPreferencesProvider)
+          .setBool(_demoGuestModePreferenceKey, false);
       final user = await _authRepository.login(usernameOrEmail, password);
       state = state.copyWith(isAuthenticated: true, user: user);
     } catch (e) {
@@ -82,6 +108,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }) async {
     state = state.copyWith(isLoading: true);
     try {
+      DemoDataService.isDemoMode = false;
+      await _ref
+          .read(sharedPreferencesProvider)
+          .setBool(_demoGuestModePreferenceKey, false);
       final user = await _authRepository.socialLogin(
         provider: provider,
         token: token,
@@ -101,6 +131,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> register(String username, String email, String password) async {
     state = state.copyWith(isLoading: true);
     try {
+      DemoDataService.isDemoMode = false;
+      await _ref
+          .read(sharedPreferencesProvider)
+          .setBool(_demoGuestModePreferenceKey, false);
       final user = await _authRepository.register(username, email, password);
       state = state.copyWith(isAuthenticated: true, user: user);
     } catch (e) {
@@ -113,11 +147,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> loginAsGuest() async {
     state = state.copyWith(isLoading: true);
     try {
-      // 游客登录默认走真实联调链路，避免社区模块混入 mock 数据。
-      DemoDataService.isDemoMode = false;
-      debugPrint('🔌 Guest login using real backend data');
+      // 恢复原有访客体验：预设演示数据 + 真实 token。
+      DemoDataService.isDemoMode = true;
+      await _ref
+          .read(sharedPreferencesProvider)
+          .setBool(_demoGuestModePreferenceKey, true);
+      debugPrint('🎭 Guest login using demo content with live backend token');
 
-      final user = await _authRepository.guestLogin('guest_user');
+      final guestService = _ref.read(guestServiceProvider);
+      final guestId = await guestService.getGuestId();
+      final user = await _authRepository.guestLogin(guestId);
       final accessToken = await _authRepository.getAccessToken();
       if (accessToken == null || accessToken.isEmpty) {
         throw Exception('游客登录未获取到有效登录令牌');
@@ -129,7 +168,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       );
     } catch (e) {
       debugPrint('⚠️ Guest login failed: $e');
-      DemoDataService.isDemoMode = false;
+      DemoDataService.isDemoMode = true;
       state = state.copyWith(
         isLoading: false,
         isAuthenticated: false,
@@ -144,6 +183,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
       // ✅ 演示账号登录：使用真实账户chat_test + 预设数据库数据
       // 必须关闭DemoMode以确保从后端API读取真实数据
       DemoDataService.isDemoMode = false;
+      await _ref
+          .read(sharedPreferencesProvider)
+          .setBool(_demoGuestModePreferenceKey, false);
       debugPrint('🎬 Demo account login (real data from backend)');
 
       final user = await _authRepository.login('chat_test', 'Chat123456');
@@ -218,13 +260,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> logout() async {
     await _authRepository.logout();
+    await _ref
+        .read(sharedPreferencesProvider)
+        .setBool(_demoGuestModePreferenceKey, false);
+    DemoDataService.isDemoMode = false;
     state = AuthState(); // Reset to initial state
   }
 }
 
 // 3. Providers
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>(
-  (ref) => AuthNotifier(ref.watch(authRepositoryProvider)),
+  (ref) => AuthNotifier(ref, ref.watch(authRepositoryProvider)),
 );
 
 final currentUserProvider =
