@@ -414,6 +414,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
     final accumulatedWidgets = <WidgetPayload>[];
     Map<String, dynamic>? accumulatedCollaboration;
     Map<String, dynamic>? accumulatedUxEnvelope;
+    Map<String, dynamic>? accumulatedOrchestrationTrace;
+    Map<String, dynamic>? accumulatedModeSuggestion;
     final accumulatedReasoningSteps = <ReasoningStep>[];
     int? reasoningStartTime;
     String? pendingStreamingContent;
@@ -763,6 +765,12 @@ class ChatNotifier extends StateNotifier<ChatState> {
             transparencyData: event.transparencyData,
           );
           flushPending();
+        } else if (event is OrchestrationTraceEvent) {
+          accumulatedOrchestrationTrace = event.traceData;
+          flushPending();
+        } else if (event is ModeSuggestionEvent) {
+          accumulatedModeSuggestion = event.suggestion;
+          flushPending();
         } else if (event is SprintModeSwitchEvent) {
           // Sprint Mode Switch Event
           _handleSprintModeSwitch(event);
@@ -814,6 +822,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
           createdAt: DateTime.now(),
           widgets: accumulatedWidgets.isNotEmpty ? accumulatedWidgets : null,
           agentCollaboration: accumulatedCollaboration,
+          orchestrationTrace: accumulatedOrchestrationTrace,
+          modeSuggestion: accumulatedModeSuggestion,
           aiStatus: lastAiStatus, // 持久化最后的 AI 状态（如：EXECUTING_TOOL）
           reasoningSteps: accumulatedReasoningSteps.isNotEmpty
               ? accumulatedReasoningSteps

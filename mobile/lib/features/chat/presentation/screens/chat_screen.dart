@@ -149,6 +149,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ),
         backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
         elevation: 0,
+        leading: SparkleIconButton(
+          icon: Icon(Icons.arrow_back_rounded, color: DS.textSecondary),
+          onPressed: () => _handleExitChat(context),
+          semanticLabel: '返回',
+          variant: ButtonVariant.ghost,
+          size: DS.touchTargetMinSize,
+        ),
         title: Row(
           children: [
             Container(
@@ -478,6 +485,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       showModalBottomSheet<void>(
         context: context,
         backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
+        useRootNavigator: true,
         isScrollControlled: true,
         builder: (context) {
           final mediaQuery = MediaQuery.of(context);
@@ -704,7 +712,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     BuildContext sheetContext,
     Map<String, dynamic> session,
   ) async {
-    Navigator.of(sheetContext).pop();
+    final navigator = Navigator.of(sheetContext, rootNavigator: true);
+    if (navigator.canPop()) {
+      navigator.pop();
+    }
 
     final sessionId = session['id']?.toString() ?? '';
     if (sessionId.isEmpty) {
@@ -718,6 +729,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
 
     await ref.read(chatProvider.notifier).loadConversationHistory(sessionId);
+    if (mounted) {
+      _scrollController.jumpTo(0);
+    }
     if (!mounted) {
       return;
     }
@@ -726,6 +740,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     if (loadError != null && loadError.isNotEmpty) {
       AppFeedback.error(context, loadError);
     }
+  }
+
+  void _handleExitChat(BuildContext context) {
+    final router = GoRouter.of(context);
+    if (router.canPop()) {
+      router.pop();
+      return;
+    }
+    router.go('/home');
   }
 
   Widget _buildQuickActions(BuildContext context) => Center(

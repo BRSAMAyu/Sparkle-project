@@ -96,6 +96,7 @@ class PlanReviewResult:
     persona_strategy_mapping: list[dict[str, Any]] | None = None
     alignment_score: float | None = None
     alignment_summary: str | None = None
+    review_feedback_entry: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -114,6 +115,7 @@ class PlanReviewResult:
             "persona_strategy_mapping": self.persona_strategy_mapping,
             "alignment_score": self.alignment_score,
             "alignment_summary": self.alignment_summary,
+            "review_feedback_entry": self.review_feedback_entry,
         }
 
 
@@ -188,6 +190,7 @@ class PlanReviewService:
         """
         review_id = str(uuid.uuid4())
         reviewed_at = _utcnow().isoformat()
+        mode_strategy = self._extract_mode_strategy(user_context)
 
         # Step 1: Quick rule-based check
         rule_result = await self._quick_rule_check(plan, user_context)
@@ -220,27 +223,49 @@ class PlanReviewService:
                 await calibration_service.record_alignment_score(user_id=user_uuid, score=alignment_score)
             comments: list[ReviewComment] = []
             if alignment_score is not None and alignment_score < 0.55:
+                severity = SeverityLevel.WARNING.value
+                decision = ReviewDecision.APPROVED.value
+                if mode_strategy.get("require_alignment_check"):
+                    severity = SeverityLevel.CRITICAL.value
+                    decision = ReviewDecision.NEEDS_MODIFICATION.value
                 comments.append(
                     ReviewComment(
                         category=ReviewCategory.ALIGNMENT.value,
-                        severity=SeverityLevel.WARNING.value,
+                        severity=severity,
                         message=alignment_summary or "当前计划和你的近期执行画像存在一定偏差。",
                         suggested_fix="建议降低难度、缩短单次负载或把任务拆细后再执行。",
                     )
                 )
+            review_feedback_entry = self.build_review_feedback_entry(
+                review_id=review_id,
+                decision=(
+                    decision
+                    if alignment_score is not None and alignment_score < 0.55 and mode_strategy.get("require_alignment_check")
+                    else ReviewDecision.APPROVED.value
+                ),
+                comments=comments,
+                alignment_score=alignment_score,
+                alignment_summary=alignment_summary,
+                mode_strategy=mode_strategy,
+            )
             if reasoning_summary:
                 PLAN_REASONING_SOURCE_TOTAL.labels(source="rules_only").inc()
+            final_decision = (
+                decision
+                if alignment_score is not None and alignment_score < 0.55 and mode_strategy.get("require_alignment_check")
+                else ReviewDecision.APPROVED.value
+            )
             return PlanReviewResult(
                 review_id=review_id,
                 plan_id=plan.plan_id,
-                decision=ReviewDecision.APPROVED.value,
+                decision=final_decision,
                 confidence=1.0,
                 comments=comments,
                 reviewed_at=reviewed_at,
-                auto_approved=True,
+                auto_approved=final_decision == ReviewDecision.APPROVED.value,
                 user_facing_reason=self._get_user_facing_reason(
-                    decision=ReviewDecision.APPROVED.value,
-                    auto_approved=True,
+                    decision=final_decision,
+                    auto_approved=final_decision == ReviewDecision.APPROVED.value,
                     auto_approve_reason=rule_result,
                 ),
                 reasoning_summary=reasoning_summary,
@@ -249,6 +274,7 @@ class PlanReviewService:
                 persona_strategy_mapping=persona_strategy_mapping,
                 alignment_score=alignment_score,
                 alignment_summary=alignment_summary,
+                review_feedback_entry=review_feedback_entry,
             )
 
         # Step 2: LLM-based deep review
@@ -292,15 +318,27 @@ class PlanReviewService:
             for c in llm_result.get("comments", [])
         ]
         if decision == ReviewDecision.APPROVED.value and alignment_score is not None and alignment_score < 0.55:
+            severity = SeverityLevel.WARNING.value
+            if mode_strategy.get("require_alignment_check"):
+                decision = ReviewDecision.NEEDS_MODIFICATION.value
+                severity = SeverityLevel.CRITICAL.value
             comments.append(
                 ReviewComment(
                     category=ReviewCategory.ALIGNMENT.value,
-                    severity=SeverityLevel.WARNING.value,
+                    severity=severity,
                     message=alignment_summary or "当前计划和你的近期执行画像存在一定偏差。",
                     suggested_fix="建议把任务颗粒度再拆细一点，或先降低本轮负载后再推进。",
                 )
             )
 
+        review_feedback_entry = self.build_review_feedback_entry(
+            review_id=review_id,
+            decision=decision,
+            comments=comments,
+            alignment_score=alignment_score,
+            alignment_summary=alignment_summary,
+            mode_strategy=mode_strategy,
+        )
         if reasoning_summary:
             PLAN_REASONING_SOURCE_TOTAL.labels(source=reasoning_source).inc()
         return PlanReviewResult(
@@ -322,6 +360,7 @@ class PlanReviewService:
             persona_strategy_mapping=persona_strategy_mapping,
             alignment_score=alignment_score,
             alignment_summary=alignment_summary,
+            review_feedback_entry=review_feedback_entry,
         )
 
     async def _quick_rule_check(self, plan: ExecutablePlan, user_context: dict[str, Any]) -> str | None:
@@ -337,6 +376,14 @@ class PlanReviewService:
         Returns:
             Reason string if auto-approved, None otherwise
         """
+        mode_strategy = self._extract_mode_strategy(user_context)
+        review_strictness = max(float(mode_strategy.get("review_strictness", 1.0) or 1.0), 0.5)
+        auto_approve_confidence_threshold = min(
+            0.99,
+            self.AUTO_APPROVE_CONFIDENCE_THRESHOLD + max(review_strictness - 1.0, 0.0) * 0.08,
+        )
+        auto_approve_max_tools = max(2, int(round(self.AUTO_APPROVE_MAX_TOOLS / review_strictness)))
+
         # === P0 Fix #2: Check for overcommitment (user already has too many plans) ===
         active_plan_count = user_context.get("current_plan_count", 0)
         if active_plan_count >= 3:
@@ -357,12 +404,12 @@ class PlanReviewService:
                 return None
 
         # Check plan confidence
-        if plan.confidence < self.AUTO_APPROVE_CONFIDENCE_THRESHOLD:
+        if plan.confidence < auto_approve_confidence_threshold:
             logger.info(f"Plan confidence {plan.confidence} below threshold")
             return None
 
         # Check number of tools
-        if len(plan.tool_calls) > self.AUTO_APPROVE_MAX_TOOLS:
+        if len(plan.tool_calls) > auto_approve_max_tools:
             logger.info(f"Too many tools: {len(plan.tool_calls)}")
             return None
 
@@ -383,7 +430,7 @@ class PlanReviewService:
             return None
 
         # === P0 Fix #1: Validate feasibility before auto-approving high confidence plans ===
-        if plan.confidence >= 0.95 and len(plan.tool_calls) <= 2:
+        if plan.confidence >= max(0.95, auto_approve_confidence_threshold + 0.05) and len(plan.tool_calls) <= 2:
             # Add feasibility validation for high confidence plans
             feasibility_ok = await self._validate_feasibility(plan, user_context)
             if not feasibility_ok:
@@ -396,6 +443,49 @@ class PlanReviewService:
             return "high_confidence_simple_plan"
 
         return None
+
+    @staticmethod
+    def _extract_mode_strategy(user_context: dict[str, Any]) -> dict[str, Any]:
+        strategy = (user_context or {}).get("mode_strategy")
+        return strategy if isinstance(strategy, dict) else {}
+
+    def build_review_feedback_entry(
+        self,
+        *,
+        review_id: str,
+        decision: str,
+        comments: list[ReviewComment],
+        alignment_score: float | None,
+        alignment_summary: str | None,
+        mode_strategy: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        dominant = comments[0] if comments else None
+        category = str(dominant.category if dominant else decision)
+        message = str(dominant.message if dominant else alignment_summary or decision)
+        bias_constraint = ""
+        lowered = message.lower()
+        if category == ReviewCategory.ALIGNMENT.value and alignment_score is not None and alignment_score < 0.55:
+            if "难度" in message or "difficulty" in lowered:
+                bias_constraint = "task_difficulty"
+            elif "颗粒度" in message or "granularity" in lowered:
+                bias_constraint = "task_granularity"
+            elif "并行" in message or "concurrency" in lowered:
+                bias_constraint = "concurrency"
+
+        return {
+            "type": "plan_review",
+            "source": "plan_review_service",
+            "review_id": review_id,
+            "decision": decision,
+            "category": category,
+            "message": message,
+            "alignment_score": alignment_score,
+            "alignment_summary": alignment_summary or "",
+            "bias_constraint": bias_constraint,
+            "review_strictness": float((mode_strategy or {}).get("review_strictness", 1.0) or 1.0),
+            "require_alignment_check": bool((mode_strategy or {}).get("require_alignment_check", False)),
+            "recorded_at": _utcnow().isoformat(),
+        }
 
     async def _validate_feasibility(
         self,

@@ -35,7 +35,24 @@ extension ChatNotifierHistory on ChatNotifier {
       '${date.day.toString().padLeft(2, '0')}';
 
   Future<void> loadConversationHistory(String conversationId) async {
-    state = state.copyWith(isLoading: true, clearError: true);
+    state = state.copyWith(
+      isLoading: true,
+      isSending: false,
+      isLoadingMore: false,
+      hasMoreMessages: true,
+      streamingContent: '',
+      clearError: true,
+      clearAiStatus: true,
+      clearReasoning: true,
+      clearDagExecution: true,
+      clearActionFeedback: true,
+      clearPendingReview: true,
+      clearPendingContentReview: true,
+      clearTransparency: true,
+      activeTools: const [],
+      reasoningSteps: const [],
+      pendingInterventions: const [],
+    );
     try {
       final history = await _chatRepository.getConversationHistory(conversationId);
       state = state.copyWith(

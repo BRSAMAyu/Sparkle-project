@@ -10,6 +10,8 @@ import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/action_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart';
 import 'package:sparkle/features/chat/presentation/widgets/assistant_message_metadata_tray.dart';
+import 'package:sparkle/features/chat/presentation/widgets/mode_suggestion_card.dart';
+import 'package:sparkle/features/chat/presentation/widgets/orchestration_trace_panel.dart';
 import 'package:sparkle/features/chat/presentation/widgets/message_detail_view.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/presentation/providers/community_agent_provider.dart';
@@ -324,6 +326,12 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
     final isUser = _isUser;
     final timeStr = DateFormat('HH:mm').format(_createdAt);
     final reduceMotion = context.reduceMotion;
+    final orchestrationTrace = widget.message is ChatMessageModel
+        ? (widget.message as ChatMessageModel).orchestrationTrace
+        : null;
+    final modeSuggestion = widget.message is ChatMessageModel
+        ? (widget.message as ChatMessageModel).modeSuggestion
+        : null;
     final bubble = Container(
       margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
       child: Column(
@@ -537,6 +545,28 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                           .aiStatus
                                       : null,
                                   onWidgetAction: widget.onWidgetAction,
+                                ),
+                              ),
+                            if (!isUser && modeSuggestion != null)
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  top: 8.0,
+                                  right: 8.0,
+                                  left: 8.0,
+                                ),
+                                child: ModeSuggestionCard(
+                                  suggestion: modeSuggestion,
+                                ),
+                              ),
+                            if (!isUser && orchestrationTrace != null)
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  top: 8.0,
+                                  right: 8.0,
+                                  left: 8.0,
+                                ),
+                                child: OrchestrationTracePanel(
+                                  traceData: orchestrationTrace,
                                 ),
                               ),
                             ..._actionableWidgets.map(

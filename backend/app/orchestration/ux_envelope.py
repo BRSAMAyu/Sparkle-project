@@ -369,6 +369,14 @@ class UXEnvelopeBuilder:
             "ux_sources": ux_sources,
         }
 
+        orchestration_summary = self._orchestration_summary(
+            final_state=final_state,
+            chat_mode=chat_mode,
+            executable_plan=executable_plan,
+        )
+        if orchestration_summary:
+            envelope["orchestration_summary"] = orchestration_summary
+
         ux_evolution = self._ux_evolution(final_state=final_state, memory_updates=memory_updates)
         if ux_evolution:
             envelope["ux_evolution"] = ux_evolution
@@ -1497,6 +1505,57 @@ class UXEnvelopeBuilder:
         context_data = getattr(final_state, "context_data", {}) or {}
         decision = context_data.get("dual_core_decision") or {}
         return str((decision or {}).get("reason") or "").strip()
+
+    def _orchestration_summary(
+        self,
+        *,
+        final_state: Any,
+        chat_mode: str,
+        executable_plan: Any | None,
+    ) -> dict[str, Any] | None:
+        context_data = getattr(final_state, "context_data", {}) or {}
+        trace = context_data.get("orchestration_trace")
+        if isinstance(trace, str):
+            try:
+                trace = json.loads(trace)
+            except Exception:
+                trace = None
+        if not isinstance(trace, dict):
+            return None
+
+        mode = str(trace.get("mode") or chat_mode).strip()
+        agents_used = trace.get("agents") or []
+        if not agents_used and executable_plan is not None:
+            agents_used = getattr(executable_plan, "agents_involved", []) or []
+        agents_used = [str(agent).strip() for agent in agents_used if str(agent).strip()]
+
+        persona_step = trace.get("persona_step") or {}
+        persona_meta = persona_step.get("metadata") if isinstance(persona_step, dict) else {}
+        persona_meta = persona_meta if isinstance(persona_meta, dict) else {}
+        persona_highlights: list[str] = []
+        preferred_task_size = persona_meta.get("preferred_task_size")
+        if preferred_task_size:
+            persona_highlights.append(f"偏好 {preferred_task_size} 任务")
+        max_session_minutes = persona_meta.get("max_session_minutes")
+        if max_session_minutes:
+            persona_highlights.append(f"最大专注 {max_session_minutes} 分钟")
+        time_multiplier = persona_meta.get("time_multiplier")
+        if isinstance(time_multiplier, (int, float)):
+            persona_highlights.append(f"时间倍率 {float(time_multiplier):.2f}")
+        if persona_meta.get("require_warmup_task"):
+            persona_highlights.append("需要热身任务")
+
+        review_step = trace.get("review_step") or {}
+        review_meta = review_step.get("metadata") if isinstance(review_step, dict) else {}
+        review_meta = review_meta if isinstance(review_meta, dict) else {}
+        review_result = review_meta.get("decision") or review_step.get("decision") if isinstance(review_step, dict) else None
+
+        return {
+            "mode": mode,
+            "agents_used": agents_used,
+            "persona_highlights": persona_highlights,
+            "review_result": review_result,
+        }
 
     def _reference_scope(self, include_references: bool, file_ids: list[str]) -> str:
         if include_references and file_ids:

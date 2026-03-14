@@ -216,7 +216,8 @@ class FocusService:
     @staticmethod
     async def breakdown_task_via_llm(
         task_title: str,
-        task_description: str
+        task_description: str,
+        persona_prompt: str = "",
     ) -> list[dict[str, Any]]:
         """
         Break down a task into subtasks using LLM.
@@ -235,6 +236,8 @@ class FocusService:
         """
 
         prompt = f"Task: {task_title}\nDescription: {task_description}"
+        if persona_prompt:
+            prompt += f"\n\n{persona_prompt}"
 
         return await llm_service.chat_json(
             messages=[

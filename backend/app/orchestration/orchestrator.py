@@ -73,8 +73,10 @@ from app.orchestration.chat_modes import (
     normalize_chat_mode,
 )
 from app.orchestration.expert_strategy import ExpertStrategyV1
-from app.orchestration.mode_workflow_config import get_workflow_config
+from app.orchestration.mode_workflow_config import get_mode_strategy, get_workflow_config
 from app.orchestration.multi_agent_adapter import MultiAgentWorkflowAdapter, execute_multi_agent_workflow
+from app.orchestration.orchestration_trace import OrchestrationTrace
+from app.orchestration.persona_aware_planner import PersonaAwarePlanner
 from app.orchestration.observability_logger import observability_logger
 from app.orchestration.plan_review_service import ReviewDecision, plan_review_service
 from app.orchestration.session_feedback import (
@@ -2198,6 +2200,133 @@ class ChatOrchestrator:
 
         return route_decision, notes
 
+    def _apply_mode_strategy_override(
+        self,
+        *,
+        chat_mode: str,
+        route_decision: RouteDecision,
+        user_message: str,
+    ) -> tuple[RouteDecision, dict[str, Any] | None]:
+        strategy = get_mode_strategy(chat_mode)
+        if not strategy:
+            return route_decision, None
+
+        metadata: dict[str, Any] = {
+            "chat_mode": strategy.chat_mode,
+            "required_agents": list(strategy.required_agents),
+            "preferred_agents": list(strategy.preferred_agents),
+            "collaboration_mode": strategy.collaboration_mode,
+            "review_strictness": strategy.review_strictness,
+            "require_alignment_check": strategy.require_alignment_check,
+            "output_structure": list(strategy.output_structure),
+            "synthesis_instruction": str(strategy.synthesis_instruction or "").strip(),
+        }
+
+        if strategy.force_execution_mode:
+            route_decision.execution_mode = strategy.force_execution_mode
+            route_decision.reason = f"mode_strategy:forced:{strategy.chat_mode}"
+
+        threshold = strategy.min_confidence_for_direct
+        if (
+            threshold is not None
+            and route_decision.execution_mode == "hybrid"
+            and route_decision.confidence >= threshold
+            and not self._is_complex_user_query(user_message)
+            and not self._is_context_dependent_query(user_message)
+        ):
+            route_decision.execution_mode = "direct"
+            route_decision.reason = f"mode_strategy:direct_threshold:{strategy.chat_mode}"
+            metadata["direct_threshold_applied"] = threshold
+
+        return route_decision, metadata
+
+    def _suggest_mode_switch(
+        self,
+        *,
+        intent: Any,
+        confidence: float,
+        context_signals: dict[str, Any] | None,
+    ) -> dict[str, Any] | None:
+        intent_value = intent.value if hasattr(intent, "value") else str(intent or "")
+        intent_value = intent_value.strip().lower()
+        if confidence < 0.75:
+            return None
+        intent_mode_map = {
+            "plan": ("study_plan", "检测到你在制定学习计划，切换到「学习规划」模式可以调用多专家协作。"),
+            "sprint_plan": ("study_plan", "检测到你在做冲刺安排，切换到「学习规划」模式更适合拆解节奏。"),
+            "error_diagnosis": ("error_diagnosis", "检测到你在分析错误原因，切换到「错因诊断」模式会更深入。"),
+            "knowledge": ("deep_analysis", "这个问题偏复杂，切换到「深度分析」模式可以更系统地拆解。"),
+            "learn": ("deep_analysis", "检测到你需要深入理解，切换到「深度分析」模式可以给出完整证据链。"),
+            "review": ("deep_analysis", "检测到你需要复盘总结，切换到「深度分析」模式可以做更完整的结构化整理。"),
+        }
+        if intent_value not in intent_mode_map:
+            return None
+        suggested_mode, reason = intent_mode_map[intent_value]
+        return {
+            "suggested_mode": suggested_mode,
+            "reason": reason,
+            "intent": intent_value,
+            "confidence": round(float(confidence), 4),
+            "context_signals": context_signals or {},
+        }
+
+    @staticmethod
+    def _execution_mode_label(execution_mode: str) -> str:
+        if execution_mode == "langgraph":
+            return "系统编排"
+        if execution_mode == "hybrid":
+            return "混合执行"
+        return "直接回答"
+
+    @staticmethod
+    def _dual_core_mode_label(mode: str) -> str:
+        if mode == "cognitive_first":
+            return "认知优先"
+        if mode == "execution_first":
+            return "执行优先"
+        return "双核平衡"
+
+    @staticmethod
+    def _roundtrip_ms(started_at: float) -> float:
+        return max((time.perf_counter() - started_at) * 1000.0, 0.0)
+
+    def _sync_orchestration_trace(
+        self,
+        *,
+        state: WorkflowState,
+        orchestration_trace: OrchestrationTrace | None,
+        user_context_payload: dict[str, Any] | None = None,
+    ) -> None:
+        if orchestration_trace is None:
+            return
+        payload = orchestration_trace.to_metadata()
+        state.context_data["orchestration_trace"] = payload
+        if isinstance(user_context_payload, dict):
+            user_context_payload["orchestration_trace"] = payload
+
+    async def _emit_orchestration_trace(
+        self,
+        *,
+        state: WorkflowState,
+        orchestration_trace: OrchestrationTrace | None,
+        stream_callback,
+    ) -> None:
+        if orchestration_trace is None or not orchestration_trace.steps:
+            return
+        payload = orchestration_trace.to_metadata()
+        state.context_data["orchestration_trace"] = payload
+        try:
+            await stream_callback(
+                agent_service_pb2.ChatResponse(
+                    metadata={
+                        "event_type": "orchestration_trace",
+                        "trace": json.dumps(payload, ensure_ascii=False),
+                    }
+                )
+            )
+        except Exception as exc:
+            logger.debug(f"Failed to emit orchestration trace: {exc}")
+
     async def _stream_hitl_escalation(
         self,
         *,
@@ -3418,6 +3547,7 @@ class ChatOrchestrator:
         stream_callback,
         state: WorkflowState,
         user_context_payload: dict[str, Any] | None,
+        orchestration_trace: OrchestrationTrace | None = None,
     ) -> tuple[RouteDecision, ExecutablePlan | None, StateSnapshot | None, bool]:
         executable_plan = None
         snapshot = None
@@ -3483,7 +3613,75 @@ class ChatOrchestrator:
                     planning_constraints["weak_knowledge_nodes"] = resolved_nodes
 
             chat_mode = str(state.context_data.get("chat_mode", CHAT_MODE_STANDARD))
+            mode_strategy = get_mode_strategy(chat_mode)
             mode_config = get_workflow_config(chat_mode)
+            if mode_strategy and mode_strategy.collaboration_mode != "auto":
+                planning_constraints["collaboration_mode"] = mode_strategy.collaboration_mode
+            if mode_strategy and mode_strategy.required_agents:
+                planning_constraints["required_agents"] = list(mode_strategy.required_agents)
+            if mode_strategy and mode_strategy.preferred_agents:
+                planning_constraints["preferred_agents"] = list(mode_strategy.preferred_agents)
+            if mode_strategy and mode_strategy.output_structure:
+                planning_constraints["required_output_structure"] = list(mode_strategy.output_structure)
+
+            persona_constraints = None
+            if active_db is not None:
+                persona_started_at = time.perf_counter()
+                persona_constraints = await PersonaAwarePlanner(active_db, self.redis).build_constraints(
+                    user_id=user_id,
+                    user_context_payload=user_context_payload,
+                    plan_context=plan_context,
+                    plan_id=plan_id_str,
+                )
+                planning_constraints["persona_constraints"] = persona_constraints.to_planning_constraints()
+                persona_summary = (
+                    f"完成率{persona_constraints.recent_completion_rate:.0%}，"
+                    f"偏好{persona_constraints.preferred_task_size}任务，"
+                    f"最大专注{persona_constraints.max_session_minutes}分钟"
+                    + ("，需要热身任务" if persona_constraints.require_warmup_task else "")
+                )
+                state.context_data["persona_constraints_summary"] = persona_summary
+                if isinstance(user_context_payload, dict):
+                    user_context_payload["persona_constraints_summary"] = persona_summary
+                if persona_constraints.weak_knowledge_nodes:
+                    planning_constraints["insert_prerequisite_review"] = True
+                    if "weak_knowledge_nodes" not in planning_constraints:
+                        planning_constraints["weak_knowledge_nodes"] = [
+                            {"name": item} for item in persona_constraints.weak_knowledge_nodes
+                        ]
+                if orchestration_trace is not None:
+                    orchestration_trace.add_step(
+                        step_id="persona",
+                        label="画像约束",
+                        decision=(
+                            f"完成率 {persona_constraints.recent_completion_rate:.0%}，"
+                            f"{persona_constraints.preferred_task_size} 任务优先"
+                        ),
+                        reason=(
+                            f"根据你的画像，当前最大专注时长约 {persona_constraints.max_session_minutes} 分钟，"
+                            f"时间倍率 {persona_constraints.time_multiplier:.2f}"
+                            + (
+                                "，并需要热身任务来降低启动成本。"
+                                if persona_constraints.require_warmup_task
+                                else "。"
+                            )
+                        ),
+                        metadata={
+                            "recent_completion_rate": round(persona_constraints.recent_completion_rate, 4),
+                            "preferred_task_size": persona_constraints.preferred_task_size,
+                            "max_session_minutes": persona_constraints.max_session_minutes,
+                            "time_multiplier": round(persona_constraints.time_multiplier, 2),
+                            "require_warmup_task": persona_constraints.require_warmup_task,
+                            "weak_knowledge_nodes": list(persona_constraints.weak_knowledge_nodes[:5]),
+                        },
+                        duration_ms=self._roundtrip_ms(persona_started_at),
+                    )
+                    self._sync_orchestration_trace(
+                        state=state,
+                        orchestration_trace=orchestration_trace,
+                        user_context_payload=user_context_payload,
+                    )
+
             selected_experts = state.context_data.get("selected_experts", [])
             state_overrides: dict[str, Any] = {}
             if isinstance(selected_experts, list) and selected_experts:
@@ -3496,6 +3694,19 @@ class ChatOrchestrator:
                         {"agent": expert, "task": user_message} for expert in cleaned
                     ]
                     state_overrides["collaboration_index"] = 0
+            elif mode_strategy:
+                required = [str(agent).strip() for agent in mode_strategy.required_agents if str(agent).strip()]
+                preferred = [str(agent).strip() for agent in mode_strategy.preferred_agents if str(agent).strip()]
+                ordered_agents = required or preferred
+                if ordered_agents:
+                    state_overrides["next_step"] = ordered_agents[0]
+                    state_overrides["collaboration_agents"] = ordered_agents
+                    if mode_strategy.collaboration_mode != "auto":
+                        state_overrides["collaboration_mode"] = mode_strategy.collaboration_mode
+                    state_overrides["collaboration_order"] = [
+                        {"agent": agent, "task": user_message} for agent in ordered_agents
+                    ]
+                    state_overrides["collaboration_index"] = 0
 
             executable_plan = await self.lang_graph_planner.plan(
                 message=user_message,
@@ -3506,9 +3717,29 @@ class ChatOrchestrator:
                 plan_id=plan_id_str,
                 execution_feedback=execution_feedback,
                 mode_config=mode_config,
+                mode_strategy=mode_strategy,
+                persona_constraints=persona_constraints,
                 state_overrides=state_overrides or None,
                 planning_constraints=planning_constraints or None,
             )
+
+            if orchestration_trace is not None and executable_plan is not None:
+                mode_step = orchestration_trace.latest_step("mode_strategy")
+                if mode_step is not None:
+                    actual_agents = [
+                        str(agent).strip()
+                        for agent in (getattr(executable_plan, "agents_involved", []) or [])
+                        if str(agent).strip()
+                    ]
+                    if actual_agents:
+                        mode_step.metadata["agents_involved"] = actual_agents
+                        if not (mode_step.metadata.get("required_agents") or mode_step.metadata.get("preferred_agents")):
+                            mode_step.metadata["required_agents"] = actual_agents
+                        self._sync_orchestration_trace(
+                            state=state,
+                            orchestration_trace=orchestration_trace,
+                            user_context_payload=user_context_payload,
+                        )
 
             await self.observability.log_langgraph_plan(
                 user_id=user_id,
@@ -3641,14 +3872,48 @@ class ChatOrchestrator:
                 return route_decision, executable_plan, snapshot, True
 
             if executable_plan and route_decision.execution_mode in ["langgraph", "hybrid"]:
+                review_started_at = time.perf_counter()
                 review_result = await plan_review_service.review_plan(
                     plan=executable_plan,
                     user_message=user_message,
                     user_context={
                         **(user_context_payload or {}),
                         "plan_context": plan_context or (user_context_payload or {}).get("plan_context"),
+                        "mode_strategy": state.context_data.get("mode_strategy"),
                     },
                 )
+                if orchestration_trace is not None:
+                    alignment_score = review_result.alignment_score
+                    decision_label = str(review_result.decision or "unknown")
+                    alignment_text = (
+                        f"{alignment_score:.2f}"
+                        if isinstance(alignment_score, (int, float))
+                        else "未知"
+                    )
+                    orchestration_trace.add_step(
+                        step_id="plan_review",
+                        label="计划审查",
+                        decision=f"审查结果 {decision_label}，对齐度 {alignment_text}",
+                        reason=(
+                            review_result.alignment_summary
+                            or review_result.user_facing_reason
+                            or "系统已根据当前画像、风险和执行可行性完成审查。"
+                        ),
+                        confidence=review_result.confidence,
+                        metadata={
+                            "decision": review_result.decision,
+                            "alignment_score": review_result.alignment_score,
+                            "alignment_summary": review_result.alignment_summary or "",
+                            "review_id": review_result.review_id,
+                            "reasoning_source": review_result.reasoning_source or "",
+                        },
+                        duration_ms=self._roundtrip_ms(review_started_at),
+                    )
+                    self._sync_orchestration_trace(
+                        state=state,
+                        orchestration_trace=orchestration_trace,
+                        user_context_payload=user_context_payload,
+                    )
                 if (
                     settings.ENABLE_PERCEPTIBLE_INTELLIGENCE
                     and settings.ENABLE_PLAN_REASONING_SUMMARY
@@ -3687,6 +3952,7 @@ class ChatOrchestrator:
                         logger.warning(f"Failed to enqueue plan reasoning summary: {exc}")
                 if plan_id:
                     from app.services.plan_feedback_service import get_plan_feedback_service
+                    from app.services.plan_state_service import PlanStateService
 
                     feedback_service = get_plan_feedback_service(active_db, self.redis)
                     await feedback_service.append_review_feedback(
@@ -3695,6 +3961,29 @@ class ChatOrchestrator:
                         review_result=review_result,
                         user_decision=None,
                     )
+                    review_feedback_entry = review_result.review_feedback_entry or {}
+                    if review_feedback_entry:
+                        plan_state_service = PlanStateService(active_db, self.redis)
+                        plan_state = await plan_state_service.get_plan_state(
+                            uuid.UUID(user_id),
+                            uuid.UUID(plan_id),
+                        )
+                        existing_review_log = []
+                        if plan_state and isinstance(plan_state.facts, dict):
+                            raw_log = plan_state.facts.get("review_feedback_log")
+                            if isinstance(raw_log, list):
+                                existing_review_log = [item for item in raw_log if isinstance(item, dict)]
+                        existing_review_log.append(review_feedback_entry)
+                        await plan_state_service.upsert_plan_state(
+                            user_id=uuid.UUID(user_id),
+                            plan_id=uuid.UUID(plan_id),
+                            patch={
+                                "feedback_log": review_feedback_entry,
+                                "facts": {
+                                    "review_feedback_log": existing_review_log[-10:],
+                                },
+                            },
+                        )
                     logger.info(f"Review feedback written for plan {plan_id}")
 
                 if review_result.decision in [
@@ -4207,20 +4496,36 @@ class ChatOrchestrator:
                     workflow_id=workflow_id, prompt_version=prompt_version,
                 )
                 state.context_data["chat_mode"] = chat_mode
+                orchestration_trace = OrchestrationTrace(trace_id=trace_id or request_id or str(uuid.uuid4()))
+                self._sync_orchestration_trace(
+                    state=state,
+                    orchestration_trace=orchestration_trace,
+                    user_context_payload=user_context_payload,
+                )
                 if expert_routing_decision:
                     state.context_data["expert_routing_metadata"] = expert_routing_decision.to_metadata()
                     state.context_data["selected_experts"] = list(expert_routing_decision.selected_experts)
                     state.context_data["expert_policy_id"] = expert_routing_decision.policy_id
 
-                # Step 9: Multi-agent mode (early exit)
+                # Step 9: Non-standard mode fallback only when unified graph routing is explicitly disabled.
                 if chat_mode != CHAT_MODE_STANDARD and not settings.ENABLE_UNIFIED_GRAPH_ROUTING:
                     mode_result: dict[str, Any] = {}
                     async for resp in self._handle_multi_agent_mode(
-                        chat_mode=chat_mode, user_message=user_message, user_id=user_id, session_id=session_id,
-                        response_id=response_id, request_id=request_id, trace_id=trace_id, start_time=start_time,
-                        user_context_payload=user_context_payload, conversation_context=conversation_context,
-                        plan_context=plan_context, active_db=active_db, workflow_id=workflow_id,
-                        prompt_version=prompt_version, stream_callback=stream_callback,
+                        chat_mode=chat_mode,
+                        user_message=user_message,
+                        user_id=user_id,
+                        session_id=session_id,
+                        response_id=response_id,
+                        request_id=request_id,
+                        trace_id=trace_id,
+                        start_time=start_time,
+                        user_context_payload=user_context_payload,
+                        conversation_context=conversation_context,
+                        plan_context=plan_context,
+                        active_db=active_db,
+                        workflow_id=workflow_id,
+                        prompt_version=prompt_version,
+                        stream_callback=stream_callback,
                         session_feedback_signal=(
                             session_feedback_signal.to_dict() if session_feedback_signal is not None else None
                         ),
@@ -4239,19 +4544,100 @@ class ChatOrchestrator:
                             yield update_resp
                     return
 
-                # Step 10: Route
+                # Step 10: Route with unified orchestration brain for all modes
+                route_started_at = time.perf_counter()
                 route_decision, unified_routing_result = await self._route_and_classify(
                     user_message=user_message, user_id=user_id, session_id=session_id,
                     grpc_context=grpc_context, conversation_context=conversation_context, state=state,
                 )
-                if settings.ENABLE_UNIFIED_GRAPH_ROUTING and chat_mode != CHAT_MODE_STANDARD:
-                    route_decision.execution_mode = "langgraph"
+                orchestration_trace.add_step(
+                    step_id="route",
+                    label="路由决策",
+                    decision=f"进入{self._execution_mode_label(route_decision.execution_mode)}模式",
+                    reason=(
+                        f"根据你的问题复杂度与上下文信号，当前更适合 {self._execution_mode_label(route_decision.execution_mode)}。"
+                    ),
+                    confidence=route_decision.confidence,
+                    metadata={
+                        "execution_mode": route_decision.execution_mode,
+                        "risk_level": route_decision.risk_level,
+                        "route_reason": route_decision.reason,
+                        "intent": (
+                            unified_routing_result.primary_intent.value
+                            if unified_routing_result and hasattr(unified_routing_result, "primary_intent")
+                            else None
+                        ),
+                    },
+                    duration_ms=self._roundtrip_ms(route_started_at),
+                )
+                self._sync_orchestration_trace(
+                    state=state,
+                    orchestration_trace=orchestration_trace,
+                    user_context_payload=user_context_payload,
+                )
+
+                if chat_mode == CHAT_MODE_STANDARD and unified_routing_result:
+                    mode_suggestion = self._suggest_mode_switch(
+                        intent=unified_routing_result.primary_intent,
+                        confidence=unified_routing_result.confidence,
+                        context_signals=unified_routing_result.context_signals,
+                    )
+                    if mode_suggestion:
+                        state.context_data["mode_suggestion"] = mode_suggestion
+                        if isinstance(user_context_payload, dict):
+                            user_context_payload["mode_suggestion"] = mode_suggestion
+                        if not state.context_data.get("mode_suggestion_sent"):
+                            try:
+                                await stream_callback(
+                                    agent_service_pb2.ChatResponse(
+                                        metadata={
+                                            "event_type": "mode_suggestion",
+                                            "suggestion": json.dumps(mode_suggestion, ensure_ascii=False),
+                                        }
+                                    )
+                                )
+                                state.context_data["mode_suggestion_sent"] = True
+                            except Exception as exc:
+                                logger.debug(f"Failed to emit mode suggestion: {exc}")
+
+                mode_strategy_started_at = time.perf_counter()
+                route_decision, mode_strategy_metadata = self._apply_mode_strategy_override(
+                    chat_mode=chat_mode,
+                    route_decision=route_decision,
+                    user_message=user_message,
+                )
+                if mode_strategy_metadata:
+                    state.context_data["mode_strategy"] = mode_strategy_metadata
+                    if isinstance(user_context_payload, dict):
+                        user_context_payload["mode_strategy"] = mode_strategy_metadata
+                    orchestration_trace.add_step(
+                        step_id="mode_strategy",
+                        label="模式策略",
+                        decision=(
+                            f"{chat_mode} 模式要求 {', '.join(mode_strategy_metadata.get('required_agents') or mode_strategy_metadata.get('preferred_agents') or ['系统自动选择'])} 协作"
+                        ),
+                        reason=(
+                            f"当前模式会优先使用 {mode_strategy_metadata.get('collaboration_mode', 'auto')} 协同，"
+                            f"并按既定输出结构组织结果。"
+                        ),
+                        metadata={
+                            **mode_strategy_metadata,
+                            "chat_mode": chat_mode,
+                        },
+                        duration_ms=self._roundtrip_ms(mode_strategy_started_at),
+                    )
+                    self._sync_orchestration_trace(
+                        state=state,
+                        orchestration_trace=orchestration_trace,
+                        user_context_payload=user_context_payload,
+                    )
                     route_decision.reason = (
                         f"{route_decision.reason} | unified_mode:{chat_mode}"
                         if route_decision.reason
                         else f"unified_mode:{chat_mode}"
                     )
 
+                dual_core_started_at = time.perf_counter()
                 route_decision = await self._apply_dual_core_routing(
                     route_decision=route_decision,
                     state=state,
@@ -4263,6 +4649,27 @@ class ChatOrchestrator:
                     unified_routing_result=unified_routing_result,
                     information_sufficient=bool((state.context_data.get("goal_quality") or {}).get("passed", True)),
                     stream_callback=stream_callback,
+                )
+                dual_core_decision = state.context_data.get("dual_core_decision") or {}
+                orchestration_trace.add_step(
+                    step_id="dual_core",
+                    label="双核调度",
+                    decision=f"{self._dual_core_mode_label(str(dual_core_decision.get('mode') or 'balanced'))}",
+                    reason=str(
+                        dual_core_decision.get("reason")
+                        or "系统判断当前需要同时兼顾理解用户状态与推进执行。"
+                    ),
+                    metadata={
+                        "mode": dual_core_decision.get("mode"),
+                        "cognitive_adjustments": dual_core_decision.get("cognitive_adjustments", []),
+                        "execution_constraints": dual_core_decision.get("execution_constraints", []),
+                    },
+                    duration_ms=self._roundtrip_ms(dual_core_started_at),
+                )
+                self._sync_orchestration_trace(
+                    state=state,
+                    orchestration_trace=orchestration_trace,
+                    user_context_payload=user_context_payload,
                 )
 
                 user_context_payload = await self._apply_context_focus_overlay(
@@ -4289,6 +4696,12 @@ class ChatOrchestrator:
                     active_db=active_db, plan_id=plan_id, conversation_context=conversation_context,
                     plan_context=plan_context,
                     stream_callback=stream_callback, state=state, user_context_payload=user_context_payload,
+                    orchestration_trace=orchestration_trace,
+                )
+                await self._emit_orchestration_trace(
+                    state=state,
+                    orchestration_trace=orchestration_trace,
+                    stream_callback=stream_callback,
                 )
                 if should_return:
                     return

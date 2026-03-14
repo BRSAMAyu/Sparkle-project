@@ -124,6 +124,46 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
           }
         }
 
+        // Check for orchestration trace events
+        if (metadata != null && metadata['event_type'] == 'orchestration_trace') {
+          final tracePayload = metadata['trace'] as String?;
+          if (tracePayload != null && tracePayload.isNotEmpty) {
+            try {
+              final traceData =
+                  json.decode(tracePayload) as Map<String, dynamic>;
+              return OrchestrationTraceEvent(
+                traceData: traceData,
+                responseId: responseId,
+                traceId: traceId,
+                workflowId: workflowId,
+                promptVersion: promptVersion,
+              );
+            } catch (e) {
+              debugPrint('Failed to parse orchestration trace: $e');
+            }
+          }
+        }
+
+        // Check for mode suggestion events
+        if (metadata != null && metadata['event_type'] == 'mode_suggestion') {
+          final suggestionPayload = metadata['suggestion'] as String?;
+          if (suggestionPayload != null && suggestionPayload.isNotEmpty) {
+            try {
+              final suggestion =
+                  json.decode(suggestionPayload) as Map<String, dynamic>;
+              return ModeSuggestionEvent(
+                suggestion: suggestion,
+                responseId: responseId,
+                traceId: traceId,
+                workflowId: workflowId,
+                promptVersion: promptVersion,
+              );
+            } catch (e) {
+              debugPrint('Failed to parse mode suggestion: $e');
+            }
+          }
+        }
+
         // Check for state change events (计划归档/恢复/删除等重大状态变更)
         if (metadata != null && metadata['state_change_event'] != null) {
           final stateChangeData =
