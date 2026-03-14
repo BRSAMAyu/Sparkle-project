@@ -390,6 +390,41 @@ Map<String, dynamic> _$GroupListItemToJson(GroupListItem instance) =>
       'my_role': _$GroupRoleEnumMap[instance.myRole],
     };
 
+GroupRecommendationReason _$GroupRecommendationReasonFromJson(
+        Map<String, dynamic> json) =>
+    GroupRecommendationReason(
+      type: json['type'] as String,
+      data: json['data'] as Map<String, dynamic>?,
+    );
+
+Map<String, dynamic> _$GroupRecommendationReasonToJson(
+        GroupRecommendationReason instance) =>
+    <String, dynamic>{
+      'type': instance.type,
+      'data': instance.data,
+    };
+
+GroupRecommendationItem _$GroupRecommendationItemFromJson(
+        Map<String, dynamic> json) =>
+    GroupRecommendationItem(
+      group: GroupListItem.fromJson(json['group'] as Map<String, dynamic>),
+      score: (json['score'] as num).toDouble(),
+      reasons: (json['reasons'] as List<dynamic>)
+          .map((e) =>
+              GroupRecommendationReason.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      requiresApproval: json['requires_approval'] as bool,
+    );
+
+Map<String, dynamic> _$GroupRecommendationItemToJson(
+        GroupRecommendationItem instance) =>
+    <String, dynamic>{
+      'group': instance.group,
+      'score': instance.score,
+      'reasons': instance.reasons,
+      'requires_approval': instance.requiresApproval,
+    };
+
 GroupCreate _$GroupCreateFromJson(Map<String, dynamic> json) => GroupCreate(
       name: json['name'] as String,
       type: $enumDecode(_$GroupTypeEnumMap, json['type']),
@@ -471,6 +506,9 @@ MessageInfo _$MessageInfoFromJson(Map<String, dynamic> json) => MessageInfo(
           ? null
           : MessageInfo.fromJson(
               json['quoted_message'] as Map<String, dynamic>),
+      readByUsers: (json['read_by_users'] as List<dynamic>?)
+          ?.map((e) => UserBrief.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
 
 Map<String, dynamic> _$MessageInfoToJson(MessageInfo instance) =>
@@ -491,6 +529,7 @@ Map<String, dynamic> _$MessageInfoToJson(MessageInfo instance) =>
       'edited_at': instance.editedAt?.toIso8601String(),
       'read_by': instance.readBy,
       'quoted_message': instance.quotedMessage,
+      'read_by_users': instance.readByUsers,
     };
 
 const _$MessageTypeEnumMap = {

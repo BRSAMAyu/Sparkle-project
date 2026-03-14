@@ -130,6 +130,53 @@ class TaskAbandoned(Event):
             "timestamp": self.timestamp.isoformat()
         }
 
+
+class ProfilePreferenceUpdated(Event):
+    def __init__(
+        self,
+        user_id: str,
+        pref_keys: list[str],
+        preference_version: int,
+        source: str,
+    ):
+        self.user_id = user_id
+        self.pref_keys = pref_keys
+        self.preference_version = preference_version
+        self.source = source
+        self.timestamp = datetime.now(UTC)
+
+    def to_dict(self):
+        return {
+            "event_type": "profile.preference.updated",
+            "user_id": self.user_id,
+            "pref_keys": self.pref_keys,
+            "preference_version": self.preference_version,
+            "source": self.source,
+            "timestamp": self.timestamp.isoformat(),
+        }
+
+
+class ProfilePreferenceDeleted(Event):
+    def __init__(
+        self,
+        user_id: str,
+        pref_key: str,
+        preference_version: int,
+    ):
+        self.user_id = user_id
+        self.pref_key = pref_key
+        self.preference_version = preference_version
+        self.timestamp = datetime.now(UTC)
+
+    def to_dict(self):
+        return {
+            "event_type": "profile.preference.deleted",
+            "user_id": self.user_id,
+            "pref_key": self.pref_key,
+            "preference_version": self.preference_version,
+            "timestamp": self.timestamp.isoformat(),
+        }
+
 class EventBus:
     """
     Event Bus - Redis Streams Implementation

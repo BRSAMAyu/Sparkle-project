@@ -2,7 +2,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from app.services.persona_service import PersonaService
+from app.services.persona_service import ProfileSnapshotService
 from app.tools.base import BaseTool, ToolCategory, ToolResult
 
 
@@ -17,8 +17,8 @@ class PersonaTool(BaseTool):
     parameters_schema = PersonaRequest
 
     async def execute(self, params: PersonaRequest, user_id: str, db_session, tool_call_id: str | None = None) -> ToolResult:
-        service = PersonaService(db_session)
-        snapshot = await service.get_snapshot(UUID(user_id), params.purpose)
+        service = ProfileSnapshotService(db_session)
+        snapshot = await service.build_profile_snapshot(UUID(user_id), params.purpose)
         return ToolResult(
             success=True,
             tool_name=self.name,

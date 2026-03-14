@@ -21,6 +21,7 @@ from app.core.metrics import CACHE_HIT_COUNT
 from app.core.security import get_password_hash
 from app.models.user import PushPreference, User
 from app.schemas.user import UserContext, UserPreferences, UserRegister
+from app.services.profile_write_service import ProfileWriteService
 from app.services.personalization.preference_service import PreferenceService
 
 
@@ -590,8 +591,17 @@ class UserService:
             logger.info(f"Updated user profile for {user_id}: {updates}")
 
             if pref_updates:
-                pref_service = PreferenceService(self.db, self.redis)
-                await pref_service.update_explicit(user_id, pref_updates)
+                profile_write_service = ProfileWriteService(self.db, self.redis)
+                await profile_write_service.set_explicit_preferences(
+                    user_id=user_id,
+                    updates=pref_updates,
+                    evidence_refs_by_key={
+                        key: [{"type": "user_state", "id": "user_profile", "schema_version": "user_profile.v1"}]
+                        for key in pref_updates
+                    },
+                    source_type="user_state",
+                    source="manual_edit",
+                )
 
             # 2. 使缓存失效
             await self.invalidate_user_cache(user_id)
@@ -643,10 +653,18 @@ class UserService:
             if "enable_curiosity" in pref_updates:
                 pref_updates["enable_curiosity_push"] = pref_updates.pop("enable_curiosity")
 
-            pref_service = PreferenceService(self.db, self.redis)
-            await pref_service.update_explicit(user_id, pref_updates)
+            profile_write_service = ProfileWriteService(self.db, self.redis)
+            await profile_write_service.set_explicit_preferences(
+                user_id=user_id,
+                updates=pref_updates,
+                evidence_refs_by_key={
+                    key: [{"type": "user_state", "id": "user_service", "schema_version": "user_service.v1"}]
+                    for key in pref_updates
+                },
+                source_type="user_state",
+                source="manual_edit",
+            )
 
-            await self.db.commit()
             logger.info(f"Updated push preferences for {user_id}: {updates}")
 
             # 3. 使缓存失效

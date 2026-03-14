@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user, get_db
 from app.models.user import User
 from app.services.memory_service import MemoryService
+from app.services.profile_write_service import ProfileWriteService
 
 router = APIRouter(prefix="/user/persona", tags=["user-persona"])
 
@@ -64,6 +65,7 @@ async def batch_update_preferences(
     支持更新、删除、合并操作
     """
     memory_service = MemoryService(db)
+    profile_write_service = ProfileWriteService(db)
     response = BatchUpdatePreferencesResponse(
         success_count=0,
         failed_count=0,
@@ -83,53 +85,55 @@ async def batch_update_preferences(
     for pref_id in request.preference_ids:
         try:
             pref_uuid = UUID(pref_id)
+            existing = await memory_service.get_preference_record(
+                user_id=current_user.id,
+                preference_id=pref_uuid,
+            )
+            if existing is None:
+                raise ValueError("Preference not found")
             if request.operation == "update":
-                # Update preference
-                record = await memory_service.update_preference(
+                next_key = updates.get("pref_key", existing.pref_key)
+                next_value = updates.get("pref_value", existing.pref_value)
+                await profile_write_service.set_explicit_preference(
                     user_id=current_user.id,
-                    preference_id=pref_uuid,
-                    **updates,
+                    pref_key=next_key,
+                    pref_value=next_value,
+                    evidence_refs=[
+                        {"type": "user_state", "id": "batch_update", "schema_version": "batch_update.v1"}
+                    ],
+                    confidence=updates.get("confidence", existing.confidence),
+                    source_type="user_state",
+                    source="manual_edit",
                 )
-                if record is None:
-                    raise ValueError("Preference not found")
                 response.success_count += 1
 
             elif request.operation == "delete":
-                # Delete preference
-                deleted = await memory_service.delete_preference(
+                await profile_write_service.remove_explicit_preference(
                     user_id=current_user.id,
-                    preference_id=pref_uuid,
+                    pref_key=existing.pref_key,
+                    reason="batch_delete",
                 )
-                if deleted:
-                    response.success_count += 1
-                else:
-                    response.failed_count += 1
-                    response.errors.append(f"Preference {pref_id} not found")
+                response.success_count += 1
 
             elif request.operation == "merge":
-                # Merge updates
-                existing = await memory_service.get_preference_record(
+                merged = {
+                    "pref_key": existing.pref_key,
+                    "pref_value": existing.pref_value,
+                    "confidence": existing.confidence,
+                }
+                merged.update(updates)
+                await profile_write_service.set_explicit_preference(
                     user_id=current_user.id,
-                    preference_id=pref_uuid,
+                    pref_key=merged["pref_key"],
+                    pref_value=merged["pref_value"],
+                    evidence_refs=[
+                        {"type": "user_state", "id": "batch_merge", "schema_version": "batch_merge.v1"}
+                    ],
+                    confidence=merged.get("confidence"),
+                    source_type="user_state",
+                    source="manual_edit",
                 )
-                if existing:
-                    merged = {
-                        "pref_key": existing.pref_key,
-                        "pref_value": existing.pref_value,
-                        "confidence": existing.confidence,
-                    }
-                    merged.update(updates)
-                    record = await memory_service.update_preference(
-                        user_id=current_user.id,
-                        preference_id=pref_uuid,
-                        **merged,
-                    )
-                    if record is None:
-                        raise ValueError("Preference not found")
-                    response.success_count += 1
-                else:
-                    response.failed_count += 1
-                    response.errors.append(f"Preference {pref_id} not found")
+                response.success_count += 1
 
         except Exception as e:
             response.failed_count += 1
@@ -212,6 +216,7 @@ async def import_persona_data(
     支持合并或替换现有数据
     """
     memory_service = MemoryService(db)
+    profile_write_service = ProfileWriteService(db)
     imported_count = 0
     errors = []
     data = request.data
@@ -242,11 +247,7 @@ async def import_persona_data(
                     pref_value = {"value": pref_value}
 
                 if request.merge_strategy == "replace":
-                    # Delete existing preference with same key/category
-                    # (In practice, query and delete first)
-
-                    # Create new preference
-                    await memory_service.upsert_preference(
+                    await profile_write_service.set_explicit_preference(
                         user_id=current_user.id,
                         pref_key=pref_key,
                         pref_value=pref_value,
@@ -255,6 +256,7 @@ async def import_persona_data(
                         ],
                         confidence=pref_data.get("confidence", 0.8),
                         source_type="user_state",
+                        source="manual_edit",
                     )
                     imported_count += 1
 
@@ -266,15 +268,20 @@ async def import_persona_data(
                     )
 
                     if existing:
-                        await memory_service.update_preference(
+                        await profile_write_service.set_explicit_preference(
                             user_id=current_user.id,
-                            preference_id=existing.id,
                             pref_value=pref_value,
+                            pref_key=pref_key,
+                            evidence_refs=[
+                                {"type": "user_state", "id": "batch_import", "schema_version": "batch_import.v1"}
+                            ],
                             confidence=pref_data.get("confidence", 0.8),
+                            source_type="user_state",
+                            source="manual_edit",
                         )
                         imported_count += 1
                     else:
-                        await memory_service.upsert_preference(
+                        await profile_write_service.set_explicit_preference(
                             user_id=current_user.id,
                             pref_key=pref_key,
                             pref_value=pref_value,
@@ -283,6 +290,7 @@ async def import_persona_data(
                             ],
                             confidence=pref_data.get("confidence", 0.8),
                             source_type="user_state",
+                            source="manual_edit",
                         )
                         imported_count += 1
 
@@ -376,7 +384,7 @@ async def import_persona_data(
                     confidence_raw = row.get("confidence")
                     confidence_val = float(confidence_raw) if confidence_raw else 0.8
 
-                    await memory_service.upsert_preference(
+                    await profile_write_service.set_explicit_preference(
                         user_id=current_user.id,
                         pref_key=pref_key,
                         pref_value=parsed_value,
@@ -389,6 +397,7 @@ async def import_persona_data(
                         ],
                         confidence=confidence_val,
                         source_type="user_state",
+                        source="manual_edit",
                     )
                     imported_count += 1
                 except Exception as e:

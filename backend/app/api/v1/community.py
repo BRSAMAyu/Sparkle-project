@@ -55,6 +55,10 @@ from app.schemas.community import (
     GroupInfo,
     GroupListItem,
     GroupModerationSettings,
+    GroupMessageReadRequest,
+    GroupMessageReadResponse,
+    GroupRecommendationFeedbackRequest,
+    GroupRecommendationItem,
     GroupTaskCreate,
     GroupTaskInfo,
     # 枚举
@@ -113,6 +117,7 @@ from app.services.community_service import (
     PrivateMessageService,
 )
 from app.services.group_file_service import GroupFileService
+from app.services.group_recommendation_service import GroupRecommendationService
 
 router = APIRouter()
 
@@ -131,6 +136,24 @@ def _build_message_info(msg: GroupMessage) -> MessageInfo:
             flame_level=msg.sender.flame_level,
             flame_brightness=msg.sender.flame_brightness
         )
+
+    read_receipts = sorted(
+        list(getattr(msg, "read_receipts", []) or []),
+        key=lambda receipt: receipt.read_at,
+    )
+    read_by = [receipt.user_id for receipt in read_receipts]
+    read_by_users = [
+        UserBrief(
+            id=receipt.user.id,
+            username=receipt.user.username,
+            nickname=receipt.user.nickname,
+            avatar_url=receipt.user.avatar_url,
+            flame_level=receipt.user.flame_level,
+            flame_brightness=receipt.user.flame_brightness,
+        )
+        for receipt in read_receipts
+        if receipt.user is not None
+    ]
 
     quoted_message = None
     if msg.reply_to:
@@ -160,6 +183,8 @@ def _build_message_info(msg: GroupMessage) -> MessageInfo:
             is_revoked=msg.reply_to.is_revoked,
             revoked_at=msg.reply_to.revoked_at,
             edited_at=msg.reply_to.edited_at,
+            read_by=None,
+            read_by_users=None,
             quoted_message=None # Stop recursion
         )
 
@@ -178,6 +203,8 @@ def _build_message_info(msg: GroupMessage) -> MessageInfo:
         is_revoked=msg.is_revoked,
         revoked_at=msg.revoked_at,
         edited_at=msg.edited_at,
+        read_by=read_by or None,
+        read_by_users=read_by_users or None,
         quoted_message=quoted_message
     )
 
@@ -658,9 +685,9 @@ async def get_friend_recommendations(
                     break
 
     # 如果推荐不足，基于学习标签补充推荐
-    if len(recommendations) < limit and current_user.learning_tags:
+    current_tags = set(getattr(current_user, "learning_tags", None) or [])
+    if len(recommendations) < limit and current_tags:
         remaining_limit = limit - len(recommendations)
-        current_tags = set(current_user.learning_tags or [])
 
         # 获取所有活跃用户，在Python中过滤标签匹配
         active_users_stmt = select(User).where(
@@ -680,7 +707,7 @@ async def get_friend_recommendations(
             if user_obj.id in seen_user_ids:
                 continue
 
-            user_tags = set(user_obj.learning_tags or [])
+            user_tags = set(getattr(user_obj, "learning_tags", None) or [])
             common_tags = user_tags & current_tags
 
             if common_tags:
@@ -886,6 +913,36 @@ async def search_groups(
     return result
 
 
+@router.get("/groups/recommendations", response_model=list[GroupRecommendationItem], summary="群组推荐")
+async def get_group_recommendations(
+    limit: int = Query(default=20, ge=1, le=50),
+    cursor: int = Query(default=0, ge=0),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """获取群组推荐列表"""
+    recommendations = await GroupRecommendationService.get_recommendations(
+        db,
+        current_user.id,
+        limit=limit,
+        cursor=cursor,
+    )
+    await db.commit()
+    return recommendations
+
+
+@router.post("/groups/recommendations/feedback", summary="群组推荐反馈")
+async def group_recommendations_feedback(
+    data: GroupRecommendationFeedbackRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """记录群组推荐反馈"""
+    await GroupRecommendationService.record_feedback(db, current_user.id, data)
+    await db.commit()
+    return {"success": True}
+
+
 @router.get("/groups/{group_id}", response_model=GroupInfo, summary="获取群组详情")
 async def get_group(
     group_id: UUID,
@@ -1063,6 +1120,47 @@ async def get_messages(
     for msg in messages:
         result.append(_build_message_info(msg))
     return result
+
+
+@router.post(
+    "/groups/{group_id}/messages/read",
+    response_model=GroupMessageReadResponse,
+    summary="标记群消息已读",
+)
+async def mark_group_messages_read(
+    group_id: UUID,
+    data: GroupMessageReadRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """对当前用户可见且不晚于目标消息的群消息做幂等已读标记。"""
+    try:
+        updated_count, target_message = await GroupMessageService.mark_as_read(
+            db,
+            group_id=group_id,
+            user_id=current_user.id,
+            up_to_message_id=data.up_to_message_id,
+        )
+        await db.commit()
+        await manager.broadcast(
+            {
+                "type": "read_receipt",
+                "group_id": str(group_id),
+                "up_to_message_id": str(target_message.id),
+                "reader_id": str(current_user.id),
+                "reader": UserBrief.model_validate(current_user).model_dump(mode="json"),
+                "read_at": _utcnow().isoformat(),
+                "updated_count": updated_count,
+            },
+            str(group_id),
+        )
+        return GroupMessageReadResponse(
+            updated_count=updated_count,
+            up_to_message_id=target_message.id,
+        )
+    except ValueError as e:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 # ============ 群文件 ============

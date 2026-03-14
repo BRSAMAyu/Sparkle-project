@@ -53,7 +53,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
       }
     } catch (e) {
       state = state.copyWith(
-          isLoading: false, isAuthenticated: false, error: e.toString(),);
+        isLoading: false,
+        isAuthenticated: false,
+        error: e.toString(),
+      );
     }
   }
 
@@ -110,27 +113,27 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> loginAsGuest() async {
     state = state.copyWith(isLoading: true);
     try {
-      // ✅ 始终启用演示模式以展示完整的 Mock 数据
-      // 这样可以展示丰富的预设内容（任务、星图、成就等）
-      // 同时保持核心功能（LLM对话、任务创建）真实可用
-      DemoDataService.isDemoMode = true;
-      debugPrint('🎭 Demo Mode enabled for guest login');
+      // 游客登录默认走真实联调链路，避免社区模块混入 mock 数据。
+      DemoDataService.isDemoMode = false;
+      debugPrint('🔌 Guest login using real backend data');
 
-      // 使用真实API获取游客token（保持核心功能可用）
       final user = await _authRepository.guestLogin('guest_user');
+      final accessToken = await _authRepository.getAccessToken();
+      if (accessToken == null || accessToken.isEmpty) {
+        throw Exception('游客登录未获取到有效登录令牌');
+      }
       state = state.copyWith(
         isLoading: false,
         isAuthenticated: true,
         user: user,
       );
     } catch (e) {
-      // API 失败时仍然使用演示模式
-      debugPrint('⚠️ Guest API failed, using demo data: $e');
-      final guestUser = DemoDataService().demoUser;
+      debugPrint('⚠️ Guest login failed: $e');
+      DemoDataService.isDemoMode = false;
       state = state.copyWith(
         isLoading: false,
-        isAuthenticated: true,
-        user: guestUser,
+        isAuthenticated: false,
+        error: e.toString(),
       );
     }
   }
@@ -149,7 +152,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
         isAuthenticated: true,
         user: user,
       );
-      debugPrint('✅ Demo account login successful, fetching real data from API');
+      debugPrint(
+        '✅ Demo account login successful, fetching real data from API',
+      );
     } catch (e) {
       debugPrint('⚠️ Demo account login failed: $e');
       state = state.copyWith(
@@ -219,7 +224,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
 // 3. Providers
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>(
-    (ref) => AuthNotifier(ref.watch(authRepositoryProvider)),);
+  (ref) => AuthNotifier(ref.watch(authRepositoryProvider)),
+);
 
 final currentUserProvider =
     Provider<UserModel?>((ref) => ref.watch(authProvider).user);

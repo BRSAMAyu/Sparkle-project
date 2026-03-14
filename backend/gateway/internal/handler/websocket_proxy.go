@@ -6,6 +6,7 @@ import (
 	"go.uber.org/zap"
 	"net/http"
 	"net/url"
+	"sync"
 	"time"
 )
 
@@ -131,11 +132,17 @@ func (p *WebSocketProxy) proxyWebSocket(w http.ResponseWriter, r *http.Request, 
 
 	// 双向转发
 	done := make(chan struct{})
+	var doneOnce sync.Once
 	errChan := make(chan error, 2)
+	signalDone := func() {
+		doneOnce.Do(func() {
+			close(done)
+		})
+	}
 
 	// 客户端 -> 后端
 	go func() {
-		defer close(done)
+		defer signalDone()
 		for {
 			messageType, data, err := clientConn.ReadMessage()
 			if err != nil {
@@ -159,7 +166,7 @@ func (p *WebSocketProxy) proxyWebSocket(w http.ResponseWriter, r *http.Request, 
 
 	// 后端 -> 客户端
 	go func() {
-		defer close(done)
+		defer signalDone()
 		for {
 			messageType, data, err := backendConn.ReadMessage()
 			if err != nil {
@@ -183,6 +190,15 @@ func (p *WebSocketProxy) proxyWebSocket(w http.ResponseWriter, r *http.Request, 
 
 	// 等待任一方向关闭
 	<-done
+	select {
+	case err := <-errChan:
+		if err != nil && !websocket.IsCloseError(err, websocket.CloseNormalClosure) {
+			p.logger.Debug("WebSocket proxy closed with terminal error",
+				zap.String("user_id", userID),
+				zap.Error(err))
+		}
+	default:
+	}
 
 	p.logger.Info("WebSocket proxy connection closed",
 		zap.String("user_id", userID),

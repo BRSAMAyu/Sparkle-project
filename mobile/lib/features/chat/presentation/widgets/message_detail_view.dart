@@ -188,6 +188,17 @@ class MessageDetailView extends StatelessWidget {
       );
     }
 
+    if (!_hasStrongMarkdownSyntax(message.content)) {
+      return SelectableText(
+        message.content,
+        style: TextStyle(
+          fontSize: 16,
+          height: 1.6,
+          color: DS.textPrimary,
+        ),
+      );
+    }
+
     // AI消息使用Markdown渲染
     return MarkdownBody(
       data: message.content,
@@ -259,6 +270,25 @@ class MessageDetailView extends StatelessWidget {
         }
       },
     );
+  }
+
+  bool _hasStrongMarkdownSyntax(String content) {
+    if (content.isEmpty) {
+      return false;
+    }
+
+    final trimmed = content.trim();
+    final strongPatterns = <RegExp>[
+      RegExp(r'(^|\n)#{1,6}\s', multiLine: true),
+      RegExp(r'```'),
+      RegExp(r'`[^`\n]+`'),
+      RegExp(r'\[[^\]]+\]\([^)]+\)'),
+      RegExp(r'(^|\n)>\s', multiLine: true),
+      RegExp(r'(^|\n)\|.+\|', multiLine: true),
+      RegExp(r'(\*\*|__)[^*_]+(\*\*|__)'),
+    ];
+
+    return strongPatterns.any((pattern) => pattern.hasMatch(trimmed));
   }
 
   Widget _buildActions(BuildContext context) {

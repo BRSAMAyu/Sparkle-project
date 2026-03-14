@@ -106,16 +106,6 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
                             height: 1.0,
                           ),
                         ),
-                        if (!widget.dense && compactPages.length > 1)
-                          Text(
-                            '左右滑动查看更多工具',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style:
-                                context.sparkleTypography.labelSmall.copyWith(
-                              color: DS.textSecondary,
-                            ),
-                          ),
                       ],
                     ),
                   ),

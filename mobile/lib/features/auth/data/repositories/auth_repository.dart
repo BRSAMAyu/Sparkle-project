@@ -2,15 +2,15 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/auth/data/models/token_model.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 
-// Keys for Secure Storage
-const String _accessTokenKey = 'accessToken';
-const String _refreshTokenKey = 'refreshToken';
+const String _legacyAccessTokenKey = 'accessToken';
+const String _legacyRefreshTokenKey = 'refreshToken';
 
 class AuthRepository {
   AuthRepository(this._apiClient, this._storage);
@@ -18,7 +18,10 @@ class AuthRepository {
   final FlutterSecureStorage _storage;
 
   Future<UserModel> register(
-      String username, String email, String password,) async {
+    String username,
+    String email,
+    String password,
+  ) async {
     try {
       if (DemoDataService.isDemoMode) {
         return DemoDataService().demoUser;
@@ -33,7 +36,8 @@ class AuthRepository {
       );
       // Assuming registration returns the user and tokens directly
       final data = response.data;
-      final tokenResponse = TokenResponse.fromJson(data!['token'] as Map<String, dynamic>);
+      final tokenResponse =
+          TokenResponse.fromJson(data!['token'] as Map<String, dynamic>);
       await saveTokens(tokenResponse);
       return UserModel.fromJson(data['user'] as Map<String, dynamic>);
     } on DioException catch (e) {
@@ -48,11 +52,13 @@ class AuthRepository {
     try {
       if (DemoDataService.isDemoMode) {
         // Should not happen via this method usually, but for safety
-        await saveTokens(TokenResponse(
-          accessToken: 'demo_token',
-          refreshToken: 'demo_refresh_token',
-          expiresIn: 3600,
-        ),);
+        await saveTokens(
+          TokenResponse(
+            accessToken: 'demo_token',
+            refreshToken: 'demo_refresh_token',
+            expiresIn: 3600,
+          ),
+        );
         return DemoDataService().demoUser;
       }
       final response = await _apiClient.post<Map<String, dynamic>>(
@@ -64,13 +70,13 @@ class AuthRepository {
       );
       final data = response.data!;
       // Use the nested token object if available (new structure), otherwise fallback to root (old structure)
-      final tokenData = data['token'] is Map<String, dynamic> 
-          ? data['token'] as Map<String, dynamic> 
+      final tokenData = data['token'] is Map<String, dynamic>
+          ? data['token'] as Map<String, dynamic>
           : data;
-          
+
       final tokenResponse = TokenResponse.fromJson(tokenData);
       await saveTokens(tokenResponse);
-      
+
       return UserModel.fromJson(data['user'] as Map<String, dynamic>);
     } on DioException catch (e) {
       final message = _extractErrorMessage(e.response?.data);
@@ -90,11 +96,13 @@ class AuthRepository {
   }) async {
     try {
       if (DemoDataService.isDemoMode) {
-        await saveTokens(TokenResponse(
-          accessToken: 'demo',
-          refreshToken: 'demo',
-          expiresIn: 3600,
-        ),);
+        await saveTokens(
+          TokenResponse(
+            accessToken: 'demo',
+            refreshToken: 'demo',
+            expiresIn: 3600,
+          ),
+        );
         return DemoDataService().demoUser;
       }
       final endpoint =
@@ -113,8 +121,8 @@ class AuthRepository {
 
       final data = response.data!;
       // Use the nested token object if available (new structure), otherwise fallback to root (old structure)
-      final tokenData = data['token'] is Map<String, dynamic> 
-          ? data['token'] as Map<String, dynamic> 
+      final tokenData = data['token'] is Map<String, dynamic>
+          ? data['token'] as Map<String, dynamic>
           : data;
 
       final tokenResponse = TokenResponse.fromJson(tokenData);
@@ -152,16 +160,26 @@ class AuthRepository {
   }
 
   Future<TokenResponse> refreshToken() async {
-    final refreshToken = await getRefreshToken();
-    if (refreshToken == null) {
+    final currentRefreshToken = await getRefreshToken();
+    if (currentRefreshToken == null || currentRefreshToken.isEmpty) {
       throw Exception('No refresh token available.');
     }
     try {
       final response = await _apiClient.post<Map<String, dynamic>>(
         ApiEndpoints.refresh,
-        data: {'refresh_token': refreshToken},
+        data: {'refresh_token': currentRefreshToken},
       );
-      final tokenResponse = TokenResponse.fromJson(response.data!);
+      final data = response.data ?? const <String, dynamic>{};
+      final refreshedAccessToken = data['access_token'] as String?;
+      if (refreshedAccessToken == null || refreshedAccessToken.isEmpty) {
+        throw Exception('Refresh response missing access token.');
+      }
+      final tokenResponse = TokenResponse(
+        accessToken: refreshedAccessToken,
+        refreshToken: (data['refresh_token'] as String?) ?? currentRefreshToken,
+        tokenType: (data['token_type'] as String?) ?? 'bearer',
+        expiresIn: data['expires_in'] as int?,
+      );
       await saveTokens(tokenResponse);
       return tokenResponse;
     } on DioException catch (e) {
@@ -182,7 +200,8 @@ class AuthRepository {
       if (DemoDataService.isDemoMode) {
         return DemoDataService().demoUser;
       }
-      final response = await _apiClient.get<Map<String, dynamic>>(ApiEndpoints.me);
+      final response =
+          await _apiClient.get<Map<String, dynamic>>(ApiEndpoints.me);
       return UserModel.fromJson(response.data!);
     } on DioException catch (e) {
       final detail =
@@ -198,7 +217,8 @@ class AuthRepository {
       if (DemoDataService.isDemoMode) {
         return DemoDataService().demoUser;
       }
-      final response = await _apiClient.put<Map<String, dynamic>>(ApiEndpoints.me, data: data);
+      final response = await _apiClient
+          .put<Map<String, dynamic>>(ApiEndpoints.me, data: data);
       return UserModel.fromJson(response.data!);
     } on DioException catch (e) {
       final detail =
@@ -262,23 +282,44 @@ class AuthRepository {
 
   Future<void> saveTokens(TokenResponse tokenResponse) async {
     await _storage.write(
-        key: _accessTokenKey, value: tokenResponse.accessToken,);
+      key: AppConstants.keyAccessToken,
+      value: tokenResponse.accessToken,
+    );
     await _storage.write(
-        key: _refreshTokenKey, value: tokenResponse.refreshToken,);
+      key: AppConstants.keyRefreshToken,
+      value: tokenResponse.refreshToken,
+    );
+
+    // Keep legacy keys during migration so older code paths do not lose session.
+    await _storage.write(
+      key: _legacyAccessTokenKey,
+      value: tokenResponse.accessToken,
+    );
+    await _storage.write(
+      key: _legacyRefreshTokenKey,
+      value: tokenResponse.refreshToken,
+    );
   }
 
   Future<void> clearTokens() async {
-    await _storage.delete(key: _accessTokenKey);
-    await _storage.delete(key: _refreshTokenKey);
+    await _storage.delete(key: AppConstants.keyAccessToken);
+    await _storage.delete(key: AppConstants.keyRefreshToken);
+    await _storage.delete(key: _legacyAccessTokenKey);
+    await _storage.delete(key: _legacyRefreshTokenKey);
   }
 
-  Future<String?> getAccessToken() async => _storage.read(key: _accessTokenKey);
+  Future<String?> getAccessToken() async => _readToken(
+        primaryKey: AppConstants.keyAccessToken,
+        legacyKey: _legacyAccessTokenKey,
+      );
 
   // Alias for getAccessToken to match usage in ApiInterceptor
   Future<String?> getToken() => getAccessToken();
 
-  Future<String?> getRefreshToken() async =>
-      _storage.read(key: _refreshTokenKey);
+  Future<String?> getRefreshToken() async => _readToken(
+        primaryKey: AppConstants.keyRefreshToken,
+        legacyKey: _legacyRefreshTokenKey,
+      );
 
   Future<bool> isLoggedIn() async {
     if (DemoDataService.isDemoMode) return true;
@@ -293,7 +334,7 @@ class AuthRepository {
       // 🎭 始终尝试获取真实token，保证LLM对话功能可用
       final response = await _apiClient.post<Map<String, dynamic>>(
         '/auth/guest',
-        data: {'guest_id': guestId},
+        queryParameters: {'guest_id': guestId},
       );
 
       final data = response.data!;
@@ -327,16 +368,35 @@ class AuthRepository {
       throw Exception('An unexpected error occurred: $e');
     }
   }
+
+  Future<String?> _readToken({
+    required String primaryKey,
+    required String legacyKey,
+  }) async {
+    final primaryValue = await _storage.read(key: primaryKey);
+    if (primaryValue != null && primaryValue.isNotEmpty) {
+      return primaryValue;
+    }
+
+    final legacyValue = await _storage.read(key: legacyKey);
+    if (legacyValue != null && legacyValue.isNotEmpty) {
+      await _storage.write(key: primaryKey, value: legacyValue);
+      return legacyValue;
+    }
+
+    return null;
+  }
 }
 
 // Provider for FlutterSecureStorage
-final flutterSecureStorageProvider =
-    Provider<FlutterSecureStorage>((ref) => const FlutterSecureStorage(
-          aOptions: AndroidOptions(encryptedSharedPreferences: true),
-          iOptions: IOSOptions(
-            accessibility: KeychainAccessibility.first_unlock,
-          ),
-        ),);
+final flutterSecureStorageProvider = Provider<FlutterSecureStorage>(
+  (ref) => const FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    iOptions: IOSOptions(
+      accessibility: KeychainAccessibility.first_unlock,
+    ),
+  ),
+);
 
 // Provider for AuthRepository
 final authRepositoryProvider = Provider<AuthRepository>((ref) {

@@ -192,6 +192,44 @@ class CommunityRepository {
     throw Exception('Failed to search groups');
   }
 
+  Future<List<GroupRecommendationItem>> getGroupRecommendations({
+    int limit = 20,
+    int cursor = 0,
+  }) async {
+    final response = await _apiClient.get<dynamic>(
+      ApiEndpoints.groupsRecommendations,
+      queryParameters: {'limit': limit, 'cursor': cursor},
+    );
+    if (response.statusCode == 200) {
+      final data = ApiResponseParser.unwrapList(
+        response.data,
+        action: 'getGroupRecommendations',
+      );
+      return data
+          .map((e) => GroupRecommendationItem.fromJson(
+              e as Map<String, dynamic>,),)
+          .toList();
+    }
+    throw Exception('Failed to load group recommendations');
+  }
+
+  Future<void> sendGroupRecommendationFeedback({
+    required String groupId,
+    required String action,
+    required String source,
+    List<String>? reasonTypes,
+  }) async {
+    await _apiClient.post<dynamic>(
+      ApiEndpoints.groupsRecommendationsFeedback,
+      data: {
+        'group_id': groupId,
+        'action': action,
+        'source': source,
+        if (reasonTypes != null) 'reason_types': reasonTypes,
+      },
+    );
+  }
+
   Future<List<GroupMemberInfo>> getGroupMembers(String groupId) async {
     final response = await _apiClient.get<dynamic>(
       ApiEndpoints.groupMembers(groupId),
@@ -356,6 +394,24 @@ class CommunityRepository {
       return data.map((e) => MessageInfo.fromJson(e as Map<String, dynamic>)).toList();
     }
     throw Exception('Failed to load thread messages');
+  }
+
+  Future<int> markGroupMessagesRead(
+    String groupId, {
+    required String upToMessageId,
+  }) async {
+    final response = await _apiClient.post<dynamic>(
+      ApiEndpoints.groupMessagesRead(groupId),
+      data: {'up_to_message_id': upToMessageId},
+    );
+    if (response.statusCode == 200) {
+      final payload = ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'markGroupMessagesRead',
+      );
+      return payload['updated_count'] as int? ?? 0;
+    }
+    throw Exception('Failed to mark group messages as read');
   }
 
   Future<List<PrivateMessageInfo>> getPrivateMessages(String friendId,

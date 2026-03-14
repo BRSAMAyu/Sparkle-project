@@ -340,10 +340,45 @@ class GroupMessage(BaseModel):
     reply_to = relationship("GroupMessage", remote_side="GroupMessage.id", foreign_keys=[reply_to_id])
     thread_root = relationship("GroupMessage", remote_side="GroupMessage.id", foreign_keys=[thread_root_id])
     forwarded_from = relationship("GroupMessage", remote_side="GroupMessage.id", foreign_keys=[forwarded_from_id])
+    read_receipts = relationship(
+        "GroupMessageRead",
+        back_populates="message",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
 
     __table_args__ = (
         Index('idx_message_group_time', 'group_id', 'created_at'),
         Index('idx_message_group_thread', 'group_id', 'thread_root_id', 'created_at'),
+    )
+
+
+class GroupMessageRead(BaseModel):
+    """群消息已读回执"""
+
+    __tablename__ = "group_message_reads"
+
+    message_id = Column(
+        GUID(),
+        ForeignKey("group_messages.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    user_id = Column(
+        GUID(),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    read_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    message = relationship("GroupMessage", back_populates="read_receipts")
+    user = relationship("User")
+
+    __table_args__ = (
+        UniqueConstraint("message_id", "user_id", name="uq_group_message_read"),
+        Index("idx_group_message_read_message", "message_id", "read_at"),
+        Index("idx_group_message_read_user", "user_id", "read_at"),
     )
 
 

@@ -274,6 +274,39 @@ class GroupListItem {
 }
 
 @JsonSerializable()
+class GroupRecommendationReason {
+  GroupRecommendationReason({
+    required this.type,
+    this.data,
+  });
+
+  factory GroupRecommendationReason.fromJson(Map<String, dynamic> json) =>
+      _$GroupRecommendationReasonFromJson(json);
+  final String type;
+  final Map<String, dynamic>? data;
+  Map<String, dynamic> toJson() => _$GroupRecommendationReasonToJson(this);
+}
+
+@JsonSerializable()
+class GroupRecommendationItem {
+  GroupRecommendationItem({
+    required this.group,
+    required this.score,
+    required this.reasons,
+    required this.requiresApproval,
+  });
+
+  factory GroupRecommendationItem.fromJson(Map<String, dynamic> json) =>
+      _$GroupRecommendationItemFromJson(json);
+  final GroupListItem group;
+  final double score;
+  final List<GroupRecommendationReason> reasons;
+  @JsonKey(name: 'requires_approval')
+  final bool requiresApproval;
+  Map<String, dynamic> toJson() => _$GroupRecommendationItemToJson(this);
+}
+
+@JsonSerializable()
 class GroupCreate {
   GroupCreate({
     required this.name,
@@ -414,9 +447,8 @@ class MessageInfo {
   @HiveField(10)
   final MessageInfo? quotedMessage;
 
-  // Avatar URLs for read-by users (populated by service layer)
-  @JsonKey(
-      name: 'read_by_avatars', includeFromJson: false, includeToJson: false,)
+  // Rich read-by user info for avatar and display rendering.
+  @JsonKey(name: 'read_by_users')
   final List<UserBrief>? readByUsers;
   Map<String, dynamic> toJson() => _$MessageInfoToJson(this);
 

@@ -34,6 +34,7 @@ from app.models.user import User
 from app.schemas.community import (
     CheckinRequest,
     GroupCreate,
+    GroupRecommendationFeedbackRequest,
     GroupTaskCreate,
     MessageEdit,
     MessageSend,
@@ -47,6 +48,7 @@ from app.services.community_service import (
     GroupTaskService,
     PrivateMessageService,
 )
+from app.services.group_recommendation_service import GroupRecommendationService
 
 
 def _utcnow() -> datetime:
@@ -284,6 +286,81 @@ async def test_e2e_group_messaging(db_session, test_users):
     )
 
     assert len(messages) >= 2
+
+
+# =============================================================================
+# Test 3.5: 群消息已读回执
+# =============================================================================
+
+
+@pytest.mark.asyncio
+@pytest.mark.e2e
+async def test_e2e_group_message_read_receipts(db_session, test_users):
+    """
+    E2E: 群消息已读回执流程
+
+    场景：
+    1. 创建群组并加入成员
+    2. 群主发送两条消息
+    3. 成员标记已读到最新消息
+    4. 验证 read_receipts 持久化与幂等性
+    """
+    user1, user2, _ = test_users
+
+    group_data = GroupCreate(
+        name="已读测试群",
+        type=GroupType.SQUAD,
+        max_members=10,
+        is_public=True,
+    )
+    group = await GroupService.create_group(db_session, user1.id, group_data)
+    await GroupService.join_group(db_session, group.id, user2.id)
+    await db_session.commit()
+
+    msg1 = await GroupMessageService.send_message(
+        db_session,
+        group.id,
+        user1.id,
+        MessageSend(message_type=MessageType.TEXT, content="第一条消息"),
+    )
+    msg2 = await GroupMessageService.send_message(
+        db_session,
+        group.id,
+        user1.id,
+        MessageSend(message_type=MessageType.TEXT, content="第二条消息"),
+    )
+    await db_session.commit()
+
+    updated_count, target_message = await GroupMessageService.mark_as_read(
+        db_session,
+        group.id,
+        user2.id,
+        msg2.id,
+    )
+    await db_session.commit()
+
+    assert updated_count == 2
+    assert target_message.id == msg2.id
+    assert any(receipt.user_id == user2.id for receipt in target_message.read_receipts)
+
+    messages = await GroupMessageService.get_messages(
+        db_session,
+        group.id,
+        user1.id,
+        limit=10,
+    )
+    reloaded = {message.id: message for message in messages}
+    assert any(receipt.user_id == user2.id for receipt in reloaded[msg1.id].read_receipts)
+    assert any(receipt.user_id == user2.id for receipt in reloaded[msg2.id].read_receipts)
+
+    repeated_count, _ = await GroupMessageService.mark_as_read(
+        db_session,
+        group.id,
+        user2.id,
+        msg2.id,
+    )
+    await db_session.commit()
+    assert repeated_count == 0
 
 
 # =============================================================================
@@ -769,3 +846,52 @@ async def test_e2e_thread_messages(db_session, test_users):
     )
 
     assert len(thread_messages) >= 3  # 根消息 + 2个回复
+
+
+# =============================================================================
+# Test 7: 群组推荐
+# =============================================================================
+
+
+@pytest.mark.asyncio
+@pytest.mark.e2e
+async def test_group_recommendations_exclude_dismissed(db_session, test_users):
+    """
+    E2E: 群组推荐与 dismiss 过滤
+
+    场景：
+    1. 用户能获取推荐群组
+    2. dismiss 后 30 天内不再推荐
+    """
+    user1, user2, _ = test_users
+
+    group_data = GroupCreate(
+        name="推荐测试群",
+        type=GroupType.SQUAD,
+        focus_tags=["ai", "ml"],
+        max_members=20,
+        is_public=True,
+    )
+    group = await GroupService.create_group(db_session, user2.id, group_data)
+    await db_session.commit()
+
+    recommendations = await GroupRecommendationService.get_recommendations(
+        db_session, user1.id, limit=10,
+    )
+    assert any(item.group.id == group.id for item in recommendations)
+
+    await GroupRecommendationService.record_feedback(
+        db_session,
+        user1.id,
+        GroupRecommendationFeedbackRequest(
+            group_id=group.id,
+            action="dismiss",
+            source="list",
+        ),
+    )
+    await db_session.commit()
+
+    recommendations_after = await GroupRecommendationService.get_recommendations(
+        db_session, user1.id, limit=10,
+    )
+    assert all(item.group.id != group.id for item in recommendations_after)

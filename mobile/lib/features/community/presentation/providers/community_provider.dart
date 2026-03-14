@@ -10,7 +10,6 @@ import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/features/chat/chat.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
-import 'package:sparkle/features/community/data/repositories/mock_community_repository.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
 import 'package:uuid/uuid.dart';
 
@@ -84,7 +83,7 @@ class FriendsNotifier extends StateNotifier<AsyncValue<List<FriendshipInfo>>> {
       final json = data is String
           ? jsonDecode(data) as Map<String, dynamic>
           : data is Map
-              ? Map<String, dynamic>.from(data as Map)
+              ? Map<String, dynamic>.from(data)
               : null;
       if (json == null) return;
       if (json['type'] == 'status_update') {
@@ -134,19 +133,9 @@ class FriendsNotifier extends StateNotifier<AsyncValue<List<FriendshipInfo>>> {
   Future<void> loadFriends() async {
     state = const AsyncValue.loading();
     try {
-      var friends = await _repository.getFriends();
-      if (friends.isEmpty && kDebugMode && !DemoDataService.isDemoMode) {
-        friends = await MockCommunityRepository.instance().getFriends();
-      }
+      final friends = await _repository.getFriends();
       state = AsyncValue.data(friends);
     } catch (e, st) {
-      if (kDebugMode) {
-        try {
-          final fallback = await MockCommunityRepository.instance().getFriends();
-          state = AsyncValue.data(fallback);
-          return;
-        } catch (_) {}
-      }
       state = AsyncValue.error(e, st);
     }
   }
@@ -220,6 +209,112 @@ class FriendRecommendationsNotifier
     } catch (e) {
       rethrow;
     }
+  }
+}
+
+// 2.5 Group Recommendations Provider
+final groupRecommendationsProvider = StateNotifierProvider<
+    GroupRecommendationsNotifier, AsyncValue<List<GroupRecommendationItem>>>(
+  (ref) => GroupRecommendationsNotifier(
+    ref.watch(communityRepositoryProvider),
+    source: 'list',
+    limit: 8,
+  ),
+);
+
+final groupDiscoverProvider = StateNotifierProvider<
+    GroupRecommendationsNotifier, AsyncValue<List<GroupRecommendationItem>>>(
+  (ref) => GroupRecommendationsNotifier(
+    ref.watch(communityRepositoryProvider),
+    source: 'discover',
+    limit: 20,
+  ),
+);
+
+class GroupRecommendationsNotifier
+    extends StateNotifier<AsyncValue<List<GroupRecommendationItem>>> {
+  GroupRecommendationsNotifier(
+    this._repository, {
+    required this.source,
+    required this.limit,
+  }) : super(const AsyncValue.loading()) {
+    loadRecommendations();
+  }
+  final CommunityRepository _repository;
+  final String source;
+  final int limit;
+  final Set<String> _viewed = {};
+
+  Future<void> loadRecommendations({int cursor = 0}) async {
+    state = const AsyncValue.loading();
+    try {
+      final recommendations = await _repository.getGroupRecommendations(
+        limit: limit,
+        cursor: cursor,
+      );
+      state = AsyncValue.data(recommendations);
+      try {
+        await _recordViews(recommendations);
+      } catch (e) {
+        debugPrint('Group recommendation view feedback failed: $e');
+      }
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
+
+  Future<void> refresh() => loadRecommendations();
+
+  Future<void> dismiss(String groupId) async {
+    await _repository.sendGroupRecommendationFeedback(
+      groupId: groupId,
+      action: 'dismiss',
+      source: source,
+      reasonTypes: _reasonTypesFor(groupId),
+    );
+    state.whenData((items) {
+      final updated = items.where((item) => item.group.id != groupId).toList();
+      state = AsyncValue.data(updated);
+    });
+  }
+
+  Future<void> join(String groupId) async {
+    await _repository.joinGroup(groupId);
+    await _repository.sendGroupRecommendationFeedback(
+      groupId: groupId,
+      action: 'join',
+      source: source,
+      reasonTypes: _reasonTypesFor(groupId),
+    );
+    await refresh();
+  }
+
+  Future<void> _recordViews(List<GroupRecommendationItem> items) async {
+    final pending = <Future<void>>[];
+    for (final item in items) {
+      if (_viewed.contains(item.group.id)) continue;
+      _viewed.add(item.group.id);
+      pending.add(_repository.sendGroupRecommendationFeedback(
+        groupId: item.group.id,
+        action: 'view',
+        source: source,
+        reasonTypes: item.reasons.map((reason) => reason.type).toList(),
+      ),);
+    }
+    if (pending.isNotEmpty) {
+      await Future.wait(pending);
+    }
+  }
+
+  List<String>? _reasonTypesFor(String groupId) {
+    final items = state.valueOrNull;
+    if (items == null) return null;
+    for (final item in items) {
+      if (item.group.id == groupId) {
+        return item.reasons.map((reason) => reason.type).toList();
+      }
+    }
+    return null;
   }
 }
 
@@ -316,20 +411,9 @@ class MyGroupsNotifier extends StateNotifier<AsyncValue<List<GroupListItem>>> {
   Future<void> loadGroups() async {
     state = const AsyncValue.loading();
     try {
-      var groups = await _repository.getMyGroups();
-      if (groups.isEmpty && kDebugMode && !DemoDataService.isDemoMode) {
-        groups = await MockCommunityRepository.instance().getMyGroups();
-      }
+      final groups = await _repository.getMyGroups();
       state = AsyncValue.data(groups);
     } catch (e, st) {
-      if (kDebugMode) {
-        try {
-          final fallback =
-              await MockCommunityRepository.instance().getMyGroups();
-          state = AsyncValue.data(fallback);
-          return;
-        } catch (_) {}
-      }
       state = AsyncValue.error(e, st);
     }
   }
@@ -468,6 +552,10 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
 
   Future<void> _connectWebSocket({bool isRetry = false}) async {
     if (_connectionState == WebSocketConnectionState.connecting) return;
+    if (DemoDataService.isDemoMode) {
+      _connectionState = WebSocketConnectionState.disconnected;
+      return;
+    }
 
     _connectionState = WebSocketConnectionState.connecting;
     final token = await _authRepository.getAccessToken();
@@ -534,10 +622,35 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
                 return;
               }
 
+              if (jsonData['type'] == 'read_receipt') {
+                final upToMessageId = jsonData['up_to_message_id']?.toString();
+                final readerId = jsonData['reader_id']?.toString();
+                final readerRaw = jsonData['reader'];
+                final reader = readerRaw is Map<String, dynamic>
+                    ? UserBrief.fromJson(readerRaw)
+                    : readerRaw is Map
+                        ? UserBrief.fromJson(
+                            Map<String, dynamic>.from(readerRaw),
+                          )
+                        : null;
+                if (upToMessageId != null &&
+                    upToMessageId.isNotEmpty &&
+                    readerId != null &&
+                    readerId.isNotEmpty) {
+                  _handleReadReceipt(
+                    upToMessageId: upToMessageId,
+                    readerId: readerId,
+                    reader: reader,
+                  );
+                }
+                return;
+              }
+
               final message = MessageInfo.fromJson(jsonData);
               state.whenData((messages) {
                 if (!messages.any((m) => m.id == message.id)) {
                   state = AsyncValue.data([message, ...messages]);
+                  unawaited(_markVisibleMessagesAsRead(upToMessageId: message.id));
 
                   // Trigger in-app notification for incoming group messages
                   // Only notify if message is from someone else
@@ -651,6 +764,9 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
       final messages = await _repository.getMessages(_groupId);
       state = AsyncValue.data(messages);
       await _cacheService.saveGroupMessages(_groupId, messages);
+      if (messages.isNotEmpty) {
+        await _markVisibleMessagesAsRead(upToMessageId: messages.first.id);
+      }
     } catch (e, st) {
       if (!state.hasValue) {
         state = AsyncValue.error(e, st);
@@ -767,6 +883,42 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
   Future<List<MessageInfo>> getThreadMessages(String threadRootId) async =>
       _repository.getThreadMessages(_groupId, threadRootId);
 
+  Future<void> _markVisibleMessagesAsRead({required String upToMessageId}) async {
+    final currentUserId = await _resolveCurrentUserId();
+    if (currentUserId == null || currentUserId.isEmpty) {
+      return;
+    }
+    final messages = state.valueOrNull ?? const <MessageInfo>[];
+    MessageInfo? target;
+    for (final message in messages) {
+      if (message.id == upToMessageId) {
+        target = message;
+        break;
+      }
+    }
+    if (target == null) {
+      return;
+    }
+    final hasUnreadVisible = messages.any((message) {
+      final isVisibleRange = !message.createdAt.isAfter(target!.createdAt);
+      final isFromSomeoneElse = message.sender?.id != currentUserId;
+      final isUnread =
+          !(message.readBy ?? const <String>[]).contains(currentUserId);
+      return isVisibleRange && isFromSomeoneElse && isUnread;
+    });
+    if (!hasUnreadVisible) {
+      return;
+    }
+    try {
+      await _repository.markGroupMessagesRead(
+        _groupId,
+        upToMessageId: upToMessageId,
+      );
+    } catch (e) {
+      debugPrint('Mark group messages read failed: $e');
+    }
+  }
+
   void _handleRevokedEvent(String messageId) {
     state.whenData((messages) {
       final index = messages.indexWhere((m) => m.id == messageId);
@@ -841,17 +993,69 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
     });
   }
 
+  void _handleReadReceipt({
+    required String upToMessageId,
+    required String readerId,
+    UserBrief? reader,
+  }) {
+    state.whenData((messages) {
+      MessageInfo? target;
+      for (final message in messages) {
+        if (message.id == upToMessageId) {
+          target = message;
+          break;
+        }
+      }
+      if (target == null) {
+        return;
+      }
+      final targetCreatedAt = target.createdAt;
+      final updated = messages.map((message) {
+        if (message.sender?.id == readerId) {
+          return message;
+        }
+        if (message.createdAt.isAfter(targetCreatedAt)) {
+          return message;
+        }
+        final readBy = List<String>.from(message.readBy ?? const <String>[]);
+        if (!readBy.contains(readerId)) {
+          readBy.add(readerId);
+        }
+        final readByUsers =
+            List<UserBrief>.from(message.readByUsers ?? const <UserBrief>[]);
+        if (reader != null && !readByUsers.any((user) => user.id == readerId)) {
+          readByUsers.add(reader);
+        }
+        return MessageInfo(
+          id: message.id,
+          messageType: message.messageType,
+          sender: message.sender,
+          content: message.content,
+          contentData: message.contentData,
+          replyToId: message.replyToId,
+          threadRootId: message.threadRootId,
+          mentionUserIds: message.mentionUserIds,
+          reactions: message.reactions,
+          createdAt: message.createdAt,
+          updatedAt: message.updatedAt,
+          isRevoked: message.isRevoked,
+          revokedAt: message.revokedAt,
+          editedAt: message.editedAt,
+          readBy: readBy,
+          quotedMessage: message.quotedMessage,
+          readByUsers: readByUsers,
+        );
+      }).toList();
+      state = AsyncValue.data(updated);
+    });
+  }
+
   Future<String?> _resolveCurrentUserId() async {
     final current = _ref.read(currentUserProvider)?.id;
     if (current != null && current.isNotEmpty) {
       return current;
     }
-    try {
-      final guestService = _ref.read(guestServiceProvider);
-      return await guestService.getGuestId();
-    } catch (_) {
-      return 'guest';
-    }
+    return null;
   }
 }
 

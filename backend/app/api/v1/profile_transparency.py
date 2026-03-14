@@ -12,8 +12,8 @@ from app.core.cache import cache_service
 from app.models.user import User
 from app.services.cognitive_service import CognitiveService
 from app.services.memory_service import MemoryService
-from app.services.persona_service import PersonaService
-from app.services.personalization.preference_service import PreferenceService
+from app.services.profile_context_service import ProfileContextService
+from app.services.profile_write_service import ProfileWriteService
 from app.services.system_update_service import SystemUpdateService, build_system_update
 
 router = APIRouter(prefix="/profile", tags=["profile"])
@@ -182,40 +182,67 @@ def _coerce_preference_value(pref_key: str, value: Any) -> dict[str, Any]:
     return {"value": str(value)}
 
 
+def _display_preference_value(pref_key: str, value: Any) -> Any:
+    if pref_key == "study_time_preference" and isinstance(value, dict) and "minutes" in value:
+        return value.get("minutes")
+    if isinstance(value, dict) and set(value.keys()) == {"value"}:
+        return value.get("value")
+    return value
+
+
+def _build_preference_entries(
+    explicit_prefs: dict[str, Any],
+    history: list[Any],
+) -> list[dict[str, Any]]:
+    latest_by_key: dict[str, Any] = {}
+    history_count: dict[str, int] = {}
+    for item in history:
+        history_count[item.pref_key] = history_count.get(item.pref_key, 0) + 1
+        if item.pref_key not in latest_by_key:
+            latest_by_key[item.pref_key] = item
+
+    entries: list[dict[str, Any]] = []
+    for pref_key in sorted(explicit_prefs.keys()):
+        history_item = latest_by_key.get(pref_key)
+        entries.append(
+            {
+                "id": str(history_item.id) if history_item is not None else pref_key,
+                "key": pref_key,
+                "value": _display_preference_value(pref_key, explicit_prefs.get(pref_key)),
+                "confidence": history_item.confidence if history_item is not None else None,
+                "version": history_item.version if history_item is not None else 1,
+                "can_rollback": history_count.get(pref_key, 0) > 1,
+                "updated_at": history_item.updated_at if history_item is not None else None,
+                "metadata": _editability_meta(
+                    source="user",
+                    confidence=float((history_item.confidence if history_item is not None else 0.9) or 0.9),
+                    risk_level="low",
+                    field_type="preference",
+                ),
+            }
+        )
+    return entries
+
+
 @router.get("/transparent")
 async def get_profile_transparent(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     memory_service = MemoryService(db)
-    persona_service = PersonaService(db, cache_service.redis)
+    profile_write_service = ProfileWriteService(db, cache_service.redis)
     cognitive_service = CognitiveService(db)
+    profile_context_service = ProfileContextService(db, cache_service.redis)
 
-    preferences = await memory_service.list_preference_records(current_user.id)
+    prefs_center = await profile_write_service.pref_service.get_preferences(current_user.id)
+    preferences = await memory_service.list_preference_history(current_user.id)
     goals = await memory_service.list_active_goals(current_user.id)
-    persona = await persona_service.get_snapshot(current_user.id, "transparency_view")
-    patterns = await cognitive_service.get_user_patterns(current_user.id, min_confidence=0.6)
+    profile_context = await profile_context_service.get_profile_context(current_user.id)
+    patterns = profile_context.cognitive_summary.active_patterns
     fragments = await cognitive_service.get_fragments(current_user.id, limit=5)
 
     layer_1 = {
-        "preferences": [
-            {
-                "id": str(item.id),
-                "key": item.pref_key,
-                "value": item.pref_value,
-                "confidence": item.confidence,
-                "version": item.version,
-                "can_rollback": item.version > 1,
-                "updated_at": item.updated_at,
-                "metadata": _editability_meta(
-                    source="user",
-                    confidence=float(item.confidence or 0.9),
-                    risk_level="low",
-                    field_type="preference",
-                ),
-            }
-            for item in preferences
-        ],
+        "preferences": _build_preference_entries(prefs_center.explicit or {}, preferences),
         "goals": [
             {
                 "id": str(item.id),
@@ -238,15 +265,15 @@ async def get_profile_transparent(
         "persona": {
             "tags": [
                 {
-                    "value": tag,
+                    "value": pattern.pattern_name,
                     "metadata": _editability_meta(
                         source="mixed",
-                        confidence=0.6,
+                        confidence=float(pattern.confidence or 0.6),
                         risk_level="medium",
                         field_type="behavior",
                     ),
                 }
-                for tag in persona.get("tags", [])
+                for pattern in patterns
             ],
             "capabilities": [
                 {
@@ -259,11 +286,14 @@ async def get_profile_transparent(
                         field_type="analysis",
                     ),
                 }
-                for k, v in (persona.get("capabilities") or {}).items()
+                for k, v in {
+                    "overall_mastery": profile_context.knowledge_summary.overall_mastery,
+                    "active_learning_subjects": profile_context.knowledge_summary.active_learning_subjects,
+                    "weak_spot_count": len(profile_context.knowledge_summary.weak_spots),
+                }.items()
             ],
             "meta": {
-                "persona_version": persona.get("persona_version"),
-                "last_update_event_id": persona.get("last_update_event_id"),
+                "preference_version": profile_context.preference_version,
             },
         },
         "editable": False,
@@ -272,19 +302,19 @@ async def get_profile_transparent(
     layer_3 = {
         "patterns": [
             {
-                "id": str(item.id),
+                "id": item.pattern_name,
                 "name": item.pattern_name,
                 "type": item.pattern_type,
-                "confidence": item.confidence_score,
-                "description": item.description,
+                "confidence": item.confidence,
+                "description": None,
                 "metadata": {
                     **_editability_meta(
                     source="system",
-                    confidence=float(item.confidence_score or 0.0),
+                    confidence=float(item.confidence or 0.0),
                     risk_level="high",
                     field_type="analysis",
                 ),
-                    "evidence_ids": item.evidence_ids or [],
+                    "policy_signals": item.policy_signals,
                 },
             }
             for item in patterns
@@ -331,82 +361,70 @@ async def submit_onboarding(
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     memory_service = MemoryService(db)
-    pref_service = PreferenceService(db, cache_service.redis)
+    profile_write_service = ProfileWriteService(db, cache_service.redis)
 
     evidence_refs = [
         {"type": "user_state", "id": "onboarding", "schema_version": "onboarding.v1"}
     ]
 
     updated: dict[str, Any] = {}
-    explicit_updates: dict[str, Any] = {}
+    preference_updates: dict[str, Any] = {}
 
     if payload.learning_style:
-        record = await memory_service.upsert_preference(
-            current_user.id,
-            "learning_style",
-            {"value": payload.learning_style},
-            evidence_refs,
+        result = await profile_write_service.set_explicit_preference(
+            user_id=current_user.id,
+            pref_key="learning_style",
+            pref_value={"value": payload.learning_style},
+            evidence_refs=evidence_refs,
             source_type="user_state",
+            source="onboarding",
         )
-        if record:
+        if result.preference_version:
             updated["learning_style"] = payload.learning_style
 
     if payload.knowledge_level:
-        record = await memory_service.upsert_preference(
-            current_user.id,
-            "knowledge_level",
-            {"value": payload.knowledge_level},
-            evidence_refs,
+        result = await profile_write_service.set_explicit_preference(
+            user_id=current_user.id,
+            pref_key="knowledge_level",
+            pref_value={"value": payload.knowledge_level},
+            evidence_refs=evidence_refs,
             source_type="user_state",
+            source="onboarding",
         )
-        if record:
+        if result.preference_version:
             updated["knowledge_level"] = payload.knowledge_level
 
     if payload.study_time_minutes is not None:
-        record = await memory_service.upsert_preference(
-            current_user.id,
-            "study_time_preference",
-            {"minutes": payload.study_time_minutes},
-            evidence_refs,
+        result = await profile_write_service.set_explicit_preference(
+            user_id=current_user.id,
+            pref_key="study_time_preference",
+            pref_value={"minutes": payload.study_time_minutes},
+            evidence_refs=evidence_refs,
             source_type="user_state",
+            source="onboarding",
         )
-        if record:
+        if result.preference_version:
             updated["study_time_preference"] = payload.study_time_minutes
 
     if payload.response_depth is not None:
-        explicit_updates["depth_preference"] = payload.response_depth
-        record = await memory_service.upsert_preference(
-            current_user.id,
-            "depth_preference",
-            {"value": payload.response_depth},
-            evidence_refs,
-            source_type="user_state",
-        )
-        if record:
-            updated["depth_preference"] = payload.response_depth
-
         style = _response_style_from_depth(payload.response_depth)
-        record = await memory_service.upsert_preference(
-            current_user.id,
-            "response_style",
-            {"value": style},
-            evidence_refs,
-            source_type="user_state",
-        )
-        if record:
-            updated["response_style"] = style
+        preference_updates["depth_preference"] = {"value": payload.response_depth}
+        preference_updates["response_style"] = {"value": style}
+        updated["depth_preference"] = payload.response_depth
+        updated["response_style"] = style
 
     if payload.curiosity_preference is not None:
-        explicit_updates["curiosity_preference"] = payload.curiosity_preference
-        record = await memory_service.upsert_preference(
-            current_user.id,
-            "curiosity_preference",
-            {"value": payload.curiosity_preference},
-            evidence_refs,
+        preference_updates["curiosity_preference"] = {"value": payload.curiosity_preference}
+        updated["curiosity_preference"] = payload.curiosity_preference
+
+    if preference_updates:
+        await profile_write_service.set_explicit_preferences(
+            user_id=current_user.id,
+            updates=preference_updates,
+            evidence_refs_by_key={key: evidence_refs for key in preference_updates},
             source_type="user_state",
+            source="onboarding",
         )
-        if record:
-            updated["curiosity_preference"] = payload.curiosity_preference
 
     if payload.learning_goal:
         metadata: dict[str, Any] | None = None
@@ -422,9 +440,6 @@ async def submit_onboarding(
         if record:
             updated["learning_goal"] = payload.learning_goal
 
-    if explicit_updates:
-        await pref_service.update_explicit(current_user.id, explicit_updates)
-
     return {"status": "ok", "updated": updated}
 
 
@@ -437,21 +452,24 @@ async def update_preference(
     if not payload.pref_key:
         return {"status": "error", "message": "pref_key required"}
 
-    memory_service = MemoryService(db)
+    profile_write_service = ProfileWriteService(db, cache_service.redis)
     evidence_refs = [
         {"type": "user_state", "id": "manual_edit", "schema_version": "manual_edit.v1"}
     ]
     value_payload = _coerce_preference_value(payload.pref_key, payload.value)
-    record = await memory_service.upsert_preference(
-        current_user.id,
-        payload.pref_key,
-        value_payload,
-        evidence_refs,
+    result = await profile_write_service.set_explicit_preference(
+        user_id=current_user.id,
+        pref_key=payload.pref_key,
+        pref_value=value_payload,
+        evidence_refs=evidence_refs,
         source_type="user_state",
+        source="manual_edit",
     )
-    if record is None:
-        return {"status": "blocked"}
-    return {"status": "ok", "version": record.version}
+    return {
+        "status": "ok",
+        "version": result.preference_version,
+        "history_version": result.history_version,
+    }
 
 
 @router.post("/preferences/rollback")
@@ -474,20 +492,21 @@ async def rollback_preference(
     evidence_refs = [
         {"type": "user_state", "id": "rollback", "schema_version": "rollback.v1"}
     ]
-    record = await memory_service.upsert_preference(
-        current_user.id,
-        payload.pref_key,
-        previous.pref_value,
-        evidence_refs,
+    profile_write_service = ProfileWriteService(db, cache_service.redis)
+    result = await profile_write_service.set_explicit_preference(
+        user_id=current_user.id,
+        pref_key=payload.pref_key,
+        pref_value=previous.pref_value,
+        evidence_refs=evidence_refs,
         source_type="user_state",
+        source="rollback",
     )
-    if record is None:
-        return {"status": "blocked"}
     return {
         "status": "ok",
         "from_version": current.version,
         "to_version": previous.version,
-        "new_version": record.version,
+        "new_version": result.history_version,
+        "preference_version": result.preference_version,
     }
 
 

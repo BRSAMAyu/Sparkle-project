@@ -6,6 +6,7 @@ import 'package:sparkle/features/community/presentation/screens/create_group_scr
 import 'package:sparkle/features/community/presentation/screens/create_post_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/friends_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/group_detail_screen.dart';
+import 'package:sparkle/features/community/presentation/screens/group_discover_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/group_files_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/group_list_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/group_members_screen.dart';
@@ -38,6 +39,7 @@ class CommunityRoutes {
   static const String userSearch = '/community/users/search';
   static const String groups = '/community/groups';
   static const String groupsSearch = '/community/groups/search';
+  static const String groupsDiscover = '/community/groups/discover';
   static const String groupsCreate = '/community/groups/create';
   static const String postsCreate = '/community/posts/create';
   static const String groupDetail = '/community/groups/:id';
@@ -94,6 +96,16 @@ class CommunityRoutes {
           pageBuilder: (context, state) => _buildTransitionPage(
             state: state,
             child: const GroupSearchScreen(),
+          ),
+        ),
+        // Group discover (detail page, full-screen)
+        GoRoute(
+          path: groupsDiscover,
+          name: 'groupDiscover',
+          parentNavigatorKey: navigatorKey,
+          pageBuilder: (context, state) => _buildTransitionPage(
+            state: state,
+            child: const GroupDiscoverScreen(),
           ),
         ),
         // Create group (modal-like, full-screen)

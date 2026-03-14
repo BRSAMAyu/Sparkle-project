@@ -4,11 +4,14 @@ Integration Test Configuration
 Uses real PostgreSQL database for WebSocket tests that communicate with gRPC server.
 """
 
+import ssl
+
 import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from app.config import settings
 from sqlalchemy import select
+from sqlalchemy.engine import make_url
 
 from app.models.base import Base
 from app.models.user import User
@@ -23,7 +26,24 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
     Use real PostgreSQL database for integration tests.
     This ensures test data is visible to the gRPC server.
     """
-    engine = create_async_engine(settings.DATABASE_URL, echo=False)
+    db_url = settings.DATABASE_URL
+    connect_args = {}
+
+    # asyncpg does not accept sslmode in the URL; strip it and map to ssl args.
+    parsed = make_url(db_url)
+    if parsed.drivername.startswith("postgresql+asyncpg"):
+        query = dict(parsed.query)
+        sslmode = query.pop("sslmode", None)
+        sslrootcert = query.pop("sslrootcert", None)
+        if sslrootcert:
+            connect_args["ssl"] = ssl.create_default_context(cafile=sslrootcert)
+        elif sslmode == "disable":
+            connect_args["ssl"] = False
+        elif sslmode in ("require", "verify-ca", "verify-full"):
+            connect_args["ssl"] = True
+        db_url = str(parsed.set(query=query))
+
+    engine = create_async_engine(db_url, echo=False, connect_args=connect_args)
 
     # Don't create tables - assume they already exist from migrations
     # async with engine.begin() as conn:

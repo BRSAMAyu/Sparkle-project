@@ -1186,6 +1186,28 @@ def format_user_context(
             lines.append(f"- 深度: {prefs.get('depth_preference', 0.5):.1f}")
             lines.append(f"- 好奇心: {prefs.get('curiosity_preference', 0.5):.1f}")
 
+    # 知识薄弱点
+    knowledge_summary = normalized.get("knowledge_summary")
+    if knowledge_summary and section_weights.get("knowledge", "medium") != "off":
+        weak_spots = knowledge_summary.get("weak_spots") or []
+        if weak_spots:
+            lines.append("【知识薄弱点】")
+            limit = 3 if context_level == "light" else 5
+            for spot in weak_spots[:limit]:
+                if not isinstance(spot, dict):
+                    continue
+                node_name = spot.get("node_name") or spot.get("node_id") or "未知知识点"
+                mastery = spot.get("mastery")
+                if mastery is None:
+                    lines.append(f"- {node_name}")
+                else:
+                    try:
+                        mastery_val = float(mastery)
+                        lines.append(f"- {node_name}: 掌握度 {mastery_val:.0f}%")
+                    except Exception:
+                        lines.append(f"- {node_name}: 掌握度 {mastery}")
+            lines.append("如果用户的问题涉及以上知识点，请提供更详细的基础解释。")
+
     # 碎片时间推荐线索：待办任务
     next_actions = normalized.get("next_actions") or []
     task_weight = section_weights.get("task_summary", "medium")
@@ -1309,6 +1331,19 @@ def _normalize_user_context(context: dict) -> dict:
 
     if context.get("preferences") and "preferences" not in normalized:
         normalized["preferences"] = context["preferences"]
+
+    profile_context = context.get("profile_context")
+    if profile_context:
+        if hasattr(profile_context, "model_dump"):
+            profile_context = profile_context.model_dump()
+        if isinstance(profile_context, dict):
+            knowledge_summary = profile_context.get("knowledge_summary")
+            if isinstance(knowledge_summary, dict):
+                normalized["knowledge_summary"] = knowledge_summary
+
+    if context.get("knowledge_summary") and "knowledge_summary" not in normalized:
+        if isinstance(context.get("knowledge_summary"), dict):
+            normalized["knowledge_summary"] = context["knowledge_summary"]
 
     llm_profile = context.get("llm_profile")
     if isinstance(llm_profile, dict):

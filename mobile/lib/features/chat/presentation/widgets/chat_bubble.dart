@@ -9,7 +9,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/action_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart';
-import 'package:sparkle/features/chat/presentation/widgets/ai_status_indicator.dart';
+import 'package:sparkle/features/chat/presentation/widgets/assistant_message_metadata_tray.dart';
 import 'package:sparkle/features/chat/presentation/widgets/message_detail_view.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/presentation/providers/community_agent_provider.dart';
@@ -27,6 +27,7 @@ class ChatBubble extends StatefulWidget {
     this.onActionDismiss,
     this.onResponseFeedback,
     this.onWidgetAction,
+    this.isLatestAssistantMessage = false,
   });
   final dynamic message; // ChatMessageModel or PrivateMessageInfo
   final bool showAvatar;
@@ -39,6 +40,7 @@ class ChatBubble extends StatefulWidget {
       onResponseFeedback;
   final Future<void> Function(String actionType, Map<String, dynamic> payload)?
       onWidgetAction;
+  final bool isLatestAssistantMessage;
 
   @override
   State<ChatBubble> createState() => _ChatBubbleState();
@@ -133,6 +135,37 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
   String? get _responseId => (widget.message is ChatMessageModel)
       ? (widget.message as ChatMessageModel).responseId
       : null;
+
+  bool get _shouldUseMarkdown => _hasStrongMarkdownSyntax(_content);
+
+  List<WidgetPayload> get _widgets => widget.message is ChatMessageModel
+      ? (widget.message as ChatMessageModel).widgets ?? const []
+      : const [];
+
+  List<WidgetPayload> get _metadataWidgets => _widgets.where((widgetItem) {
+        switch (widgetItem.type) {
+          case 'continuity_banner':
+          case 'mode_explanation':
+          case 'source_summary':
+            return true;
+          case 'next_actions':
+            return widget.isLatestAssistantMessage;
+          default:
+            return false;
+        }
+      }).toList();
+
+  List<WidgetPayload> get _actionableWidgets => _widgets.where((widgetItem) {
+        switch (widgetItem.type) {
+          case 'continuity_banner':
+          case 'mode_explanation':
+          case 'source_summary':
+          case 'next_actions':
+            return false;
+          default:
+            return true;
+        }
+      }).toList();
 
   void _handleDoubleTap() {
     if (_isUser || _isRevoked || !mounted || context.reduceMotion) return;
@@ -371,19 +404,6 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                       ),
                                     if (widget.message is ChatMessageModel &&
                                         (widget.message as ChatMessageModel)
-                                                .aiStatus !=
-                                            null)
-                                      Padding(
-                                        padding:
-                                            const EdgeInsets.only(bottom: 8.0),
-                                        child: AiStatusBubble(
-                                          status: (widget.message
-                                                  as ChatMessageModel)
-                                              .aiStatus!,
-                                        ),
-                                      ),
-                                    if (widget.message is ChatMessageModel &&
-                                        (widget.message as ChatMessageModel)
                                                 .reasoningSteps !=
                                             null)
                                       Padding(
@@ -406,45 +426,60 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                         final maxHeight =
                                             MediaQuery.of(context).size.height *
                                                 0.5;
-                                        final contentWidget = MarkdownBody(
-                                          data: _content,
-                                          styleSheet: _getMarkdownStyle(
-                                            context,
-                                            isUser,
-                                          ),
-                                          onTapLink: (text, href, title) async {
-                                            if (href == null) return;
-                                            final uri = Uri.tryParse(href);
-                                            if (uri == null) return;
+                                        final contentWidget = _shouldUseMarkdown
+                                            ? MarkdownBody(
+                                                data: _content,
+                                                styleSheet: _getMarkdownStyle(
+                                                  context,
+                                                  isUser,
+                                                ),
+                                                onTapLink:
+                                                    (text, href, title) async {
+                                                  if (href == null) return;
+                                                  final uri =
+                                                      Uri.tryParse(href);
+                                                  if (uri == null) return;
 
-                                            final scheme =
-                                                uri.scheme.toLowerCase();
-                                            const allowedSchemes = [
-                                              'http',
-                                              'https',
-                                            ];
-                                            if (!allowedSchemes
-                                                .contains(scheme)) {
-                                              return;
-                                            }
+                                                  final scheme =
+                                                      uri.scheme.toLowerCase();
+                                                  const allowedSchemes = [
+                                                    'http',
+                                                    'https',
+                                                  ];
+                                                  if (!allowedSchemes
+                                                      .contains(scheme)) {
+                                                    return;
+                                                  }
 
-                                            try {
-                                              if (await canLaunchUrl(uri)) {
-                                                unawaited(
-                                                  launchUrl(
-                                                    uri,
-                                                    mode: LaunchMode
-                                                        .externalApplication,
-                                                  ),
-                                                );
-                                              }
-                                            } catch (e) {
-                                              debugPrint(
-                                                'Failed to launch URL: $e',
+                                                  try {
+                                                    if (await canLaunchUrl(
+                                                      uri,
+                                                    )) {
+                                                      unawaited(
+                                                        launchUrl(
+                                                          uri,
+                                                          mode: LaunchMode
+                                                              .externalApplication,
+                                                        ),
+                                                      );
+                                                    }
+                                                  } catch (e) {
+                                                    debugPrint(
+                                                      'Failed to launch URL: $e',
+                                                    );
+                                                  }
+                                                },
+                                              )
+                                            : Text(
+                                                _content,
+                                                style: TextStyle(
+                                                  color: isUser
+                                                      ? DS.chatBubbleUserText
+                                                      : DS.chatBubbleOtherText,
+                                                  fontSize: 16,
+                                                  height: 1.5,
+                                                ),
                                               );
-                                            }
-                                          },
-                                        );
 
                                         // Try to estimate content height and decide if scrolling is needed
                                         // For long content (heuristic: >500 chars), use constrained scrollable
@@ -469,12 +504,29 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                 ),
                               ),
                             ),
-                            if (widget.message is ChatMessageModel &&
-                                (widget.message as ChatMessageModel).widgets !=
-                                    null)
-                              ...(widget.message as ChatMessageModel)
-                                  .widgets!
-                                  .map(
+                            if (_metadataWidgets.isNotEmpty ||
+                                (widget.message is ChatMessageModel &&
+                                    (widget.message as ChatMessageModel)
+                                            .aiStatus !=
+                                        null))
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  top: 8.0,
+                                  right: 8.0,
+                                  left: 8.0,
+                                ),
+                                child: AssistantMessageMetadataTray(
+                                  actions: _metadataWidgets,
+                                  isLatestMessage:
+                                      widget.isLatestAssistantMessage,
+                                  status: widget.message is ChatMessageModel
+                                      ? (widget.message as ChatMessageModel)
+                                          .aiStatus
+                                      : null,
+                                  onWidgetAction: widget.onWidgetAction,
+                                ),
+                              ),
+                            ..._actionableWidgets.map(
                                 (w) {
                                   final actionable = (w.data['id'] ??
                                           w.data['tool_result_id'] ??
@@ -765,6 +817,25 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
           decoration: TextDecoration.underline,
         ),
       );
+
+  bool _hasStrongMarkdownSyntax(String content) {
+    if (content.isEmpty) {
+      return false;
+    }
+
+    final trimmed = content.trim();
+    final strongPatterns = <RegExp>[
+      RegExp(r'(^|\n)#{1,6}\s', multiLine: true),
+      RegExp(r'```'),
+      RegExp(r'`[^`\n]+`'),
+      RegExp(r'\[[^\]]+\]\([^)]+\)'),
+      RegExp(r'(^|\n)>\s', multiLine: true),
+      RegExp(r'(^|\n)\|.+\|', multiLine: true),
+      RegExp(r'(\*\*|__)[^*_]+(\*\*|__)'),
+    ];
+
+    return strongPatterns.any((pattern) => pattern.hasMatch(trimmed));
+  }
 
   int? _calculateReasoningDuration(ChatMessageModel message) {
     if (message.reasoningSteps == null || message.reasoningSteps!.isEmpty) {

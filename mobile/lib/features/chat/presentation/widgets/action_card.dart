@@ -475,11 +475,11 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       case 'source_summary':
         return '依据与来源';
       case 'next_actions':
-        return '建议下一步';
+        return '下一步';
       case 'continuity_banner':
-        return '继续当前上下文';
+        return '上下文';
       case 'mode_explanation':
-        return '当前协作模式';
+        return '协作模式';
       case 'blocked_input_request':
         return '继续前需要你确认';
       default:
@@ -691,7 +691,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       case 'source_summary':
         return action.data['headline']?.toString() ??
             action.data['evidence_summary']?.toString() ??
-            '查看本轮回答的依据与来源。';
+            '查看来源';
       case 'next_actions':
         final actions = (action.data['actions'] as List<dynamic>? ?? [])
             .whereType<Map<dynamic, dynamic>>()
@@ -701,13 +701,13 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             .join(' · ');
         return actions.isNotEmpty
             ? '建议操作：$actions'
-            : (action.data['title']?.toString() ?? '查看这一轮建议下一步。');
+            : (action.data['title']?.toString() ?? '查看下一步');
       case 'continuity_banner':
       case 'mode_explanation':
         return action.data['message']?.toString() ??
             action.data['description']?.toString() ??
             action.data['label']?.toString() ??
-            '查看当前协作上下文。';
+            '查看详情';
       default:
         return '';
     }

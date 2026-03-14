@@ -16,6 +16,7 @@ from app.services.error_book_service import ErrorBookService
 from app.services.focus_service import focus_service
 from app.services.galaxy_service import GalaxyService
 from app.services.personalization.preference_service import PreferenceService
+from app.services.profile_context_service import ProfileContextService
 from app.services.task_service import TaskService
 from app.services.user_service import UserService
 
@@ -48,6 +49,7 @@ class CognitiveContext(BaseModel):
     preferences: dict[str, Any] = Field(default_factory=dict, description="Learning preferences")
     engagement_metrics: dict[str, Any] = Field(default_factory=dict, description="Engagement level and patterns")
     community_context: dict[str, Any] = Field(default_factory=dict, description="Active community participation snapshot")
+    profile_context: dict[str, Any] | None = Field(default=None, description="Unified profile context payload")
 
     # Preference Version (for cache invalidation)
     preference_version: int = Field(default=0, description="Preference version for cache validation")
@@ -77,6 +79,7 @@ class ContextOrchestrator:
         # UserService needs instance
         self.user_service = UserService(db_session, redis_client)
         self.preference_service = PreferenceService(db_session, redis_client)
+        self.profile_context_service = ProfileContextService(db_session, redis_client)
 
     async def get_user_context(self, user_id: str, force_refresh: bool = False) -> CognitiveContext:
         """
@@ -101,30 +104,43 @@ class ContextOrchestrator:
         # Parallel Execution of independent context gathering
         # We protect against individual service failures to return at least partial context
         results = await asyncio.gather(
-            self._get_knowledge_profile(uid),
+            self._get_profile_context(uid),
             self._get_error_profile(uid),
             self._get_task_profile(uid),
-            self._get_user_profile(uid),
+            self._get_user_metrics(uid),
             self._get_community_profile(uid),
-            self._get_preference_version(user_id),
             return_exceptions=True
         )
 
         # Unpack results
-        knowledge_data = self._handle_result(results[0], "knowledge", {})
+        profile_context = self._handle_result(results[0], "profile_context", None)
         error_data = self._handle_result(results[1], "error", {})
         task_data = self._handle_result(results[2], "task", {})
-        user_data = self._handle_result(results[3], "user", {})
+        metrics_data = self._handle_result(results[3], "metrics", {})
         community_data = self._handle_result(results[4], "community", {})
-        preference_version = self._handle_result(results[5], "preference_version", 0)
+
+        knowledge_summary = {}
+        preference_version = 0
+        preferences = {}
+        profile_context_payload = None
+        if profile_context is not None:
+            profile_context_payload = profile_context.to_prompt_context()
+            preferences = profile_context.preferences or {}
+            preference_version = profile_context.preference_version or 0
+            knowledge_summary = (profile_context.knowledge_summary.model_dump(mode="json")
+                                 if profile_context.knowledge_summary else {})
 
         # Construct Context Object
         context = CognitiveContext(
             user_id=user_id,
             timestamp=_utcnow(),
 
-            knowledge_stats=knowledge_data.get("stats", {}),
-            recent_mastery_changes=knowledge_data.get("recent", []),
+            knowledge_stats={
+                "overall_mastery": knowledge_summary.get("overall_mastery", 0.0),
+                "active_learning_subjects": knowledge_summary.get("active_learning_subjects", []),
+                "weak_spots": knowledge_summary.get("weak_spots", []),
+            },
+            recent_mastery_changes=knowledge_summary.get("recent_mastery_changes", []),
 
             error_summary=error_data.get("summary", {}),
             recent_errors=error_data.get("recent", []),
@@ -132,9 +148,10 @@ class ContextOrchestrator:
             active_tasks=task_data.get("tasks", []),
             focus_stats=task_data.get("focus", {}),
 
-            preferences=user_data.get("preferences", {}),
-            engagement_metrics=user_data.get("metrics") or {},
+            preferences=preferences,
+            engagement_metrics=metrics_data or {},
             community_context=community_data or {},
+            profile_context=profile_context_payload,
 
             # 记录偏好版本用于缓存验证
             preference_version=preference_version,
@@ -272,6 +289,13 @@ class ContextOrchestrator:
             "preferences": preferences,
             "metrics": analytics
         }
+
+    async def _get_user_metrics(self, user_id: UUID) -> dict[str, Any]:
+        """Fetch analytics metrics only."""
+        return await self.user_service.get_analytics_summary(user_id)
+
+    async def _get_profile_context(self, user_id: UUID):
+        return await self.profile_context_service.get_profile_context(user_id)
 
     async def _get_preference_version(self, user_id: str) -> int:
         """

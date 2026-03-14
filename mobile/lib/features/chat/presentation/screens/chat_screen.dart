@@ -119,6 +119,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final chatState = ref.watch(chatProvider);
     final messages = chatState.messages;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    String? latestAssistantMessageId;
+    for (final message in messages.reversed) {
+      if (message.role == MessageRole.assistant) {
+        latestAssistantMessageId = message.id;
+        break;
+      }
+    }
 
     return GraphiteScaffold(
       role: SparklePageRole.content,
@@ -327,6 +334,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                 final message = messages[adjustedIndex];
                                 return ChatBubble(
                                   message: message,
+                                  isLatestAssistantMessage:
+                                      message.id == latestAssistantMessageId,
                                   onActionConfirm: (action) {
                                     ref
                                         .read(chatProvider.notifier)
@@ -885,19 +894,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final isCompactMobile = _isCompactMobileContext(context);
     final showExpandedContext = !isCompactMobile || _showContextControls;
     final transparentMode = ref.watch(transparentModeProvider);
-    ChatMessageModel? latestAssistant;
-    for (final message in chatState.messages.reversed) {
-      if (message.role == MessageRole.assistant) {
-        latestAssistant = message;
-        break;
-      }
-    }
-    final latestEnvelope =
-        latestAssistant?.uxEnvelope ?? const <String, dynamic>{};
-    final continuityBanner =
-        latestEnvelope['continuity_banner'] as Map<String, dynamic>?;
-    final modeExplanation =
-        latestEnvelope['mode_explanation'] as Map<String, dynamic>?;
     final currentMode = ref.watch(chatModeProvider);
     final dynamicPrompts = _buildPromptStarters(currentMode.apiValue);
     final activePlanId = ref.watch(activePlanProvider);
@@ -953,37 +949,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             ),
           if (showExpandedContext) ...[
             const PlanSelectorPill(),
+            const SizedBox(height: DS.spacing12),
             const ChatModeSelectorPill(),
           ],
-          if (showExpandedContext &&
-              (modeExplanation != null || currentMode.apiValue != 'standard'))
-            Padding(
-              padding: const EdgeInsets.only(
-                left: DS.spacing16,
-                right: DS.spacing16,
-                top: DS.spacing8,
-              ),
-              child: _ContextStrip(
-                icon: Icons.auto_awesome,
-                title:
-                    modeExplanation?['label']?.toString() ?? currentMode.label,
-                description: modeExplanation?['description']?.toString() ??
-                    currentMode.description,
-              ),
-            ),
-          if (showExpandedContext && continuityBanner != null)
-            Padding(
-              padding: const EdgeInsets.only(
-                left: DS.spacing16,
-                right: DS.spacing16,
-                top: DS.spacing8,
-              ),
-              child: _ContextStrip(
-                icon: Icons.link_rounded,
-                title: continuityBanner['title']?.toString() ?? '继续当前上下文',
-                description: continuityBanner['message']?.toString() ?? '',
-              ),
-            ),
           if (showExpandedContext) const IntentPredictionBar(showIdle: false),
           if (showExpandedContext &&
               !chatState.isSending &&
@@ -1080,66 +1048,6 @@ class _QuickActionChip extends StatefulWidget {
 
   @override
   State<_QuickActionChip> createState() => _QuickActionChipState();
-}
-
-class _ContextStrip extends StatelessWidget {
-  const _ContextStrip({
-    required this.icon,
-    required this.title,
-    required this.description,
-  });
-
-  final IconData icon;
-  final String title;
-  final String description;
-
-  @override
-  Widget build(BuildContext context) {
-    if (title.trim().isEmpty && description.trim().isEmpty) {
-      return const SizedBox.shrink();
-    }
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: DS.surfaceTertiary,
-        borderRadius: DS.borderRadius12,
-        border: Border.all(color: DS.neutral200),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(DS.spacing12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, size: DS.iconSizeSm, color: DS.primaryBase),
-            const SizedBox(width: DS.spacing8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (title.trim().isNotEmpty)
-                    Text(
-                      title,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontWeight: DS.fontWeightSemibold,
-                            color: DS.textPrimary,
-                          ),
-                    ),
-                  if (description.trim().isNotEmpty) ...[
-                    const SizedBox(height: DS.spacing4),
-                    Text(
-                      description,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: DS.textSecondary,
-                          ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 class _ChatContextToggle extends StatelessWidget {

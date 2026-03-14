@@ -7,6 +7,7 @@ import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
+import 'package:sparkle/features/community/presentation/widgets/group_recommendation_card.dart';
 
 class GroupListScreen extends ConsumerWidget {
   const GroupListScreen({super.key});
@@ -46,34 +47,42 @@ class GroupListScreen extends ConsumerWidget {
       ),
       child: groupsState.when(
         data: (groups) {
-          if (groups.isEmpty) {
-            return Center(
-              child: CompactEmptyState(
-                message: 'You haven\'t joined any groups yet',
-                icon: Icons.group_outlined,
-                actionText: 'Discover Groups',
-                onAction: () {
-                  context.push('/community/groups/search');
-                },
-              ),
-            );
-          }
           return ContentConstraint(
             child: RefreshIndicator(
               onRefresh: () async =>
                   ref.read(myGroupsProvider.notifier).refresh(),
-              child: ListView.separated(
+              child: ListView(
                 padding: const EdgeInsets.all(DS.spacing16),
-                itemCount: groups.length,
-                separatorBuilder: (context, index) =>
-                    const SizedBox(height: DS.spacing12),
-                itemBuilder: (context, index) {
-                  final group = groups[index];
-                  return _AnimatedGroupTile(
-                    group: group,
-                    index: index,
-                  );
-                },
+                children: [
+                  const _ForYouSection(),
+                  const SizedBox(height: DS.spacing20),
+                  if (groups.isEmpty)
+                    Center(
+                      child: CompactEmptyState(
+                        message: 'You haven\'t joined any groups yet',
+                        icon: Icons.group_outlined,
+                        actionText: 'Discover Groups',
+                        onAction: () {
+                          context.push('/community/groups/discover');
+                        },
+                      ),
+                    )
+                  else
+                    ...List.generate(groups.length, (index) {
+                      final group = groups[index];
+                      return Padding(
+                        padding: EdgeInsets.only(
+                          bottom: index == groups.length - 1
+                              ? 0
+                              : DS.spacing12,
+                        ),
+                        child: _AnimatedGroupTile(
+                          group: group,
+                          index: index,
+                        ),
+                      );
+                    }),
+                ],
               ),
             ),
           );
@@ -89,6 +98,115 @@ class GroupListScreen extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ForYouSection extends ConsumerWidget {
+  const _ForYouSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final recommendationsState = ref.watch(groupRecommendationsProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              'For You',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const Spacer(),
+            SparkleButton(
+              label: 'See all',
+              variant: ButtonVariant.ghost,
+              size: ButtonSize.small,
+              onPressed: () {
+                context.push('/community/groups/discover');
+              },
+            ),
+          ],
+        ),
+        const SizedBox(height: DS.spacing12),
+        recommendationsState.when(
+          data: (items) {
+            if (items.isEmpty) {
+              return const SizedBox.shrink();
+            }
+            return SizedBox(
+              height: 210,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: items.length,
+                separatorBuilder: (context, index) =>
+                    const SizedBox(width: DS.spacing12),
+                itemBuilder: (context, index) {
+                  final item = items[index];
+                  return SizedBox(
+                    width: 280,
+                    child: GroupRecommendationCard(
+                      recommendation: item,
+                      onTap: () {
+                        context.push('/community/groups/${item.group.id}');
+                      },
+                      onJoin: () async {
+                        await ref
+                            .read(groupRecommendationsProvider.notifier)
+                            .join(item.group.id);
+                      },
+                      onDismiss: () async {
+                        await ref
+                            .read(groupRecommendationsProvider.notifier)
+                            .dismiss(item.group.id);
+                      },
+                    ),
+                  );
+                },
+              ),
+            );
+          },
+          loading: () => SizedBox(
+            height: 190,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: 2,
+              separatorBuilder: (context, index) =>
+                  const SizedBox(width: DS.spacing12),
+              itemBuilder: (context, index) => Shimmer.fromColors(
+                baseColor: DS.surfaceOverlay,
+                highlightColor: DS.surfacePrimary,
+                child: Container(
+                  width: 260,
+                  decoration: BoxDecoration(
+                    color: DS.surfaceOverlay,
+                    borderRadius: DS.borderRadius16,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          error: (error, stackTrace) => Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Unable to load recommendations',
+                  style: TextStyle(color: DS.textSecondary),
+                ),
+              ),
+              SparkleButton(
+                label: 'Retry',
+                variant: ButtonVariant.ghost,
+                size: ButtonSize.small,
+                onPressed: () {
+                  ref.read(groupRecommendationsProvider.notifier).refresh();
+                },
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
