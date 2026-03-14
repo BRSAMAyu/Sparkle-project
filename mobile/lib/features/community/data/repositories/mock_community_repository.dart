@@ -10,18 +10,48 @@ class MockCommunityRepository implements CommunityRepository {
 
   MockCommunityRepository._init() {
     // Create current user matching DemoDataService
-    final me = _createUser('AI_Learner_02', 15, UserStatus.online,
-        id: currentUserId, avatarSeed: 'AI_Learner_02',);
-    final alice = _createUser('Alice', 8, UserStatus.online,
-        id: 'user_alice', avatarSeed: 'alice_seed',);
-    final bob = _createUser('Bob', 5, UserStatus.offline,
-        id: 'user_bob', avatarSeed: 'bob_seed',);
-    final charlie = _createUser('Charlie', 12, UserStatus.online,
-        id: 'user_charlie', avatarSeed: 'charlie_seed',);
-    final diana = _createUser('Diana', 9, UserStatus.online,
-        id: 'user_diana', avatarSeed: 'diana_seed',);
-    final eva = _createUser('Eva', 6, UserStatus.offline,
-        id: 'user_eva', avatarSeed: 'eva_seed',);
+    final me = _createUser(
+      'AI_Learner_02',
+      15,
+      UserStatus.online,
+      id: currentUserId,
+      avatarSeed: 'AI_Learner_02',
+    );
+    final alice = _createUser(
+      'Alice',
+      8,
+      UserStatus.online,
+      id: 'user_alice',
+      avatarSeed: 'alice_seed',
+    );
+    final bob = _createUser(
+      'Bob',
+      5,
+      UserStatus.offline,
+      id: 'user_bob',
+      avatarSeed: 'bob_seed',
+    );
+    final charlie = _createUser(
+      'Charlie',
+      12,
+      UserStatus.online,
+      id: 'user_charlie',
+      avatarSeed: 'charlie_seed',
+    );
+    final diana = _createUser(
+      'Diana',
+      9,
+      UserStatus.online,
+      id: 'user_diana',
+      avatarSeed: 'diana_seed',
+    );
+    final eva = _createUser(
+      'Eva',
+      6,
+      UserStatus.offline,
+      id: 'user_eva',
+      avatarSeed: 'eva_seed',
+    );
 
     _mockUsers = [alice, bob, charlie, diana, eva, me];
 
@@ -318,8 +348,13 @@ class MockCommunityRepository implements CommunityRepository {
   // Demo user ID - matches DemoDataService.demoUser.id
   static const String currentUserId = 'CS_Sophomore_12345';
 
-  UserBrief _createUser(String name, int level, UserStatus status,
-          {String? avatarSeed, String? id,}) =>
+  UserBrief _createUser(
+    String name,
+    int level,
+    UserStatus status, {
+    String? avatarSeed,
+    String? id,
+  }) =>
       UserBrief(
         id: id ?? const Uuid().v4(),
         username: name.toLowerCase(),
@@ -328,7 +363,8 @@ class MockCommunityRepository implements CommunityRepository {
         // not be a hard dependency for community screens or tests.
         avatarUrl: null,
         flameLevel: level,
-        flameBrightness: (0.5 + (level / 40.0)).clamp(0.0, 1.0),  // 🔧 修复：确保不超过1.0
+        flameBrightness:
+            (0.5 + (level / 40.0)).clamp(0.0, 1.0), // 🔧 修复：确保不超过1.0
         status: status,
       );
 
@@ -342,13 +378,18 @@ class MockCommunityRepository implements CommunityRepository {
       MockCommunityRepository._init();
 
   @override
-  Future<List<FriendshipInfo>> getFriends(
-          {int limit = 20, int offset = 0,}) async =>
+  Future<List<FriendshipInfo>> getFriends({
+    int limit = 20,
+    int offset = 0,
+  }) async =>
       _mockFriends;
 
   @override
-  Future<List<PrivateMessageInfo>> getPrivateMessages(String friendId,
-      {String? beforeId, int limit = 50,}) async {
+  Future<List<PrivateMessageInfo>> getPrivateMessages(
+    String friendId, {
+    String? beforeId,
+    int limit = 50,
+  }) async {
     final messages = _mockPrivateMessages[friendId] ?? [];
     messages.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return messages;
@@ -356,11 +397,18 @@ class MockCommunityRepository implements CommunityRepository {
 
   @override
   Future<PrivateMessageInfo> sendPrivateMessage(
-      PrivateMessageSend message,) async {
+    PrivateMessageSend message,
+  ) async {
     final me = _mockUsers.firstWhere((u) => u.id == currentUserId);
-    final target = _mockUsers.firstWhere((u) => u.id == message.targetUserId,
-        orElse: () => _createUser('User', 1, UserStatus.online,
-            id: message.targetUserId,),);
+    final target = _mockUsers.firstWhere(
+      (u) => u.id == message.targetUserId,
+      orElse: () => _createUser(
+        'User',
+        1,
+        UserStatus.online,
+        id: message.targetUserId,
+      ),
+    );
 
     // Find quoted message if replyToId is set
     PrivateMessageInfo? quotedMessage;
@@ -490,8 +538,10 @@ class MockCommunityRepository implements CommunityRepository {
 
   @override
   Future<List<PrivateMessageInfo>> searchPrivateMessages(
-      String friendId, String keyword,
-      {int limit = 50,}) async {
+    String friendId,
+    String keyword, {
+    int limit = 50,
+  }) async {
     final list = _mockPrivateMessages[friendId] ?? [];
     final lower = keyword.toLowerCase();
     return list
@@ -520,8 +570,11 @@ class MockCommunityRepository implements CommunityRepository {
       _mockGroups.firstWhere((g) => g.id == groupId);
 
   @override
-  Future<List<MessageInfo>> getMessages(String groupId,
-          {String? beforeId, int limit = 50,}) async =>
+  Future<List<MessageInfo>> getMessages(
+    String groupId, {
+    String? beforeId,
+    int limit = 50,
+  }) async =>
       _mockGroupMessages[groupId] ?? [];
 
   @override
@@ -680,8 +733,11 @@ class MockCommunityRepository implements CommunityRepository {
   }
 
   @override
-  Future<List<MessageInfo>> searchGroupMessages(String groupId, String keyword,
-      {int limit = 50,}) async {
+  Future<List<MessageInfo>> searchGroupMessages(
+    String groupId,
+    String keyword, {
+    int limit = 50,
+  }) async {
     final list = _mockGroupMessages[groupId] ?? [];
     final lower = keyword.toLowerCase();
     return list
@@ -692,8 +748,10 @@ class MockCommunityRepository implements CommunityRepository {
 
   @override
   Future<List<MessageInfo>> getThreadMessages(
-      String groupId, String threadRootId,
-      {int limit = 100,}) async {
+    String groupId,
+    String threadRootId, {
+    int limit = 100,
+  }) async {
     final list = _mockGroupMessages[groupId] ?? [];
     MessageInfo? root;
     for (final msg in list) {
@@ -708,17 +766,64 @@ class MockCommunityRepository implements CommunityRepository {
     return combined.take(limit).toList();
   }
 
+  @override
+  Future<int> markGroupMessagesRead(
+    String groupId, {
+    required String upToMessageId,
+  }) async {
+    final list = _mockGroupMessages[groupId];
+    if (list == null || list.isEmpty) {
+      return 0;
+    }
+
+    var updatedCount = 0;
+    for (var i = 0; i < list.length; i++) {
+      final message = list[i];
+      final readBy = List<String>.from(message.readBy ?? const <String>[]);
+      if (!readBy.contains(currentUserId)) {
+        readBy.add(currentUserId);
+        list[i] = MessageInfo(
+          id: message.id,
+          messageType: message.messageType,
+          sender: message.sender,
+          content: message.content,
+          contentData: message.contentData,
+          replyToId: message.replyToId,
+          threadRootId: message.threadRootId,
+          mentionUserIds: message.mentionUserIds,
+          reactions: message.reactions,
+          createdAt: message.createdAt,
+          updatedAt: DateTime.now(),
+          isRevoked: message.isRevoked,
+          revokedAt: message.revokedAt,
+          editedAt: message.editedAt,
+          readBy: readBy,
+          quotedMessage: message.quotedMessage,
+          readByUsers: message.readByUsers,
+        );
+        updatedCount++;
+      }
+      if (message.id == upToMessageId) {
+        break;
+      }
+    }
+    return updatedCount;
+  }
+
   // Other methods remain as minimal implementation
   @override
-  Future<void> sendFriendRequest(String targetUserId,
-      {String? message,}) async {}
+  Future<void> sendFriendRequest(
+    String targetUserId, {
+    String? message,
+  }) async {}
   @override
   Future<void> respondToRequest(String friendshipId, bool accept) async {}
   @override
   Future<List<FriendshipInfo>> getPendingRequests() async => [];
   @override
-  Future<List<FriendRecommendation>> getFriendRecommendations(
-          {int limit = 10,}) async =>
+  Future<List<FriendRecommendation>> getFriendRecommendations({
+    int limit = 10,
+  }) async =>
       [];
   @override
   Future<List<UserBrief>> searchUsers(String keyword, {int limit = 20}) async =>
@@ -728,47 +833,59 @@ class MockCommunityRepository implements CommunityRepository {
   @override
   Future<GroupInfo> createGroup(GroupCreate group) async => _mockGroups[0];
   @override
-  Future<List<GroupListItem>> searchGroups(
-          {String? keyword,
-          GroupType? type,
-          List<String>? tags,
-          int limit = 20,}) async =>
+  Future<List<GroupListItem>> searchGroups({
+    String? keyword,
+    GroupType? type,
+    List<String>? tags,
+    int limit = 20,
+  }) async =>
       [];
   @override
   Future<void> joinGroup(String groupId) async {}
   @override
   Future<void> leaveGroup(String groupId) async {}
   @override
-  Future<CheckinResponse> checkin(String groupId,
-          {required int todayDurationMinutes, String? message,}) async =>
+  Future<CheckinResponse> checkin(
+    String groupId, {
+    required int todayDurationMinutes,
+    String? message,
+  }) async =>
       CheckinResponse(
-          success: true,
-          newStreak: 1,
-          flameEarned: 10,
-          rankInGroup: 1,
-          groupCheckinCount: 1,);
+        success: true,
+        newStreak: 1,
+        flameEarned: 10,
+        rankInGroup: 1,
+        groupCheckinCount: 1,
+      );
   @override
   Future<List<GroupTaskInfo>> getGroupTasks(String groupId) async => [];
   @override
   Future<GroupTaskInfo> createGroupTask(
-          String groupId, GroupTaskCreate task,) async =>
+    String groupId,
+    GroupTaskCreate task,
+  ) async =>
       GroupTaskInfo(
-          id: '',
-          title: '',
-          tags: [],
-          estimatedMinutes: 0,
-          difficulty: 1,
-          totalClaims: 0,
-          totalCompletions: 0,
-          completionRate: 0,
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),);
+        id: '',
+        title: '',
+        tags: [],
+        estimatedMinutes: 0,
+        difficulty: 1,
+        totalClaims: 0,
+        totalCompletions: 0,
+        completionRate: 0,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
   @override
   Future<void> claimTask(String taskId) async {}
   @override
   Future<GroupFlameStatus> getFlameStatus(String groupId) async =>
       GroupFlameStatus(
-          groupId: groupId, totalPower: 0, flames: [], bonfireLevel: 1,);
+        groupId: groupId,
+        totalPower: 0,
+        flames: [],
+        bonfireLevel: 1,
+      );
 
   // === CommunityRepository interface methods ===
   @override

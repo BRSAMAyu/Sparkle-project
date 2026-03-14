@@ -36,12 +36,13 @@ class _AssistantMessageMetadataTrayState
     final sources = _findAction('source_summary');
     final nextActions =
         widget.isLatestMessage ? _findAction('next_actions') : null;
+    final hasSources = _hasSourceDetails(sources?.data);
 
     if (widget.status != null && widget.status!.trim().isNotEmpty) {
       badges.add(
         _MetadataBadge(
           icon: _statusIcon(widget.status!),
-          label: '',
+          label: _statusLabel(widget.status!),
           isCompact: true,
           selected: _expandedKey == 'status',
           onTap: () => _toggle('status'),
@@ -52,9 +53,10 @@ class _AssistantMessageMetadataTrayState
       badges.add(
         _MetadataBadge(
           icon: Icons.link_rounded,
-          label: '延续',
-          selected: _expandedKey == continuity.type,
-          onTap: () => _toggle(continuity.type),
+          label: '承接上文',
+          selected: false,
+          onTap: () {},
+          enabled: false,
         ),
       );
     }
@@ -63,18 +65,20 @@ class _AssistantMessageMetadataTrayState
         _MetadataBadge(
           icon: Icons.auto_awesome_rounded,
           label: _shortModeLabel(mode.data),
-          selected: _expandedKey == mode.type,
-          onTap: () => _toggle(mode.type),
+          selected: false,
+          onTap: () {},
+          enabled: false,
         ),
       );
     }
-    if (sources != null) {
+    if (sources != null && hasSources) {
       badges.add(
         _MetadataBadge(
-          icon: Icons.bookmark_border_rounded,
-          label: '来源',
+          icon: Icons.library_books_outlined,
+          label: '依据',
           selected: _expandedKey == sources.type,
           onTap: () => _toggle(sources.type),
+          iconOnlyWhenCollapsed: true,
         ),
       );
     }
@@ -85,6 +89,8 @@ class _AssistantMessageMetadataTrayState
           label: '下一步',
           selected: _expandedKey == nextActions.type,
           onTap: () => _toggle(nextActions.type),
+          iconOnlyWhenCollapsed: true,
+          emphasize: true,
         ),
       );
     }
@@ -99,8 +105,8 @@ class _AssistantMessageMetadataTrayState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Wrap(
-            spacing: DS.spacing8,
-            runSpacing: DS.spacing8,
+            spacing: DS.spacing6,
+            runSpacing: DS.spacing6,
             children: badges,
           ),
           AnimatedSwitcher(
@@ -142,50 +148,13 @@ class _AssistantMessageMetadataTrayState
           ),
         );
       case 'continuity_banner':
-        final message = continuity?.data['message']?.toString().trim() ?? '';
-        if (message.isEmpty) return const SizedBox.shrink();
-        return _MetadataPanel(
-          key: const ValueKey('continuity_banner'),
-          child: Text(
-            message,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: DS.textPrimary,
-                  height: 1.45,
-                ),
-          ),
-        );
+        return const SizedBox.shrink();
       case 'mode_explanation':
-        final label = mode?.data['label']?.toString().trim() ?? '';
-        final description = mode?.data['description']?.toString().trim() ?? '';
-        if (label.isEmpty && description.isEmpty) return const SizedBox.shrink();
-        return _MetadataPanel(
-          key: const ValueKey('mode_explanation'),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (label.isNotEmpty)
-                Text(
-                  label,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: DS.textPrimary,
-                        fontWeight: DS.fontWeightSemibold,
-                      ),
-                ),
-              if (description.isNotEmpty) ...[
-                if (label.isNotEmpty) const SizedBox(height: DS.spacing4),
-                Text(
-                  description,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: DS.textSecondary,
-                        height: 1.4,
-                      ),
-                ),
-              ],
-            ],
-          ),
-        );
+        return const SizedBox.shrink();
       case 'source_summary':
-        if (sources == null) return const SizedBox.shrink();
+        if (sources == null || !_hasSourceDetails(sources.data)) {
+          return const SizedBox.shrink();
+        }
         return _MetadataPanel(
           key: const ValueKey('source_summary'),
           child: _SourceSummaryContent(data: sources.data),
@@ -220,6 +189,17 @@ class _AssistantMessageMetadataTrayState
     return actions is List && actions.isNotEmpty;
   }
 
+  bool _hasSourceDetails(Map<String, dynamic>? data) {
+    if (data == null) return false;
+    final citations = data['citations'];
+    if (citations is List && citations.isNotEmpty) {
+      return true;
+    }
+    final headline = data['headline']?.toString().trim() ?? '';
+    final evidenceSummary = data['evidence_summary']?.toString().trim() ?? '';
+    return headline.isNotEmpty || evidenceSummary.isNotEmpty;
+  }
+
   void _toggle(String key) {
     setState(() {
       _expandedKey = _expandedKey == key ? null : key;
@@ -229,8 +209,8 @@ class _AssistantMessageMetadataTrayState
   String _shortModeLabel(Map<String, dynamic> data) {
     final label = data['label']?.toString().trim() ?? '';
     if (label.isEmpty) return '协作';
-    if (label.length <= 6) return label;
-    return '${label.substring(0, 6)}...';
+    if (label.length <= 4) return label;
+    return '${label.substring(0, 4)}…';
   }
 
   IconData _statusIcon(String status) {
@@ -275,6 +255,9 @@ class _MetadataBadge extends StatelessWidget {
     required this.selected,
     required this.onTap,
     this.isCompact = false,
+    this.iconOnlyWhenCollapsed = false,
+    this.enabled = true,
+    this.emphasize = false,
   });
 
   final IconData icon;
@@ -282,29 +265,42 @@ class _MetadataBadge extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
   final bool isCompact;
+  final bool iconOnlyWhenCollapsed;
+  final bool enabled;
+  final bool emphasize;
 
   @override
   Widget build(BuildContext context) {
+    final showLabel = !isCompact &&
+        label.trim().isNotEmpty &&
+        (!iconOnlyWhenCollapsed || selected);
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(999),
-        onTap: onTap,
+        onTap: enabled ? onTap : null,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 160),
           padding: EdgeInsets.symmetric(
-            horizontal: isCompact ? DS.spacing8 : DS.spacing10,
-            vertical: DS.spacing6,
+            horizontal: isCompact
+                ? DS.spacing8
+                : (showLabel ? DS.spacing10 : DS.spacing8),
+            vertical: emphasize ? DS.spacing8 : DS.spacing6,
           ),
           decoration: BoxDecoration(
             color: selected
                 ? DS.primaryBase.withValues(alpha: 0.12)
-                : DS.surfacePanel,
+                : emphasize
+                    ? DS.primaryBase.withValues(alpha: 0.08)
+                    : DS.surfacePanel,
             borderRadius: BorderRadius.circular(999),
             border: Border.all(
               color: selected
                   ? DS.primaryBase.withValues(alpha: 0.28)
-                  : DS.borderSubtle,
+                  : emphasize
+                      ? DS.primaryBase.withValues(alpha: 0.22)
+                      : DS.borderSubtle,
             ),
           ),
           child: Row(
@@ -315,7 +311,7 @@ class _MetadataBadge extends StatelessWidget {
                 size: DS.iconSizeXs,
                 color: selected ? DS.primaryBase : DS.textSecondary,
               ),
-              if (!isCompact && label.trim().isNotEmpty) ...[
+              if (showLabel) ...[
                 const SizedBox(width: DS.spacing4),
                 Text(
                   label,
@@ -344,7 +340,7 @@ class _MetadataPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: DS.spacing8),
+      padding: const EdgeInsets.only(top: DS.spacing6),
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: DS.surfacePanel,
@@ -368,8 +364,6 @@ class _SourceSummaryContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final headline = data['headline']?.toString().trim() ?? '';
-    final focus = data['first_screen_focus']?.toString().trim() ?? '';
-    final evidenceSummary = data['evidence_summary']?.toString().trim() ?? '';
     final citations = (data['citations'] as List<dynamic>? ?? const [])
         .whereType<Map<Object?, Object?>>()
         .map((item) => Map<String, dynamic>.from(item))
@@ -386,28 +380,8 @@ class _SourceSummaryContent extends StatelessWidget {
                   fontWeight: DS.fontWeightSemibold,
                 ),
           ),
-        if (focus.isNotEmpty) ...[
-          if (headline.isNotEmpty) const SizedBox(height: DS.spacing6),
-          Text(
-            focus,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: DS.textSecondary,
-                ),
-          ),
-        ],
-        if (evidenceSummary.isNotEmpty) ...[
-          if (headline.isNotEmpty || focus.isNotEmpty)
-            const SizedBox(height: DS.spacing8),
-          Text(
-            evidenceSummary,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: DS.textPrimary,
-                  height: 1.45,
-                ),
-          ),
-        ],
         if (citations.isNotEmpty) ...[
-          const SizedBox(height: DS.spacing10),
+          if (headline.isNotEmpty) const SizedBox(height: DS.spacing8),
           ...citations.take(3).map(
                 (citation) => Padding(
                   padding: const EdgeInsets.only(bottom: DS.spacing8),
@@ -422,7 +396,8 @@ class _SourceSummaryContent extends StatelessWidget {
                       const SizedBox(width: DS.spacing4),
                       Expanded(
                         child: Text(
-                          citation['title']?.toString().trim().isNotEmpty == true
+                          citation['title']?.toString().trim().isNotEmpty ==
+                                  true
                               ? citation['title'].toString()
                               : (citation['content']?.toString() ?? ''),
                           maxLines: 2,

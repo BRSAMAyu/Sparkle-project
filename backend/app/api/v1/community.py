@@ -2,17 +2,20 @@
 社群功能 API 路由
 Community API - 好友、群组、消息、打卡、任务相关接口
 """
+import asyncio
 import contextlib
 import json
 from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
+from loguru import logger
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.config import settings
+from app.core.cache import cache_service
 from app.core.rate_limiting import limiter
 from app.core.security import decode_token
 from app.core.websocket import manager
@@ -116,6 +119,7 @@ from app.services.community_service import (
     GroupTaskService,
     PrivateMessageService,
 )
+from app.services.streak_signal_processor import StreakSignalProcessor
 from app.services.group_file_service import GroupFileService
 from app.services.group_recommendation_service import GroupRecommendationService
 
@@ -1656,6 +1660,7 @@ async def checkin(
     try:
         result = await CheckinService.checkin(db, current_user.id, data)
         await db.commit()
+        asyncio.create_task(_refresh_streak_signals(current_user.id))
 
         # Broadcast member checkin event
         await manager.broadcast({
@@ -1669,6 +1674,15 @@ async def checkin(
         return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+async def _refresh_streak_signals(user_id: UUID) -> None:
+    try:
+        async with AsyncSessionLocal() as session:
+            processor = StreakSignalProcessor(session, cache_service.redis)
+            await processor.process_checkin(user_id)
+    except Exception as exc:
+        logger.warning(f"Failed to refresh streak signals for {user_id}: {exc}")
 
 
 # ============ 群任务 ============

@@ -5,6 +5,7 @@ import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/services/memory_api_service.dart';
+import 'package:sparkle/features/memory/memory_routes.dart';
 
 class MemorySettingsScreen extends ConsumerStatefulWidget {
   const MemorySettingsScreen({super.key});
@@ -135,6 +136,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
         _saving = false;
       });
       AppFeedback.success(context, '记忆设置已更新');
+      MemoryRoutes.popOrGoPanel(context);
     } catch (e) {
       if (!mounted) {
         return;

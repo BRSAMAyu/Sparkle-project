@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sparkle/core/constants/api_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_permission_dialog.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 import 'package:sparkle/features/chat/data/services/audio_recording_service.dart';
@@ -57,36 +58,22 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
   /// 检查麦克风权限
   Future<bool> _checkPermissions() async {
     final status = await Permission.microphone.request();
-    if (status.isPermanentlyDenied) {
-      if (mounted) {
-        _showPermissionDialog();
-      }
-      return false;
+    if (status.isGranted) {
+      return true;
     }
-    return status.isGranted;
+    if (status.isPermanentlyDenied || status.isRestricted || status.isDenied) {
+      if (mounted) {
+        await _showPermissionDialog();
+      }
+    }
+    return false;
   }
 
   /// 显示权限申请对话框
-  void _showPermissionDialog() {
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(context.l10n.voiceInputPermissionTitle),
-        content: Text(context.l10n.voiceInputPermissionContent),
-        actions: [
-          SparkleButton.ghost(
-            label: context.l10n.cancel,
-            onPressed: () => Navigator.pop(context),
-          ),
-          SparkleButton.primary(
-            label: context.l10n.voiceInputOpenSettings,
-            onPressed: () {
-              Navigator.pop(context);
-              openAppSettings();
-            },
-          ),
-        ],
-      ),
+  Future<void> _showPermissionDialog() {
+    return showAppPermissionDialog(
+      context,
+      permission: AppPermissionKind.microphone,
     );
   }
 

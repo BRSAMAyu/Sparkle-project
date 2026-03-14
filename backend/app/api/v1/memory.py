@@ -9,6 +9,7 @@ from app.api.deps import get_current_user, get_db
 from app.config import settings
 from app.models.memory import EpisodicMemory, MemoryGoal, MemoryPreference
 from app.models.user import User
+from app.services.personalization.inferred_meta import INFERRED_META, build_inferred_explanation
 from app.services.memory_service import MemoryService
 
 router = APIRouter(prefix="/memory", tags=["memory"])
@@ -32,6 +33,52 @@ def _ensure_memory_correction_enabled() -> None:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Memory correction disabled")
 
 
+def _resolve_preference_source(record: MemoryPreference) -> tuple[str, str]:
+    evidence_types = {
+        ref.get("type")
+        for ref in (record.evidence_refs or [])
+        if isinstance(ref, dict)
+    }
+    if "ai_inferred" in evidence_types:
+        return "ai_inferred", "系统推断"
+    return "user_state", "用户设置"
+
+
+def _serialize_preference_record(
+    record: MemoryPreference,
+    *,
+    current_values: dict[str, object],
+) -> dict[str, object]:
+    source_type, source_label = _resolve_preference_source(record)
+    explanation = None
+    adjustable = False
+    if source_type == "ai_inferred":
+        explanation = build_inferred_explanation(
+            record.pref_key,
+            (record.pref_value or {}).get("value") if isinstance(record.pref_value, dict) else record.pref_value,
+            current_values,
+        )
+        adjustable = INFERRED_META.get(record.pref_key).adjustable if record.pref_key in INFERRED_META else False
+
+    return {
+        "id": str(record.id),
+        "pref_key": record.pref_key,
+        "pref_value": record.pref_value,
+        "version": record.version,
+        "confidence": record.confidence,
+        "evidence_score": record.evidence_score,
+        "correction_count": record.correction_count,
+        "updated_at": record.updated_at,
+        "evidence_missing": record.evidence_missing,
+        "evidence_refs": record.evidence_refs or [],
+        "retracted_at": record.retracted_at,
+        "source_label": source_label,
+        "source_type": source_type,
+        "explanation": explanation,
+        "adjustable": adjustable,
+    }
+
+
 @router.get("/preferences")
 async def list_preferences(
     db: AsyncSession = Depends(get_db),
@@ -48,22 +95,23 @@ async def list_preferences(
         .order_by(MemoryPreference.pref_key.asc(), MemoryPreference.version.desc())
     )
     latest_by_key = {}
-    for record in result.scalars().all():
+    records = result.scalars().all()
+    current_values = {}
+    for record in records:
+        if record.pref_key in current_values:
+            continue
+        current_values[record.pref_key] = (
+            (record.pref_value or {}).get("value")
+            if isinstance(record.pref_value, dict)
+            else record.pref_value
+        )
+    for record in records:
         if record.pref_key in latest_by_key:
             continue
-        latest_by_key[record.pref_key] = {
-            "id": str(record.id),
-            "pref_key": record.pref_key,
-            "pref_value": record.pref_value,
-            "version": record.version,
-            "confidence": record.confidence,
-            "evidence_score": record.evidence_score,
-            "correction_count": record.correction_count,
-            "updated_at": record.updated_at,
-            "evidence_missing": record.evidence_missing,
-            "evidence_refs": record.evidence_refs or [],
-            "retracted_at": record.retracted_at,
-        }
+        latest_by_key[record.pref_key] = _serialize_preference_record(
+            record,
+            current_values=current_values,
+        )
     return {"items": list(latest_by_key.values())}
 
 

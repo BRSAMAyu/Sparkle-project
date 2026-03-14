@@ -185,12 +185,16 @@ class GraphiteModalSurface extends StatelessWidget {
     this.title,
     this.padding = const EdgeInsets.fromLTRB(20, 16, 20, 20),
     this.surfaceRole = SparkleSurfaceRole.modal,
+    this.borderRadius = const BorderRadius.vertical(top: Radius.circular(28)),
+    this.showHandle = true,
   });
 
   final Widget child;
   final String? title;
   final EdgeInsetsGeometry padding;
   final SparkleSurfaceRole surfaceRole;
+  final BorderRadiusGeometry borderRadius;
+  final bool showHandle;
 
   @override
   Widget build(BuildContext context) {
@@ -201,7 +205,7 @@ class GraphiteModalSurface extends StatelessWidget {
     return SafeArea(
       top: false,
       child: ClipRRect(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        borderRadius: borderRadius,
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
           child: AnimatedContainer(
@@ -210,27 +214,26 @@ class GraphiteModalSurface extends StatelessWidget {
             padding: padding,
             decoration: BoxDecoration(
               color: DS.surfaceRoleColor(surfaceRole),
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(28),
-              ),
-              border: Border(
-                top: BorderSide(color: DS.borderSubtle),
+              borderRadius: borderRadius,
+              border: Border.all(
+                color: DS.borderSubtle,
               ),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Center(
-                  child: Container(
-                    width: 36,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: DS.borderStrong,
-                      borderRadius: BorderRadius.circular(999),
+                if (showHandle)
+                  Center(
+                    child: Container(
+                      width: 36,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: DS.borderStrong,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
                     ),
                   ),
-                ),
                 if (title != null) ...[
                   const SizedBox(height: 16),
                   Text(

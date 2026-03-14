@@ -1,10 +1,14 @@
+import 'dart:io';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_permission_dialog.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/auth/auth.dart';
@@ -24,6 +28,37 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   late TextEditingController _emailController;
   bool _isLoading = false;
   final _picker = ImagePicker();
+
+  Future<bool> _ensureMediaPermission(String source) async {
+    if (source == 'camera') {
+      final status = await Permission.camera.request();
+      if (status.isGranted) {
+        return true;
+      }
+    } else {
+      final photoStatus = await Permission.photos.request();
+      if (photoStatus.isGranted || photoStatus.isLimited) {
+        return true;
+      }
+
+      if (!Platform.isIOS) {
+        final storageStatus = await Permission.storage.request();
+        if (storageStatus.isGranted) {
+          return true;
+        }
+      }
+    }
+
+    if (mounted) {
+      await showAppPermissionDialog(
+        context,
+        permission: source == 'camera'
+            ? AppPermissionKind.camera
+            : AppPermissionKind.photos,
+      );
+    }
+    return false;
+  }
 
   @override
   void initState() {
@@ -91,7 +126,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         }
       } catch (e) {
         if (parentContext.mounted) {
-          AppFeedback.error(parentContext, l10n.editProfileUpdateFailed(e.toString()));
+          AppFeedback.error(
+              parentContext, l10n.editProfileUpdateFailed(e.toString()));
         }
       } finally {
         if (mounted) setState(() => _isLoading = false);
@@ -101,6 +137,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
     final imageSource =
         source == 'camera' ? ImageSource.camera : ImageSource.gallery;
+    final hasPermission = await _ensureMediaPermission(source);
+    if (!hasPermission) return;
     final pickedFile = await _picker.pickImage(
       source: imageSource,
       maxWidth: 512,
@@ -151,7 +189,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
       if (mounted) {
         AppFeedback.success(context, l10n.editProfileProfileUpdated);
-        Navigator.of(context).pop();
+        UserRoutes.popOrGoProfile(context);
       }
     } catch (e) {
       if (mounted) {
@@ -326,8 +364,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                         Icon(Icons.lock_reset_rounded, color: DS.primaryBase),
                     title: Text(
                       l10n.editProfileResetPassword,
-                      style:
-                          const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+                      style: const TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w500),
                     ),
                     trailing: const Icon(Icons.chevron_right_rounded),
                     onTap: () {
@@ -347,14 +385,17 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildInfoRow(l10n.editProfileFlameLevel, 'Lv.${user?.flameLevel ?? 1}'),
+                      _buildInfoRow(l10n.editProfileFlameLevel,
+                          'Lv.${user?.flameLevel ?? 1}'),
                       _buildInfoRow(
                         l10n.editProfileFlameBrightness,
                         '${((user?.flameBrightness ?? 0.5) * 100).toInt()}%',
                       ),
                       _buildInfoRow(
                         l10n.editProfileAccountType,
-                        user?.id.startsWith('guest') ?? false ? l10n.editProfileGuestAccount : l10n.editProfileFullAccount,
+                        user?.id.startsWith('guest') ?? false
+                            ? l10n.editProfileGuestAccount
+                            : l10n.editProfileFullAccount,
                       ),
                     ],
                   ),

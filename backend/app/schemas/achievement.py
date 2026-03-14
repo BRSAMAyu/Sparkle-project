@@ -160,7 +160,7 @@ class ContractCheckResponse(BaseModel):
 
 # ========== Galaxy Skin Schemas ==========
 
-class GalaxySkinBase(BaseSchema):
+class GalaxySkinBase(BaseModel):
     """Galaxy skin basic information"""
     id: str = Field(description="Skin ID")
     name: str = Field(description="Skin name")

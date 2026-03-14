@@ -19,8 +19,7 @@ class AchievementRepository {
       final Map<dynamic, dynamic> map => map['detail'] as String?,
       _ => null,
     };
-    final errorMessage =
-        detail ?? 'An unknown error occurred in $functionName';
+    final errorMessage = detail ?? 'An unknown error occurred in $functionName';
     throw Exception(errorMessage);
   }
 
@@ -297,13 +296,15 @@ class AchievementRepository {
           ApiResponseParser.unwrapMap(response.data, action: 'getTitles');
       final dataList = payload['data'] as List<dynamic>?;
 
-      return dataList
-              ?.map(
-                (json) => UserTitle.fromJson(
-                  json as Map<String, dynamic>,
-                ),
-              )
-              .toList() ??
+      return dataList?.map(
+            (json) {
+              final item = Map<String, dynamic>.from(
+                json as Map<String, dynamic>,
+              );
+              item.putIfAbsent('user_id', () => '');
+              return UserTitle.fromJson(item);
+            },
+          ).toList() ??
           [];
     } on DioException catch (e) {
       return _handleDioError(e, 'getTitles');

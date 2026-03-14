@@ -46,6 +46,8 @@ from app.models import (
     TrackingEvent, UserStateSnapshot,
     # Phase 2 models
     StrategyNode, SemanticLink,
+    # Recommendation models
+    UserSimilarity, ItemSimilarity, UserItemInteraction, UserLearningProfile, RecommendationCache, LeaderboardSnapshot,
     NightlyReview,
     # Seed Content Library
     SeedLibrary, SeedItem, UserLibrarySubscription,

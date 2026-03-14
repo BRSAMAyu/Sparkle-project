@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/auth/auth.dart';
+import 'package:sparkle/features/user/user_routes.dart';
 
 class SchedulePreferencesScreen extends ConsumerStatefulWidget {
   const SchedulePreferencesScreen({super.key});
@@ -86,7 +87,7 @@ class _SchedulePreferencesScreenState
       });
       if (mounted) {
         AppFeedback.success(context, context.l10n.schedulePreferencesSaved);
-        Navigator.pop(context);
+        UserRoutes.popOrGoProfile(context);
       }
     } catch (e) {
       if (mounted) {

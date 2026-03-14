@@ -39,6 +39,20 @@ class UserRoutes {
   static const String memorySettings = '/profile/memory-settings';
   static const String syncCenter = '/profile/sync-center';
 
+  static void popOrGo(BuildContext context, {required String fallback}) {
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      context.pop();
+      return;
+    }
+    context.go(fallback);
+  }
+
+  static void popOrGoProfile(BuildContext context,
+      {String fallback = profile}) {
+    popOrGo(context, fallback: fallback);
+  }
+
   static List<RouteBase> get routes => [
         GoRoute(
           path: editProfile,
@@ -61,7 +75,9 @@ class UserRoutes {
           name: 'profilePersona',
           pageBuilder: (context, state) => _buildTransitionPage(
             state: state,
-            child: const UserPersonaScreen(),
+            child: UserPersonaScreen(
+              initialOverrideKey: state.uri.queryParameters['override'],
+            ),
           ),
         ),
         GoRoute(

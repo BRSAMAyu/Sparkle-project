@@ -10,6 +10,7 @@ import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
+import 'package:sparkle/features/user/user_routes.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 
@@ -78,6 +79,7 @@ class _SmartPushSettingsScreenState
 
       if (mounted) {
         AppFeedback.success(context, l10n.smartPushSettingsSaved);
+        UserRoutes.popOrGoProfile(context);
       }
     } catch (e) {
       _logger.e('Failed to save push settings: $e');

@@ -9,6 +9,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:sparkle/core/constants/api_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_permission_dialog.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
@@ -115,6 +116,28 @@ class _AchievementShareDialogState extends State<AchievementShareDialog> {
     if (_imageFile == null || _shareCard == null) return;
 
     try {
+      final photoStatus = await Permission.photos.request();
+      PermissionStatus? storageStatus;
+      if (!photoStatus.isGranted &&
+          !photoStatus.isLimited &&
+          Platform.isAndroid) {
+        storageStatus = await Permission.storage.request();
+      }
+      final hasPermission = photoStatus.isGranted ||
+          photoStatus.isLimited ||
+          (storageStatus?.isGranted ?? false);
+      if (!hasPermission) {
+        if (mounted) {
+          await showAppPermissionDialog(
+            context,
+            permission: Platform.isAndroid
+                ? AppPermissionKind.storage
+                : AppPermissionKind.photos,
+          );
+        }
+        throw Exception(context.l10n.noGalleryPermission);
+      }
+
       final saveFile = widget.saveFileToGallery ?? _saveImageToGallery;
       await saveFile(_imageFile!, _shareCard!);
       if (mounted && widget.showFeedback) {

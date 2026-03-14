@@ -8,6 +8,7 @@ import 'package:sparkle/core/services/memory_api_service.dart';
 import 'package:sparkle/features/memory/presentation/screens/memory_detail_screen.dart';
 import 'package:sparkle/features/memory/presentation/widgets/memory_evidence_badge.dart';
 import 'package:sparkle/features/memory/memory_routes.dart';
+import 'package:sparkle/features/user/user_routes.dart';
 
 enum MemoryEntryType { preference, goal, episodic }
 
@@ -328,10 +329,11 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
 
   Widget _buildPreferenceCard(MemoryPreferenceItem item) => _MemoryCard(
         title: item.prefKey,
-        subtitle: _formatUpdated(item.updatedAt),
+        subtitle: _formatPreferenceSubtitle(item),
         badge: MemoryEvidenceBadge(
             status: _statusFor(item.evidenceMissing, item.evidenceRefs)),
         correctionCount: item.correctionCount,
+        footer: _buildPreferenceFooter(item),
         onTap: () => _openDetail(
           context,
           MemoryDetailArgs.preference(item),
@@ -364,6 +366,9 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
 
   Widget _buildEntryCard(MemoryEntry entry) {
     final isPinned = _pinnedIds.contains(entry.id);
+    final preference = entry.detailArgs.preference;
+    final showAdjust =
+        preference?.sourceType == 'ai_inferred' && preference?.adjustable == true;
     final subtitle = [
       _entryTypeLabel(entry.type),
       _formatUpdated(entry.updatedAt),
@@ -383,7 +388,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
                 ],
               ),
         trailing: SizedBox(
-          width: 176,
+          width: showAdjust ? 240 : 176,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
@@ -391,6 +396,13 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
               if (entry.correctionCount > 0) ...[
                 const SizedBox(width: 6),
                 _CorrectionBadge(count: entry.correctionCount),
+              ],
+              if (showAdjust) ...[
+                const SizedBox(width: 6),
+                SparkleButton.ghost(
+                  onPressed: () => _openPersonaAdjust(preference!),
+                  label: '调整',
+                ),
               ],
               const SizedBox(width: 4),
               SparkleIconButton(
@@ -603,6 +615,55 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
     }
     return MemoryEvidenceStatus.ok;
   }
+
+  String _formatPreferenceSubtitle(MemoryPreferenceItem item) {
+    final parts = <String>[
+      if ((item.sourceLabel ?? '').isNotEmpty) item.sourceLabel!,
+      _formatUpdated(item.updatedAt),
+    ];
+    return parts.join(' · ');
+  }
+
+  Widget? _buildPreferenceFooter(MemoryPreferenceItem item) {
+    final parts = <Widget>[];
+    if ((item.explanation ?? '').isNotEmpty) {
+      parts.add(
+        Text(
+          item.explanation!,
+          style: TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeSm),
+        ),
+      );
+    }
+    if (item.sourceType == 'ai_inferred' && item.adjustable) {
+      if (parts.isNotEmpty) {
+        parts.add(const SizedBox(height: DS.sm));
+      }
+      parts.add(
+        Align(
+          alignment: Alignment.centerLeft,
+          child: SparkleButton.ghost(
+            onPressed: () => _openPersonaAdjust(item),
+            label: '调整',
+          ),
+        ),
+      );
+    }
+    if (parts.isEmpty) {
+      return null;
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: parts,
+    );
+  }
+
+  void _openPersonaAdjust(MemoryPreferenceItem item) {
+    final uri = Uri(
+      path: UserRoutes.persona,
+      queryParameters: {'override': item.prefKey},
+    );
+    context.push(uri.toString());
+  }
 }
 
 class _SectionHeader extends StatelessWidget {
@@ -627,6 +688,7 @@ class _MemoryCard extends StatelessWidget {
     required this.badge,
     required this.correctionCount,
     required this.onTap,
+    this.footer,
   });
 
   final String title;
@@ -634,24 +696,55 @@ class _MemoryCard extends StatelessWidget {
   final Widget badge;
   final int correctionCount;
   final VoidCallback onTap;
+  final Widget? footer;
 
   @override
   Widget build(BuildContext context) => Card(
         margin: const EdgeInsets.only(bottom: DS.md),
-        child: ListTile(
-          title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
-          subtitle: Text(subtitle),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              badge,
-              if (correctionCount > 0) ...[
-                const SizedBox(width: 6),
-                _CorrectionBadge(count: correctionCount),
-              ],
-            ],
-          ),
+        child: InkWell(
           onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(DS.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(subtitle),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: DS.sm),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        badge,
+                        if (correctionCount > 0) ...[
+                          const SizedBox(width: 6),
+                          _CorrectionBadge(count: correctionCount),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+                if (footer != null) ...[
+                  const SizedBox(height: DS.sm),
+                  footer!,
+                ],
+              ],
+            ),
+          ),
         ),
       );
 }

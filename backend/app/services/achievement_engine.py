@@ -1063,12 +1063,22 @@ class AchievementEngine:
         result_list = []
         for achievement in filtered:
             user_ach = user_progress.get(achievement.id)
-            is_unlocked = user_ach and user_ach.unlocked_at is not None
+            is_unlocked = bool(user_ach and user_ach.unlocked_at is not None)
             progress_percentage = int((user_ach.progress if user_ach else 0) * 100)
 
             # 转换为schema
-            achievement_detail = AchievementDetail.model_validate(achievement)
-            user_progress_detail = UserAchievementProgressPayload.model_validate(user_ach) if user_ach else None
+            achievement_detail = AchievementDetail.model_validate(
+                achievement,
+                from_attributes=True,
+            )
+            user_progress_detail = (
+                UserAchievementProgressPayload.model_validate(
+                    user_ach,
+                    from_attributes=True,
+                )
+                if user_ach
+                else None
+            )
 
             result_list.append(AchievementWithProgress(
                 achievement=achievement_detail,
@@ -1177,7 +1187,7 @@ class AchievementEngine:
         stats = await self._get_or_create_streak_stats(user_id)
 
         from app.schemas.achievement import StreakStatsResponse
-        return StreakStatsResponse.model_validate(stats).model_dump()
+        return StreakStatsResponse.model_validate(stats, from_attributes=True).model_dump()
 
     async def get_achievement_stats(self, user_id: str) -> dict[str, Any]:
         """获取用户成就统计"""

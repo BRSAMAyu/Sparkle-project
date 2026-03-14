@@ -53,7 +53,8 @@ void main() async {
 
     // Enable Demo Mode via --dart-define=DEMO_MODE=true
     const isDemoMode = bool.fromEnvironment('DEMO_MODE');
-    DemoDataService.isDemoMode = isDemoMode;
+    DemoDataService.isDemoMode =
+        isDemoMode || (prefs.getBool('demo_guest_mode_enabled') ?? false);
 
     // TODO: Open Hive boxes
     await Hive.openBox<dynamic>('settings');

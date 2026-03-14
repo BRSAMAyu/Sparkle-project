@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/auth/auth.dart';
+import 'package:sparkle/features/user/user_routes.dart';
 
 class PasswordResetScreen extends ConsumerStatefulWidget {
   const PasswordResetScreen({super.key});
@@ -43,7 +44,7 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
           );
       if (mounted) {
         AppFeedback.success(context, l10n.passwordResetSuccess);
-        Navigator.of(context).pop();
+        UserRoutes.popOrGoProfile(context);
       }
     } catch (e) {
       if (mounted) {
