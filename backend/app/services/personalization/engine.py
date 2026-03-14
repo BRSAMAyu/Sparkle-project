@@ -6,7 +6,7 @@ from uuid import UUID
 from app.core.profile_context import ProfileContext
 
 from .preference_service import PreferenceService
-from .profiles import LLMProfile, PushPolicyProfile, TaskPlanProfile
+from .profiles import LLMProfile, PolicyExplanation, PushPolicyProfile, TaskPlanProfile
 from .runtime_context_service import RuntimeContextService
 
 
@@ -51,8 +51,11 @@ class PersonalizationEngine:
 
         # 显式未设置时，使用推断值
         depth = explicit.get("depth_preference")
-        if depth is None:
-            depth = inferred.get("depth_preference", 0.5)
+        if depth is None or prefs.last_explicit_update is None:
+            depth = explicit.get(
+                "depth_preference_signal",
+                inferred.get("depth_preference_signal", inferred.get("depth_preference", 0.5)),
+            )
 
         verbosity = "detailed" if depth > 0.7 else ("concise" if depth < 0.3 else "balanced")
         temperature = 0.3 + (depth * 0.4)
@@ -70,7 +73,11 @@ class PersonalizationEngine:
         persona_additions = self._get_persona_prompt_additions(persona)
 
         # 标记来源（用于调试）
-        depth_source = "explicit" if explicit.get("depth_preference") is not None else "inferred"
+        depth_source = (
+            "explicit"
+            if explicit.get("depth_preference") is not None and prefs.last_explicit_update is not None
+            else "inferred"
+        )
         curiosity_source = "explicit" if explicit.get("curiosity_preference") is not None else "inferred"
 
         system_additions = f"""
@@ -86,10 +93,24 @@ class PersonalizationEngine:
 - 如果 exploration=exploratory，可以主动引入相关的有趣知识点
 - 如果 exploration=focused，严格围绕用户问题，不发散
 """
+        error_density = inferred.get("error_density_score")
+        if isinstance(error_density, (int, float)) and error_density >= 0.7:
+            system_additions += "\n- 用户近期错题密度较高，请放慢节奏，确认理解后再推进。"
         policy_signals = self._collect_policy_signals(resolved_context)
+        signal_sources = self._collect_policy_signal_sources(resolved_context)
+        applied_policies: list[PolicyExplanation] = []
+        if isinstance(error_density, (int, float)) and error_density >= 0.7:
+            applied_policies.append(
+                PolicyExplanation(
+                    signal="llm.pacing.slow_down_for_error_density",
+                    effect="The assistant slows the pace and verifies understanding before moving forward.",
+                    source_pattern="error_book",
+                )
+            )
         policy_instructions = self._build_llm_policy_instructions(policy_signals)
         if policy_instructions:
             system_additions += f"\n## 行为策略适配\n{policy_instructions}\n"
+        applied_policies.extend(self._build_policy_explanations("llm", policy_signals, signal_sources))
 
         return LLMProfile(
             system_prompt_additions=system_additions,
@@ -99,6 +120,7 @@ class PersonalizationEngine:
             should_provide_examples=depth > 0.5,
             exploration_level=exploration,
             tone=tone,
+            applied_policies=applied_policies,
         )
 
     async def get_push_policy_profile(
@@ -148,11 +170,78 @@ class PersonalizationEngine:
             end = self._slot_to_minutes(slot, "end_min", "end", 540)
             active_hours.extend(range(start, end))
 
+        chat_active_hours = inferred.get("chat_active_hours")
+        if not active_hours and isinstance(chat_active_hours, list) and chat_active_hours:
+            active_hours = self._expand_hours_to_minutes(chat_active_hours)
+
+        push_receptivity = explicit.get("push_receptivity", inferred.get("push_receptivity"))
+        applied_policies: list[PolicyExplanation] = []
+        if isinstance(push_receptivity, (int, float)) and push_receptivity < 0.3:
+            daily_cap = max(1, int(daily_cap * max(0.1, float(push_receptivity))))
+            applied_policies.append(
+                PolicyExplanation(
+                    signal="push.frequency.reduce_for_low_receptivity",
+                    effect=f"Daily push cap was reduced to {daily_cap} because recent push receptivity is low.",
+                    source_pattern="push_feedback",
+                )
+            )
+
+        community_engagement = inferred.get("community_engagement_level")
+        if community_engagement == "passive":
+            daily_cap = max(1, int(daily_cap * 0.85))
+            applied_policies.append(
+                PolicyExplanation(
+                    signal="push.community.reduce_frequency",
+                    effect="Community-related push pressure was reduced because community engagement is currently passive.",
+                    source_pattern="community",
+                )
+            )
+
+        if explicit.get("curiosity_push_receptivity", inferred.get("curiosity_push_receptivity")) == "low":
+            curiosity_freq = "low"
+            applied_policies.append(
+                PolicyExplanation(
+                    signal="push.curiosity.lower_frequency",
+                    effect="Curiosity push frequency was forced to low because recent curiosity pushes were often ignored.",
+                    source_pattern="push_feedback",
+                )
+            )
+
+        inactive_hours = set()
+        for hour in explicit.get("inactive_push_hours", inferred.get("inactive_push_hours")) or []:
+            try:
+                hour_int = int(hour)
+            except (TypeError, ValueError):
+                continue
+            if 0 <= hour_int <= 23:
+                inactive_hours.add(hour_int)
+        for hour in inferred.get("peak_focus_hours") or []:
+            try:
+                hour_int = int(hour)
+            except (TypeError, ValueError):
+                continue
+            if 0 <= hour_int <= 23:
+                inactive_hours.add(hour_int)
+        if inactive_hours:
+            if not active_hours:
+                active_hours = list(range(480, 1321))
+            active_hours = [minute for minute in active_hours if (minute // 60) not in inactive_hours]
+
         is_focusing = ctx.get("focus_session_active", False)
 
         policy_signals = self._collect_policy_signals(resolved_context)
+        signal_sources = self._collect_policy_signal_sources(resolved_context)
         if "push.timing.earlier_reminder" in policy_signals:
             min_interval = max(30, int(min_interval * 0.8))
+        if inactive_hours:
+            applied_policies.append(
+                PolicyExplanation(
+                    signal="push.timing.avoid_inactive_hours",
+                    effect="Push active hours were trimmed to avoid hours where you often ignore pushes or focus deeply.",
+                    source_pattern="push_feedback",
+                )
+            )
+        applied_policies.extend(self._build_policy_explanations("push", policy_signals, signal_sources))
 
         return PushPolicyProfile(
             daily_cap=daily_cap,
@@ -164,6 +253,7 @@ class PersonalizationEngine:
             active_hours=active_hours,
             timezone=timezone,
             preference_version=prefs.version,
+            applied_policies=applied_policies,
         )
 
     async def get_task_plan_profile(
@@ -175,6 +265,7 @@ class PersonalizationEngine:
         """生成任务规划策略配置"""
         prefs = await self.pref_service.get_preferences(user_id)
         explicit = prefs.explicit.copy()
+        inferred = prefs.inferred or {}
 
         resolved_context = await self._resolve_profile_context(user_id, profile_context)
         if resolved_context:
@@ -183,13 +274,32 @@ class PersonalizationEngine:
         if override_preferences:
             explicit.update(override_preferences)
 
-        focus_duration = explicit.get("focus_duration_preference", 25)
+        focus_duration = explicit.get("focus_duration_preference")
+        if focus_duration is None or prefs.last_explicit_update is None:
+            inferred_focus = explicit.get("preferred_focus_duration", inferred.get("preferred_focus_duration"))
+            if isinstance(inferred_focus, (int, float)):
+                focus_duration = int(inferred_focus)
+        if focus_duration is None:
+            focus_duration = 25
         depth = explicit.get("depth_preference", 0.5)
         curiosity = explicit.get("curiosity_preference", 0.5)
 
         difficulty_gradient = 0.3 + (depth * 0.5)
         exploration_ratio = curiosity * 0.4
         review_priority = "high" if depth > 0.6 else ("medium" if depth > 0.3 else "low")
+        applied_policies: list[PolicyExplanation] = []
+
+        recurring_tags = inferred.get("recurring_error_tags")
+        if isinstance(recurring_tags, list) and recurring_tags:
+            review_priority = "high"
+            exploration_ratio = max(0.05, exploration_ratio * 0.7)
+            applied_policies.append(
+                PolicyExplanation(
+                    signal="task.review.raise_priority_for_recurring_errors",
+                    effect="Review priority was raised and exploration was reduced because recurring error tags were detected.",
+                    source_pattern="error_book",
+                )
+            )
 
         slots = explicit.get("active_slots", [])
         if isinstance(slots, dict):
@@ -205,6 +315,7 @@ class PersonalizationEngine:
                 fragmented.append(normalized)
 
         policy_signals = self._collect_policy_signals(resolved_context)
+        signal_sources = self._collect_policy_signal_sources(resolved_context)
         if "task.time_estimate.add_buffer_30pct" in policy_signals:
             focus_duration = max(5, int(focus_duration * 1.3))
         if "task.difficulty.start_easy" in policy_signals:
@@ -214,6 +325,7 @@ class PersonalizationEngine:
             review_priority = "high"
         if "plan.milestone.add_checkpoint" in policy_signals:
             review_priority = "high"
+        applied_policies.extend(self._build_policy_explanations("task", policy_signals, signal_sources))
 
         return TaskPlanProfile(
             preferred_task_duration=focus_duration,
@@ -222,6 +334,7 @@ class PersonalizationEngine:
             exploration_ratio=exploration_ratio,
             review_priority=review_priority,
             fragmented_time_slots=fragmented,
+            applied_policies=applied_policies,
         )
 
     def _get_persona_prompt_additions(self, persona: str) -> str:
@@ -263,6 +376,29 @@ class PersonalizationEngine:
         return signals
 
     @staticmethod
+    def _collect_policy_signal_sources(profile_context: ProfileContext | None) -> dict[str, str]:
+        if not profile_context or not profile_context.cognitive_summary:
+            return {}
+        signal_sources: dict[str, str] = {}
+        for pattern in profile_context.cognitive_summary.active_patterns:
+            for signal in pattern.policy_signals:
+                if signal and signal not in signal_sources:
+                    signal_sources[signal] = pattern.pattern_name
+        return signal_sources
+
+    @staticmethod
+    def _expand_hours_to_minutes(hours: list[int]) -> list[int]:
+        minutes: list[int] = []
+        for raw in hours:
+            try:
+                hour = int(raw)
+            except (TypeError, ValueError):
+                continue
+            if 0 <= hour <= 23:
+                minutes.extend(range(hour * 60, (hour + 1) * 60))
+        return minutes
+
+    @staticmethod
     def _build_llm_policy_instructions(policy_signals: list[str]) -> str:
         instructions: list[str] = []
         if "llm.feedback.emphasize_progress" in policy_signals:
@@ -270,6 +406,43 @@ class PersonalizationEngine:
         if "llm.explanation.add_foundation" in policy_signals:
             instructions.append("- 解释时先补充必要的前置概念，不跳步骤")
         return "\n".join(instructions)
+
+    @staticmethod
+    def _build_policy_explanations(
+        profile_kind: str,
+        policy_signals: list[str],
+        signal_sources: dict[str, str],
+    ) -> list[PolicyExplanation]:
+        effect_map = {
+            "llm": {
+                "llm.feedback.emphasize_progress": "Responses emphasize progress and reduce over-correction.",
+                "llm.explanation.add_foundation": "Responses add prerequisite concepts before jumping ahead.",
+            },
+            "push": {
+                "push.timing.earlier_reminder": "Reminder timing was moved earlier to reduce procrastination risk.",
+            },
+            "task": {
+                "task.time_estimate.add_buffer_30pct": "Task duration estimates include a 30% buffer.",
+                "task.difficulty.start_easy": "Task difficulty was softened to lower the start barrier.",
+                "task.content.scaffold_prerequisites": "Task plans now scaffold prerequisite knowledge first.",
+                "plan.milestone.add_checkpoint": "Plans include extra checkpoints to reduce execution drift.",
+            },
+        }
+        explanations: list[PolicyExplanation] = []
+        seen: set[str] = set()
+        for signal in policy_signals:
+            effect = effect_map.get(profile_kind, {}).get(signal)
+            if not effect or signal in seen:
+                continue
+            explanations.append(
+                PolicyExplanation(
+                    signal=signal,
+                    effect=effect,
+                    source_pattern=signal_sources.get(signal, "behavior_pattern"),
+                )
+            )
+            seen.add(signal)
+        return explanations
 
     @staticmethod
     def _slot_to_minutes(slot: dict, min_key: str, fallback_key: str, default: int) -> int:

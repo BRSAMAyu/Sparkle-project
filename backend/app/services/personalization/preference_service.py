@@ -103,6 +103,20 @@ class PreferenceService:
             await self._invalidate_cache(user_id)
         return self._fill_defaults(prefs)
 
+    async def delete_inferred_key(self, user_id: UUID, pref_key: str) -> UserPreferencesCenter:
+        """删除推断偏好键并递增版本"""
+        prefs = await self._get_or_create(user_id)
+        if prefs.inferred is None:
+            prefs.inferred = {}
+        if pref_key in prefs.inferred:
+            prefs.inferred.pop(pref_key, None)
+            prefs.version = (prefs.version or 0) + 1
+            prefs.last_inferred_update = _utcnow()
+            prefs.updated_at = _utcnow()
+            await self.db.commit()
+            await self._invalidate_cache(user_id)
+        return self._fill_defaults(prefs)
+
     async def update_inferred(self, user_id: UUID, updates: dict) -> UserPreferencesCenter:
         """
         更新推断偏好并递增版本（带乐观锁并发保护）

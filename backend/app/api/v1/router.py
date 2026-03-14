@@ -50,6 +50,7 @@ from app.api.v1 import (
     predictive_analytics,
     preferences,
     profile_transparency,
+    push_interaction,
     recommendations,
     seed_libraries,
     shop,
@@ -102,6 +103,7 @@ api_router.include_router(memory.router, tags=["memory"])
 api_router.include_router(memory_settings.router, tags=["memory"])
 api_router.include_router(memory_admin.router)
 api_router.include_router(preferences.router)
+api_router.include_router(push_interaction.router)
 api_router.include_router(seed_libraries.router, tags=["seed-libraries"])
 api_router.include_router(experiments.router, prefix="/experiments", tags=["experiments"])
 api_router.include_router(achievements.router, prefix="/achievements", tags=["achievements"])

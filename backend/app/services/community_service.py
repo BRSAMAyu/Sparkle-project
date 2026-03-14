@@ -2,6 +2,7 @@
 社群功能服务层
 Community Service - 好友、群组、消息、打卡、任务的业务逻辑
 """
+import asyncio
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
@@ -10,6 +11,7 @@ from sqlalchemy import and_, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.cache import cache_service
 from app.core.websocket import manager
 from app.models.community import (
     Friendship,
@@ -27,11 +29,29 @@ from app.models.community import (
 from app.models.plan import Plan, PlanType
 from app.models.user import User
 from app.schemas.community import CheckinRequest, GroupCreate, GroupTaskCreate, MessageEdit, MessageSend
+from app.services.community_signal_collector import CommunitySignalCollector
 
 
 def _utcnow() -> datetime:
     """Return naive UTC datetime compatible with existing DB fields."""
     return datetime.now(UTC).replace(tzinfo=None)
+
+
+def _record_community_signal(
+    *,
+    user_id: UUID,
+    action: str,
+    context: str,
+    timestamp: datetime | None = None,
+) -> None:
+    asyncio.create_task(
+        CommunitySignalCollector(cache_service.redis).record_interaction(
+            user_id=user_id,
+            action=action,
+            context=context,
+            timestamp=timestamp or _utcnow(),
+        )
+    )
 
 
 def _is_visible_to(content_data: dict | None, user_id: UUID) -> bool:
@@ -407,6 +427,12 @@ class GroupService:
         db.add(member)
         await db.flush()
         await db.refresh(member)
+        _record_community_signal(
+            user_id=user_id,
+            action="join",
+            context="group",
+            timestamp=member.joined_at,
+        )
         return member
 
     @staticmethod
@@ -626,6 +652,13 @@ class GroupMessageService:
         member.last_active_at = _utcnow()
 
         await db.flush()
+        action = "comment" if (message.reply_to_id or message.thread_root_id) else "post"
+        _record_community_signal(
+            user_id=sender_id,
+            action=action,
+            context="group",
+            timestamp=message.created_at,
+        )
 
         # Re-fetch with relationships to ensure reply_to is loaded
         stmt = select(GroupMessage).options(
@@ -769,6 +802,13 @@ class GroupMessageService:
         msg.reactions = reactions
         db.add(msg)
         await db.flush()
+        if is_add:
+            _record_community_signal(
+                user_id=user_id,
+                action="like",
+                context="group",
+                timestamp=msg.updated_at or _utcnow(),
+            )
 
         stmt = select(GroupMessage).options(
             selectinload(GroupMessage.sender),
@@ -1373,6 +1413,12 @@ class PrivateMessageService:
         )
         db.add(message)
         await db.flush()
+        _record_community_signal(
+            user_id=sender_id,
+            action="dm",
+            context="direct",
+            timestamp=message.created_at,
+        )
 
         # Re-fetch with relationships
         stmt = select(PrivateMessage).options(

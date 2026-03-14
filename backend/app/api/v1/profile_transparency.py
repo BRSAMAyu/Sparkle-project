@@ -12,6 +12,9 @@ from app.core.cache import cache_service
 from app.models.user import User
 from app.services.cognitive_service import CognitiveService
 from app.services.memory_service import MemoryService
+from app.services.personalization import get_personalization_engine
+from app.services.personalization.inferred_meta import INFERRED_META, build_inferred_explanation
+from app.services.personalization.preference_service import PreferenceService
 from app.services.profile_context_service import ProfileContextService
 from app.services.profile_write_service import ProfileWriteService
 from app.services.system_update_service import SystemUpdateService, build_system_update
@@ -165,6 +168,16 @@ class GoalUpdateRequest(BaseModel):
     target_date: date | None = None
 
 
+class InferredOverrideRequest(BaseModel):
+    key: str
+    value: Any
+    reason: str | None = None
+
+
+class ResetOverrideRequest(BaseModel):
+    key: str
+
+
 def _coerce_preference_value(pref_key: str, value: Any) -> dict[str, Any]:
     if isinstance(value, dict):
         return value
@@ -188,6 +201,76 @@ def _display_preference_value(pref_key: str, value: Any) -> Any:
     if isinstance(value, dict) and set(value.keys()) == {"value"}:
         return value.get("value")
     return value
+
+
+def _merge_preferences(explicit: dict[str, Any], inferred: dict[str, Any]) -> dict[str, Any]:
+    merged = dict(inferred or {})
+    merged.update(explicit or {})
+    return merged
+
+
+def _normalize_inferred_display_value(value: Any) -> Any:
+    if isinstance(value, dict) and set(value.keys()) == {"value"}:
+        return value.get("value")
+    return value
+
+
+def _build_inferred_entries(
+    *,
+    explicit: dict[str, Any],
+    inferred: dict[str, Any],
+    inferred_updated_at: Any,
+    backups: dict[str, dict[str, Any]],
+) -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    all_keys = set(inferred.keys()) | set(backups.keys())
+    for key in sorted(all_keys):
+        meta = INFERRED_META.get(key)
+        source = meta.source if meta is not None else "behavior"
+        adjustable = meta.adjustable if meta is not None else False
+        overridden = key in explicit and key in backups
+        stored_value = inferred.get(key)
+        backup_value = backups.get(key, {}).get("value")
+        effective_value = explicit.get(key) if overridden else stored_value
+        display_value = _normalize_inferred_display_value(effective_value)
+        explanation_value = backup_value if overridden and backup_value is not None else stored_value
+        explanation = build_inferred_explanation(
+            key,
+            explanation_value,
+            related_values={key: explanation_value},
+        )
+        updated_at = backups.get(key, {}).get("updated_at") or (
+            inferred_updated_at.isoformat() if inferred_updated_at is not None else None
+        )
+        items.append(
+            {
+                "key": key,
+                "value": display_value,
+                "source": source,
+                "explanation": explanation,
+                "updated_at": updated_at,
+                "adjustable": adjustable,
+                "overridden": overridden,
+                "related_fields": list(meta.related_fields) if meta is not None else [],
+            }
+        )
+        seen.add(key)
+    return items
+
+
+def _serialize_policy_explanations(profile_name: str, items: list[Any]) -> list[dict[str, Any]]:
+    serialized: list[dict[str, Any]] = []
+    for item in items:
+        serialized.append(
+            {
+                "profile": profile_name,
+                "signal": item.signal,
+                "effect": item.effect,
+                "source_pattern": item.source_pattern,
+            }
+        )
+    return serialized
 
 
 def _build_preference_entries(
@@ -343,6 +426,56 @@ async def get_profile_transparent(
     }
 
 
+@router.get("/context")
+async def get_profile_context(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    profile_context_service = ProfileContextService(db, cache_service.redis)
+    pref_service = PreferenceService(db, cache_service.redis)
+
+    context = await profile_context_service.get_profile_context(current_user.id)
+    prefs = await pref_service.get_preferences(current_user.id)
+    merged_preferences = _merge_preferences(prefs.explicit or {}, prefs.inferred or {})
+
+    payload = context.to_prompt_context()
+    payload["preferences"] = merged_preferences
+    payload["preference_version"] = prefs.version or payload.get("preference_version", 0)
+    return payload
+
+
+@router.get("/inferred-preferences")
+async def get_inferred_preferences(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> list[dict[str, Any]]:
+    profile_write_service = ProfileWriteService(db, cache_service.redis)
+    prefs = await profile_write_service.pref_service.get_preferences(current_user.id)
+    backups = await profile_write_service.list_inferred_backups(current_user.id)
+    return _build_inferred_entries(
+        explicit=prefs.explicit or {},
+        inferred=prefs.inferred or {},
+        inferred_updated_at=prefs.last_inferred_update,
+        backups=backups,
+    )
+
+
+@router.get("/active-policies")
+async def get_active_policies(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> list[dict[str, Any]]:
+    engine = get_personalization_engine(db, cache_service.redis)
+    llm_profile = await engine.get_llm_profile(current_user.id)
+    push_profile = await engine.get_push_policy_profile(current_user.id)
+    task_profile = await engine.get_task_plan_profile(current_user.id)
+    return (
+        _serialize_policy_explanations("llm", llm_profile.applied_policies)
+        + _serialize_policy_explanations("push", push_profile.applied_policies)
+        + _serialize_policy_explanations("task", task_profile.applied_policies)
+    )
+
+
 @router.get("/system-updates")
 async def list_system_updates(
     limit: int = 50,
@@ -469,6 +602,58 @@ async def update_preference(
         "status": "ok",
         "version": result.preference_version,
         "history_version": result.history_version,
+    }
+
+
+@router.post("/override-inferred")
+async def override_inferred_preference(
+    payload: InferredOverrideRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    if not payload.key:
+        return {"status": "error", "message": "key required"}
+    meta = INFERRED_META.get(payload.key)
+    if meta is None:
+        return {"status": "error", "message": "unknown inferred key"}
+    if not meta.adjustable:
+        return {"status": "error", "message": "key is not adjustable"}
+
+    profile_write_service = ProfileWriteService(db, cache_service.redis)
+    evidence_refs = [
+        {"type": "user_state", "id": "user_override", "schema_version": "user_override.v1"}
+    ]
+    value_payload = _coerce_preference_value(payload.key, payload.value)
+    result = await profile_write_service.override_inferred_preference(
+        user_id=current_user.id,
+        pref_key=payload.key,
+        pref_value=value_payload,
+        evidence_refs=evidence_refs,
+        source="user_override",
+    )
+    return {
+        "status": "ok",
+        "version": result.preference_version,
+        "message": payload.reason or "override applied",
+    }
+
+
+@router.post("/reset-override")
+async def reset_override_preference(
+    payload: ResetOverrideRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    if not payload.key:
+        return {"status": "error", "message": "key required"}
+    profile_write_service = ProfileWriteService(db, cache_service.redis)
+    result = await profile_write_service.reset_override_preference(
+        user_id=current_user.id,
+        pref_key=payload.key,
+    )
+    return {
+        "status": "ok",
+        "version": result.preference_version,
     }
 
 

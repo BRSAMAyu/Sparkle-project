@@ -218,6 +218,9 @@ class ApiEndpoints {
   static const String focusLlmGuide = '/focus/llm/guide';
   static const String focusLlmBreakdown = '/focus/llm/breakdown';
 
+  // Push Interactions
+  static const String pushInteraction = '/push/interaction';
+
   // Translation
   static const String translationTranslate = '/translation/translate';
   static const String translationLanguages = '/translation/languages';

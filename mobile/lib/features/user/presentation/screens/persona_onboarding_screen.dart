@@ -7,6 +7,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
+import 'package:sparkle/features/user/presentation/providers/profile_context_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
@@ -219,6 +220,9 @@ class _PersonaOnboardingScreenState
       });
       await ref.read(onboardingCompletedProvider.notifier).setCompleted(true);
       ref.invalidate(transparentProfileProvider);
+      ref.invalidate(profileContextProvider);
+      ref.invalidate(inferredPreferencesProvider);
+      ref.invalidate(activePoliciesProvider);
       if (mounted) {
         context.go('/home');
       }
