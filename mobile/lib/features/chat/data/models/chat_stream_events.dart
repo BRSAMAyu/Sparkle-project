@@ -904,6 +904,85 @@ class TransparencyCompleteEvent extends ChatStreamEvent {
   final TransparencyData? transparencyData;
 }
 
+// ============================================
+// Orchestration Trace Events
+// ============================================
+
+class OrchestrationTraceEvent extends ChatStreamEvent {
+  OrchestrationTraceEvent({
+    required this.traceData,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+  });
+
+  final Map<String, dynamic> traceData;
+
+  List<OrchestrationTraceStep> get steps => (traceData['steps'] as List<dynamic>?)
+          ?.whereType<Map<String, dynamic>>()
+          .map(OrchestrationTraceStep.fromJson)
+          .toList() ??
+      [];
+
+  String get mode => traceData['mode'] as String? ?? '';
+  List<String> get agents => (traceData['agents'] as List<dynamic>?)
+          ?.map((e) => e.toString())
+          .toList() ??
+      [];
+}
+
+class OrchestrationTraceStep {
+  const OrchestrationTraceStep({
+    required this.stepId,
+    required this.label,
+    required this.decision,
+    required this.reason,
+    this.confidence,
+    this.metadata,
+    this.durationMs,
+  });
+
+  factory OrchestrationTraceStep.fromJson(Map<String, dynamic> json) =>
+      OrchestrationTraceStep(
+        stepId: json['step_id'] as String? ?? '',
+        label: json['label'] as String? ?? '',
+        decision: json['decision'] as String? ?? '',
+        reason: json['reason'] as String? ?? '',
+        confidence: (json['confidence'] as num?)?.toDouble(),
+        metadata: json['metadata'] as Map<String, dynamic>?,
+        durationMs: (json['duration_ms'] as num?)?.toDouble(),
+      );
+
+  final String stepId;
+  final String label;
+  final String decision;
+  final String reason;
+  final double? confidence;
+  final Map<String, dynamic>? metadata;
+  final double? durationMs;
+}
+
+// ============================================
+// Mode Suggestion Events
+// ============================================
+
+class ModeSuggestionEvent extends ChatStreamEvent {
+  ModeSuggestionEvent({
+    required this.suggestion,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+  });
+
+  final Map<String, dynamic> suggestion;
+
+  String get suggestedMode => suggestion['suggested_mode'] as String? ?? '';
+  String get reason => suggestion['reason'] as String? ?? '';
+  double get confidence => (suggestion['confidence'] as num?)?.toDouble() ?? 0.0;
+}
+
 /// 透明度数据模型
 class TransparencyData {
   const TransparencyData({

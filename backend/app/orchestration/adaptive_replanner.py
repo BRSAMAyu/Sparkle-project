@@ -14,6 +14,8 @@ from sqlalchemy import desc, select
 
 from app.core.business_metrics import ADAPTIVE_ADJUSTMENT_SKIPPED_TOTAL, ADAPTIVE_ROLLBACK_TOTAL
 from app.models.cognitive import BehaviorPattern
+from app.models.task import Task
+from app.models.task_feedback import TaskFeedback
 from app.orchestration.dual_core_router import AdaptationRecord
 from app.orchestration.plan_review_service import plan_review_service
 from app.services.personalization.preference_service import PreferenceService
@@ -242,6 +244,12 @@ class AdaptiveReplanner:
         task_id: UUID,
         completion_rate: float | None = None,
     ) -> list[AdaptationRecord]:
+        await self._maybe_record_breakdown_feedback(
+            user_id=user_id,
+            plan_id=plan_id,
+            task_id=task_id,
+            completion_status="completed",
+        )
         report = await self.progress_service.evaluate_progress(user_id, plan_id)
         return await self._handle_report(
             report,
@@ -258,6 +266,13 @@ class AdaptiveReplanner:
         category: str | None = None,
         difficulty_delta: float | None = None,
     ) -> list[AdaptationRecord]:
+        await self._maybe_record_breakdown_feedback(
+            user_id=user_id,
+            plan_id=plan_id,
+            task_id=task_id,
+            completion_status="feedback",
+            feedback_category=category,
+        )
         rollback_records = await self._maybe_rollback_after_feedback(
             user_id=user_id,
             plan_id=plan_id,
@@ -274,6 +289,88 @@ class AdaptiveReplanner:
             feedback_category=category,
             difficulty_delta=difficulty_delta,
         )
+
+    async def _maybe_record_breakdown_feedback(
+        self,
+        *,
+        user_id: UUID,
+        plan_id: UUID,
+        task_id: UUID,
+        completion_status: str,
+        feedback_category: str | None = None,
+    ) -> None:
+        if not self.db:
+            return
+        try:
+            result = await self.db.execute(
+                select(Task).where(Task.id == task_id).where(Task.user_id == user_id)
+            )
+            task = result.scalar_one_or_none()
+            if task is None:
+                return
+
+            tags = list(task.tags or [])
+            is_breakdown = any(str(tag).startswith("parent:") for tag in tags) or "micro" in tags
+            if not is_breakdown:
+                return
+
+            parent_title = ""
+            for tag in tags:
+                tag_str = str(tag)
+                if tag_str.startswith("parent:"):
+                    parent_title = tag_str.split("parent:", 1)[-1].strip()
+                    break
+
+            actual_minutes = task.actual_minutes
+            feedback_text = None
+            if actual_minutes is None or feedback_category is None:
+                feedback_result = await self.db.execute(
+                    select(TaskFeedback)
+                    .where(TaskFeedback.task_id == task_id)
+                    .order_by(desc(TaskFeedback.created_at))
+                    .limit(1)
+                )
+                feedback = feedback_result.scalar_one_or_none()
+                if feedback:
+                    actual_minutes = actual_minutes or feedback.actual_minutes_snapshot
+                    feedback_text = feedback.feedback_text
+                    if feedback_category is None:
+                        feedback_category = feedback.category
+
+            estimated_minutes = task.estimated_minutes
+            time_accuracy = None
+            if actual_minutes and estimated_minutes:
+                time_accuracy = round(actual_minutes / max(estimated_minutes, 1), 2)
+
+            entry = {
+                "task_id": str(task.id),
+                "plan_id": str(plan_id),
+                "parent_title": parent_title or task.title,
+                "task_title": task.title,
+                "completion_status": completion_status,
+                "feedback_category": feedback_category,
+                "user_feedback": feedback_text,
+                "estimated_minutes": estimated_minutes,
+                "actual_minutes": actual_minutes,
+                "time_accuracy": time_accuracy,
+                "recorded_at": _utcnow().isoformat(),
+            }
+
+            state = await self.plan_state_service.get_plan_state(user_id, plan_id)
+            existing: list[dict[str, Any]] = []
+            if state and isinstance(state.facts, dict):
+                raw = state.facts.get("breakdown_feedback")
+                if isinstance(raw, list):
+                    existing = [item for item in raw if isinstance(item, dict)]
+            existing.append(entry)
+            await self.plan_state_service.upsert_plan_state(
+                user_id=user_id,
+                plan_id=plan_id,
+                patch={"facts": {"breakdown_feedback": existing[-50:]}},
+                bump_version=False,
+            )
+        except Exception as exc:
+            logger.debug(f"Failed to record breakdown feedback: {exc}")
 
     async def on_plan_execution_completed(
         self,

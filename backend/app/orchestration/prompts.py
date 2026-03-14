@@ -18,6 +18,7 @@ Prompt 管理系统 - 统一的Agent Prompt管理
 """
 
 from typing import Any
+import json
 import random
 
 from loguru import logger
@@ -170,6 +171,18 @@ AGENT_SYSTEM_PROMPT = """你是 Sparkle（星火），一个智能学习助手�
 
 
 
+{orchestration_context_section}
+
+
+
+{mode_strategy_section}
+
+
+
+{persona_section}
+
+
+
 ## 当前用户上下文
 
 {user_context}
@@ -239,6 +252,18 @@ MODE_SYSTEM_PROMPTS = {
 
 
 {understanding_depth_section}
+
+
+
+{orchestration_context_section}
+
+
+
+{mode_strategy_section}
+
+
+
+{persona_section}
 
 
 
@@ -328,6 +353,18 @@ MODE_SYSTEM_PROMPTS = {
 
 
 
+{orchestration_context_section}
+
+
+
+{mode_strategy_section}
+
+
+
+{persona_section}
+
+
+
 ## 当前用户上下文
 
 {user_context}
@@ -411,6 +448,18 @@ MODE_SYSTEM_PROMPTS = {
 
 
 {understanding_depth_section}
+
+
+
+{orchestration_context_section}
+
+
+
+{mode_strategy_section}
+
+
+
+{persona_section}
 
 
 
@@ -578,6 +627,29 @@ def build_system_prompt(
     if not context_briefing_note and isinstance(user_context, dict):
         context_briefing_note = str(user_context.get("context_briefing_note") or "").strip()
 
+    orchestration_trace = None
+    mode_strategy_payload = None
+    persona_constraints_summary = ""
+    if isinstance(user_context, dict):
+        raw_trace = user_context.get("orchestration_trace")
+        if isinstance(raw_trace, str) and raw_trace:
+            try:
+                raw_trace = json.loads(raw_trace)
+            except Exception:
+                raw_trace = None
+        if isinstance(raw_trace, dict):
+            orchestration_trace = raw_trace
+
+        raw_strategy = user_context.get("mode_strategy")
+        if isinstance(raw_strategy, str) and raw_strategy:
+            try:
+                raw_strategy = json.loads(raw_strategy)
+            except Exception:
+                raw_strategy = None
+        if isinstance(raw_strategy, dict):
+            mode_strategy_payload = raw_strategy
+
+        persona_constraints_summary = str(user_context.get("persona_constraints_summary") or "").strip()
 
 
     # 1. 首先检查 AgentProfile 是否有专用 prompt
@@ -660,6 +732,44 @@ def build_system_prompt(
             "请先遵循这组路径与约束，再结合用户一般偏好组织回答。"
         )
 
+    orchestration_context_section = ""
+    if isinstance(orchestration_trace, dict):
+        mode_label = str(orchestration_trace.get("mode") or "").strip()
+        agents = orchestration_trace.get("agents") or []
+        agent_list = [str(agent).strip() for agent in agents if str(agent).strip()]
+        persona_step = orchestration_trace.get("persona_step") or {}
+        review_step = orchestration_trace.get("review_step") or {}
+        summary_lines: list[str] = []
+        if mode_label or agent_list:
+            agent_text = "、".join(agent_list) if agent_list else "系统自动选择"
+            summary_lines.append(f"本次由 {mode_label or 'standard'} 模式驱动，调度 {agent_text} 协作。")
+        if isinstance(persona_step, dict) and persona_step.get("decision"):
+            summary_lines.append(f"画像提示：{persona_step.get('decision')}")
+        if isinstance(review_step, dict) and review_step.get("decision"):
+            summary_lines.append(f"计划审查：{review_step.get('decision')}")
+        if summary_lines:
+            orchestration_context_section = "\n## 编排上下文 [L2 引导]\n" + "\n".join(summary_lines)
+
+    mode_strategy_section = ""
+    if isinstance(mode_strategy_payload, dict):
+        output_structure = mode_strategy_payload.get("output_structure") or []
+        synthesis_instruction = str(mode_strategy_payload.get("synthesis_instruction") or "").strip()
+        output_text = ""
+        if isinstance(output_structure, list):
+            output_items = [str(item).strip() for item in output_structure if str(item).strip()]
+            if output_items:
+                output_text = f"请严格按以下结构组织回答：{'、'.join(output_items)}。"
+        if output_text or synthesis_instruction:
+            mode_strategy_section = "\n## 输出要求 [L2 引导]\n"
+            if output_text:
+                mode_strategy_section += output_text
+            if synthesis_instruction:
+                mode_strategy_section += f"\n{synthesis_instruction}"
+
+    persona_section = ""
+    if persona_constraints_summary:
+        persona_section = "\n## 用户画像提示 [L2 引导]\n" + persona_constraints_summary
+
     understanding_depth_section = ""
     if isinstance(understanding_depth_hint, dict):
         natural_hint = str(understanding_depth_hint.get("natural_hint") or "").strip()
@@ -698,6 +808,16 @@ def build_system_prompt(
                 cognitive_prism_section,
                 reason="本轮以精简表达为准；认知洞察仅作软建议。",
             )
+        if orchestration_context_section:
+            orchestration_context_section = _soften_section(
+                orchestration_context_section,
+                reason="本轮以精简为主；编排背景只保留最小必要信息。",
+            )
+        if persona_section:
+            persona_section = _soften_section(
+                persona_section,
+                reason="本轮以精简为主；画像信息仅作轻量提示。",
+            )
     elif feedback_mode == "expand":
         preference_instructions = _soften_section(
             preference_instructions,
@@ -723,6 +843,9 @@ def build_system_prompt(
         "plan_context_section": plan_context_section,
         "dual_core_section": dual_core_section,
         "understanding_depth_section": understanding_depth_section,
+        "orchestration_context_section": orchestration_context_section,
+        "mode_strategy_section": mode_strategy_section,
+        "persona_section": persona_section,
         "cognitive_prism_section": cognitive_prism_section,
         "conversation_history_section": f"[优先级：L3 背景]\n{conversation_history_section}".strip() if conversation_history_section else "",
         "task_awareness_section": f"[优先级：L3 背景]\n{TASK_AWARENESS_SECTION}".strip(),
@@ -735,6 +858,9 @@ def build_system_prompt(
             "plan_context_section": 2,
             "dual_core_section": 2,
             "understanding_depth_section": 2,
+            "orchestration_context_section": 2,
+            "mode_strategy_section": 2,
+            "persona_section": 2,
             "cognitive_prism_section": cognitive_priority,
             "conversation_history_section": 3,
             "task_awareness_section": 3,
@@ -745,6 +871,9 @@ def build_system_prompt(
     plan_context_section = section_map["plan_context_section"]
     dual_core_section = section_map["dual_core_section"]
     understanding_depth_section = section_map["understanding_depth_section"]
+    orchestration_context_section = section_map["orchestration_context_section"]
+    mode_strategy_section = section_map["mode_strategy_section"]
+    persona_section = section_map["persona_section"]
     cognitive_prism_section = section_map["cognitive_prism_section"]
     conversation_history_section = section_map["conversation_history_section"]
     task_awareness_section = section_map["task_awareness_section"]
@@ -763,6 +892,9 @@ def build_system_prompt(
                 session_feedback_section=session_feedback_section,
                 dual_core_section=dual_core_section,
                 understanding_depth_section=understanding_depth_section,
+                orchestration_context_section=orchestration_context_section,
+                mode_strategy_section=mode_strategy_section,
+                persona_section=persona_section,
                 context_briefing_section=context_briefing_section,
                 task_awareness_section=task_awareness_section,
                 cognitive_prism_section=cognitive_prism_section,
@@ -791,6 +923,12 @@ def build_system_prompt(
              prompt += f"\n\n## 会话内反馈适配 [L1 强制]\n{session_feedback_instruction}"
         if dual_core_instruction:
              prompt += f"\n\n## 双核心路由指令 [L2 引导]\n{dual_core_instruction}"
+        if orchestration_context_section:
+             prompt += f"\n\n{orchestration_context_section}"
+        if mode_strategy_section:
+             prompt += f"\n\n{mode_strategy_section}"
+        if persona_section:
+             prompt += f"\n\n{persona_section}"
         if understanding_depth_section:
              prompt += f"\n\n{understanding_depth_section}"
 

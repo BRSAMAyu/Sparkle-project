@@ -71,6 +71,8 @@ class LangGraphPlanner:
         plan_id: str | None = None,  # Phase 4: for plan_version tracking
         execution_feedback: dict[str, Any] | None = None,  # Phase C: past feedback
         mode_config: Any | None = None,
+        mode_strategy: Any | None = None,
+        persona_constraints: Any | None = None,
         state_overrides: dict[str, Any] | None = None,
         planning_constraints: dict[str, Any] | None = None,
     ) -> ExecutablePlan:
@@ -97,6 +99,8 @@ class LangGraphPlanner:
         messages = [HumanMessage(content=message)]
         if planning_constraints:
             messages.insert(0, HumanMessage(content=self._build_constraints_context(planning_constraints)))
+        if persona_constraints:
+            messages.insert(0, HumanMessage(content=self._build_persona_constraints_context(persona_constraints)))
 
         # Phase C: Inject execution feedback as system context
         if execution_feedback:
@@ -119,6 +123,7 @@ class LangGraphPlanner:
             "user_profile": {
                 **(snapshot.to_dict() if snapshot else {}),
                 **({"plan_constraints": planning_constraints} if planning_constraints else {}),
+                **({"persona_constraints": persona_constraints.to_planning_constraints()} if hasattr(persona_constraints, "to_planning_constraints") else {}),
             },
             "next_step": None,
             "active_agent": None,
@@ -145,6 +150,13 @@ class LangGraphPlanner:
             initial_state["collaboration_index"] = 0
             initial_state["mode_constraints"] = getattr(mode_config, "tool_policy", None)
             initial_state["synthesis_policy"] = {"template": getattr(mode_config, "synthesis_template", "")}
+        if mode_strategy:
+            initial_state["mode_strategy"] = {
+                "chat_mode": getattr(mode_strategy, "chat_mode", None),
+                "required_agents": getattr(mode_strategy, "required_agents", []),
+                "preferred_agents": getattr(mode_strategy, "preferred_agents", []),
+                "output_structure": getattr(mode_strategy, "output_structure", []),
+            }
 
         if state_overrides:
             initial_state.update(state_overrides)
@@ -200,6 +212,17 @@ class LangGraphPlanner:
                 continue
             lines.append(f"- {key}: {value}")
         return "\n".join(lines)
+
+    @staticmethod
+    def _build_persona_constraints_context(persona_constraints: Any) -> str:
+        if hasattr(persona_constraints, "to_prompt_block"):
+            return persona_constraints.to_prompt_block()
+        if isinstance(persona_constraints, dict):
+            lines = ["Persona-aware planning constraints:"]
+            for key, value in persona_constraints.items():
+                lines.append(f"- {key}: {value}")
+            return "\n".join(lines)
+        return "Persona-aware planning constraints: unavailable"
 
     def _convert_to_plan(
         self,

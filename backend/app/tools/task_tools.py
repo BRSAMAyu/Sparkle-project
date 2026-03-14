@@ -1,8 +1,10 @@
 from typing import Any
 from uuid import UUID
 
+from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy import and_, asc, desc, select
 
+from app.orchestration.persona_aware_planner import PersonaAwarePlanner
 from app.models.task import Task
 from app.models.task import TaskStatus as ModelTaskStatus
 from app.models.task import TaskType as ModelTaskType
@@ -18,6 +20,12 @@ from .schemas import (
     SuggestQuickTaskParams,
     UpdateTaskStatusParams,
 )
+
+
+class _BreakdownSubtaskSchema(BaseModel):
+    title: str = Field(min_length=2, max_length=120)
+    estimated_minutes: int = Field(ge=5, le=90)
+    type: str = Field(pattern="^(learning|practice|review|exercise)$")
 
 
 class CreateTaskTool(BaseTool):
@@ -348,9 +356,16 @@ class BreakdownTaskTool(BaseTool):
     ) -> ToolResult:
         try:
             user_uuid = UUID(user_id)
+            persona_constraints = await PersonaAwarePlanner(db_session).build_constraints(
+                user_id=user_id,
+                user_context_payload={},
+                plan_context={},
+                plan_id=None,
+            )
             subtasks = await focus_service.breakdown_task_via_llm(
                 task_title=params.title,
-                task_description=params.description or ""
+                task_description=params.description or "",
+                persona_prompt=persona_constraints.to_prompt_block(),
             )
 
             if not isinstance(subtasks, list) or not subtasks:
@@ -363,13 +378,31 @@ class BreakdownTaskTool(BaseTool):
 
             created_tasks = []
             for subtask in subtasks[:params.max_tasks]:
-                title = subtask.get("title") or "微任务"
-                minutes = int(subtask.get("minutes") or subtask.get("duration") or 25)
-                minutes = max(5, min(90, minutes))
+                normalized = {
+                    "title": subtask.get("title") or "微任务",
+                    "estimated_minutes": subtask.get("estimated_minutes")
+                    or subtask.get("minutes")
+                    or subtask.get("duration")
+                    or 25,
+                    "type": subtask.get("type") or "learning",
+                }
+                try:
+                    validated = _BreakdownSubtaskSchema.model_validate(normalized)
+                except ValidationError:
+                    continue
+
+                title = validated.title
+                minutes = validated.estimated_minutes
+                type_mapping = {
+                    "learning": ModelTaskType.LEARNING,
+                    "practice": ModelTaskType.TRAINING,
+                    "review": ModelTaskType.REFLECTION,
+                    "exercise": ModelTaskType.TRAINING,
+                }
 
                 task_create = TaskCreate(
                     title=title,
-                    type=ModelTaskType(params.task_type.value),
+                    type=type_mapping.get(validated.type, ModelTaskType(params.task_type.value)),
                     estimated_minutes=minutes,
                     guide_content=f"来自任务拆解：{params.title}",
                     priority=2,
@@ -391,6 +424,14 @@ class BreakdownTaskTool(BaseTool):
                     "estimated_minutes": task.estimated_minutes
                 })
 
+            if not created_tasks:
+                return ToolResult(
+                    success=False,
+                    tool_name=self.name,
+                    error_message="任务拆解结果未通过结构化校验",
+                    suggestion="请补充更具体的任务目标或缩小范围后重试",
+                )
+
             return ToolResult(
                 success=True,
                 tool_name=self.name,
@@ -398,7 +439,14 @@ class BreakdownTaskTool(BaseTool):
                 widget_type="task_list",
                 widget_data={
                     "tasks": created_tasks,
-                    "tool_result_id": tool_call_id
+                    "tool_result_id": tool_call_id,
+                    "persona_applied": True,
+                    "persona_highlights": {
+                        "max_session": persona_constraints.max_session_minutes,
+                        "task_size": persona_constraints.preferred_task_size,
+                        "time_multiplier": persona_constraints.time_multiplier,
+                        "warmup_included": persona_constraints.require_warmup_task,
+                    },
                 }
             )
         except Exception as e:
