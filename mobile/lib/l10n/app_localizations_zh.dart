@@ -389,7 +389,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get planId => '计划ID';
 
   @override
-  String get featureInDevelopment => '此功能正在开发中，即将推出';
+  String get featureInDevelopment => '功能开发中...';
 
   @override
   String get sprintHistory => '冲刺历史';
@@ -621,7 +621,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get toolsCognitivePatternsDesc => '查看行为定式与认知洞察';
 
   @override
-  String get chatModeStandard => '标准模式';
+  String get chatModeStandard => '标准对话';
 
   @override
   String get chatModeDeep => '深度专注';
@@ -660,7 +660,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatModeExpertAutoDesc => '自动选择最佳专家';
 
   @override
-  String get chatModeExpertDirect => '专家直连';
+  String get chatModeExpertDirect => '专家直达';
 
   @override
   String get chatModeExpertDirectDesc => '直连专家咨询';
@@ -767,7 +767,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatWelcome => '你好！今天我能帮你什么？';
 
   @override
-  String get chatWelcomeSubtitle => '问我任何关于学习的问题';
+  String get chatWelcomeSubtitle => '今天想做点什么？';
 
   @override
   String get chatSuggestion1 => '帮我规划学习';
@@ -4333,4 +4333,607 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get patternTypeDefault => '行为模式';
+
+  @override
+  String get chatTitle => 'AI学习助手';
+
+  @override
+  String get chatSubtitle => '随时为你解答';
+
+  @override
+  String get chatHistoryTitle => '历史对话';
+
+  @override
+  String get chatNewConversation => '新建对话';
+
+  @override
+  String chatHistoryLoadFailed(String error) {
+    return '加载失败：$error';
+  }
+
+  @override
+  String chatHistoryLoadMoreFailed(String error) {
+    return '加载更多失败：$error';
+  }
+
+  @override
+  String get chatHistoryEmpty => '暂无历史记录';
+
+  @override
+  String get chatSessionUntitled => '未命名会话';
+
+  @override
+  String get chatInvalidNavigationTarget => '无法识别跳转地址';
+
+  @override
+  String get chatNavigationFailed => '页面跳转失败，请重试';
+
+  @override
+  String get chatSessionDataError => '会话数据异常，请重试';
+
+  @override
+  String get chatWelcomeTitle => '你好，我是你的 AI 导师';
+
+  @override
+  String get chatQuickActionNewTask => '新建微任务';
+
+  @override
+  String get chatQuickActionNewTaskPrompt => '帮我创建一个新的微任务';
+
+  @override
+  String get chatQuickActionLongPlan => '生成长期计划';
+
+  @override
+  String get chatQuickActionLongPlanPrompt => '帮我生成一个长期学习计划';
+
+  @override
+  String get chatQuickActionErrorAttribution => '错误归因';
+
+  @override
+  String get chatQuickActionErrorAttributionPrompt => '我想分析一下最近的错误原因';
+
+  @override
+  String get chatPlanUnbound => '未绑定计划';
+
+  @override
+  String get chatFileProcessing => '文件处理中，完成后可用于对话';
+
+  @override
+  String get chatPromptDeepAnalysis1 => '先给综合判断，再展开依据';
+
+  @override
+  String get chatPromptDeepAnalysis2 => '只看关键结论和风险';
+
+  @override
+  String get chatPromptDeepAnalysis3 => '补一个反方观点帮我校准';
+
+  @override
+  String get chatPromptStudyPlan1 => '先按今天能开始的节奏排';
+
+  @override
+  String get chatPromptStudyPlan2 => '拆成今天/本周两个层级';
+
+  @override
+  String get chatPromptStudyPlan3 => '按我现在水平再降一点难度';
+
+  @override
+  String get chatPromptErrorDiagnosis1 => '先定位错因和证据';
+
+  @override
+  String get chatPromptErrorDiagnosis2 => '给我一条针对性修复练习';
+
+  @override
+  String get chatPromptErrorDiagnosis3 => '告诉我下次怎么避免再错';
+
+  @override
+  String get chatPromptExpertAuto1 => '自动选专家给我综合结论';
+
+  @override
+  String get chatPromptExpertAuto2 => '先告诉我这轮请了谁';
+
+  @override
+  String get chatPromptExpertAuto3 => '把专家结果压成执行清单';
+
+  @override
+  String get chatPromptDefault1 => '直接回答我的当前问题';
+
+  @override
+  String get chatPromptDefault2 => '先给我 3 步执行清单';
+
+  @override
+  String get chatPromptDefault3 => '结合我当前计划继续推进';
+
+  @override
+  String get chatHelpful => '有帮助';
+
+  @override
+  String get chatNotHelpful => '没帮助';
+
+  @override
+  String get chatQuote => '引用';
+
+  @override
+  String get chatUndo => '撤销';
+
+  @override
+  String get chatRecalledSelf => '你撤回了一条消息';
+
+  @override
+  String get chatRecalledPeer => '对方撤回了一条消息';
+
+  @override
+  String get chatRead => '已读';
+
+  @override
+  String get chatAgentNavigator => '星图导航';
+
+  @override
+  String get chatAgentExamStrategist => '考试策略师';
+
+  @override
+  String get chatAgentTimeCoach => '时间教练';
+
+  @override
+  String get chatAgentDeepAnalyst => '深度分析师';
+
+  @override
+  String get chatAgentCorrectionExpert => '纠错专家';
+
+  @override
+  String get chatAgentLearningBuddy => '学伴';
+
+  @override
+  String get chatAgentMathExpert => '数学专家';
+
+  @override
+  String get chatAgentCodingExpert => '编程专家';
+
+  @override
+  String get chatAgentWritingExpert => '写作专家';
+
+  @override
+  String get chatAgentScienceExpert => '理科专家';
+
+  @override
+  String get chatAgentSearchExpert => '搜索专家';
+
+  @override
+  String get chatCollabParallel => '并行协作';
+
+  @override
+  String get chatCollabDebate => '辩论协作';
+
+  @override
+  String get chatCollabDelegation => '委派协作';
+
+  @override
+  String get chatCollabSequential => '分步协作';
+
+  @override
+  String get chatCollabExpert => '专家协作';
+
+  @override
+  String get chatTeamSheetTitle => '组建你的专家团队';
+
+  @override
+  String get chatTeamSheetAvailableExperts => '可选专家';
+
+  @override
+  String get chatTeamSheetNoExperts => '暂无可用专家';
+
+  @override
+  String get chatTeamSheetLoading => '专家目录加载中…';
+
+  @override
+  String get chatTeamSheetLoadFailed => '加载失败，请稍后重试';
+
+  @override
+  String get chatTeamSheetCollaborationMode => '协作方式';
+
+  @override
+  String chatTeamSheetSelectedExperts(int count) {
+    return '已选 $count 位专家';
+  }
+
+  @override
+  String get chatTeamSheetEnterExpert => '进入专家直达';
+
+  @override
+  String get chatTeamSheetStartCollaboration => '开始协作';
+
+  @override
+  String get chatCollabAuto => '自动';
+
+  @override
+  String get chatCollabAutoDesc => '系统根据问题类型自动选择最佳协作方式';
+
+  @override
+  String get chatCollabSequentialShort => '分步';
+
+  @override
+  String get chatCollabSequentialDesc => '专家按顺序依次分析，后者可参考前者结论';
+
+  @override
+  String get chatCollabParallelShort => '并行';
+
+  @override
+  String get chatCollabParallelDesc => '所有专家同时分析，最后汇总各方观点';
+
+  @override
+  String get chatCollabDebateShort => '辩论';
+
+  @override
+  String get chatCollabDebateDesc => '专家独立分析后交叉审阅，最终给出共识结论';
+
+  @override
+  String get chatCollabDelegationShort => '委派';
+
+  @override
+  String get chatCollabDelegationDesc => '主专家拆解任务后分派给其他专家执行';
+
+  @override
+  String get chatLabelMe => '我';
+
+  @override
+  String get chatLabelAssistant => 'AI助手';
+
+  @override
+  String get chatNoContent => '无内容';
+
+  @override
+  String get chatTransparencyTitle => '透明模式';
+
+  @override
+  String chatActiveToolsCount(int count) {
+    return '$count 个工具';
+  }
+
+  @override
+  String get chatActiveTools => '活跃工具';
+
+  @override
+  String get chatTokenStats => 'Token 统计';
+
+  @override
+  String get chatPromptTokens => 'Prompt Tokens';
+
+  @override
+  String get chatCompletionTokens => 'Completion Tokens';
+
+  @override
+  String get chatTokenUsageToday => '今日使用';
+
+  @override
+  String get chatTokenCostEstimate => '成本估算';
+
+  @override
+  String get chatExecutionSteps => '执行步骤';
+
+  @override
+  String chatExecutionStepsCount(int count) {
+    return '$count 个步骤';
+  }
+
+  @override
+  String get chatModeSelect => '选择模式';
+
+  @override
+  String chatModeTeamSummary(int count, String mode) {
+    return '$count位专家·$mode';
+  }
+
+  @override
+  String get chatModeCustomTeamLabel => '自定义团队';
+
+  @override
+  String get chatModeCustomTeamTitle => '自定义专家团队';
+
+  @override
+  String get chatModeCustomTeamSubtitle => '选择参与专家和协作方式';
+
+  @override
+  String get chatMetadataContinuity => '承接上文';
+
+  @override
+  String get chatMetadataEvidence => '依据';
+
+  @override
+  String get chatMetadataNext => '下一步';
+
+  @override
+  String get chatMetadataCollaboration => '协作';
+
+  @override
+  String get chatLoginRequired => '请先登录';
+
+  @override
+  String get chatReviewRegenerationRequested => '已请求重新生成';
+
+  @override
+  String get chatReviewHumanReviewRequested => '已提交人工审查请求';
+
+  @override
+  String get chatReviewOverrideAcceptedEvenFail => '已接受内容（尽管未通过审查）';
+
+  @override
+  String get chatReviewOverrideRejectedEvenPass => '已拒绝内容（尽管审查通过）';
+
+  @override
+  String get chatSubmitFailedRetry => '提交失败，请重试';
+
+  @override
+  String get chatAppealSubmitted => '申诉已提交，正在处理...';
+
+  @override
+  String get commonBack => '返回';
+
+  @override
+  String get noData => '暂无数据';
+
+  @override
+  String get operationSuccess => '操作成功';
+
+  @override
+  String get operationFailed => '操作失败';
+
+  @override
+  String get confirmDeleteTitle => '确认删除';
+
+  @override
+  String get confirmDeleteMessage => '此操作无法撤销';
+
+  @override
+  String get errorBookTitle => '错题档案';
+
+  @override
+  String get errorBookTabAll => '全部';
+
+  @override
+  String get errorBookTabNeedReview => '待复习';
+
+  @override
+  String get errorBookAddError => '添加错题';
+
+  @override
+  String get errorBookAddFirst => '添加第一道错题';
+
+  @override
+  String get errorBookFilterTitle => '筛选选项';
+
+  @override
+  String get errorBookSearchHint => '搜索题目内容...';
+
+  @override
+  String get errorBookNoErrors => '还没有错题记录';
+
+  @override
+  String get errorBookNoErrorsHint => '点击右下角 + 按钮添加错题';
+
+  @override
+  String get errorBookNoReview => '暂无需要复习的错题';
+
+  @override
+  String get errorBookNoReviewHint => '做得很好！继续保持';
+
+  @override
+  String get errorBookDeleteSuccess => '删除成功';
+
+  @override
+  String get errorBookDeleteFailed => '删除失败';
+
+  @override
+  String get errorBookDeleteConfirmTitle => '确认删除';
+
+  @override
+  String get errorBookDeleteConfirmMessage => '删除后无法恢复，确定要删除这道错题吗？';
+
+  @override
+  String errorBookCognitiveFilter(String dimension) {
+    return '正针对 \"$dimension\" 维度进行针对性复习';
+  }
+
+  @override
+  String errorBookReviewCount(int count) {
+    return '复习 $count 次';
+  }
+
+  @override
+  String get errorBookAIAnalyzed => 'AI已分析';
+
+  @override
+  String errorBookTimeAgoMinutes(int count) {
+    return '$count分钟前';
+  }
+
+  @override
+  String errorBookTimeAgoHours(int count) {
+    return '$count小时前';
+  }
+
+  @override
+  String errorBookTimeAgoDays(int count) {
+    return '$count天前';
+  }
+
+  @override
+  String get reviewModeToday => '今日复习';
+
+  @override
+  String get reviewModeTodayDesc => '完成今天到期的所有错题';
+
+  @override
+  String get reviewModeBySubject => '按科目';
+
+  @override
+  String get reviewModeBySubjectDesc => '选择一个科目进行专项复习';
+
+  @override
+  String get reviewModeWeakest => '薄弱专攻';
+
+  @override
+  String get reviewModeWeakestDesc => '优先复习掌握度最低的错题';
+
+  @override
+  String get reviewModeRandom => '随机抽查';
+
+  @override
+  String get reviewModeRandomDesc => '随机抽取错题进行复习';
+
+  @override
+  String reviewProgress(int current, int total) {
+    return '进度: $current/$total';
+  }
+
+  @override
+  String get reviewQuestion => '题目';
+
+  @override
+  String get reviewYourAnswer => '你的答案';
+
+  @override
+  String get reviewCorrectAnswer => '正确答案';
+
+  @override
+  String get reviewAIAnalysis => 'AI 分析';
+
+  @override
+  String get reviewHideAnalysis => '隐藏';
+
+  @override
+  String get reviewViewAnalysis => '查看 AI 分析';
+
+  @override
+  String get reviewViewAnswer => '查看答案';
+
+  @override
+  String get reviewViewAnswerHint => '先思考答案，再点击查看';
+
+  @override
+  String reviewSubmitFailed(String error) {
+    return '提交失败: $error';
+  }
+
+  @override
+  String get reviewNoErrorsToday => '暂无需要复习的错题';
+
+  @override
+  String get reviewKeepGoing => '做得很好！继续保持';
+
+  @override
+  String get reviewComplete => '复习完成！';
+
+  @override
+  String reviewTotalReviewed(int count) {
+    return '本次共复习 $count 道题';
+  }
+
+  @override
+  String get reviewResults => '复习成果';
+
+  @override
+  String get reviewRemembered => '记住了';
+
+  @override
+  String get reviewFuzzy => '模糊';
+
+  @override
+  String get reviewForgotten => '忘记了';
+
+  @override
+  String get reviewEncourageExcellent => '太棒了！掌握得非常扎实 🎉';
+
+  @override
+  String get reviewEncourageGood => '很好！继续保持这个势头 💪';
+
+  @override
+  String get reviewEncourageFair => '不错！再多复习几次会更好 📚';
+
+  @override
+  String get reviewEncourageNeedsWork => '加油！多复习几次就能记住了 🌟';
+
+  @override
+  String get reviewBackToList => '返回列表';
+
+  @override
+  String get reviewAnotherRound => '再来一轮';
+
+  @override
+  String get reviewConfirmExitTitle => '确认退出';
+
+  @override
+  String get reviewConfirmExitMessage => '复习还未完成，确定要退出吗？';
+
+  @override
+  String get reviewContinue => '继续复习';
+
+  @override
+  String get reviewExit => '退出';
+
+  @override
+  String get reviewNoMatchingErrors => '没有符合条件的错题';
+
+  @override
+  String get communityTitle => '星火社群';
+
+  @override
+  String get communitySearch => '搜索';
+
+  @override
+  String get communitySearchUsers => '搜索用户';
+
+  @override
+  String get communitySearchGroups => '搜索群组';
+
+  @override
+  String get communityDiscoverFriends => '发现新好友';
+
+  @override
+  String get communityDiscoverFriendsHint => '查看推荐的好友';
+
+  @override
+  String get communityCreateGroup => '创建群组';
+
+  @override
+  String get communityCreateGroupHint => '创建一个新的学习群组';
+
+  @override
+  String get communityActions => '社群操作';
+
+  @override
+  String get communityNoFriends => '还没有好友';
+
+  @override
+  String get communityNoGroups => '还没有加入群组';
+
+  @override
+  String get communityStatusOnline => '在线';
+
+  @override
+  String get communityStatusOffline => '离线';
+
+  @override
+  String get communityFocusModeOn => '专注模式开启中';
+
+  @override
+  String get communityFocusModeOff => '开启专注模式';
+
+  @override
+  String get communityFocusModeEnabled => '已开启专注模式，消息将不会打扰您';
+
+  @override
+  String get communityFocusModeDisabled => '已关闭专注模式';
+
+  @override
+  String get communityTabFriends => '好友';
+
+  @override
+  String get communityTabGroups => '群组';
+
+  @override
+  String get communityAddFriend => '添加好友';
+
+  @override
+  String communityMembers(int count) {
+    return '$count 成员';
+  }
 }

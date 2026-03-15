@@ -68,6 +68,9 @@ class ConnectionManager:
         self.pubsub: redis.client.PubSub | None = None
         self.listener_task: asyncio.Task | None = None
 
+        # ACK tracking: user_id -> {message_id: asyncio.Event}
+        self._ack_events: dict[str, dict[str, asyncio.Event]] = {}
+
     async def init_redis(self):
         """Initialize Redis connection for Pub/Sub"""
         password, password_source = resolve_redis_password(settings.REDIS_URL, settings.REDIS_PASSWORD)
@@ -371,56 +374,98 @@ class ConnectionManager:
 
     # ========== Production-grade Features ==========
 
-    async def send_with_ack(self, message: dict, user_id: str, timeout: float = 5.0) -> bool:
+    async def send_with_ack(
+        self,
+        message: dict,
+        user_id: str,
+        timeout: float = 5.0,
+        max_retries: int = 3
+    ) -> bool:
         """
-        Send message and wait for ACK, return whether delivery was successful.
+        Send message and wait for ACK, with retry mechanism.
 
-        This is used for critical messages where delivery confirmation is required.
+        Args:
+            message: The message to send
+            user_id: Target user ID
+            timeout: Timeout for each ACK wait (seconds)
+            max_retries: Maximum number of retry attempts
+
+        Returns:
+            True if ACK received, False otherwise
         """
-        message_id = message.get("id") or str(uuid.uuid4())
+        message_id = message.get("id") or message.get("msg_id") or str(uuid.uuid4())
         message["msg_id"] = message_id
 
+        # Create Event for this ACK
+        if user_id not in self._ack_events:
+            self._ack_events[user_id] = {}
+        ack_event = asyncio.Event()
+        self._ack_events[user_id][message_id] = ack_event
+
+        try:
+            for attempt in range(max_retries):
+                # Send message
+                await self.send_personal_message(message, user_id)
+
+                # Wait for ACK using Event (no polling)
+                try:
+                    await asyncio.wait_for(ack_event.wait(), timeout=timeout)
+                    logger.debug(f"ACK received for message {message_id} from user {user_id} (attempt {attempt + 1})")
+                    return True
+                except asyncio.TimeoutError:
+                    if attempt < max_retries - 1:
+                        # Exponential backoff
+                        backoff = min(2 ** attempt, 5)
+                        logger.warning(f"ACK timeout for message {message_id}, retrying in {backoff}s (attempt {attempt + 1}/{max_retries})")
+                        await asyncio.sleep(backoff)
+                    else:
+                        logger.warning(f"ACK failed for message {message_id} to user {user_id} after {max_retries} attempts")
+                        # Store to offline queue for later delivery
+                        await self._store_to_offline_queue(user_id, message, message_id)
+                        return False
+        finally:
+            # Cleanup
+            if user_id in self._ack_events and message_id in self._ack_events[user_id]:
+                del self._ack_events[user_id][message_id]
+                if not self._ack_events[user_id]:
+                    del self._ack_events[user_id]
+
+    async def _store_to_offline_queue(self, user_id: str, message: dict, message_id: str):
+        """Store failed message to offline queue for later delivery."""
         if not self.redis:
-            # Fallback for single-instance: just send without ACK tracking
-            await self.send_personal_message(message, user_id)
-            return True
+            return
 
-        # Store pending ACK
-        await self.redis.setex(
-            f"ws:pending_ack:{user_id}:{message_id}",
-            int(timeout),
-            json.dumps({"timestamp": time.time()})
+        queue_item = {
+            "user_id": user_id,
+            "message_id": message_id,
+            "message": message,
+            "queued_at": time.time(),
+            "retry_count": 0
+        }
+        await self.redis.rpush(
+            f"ws:offline_queue:{user_id}",
+            json.dumps(queue_item)
         )
-
-        await self.send_personal_message(message, user_id)
-
-        # Wait for ACK (simplified polling implementation)
-        start = time.time()
-        while time.time() - start < timeout:
-            exists = await self.redis.exists(f"ws:ack:{user_id}:{message_id}")
-            if exists:
-                await self.redis.delete(f"ws:ack:{user_id}:{message_id}")
-                logger.debug(f"ACK received for message {message_id} from user {user_id}")
-                return True
-            await asyncio.sleep(0.05)
-
-        logger.warning(f"ACK timeout for message {message_id} to user {user_id}")
-        return False  # Timeout - user offline or connection issue
+        logger.info(f"Stored message {message_id} to offline queue for user {user_id}")
 
     async def record_ack(self, user_id: str, message_id: str):
         """
         Record client ACK for a message.
 
         Called when client sends back an ACK message.
+        Uses Event for immediate notification instead of Redis polling.
         """
-        if not self.redis:
-            return
+        # Set the Event if waiting
+        if user_id in self._ack_events and message_id in self._ack_events[user_id]:
+            self._ack_events[user_id][message_id].set()
 
-        await self.redis.setex(
-            f"ws:ack:{user_id}:{message_id}",
-            60,  # Keep for 1 minute
-            "1"
-        )
+        # Also store in Redis for distributed tracking
+        if self.redis:
+            await self.redis.setex(
+                f"ws:ack:{user_id}:{message_id}",
+                60,  # Keep for 1 minute
+                "1"
+            )
         logger.debug(f"Recorded ACK for message {message_id} from user {user_id}")
 
     async def is_user_online(self, user_id: str) -> bool:

@@ -1,0 +1,267 @@
+syntax = "proto3";
+
+package stt.v1;
+
+option go_package = "github.com/sparkle/gateway/gen/stt/v1;sttv1";
+
+import "google/protobuf/timestamp.proto";
+
+// STTService defines the interface for Speech-to-Text operations.
+// Supports both streaming (real-time) and batch (file-based) transcription.
+service STTService {
+  // StreamSpeechToText handles bi-directional streaming for real-time transcription.
+  // Client streams audio chunks, server streams transcription results.
+  // Use case: Live voice input, real-time captioning.
+  rpc StreamSpeechToText(stream AudioChunk) returns (stream TranscriptionResult);
+
+  // TranscribeAudio transcribes a complete audio file.
+  // Use case: Voice messages, recorded audio notes.
+  rpc TranscribeAudio(TranscribeRequest) returns (TranscribeResponse);
+
+  // EnhanceTranscript improves transcript quality using LLM post-processing.
+  // Adds punctuation, corrects typos, and formats speaker turns.
+  rpc EnhanceTranscript(EnhanceRequest) returns (EnhanceResponse);
+}
+
+// ============================================================================
+// Streaming Transcription
+// ============================================================================
+
+// AudioChunk represents a chunk of audio data for streaming.
+message AudioChunk {
+  // Audio data in binary format (PCM, Opus, etc.)
+  bytes data = 1;
+
+  // Sample rate in Hz (e.g., 16000, 44100)
+  int32 sample_rate = 2;
+
+  // Audio format: "pcm", "opus", "wav", "mp3"
+  string format = 3;
+
+  // Language code (e.g., "zh-CN", "en-US")
+  string language = 4;
+
+  // Optional: User ID for session tracking
+  string user_id = 5;
+
+  // Optional: Session ID for multi-turn transcription
+  string session_id = 6;
+
+  // Control signal: true indicates end of stream
+  bool end_of_stream = 7;
+}
+
+// TranscriptionResult represents a transcription result from the server.
+message TranscriptionResult {
+  // Transcribed text (partial or final)
+  string text = 1;
+
+  // Whether this is the final result for this segment
+  bool is_final = 2;
+
+  // Confidence score (0.0-1.0), may be unset if not available
+  float confidence = 3;
+
+  // Sequence number for ordering (optional)
+  int32 sequence = 4;
+
+  // Timestamp when this segment was transcribed
+  google.protobuf.Timestamp timestamp = 5;
+
+  // Session ID for correlation
+  string session_id = 6;
+
+  // Error information if transcription failed
+  TranscriptionError error = 7;
+}
+
+// TranscriptionError represents an error during transcription.
+message TranscriptionError {
+  // Error code for programmatic handling
+  string code = 1;
+
+  // Human-readable error message
+  string message = 2;
+
+  // Whether the error is recoverable (streaming can continue)
+  bool recoverable = 3;
+}
+
+// ============================================================================
+// Batch Transcription
+// ============================================================================
+
+// TranscribeRequest contains the audio file to transcribe.
+message TranscribeRequest {
+  // Audio file content in binary format
+  bytes audio_data = 1;
+
+  // Original filename (for format detection)
+  string filename = 2;
+
+  // Language code (e.g., "zh-CN", "en-US")
+  // If not specified, auto-detection will be attempted
+  string language = 3;
+
+  // Audio format hint: "wav", "mp3", "m4a", "ogg", "webm"
+  string format = 4;
+
+  // User ID for tracking and rate limiting
+  string user_id = 5;
+
+  // Whether to apply LLM enhancement (punctuation, correction)
+  bool enable_enhancement = 6;
+
+  // Sample rate if known (helps with processing)
+  int32 sample_rate = 7;
+}
+
+// TranscribeResponse contains the transcription result.
+message TranscribeResponse {
+  // Full transcribed text
+  string text = 1;
+
+  // Duration of the audio in seconds
+  float duration_seconds = 2;
+
+  // Overall confidence score (0.0-1.0)
+  float confidence = 3;
+
+  // Detected language (if auto-detection was used)
+  string detected_language = 4;
+
+  // Enhanced text (if enhancement was enabled)
+  string enhanced_text = 5;
+
+  // Word-level timestamps (optional, for subtitle generation)
+  repeated WordTimestamp words = 6;
+
+  // Processing metadata
+  TranscriptionMetadata metadata = 7;
+
+  // Error if transcription failed
+  TranscriptionError error = 8;
+}
+
+// WordTimestamp provides word-level timing information.
+message WordTimestamp {
+  // The word text
+  string word = 1;
+
+  // Start time in seconds
+  float start_time = 2;
+
+  // End time in seconds
+  float end_time = 3;
+
+  // Confidence for this word
+  float confidence = 4;
+}
+
+// TranscriptionMetadata contains processing information.
+message TranscriptionMetadata {
+  // Provider used for transcription (e.g., "zhipu", "whisper")
+  string provider = 1;
+
+  // Model used
+  string model = 2;
+
+  // Processing time in milliseconds
+  int64 processing_time_ms = 3;
+
+  // Audio file size in bytes
+  int64 file_size_bytes = 4;
+
+  // Number of audio channels
+  int32 channels = 5;
+
+  // Sample rate used for processing
+  int32 sample_rate = 6;
+}
+
+// ============================================================================
+// Transcript Enhancement
+// ============================================================================
+
+// EnhanceRequest contains the raw transcript to enhance.
+message EnhanceRequest {
+  // Raw transcript text
+  string text = 1;
+
+  // User ID for personalization
+  string user_id = 2;
+
+  // Enhancement options
+  EnhancementOptions options = 3;
+}
+
+// EnhancementOptions configures the enhancement behavior.
+message EnhancementOptions {
+  // Add punctuation
+  bool add_punctuation = 1;
+
+  // Correct typos and homophones
+  bool correct_typos = 2;
+
+  // Format speaker turns (detect multiple speakers)
+  bool format_speakers = 3;
+
+  // Language for enhancement
+  string language = 4;
+}
+
+// EnhanceResponse contains the enhanced transcript.
+message EnhanceResponse {
+  // Enhanced text
+  string enhanced_text = 1;
+
+  // Original text (for comparison)
+  string original_text = 2;
+
+  // Number of changes made
+  int32 changes_count = 3;
+
+  // Processing time in milliseconds
+  int64 processing_time_ms = 4;
+}
+
+// ============================================================================
+// Common Types
+// ============================================================================
+
+// AudioFormat enumerates supported audio formats.
+enum AudioFormat {
+  AUDIO_FORMAT_UNSPECIFIED = 0;
+  AUDIO_FORMAT_PCM = 1;
+  AUDIO_FORMAT_WAV = 2;
+  AUDIO_FORMAT_MP3 = 3;
+  AUDIO_FORMAT_M4A = 4;
+  AUDIO_FORMAT_OGG = 5;
+  AUDIO_FORMAT_WEBM = 6;
+  AUDIO_FORMAT_OPUS = 7;
+}
+
+// LanguageCode enumerates supported languages.
+enum LanguageCode {
+  LANGUAGE_CODE_UNSPECIFIED = 0;
+  LANGUAGE_CODE_ZH_CN = 1;  // Mandarin Chinese
+  LANGUAGE_CODE_ZH_TW = 2;  // Traditional Chinese
+  LANGUAGE_CODE_EN_US = 3;  // American English
+  LANGUAGE_CODE_EN_GB = 4;  // British English
+  LANGUAGE_CODE_JA_JP = 5;  // Japanese
+  LANGUAGE_CODE_KO_KR = 6;  // Korean
+}
+
+// STTErrorCode enumerates possible error codes.
+enum STTErrorCode {
+  STT_ERROR_CODE_UNSPECIFIED = 0;
+  STT_ERROR_CODE_AUDIO_TOO_LARGE = 1;
+  STT_ERROR_CODE_UNSUPPORTED_FORMAT = 2;
+  STT_ERROR_CODE_INVALID_SAMPLE_RATE = 3;
+  STT_ERROR_CODE_NO_SPEECH_DETECTED = 4;
+  STT_ERROR_CODE_RECOGNITION_FAILED = 5;
+  STT_ERROR_CODE_PROVIDER_UNAVAILABLE = 6;
+  STT_ERROR_CODE_RATE_LIMITED = 7;
+  STT_ERROR_CODE_UNAUTHORIZED = 8;
+  STT_ERROR_CODE_INTERNAL_ERROR = 9;
+}

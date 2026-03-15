@@ -79,6 +79,8 @@ class IngestionService:
                 return self._process_docx(file_path)
             elif ext == ".pptx":
                 return self._process_pptx(file_path)
+            elif ext in [".jpg", ".jpeg", ".png", ".webp", ".gif"]:
+                return self._process_image(file_path, options)
             else:
                 logger.warning(f"Unsupported file type: {ext}")
                 return []
@@ -356,6 +358,77 @@ class IngestionService:
                 metadata={}
             ))
         return chunks
+
+    def _process_image(self, path: str, options: dict[str, Any] = None) -> list[ExtractedChunk]:
+        """
+        处理图片文件，直接进行 OCR。
+        支持格式: JPG, JPEG, PNG, WebP, GIF
+        """
+        if options is None:
+            options = {}
+
+        if not HAS_PIL:
+            raise HTTPException(
+                status_code=501,
+                detail="Image OCR requires Pillow, which is not installed."
+            )
+
+        from PIL import Image
+
+        try:
+            im = Image.open(path)
+
+            # 获取图片格式信息
+            image_format = im.format or "UNKNOWN"
+            logger.info(f"Processing image: {path}, format={image_format}, size={im.size}")
+
+            # 创建 Mock Page 对象用于复用现有 OCR 逻辑
+            class MockPage:
+                def __init__(self, image):
+                    self._image = image
+
+                def to_image(self, resolution=300):
+                    class PageImage:
+                        def __init__(self, img):
+                            self.original = img
+                    return PageImage(self._image)
+
+            mock_page = MockPage(im)
+
+            # 复用现有 OCR 逻辑
+            enable_ocr = bool(options.get("enable_ocr", True))
+            if not enable_ocr:
+                logger.warning("Image processing requires OCR, but OCR is disabled")
+                return []
+
+            ocr_text, ocr_confidence = self._attempt_ocr(mock_page, options)
+
+            if not ocr_text:
+                logger.warning(f"OCR produced no text for image: {path}")
+                return []
+
+            # 清理文本
+            clean_text = self._clean_text(ocr_text)
+
+            if len(clean_text) < 20:
+                logger.info(f"Image OCR text too short ({len(clean_text)} chars), skipping")
+                return []
+
+            return [ExtractedChunk(
+                text=clean_text,
+                page_num=1,
+                source="image",
+                metadata={
+                    "format": image_format,
+                    "width": im.size[0],
+                    "height": im.size[1],
+                },
+                ocr_confidence=ocr_confidence
+            )]
+
+        except Exception as e:
+            logger.error(f"Failed to process image {path}: {e}")
+            raise
 
     def _clean_text(self, text: str) -> str:
         """

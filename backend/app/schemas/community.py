@@ -740,3 +740,42 @@ class MessageSearchResult(BaseModel):
     page: int = Field(description="当前页码")
     page_size: int = Field(description="每页数量")
     has_more: bool = Field(description="是否有更多")
+
+
+# ============ 拉黑相关 Schemas ============
+
+class BlockUserRequest(BaseModel):
+    """拉黑用户请求"""
+    target_user_id: UUID = Field(description="要拉黑的用户ID")
+    reason: str | None = Field(default=None, max_length=500, description="拉黑原因")
+
+
+class BlockUserInfo(BaseSchema):
+    """被拉黑用户信息"""
+    blocked_user: UserBrief = Field(description="被拉黑的用户")
+    reason: str | None = Field(default=None, description="拉黑原因")
+
+
+class SearchVisibilityEnum(str, Enum):
+    """搜索可见性设置"""
+    EVERYONE = "everyone"
+    FRIENDS = "friends"
+    NOBODY = "nobody"
+
+
+class UserPrivacySettings(BaseModel):
+    """用户隐私设置"""
+    searchable_by: SearchVisibilityEnum = Field(description="谁可以搜索到我")
+
+
+# ============ 消息撤回配置 ============
+
+# 从settings导入配置
+def get_message_revoke_time_limit() -> int:
+    """获取消息撤回时间限制（秒）"""
+    from app.config import settings
+    return getattr(settings, 'MESSAGE_REVOKE_TIME_LIMIT_SECONDS', 120)
+
+
+# 保留常量作为默认值（向后兼容）
+MESSAGE_REVOKE_TIME_LIMIT_SECONDS = 120  # 2分钟内可撤回

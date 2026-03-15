@@ -857,7 +857,7 @@ abstract class AppLocalizations {
   /// No description provided for @featureInDevelopment.
   ///
   /// In zh, this message translates to:
-  /// **'此功能正在开发中，即将推出'**
+  /// **'功能开发中...'**
   String get featureInDevelopment;
 
   /// No description provided for @sprintHistory.
@@ -1313,7 +1313,7 @@ abstract class AppLocalizations {
   /// No description provided for @chatModeStandard.
   ///
   /// In zh, this message translates to:
-  /// **'标准模式'**
+  /// **'标准对话'**
   String get chatModeStandard;
 
   /// No description provided for @chatModeDeep.
@@ -1391,7 +1391,7 @@ abstract class AppLocalizations {
   /// No description provided for @chatModeExpertDirect.
   ///
   /// In zh, this message translates to:
-  /// **'专家直连'**
+  /// **'专家直达'**
   String get chatModeExpertDirect;
 
   /// No description provided for @chatModeExpertDirectDesc.
@@ -1601,7 +1601,7 @@ abstract class AppLocalizations {
   /// No description provided for @chatWelcomeSubtitle.
   ///
   /// In zh, this message translates to:
-  /// **'问我任何关于学习的问题'**
+  /// **'今天想做点什么？'**
   String get chatWelcomeSubtitle;
 
   /// No description provided for @chatSuggestion1.
@@ -8089,6 +8089,1152 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'行为模式'**
   String get patternTypeDefault;
+
+  /// No description provided for @chatTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI学习助手'**
+  String get chatTitle;
+
+  /// No description provided for @chatSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'随时为你解答'**
+  String get chatSubtitle;
+
+  /// No description provided for @chatHistoryTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'历史对话'**
+  String get chatHistoryTitle;
+
+  /// No description provided for @chatNewConversation.
+  ///
+  /// In zh, this message translates to:
+  /// **'新建对话'**
+  String get chatNewConversation;
+
+  /// No description provided for @chatHistoryLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载失败：{error}'**
+  String chatHistoryLoadFailed(String error);
+
+  /// No description provided for @chatHistoryLoadMoreFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载更多失败：{error}'**
+  String chatHistoryLoadMoreFailed(String error);
+
+  /// No description provided for @chatHistoryEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无历史记录'**
+  String get chatHistoryEmpty;
+
+  /// No description provided for @chatSessionUntitled.
+  ///
+  /// In zh, this message translates to:
+  /// **'未命名会话'**
+  String get chatSessionUntitled;
+
+  /// No description provided for @chatInvalidNavigationTarget.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法识别跳转地址'**
+  String get chatInvalidNavigationTarget;
+
+  /// No description provided for @chatNavigationFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'页面跳转失败，请重试'**
+  String get chatNavigationFailed;
+
+  /// No description provided for @chatSessionDataError.
+  ///
+  /// In zh, this message translates to:
+  /// **'会话数据异常，请重试'**
+  String get chatSessionDataError;
+
+  /// No description provided for @chatWelcomeTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'你好，我是你的 AI 导师'**
+  String get chatWelcomeTitle;
+
+  /// No description provided for @chatQuickActionNewTask.
+  ///
+  /// In zh, this message translates to:
+  /// **'新建微任务'**
+  String get chatQuickActionNewTask;
+
+  /// No description provided for @chatQuickActionNewTaskPrompt.
+  ///
+  /// In zh, this message translates to:
+  /// **'帮我创建一个新的微任务'**
+  String get chatQuickActionNewTaskPrompt;
+
+  /// No description provided for @chatQuickActionLongPlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成长期计划'**
+  String get chatQuickActionLongPlan;
+
+  /// No description provided for @chatQuickActionLongPlanPrompt.
+  ///
+  /// In zh, this message translates to:
+  /// **'帮我生成一个长期学习计划'**
+  String get chatQuickActionLongPlanPrompt;
+
+  /// No description provided for @chatQuickActionErrorAttribution.
+  ///
+  /// In zh, this message translates to:
+  /// **'错误归因'**
+  String get chatQuickActionErrorAttribution;
+
+  /// No description provided for @chatQuickActionErrorAttributionPrompt.
+  ///
+  /// In zh, this message translates to:
+  /// **'我想分析一下最近的错误原因'**
+  String get chatQuickActionErrorAttributionPrompt;
+
+  /// No description provided for @chatPlanUnbound.
+  ///
+  /// In zh, this message translates to:
+  /// **'未绑定计划'**
+  String get chatPlanUnbound;
+
+  /// No description provided for @chatFileProcessing.
+  ///
+  /// In zh, this message translates to:
+  /// **'文件处理中，完成后可用于对话'**
+  String get chatFileProcessing;
+
+  /// No description provided for @chatPromptDeepAnalysis1.
+  ///
+  /// In zh, this message translates to:
+  /// **'先给综合判断，再展开依据'**
+  String get chatPromptDeepAnalysis1;
+
+  /// No description provided for @chatPromptDeepAnalysis2.
+  ///
+  /// In zh, this message translates to:
+  /// **'只看关键结论和风险'**
+  String get chatPromptDeepAnalysis2;
+
+  /// No description provided for @chatPromptDeepAnalysis3.
+  ///
+  /// In zh, this message translates to:
+  /// **'补一个反方观点帮我校准'**
+  String get chatPromptDeepAnalysis3;
+
+  /// No description provided for @chatPromptStudyPlan1.
+  ///
+  /// In zh, this message translates to:
+  /// **'先按今天能开始的节奏排'**
+  String get chatPromptStudyPlan1;
+
+  /// No description provided for @chatPromptStudyPlan2.
+  ///
+  /// In zh, this message translates to:
+  /// **'拆成今天/本周两个层级'**
+  String get chatPromptStudyPlan2;
+
+  /// No description provided for @chatPromptStudyPlan3.
+  ///
+  /// In zh, this message translates to:
+  /// **'按我现在水平再降一点难度'**
+  String get chatPromptStudyPlan3;
+
+  /// No description provided for @chatPromptErrorDiagnosis1.
+  ///
+  /// In zh, this message translates to:
+  /// **'先定位错因和证据'**
+  String get chatPromptErrorDiagnosis1;
+
+  /// No description provided for @chatPromptErrorDiagnosis2.
+  ///
+  /// In zh, this message translates to:
+  /// **'给我一条针对性修复练习'**
+  String get chatPromptErrorDiagnosis2;
+
+  /// No description provided for @chatPromptErrorDiagnosis3.
+  ///
+  /// In zh, this message translates to:
+  /// **'告诉我下次怎么避免再错'**
+  String get chatPromptErrorDiagnosis3;
+
+  /// No description provided for @chatPromptExpertAuto1.
+  ///
+  /// In zh, this message translates to:
+  /// **'自动选专家给我综合结论'**
+  String get chatPromptExpertAuto1;
+
+  /// No description provided for @chatPromptExpertAuto2.
+  ///
+  /// In zh, this message translates to:
+  /// **'先告诉我这轮请了谁'**
+  String get chatPromptExpertAuto2;
+
+  /// No description provided for @chatPromptExpertAuto3.
+  ///
+  /// In zh, this message translates to:
+  /// **'把专家结果压成执行清单'**
+  String get chatPromptExpertAuto3;
+
+  /// No description provided for @chatPromptDefault1.
+  ///
+  /// In zh, this message translates to:
+  /// **'直接回答我的当前问题'**
+  String get chatPromptDefault1;
+
+  /// No description provided for @chatPromptDefault2.
+  ///
+  /// In zh, this message translates to:
+  /// **'先给我 3 步执行清单'**
+  String get chatPromptDefault2;
+
+  /// No description provided for @chatPromptDefault3.
+  ///
+  /// In zh, this message translates to:
+  /// **'结合我当前计划继续推进'**
+  String get chatPromptDefault3;
+
+  /// No description provided for @chatHelpful.
+  ///
+  /// In zh, this message translates to:
+  /// **'有帮助'**
+  String get chatHelpful;
+
+  /// No description provided for @chatNotHelpful.
+  ///
+  /// In zh, this message translates to:
+  /// **'没帮助'**
+  String get chatNotHelpful;
+
+  /// No description provided for @chatQuote.
+  ///
+  /// In zh, this message translates to:
+  /// **'引用'**
+  String get chatQuote;
+
+  /// No description provided for @chatUndo.
+  ///
+  /// In zh, this message translates to:
+  /// **'撤销'**
+  String get chatUndo;
+
+  /// No description provided for @chatRecalledSelf.
+  ///
+  /// In zh, this message translates to:
+  /// **'你撤回了一条消息'**
+  String get chatRecalledSelf;
+
+  /// No description provided for @chatRecalledPeer.
+  ///
+  /// In zh, this message translates to:
+  /// **'对方撤回了一条消息'**
+  String get chatRecalledPeer;
+
+  /// No description provided for @chatRead.
+  ///
+  /// In zh, this message translates to:
+  /// **'已读'**
+  String get chatRead;
+
+  /// No description provided for @chatAgentNavigator.
+  ///
+  /// In zh, this message translates to:
+  /// **'星图导航'**
+  String get chatAgentNavigator;
+
+  /// No description provided for @chatAgentExamStrategist.
+  ///
+  /// In zh, this message translates to:
+  /// **'考试策略师'**
+  String get chatAgentExamStrategist;
+
+  /// No description provided for @chatAgentTimeCoach.
+  ///
+  /// In zh, this message translates to:
+  /// **'时间教练'**
+  String get chatAgentTimeCoach;
+
+  /// No description provided for @chatAgentDeepAnalyst.
+  ///
+  /// In zh, this message translates to:
+  /// **'深度分析师'**
+  String get chatAgentDeepAnalyst;
+
+  /// No description provided for @chatAgentCorrectionExpert.
+  ///
+  /// In zh, this message translates to:
+  /// **'纠错专家'**
+  String get chatAgentCorrectionExpert;
+
+  /// No description provided for @chatAgentLearningBuddy.
+  ///
+  /// In zh, this message translates to:
+  /// **'学伴'**
+  String get chatAgentLearningBuddy;
+
+  /// No description provided for @chatAgentMathExpert.
+  ///
+  /// In zh, this message translates to:
+  /// **'数学专家'**
+  String get chatAgentMathExpert;
+
+  /// No description provided for @chatAgentCodingExpert.
+  ///
+  /// In zh, this message translates to:
+  /// **'编程专家'**
+  String get chatAgentCodingExpert;
+
+  /// No description provided for @chatAgentWritingExpert.
+  ///
+  /// In zh, this message translates to:
+  /// **'写作专家'**
+  String get chatAgentWritingExpert;
+
+  /// No description provided for @chatAgentScienceExpert.
+  ///
+  /// In zh, this message translates to:
+  /// **'理科专家'**
+  String get chatAgentScienceExpert;
+
+  /// No description provided for @chatAgentSearchExpert.
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索专家'**
+  String get chatAgentSearchExpert;
+
+  /// No description provided for @chatCollabParallel.
+  ///
+  /// In zh, this message translates to:
+  /// **'并行协作'**
+  String get chatCollabParallel;
+
+  /// No description provided for @chatCollabDebate.
+  ///
+  /// In zh, this message translates to:
+  /// **'辩论协作'**
+  String get chatCollabDebate;
+
+  /// No description provided for @chatCollabDelegation.
+  ///
+  /// In zh, this message translates to:
+  /// **'委派协作'**
+  String get chatCollabDelegation;
+
+  /// No description provided for @chatCollabSequential.
+  ///
+  /// In zh, this message translates to:
+  /// **'分步协作'**
+  String get chatCollabSequential;
+
+  /// No description provided for @chatCollabExpert.
+  ///
+  /// In zh, this message translates to:
+  /// **'专家协作'**
+  String get chatCollabExpert;
+
+  /// No description provided for @chatTeamSheetTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'组建你的专家团队'**
+  String get chatTeamSheetTitle;
+
+  /// No description provided for @chatTeamSheetAvailableExperts.
+  ///
+  /// In zh, this message translates to:
+  /// **'可选专家'**
+  String get chatTeamSheetAvailableExperts;
+
+  /// No description provided for @chatTeamSheetNoExperts.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无可用专家'**
+  String get chatTeamSheetNoExperts;
+
+  /// No description provided for @chatTeamSheetLoading.
+  ///
+  /// In zh, this message translates to:
+  /// **'专家目录加载中…'**
+  String get chatTeamSheetLoading;
+
+  /// No description provided for @chatTeamSheetLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载失败，请稍后重试'**
+  String get chatTeamSheetLoadFailed;
+
+  /// No description provided for @chatTeamSheetCollaborationMode.
+  ///
+  /// In zh, this message translates to:
+  /// **'协作方式'**
+  String get chatTeamSheetCollaborationMode;
+
+  /// No description provided for @chatTeamSheetSelectedExperts.
+  ///
+  /// In zh, this message translates to:
+  /// **'已选 {count} 位专家'**
+  String chatTeamSheetSelectedExperts(int count);
+
+  /// No description provided for @chatTeamSheetEnterExpert.
+  ///
+  /// In zh, this message translates to:
+  /// **'进入专家直达'**
+  String get chatTeamSheetEnterExpert;
+
+  /// No description provided for @chatTeamSheetStartCollaboration.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始协作'**
+  String get chatTeamSheetStartCollaboration;
+
+  /// No description provided for @chatCollabAuto.
+  ///
+  /// In zh, this message translates to:
+  /// **'自动'**
+  String get chatCollabAuto;
+
+  /// No description provided for @chatCollabAutoDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'系统根据问题类型自动选择最佳协作方式'**
+  String get chatCollabAutoDesc;
+
+  /// No description provided for @chatCollabSequentialShort.
+  ///
+  /// In zh, this message translates to:
+  /// **'分步'**
+  String get chatCollabSequentialShort;
+
+  /// No description provided for @chatCollabSequentialDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'专家按顺序依次分析，后者可参考前者结论'**
+  String get chatCollabSequentialDesc;
+
+  /// No description provided for @chatCollabParallelShort.
+  ///
+  /// In zh, this message translates to:
+  /// **'并行'**
+  String get chatCollabParallelShort;
+
+  /// No description provided for @chatCollabParallelDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'所有专家同时分析，最后汇总各方观点'**
+  String get chatCollabParallelDesc;
+
+  /// No description provided for @chatCollabDebateShort.
+  ///
+  /// In zh, this message translates to:
+  /// **'辩论'**
+  String get chatCollabDebateShort;
+
+  /// No description provided for @chatCollabDebateDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'专家独立分析后交叉审阅，最终给出共识结论'**
+  String get chatCollabDebateDesc;
+
+  /// No description provided for @chatCollabDelegationShort.
+  ///
+  /// In zh, this message translates to:
+  /// **'委派'**
+  String get chatCollabDelegationShort;
+
+  /// No description provided for @chatCollabDelegationDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'主专家拆解任务后分派给其他专家执行'**
+  String get chatCollabDelegationDesc;
+
+  /// No description provided for @chatLabelMe.
+  ///
+  /// In zh, this message translates to:
+  /// **'我'**
+  String get chatLabelMe;
+
+  /// No description provided for @chatLabelAssistant.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI助手'**
+  String get chatLabelAssistant;
+
+  /// No description provided for @chatNoContent.
+  ///
+  /// In zh, this message translates to:
+  /// **'无内容'**
+  String get chatNoContent;
+
+  /// No description provided for @chatTransparencyTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'透明模式'**
+  String get chatTransparencyTitle;
+
+  /// No description provided for @chatActiveToolsCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 个工具'**
+  String chatActiveToolsCount(int count);
+
+  /// No description provided for @chatActiveTools.
+  ///
+  /// In zh, this message translates to:
+  /// **'活跃工具'**
+  String get chatActiveTools;
+
+  /// No description provided for @chatTokenStats.
+  ///
+  /// In zh, this message translates to:
+  /// **'Token 统计'**
+  String get chatTokenStats;
+
+  /// No description provided for @chatPromptTokens.
+  ///
+  /// In zh, this message translates to:
+  /// **'Prompt Tokens'**
+  String get chatPromptTokens;
+
+  /// No description provided for @chatCompletionTokens.
+  ///
+  /// In zh, this message translates to:
+  /// **'Completion Tokens'**
+  String get chatCompletionTokens;
+
+  /// No description provided for @chatTokenUsageToday.
+  ///
+  /// In zh, this message translates to:
+  /// **'今日使用'**
+  String get chatTokenUsageToday;
+
+  /// No description provided for @chatTokenCostEstimate.
+  ///
+  /// In zh, this message translates to:
+  /// **'成本估算'**
+  String get chatTokenCostEstimate;
+
+  /// No description provided for @chatExecutionSteps.
+  ///
+  /// In zh, this message translates to:
+  /// **'执行步骤'**
+  String get chatExecutionSteps;
+
+  /// No description provided for @chatExecutionStepsCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 个步骤'**
+  String chatExecutionStepsCount(int count);
+
+  /// No description provided for @chatModeSelect.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择模式'**
+  String get chatModeSelect;
+
+  /// No description provided for @chatModeTeamSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count}位专家·{mode}'**
+  String chatModeTeamSummary(int count, String mode);
+
+  /// No description provided for @chatModeCustomTeamLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'自定义团队'**
+  String get chatModeCustomTeamLabel;
+
+  /// No description provided for @chatModeCustomTeamTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'自定义专家团队'**
+  String get chatModeCustomTeamTitle;
+
+  /// No description provided for @chatModeCustomTeamSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择参与专家和协作方式'**
+  String get chatModeCustomTeamSubtitle;
+
+  /// No description provided for @chatMetadataContinuity.
+  ///
+  /// In zh, this message translates to:
+  /// **'承接上文'**
+  String get chatMetadataContinuity;
+
+  /// No description provided for @chatMetadataEvidence.
+  ///
+  /// In zh, this message translates to:
+  /// **'依据'**
+  String get chatMetadataEvidence;
+
+  /// No description provided for @chatMetadataNext.
+  ///
+  /// In zh, this message translates to:
+  /// **'下一步'**
+  String get chatMetadataNext;
+
+  /// No description provided for @chatMetadataCollaboration.
+  ///
+  /// In zh, this message translates to:
+  /// **'协作'**
+  String get chatMetadataCollaboration;
+
+  /// No description provided for @chatLoginRequired.
+  ///
+  /// In zh, this message translates to:
+  /// **'请先登录'**
+  String get chatLoginRequired;
+
+  /// No description provided for @chatReviewRegenerationRequested.
+  ///
+  /// In zh, this message translates to:
+  /// **'已请求重新生成'**
+  String get chatReviewRegenerationRequested;
+
+  /// No description provided for @chatReviewHumanReviewRequested.
+  ///
+  /// In zh, this message translates to:
+  /// **'已提交人工审查请求'**
+  String get chatReviewHumanReviewRequested;
+
+  /// No description provided for @chatReviewOverrideAcceptedEvenFail.
+  ///
+  /// In zh, this message translates to:
+  /// **'已接受内容（尽管未通过审查）'**
+  String get chatReviewOverrideAcceptedEvenFail;
+
+  /// No description provided for @chatReviewOverrideRejectedEvenPass.
+  ///
+  /// In zh, this message translates to:
+  /// **'已拒绝内容（尽管审查通过）'**
+  String get chatReviewOverrideRejectedEvenPass;
+
+  /// No description provided for @chatSubmitFailedRetry.
+  ///
+  /// In zh, this message translates to:
+  /// **'提交失败，请重试'**
+  String get chatSubmitFailedRetry;
+
+  /// No description provided for @chatAppealSubmitted.
+  ///
+  /// In zh, this message translates to:
+  /// **'申诉已提交，正在处理...'**
+  String get chatAppealSubmitted;
+
+  /// No description provided for @commonBack.
+  ///
+  /// In zh, this message translates to:
+  /// **'返回'**
+  String get commonBack;
+
+  /// No description provided for @noData.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无数据'**
+  String get noData;
+
+  /// No description provided for @operationSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'操作成功'**
+  String get operationSuccess;
+
+  /// No description provided for @operationFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'操作失败'**
+  String get operationFailed;
+
+  /// No description provided for @confirmDeleteTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认删除'**
+  String get confirmDeleteTitle;
+
+  /// No description provided for @confirmDeleteMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'此操作无法撤销'**
+  String get confirmDeleteMessage;
+
+  /// No description provided for @errorBookTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'错题档案'**
+  String get errorBookTitle;
+
+  /// No description provided for @errorBookTabAll.
+  ///
+  /// In zh, this message translates to:
+  /// **'全部'**
+  String get errorBookTabAll;
+
+  /// No description provided for @errorBookTabNeedReview.
+  ///
+  /// In zh, this message translates to:
+  /// **'待复习'**
+  String get errorBookTabNeedReview;
+
+  /// No description provided for @errorBookAddError.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加错题'**
+  String get errorBookAddError;
+
+  /// No description provided for @errorBookAddFirst.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加第一道错题'**
+  String get errorBookAddFirst;
+
+  /// No description provided for @errorBookFilterTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'筛选选项'**
+  String get errorBookFilterTitle;
+
+  /// No description provided for @errorBookSearchHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索题目内容...'**
+  String get errorBookSearchHint;
+
+  /// No description provided for @errorBookNoErrors.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有错题记录'**
+  String get errorBookNoErrors;
+
+  /// No description provided for @errorBookNoErrorsHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'点击右下角 + 按钮添加错题'**
+  String get errorBookNoErrorsHint;
+
+  /// No description provided for @errorBookNoReview.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无需要复习的错题'**
+  String get errorBookNoReview;
+
+  /// No description provided for @errorBookNoReviewHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'做得很好！继续保持'**
+  String get errorBookNoReviewHint;
+
+  /// No description provided for @errorBookDeleteSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除成功'**
+  String get errorBookDeleteSuccess;
+
+  /// No description provided for @errorBookDeleteFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除失败'**
+  String get errorBookDeleteFailed;
+
+  /// No description provided for @errorBookDeleteConfirmTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认删除'**
+  String get errorBookDeleteConfirmTitle;
+
+  /// No description provided for @errorBookDeleteConfirmMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除后无法恢复，确定要删除这道错题吗？'**
+  String get errorBookDeleteConfirmMessage;
+
+  /// No description provided for @errorBookCognitiveFilter.
+  ///
+  /// In zh, this message translates to:
+  /// **'正针对 \"{dimension}\" 维度进行针对性复习'**
+  String errorBookCognitiveFilter(String dimension);
+
+  /// No description provided for @errorBookReviewCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'复习 {count} 次'**
+  String errorBookReviewCount(int count);
+
+  /// No description provided for @errorBookAIAnalyzed.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI已分析'**
+  String get errorBookAIAnalyzed;
+
+  /// No description provided for @errorBookTimeAgoMinutes.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count}分钟前'**
+  String errorBookTimeAgoMinutes(int count);
+
+  /// No description provided for @errorBookTimeAgoHours.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count}小时前'**
+  String errorBookTimeAgoHours(int count);
+
+  /// No description provided for @errorBookTimeAgoDays.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count}天前'**
+  String errorBookTimeAgoDays(int count);
+
+  /// No description provided for @reviewModeToday.
+  ///
+  /// In zh, this message translates to:
+  /// **'今日复习'**
+  String get reviewModeToday;
+
+  /// No description provided for @reviewModeTodayDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成今天到期的所有错题'**
+  String get reviewModeTodayDesc;
+
+  /// No description provided for @reviewModeBySubject.
+  ///
+  /// In zh, this message translates to:
+  /// **'按科目'**
+  String get reviewModeBySubject;
+
+  /// No description provided for @reviewModeBySubjectDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择一个科目进行专项复习'**
+  String get reviewModeBySubjectDesc;
+
+  /// No description provided for @reviewModeWeakest.
+  ///
+  /// In zh, this message translates to:
+  /// **'薄弱专攻'**
+  String get reviewModeWeakest;
+
+  /// No description provided for @reviewModeWeakestDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'优先复习掌握度最低的错题'**
+  String get reviewModeWeakestDesc;
+
+  /// No description provided for @reviewModeRandom.
+  ///
+  /// In zh, this message translates to:
+  /// **'随机抽查'**
+  String get reviewModeRandom;
+
+  /// No description provided for @reviewModeRandomDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'随机抽取错题进行复习'**
+  String get reviewModeRandomDesc;
+
+  /// No description provided for @reviewProgress.
+  ///
+  /// In zh, this message translates to:
+  /// **'进度: {current}/{total}'**
+  String reviewProgress(int current, int total);
+
+  /// No description provided for @reviewQuestion.
+  ///
+  /// In zh, this message translates to:
+  /// **'题目'**
+  String get reviewQuestion;
+
+  /// No description provided for @reviewYourAnswer.
+  ///
+  /// In zh, this message translates to:
+  /// **'你的答案'**
+  String get reviewYourAnswer;
+
+  /// No description provided for @reviewCorrectAnswer.
+  ///
+  /// In zh, this message translates to:
+  /// **'正确答案'**
+  String get reviewCorrectAnswer;
+
+  /// No description provided for @reviewAIAnalysis.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 分析'**
+  String get reviewAIAnalysis;
+
+  /// No description provided for @reviewHideAnalysis.
+  ///
+  /// In zh, this message translates to:
+  /// **'隐藏'**
+  String get reviewHideAnalysis;
+
+  /// No description provided for @reviewViewAnalysis.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看 AI 分析'**
+  String get reviewViewAnalysis;
+
+  /// No description provided for @reviewViewAnswer.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看答案'**
+  String get reviewViewAnswer;
+
+  /// No description provided for @reviewViewAnswerHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'先思考答案，再点击查看'**
+  String get reviewViewAnswerHint;
+
+  /// No description provided for @reviewSubmitFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'提交失败: {error}'**
+  String reviewSubmitFailed(String error);
+
+  /// No description provided for @reviewNoErrorsToday.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无需要复习的错题'**
+  String get reviewNoErrorsToday;
+
+  /// No description provided for @reviewKeepGoing.
+  ///
+  /// In zh, this message translates to:
+  /// **'做得很好！继续保持'**
+  String get reviewKeepGoing;
+
+  /// No description provided for @reviewComplete.
+  ///
+  /// In zh, this message translates to:
+  /// **'复习完成！'**
+  String get reviewComplete;
+
+  /// No description provided for @reviewTotalReviewed.
+  ///
+  /// In zh, this message translates to:
+  /// **'本次共复习 {count} 道题'**
+  String reviewTotalReviewed(int count);
+
+  /// No description provided for @reviewResults.
+  ///
+  /// In zh, this message translates to:
+  /// **'复习成果'**
+  String get reviewResults;
+
+  /// No description provided for @reviewRemembered.
+  ///
+  /// In zh, this message translates to:
+  /// **'记住了'**
+  String get reviewRemembered;
+
+  /// No description provided for @reviewFuzzy.
+  ///
+  /// In zh, this message translates to:
+  /// **'模糊'**
+  String get reviewFuzzy;
+
+  /// No description provided for @reviewForgotten.
+  ///
+  /// In zh, this message translates to:
+  /// **'忘记了'**
+  String get reviewForgotten;
+
+  /// No description provided for @reviewEncourageExcellent.
+  ///
+  /// In zh, this message translates to:
+  /// **'太棒了！掌握得非常扎实 🎉'**
+  String get reviewEncourageExcellent;
+
+  /// No description provided for @reviewEncourageGood.
+  ///
+  /// In zh, this message translates to:
+  /// **'很好！继续保持这个势头 💪'**
+  String get reviewEncourageGood;
+
+  /// No description provided for @reviewEncourageFair.
+  ///
+  /// In zh, this message translates to:
+  /// **'不错！再多复习几次会更好 📚'**
+  String get reviewEncourageFair;
+
+  /// No description provided for @reviewEncourageNeedsWork.
+  ///
+  /// In zh, this message translates to:
+  /// **'加油！多复习几次就能记住了 🌟'**
+  String get reviewEncourageNeedsWork;
+
+  /// No description provided for @reviewBackToList.
+  ///
+  /// In zh, this message translates to:
+  /// **'返回列表'**
+  String get reviewBackToList;
+
+  /// No description provided for @reviewAnotherRound.
+  ///
+  /// In zh, this message translates to:
+  /// **'再来一轮'**
+  String get reviewAnotherRound;
+
+  /// No description provided for @reviewConfirmExitTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认退出'**
+  String get reviewConfirmExitTitle;
+
+  /// No description provided for @reviewConfirmExitMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'复习还未完成，确定要退出吗？'**
+  String get reviewConfirmExitMessage;
+
+  /// No description provided for @reviewContinue.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续复习'**
+  String get reviewContinue;
+
+  /// No description provided for @reviewExit.
+  ///
+  /// In zh, this message translates to:
+  /// **'退出'**
+  String get reviewExit;
+
+  /// No description provided for @reviewNoMatchingErrors.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有符合条件的错题'**
+  String get reviewNoMatchingErrors;
+
+  /// No description provided for @communityTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'星火社群'**
+  String get communityTitle;
+
+  /// No description provided for @communitySearch.
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索'**
+  String get communitySearch;
+
+  /// No description provided for @communitySearchUsers.
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索用户'**
+  String get communitySearchUsers;
+
+  /// No description provided for @communitySearchGroups.
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索群组'**
+  String get communitySearchGroups;
+
+  /// No description provided for @communityDiscoverFriends.
+  ///
+  /// In zh, this message translates to:
+  /// **'发现新好友'**
+  String get communityDiscoverFriends;
+
+  /// No description provided for @communityDiscoverFriendsHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看推荐的好友'**
+  String get communityDiscoverFriendsHint;
+
+  /// No description provided for @communityCreateGroup.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建群组'**
+  String get communityCreateGroup;
+
+  /// No description provided for @communityCreateGroupHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建一个新的学习群组'**
+  String get communityCreateGroupHint;
+
+  /// No description provided for @communityActions.
+  ///
+  /// In zh, this message translates to:
+  /// **'社群操作'**
+  String get communityActions;
+
+  /// No description provided for @communityNoFriends.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有好友'**
+  String get communityNoFriends;
+
+  /// No description provided for @communityNoGroups.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有加入群组'**
+  String get communityNoGroups;
+
+  /// No description provided for @communityStatusOnline.
+  ///
+  /// In zh, this message translates to:
+  /// **'在线'**
+  String get communityStatusOnline;
+
+  /// No description provided for @communityStatusOffline.
+  ///
+  /// In zh, this message translates to:
+  /// **'离线'**
+  String get communityStatusOffline;
+
+  /// No description provided for @communityFocusModeOn.
+  ///
+  /// In zh, this message translates to:
+  /// **'专注模式开启中'**
+  String get communityFocusModeOn;
+
+  /// No description provided for @communityFocusModeOff.
+  ///
+  /// In zh, this message translates to:
+  /// **'开启专注模式'**
+  String get communityFocusModeOff;
+
+  /// No description provided for @communityFocusModeEnabled.
+  ///
+  /// In zh, this message translates to:
+  /// **'已开启专注模式，消息将不会打扰您'**
+  String get communityFocusModeEnabled;
+
+  /// No description provided for @communityFocusModeDisabled.
+  ///
+  /// In zh, this message translates to:
+  /// **'已关闭专注模式'**
+  String get communityFocusModeDisabled;
+
+  /// No description provided for @communityTabFriends.
+  ///
+  /// In zh, this message translates to:
+  /// **'好友'**
+  String get communityTabFriends;
+
+  /// No description provided for @communityTabGroups.
+  ///
+  /// In zh, this message translates to:
+  /// **'群组'**
+  String get communityTabGroups;
+
+  /// No description provided for @communityAddFriend.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加好友'**
+  String get communityAddFriend;
+
+  /// No description provided for @communityMembers.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 成员'**
+  String communityMembers(int count);
 }
 
 class _AppLocalizationsDelegate

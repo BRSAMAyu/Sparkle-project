@@ -174,6 +174,7 @@ proto-gen-legacy:
 	@echo "  → Go..."
 	mkdir -p backend/gateway/gen/agent/v1
 	mkdir -p backend/gateway/gen/galaxy/v1
+	mkdir -p backend/gateway/gen/stt/v1
 	protoc --proto_path=proto \
 	       --go_out=backend/gateway/gen/agent/v1 --go_opt=paths=source_relative \
 	       --go-grpc_out=backend/gateway/gen/agent/v1 --go-grpc_opt=paths=source_relative \
@@ -182,6 +183,10 @@ proto-gen-legacy:
 	       --go_out=backend/gateway/gen/galaxy/v1 --go_opt=paths=source_relative \
 	       --go-grpc_out=backend/gateway/gen/galaxy/v1 --go-grpc_opt=paths=source_relative \
 	       proto/galaxy_service.proto
+	protoc --proto_path=proto \
+	       --go_out=backend/gateway/gen/stt/v1 --go_opt=paths=source_relative \
+	       --go-grpc_out=backend/gateway/gen/stt/v1 --go-grpc_opt=paths=source_relative \
+	       proto/stt_service.proto
 	@echo "  → WebSocket..."
 	mkdir -p backend/gateway/gen/ws
 	protoc --proto_path=proto \
@@ -190,6 +195,7 @@ proto-gen-legacy:
 	@echo "  → Python..."
 	mkdir -p backend/app/gen/agent/v1
 	mkdir -p backend/app/gen/galaxy/v1
+	mkdir -p backend/app/gen/stt/v1
 	python -m grpc_tools.protoc \
 	       --proto_path=proto \
 	       --python_out=backend/app/gen/agent/v1 \
@@ -204,6 +210,12 @@ proto-gen-legacy:
 	       proto/galaxy_service.proto
 	python -m grpc_tools.protoc \
 	       --proto_path=proto \
+	       --python_out=backend/app/gen/stt/v1 \
+	       --grpc_python_out=backend/app/gen/stt/v1 \
+	       --pyi_out=backend/app/gen/stt/v1 \
+	       proto/stt_service.proto
+	python -m grpc_tools.protoc \
+	       --proto_path=proto \
 	       --python_out=backend/app/gen \
 	       --pyi_out=backend/app/gen \
 	       proto/websocket.proto
@@ -211,7 +223,7 @@ proto-gen-legacy:
 	@if [ -x "$$HOME/.pub-cache/bin/protoc-gen-dart" ]; then \
 		if PATH="$$HOME/.pub-cache/bin:$$PATH" protoc --proto_path=proto \
 			--dart_out=grpc:mobile/lib/gen \
-			proto/agent_service.proto proto/websocket.proto proto/galaxy_service.proto; then \
+			proto/agent_service.proto proto/websocket.proto proto/galaxy_service.proto proto/stt_service.proto; then \
 			echo "✅ Dart protobuf generated"; \
 		else \
 			echo "⚠️  Dart protobuf generation failed in current environment"; \

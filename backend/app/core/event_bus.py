@@ -1,9 +1,9 @@
 import asyncio
 import json
 import os
-from contextlib import suppress
 from abc import ABC, abstractmethod
 from collections.abc import Callable
+from contextlib import suppress
 from datetime import UTC, datetime
 from typing import Any
 
@@ -17,9 +17,11 @@ from app.core.redis_utils import format_redis_url_for_log, resolve_redis_passwor
 
 class Event(ABC):
     """Event base class"""
+
     @abstractmethod
     def to_dict(self) -> dict:
         pass
+
 
 class KnowledgeNodeUpdated(Event):
     def __init__(self, user_id: str, node_id: str, new_mastery: int):
@@ -34,8 +36,9 @@ class KnowledgeNodeUpdated(Event):
             "user_id": self.user_id,
             "node_id": self.node_id,
             "new_mastery": self.new_mastery,
-            "timestamp": self.timestamp.isoformat()
+            "timestamp": self.timestamp.isoformat(),
         }
+
 
 class NodeMasteryUpdatedEvent(Event):
     def __init__(self, user_id: str, node_id: str, old_mastery: int, new_mastery: int, reason: str):
@@ -54,8 +57,9 @@ class NodeMasteryUpdatedEvent(Event):
             "old_mastery": self.old_mastery,
             "new_mastery": self.new_mastery,
             "reason": self.reason,
-            "timestamp": self.timestamp.isoformat()
+            "timestamp": self.timestamp.isoformat(),
         }
+
 
 class ErrorCreated(Event):
     def __init__(self, user_id: str, error_id: str, linked_node_ids: list[str] = None):
@@ -70,14 +74,24 @@ class ErrorCreated(Event):
             "user_id": self.user_id,
             "error_id": self.error_id,
             "linked_node_ids": self.linked_node_ids,
-            "timestamp": self.timestamp.isoformat()
+            "timestamp": self.timestamp.isoformat(),
         }
 
+
 class TaskCompleted(Event):
-    def __init__(self, user_id: str, task_id: str, estimated_minutes: int,
-                 actual_minutes: int, difficulty: int, completion_rate: float,
-                 user_note: str | None = None, plan_id: str | None = None,
-                 source: str = "personal", source_metadata: dict[str, Any] | None = None):
+    def __init__(
+        self,
+        user_id: str,
+        task_id: str,
+        estimated_minutes: int,
+        actual_minutes: int,
+        difficulty: int,
+        completion_rate: float,
+        user_note: str | None = None,
+        plan_id: str | None = None,
+        source: str = "personal",
+        source_metadata: dict[str, Any] | None = None,
+    ):
         self.user_id = user_id
         self.task_id = task_id
         self.estimated_minutes = estimated_minutes
@@ -103,13 +117,20 @@ class TaskCompleted(Event):
             "plan_id": self.plan_id,
             "source": self.source,
             "source_metadata": self.source_metadata,
-            "timestamp": self.timestamp.isoformat()
+            "timestamp": self.timestamp.isoformat(),
         }
 
+
 class TaskAbandoned(Event):
-    def __init__(self, user_id: str, task_id: str, reason: str | None = None,
-                 estimated_minutes: int | None = None, time_spent: int | None = None,
-                 plan_id: str | None = None):
+    def __init__(
+        self,
+        user_id: str,
+        task_id: str,
+        reason: str | None = None,
+        estimated_minutes: int | None = None,
+        time_spent: int | None = None,
+        plan_id: str | None = None,
+    ):
         self.user_id = user_id
         self.task_id = task_id
         self.reason = reason
@@ -127,7 +148,7 @@ class TaskAbandoned(Event):
             "estimated_minutes": self.estimated_minutes,
             "time_spent": self.time_spent,
             "plan_id": self.plan_id,
-            "timestamp": self.timestamp.isoformat()
+            "timestamp": self.timestamp.isoformat(),
         }
 
 
@@ -177,11 +198,13 @@ class ProfilePreferenceDeleted(Event):
             "timestamp": self.timestamp.isoformat(),
         }
 
+
 class EventBus:
     """
     Event Bus - Redis Streams Implementation
     Supports asynchronous publishing and consumer groups.
     """
+
     def __init__(self, redis_url: str | None = None):
         # We delay connection until needed or explicitly initialized
         self.redis_url = redis_url or os.getenv("REDIS_URL", "redis://localhost:6379/0")
@@ -334,17 +357,11 @@ class EventBus:
         if not self.redis:
             try:
                 password, password_source = resolve_redis_password(self.redis_url, settings.REDIS_PASSWORD)
-                kwargs = {
-                    "encoding": "utf-8",
-                    "decode_responses": True
-                }
+                kwargs = {"encoding": "utf-8", "decode_responses": True}
                 if password:
                     kwargs["password"] = password
 
-                self.redis = redis.from_url(
-                    self.redis_url,
-                    **kwargs
-                )
+                self.redis = redis.from_url(self.redis_url, **kwargs)
                 await self.redis.ping()
                 logger.info(
                     "Successfully connected to Redis Event Bus: {}, Password={}, PasswordSource={}".format(
@@ -454,11 +471,7 @@ class EventBus:
                 # Read from group
                 # count=1 for processing one by one, block=5000ms
                 entries = await self.redis.xreadgroup(
-                    groupname=group_name,
-                    consumername=consumer_name,
-                    streams={stream: ">"},
-                    count=1,
-                    block=2000
+                    groupname=group_name, consumername=consumer_name, streams={stream: ">"}, count=1, block=2000
                 )
 
                 if not entries:
@@ -494,7 +507,118 @@ class EventBus:
 
             except Exception as e:
                 logger.error(f"Error in consumer loop: {e}")
-                await asyncio.sleep(1) # Backoff
+                await asyncio.sleep(1)  # Backoff
+
+    async def get_dlq_stats(self, stream: str = "sparkle_events") -> dict[str, Any]:
+        """
+        Get statistics about the Dead Letter Queue for a stream.
+
+        Returns:
+            dict with keys: dlq_stream, message_count, oldest_message_age_seconds
+        """
+        if not self.redis:
+            await self.connect()
+            if not self.redis:
+                return {"error": "Redis not connected", "dlq_stream": self._dlq_stream(stream)}
+
+        dlq_stream = self._dlq_stream(stream)
+        try:
+            info = await self.redis.xinfo_stream(dlq_stream)
+            message_count = info.get("length", 0)
+
+            oldest_age_seconds = 0
+            if message_count > 0:
+                first_entry = await self.redis.xrange(dlq_stream, count=1)
+                if first_entry:
+                    message_id = first_entry[0][0]
+                    timestamp_ms = int(message_id.split("-")[0])
+                    oldest_age_seconds = (datetime.now(UTC).timestamp() * 1000 - timestamp_ms) / 1000
+
+            return {
+                "dlq_stream": dlq_stream,
+                "message_count": message_count,
+                "oldest_message_age_seconds": round(oldest_age_seconds, 2),
+            }
+        except ResponseError as e:
+            if "no such key" in str(e).lower():
+                return {
+                    "dlq_stream": dlq_stream,
+                    "message_count": 0,
+                    "oldest_message_age_seconds": 0,
+                }
+            logger.error(f"Failed to get DLQ stats: {e}")
+            return {"error": str(e), "dlq_stream": dlq_stream}
+
+    async def get_consumer_lag(self, stream: str = "sparkle_events", group_name: str | None = None) -> dict[str, Any]:
+        """
+        Get consumer lag information for a stream and optionally a specific group.
+
+        Returns:
+            dict with keys: stream, groups (list of group info with lag details)
+        """
+        if not self.redis:
+            await self.connect()
+            if not self.redis:
+                return {"error": "Redis not connected", "stream": stream}
+
+        try:
+            stream_info = await self.redis.xinfo_stream(stream)
+            last_generated_id = stream_info.get("last-generated-id", "0-0")
+
+            try:
+                last_generated_ms = int(last_generated_id.split("-")[0])
+            except (ValueError, IndexError):
+                last_generated_ms = 0
+
+            groups_info = await self.redis.xinfo_groups(stream)
+            groups = []
+
+            for group in groups_info:
+                group_name_actual = group.get("name", "unknown")
+                if group_name and group_name_actual != group_name:
+                    continue
+
+                pending = group.get("pending", 0)
+                last_delivered_id = group.get("last-delivered-id", "0-0")
+
+                try:
+                    last_delivered_ms = int(last_delivered_id.split("-")[0])
+                except (ValueError, IndexError):
+                    last_delivered_ms = 0
+
+                lag_ms = last_generated_ms - last_delivered_ms if last_generated_ms > last_delivered_ms else 0
+                if last_delivered_id == "0-0":
+                    lag_ms = 0
+
+                groups.append(
+                    {
+                        "name": group_name_actual,
+                        "consumers": group.get("consumers", 0),
+                        "pending_messages": pending,
+                        "last_delivered_id": last_delivered_id,
+                        "lag_messages": 0 if last_delivered_id == last_generated_id else pending,
+                        "lag_time_seconds": round(lag_ms / 1000, 2) if lag_ms > 0 else 0,
+                    }
+                )
+
+            return {
+                "stream": stream,
+                "stream_length": stream_info.get("length", 0),
+                "last_generated_id": last_generated_id,
+                "groups": groups,
+            }
+        except ResponseError as e:
+            if "no such key" in str(e).lower():
+                return {
+                    "stream": stream,
+                    "stream_length": 0,
+                    "last_generated_id": "0-0",
+                    "groups": [],
+                    "error": "stream not found",
+                }
+            logger.error(f"Failed to get consumer lag: {e}")
+            return {"error": str(e), "stream": stream}
+
 
 # Global instance
 event_bus = EventBus()

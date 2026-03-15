@@ -29,6 +29,9 @@ from app.models.plan import Plan
 from app.models.task import Task
 from app.models.user import User, UserStatus
 from app.schemas.community import (
+    # 拉黑相关
+    BlockUserRequest,
+    BlockUserInfo,
     # 广播相关
     BroadcastMessageCreate,
     BroadcastMessageInfo,
@@ -96,6 +99,9 @@ from app.schemas.community import (
     SharedResourceInfo,
     SharedResourceTypeEnum,
     UserBrief,
+    # 隐私设置
+    SearchVisibilityEnum,
+    UserPrivacySettings,
     # 状态
     UserStatusUpdate,
 )
@@ -118,6 +124,8 @@ from app.services.community_service import (
     GroupService,
     GroupTaskService,
     PrivateMessageService,
+    UserBlockService,
+    UserSearchService,
 )
 from app.services.streak_signal_processor import StreakSignalProcessor
 from app.services.group_file_service import GroupFileService
@@ -490,7 +498,13 @@ async def send_friend_request(
 
     - **target_user_id**: 目标用户ID
     - **message**: 可选的请求消息
+
+    注意：如果被对方拉黑，将无法发送好友请求
     """
+    # 检查是否被对方拉黑
+    if await UserBlockService.is_blocked(db, current_user.id, data.target_user_id):
+        raise HTTPException(status_code=403, detail="由于对方的隐私设置，无法发送请求")
+
     try:
         friendship = await FriendshipService.send_friend_request(
             db, current_user.id, data.target_user_id
@@ -563,7 +577,7 @@ async def get_pending_requests(
 async def search_users(
     request: Request,
     keyword: str = Query(..., min_length=1),
-    limit: int = Query(default=20, ge=1, le=50),
+    limit: int = Query(default=20, ge=1, le=20),  # 降低默认搜索结果数量
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -571,22 +585,18 @@ async def search_users(
     搜索用户（用于添加好友）
 
     支持按用户名或昵称搜索
+
+    隐私保护：
+    - 不可搜索的用户不会出现在结果中
+    - 已拉黑当前用户的用户不会出现在结果中
     """
-    from sqlalchemy import select
-
-    # Simple search implementation
-    stmt = select(User).where(
-        or_(
-            User.username.ilike(f"%{keyword}%"),
-            User.nickname.ilike(f"%{keyword}%")
-        )
-    ).where(
-        User.id != current_user.id,
-        User.is_active
-    ).limit(limit)
-
-    result = await db.execute(stmt)
-    users = result.scalars().all()
+    # 使用带隐私过滤的搜索服务
+    users = await UserSearchService.search_users(
+        db=db,
+        query=keyword,
+        current_user_id=current_user.id,
+        limit=limit
+    )
 
     return [
         UserBrief(
@@ -595,9 +605,130 @@ async def search_users(
             nickname=user.nickname,
             avatar_url=user.avatar_url,
             flame_level=user.flame_level,
-            flame_brightness=user.flame_brightness
+            flame_brightness=user.flame_brightness,
+            status=user.status
         ) for user in users
     ]
+
+
+# ============ 用户拉黑 API ============
+
+@router.post("/users/block", summary="拉黑用户")
+@limiter.limit("10/hour")
+async def block_user(
+    request: Request,
+    data: BlockUserRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    拉黑用户
+
+    - 拉黑后自动解除好友关系
+    - 拉黑后对方无法发送消息或好友请求
+    """
+    block = await UserBlockService.block_user(
+        db=db,
+        blocker_id=current_user.id,
+        blocked_id=data.target_user_id,
+        reason=data.reason
+    )
+    await db.commit()
+
+    return {"success": True, "message": "已拉黑该用户"}
+
+
+@router.delete("/users/block/{user_id}", summary="解除拉黑")
+@limiter.limit("20/hour")
+async def unblock_user(
+    request: Request,
+    user_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """解除拉黑用户"""
+    await UserBlockService.unblock_user(
+        db=db,
+        blocker_id=current_user.id,
+        blocked_id=user_id
+    )
+    await db.commit()
+
+    return {"success": True, "message": "已解除拉黑"}
+
+
+@router.get("/users/blocked", response_model=list[BlockUserInfo], summary="获取拉黑列表")
+async def get_blocked_users(
+    request: Request,
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """获取当前用户拉黑的用户列表"""
+    blocks = await UserBlockService.get_blocked_users(
+        db=db,
+        blocker_id=current_user.id,
+        limit=limit,
+        offset=offset
+    )
+
+    return [
+        BlockUserInfo(
+            blocked_user=UserBrief(
+                id=block.blocked.id,
+                username=block.blocked.username,
+                nickname=block.blocked.nickname,
+                avatar_url=block.blocked.avatar_url,
+                flame_level=block.blocked.flame_level,
+                flame_brightness=block.blocked.flame_brightness,
+                status=block.blocked.status
+            ),
+            reason=block.reason,
+            created_at=block.created_at,
+            updated_at=block.updated_at
+        )
+        for block in blocks
+    ]
+
+
+@router.put("/users/privacy", summary="更新用户隐私设置")
+async def update_privacy_settings(
+    request: Request,
+    data: UserPrivacySettings,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    更新用户隐私设置
+
+    - everyone: 所有人可搜索
+    - friends: 仅好友可搜索
+    - nobody: 不可被搜索
+    """
+    await UserSearchService.update_searchability(
+        db=db,
+        user_id=current_user.id,
+        searchable_by=data.searchable_by.value
+    )
+    await db.commit()
+
+    return {"success": True, "searchable_by": data.searchable_by.value}
+
+
+@router.get("/users/privacy", response_model=UserPrivacySettings, summary="获取用户隐私设置")
+async def get_privacy_settings(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """获取当前用户的隐私设置"""
+    searchable_by = await UserSearchService.get_user_searchability(
+        db=db,
+        user_id=current_user.id
+    )
+
+    return UserPrivacySettings(searchable_by=SearchVisibilityEnum(searchable_by))
 
 
 @router.get("/friends/recommendations", response_model=list[FriendRecommendation], summary="获取好友推荐")
@@ -1401,7 +1532,15 @@ async def send_private_message(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    """发送私聊消息"""
+    """
+    发送私聊消息
+
+    注意：如果被对方拉黑，将无法发送消息
+    """
+    # 检查是否被对方拉黑
+    if await UserBlockService.is_blocked(db, current_user.id, data.target_user_id):
+        raise HTTPException(status_code=403, detail="由于对方的隐私设置，无法发送消息")
+
     try:
         data.content_data = _normalize_self_visibility(data.content_data, current_user.id)
         message = await PrivateMessageService.send_message(db, current_user.id, data)

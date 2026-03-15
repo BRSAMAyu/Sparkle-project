@@ -780,3 +780,34 @@ class PostLike(BaseModel):
         Index('idx_post_like_user', 'user_id'),
         Index('idx_post_like_post', 'post_id'),
     )
+
+
+# ============ 用户拉黑系统 ============
+
+class UserBlock(BaseModel):
+    """
+    用户拉黑表
+
+    设计说明：
+    - 记录用户拉黑关系
+    - 拉黑后自动解除好友关系
+    - 拉黑后无法发送消息、好友请求
+    - 支持软删除（解除拉黑）
+    """
+    __tablename__ = "user_blocks"
+
+    blocker_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    blocked_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    # 拉黑原因
+    reason = Column(String(500), nullable=True)
+
+    # 关系
+    blocker = relationship("User", foreign_keys=[blocker_id])
+    blocked = relationship("User", foreign_keys=[blocked_id])
+
+    __table_args__ = (
+        UniqueConstraint('blocker_id', 'blocked_id', name='uq_user_blocks'),
+        Index('idx_user_blocks_blocker', 'blocker_id', 'deleted_at'),
+        Index('idx_user_blocks_blocked', 'blocked_id', 'deleted_at'),
+    )

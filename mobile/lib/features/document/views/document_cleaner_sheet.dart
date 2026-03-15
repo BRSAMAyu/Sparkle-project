@@ -53,7 +53,7 @@ class _DocumentCleanerPanelState extends ConsumerState<DocumentCleanerPanel> {
   Future<void> _pickFile() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: ['pdf', 'docx', 'pptx'],
+      allowedExtensions: ['pdf', 'docx', 'pptx', 'jpg', 'jpeg', 'png', 'webp', 'gif'],
     );
 
     if (result == null || result.files.single.path == null) {
@@ -125,7 +125,7 @@ class _DocumentCleanerPanelState extends ConsumerState<DocumentCleanerPanel> {
         ),
         ToolHeroChip(
           label:
-              fileName == null ? '支持 PDF / DOCX / PPTX' : extension ?? '文件已选',
+              fileName == null ? '支持 PDF / DOCX / PPTX / 图片' : extension ?? '文件已选',
           accentColor: accent,
           icon: Icons.insert_drive_file_rounded,
         ),
@@ -227,7 +227,7 @@ class _DocumentCleanerPanelState extends ConsumerState<DocumentCleanerPanel> {
                           ),
                           const SizedBox(height: DS.spacing6),
                           Text(
-                            '支持 PDF、DOCX、PPTX；扫描件推荐开启 OCR。',
+                            '支持 PDF、DOCX、PPTX、JPG、PNG、WebP；扫描件推荐开启 OCR。',
                             textAlign: TextAlign.center,
                             style:
                                 Theme.of(context).textTheme.bodySmall?.copyWith(

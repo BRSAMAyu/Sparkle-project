@@ -1837,5 +1837,170 @@
   "chatReviewOverrideAcceptedEvenFail": "Accepted content (despite failing review)",
   "chatReviewOverrideRejectedEvenPass": "Rejected content (despite passing review)",
   "chatSubmitFailedRetry": "Submit failed, please try again",
-  "chatAppealSubmitted": "Appeal submitted, processing..."
+  "chatAppealSubmitted": "Appeal submitted, processing...",
+
+  "commonSave": "Save",
+  "commonDelete": "Delete",
+  "commonBack": "Back",
+  "commonDone": "Done",
+  "commonRetry": "Retry",
+  "commonSubmit": "Submit",
+  "commonClose": "Close",
+  "commonEdit": "Edit",
+  "commonAdd": "Add",
+  "loadingFailed": "Loading Failed",
+  "noData": "No Data",
+  "operationSuccess": "Success",
+  "operationFailed": "Failed",
+  "confirmDeleteTitle": "Confirm Delete",
+  "confirmDeleteMessage": "This cannot be undone",
+  "featureInDevelopment": "Coming soon...",
+
+  "errorBookTitle": "Error Archive",
+  "errorBookTabAll": "All",
+  "errorBookTabNeedReview": "Need Review",
+  "errorBookAddError": "Add Error",
+  "errorBookAddFirst": "Add First Error",
+  "errorBookFilterTitle": "Filter Options",
+  "errorBookSearchHint": "Search question content...",
+  "errorBookNoErrors": "No errors recorded yet",
+  "errorBookNoErrorsHint": "Tap the + button to add an error",
+  "errorBookNoReview": "No errors need review",
+  "errorBookNoReviewHint": "Great job! Keep it up",
+  "errorBookDeleteSuccess": "Deleted",
+  "errorBookDeleteFailed": "Delete Failed",
+  "errorBookDeleteConfirmTitle": "Confirm Delete",
+  "errorBookDeleteConfirmMessage": "This cannot be undone. Delete this error?",
+  "errorBookCognitiveFilter": "Reviewing specifically for \"{dimension}\" dimension",
+  "@errorBookCognitiveFilter": {
+    "placeholders": {
+      "dimension": {
+        "type": "String"
+      }
+    }
+  },
+  "errorBookReviewCount": "Reviewed {count} times",
+  "@errorBookReviewCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "errorBookAIAnalyzed": "AI Analyzed",
+  "errorBookTimeAgoMinutes": "{count} min ago",
+  "@errorBookTimeAgoMinutes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "errorBookTimeAgoHours": "{count} hr ago",
+  "@errorBookTimeAgoHours": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "errorBookTimeAgoDays": "{count} days ago",
+  "@errorBookTimeAgoDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
+  "reviewModeToday": "Today's Review",
+  "reviewModeTodayDesc": "Complete all errors due today",
+  "reviewModeBySubject": "By Subject",
+  "reviewModeBySubjectDesc": "Select a subject for focused review",
+  "reviewModeWeakest": "Weakest Areas",
+  "reviewModeWeakestDesc": "Prioritize errors with lowest mastery",
+  "reviewModeRandom": "Random Quiz",
+  "reviewModeRandomDesc": "Randomly select errors to review",
+  "reviewProgress": "Progress: {current}/{total}",
+  "@reviewProgress": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewQuestion": "Question",
+  "reviewYourAnswer": "Your Answer",
+  "reviewCorrectAnswer": "Correct Answer",
+  "reviewAIAnalysis": "AI Analysis",
+  "reviewHideAnalysis": "Hide",
+  "reviewViewAnalysis": "View AI Analysis",
+  "reviewViewAnswer": "View Answer",
+  "reviewViewAnswerHint": "Think about the answer first, then reveal",
+  "reviewSubmitFailed": "Submit failed: {error}",
+  "@reviewSubmitFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "reviewNoErrorsToday": "No errors need review today",
+  "reviewKeepGoing": "Great job! Keep it up",
+  "reviewComplete": "Review Complete!",
+  "reviewTotalReviewed": "Reviewed {count} questions this session",
+  "@reviewTotalReviewed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewResults": "Review Results",
+  "reviewRemembered": "Remembered",
+  "reviewFuzzy": "Fuzzy",
+  "reviewForgotten": "Forgotten",
+  "reviewEncourageExcellent": "Excellent! Very solid mastery 🎉",
+  "reviewEncourageGood": "Great! Keep up the momentum 💪",
+  "reviewEncourageFair": "Good! More review will help 📚",
+  "reviewEncourageNeedsWork": "Keep going! Practice makes perfect 🌟",
+  "reviewBackToList": "Back to List",
+  "reviewAnotherRound": "Another Round",
+  "reviewConfirmExitTitle": "Confirm Exit",
+  "reviewConfirmExitMessage": "Review not completed. Exit anyway?",
+  "reviewContinue": "Continue Review",
+  "reviewExit": "Exit",
+  "reviewNoMatchingErrors": "No matching errors found",
+
+  "communityTitle": "Community",
+  "communitySearch": "Search",
+  "communitySearchUsers": "Search Users",
+  "communitySearchGroups": "Search Groups",
+  "communityDiscoverFriends": "Discover Friends",
+  "communityDiscoverFriendsHint": "View recommended friends",
+  "communityCreateGroup": "Create Group",
+  "communityCreateGroupHint": "Create a new study group",
+  "communityActions": "Community Actions",
+  "communityNoFriends": "No friends yet",
+  "communityNoGroups": "No groups joined",
+  "communityStatusOnline": "Online",
+  "communityStatusOffline": "Offline",
+  "communityFocusModeOn": "Focus mode on",
+  "communityFocusModeOff": "Enable focus mode",
+  "communityFocusModeEnabled": "Focus mode enabled. You won't be disturbed",
+  "communityFocusModeDisabled": "Focus mode disabled",
+  "communityTabFriends": "Friends",
+  "communityTabGroups": "Groups",
+  "communityAddFriend": "Add Friend",
+  "communityMembers": "{count} members",
+  "@communityMembers": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

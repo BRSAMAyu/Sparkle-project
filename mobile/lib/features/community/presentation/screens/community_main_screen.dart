@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
 import 'package:sparkle/features/community/presentation/providers/focus_mode_provider.dart';
@@ -39,13 +40,13 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) => GraphiteModalSurface(
-        title: '搜索',
+        title: context.l10n.communitySearch,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
               leading: Icon(Icons.person_search, color: DS.primaryBase),
-              title: const Text('搜索用户'),
+              title: Text(context.l10n.communitySearchUsers),
               onTap: () {
                 Navigator.pop(context);
                 context.push('/community/users/search');
@@ -53,7 +54,7 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
             ),
             ListTile(
               leading: Icon(Icons.search, color: DS.primaryBase),
-              title: const Text('搜索群组'),
+              title: Text(context.l10n.communitySearchGroups),
               onTap: () {
                 Navigator.pop(context);
                 context.push('/community/groups/search');
@@ -70,14 +71,14 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) => GraphiteModalSurface(
-        title: '社群操作',
+        title: context.l10n.communityActions,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
               leading: Icon(Icons.person_add, color: DS.primaryBase),
-              title: const Text('发现新好友'),
-              subtitle: const Text('查看推荐的好友'),
+              title: Text(context.l10n.communityDiscoverFriends),
+              subtitle: Text(context.l10n.communityDiscoverFriendsHint),
               onTap: () {
                 Navigator.pop(context);
                 context.push('/community/friends/discover');
@@ -85,8 +86,8 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
             ),
             ListTile(
               leading: Icon(Icons.group_add, color: DS.primaryBase),
-              title: const Text('创建群组'),
-              subtitle: const Text('创建一个新的学习群组'),
+              title: Text(context.l10n.communityCreateGroup),
+              subtitle: Text(context.l10n.communityCreateGroupHint),
               onTap: () {
                 Navigator.pop(context);
                 context.push('/community/groups/create');
@@ -156,7 +157,7 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
           onPressed: () => context.pop(),
         ),
         title: Text(
-          '星火社群',
+          context.l10n.communityTitle,
           style: DS.titleLarge.copyWith(
             color: DS.textPrimary,
             fontWeight: FontWeight.w700,
@@ -166,7 +167,9 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
         actions: [
           // Focus mode indicator and toggle
           Tooltip(
-            message: focusMode ? '专注模式开启中' : '开启专注模式',
+            message: focusMode
+                ? context.l10n.communityFocusModeOn
+                : context.l10n.communityFocusModeOff,
             child: SparkleIconButton(
               variant: ButtonVariant.ghost,
               icon: Icon(
@@ -179,7 +182,9 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
                 ref.read(focusModeProvider.notifier).toggle();
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text(focusMode ? '已关闭专注模式' : '已开启专注模式，消息将不会打扰您'),
+                    content: Text(focusMode
+                        ? context.l10n.communityFocusModeDisabled
+                        : context.l10n.communityFocusModeEnabled),
                     duration: const Duration(seconds: 2),
                   ),
                 );
@@ -187,7 +192,7 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
             ),
           ),
           Tooltip(
-            message: '搜索',
+            message: context.l10n.communitySearch,
             child: SparkleIconButton(
               variant: ButtonVariant.ghost,
               icon: const Icon(Icons.search),
@@ -195,7 +200,7 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
             ),
           ),
           Tooltip(
-            message: '添加',
+            message: context.l10n.commonAdd,
             child: SparkleIconButton(
               variant: ButtonVariant.ghost,
               icon: const Icon(Icons.person_add_outlined),
@@ -205,13 +210,18 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
         ],
         bottom: TabBar(
           controller: _tabController,
-          tabs: const [Tab(text: '好友'), Tab(text: '群组')],
+          tabs: [
+            Tab(text: context.l10n.communityTabFriends),
+            Tab(text: context.l10n.communityTabGroups),
+          ],
           indicatorColor: DS.brandPrimary,
           labelStyle: const TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
       floatingActionButton: Tooltip(
-        message: _tabController.index == 0 ? '添加好友' : '创建群组',
+        message: _tabController.index == 0
+            ? context.l10n.communityAddFriend
+            : context.l10n.communityCreateGroup,
         child: SparkleIconButton(
           size: 56,
           icon: const Icon(Icons.add),
@@ -246,7 +256,10 @@ class _FriendsListTab extends ConsumerWidget {
                 children: [
                   Icon(Icons.people_outline, size: 64, color: DS.neutral300),
                   const SizedBox(height: DS.lg),
-                  Text('还没有好友', style: TextStyle(color: DS.neutral500)),
+                  Text(
+                    context.l10n.communityNoFriends,
+                    style: TextStyle(color: DS.neutral500),
+                  ),
                 ],
               ),
             ),
@@ -297,8 +310,8 @@ class _FriendsListTab extends ConsumerWidget {
                               const SizedBox(width: DS.xs),
                               Text(
                                 f.friend.status == UserStatus.online
-                                    ? '在线'
-                                    : '离线',
+                                    ? context.l10n.communityStatusOnline
+                                    : context.l10n.communityStatusOffline,
                                 style: TextStyle(
                                   color: f.friend.status == UserStatus.online
                                       ? DS.success
@@ -328,7 +341,9 @@ class _FriendsListTab extends ConsumerWidget {
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('加载失败: $e')),
+      error: (e, _) => Center(
+        child: Text('${context.l10n.loadingFailed}: $e'),
+      ),
     );
   }
 }
@@ -347,7 +362,10 @@ class _GroupsListTab extends ConsumerWidget {
               children: [
                 Icon(Icons.group_outlined, size: 64, color: DS.neutral300),
                 const SizedBox(height: DS.lg),
-                Text('还没有加入群组', style: TextStyle(color: DS.neutral500)),
+                Text(
+                  context.l10n.communityNoGroups,
+                  style: TextStyle(color: DS.neutral500),
+                ),
               ],
             ),
           );
@@ -390,7 +408,7 @@ class _GroupsListTab extends ConsumerWidget {
                               ),
                               const SizedBox(width: DS.xs),
                               Text(
-                                '${g.memberCount} 成员',
+                                context.l10n.communityMembers(g.memberCount),
                                 style: TextStyle(
                                   color: DS.textSecondary,
                                   fontSize: 12,
@@ -424,7 +442,9 @@ class _GroupsListTab extends ConsumerWidget {
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('加载失败: $e')),
+      error: (e, _) => Center(
+        child: Text('${context.l10n.loadingFailed}: $e'),
+      ),
     );
   }
 }

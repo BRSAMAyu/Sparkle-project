@@ -1,6 +1,7 @@
 """
 偏好服务 - 统一的偏好数据访问层
 """
+
 import asyncio
 import json
 from datetime import UTC, datetime
@@ -33,6 +34,7 @@ class PreferenceService:
         "focus_duration_preference": 25,
         "enable_push": True,
         "enable_curiosity_push": True,
+        "share_achievements_to_community": True,
     }
 
     def __init__(self, db: AsyncSession, redis=None):
@@ -166,10 +168,7 @@ class PreferenceService:
             except Exception as e:
                 await self.db.rollback()
                 if attempt < max_retries - 1:
-                    logger.warning(
-                        f"Concurrent preference update for user {user_id}, "
-                        f"retrying (attempt {attempt + 1})"
-                    )
+                    logger.warning(f"Concurrent preference update for user {user_id}, retrying (attempt {attempt + 1})")
                     await asyncio.sleep(0.01 * (attempt + 1))  # 指数退避
                     continue
                 else:
@@ -181,19 +180,13 @@ class PreferenceService:
     async def _get_db_version(self, user_id: UUID) -> int:
         """获取数据库中的版本号"""
         result = await self.db.execute(
-            select(UserPreferencesCenter.version).where(
-                UserPreferencesCenter.user_id == user_id
-            )
+            select(UserPreferencesCenter.version).where(UserPreferencesCenter.user_id == user_id)
         )
         version = result.scalar_one_or_none()
         return version or 0
 
     async def _get_or_create(self, user_id: UUID) -> UserPreferencesCenter:
-        result = await self.db.execute(
-            select(UserPreferencesCenter).where(
-                UserPreferencesCenter.user_id == user_id
-            )
-        )
+        result = await self.db.execute(select(UserPreferencesCenter).where(UserPreferencesCenter.user_id == user_id))
         prefs = result.scalar_one_or_none()
         if prefs:
             return prefs

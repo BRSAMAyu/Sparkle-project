@@ -3,10 +3,11 @@ Learning Paths API
 基于拓扑排序的动态学习路径接口
 """
 
-from typing import Any
+from typing import Any, Union
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.collaboration_workflows import TaskDecompositionWorkflow
@@ -28,11 +29,50 @@ from app.tools.schemas import GenerateTasksForPlanParams
 router = APIRouter(prefix="/learning-paths", tags=["Learning Paths"])
 
 
+# ============ Response Models ============
+
+class LearningPathErrorResponse(BaseModel):
+    """统一的学习路径错误响应"""
+    error_code: str  # "CYCLIC_DEPENDENCY" | "TARGET_NOT_FOUND" | "NO_PATH" | "GRAPH_ERROR"
+    message: str
+    details: dict[str, Any] | None = None
+
+
+class LearningPathNodeResponse(BaseModel):
+    """学习路径节点响应"""
+    id: str
+    name: str
+    status: str  # mastered, unlocked, locked
+    is_target: bool
+
+
+# ============ Helpers ============
+
+def _is_error_response(path: list[dict[str, Any]]) -> bool:
+    """检查路径响应是否为错误响应"""
+    return len(path) == 1 and "error" in path[0]
+
+
+def _extract_error(path: list[dict[str, Any]]) -> tuple[str, str, dict | None]:
+    """从路径响应中提取错误信息，返回 (error_code, message, details)"""
+    error_data = path[0]
+    error_code = error_data.get("error_code", "UNKNOWN_ERROR")
+    message = error_data.get("message", "未知错误")
+    details = error_data.get("details")
+    return error_code, message, details
+
+
+# ============ Endpoints ============
+
+
 async def get_graph_reasoning_service(db: AsyncSession = Depends(get_db)) -> GraphReasoningService:
     return GraphReasoningService(db)
 
 
-@router.get("/{target_node_id}", response_model=list[dict[str, Any]])
+@router.get(
+    "/{target_node_id}",
+    response_model=Union[list[LearningPathNodeResponse], LearningPathErrorResponse],
+)
 async def get_dynamic_learning_path(
     target_node_id: UUID,
     user_id: str = Depends(get_current_user_id),
@@ -42,13 +82,32 @@ async def get_dynamic_learning_path(
     获取到达目标节点的动态学习路径 (DAG Topological Sort)
 
     返回按学习顺序排列的节点列表，包含状态（locked/unlocked/mastered）。
+
+    Error Codes:
+    - CYCLIC_DEPENDENCY: 知识图谱存在循环依赖
+    - TARGET_NOT_FOUND: 目标节点不存在
+    - GRAPH_ERROR: 图结构查询失败
     """
     path = await service.generate_learning_path(UUID(user_id), target_node_id)
 
+    # 检查是否为空路径
     if not path:
-        # 可能是目标节点不存在，或者没有路径（比如孤立点）
-        # 这里返回空列表而不是 404，由前端处理提示 "无需前置" 或 "未找到"
         return []
+
+    # 检查是否为错误响应
+    if _is_error_response(path):
+        error_code, message, details = _extract_error(path)
+        status_code = status.HTTP_400_BAD_REQUEST
+        if error_code == "TARGET_NOT_FOUND":
+            status_code = status.HTTP_404_NOT_FOUND
+        raise HTTPException(
+            status_code=status_code,
+            detail=LearningPathErrorResponse(
+                error_code=error_code,
+                message=message,
+                details=details,
+            ).model_dump(),
+        )
 
     return path
 
@@ -66,10 +125,30 @@ async def generate_learning_path_plan(
     返回 plan_id、plan_summary、tasks 等信息。
     """
     path = await service.generate_learning_path(current_user.id, target_node_id)  # type: ignore
+
+    # 检查是否为空路径
     if not path:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="未找到学习路径或目标节点不存在",
+            detail=LearningPathErrorResponse(
+                error_code="NO_PATH",
+                message="未找到学习路径或目标节点不存在",
+            ).model_dump(),
+        )
+
+    # 检查是否为错误响应
+    if _is_error_response(path):
+        error_code, message, details = _extract_error(path)
+        http_status = status.HTTP_400_BAD_REQUEST
+        if error_code == "TARGET_NOT_FOUND":
+            http_status = status.HTTP_404_NOT_FOUND
+        raise HTTPException(
+            status_code=http_status,
+            detail=LearningPathErrorResponse(
+                error_code=error_code,
+                message=message,
+                details=details,
+            ).model_dump(),
         )
 
     target_node = next((node for node in path if node.get("is_target")), None)

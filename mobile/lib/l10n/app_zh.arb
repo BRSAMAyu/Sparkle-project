@@ -1837,5 +1837,170 @@
   "chatReviewOverrideAcceptedEvenFail": "已接受内容（尽管未通过审查）",
   "chatReviewOverrideRejectedEvenPass": "已拒绝内容（尽管审查通过）",
   "chatSubmitFailedRetry": "提交失败，请重试",
-  "chatAppealSubmitted": "申诉已提交，正在处理..."
+  "chatAppealSubmitted": "申诉已提交，正在处理...",
+
+  "commonSave": "保存",
+  "commonDelete": "删除",
+  "commonBack": "返回",
+  "commonDone": "完成",
+  "commonRetry": "重试",
+  "commonSubmit": "提交",
+  "commonClose": "关闭",
+  "commonEdit": "编辑",
+  "commonAdd": "添加",
+  "loadingFailed": "加载失败",
+  "noData": "暂无数据",
+  "operationSuccess": "操作成功",
+  "operationFailed": "操作失败",
+  "confirmDeleteTitle": "确认删除",
+  "confirmDeleteMessage": "此操作无法撤销",
+  "featureInDevelopment": "功能开发中...",
+
+  "errorBookTitle": "错题档案",
+  "errorBookTabAll": "全部",
+  "errorBookTabNeedReview": "待复习",
+  "errorBookAddError": "添加错题",
+  "errorBookAddFirst": "添加第一道错题",
+  "errorBookFilterTitle": "筛选选项",
+  "errorBookSearchHint": "搜索题目内容...",
+  "errorBookNoErrors": "还没有错题记录",
+  "errorBookNoErrorsHint": "点击右下角 + 按钮添加错题",
+  "errorBookNoReview": "暂无需要复习的错题",
+  "errorBookNoReviewHint": "做得很好！继续保持",
+  "errorBookDeleteSuccess": "删除成功",
+  "errorBookDeleteFailed": "删除失败",
+  "errorBookDeleteConfirmTitle": "确认删除",
+  "errorBookDeleteConfirmMessage": "删除后无法恢复，确定要删除这道错题吗？",
+  "errorBookCognitiveFilter": "正针对 \"{dimension}\" 维度进行针对性复习",
+  "@errorBookCognitiveFilter": {
+    "placeholders": {
+      "dimension": {
+        "type": "String"
+      }
+    }
+  },
+  "errorBookReviewCount": "复习 {count} 次",
+  "@errorBookReviewCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "errorBookAIAnalyzed": "AI已分析",
+  "errorBookTimeAgoMinutes": "{count}分钟前",
+  "@errorBookTimeAgoMinutes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "errorBookTimeAgoHours": "{count}小时前",
+  "@errorBookTimeAgoHours": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "errorBookTimeAgoDays": "{count}天前",
+  "@errorBookTimeAgoDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
+  "reviewModeToday": "今日复习",
+  "reviewModeTodayDesc": "完成今天到期的所有错题",
+  "reviewModeBySubject": "按科目",
+  "reviewModeBySubjectDesc": "选择一个科目进行专项复习",
+  "reviewModeWeakest": "薄弱专攻",
+  "reviewModeWeakestDesc": "优先复习掌握度最低的错题",
+  "reviewModeRandom": "随机抽查",
+  "reviewModeRandomDesc": "随机抽取错题进行复习",
+  "reviewProgress": "进度: {current}/{total}",
+  "@reviewProgress": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewQuestion": "题目",
+  "reviewYourAnswer": "你的答案",
+  "reviewCorrectAnswer": "正确答案",
+  "reviewAIAnalysis": "AI 分析",
+  "reviewHideAnalysis": "隐藏",
+  "reviewViewAnalysis": "查看 AI 分析",
+  "reviewViewAnswer": "查看答案",
+  "reviewViewAnswerHint": "先思考答案，再点击查看",
+  "reviewSubmitFailed": "提交失败: {error}",
+  "@reviewSubmitFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "reviewNoErrorsToday": "暂无需要复习的错题",
+  "reviewKeepGoing": "做得很好！继续保持",
+  "reviewComplete": "复习完成！",
+  "reviewTotalReviewed": "本次共复习 {count} 道题",
+  "@reviewTotalReviewed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewResults": "复习成果",
+  "reviewRemembered": "记住了",
+  "reviewFuzzy": "模糊",
+  "reviewForgotten": "忘记了",
+  "reviewEncourageExcellent": "太棒了！掌握得非常扎实 🎉",
+  "reviewEncourageGood": "很好！继续保持这个势头 💪",
+  "reviewEncourageFair": "不错！再多复习几次会更好 📚",
+  "reviewEncourageNeedsWork": "加油！多复习几次就能记住了 🌟",
+  "reviewBackToList": "返回列表",
+  "reviewAnotherRound": "再来一轮",
+  "reviewConfirmExitTitle": "确认退出",
+  "reviewConfirmExitMessage": "复习还未完成，确定要退出吗？",
+  "reviewContinue": "继续复习",
+  "reviewExit": "退出",
+  "reviewNoMatchingErrors": "没有符合条件的错题",
+
+  "communityTitle": "星火社群",
+  "communitySearch": "搜索",
+  "communitySearchUsers": "搜索用户",
+  "communitySearchGroups": "搜索群组",
+  "communityDiscoverFriends": "发现新好友",
+  "communityDiscoverFriendsHint": "查看推荐的好友",
+  "communityCreateGroup": "创建群组",
+  "communityCreateGroupHint": "创建一个新的学习群组",
+  "communityActions": "社群操作",
+  "communityNoFriends": "还没有好友",
+  "communityNoGroups": "还没有加入群组",
+  "communityStatusOnline": "在线",
+  "communityStatusOffline": "离线",
+  "communityFocusModeOn": "专注模式开启中",
+  "communityFocusModeOff": "开启专注模式",
+  "communityFocusModeEnabled": "已开启专注模式，消息将不会打扰您",
+  "communityFocusModeDisabled": "已关闭专注模式",
+  "communityTabFriends": "好友",
+  "communityTabGroups": "群组",
+  "communityAddFriend": "添加好友",
+  "communityMembers": "{count} 成员",
+  "@communityMembers": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

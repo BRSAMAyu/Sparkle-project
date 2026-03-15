@@ -20,6 +20,7 @@ from app.api.v1 import (
     decay_timemachine,
     dlq_admin,
     error_book,
+    event_bus_health,
     events,
     experiments,
     feedback_admin,
@@ -79,6 +80,7 @@ api_router.include_router(nightly_reviews.router, tags=["nightly_reviews"])
 api_router.include_router(feedback_admin.router)
 api_router.include_router(audit.router, prefix="/audit", tags=["Audit"])
 api_router.include_router(dlq_admin.router, tags=["DLQ"])
+api_router.include_router(event_bus_health.router, prefix="/admin", tags=["Event Bus Health"])
 api_router.include_router(galaxy.router, tags=["galaxy"])
 api_router.include_router(error_book.router)  # Prefix is defined in router itself (/errors)
 api_router.include_router(learning_paths.router)  # Already has prefix /learning-paths

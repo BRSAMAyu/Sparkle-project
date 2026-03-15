@@ -1,6 +1,7 @@
 """
 CommunitySignalBridge - bridge high-value community signals back into personal systems.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -10,13 +11,13 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.event_bus import KnowledgeNodeUpdated, event_bus
+from app.core.event_bus import event_bus
 from app.models.community import Group, GroupTask, GroupTaskClaim, GroupType
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.models.task import Task
 from app.orchestration.dual_core_router import AdaptationRecord
-from app.services.galaxy_service import GalaxyService
 from app.services.community_service import GroupTaskService
+from app.services.galaxy_service import GalaxyService
 from app.services.system_update_service import SystemUpdateService, build_system_update
 
 
@@ -189,3 +190,41 @@ class CommunitySignalBridge:
                 },
             ),
         )
+
+    async def broadcast_achievement_unlock(
+        self,
+        *,
+        user_id: UUID,
+        achievement_id: str,
+        achievement_title: str,
+        rarity: str = "common",
+    ) -> None:
+        """
+        Broadcast an achievement unlock to community feeds.
+        Publishes to Redis channel for real-time notification and stores in user's activity feed.
+        """
+        payload = {
+            "event_type": "community.achievement_unlocked",
+            "user_id": str(user_id),
+            "achievement_id": achievement_id,
+            "achievement_title": achievement_title,
+            "rarity": rarity,
+            "timestamp": _utcnow().isoformat(),
+        }
+
+        await event_bus.publish(
+            "community.achievement_unlocked",
+            payload,
+            stream="community_events",
+        )
+
+        if self.redis:
+            try:
+                await self.redis.publish(
+                    "community:achievements",
+                    __import__("json").dumps(payload, ensure_ascii=False),
+                )
+            except Exception as e:
+                logger.warning(f"Failed to publish achievement to Redis channel: {e}")
+
+        logger.info(f"Broadcast achievement unlock: user={user_id} achievement={achievement_id} rarity={rarity}")

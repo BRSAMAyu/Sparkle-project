@@ -115,6 +115,10 @@ class Settings(BaseSettings):
     JWT_ISSUER: str = "sparkle-gateway"
     JWT_AUDIENCE: str = "sparkle-app"
 
+    # Community Settings
+    MESSAGE_REVOKE_TIME_LIMIT_SECONDS: int = 120  # 消息撤回时间限制（秒），默认2分钟
+    MESSAGE_SEND_MAX_RETRIES: int = 3  # 消息发送最大重试次数
+
     # Database (canonical envs: POSTGRES_*)
     DATABASE_URL: str = ""
     POSTGRES_HOST: str = Field("sparkle_db", validation_alias=AliasChoices("POSTGRES_HOST", "DB_HOST"))

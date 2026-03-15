@@ -402,8 +402,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get planId => 'Plan ID';
 
   @override
-  String get featureInDevelopment =>
-      'This feature is under development, coming soon';
+  String get featureInDevelopment => 'Coming soon...';
 
   @override
   String get sprintHistory => 'Sprint History';
@@ -412,7 +411,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noSprintHistory => 'No sprint history yet';
 
   @override
-  String get loadingFailed => 'Loading failed';
+  String get loadingFailed => 'Loading Failed';
 
   @override
   String get completionProgress => 'Completion Progress';
@@ -636,7 +635,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'View behavior patterns and insights';
 
   @override
-  String get chatModeStandard => 'Standard';
+  String get chatModeStandard => 'Standard chat';
 
   @override
   String get chatModeDeep => 'Deep Focus';
@@ -675,7 +674,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatModeExpertAutoDesc => 'Auto-select best expert';
 
   @override
-  String get chatModeExpertDirect => 'Expert Direct';
+  String get chatModeExpertDirect => 'Expert direct';
 
   @override
   String get chatModeExpertDirectDesc => 'Direct expert consultation';
@@ -782,8 +781,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatWelcome => 'Hello! How can I help you today?';
 
   @override
-  String get chatWelcomeSubtitle =>
-      'Ask me anything about your learning journey';
+  String get chatWelcomeSubtitle => 'What do you want to do today?';
 
   @override
   String get chatSuggestion1 => 'Help me plan my study';
@@ -4530,4 +4528,626 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get patternTypeDefault => 'Behavior pattern';
+
+  @override
+  String get chatTitle => 'AI Learning Assistant';
+
+  @override
+  String get chatSubtitle => 'Here to help anytime';
+
+  @override
+  String get chatHistoryTitle => 'Chat History';
+
+  @override
+  String get chatNewConversation => 'New chat';
+
+  @override
+  String chatHistoryLoadFailed(String error) {
+    return 'Failed to load: $error';
+  }
+
+  @override
+  String chatHistoryLoadMoreFailed(String error) {
+    return 'Failed to load more: $error';
+  }
+
+  @override
+  String get chatHistoryEmpty => 'No history yet';
+
+  @override
+  String get chatSessionUntitled => 'Untitled session';
+
+  @override
+  String get chatInvalidNavigationTarget => 'Cannot resolve navigation target';
+
+  @override
+  String get chatNavigationFailed => 'Navigation failed, please try again';
+
+  @override
+  String get chatSessionDataError => 'Session data error, please try again';
+
+  @override
+  String get chatWelcomeTitle => 'Hi, I\'m your AI tutor';
+
+  @override
+  String get chatQuickActionNewTask => 'Create micro task';
+
+  @override
+  String get chatQuickActionNewTaskPrompt => 'Help me create a new micro task';
+
+  @override
+  String get chatQuickActionLongPlan => 'Create long-term plan';
+
+  @override
+  String get chatQuickActionLongPlanPrompt =>
+      'Help me create a long-term study plan';
+
+  @override
+  String get chatQuickActionErrorAttribution => 'Error attribution';
+
+  @override
+  String get chatQuickActionErrorAttributionPrompt =>
+      'I want to analyze recent errors';
+
+  @override
+  String get chatPlanUnbound => 'No plan linked';
+
+  @override
+  String get chatFileProcessing =>
+      'File is processing and will be available for chat soon';
+
+  @override
+  String get chatPromptDeepAnalysis1 =>
+      'Give a summary first, then show the rationale';
+
+  @override
+  String get chatPromptDeepAnalysis2 => 'Only show key conclusions and risks';
+
+  @override
+  String get chatPromptDeepAnalysis3 => 'Add a counterpoint to calibrate me';
+
+  @override
+  String get chatPromptStudyPlan1 => 'Start with what I can do today';
+
+  @override
+  String get chatPromptStudyPlan2 => 'Split into today and this week';
+
+  @override
+  String get chatPromptStudyPlan3 => 'Lower the difficulty one level';
+
+  @override
+  String get chatPromptErrorDiagnosis1 =>
+      'Identify the root cause and evidence';
+
+  @override
+  String get chatPromptErrorDiagnosis2 => 'Give one targeted repair exercise';
+
+  @override
+  String get chatPromptErrorDiagnosis3 =>
+      'How do I avoid repeating this next time?';
+
+  @override
+  String get chatPromptExpertAuto1 =>
+      'Auto-pick experts and give me a synthesis';
+
+  @override
+  String get chatPromptExpertAuto2 => 'Tell me who you invited this round';
+
+  @override
+  String get chatPromptExpertAuto3 => 'Compress results into an action list';
+
+  @override
+  String get chatPromptDefault1 => 'Answer my question directly';
+
+  @override
+  String get chatPromptDefault2 => 'Give me a 3-step action list first';
+
+  @override
+  String get chatPromptDefault3 => 'Continue based on my current plan';
+
+  @override
+  String get chatHelpful => 'Helpful';
+
+  @override
+  String get chatNotHelpful => 'Not helpful';
+
+  @override
+  String get chatQuote => 'Quote';
+
+  @override
+  String get chatUndo => 'Undo';
+
+  @override
+  String get chatRecalledSelf => 'You recalled a message';
+
+  @override
+  String get chatRecalledPeer => 'The other side recalled a message';
+
+  @override
+  String get chatRead => 'Read';
+
+  @override
+  String get chatAgentNavigator => 'Galaxy Navigator';
+
+  @override
+  String get chatAgentExamStrategist => 'Exam Strategist';
+
+  @override
+  String get chatAgentTimeCoach => 'Time Coach';
+
+  @override
+  String get chatAgentDeepAnalyst => 'Deep Analyst';
+
+  @override
+  String get chatAgentCorrectionExpert => 'Correction Expert';
+
+  @override
+  String get chatAgentLearningBuddy => 'Learning Buddy';
+
+  @override
+  String get chatAgentMathExpert => 'Math Expert';
+
+  @override
+  String get chatAgentCodingExpert => 'Coding Expert';
+
+  @override
+  String get chatAgentWritingExpert => 'Writing Expert';
+
+  @override
+  String get chatAgentScienceExpert => 'Science Expert';
+
+  @override
+  String get chatAgentSearchExpert => 'Search Expert';
+
+  @override
+  String get chatCollabParallel => 'Parallel collaboration';
+
+  @override
+  String get chatCollabDebate => 'Debate collaboration';
+
+  @override
+  String get chatCollabDelegation => 'Delegation collaboration';
+
+  @override
+  String get chatCollabSequential => 'Sequential collaboration';
+
+  @override
+  String get chatCollabExpert => 'Expert collaboration';
+
+  @override
+  String get chatTeamSheetTitle => 'Build your expert team';
+
+  @override
+  String get chatTeamSheetAvailableExperts => 'Available experts';
+
+  @override
+  String get chatTeamSheetNoExperts => 'No experts available';
+
+  @override
+  String get chatTeamSheetLoading => 'Loading expert catalog...';
+
+  @override
+  String get chatTeamSheetLoadFailed => 'Failed to load, please try again';
+
+  @override
+  String get chatTeamSheetCollaborationMode => 'Collaboration mode';
+
+  @override
+  String chatTeamSheetSelectedExperts(int count) {
+    return 'Selected $count experts';
+  }
+
+  @override
+  String get chatTeamSheetEnterExpert => 'Enter expert mode';
+
+  @override
+  String get chatTeamSheetStartCollaboration => 'Start collaboration';
+
+  @override
+  String get chatCollabAuto => 'Auto';
+
+  @override
+  String get chatCollabAutoDesc =>
+      'The system picks the best collaboration mode for your question';
+
+  @override
+  String get chatCollabSequentialShort => 'Sequential';
+
+  @override
+  String get chatCollabSequentialDesc =>
+      'Experts analyze one by one, and later experts can build on earlier conclusions';
+
+  @override
+  String get chatCollabParallelShort => 'Parallel';
+
+  @override
+  String get chatCollabParallelDesc =>
+      'All experts analyze at the same time, then results are merged';
+
+  @override
+  String get chatCollabDebateShort => 'Debate';
+
+  @override
+  String get chatCollabDebateDesc =>
+      'Experts analyze independently, cross-review, and converge on consensus';
+
+  @override
+  String get chatCollabDelegationShort => 'Delegation';
+
+  @override
+  String get chatCollabDelegationDesc =>
+      'The lead expert splits tasks and delegates to others, then summarizes';
+
+  @override
+  String get chatLabelMe => 'Me';
+
+  @override
+  String get chatLabelAssistant => 'AI Assistant';
+
+  @override
+  String get chatNoContent => 'No content';
+
+  @override
+  String get chatTransparencyTitle => 'Transparency';
+
+  @override
+  String chatActiveToolsCount(int count) {
+    return '$count tools';
+  }
+
+  @override
+  String get chatActiveTools => 'Active tools';
+
+  @override
+  String get chatTokenStats => 'Token stats';
+
+  @override
+  String get chatPromptTokens => 'Prompt tokens';
+
+  @override
+  String get chatCompletionTokens => 'Completion tokens';
+
+  @override
+  String get chatTokenUsageToday => 'Today used';
+
+  @override
+  String get chatTokenCostEstimate => 'Cost estimate';
+
+  @override
+  String get chatExecutionSteps => 'Execution steps';
+
+  @override
+  String chatExecutionStepsCount(int count) {
+    return '$count steps';
+  }
+
+  @override
+  String get chatModeSelect => 'Choose mode';
+
+  @override
+  String chatModeTeamSummary(int count, String mode) {
+    return '$count experts · $mode';
+  }
+
+  @override
+  String get chatModeCustomTeamLabel => 'Custom team';
+
+  @override
+  String get chatModeCustomTeamTitle => 'Custom expert team';
+
+  @override
+  String get chatModeCustomTeamSubtitle =>
+      'Choose experts and a collaboration mode';
+
+  @override
+  String get chatMetadataContinuity => 'Continuity';
+
+  @override
+  String get chatMetadataEvidence => 'Evidence';
+
+  @override
+  String get chatMetadataNext => 'Next steps';
+
+  @override
+  String get chatMetadataCollaboration => 'Collaboration';
+
+  @override
+  String get chatLoginRequired => 'Please log in first';
+
+  @override
+  String get chatReviewRegenerationRequested => 'Regeneration requested';
+
+  @override
+  String get chatReviewHumanReviewRequested => 'Manual review requested';
+
+  @override
+  String get chatReviewOverrideAcceptedEvenFail =>
+      'Accepted content (despite failing review)';
+
+  @override
+  String get chatReviewOverrideRejectedEvenPass =>
+      'Rejected content (despite passing review)';
+
+  @override
+  String get chatSubmitFailedRetry => 'Submit failed, please try again';
+
+  @override
+  String get chatAppealSubmitted => 'Appeal submitted, processing...';
+
+  @override
+  String get commonBack => 'Back';
+
+  @override
+  String get noData => 'No Data';
+
+  @override
+  String get operationSuccess => 'Success';
+
+  @override
+  String get operationFailed => 'Failed';
+
+  @override
+  String get confirmDeleteTitle => 'Confirm Delete';
+
+  @override
+  String get confirmDeleteMessage => 'This cannot be undone';
+
+  @override
+  String get errorBookTitle => 'Error Archive';
+
+  @override
+  String get errorBookTabAll => 'All';
+
+  @override
+  String get errorBookTabNeedReview => 'Need Review';
+
+  @override
+  String get errorBookAddError => 'Add Error';
+
+  @override
+  String get errorBookAddFirst => 'Add First Error';
+
+  @override
+  String get errorBookFilterTitle => 'Filter Options';
+
+  @override
+  String get errorBookSearchHint => 'Search question content...';
+
+  @override
+  String get errorBookNoErrors => 'No errors recorded yet';
+
+  @override
+  String get errorBookNoErrorsHint => 'Tap the + button to add an error';
+
+  @override
+  String get errorBookNoReview => 'No errors need review';
+
+  @override
+  String get errorBookNoReviewHint => 'Great job! Keep it up';
+
+  @override
+  String get errorBookDeleteSuccess => 'Deleted';
+
+  @override
+  String get errorBookDeleteFailed => 'Delete Failed';
+
+  @override
+  String get errorBookDeleteConfirmTitle => 'Confirm Delete';
+
+  @override
+  String get errorBookDeleteConfirmMessage =>
+      'This cannot be undone. Delete this error?';
+
+  @override
+  String errorBookCognitiveFilter(String dimension) {
+    return 'Reviewing specifically for \"$dimension\" dimension';
+  }
+
+  @override
+  String errorBookReviewCount(int count) {
+    return 'Reviewed $count times';
+  }
+
+  @override
+  String get errorBookAIAnalyzed => 'AI Analyzed';
+
+  @override
+  String errorBookTimeAgoMinutes(int count) {
+    return '$count min ago';
+  }
+
+  @override
+  String errorBookTimeAgoHours(int count) {
+    return '$count hr ago';
+  }
+
+  @override
+  String errorBookTimeAgoDays(int count) {
+    return '$count days ago';
+  }
+
+  @override
+  String get reviewModeToday => 'Today\'s Review';
+
+  @override
+  String get reviewModeTodayDesc => 'Complete all errors due today';
+
+  @override
+  String get reviewModeBySubject => 'By Subject';
+
+  @override
+  String get reviewModeBySubjectDesc => 'Select a subject for focused review';
+
+  @override
+  String get reviewModeWeakest => 'Weakest Areas';
+
+  @override
+  String get reviewModeWeakestDesc => 'Prioritize errors with lowest mastery';
+
+  @override
+  String get reviewModeRandom => 'Random Quiz';
+
+  @override
+  String get reviewModeRandomDesc => 'Randomly select errors to review';
+
+  @override
+  String reviewProgress(int current, int total) {
+    return 'Progress: $current/$total';
+  }
+
+  @override
+  String get reviewQuestion => 'Question';
+
+  @override
+  String get reviewYourAnswer => 'Your Answer';
+
+  @override
+  String get reviewCorrectAnswer => 'Correct Answer';
+
+  @override
+  String get reviewAIAnalysis => 'AI Analysis';
+
+  @override
+  String get reviewHideAnalysis => 'Hide';
+
+  @override
+  String get reviewViewAnalysis => 'View AI Analysis';
+
+  @override
+  String get reviewViewAnswer => 'View Answer';
+
+  @override
+  String get reviewViewAnswerHint =>
+      'Think about the answer first, then reveal';
+
+  @override
+  String reviewSubmitFailed(String error) {
+    return 'Submit failed: $error';
+  }
+
+  @override
+  String get reviewNoErrorsToday => 'No errors need review today';
+
+  @override
+  String get reviewKeepGoing => 'Great job! Keep it up';
+
+  @override
+  String get reviewComplete => 'Review Complete!';
+
+  @override
+  String reviewTotalReviewed(int count) {
+    return 'Reviewed $count questions this session';
+  }
+
+  @override
+  String get reviewResults => 'Review Results';
+
+  @override
+  String get reviewRemembered => 'Remembered';
+
+  @override
+  String get reviewFuzzy => 'Fuzzy';
+
+  @override
+  String get reviewForgotten => 'Forgotten';
+
+  @override
+  String get reviewEncourageExcellent => 'Excellent! Very solid mastery 🎉';
+
+  @override
+  String get reviewEncourageGood => 'Great! Keep up the momentum 💪';
+
+  @override
+  String get reviewEncourageFair => 'Good! More review will help 📚';
+
+  @override
+  String get reviewEncourageNeedsWork =>
+      'Keep going! Practice makes perfect 🌟';
+
+  @override
+  String get reviewBackToList => 'Back to List';
+
+  @override
+  String get reviewAnotherRound => 'Another Round';
+
+  @override
+  String get reviewConfirmExitTitle => 'Confirm Exit';
+
+  @override
+  String get reviewConfirmExitMessage => 'Review not completed. Exit anyway?';
+
+  @override
+  String get reviewContinue => 'Continue Review';
+
+  @override
+  String get reviewExit => 'Exit';
+
+  @override
+  String get reviewNoMatchingErrors => 'No matching errors found';
+
+  @override
+  String get communityTitle => 'Community';
+
+  @override
+  String get communitySearch => 'Search';
+
+  @override
+  String get communitySearchUsers => 'Search Users';
+
+  @override
+  String get communitySearchGroups => 'Search Groups';
+
+  @override
+  String get communityDiscoverFriends => 'Discover Friends';
+
+  @override
+  String get communityDiscoverFriendsHint => 'View recommended friends';
+
+  @override
+  String get communityCreateGroup => 'Create Group';
+
+  @override
+  String get communityCreateGroupHint => 'Create a new study group';
+
+  @override
+  String get communityActions => 'Community Actions';
+
+  @override
+  String get communityNoFriends => 'No friends yet';
+
+  @override
+  String get communityNoGroups => 'No groups joined';
+
+  @override
+  String get communityStatusOnline => 'Online';
+
+  @override
+  String get communityStatusOffline => 'Offline';
+
+  @override
+  String get communityFocusModeOn => 'Focus mode on';
+
+  @override
+  String get communityFocusModeOff => 'Enable focus mode';
+
+  @override
+  String get communityFocusModeEnabled =>
+      'Focus mode enabled. You won\'t be disturbed';
+
+  @override
+  String get communityFocusModeDisabled => 'Focus mode disabled';
+
+  @override
+  String get communityTabFriends => 'Friends';
+
+  @override
+  String get communityTabGroups => 'Groups';
+
+  @override
+  String get communityAddFriend => 'Add Friend';
+
+  @override
+  String communityMembers(int count) {
+    return '$count members';
+  }
 }
