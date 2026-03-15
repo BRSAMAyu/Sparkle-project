@@ -39,7 +39,7 @@ class ProfileScreen extends ConsumerWidget {
                     const SizedBox(height: DS.spacing24),
                     const StatisticsCard(),
                     const SizedBox(height: DS.spacing24),
-                    _buildSettingsSection(context, ref, l10n),
+                    _buildSettingsSection(context, ref, l10n, user),
                     const SizedBox(height: 100), // Bottom padding
                   ],
                 ),
@@ -55,126 +55,140 @@ class ProfileScreen extends ConsumerWidget {
     BuildContext context,
     UserModel user, {
     required double headerHeight,
-  }) => SizedBox(
-      height: headerHeight,
-      child: Stack(
-        children: [
-          // Wave Background
-          Positioned.fill(
-            child: CustomPaint(
-              painter: _WaveHeaderPainter(
-                startColor: Color.lerp(
-                    DS.surfacePrimaryElevated, DS.brandPrimary, 0.04)!,
-                middleColor:
-                    Color.lerp(DS.surfaceCanvas, DS.surfaceSecondary, 0.54)!,
-                endColor:
-                    Color.lerp(DS.surfaceCanvas, DS.brandSecondary, 0.06)!,
+  }) =>
+      SizedBox(
+        height: headerHeight,
+        child: Stack(
+          children: [
+            // Wave Background
+            Positioned.fill(
+              child: CustomPaint(
+                painter: _WaveHeaderPainter(
+                  startColor: Color.lerp(
+                      DS.surfacePrimaryElevated, DS.brandPrimary, 0.04)!,
+                  middleColor:
+                      Color.lerp(DS.surfaceCanvas, DS.surfaceSecondary, 0.54)!,
+                  endColor:
+                      Color.lerp(DS.surfaceCanvas, DS.brandSecondary, 0.06)!,
+                ),
               ),
             ),
-          ),
-          // Content
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(DS.spacing24),
-              child: Column(
-                children: [
-                  const SizedBox(height: DS.spacing16),
-                  Row(
-                    children: [
-                      // Avatar Area
-                      DecoratedBox(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: DS.borderStrong,
-                            width: 3,
+            // Content
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(DS.spacing24),
+                child: Column(
+                  children: [
+                    const SizedBox(height: DS.spacing16),
+                    Row(
+                      children: [
+                        // Avatar Area
+                        DecoratedBox(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: DS.borderStrong,
+                              width: 3,
+                            ),
+                            boxShadow: DS.shadowMd,
                           ),
-                          boxShadow: DS.shadowMd,
+                          child: SparkleAvatar(
+                            radius: 40,
+                            backgroundColor: DS.avatarFallbackBackground,
+                            url: user.avatarStatus == AvatarStatus.pending
+                                ? (user.pendingAvatarUrl ?? user.avatarUrl)
+                                : user.avatarUrl,
+                            fallbackText: user.nickname ?? user.username,
+                            status: user.avatarStatus,
+                          ),
                         ),
-                        child: SparkleAvatar(
-                          radius: 40,
-                          backgroundColor: DS.avatarFallbackBackground,
-                          url: user.avatarStatus == AvatarStatus.pending
-                              ? (user.pendingAvatarUrl ?? user.avatarUrl)
-                              : user.avatarUrl,
-                          fallbackText: user.nickname ?? user.username,
-                          status: user.avatarStatus,
-                        ),
-                      ),
-                      const SizedBox(width: DS.spacing20),
-                      // Info Area
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              user.nickname ?? user.username,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .headlineSmall
-                                  ?.copyWith(
-                                    color: DS.textPrimary,
-                                    fontWeight: DS.fontWeightBold,
-                                  ),
-                            ),
-                            const SizedBox(height: DS.sm),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: DS.surfaceOverlay,
-                                borderRadius: DS.borderRadius20,
-                                border: Border.all(color: DS.borderSubtle),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.local_fire_department_rounded,
-                                    color: DS.brandPrimaryConst,
-                                    size: 16,
-                                  ),
-                                  const SizedBox(width: DS.xs),
-                                  Text(
-                                    'Lv.${user.flameLevel}',
-                                    style: DS.labelLarge.copyWith(
+                        const SizedBox(width: DS.spacing20),
+                        // Info Area
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                user.nickname ?? user.username,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .headlineSmall
+                                    ?.copyWith(
                                       color: DS.textPrimary,
-                                      fontWeight: FontWeight.w700,
+                                      fontWeight: DS.fontWeightBold,
                                     ),
-                                  ),
-                                  const SizedBox(width: DS.sm),
-                                  Text(
-                                    'Brightness ${(user.flameBrightness * 100).toInt()}%',
-                                    style: DS.labelSmall.copyWith(
-                                      color: DS.textSecondary,
-                                    ),
-                                  ),
-                                ],
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: DS.sm),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: DS.surfaceOverlay,
+                                  borderRadius: DS.borderRadius20,
+                                  border: Border.all(color: DS.borderSubtle),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.local_fire_department_rounded,
+                                      color: DS.brandPrimaryConst,
+                                      size: 16,
+                                    ),
+                                    const SizedBox(width: DS.xs),
+                                    Text(
+                                      'Lv.${user.flameLevel}',
+                                      style: DS.labelLarge.copyWith(
+                                        color: DS.textPrimary,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    const SizedBox(width: DS.sm),
+                                    Text(
+                                      'Brightness ${(user.flameBrightness * 100).toInt()}%',
+                                      style: DS.labelSmall.copyWith(
+                                        color: DS.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
 
   Widget _buildSettingsSection(
     BuildContext context,
     WidgetRef ref,
     AppLocalizations l10n,
+    UserModel user,
   ) =>
       GraphiteCardSurface(
         child: Column(
           children: [
+            if (user.registrationSource == 'guest') ...[
+              _buildSettingsTile(
+                context,
+                icon: Icons.upgrade_rounded,
+                title: '升级游客账号',
+                accentColor: const Color(0xFFC37D3A),
+                onTap: () {
+                  context.push(UserRoutes.guestUpgrade);
+                },
+              ),
+              const Divider(height: 1, indent: 60),
+            ],
             _buildSettingsTile(
               context,
               icon: Icons.person_outline_rounded,
@@ -214,6 +228,36 @@ class ProfileScreen extends ConsumerWidget {
                 context.push(UserRoutes.systemUpdates);
               },
             ),
+            const Divider(height: 1, indent: 60),
+            _buildSettingsTile(
+              context,
+              icon: Icons.link_rounded,
+              title: '关联账号',
+              accentColor: const Color(0xFF7A8C64),
+              onTap: () {
+                context.push(UserRoutes.socialAccounts);
+              },
+            ),
+            const Divider(height: 1, indent: 60),
+            _buildSettingsTile(
+              context,
+              icon: Icons.devices_rounded,
+              title: '登录设备管理',
+              accentColor: const Color(0xFF5E8197),
+              onTap: () {
+                context.push(UserRoutes.sessionManagement);
+              },
+            ),
+            const Divider(height: 1, indent: 60),
+            _buildSettingsTile(
+              context,
+              icon: Icons.shield_outlined,
+              title: '安全日志',
+              accentColor: const Color(0xFF8A7AAE),
+              onTap: () {
+                context.push(UserRoutes.securityLog);
+              },
+            ),
             if (AppFeatureFlags.enableUserMemoryControls) ...[
               const Divider(height: 1, indent: 60),
               _buildSettingsTile(
@@ -245,6 +289,17 @@ class ProfileScreen extends ConsumerWidget {
               isDestructive: true,
               onTap: () {
                 _showLogoutDialog(context, ref, l10n);
+              },
+            ),
+            const Divider(height: 1, indent: 60),
+            _buildSettingsTile(
+              context,
+              icon: Icons.delete_forever_rounded,
+              title: '注销账号',
+              accentColor: const Color(0xFFB84F45),
+              isDestructive: true,
+              onTap: () {
+                context.push(UserRoutes.deleteAccount);
               },
             ),
           ],

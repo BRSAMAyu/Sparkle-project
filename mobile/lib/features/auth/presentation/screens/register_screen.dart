@@ -22,6 +22,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   bool _isPasswordVisible = false;
+  bool _acceptedTos = false;
+  bool _acceptedPrivacy = false;
 
   @override
   void dispose() {
@@ -34,11 +36,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   void _submit() {
     if (_formKey.currentState!.validate()) {
+      if (!_acceptedTos || !_acceptedPrivacy) {
+        AppFeedback.info(context, '请先同意用户协议与隐私政策');
+        return;
+      }
       unawaited(
         ref.read(authProvider.notifier).register(
               _usernameController.text.trim(),
               _emailController.text.trim(),
               _passwordController.text.trim(),
+              acceptedTos: _acceptedTos,
+              acceptedPrivacy: _acceptedPrivacy,
+              agreedLocale: Localizations.localeOf(context).toLanguageTag(),
             ),
       );
     }
@@ -187,6 +196,39 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             }
                             return null;
                           },
+                        ),
+                        const SizedBox(height: DS.lg),
+                        CheckboxListTile(
+                          contentPadding: EdgeInsets.zero,
+                          value: _acceptedTos,
+                          onChanged: (value) => setState(
+                            () => _acceptedTos = value ?? false,
+                          ),
+                          title: const Text('我已阅读并同意《用户协议》'),
+                          controlAffinity: ListTileControlAffinity.leading,
+                        ),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton(
+                            onPressed: () => context.push('/legal/terms'),
+                            child: const Text('查看用户协议'),
+                          ),
+                        ),
+                        CheckboxListTile(
+                          contentPadding: EdgeInsets.zero,
+                          value: _acceptedPrivacy,
+                          onChanged: (value) => setState(
+                            () => _acceptedPrivacy = value ?? false,
+                          ),
+                          title: const Text('我已阅读并同意《隐私政策》'),
+                          controlAffinity: ListTileControlAffinity.leading,
+                        ),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton(
+                            onPressed: () => context.push('/legal/privacy'),
+                            child: const Text('查看隐私政策'),
+                          ),
                         ),
                         const SizedBox(height: DS.xl),
                         SparkleButton(

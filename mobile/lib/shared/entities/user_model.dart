@@ -27,6 +27,7 @@ class UserModel {
     required this.createdAt,
     required this.updatedAt,
     this.emailVerified = false,
+    this.passwordLoginEnabled = true,
     this.nickname,
     this.avatarUrl,
     this.avatarStatus = AvatarStatus.approved,
@@ -40,6 +41,9 @@ class UserModel {
     this.equippedTitle,
     this.equippedTitleSource,
     this.registrationSource,
+    this.linkedProviders = const [],
+    this.tosVersion,
+    this.privacyVersion,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) =>
@@ -49,6 +53,8 @@ class UserModel {
   final String email;
   @JsonKey(name: 'email_verified')
   final bool emailVerified;
+  @JsonKey(name: 'password_login_enabled')
+  final bool passwordLoginEnabled;
   final String? nickname;
   @JsonKey(name: 'avatar_url')
   final String? avatarUrl;
@@ -91,6 +97,12 @@ class UserModel {
   final String? equippedTitleSource;
   @JsonKey(name: 'registration_source')
   final String? registrationSource;
+  @JsonKey(name: 'linked_providers')
+  final List<String> linkedProviders;
+  @JsonKey(name: 'tos_version')
+  final String? tosVersion;
+  @JsonKey(name: 'privacy_version')
+  final String? privacyVersion;
   Map<String, dynamic> toJson() => _$UserModelToJson(this);
 }
 

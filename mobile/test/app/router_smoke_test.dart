@@ -140,8 +140,10 @@ void main() {
 
       await _pumpFrames(tester);
 
-      expect(harness.router.routeInformationProvider.value.uri.path,
-          '/onboarding/persona',);
+      expect(
+        harness.router.routeInformationProvider.value.uri.path,
+        '/onboarding/persona',
+      );
       expect(find.byType(PersonaOnboardingScreen), findsOneWidget);
     });
 
@@ -221,9 +223,13 @@ void main() {
       await expectRoute('/tasks', TaskListScreen);
       await expectRoute('/notifications', NotificationListScreen);
       await expectRoute(
-          '/calendar?date=2026-03-06T00:00:00.000', CalendarStatsScreen,);
+        '/calendar?date=2026-03-06T00:00:00.000',
+        CalendarStatsScreen,
+      );
       await expectRoute(
-          '/calendar-stats?date=2026-03-07T00:00:00.000', CalendarStatsScreen,);
+        '/calendar-stats?date=2026-03-07T00:00:00.000',
+        CalendarStatsScreen,
+      );
       await expectRoute(
         '/calendar/day?date=2026-03-08T00:00:00.000',
         DailyDetailScreen,
@@ -392,12 +398,18 @@ UserModel _buildUser() => UserModel(
     );
 
 class _FakeAuthNotifier extends AuthNotifier {
-  _FakeAuthNotifier(AuthState authState) : super(_UnusedAuthRepository()) {
+  _FakeAuthNotifier(AuthState authState)
+      : super(_UnusedRef(), _UnusedAuthRepository()) {
     state = authState;
   }
 
   @override
   Future<void> checkAuthStatus() async {}
+}
+
+class _UnusedRef implements Ref<Object?> {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 class _FakeOnboardingCompletedNotifier extends OnboardingCompletedNotifier {

@@ -928,7 +928,7 @@ void main() {
 }
 
 class _FakeAuthNotifier extends AuthNotifier {
-  _FakeAuthNotifier() : super(_UnusedAuthRepository()) {
+  _FakeAuthNotifier() : super(_UnusedRef(), _UnusedAuthRepository()) {
     state = AuthState(
       isAuthenticated: true,
       user: UserModel(
@@ -956,6 +956,11 @@ class _FakeAuthNotifier extends AuthNotifier {
   Future<void> refreshUser() async {
     refreshUserCalls += 1;
   }
+}
+
+class _UnusedRef implements Ref<Object?> {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 class _UnusedAuthRepository extends AuthRepository {

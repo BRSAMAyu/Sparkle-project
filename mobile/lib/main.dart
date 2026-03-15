@@ -7,6 +7,7 @@ import 'package:sparkle/core/design/tokens_v2/theme_manager.dart';
 import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/performance_service.dart';
+import 'package:sparkle/core/services/social_auth_service.dart';
 import 'package:sparkle/core/services/user_preferences_service.dart';
 import 'package:sparkle/core/services/view_storage_service.dart';
 import 'package:sparkle/core/tracing/tracing_service.dart';
@@ -59,6 +60,9 @@ void main() async {
     // TODO: Open Hive boxes
     await Hive.openBox<dynamic>('settings');
     await Hive.openBox<dynamic>('user');
+
+    // Initialize WeChat SDK (non-blocking — skips silently if APP_ID not configured)
+    await SocialAuthService().initWeChat();
 
     runApp(
       ProviderScope(

@@ -57,5 +57,21 @@ class AuthRoutes {
             ),
           ),
         ),
+        GoRoute(
+          path: '/legal/terms',
+          name: 'legalTerms',
+          pageBuilder: (context, state) => _buildTransitionPage(
+            state: state,
+            child: const LegalDocumentScreen(documentType: 'terms'),
+          ),
+        ),
+        GoRoute(
+          path: '/legal/privacy',
+          name: 'legalPrivacy',
+          pageBuilder: (context, state) => _buildTransitionPage(
+            state: state,
+            child: const LegalDocumentScreen(documentType: 'privacy'),
+          ),
+        ),
       ];
 }

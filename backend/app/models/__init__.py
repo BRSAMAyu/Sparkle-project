@@ -17,6 +17,7 @@ from app.models.achievement import (
     VisualEffectType,
 )
 from app.models.analytics import UserDailyMetric
+from app.models.auth_security import AuthAuditAction, AuthAuditLog, UserSession
 from app.models.audit_log import ComplianceCheckLog, DataAccessLog, SecurityAuditLog, SystemConfigChangeLog
 from app.models.base import GUID, BaseModel
 from app.models.capsule_favorite import CapsuleFavorite
@@ -146,6 +147,9 @@ __all__ = [
     "BaseModel",
     "GUID",
     "User",
+    "UserSession",
+    "AuthAuditLog",
+    "AuthAuditAction",
     "PushPreference",
     "UserDevice",
     "Task",

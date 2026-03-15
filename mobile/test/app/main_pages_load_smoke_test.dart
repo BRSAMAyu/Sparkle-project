@@ -132,7 +132,7 @@ Future<void> _pumpPage(WidgetTester tester, Widget page) async {
 }
 
 class _FakeAuthNotifier extends AuthNotifier {
-  _FakeAuthNotifier() : super(_UnusedAuthRepository()) {
+  _FakeAuthNotifier() : super(_UnusedRef(), _UnusedAuthRepository()) {
     state = AuthState(
       isAuthenticated: true,
       user: _buildUser(),
@@ -141,6 +141,11 @@ class _FakeAuthNotifier extends AuthNotifier {
 
   @override
   Future<void> checkAuthStatus() async {}
+}
+
+class _UnusedRef implements Ref<Object?> {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 UserModel _buildUser() => UserModel(

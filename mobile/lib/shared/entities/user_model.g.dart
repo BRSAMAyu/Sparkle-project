@@ -11,6 +11,8 @@ UserModel _$UserModelFromJson(Map<String, dynamic> json) => UserModel(
       username: json['username'] as String,
       email: json['email'] as String,
       emailVerified: json['email_verified'] as bool? ?? false,
+      passwordLoginEnabled:
+          json['password_login_enabled'] as bool? ?? true,
       flameLevel: (json['flame_level'] as num).toInt(),
       flameBrightness: (json['flame_brightness'] as num).toDouble(),
       depthPreference: (json['depth_preference'] as num).toDouble(),
@@ -38,6 +40,12 @@ UserModel _$UserModelFromJson(Map<String, dynamic> json) => UserModel(
       equippedTitle: json['equipped_title'] as String?,
       equippedTitleSource: json['equipped_title_source'] as String?,
       registrationSource: json['registration_source'] as String?,
+      linkedProviders: (json['linked_providers'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+      tosVersion: json['tos_version'] as String?,
+      privacyVersion: json['privacy_version'] as String?,
     );
 
 Map<String, dynamic> _$UserModelToJson(UserModel instance) => <String, dynamic>{
@@ -45,6 +53,7 @@ Map<String, dynamic> _$UserModelToJson(UserModel instance) => <String, dynamic>{
       'username': instance.username,
       'email': instance.email,
       'email_verified': instance.emailVerified,
+      'password_login_enabled': instance.passwordLoginEnabled,
       'nickname': instance.nickname,
       'avatar_url': instance.avatarUrl,
       'avatar_status': _$AvatarStatusEnumMap[instance.avatarStatus]!,
@@ -65,6 +74,9 @@ Map<String, dynamic> _$UserModelToJson(UserModel instance) => <String, dynamic>{
       'equipped_title': instance.equippedTitle,
       'equipped_title_source': instance.equippedTitleSource,
       'registration_source': instance.registrationSource,
+      'linked_providers': instance.linkedProviders,
+      'tos_version': instance.tosVersion,
+      'privacy_version': instance.privacyVersion,
     };
 
 const _$AvatarStatusEnumMap = {

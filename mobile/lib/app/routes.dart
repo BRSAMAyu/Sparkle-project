@@ -54,8 +54,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isAuthenticated = authState.isAuthenticated;
       final isLoading = authState.isLoading;
       final isOnSplash = state.uri.path == '/';
-      final isOnAuth =
-          state.uri.path == '/login' || state.uri.path == '/register';
+      final publicAuthPaths = {
+        '/login',
+        '/register',
+        '/forgot-password',
+        '/reset-password',
+        '/legal/terms',
+        '/legal/privacy',
+      };
+      final isOnAuth = publicAuthPaths.contains(state.uri.path);
       final isOnPersonaOnboarding =
           state.uri.path == UserRoutes.personaOnboarding;
       final onboardingCompleted = ref.read(onboardingCompletedProvider);

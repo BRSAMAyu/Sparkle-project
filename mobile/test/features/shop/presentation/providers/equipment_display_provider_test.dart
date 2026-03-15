@@ -107,7 +107,7 @@ class _FakeAchievementRepository extends AchievementRepository {
 }
 
 class _SourceAwareAuthNotifier extends AuthNotifier {
-  _SourceAwareAuthNotifier() : super(_UnusedAuthRepository()) {
+  _SourceAwareAuthNotifier() : super(_UnusedRef(), _UnusedAuthRepository()) {
     state = AuthState(
       isAuthenticated: true,
     );
@@ -119,6 +119,11 @@ class _SourceAwareAuthNotifier extends AuthNotifier {
   void setUser(UserModel user) {
     state = state.copyWith(user: user);
   }
+}
+
+class _UnusedRef implements Ref<Object?> {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 UserModel _achievementTitleUser() => UserModel(

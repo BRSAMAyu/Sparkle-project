@@ -8,9 +8,11 @@ from uuid import uuid4
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+from sqlalchemy import select
 
 from app.config import settings
 from app.core.cache import cache_service
+from app.services.auth_session_service import auth_session_service
 
 TOKEN_BLACKLIST_PREFIX = "token_blacklist:"
 USER_REVOKED_BEFORE_PREFIX = "user_revoked_before:"
@@ -125,6 +127,11 @@ async def decode_token(token: str, expected_type: str | None = None) -> dict:
             if iat_ts is not None and iat_ts < revoked_before:
                 raise JWTError("Token revoked")
 
+    session_id = payload.get("sid")
+    if session_id:
+        if await is_session_revoked(str(session_id)):
+            raise JWTError("Session revoked")
+
     return payload
 
 
@@ -183,6 +190,33 @@ async def get_user_revoked_before(user_id: str) -> int | None:
         return None
 
     return None
+
+
+async def is_session_revoked(session_id: str) -> bool:
+    """
+    Check whether a session id has been revoked.
+    """
+    if not session_id:
+        return False
+    try:
+        if await auth_session_service.is_session_revoked(session_id):
+            return True
+    except Exception:
+        pass
+
+    try:
+        from app.db.session import AsyncSessionLocal
+        from app.models.auth_security import UserSession
+
+        async with AsyncSessionLocal() as session:
+            db_session = await session.scalar(
+                select(UserSession).where(UserSession.session_id == session_id),
+            )
+            if db_session is None:
+                return False
+            return (not db_session.is_active) or (db_session.revoked_at is not None)
+    except Exception:
+        return False
 
 
 async def set_user_revoked_before(user_id: str, revoked_before: datetime) -> None:

@@ -1,10 +1,14 @@
-
+export 'presentation/screens/delete_account_screen.dart';
 export 'presentation/screens/edit_profile_screen.dart';
+export 'presentation/screens/guest_upgrade_screen.dart';
 export 'presentation/screens/learning_mode_screen.dart';
 export 'presentation/screens/password_reset_screen.dart';
 export 'presentation/screens/persona_onboarding_screen.dart';
 export 'presentation/screens/profile_screen.dart';
 export 'presentation/screens/schedule_preferences_screen.dart';
+export 'presentation/screens/security_log_screen.dart';
+export 'presentation/screens/session_management_screen.dart';
+export 'presentation/screens/social_accounts_screen.dart';
 export 'presentation/screens/smart_push_settings_screen.dart';
 export 'presentation/screens/theme_settings_screen.dart';
 export 'presentation/screens/unified_settings_screen.dart';

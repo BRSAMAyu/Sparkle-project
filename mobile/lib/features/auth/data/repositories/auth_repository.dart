@@ -7,6 +7,7 @@ import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/auth/data/models/token_model.dart';
+import 'package:sparkle/features/user/data/models/account_security_model.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 
 const String _legacyAccessTokenKey = 'accessToken';
@@ -20,8 +21,13 @@ class AuthRepository {
   Future<UserModel> register(
     String username,
     String email,
-    String password,
-  ) async {
+    String password, {
+    required bool acceptedTos,
+    required bool acceptedPrivacy,
+    String tosVersion = 'v1',
+    String privacyVersion = 'v1',
+    String? agreedLocale,
+  }) async {
     try {
       if (DemoDataService.isDemoMode) {
         return DemoDataService().demoUser;
@@ -32,12 +38,17 @@ class AuthRepository {
           'username': username,
           'email': email,
           'password': password,
+          'accepted_tos': acceptedTos,
+          'accepted_privacy': acceptedPrivacy,
+          'tos_version': tosVersion,
+          'privacy_version': privacyVersion,
+          'agreed_locale': agreedLocale,
         },
       );
       // Assuming registration returns the user and tokens directly
       final data = response.data;
-      final tokenResponse =
-          TokenResponse.fromJson(data!['token'] as Map<String, dynamic>);
+      final tokenData = data!['token'] as Map<String, dynamic>? ?? data;
+      final tokenResponse = TokenResponse.fromJson(tokenData);
       await saveTokens(tokenResponse);
       return UserModel.fromJson(data['user'] as Map<String, dynamic>);
     } on DioException catch (e) {
@@ -337,7 +348,9 @@ class AuthRepository {
   }
 
   Future<String> resetPasswordWithToken(
-      String token, String newPassword,) async {
+    String token,
+    String newPassword,
+  ) async {
     try {
       final response = await _apiClient.post<Map<String, dynamic>>(
         ApiEndpoints.resetPassword,
@@ -381,6 +394,186 @@ class AuthRepository {
       throw Exception(message ?? 'Could not verify email.');
     } catch (e) {
       throw Exception('An unexpected error occurred');
+    }
+  }
+
+  Future<List<SocialAccountStatusModel>> getSocialAccounts() async {
+    final response =
+        await _apiClient.get<List<dynamic>>(ApiEndpoints.socialAccounts);
+    final data = response.data ?? const <dynamic>[];
+    return data
+        .whereType<Map<String, dynamic>>()
+        .map(SocialAccountStatusModel.fromJson)
+        .toList();
+  }
+
+  Future<String> linkSocial({
+    required String provider,
+    required String token,
+    String? openid,
+  }) async {
+    try {
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        ApiEndpoints.linkSocial,
+        data: {
+          'provider': provider,
+          'token': token,
+          if (openid != null) 'openid': openid,
+        },
+      );
+      return _extractErrorMessage(response.data) ?? '绑定成功';
+    } on DioException catch (e) {
+      throw Exception(_extractErrorMessage(e.response?.data) ??
+          'Could not link social account.');
+    }
+  }
+
+  Future<String> unlinkSocial(String provider) async {
+    try {
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        ApiEndpoints.unlinkSocial,
+        data: {'provider': provider},
+      );
+      return _extractErrorMessage(response.data) ?? '解绑成功';
+    } on DioException catch (e) {
+      throw Exception(_extractErrorMessage(e.response?.data) ??
+          'Could not unlink social account.');
+    }
+  }
+
+  Future<List<UserSessionModel>> getSessions() async {
+    final response =
+        await _apiClient.get<List<dynamic>>(ApiEndpoints.userSessions);
+    final data = response.data ?? const <dynamic>[];
+    return data
+        .whereType<Map<String, dynamic>>()
+        .map(UserSessionModel.fromJson)
+        .toList();
+  }
+
+  Future<String> revokeSession(String sessionId) async {
+    try {
+      final response = await _apiClient.delete<Map<String, dynamic>>(
+        '${ApiEndpoints.userSessions}/$sessionId',
+      );
+      return _extractErrorMessage(response.data) ?? '设备已下线';
+    } on DioException catch (e) {
+      throw Exception(_extractErrorMessage(e.response?.data) ??
+          'Could not revoke session.');
+    }
+  }
+
+  Future<String> revokeOtherSessions() async {
+    try {
+      final response = await _apiClient.delete<Map<String, dynamic>>(
+        ApiEndpoints.userSessions,
+      );
+      return _extractErrorMessage(response.data) ?? '其他设备已下线';
+    } on DioException catch (e) {
+      throw Exception(_extractErrorMessage(e.response?.data) ??
+          'Could not revoke other sessions.');
+    }
+  }
+
+  Future<List<AuthAuditLogModel>> getSecurityLog() async {
+    final response =
+        await _apiClient.get<List<dynamic>>(ApiEndpoints.securityLog);
+    final data = response.data ?? const <dynamic>[];
+    return data
+        .whereType<Map<String, dynamic>>()
+        .map(AuthAuditLogModel.fromJson)
+        .toList();
+  }
+
+  Future<String> deleteAccount({
+    required String confirmation,
+    String? password,
+    String? provider,
+    String? providerToken,
+  }) async {
+    try {
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        ApiEndpoints.deleteAccount,
+        data: {
+          'confirmation': confirmation,
+          if (password != null && password.isNotEmpty) 'password': password,
+          if (provider != null) 'provider': provider,
+          if (providerToken != null && providerToken.isNotEmpty)
+            'provider_token': providerToken,
+        },
+      );
+      return _extractErrorMessage(response.data) ?? '账号已注销';
+    } on DioException catch (e) {
+      throw Exception(_extractErrorMessage(e.response?.data) ??
+          'Could not delete account.');
+    }
+  }
+
+  Future<UserModel> upgradeGuest({
+    required String username,
+    required String email,
+    required String password,
+    required bool acceptedTos,
+    required bool acceptedPrivacy,
+    String tosVersion = 'v1',
+    String privacyVersion = 'v1',
+    String? agreedLocale,
+  }) async {
+    try {
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        ApiEndpoints.upgradeGuest,
+        data: {
+          'username': username,
+          'email': email,
+          'password': password,
+          'accepted_tos': acceptedTos,
+          'accepted_privacy': acceptedPrivacy,
+          'tos_version': tosVersion,
+          'privacy_version': privacyVersion,
+          'agreed_locale': agreedLocale,
+        },
+      );
+      final data = response.data!;
+      final tokenData = data['token'] as Map<String, dynamic>? ?? data;
+      await saveTokens(TokenResponse.fromJson(tokenData));
+      return UserModel.fromJson(data['user'] as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw Exception(_extractErrorMessage(e.response?.data) ??
+          'Could not upgrade guest account.');
+    }
+  }
+
+  Future<UserModel> upgradeGuestWithSocial({
+    required String provider,
+    required String token,
+    required bool acceptedTos,
+    required bool acceptedPrivacy,
+    String tosVersion = 'v1',
+    String privacyVersion = 'v1',
+    String? agreedLocale,
+    String? openid,
+  }) async {
+    try {
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        ApiEndpoints.upgradeGuestSocial,
+        data: {
+          'provider': provider,
+          'token': token,
+          if (openid != null) 'openid': openid,
+          'accepted_tos': acceptedTos,
+          'accepted_privacy': acceptedPrivacy,
+          'tos_version': tosVersion,
+          'privacy_version': privacyVersion,
+          'agreed_locale': agreedLocale,
+        },
+      );
+      final data = response.data!;
+      final tokenData = data['token'] as Map<String, dynamic>? ?? data;
+      await saveTokens(TokenResponse.fromJson(tokenData));
+      return UserModel.fromJson(data['user'] as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw Exception(_extractErrorMessage(e.response?.data) ??
+          'Could not upgrade guest account.');
     }
   }
 

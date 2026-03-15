@@ -14,8 +14,16 @@ class ApiEndpoints {
   static const String sendVerification = '/auth/send-verification';
   static const String verifyEmail = '/auth/verify-email';
   static const String logout = '/auth/logout';
+  static const String upgradeGuest = '/auth/upgrade-guest';
+  static const String upgradeGuestSocial = '/auth/upgrade-guest/social';
   static const String me = '/users/me';
   static const String setPassword = '/users/me/set-password';
+  static const String deleteAccount = '/users/me/delete-account';
+  static const String socialAccounts = '/users/me/social-accounts';
+  static const String linkSocial = '/users/me/link-social';
+  static const String unlinkSocial = '/users/me/unlink-social';
+  static const String userSessions = '/users/me/sessions';
+  static const String securityLog = '/users/me/security-log';
 
   // Files
   static const String filesPrepareUpload = '/files/upload/prepare';

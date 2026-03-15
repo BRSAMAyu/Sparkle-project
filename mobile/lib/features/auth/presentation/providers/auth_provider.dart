@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
+import 'package:sparkle/features/user/data/models/account_security_model.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 
 const _demoGuestModePreferenceKey = 'demo_guest_mode_enabled';
@@ -128,14 +129,32 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  Future<void> register(String username, String email, String password) async {
+  Future<void> register(
+    String username,
+    String email,
+    String password, {
+    required bool acceptedTos,
+    required bool acceptedPrivacy,
+    String tosVersion = 'v1',
+    String privacyVersion = 'v1',
+    String? agreedLocale,
+  }) async {
     state = state.copyWith(isLoading: true);
     try {
       DemoDataService.isDemoMode = false;
       await _ref
           .read(sharedPreferencesProvider)
           .setBool(_demoGuestModePreferenceKey, false);
-      final user = await _authRepository.register(username, email, password);
+      final user = await _authRepository.register(
+        username,
+        email,
+        password,
+        acceptedTos: acceptedTos,
+        acceptedPrivacy: acceptedPrivacy,
+        tosVersion: tosVersion,
+        privacyVersion: privacyVersion,
+        agreedLocale: agreedLocale,
+      );
       state = state.copyWith(isAuthenticated: true, user: user);
     } catch (e) {
       state = state.copyWith(isAuthenticated: false, error: e.toString());
@@ -283,7 +302,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<String> resetPasswordWithToken(
-      String token, String newPassword,) async {
+    String token,
+    String newPassword,
+  ) async {
     state = state.copyWith(isLoading: true);
     try {
       return await _authRepository.resetPasswordWithToken(token, newPassword);
@@ -313,6 +334,167 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final message = await _authRepository.verifyEmail(token);
       await refreshUser();
       return message;
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      rethrow;
+    } finally {
+      state = state.copyWith(isLoading: false);
+    }
+  }
+
+  Future<List<SocialAccountStatusModel>> getSocialAccounts() =>
+      _authRepository.getSocialAccounts();
+
+  Future<String> linkSocial({
+    required String provider,
+    required String token,
+    String? openid,
+  }) async {
+    state = state.copyWith(isLoading: true);
+    try {
+      final message = await _authRepository.linkSocial(
+        provider: provider,
+        token: token,
+        openid: openid,
+      );
+      await refreshUser();
+      return message;
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      rethrow;
+    } finally {
+      state = state.copyWith(isLoading: false);
+    }
+  }
+
+  Future<String> unlinkSocial(String provider) async {
+    state = state.copyWith(isLoading: true);
+    try {
+      final message = await _authRepository.unlinkSocial(provider);
+      await refreshUser();
+      return message;
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      rethrow;
+    } finally {
+      state = state.copyWith(isLoading: false);
+    }
+  }
+
+  Future<List<UserSessionModel>> getSessions() => _authRepository.getSessions();
+
+  Future<String> revokeSession(String sessionId) async {
+    state = state.copyWith(isLoading: true);
+    try {
+      return await _authRepository.revokeSession(sessionId);
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      rethrow;
+    } finally {
+      state = state.copyWith(isLoading: false);
+    }
+  }
+
+  Future<String> revokeOtherSessions() async {
+    state = state.copyWith(isLoading: true);
+    try {
+      return await _authRepository.revokeOtherSessions();
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      rethrow;
+    } finally {
+      state = state.copyWith(isLoading: false);
+    }
+  }
+
+  Future<List<AuthAuditLogModel>> getSecurityLog() =>
+      _authRepository.getSecurityLog();
+
+  Future<void> deleteAccount({
+    required String confirmation,
+    String? password,
+    String? provider,
+    String? providerToken,
+  }) async {
+    state = state.copyWith(isLoading: true);
+    try {
+      await _authRepository.deleteAccount(
+        confirmation: confirmation,
+        password: password,
+        provider: provider,
+        providerToken: providerToken,
+      );
+      await logout();
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      rethrow;
+    } finally {
+      state = state.copyWith(isLoading: false);
+    }
+  }
+
+  Future<void> upgradeGuest({
+    required String username,
+    required String email,
+    required String password,
+    required bool acceptedTos,
+    required bool acceptedPrivacy,
+    String tosVersion = 'v1',
+    String privacyVersion = 'v1',
+    String? agreedLocale,
+  }) async {
+    state = state.copyWith(isLoading: true);
+    try {
+      final user = await _authRepository.upgradeGuest(
+        username: username,
+        email: email,
+        password: password,
+        acceptedTos: acceptedTos,
+        acceptedPrivacy: acceptedPrivacy,
+        tosVersion: tosVersion,
+        privacyVersion: privacyVersion,
+        agreedLocale: agreedLocale,
+      );
+      DemoDataService.isDemoMode = false;
+      await _ref
+          .read(sharedPreferencesProvider)
+          .setBool(_demoGuestModePreferenceKey, false);
+      state = state.copyWith(isAuthenticated: true, user: user);
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      rethrow;
+    } finally {
+      state = state.copyWith(isLoading: false);
+    }
+  }
+
+  Future<void> upgradeGuestWithSocial({
+    required String provider,
+    required String token,
+    required bool acceptedTos,
+    required bool acceptedPrivacy,
+    String tosVersion = 'v1',
+    String privacyVersion = 'v1',
+    String? agreedLocale,
+    String? openid,
+  }) async {
+    state = state.copyWith(isLoading: true);
+    try {
+      final user = await _authRepository.upgradeGuestWithSocial(
+        provider: provider,
+        token: token,
+        openid: openid,
+        acceptedTos: acceptedTos,
+        acceptedPrivacy: acceptedPrivacy,
+        tosVersion: tosVersion,
+        privacyVersion: privacyVersion,
+        agreedLocale: agreedLocale,
+      );
+      DemoDataService.isDemoMode = false;
+      await _ref
+          .read(sharedPreferencesProvider)
+          .setBool(_demoGuestModePreferenceKey, false);
+      state = state.copyWith(isAuthenticated: true, user: user);
     } catch (e) {
       state = state.copyWith(error: e.toString());
       rethrow;

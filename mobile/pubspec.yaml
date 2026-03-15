@@ -74,7 +74,7 @@ dependencies:
   # Social Login
   google_sign_in: ^6.2.1
   sign_in_with_apple: ^6.1.1
-  # fluwx: ^4.1.0  # 🔧 暂时禁用，编译 Demo 版本时有兼容性问题
+  fluwx: ^4.6.1
 
   # Protobuf
   protobuf: ^6.0.0

@@ -114,12 +114,13 @@ func (h *AuthHandler) AppleLogin(c *gin.Context) {
 	_ = h.queries.UpdateUserLastLogin(ctx, user.ID)
 
 	// 3. Issue System Token
-	accessToken, err := h.createAccessToken(user.ID)
+	sessionID := uuid.New().String()
+	accessToken, err := h.createAccessToken(user.ID, sessionID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "签发令牌失败"})
 		return
 	}
-	refreshToken, err := h.createRefreshToken(user.ID)
+	refreshToken, err := h.createRefreshToken(user.ID, sessionID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "签发刷新令牌失败"})
 		return
@@ -149,10 +150,11 @@ func (h *AuthHandler) randomString(n int) string {
 	return hex.EncodeToString(b)
 }
 
-func (h *AuthHandler) createAccessToken(userID pgtype.UUID) (string, error) {
+func (h *AuthHandler) createAccessToken(userID pgtype.UUID, sessionID string) (string, error) {
 	now := time.Now()
 	claims := jwt.MapClaims{
 		"sub":  h.uuidToString(userID),
+		"sid":  sessionID,
 		"exp":  now.Add(time.Hour * 24).Unix(),
 		"iat":  now.Unix(),
 		"jti":  uuid.New().String(),
@@ -169,10 +171,11 @@ func (h *AuthHandler) createAccessToken(userID pgtype.UUID) (string, error) {
 	return token.SignedString([]byte(h.cfg.JWTSecret))
 }
 
-func (h *AuthHandler) createRefreshToken(userID pgtype.UUID) (string, error) {
+func (h *AuthHandler) createRefreshToken(userID pgtype.UUID, sessionID string) (string, error) {
 	now := time.Now()
 	claims := jwt.MapClaims{
 		"sub":  h.uuidToString(userID),
+		"sid":  sessionID,
 		"exp":  now.Add(7 * 24 * time.Hour).Unix(),
 		"iat":  now.Unix(),
 		"jti":  uuid.New().String(),

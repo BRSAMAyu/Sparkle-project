@@ -231,6 +231,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                         ),
                         const SizedBox(height: DS.sm),
+                        Wrap(
+                          alignment: WrapAlignment.center,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: DS.spacing4,
+                          children: [
+                            Text(
+                              '登录即表示你同意',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                            TextButton(
+                              onPressed: () => context.push('/legal/terms'),
+                              child: const Text('用户协议'),
+                            ),
+                            Text(
+                              '和',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                            TextButton(
+                              onPressed: () => context.push('/legal/privacy'),
+                              child: const Text('隐私政策'),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: DS.sm),
                         SparkleButton(
                           label: l10n.continueAsGuest,
                           onPressed: authState.isLoading
