@@ -3,6 +3,7 @@ import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 
 /// Achievement Repository
@@ -35,7 +36,9 @@ class AchievementRepository {
     }
 
     try {
+      final locale = I18nService.instance.currentLocale.languageCode;
       final queryParams = <String, dynamic>{
+        'locale': locale,
         if (category != null) 'category': category,
         if (rarity != null) 'rarity': rarity.name,
         'include_hidden': includeHidden,
@@ -124,8 +127,10 @@ class AchievementRepository {
     }
 
     try {
+      final locale = I18nService.instance.currentLocale.languageCode;
       final response = await _apiClient.get<Map<String, dynamic>>(
         ApiEndpoints.achievementsMap,
+        queryParameters: {'locale': locale},
       );
 
       final payload = ApiResponseParser.unwrapMap(
@@ -354,8 +359,10 @@ class AchievementRepository {
     }
 
     try {
+      final locale = I18nService.instance.currentLocale.languageCode;
       final response = await _apiClient.post<Map<String, dynamic>>(
         ApiEndpoints.achievementShare(achievementId),
+        queryParameters: {'locale': locale},
       );
 
       final payload = ApiResponseParser.unwrapMap(
@@ -409,8 +416,10 @@ class AchievementRepository {
     }
 
     try {
+      final locale = I18nService.instance.currentLocale.languageCode;
       final queryParams = <String, dynamic>{
         'threshold': threshold,
+        'locale': locale,
         if (category != null) 'category': category,
       };
 

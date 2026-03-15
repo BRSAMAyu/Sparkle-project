@@ -1016,6 +1016,26 @@ class AchievementEngine:
 
         return stats
 
+    def _build_achievement_detail(
+        self,
+        achievement: Achievement,
+        locale: str | None = None,
+    ):
+        from app.schemas.achievement import AchievementDetail
+
+        detail = AchievementDetail.model_validate(
+            achievement,
+            from_attributes=True,
+        )
+        if locale:
+            detail = detail.model_copy(
+                update={
+                    "name": achievement.get_localized_name(locale),
+                    "description": achievement.get_localized_description(locale),
+                }
+            )
+        return detail
+
     # ========== 公共API方法 ==========
 
     async def get_user_achievements(
@@ -1023,7 +1043,8 @@ class AchievementEngine:
         user_id: str,
         category: str | None = None,
         rarity: AchievementRarity | None = None,
-        include_hidden: bool = False
+        include_hidden: bool = False,
+        locale: str | None = None,
     ) -> dict[str, Any]:
         """获取用户成就列表"""
         all_achievements = await self._get_all_achievements()
@@ -1055,7 +1076,6 @@ class AchievementEngine:
 
         # 组装结果
         from app.schemas.achievement import (
-            AchievementDetail,
             AchievementWithProgress,
             UserAchievementProgressPayload,
         )
@@ -1067,9 +1087,9 @@ class AchievementEngine:
             progress_percentage = int((user_ach.progress if user_ach else 0) * 100)
 
             # 转换为schema
-            achievement_detail = AchievementDetail.model_validate(
+            achievement_detail = self._build_achievement_detail(
                 achievement,
-                from_attributes=True,
+                locale,
             )
             user_progress_detail = (
                 UserAchievementProgressPayload.model_validate(
@@ -1109,7 +1129,11 @@ class AchievementEngine:
             }
         }
 
-    async def get_achievement_map(self, user_id: str) -> dict[str, Any]:
+    async def get_achievement_map(
+        self,
+        user_id: str,
+        locale: str | None = None,
+    ) -> dict[str, Any]:
         """获取成就地图数据"""
         all_achievements = await self._get_all_achievements()
 
@@ -1144,7 +1168,7 @@ class AchievementEngine:
 
             nodes.append(AchievementMapNode(
                 id=achievement.id,
-                name=achievement.name,
+                name=achievement.get_localized_name(locale),
                 rarity=achievement.rarity,
                 category=achievement.category or "other",
                 position=positions.get(achievement.id, {"x": 0, "y": 0}),
@@ -1371,7 +1395,8 @@ class AchievementEngine:
         self,
         user_id: str,
         threshold: float = 0.8,
-        category: str | None = None
+        category: str | None = None,
+        locale: str | None = None,
     ) -> list[dict[str, Any]]:
         """
         获取接近解锁的成就（用于临界提示）
@@ -1391,7 +1416,6 @@ class AchievementEngine:
             all_achievements = [a for a in all_achievements if a.category == category]
 
         from app.schemas.achievement import (
-            AchievementDetail,
             AchievementWithProgress,
             UserAchievementProgressPayload,
         )
@@ -1427,7 +1451,10 @@ class AchievementEngine:
                 )
                 close_achievements.append(
                     AchievementWithProgress(
-                        achievement=AchievementDetail.model_validate(achievement),
+                        achievement=self._build_achievement_detail(
+                            achievement,
+                            locale,
+                        ),
                         user_progress=user_progress,
                         is_unlocked=False,
                         progress_percentage=int(progress * 100),

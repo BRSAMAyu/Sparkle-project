@@ -866,6 +866,165 @@ class AppLocalizationsZh extends AppLocalizations {
   String get achievementNew => '新！';
 
   @override
+  String get achievementSearch => '搜索成就';
+
+  @override
+  String get achievementFilter => '筛选';
+
+  @override
+  String get achievementFilterActive => '筛选中';
+
+  @override
+  String get achievementAll => '全部';
+
+  @override
+  String get achievementStatusUnlocked => '已解锁';
+
+  @override
+  String get achievementStatusLocked => '未解锁';
+
+  @override
+  String get achievementStatusInProgress => '进行中';
+
+  @override
+  String get achievementCategoryStreak => '连胜';
+
+  @override
+  String get achievementCategoryMilestone => '里程碑';
+
+  @override
+  String get achievementCategoryMastery => '精通';
+
+  @override
+  String get achievementCategoryExploration => '探索';
+
+  @override
+  String get achievementCategoryTask => '任务';
+
+  @override
+  String get achievementNoMatch => '没有找到匹配的成就';
+
+  @override
+  String get achievementAdjustFilter => '试试调整筛选条件';
+
+  @override
+  String get achievementFilterSheet => '筛选成就';
+
+  @override
+  String get achievementRarity => '稀有度';
+
+  @override
+  String get achievementStatus => '状态';
+
+  @override
+  String get achievementApplyFilter => '应用筛选';
+
+  @override
+  String get achievementDescription => '描述';
+
+  @override
+  String get achievementNoDescription => '暂无描述';
+
+  @override
+  String get achievementPrerequisites => '前置成就';
+
+  @override
+  String get achievementPrerequisitesHint => '需要先完成以下成就：';
+
+  @override
+  String get achievementRewards => '奖励';
+
+  @override
+  String get achievementUnlockRewards => '解锁奖励';
+
+  @override
+  String achievementRewardPhotons(Object count) {
+    return '$count 光子';
+  }
+
+  @override
+  String get achievementRewardTitle => '称号';
+
+  @override
+  String get achievementRewardSkin => '星系皮肤';
+
+  @override
+  String achievementRewardXp(Object count) {
+    return '$count 经验';
+  }
+
+  @override
+  String get achievementRewardMystery => '神秘奖励';
+
+  @override
+  String get achievementStatType => '类型';
+
+  @override
+  String get achievementCategory => '分类';
+
+  @override
+  String get achievementUnlockedAt => '解锁时间';
+
+  @override
+  String get achievementShareCount => '分享次数';
+
+  @override
+  String get achievementUnlockRank => '解锁排名';
+
+  @override
+  String get achievementFirstUnlocker => '首位解锁者';
+
+  @override
+  String get achievementNotFound => '成就未找到';
+
+  @override
+  String get achievementShareLocked => '解锁后才可以分享这个成就';
+
+  @override
+  String get achievementCompletionRate => '完成率';
+
+  @override
+  String get achievementTotalLabel => '总成就';
+
+  @override
+  String get achievementPhotons => '光子';
+
+  @override
+  String get achievementOverallProgress => '总体进度';
+
+  @override
+  String get achievementRarityDistribution => '稀有度分布';
+
+  @override
+  String achievementHiddenCount(Object count) {
+    return '隐藏: $count';
+  }
+
+  @override
+  String get achievementTypeMastery => '精通';
+
+  @override
+  String get achievementTypeTaskComplete => '任务';
+
+  @override
+  String get achievementTypeNodeExplore => '探索';
+
+  @override
+  String get achievementTypeStudyTime => '学习时长';
+
+  @override
+  String get achievementTypeSocial => '社交';
+
+  @override
+  String get achievementTypeContract => '契约';
+
+  @override
+  String get achievementTypeSprint => '冲刺';
+
+  @override
+  String get streakDetails => '连胜详情';
+
+  @override
   String get taskStatusPending => '待处理';
 
   @override
@@ -4822,6 +4981,11 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get errorBookReviewInProgress => '复习功能即将上线';
+
+  @override
+  String errorBookDeleteFailedMessage(String error) {
+    return '删除失败：$error';
+  }
 
   @override
   String errorBookCognitiveFilter(String dimension) {

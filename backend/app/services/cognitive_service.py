@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.config.phase5_config import phase5_config
 from app.core.event_bus import event_bus
+from app.core.event_types import PROFILE_COGNITIVE_UPDATED
 from app.models.cognitive import AnalysisStatus, BehaviorPattern, CognitiveFragment
 from app.services.analysis.unified_analysis_service import UnifiedAnalysisService
 from app.services.analytics_service import AnalyticsService
@@ -374,6 +375,7 @@ class CognitiveService:
             was_created = True
 
         await self.db.commit()
+        confidence_change = new_confidence - (previous_confidence or 0)
         if was_created or (previous_confidence is not None and new_confidence > previous_confidence):
             await SystemUpdateService().enqueue(
                 user_id,
@@ -388,6 +390,18 @@ class CognitiveService:
                         "confidence": new_confidence,
                     },
                 ),
+            )
+        if was_created or confidence_change > 0.1:
+            await event_bus.publish(
+                PROFILE_COGNITIVE_UPDATED,
+                {
+                    "event_type": PROFILE_COGNITIVE_UPDATED,
+                    "user_id": str(user_id),
+                    "pattern_name": pattern_name,
+                    "pattern_type": analysis.get("pattern_type", "execution"),
+                    "confidence_change": confidence_change,
+                    "is_new_pattern": was_created,
+                },
             )
         if new_confidence >= 0.7:
             await event_bus.publish(

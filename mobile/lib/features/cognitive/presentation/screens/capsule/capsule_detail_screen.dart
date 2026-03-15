@@ -182,6 +182,11 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
           ),
           const SizedBox(height: DS.spacing24),
 
+          if (capsule.personalizationContext != null) ...[
+            _buildPersonalizationExplanation(capsule),
+            const SizedBox(height: DS.spacing24),
+          ],
+
           // 内容
           MarkdownBody(
             data: capsule.content,
@@ -300,6 +305,45 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
                 padding: const EdgeInsets.symmetric(vertical: DS.spacing16),
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPersonalizationExplanation(CuriosityCapsuleModel capsule) {
+    final rawPatterns = capsule.personalizationContext?['based_on_patterns'];
+    final patterns = rawPatterns is List
+        ? rawPatterns.map((item) => item.toString()).where((item) => item.isNotEmpty).toList()
+        : <String>[];
+
+    if (patterns.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(DS.spacing16),
+      decoration: BoxDecoration(
+        color: DS.surfaceSecondary,
+        borderRadius: DS.borderRadius12,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.lightbulb_outline, size: 16, color: DS.info),
+              const SizedBox(width: 8),
+              const Text(
+                "为什么推荐给你",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "基于你最近的${patterns.join('、')}行为模式，AI为你精选了这个知识点。",
+            style: TextStyle(color: DS.textSecondary, fontSize: 13),
           ),
         ],
       ),

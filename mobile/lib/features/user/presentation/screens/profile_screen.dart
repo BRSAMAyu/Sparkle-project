@@ -5,6 +5,7 @@ import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
 import 'package:sparkle/core/providers/locale_provider.dart';
+import 'package:sparkle/features/achievement/achievement_routes.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/user/user_routes.dart';
 import 'package:sparkle/features/user/presentation/widgets/statistics_card.dart';
@@ -189,6 +190,16 @@ class ProfileScreen extends ConsumerWidget {
               ),
               const Divider(height: 1, indent: 60),
             ],
+            _buildSettingsTile(
+              context,
+              icon: Icons.emoji_events_outlined,
+              title: l10n.achievementTitle,
+              accentColor: const Color(0xFFFFD700),
+              onTap: () {
+                context.push(AchievementRoutes.basePath);
+              },
+            ),
+            const Divider(height: 1, indent: 60),
             _buildSettingsTile(
               context,
               icon: Icons.person_outline_rounded,

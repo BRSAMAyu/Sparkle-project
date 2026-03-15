@@ -296,6 +296,57 @@
   "achievementStatsPoints": "积分",
   "achievementStatsStreak": "连续天数",
   "achievementNew": "新！",
+  "achievementSearch": "搜索成就",
+  "achievementFilter": "筛选",
+  "achievementFilterActive": "筛选中",
+  "achievementAll": "全部",
+  "achievementStatusUnlocked": "已解锁",
+  "achievementStatusLocked": "未解锁",
+  "achievementStatusInProgress": "进行中",
+  "achievementCategoryStreak": "连胜",
+  "achievementCategoryMilestone": "里程碑",
+  "achievementCategoryMastery": "精通",
+  "achievementCategoryExploration": "探索",
+  "achievementCategoryTask": "任务",
+  "achievementNoMatch": "没有找到匹配的成就",
+  "achievementAdjustFilter": "试试调整筛选条件",
+  "achievementFilterSheet": "筛选成就",
+  "achievementRarity": "稀有度",
+  "achievementStatus": "状态",
+  "achievementApplyFilter": "应用筛选",
+  "achievementDescription": "描述",
+  "achievementNoDescription": "暂无描述",
+  "achievementPrerequisites": "前置成就",
+  "achievementPrerequisitesHint": "需要先完成以下成就：",
+  "achievementRewards": "奖励",
+  "achievementUnlockRewards": "解锁奖励",
+  "achievementRewardPhotons": "{count} 光子",
+  "achievementRewardTitle": "称号",
+  "achievementRewardSkin": "星系皮肤",
+  "achievementRewardXp": "{count} 经验",
+  "achievementRewardMystery": "神秘奖励",
+  "achievementStatType": "类型",
+  "achievementCategory": "分类",
+  "achievementUnlockedAt": "解锁时间",
+  "achievementShareCount": "分享次数",
+  "achievementUnlockRank": "解锁排名",
+  "achievementFirstUnlocker": "首位解锁者",
+  "achievementNotFound": "成就未找到",
+  "achievementShareLocked": "解锁后才可以分享这个成就",
+  "achievementCompletionRate": "完成率",
+  "achievementTotalLabel": "总成就",
+  "achievementPhotons": "光子",
+  "achievementOverallProgress": "总体进度",
+  "achievementRarityDistribution": "稀有度分布",
+  "achievementHiddenCount": "隐藏: {count}",
+  "achievementTypeMastery": "精通",
+  "achievementTypeTaskComplete": "任务",
+  "achievementTypeNodeExplore": "探索",
+  "achievementTypeStudyTime": "学习时长",
+  "achievementTypeSocial": "社交",
+  "achievementTypeContract": "契约",
+  "achievementTypeSprint": "冲刺",
+  "streakDetails": "连胜详情",
 
   "taskStatusPending": "待处理",
   "taskStatusInProgress": "进行中",
@@ -1901,6 +1952,7 @@
   "errorBookEditInProgress": "编辑功能即将上线",
   "errorBookReanalyzing": "正在重新分析...",
   "errorBookReviewInProgress": "复习功能即将上线",
+  "errorBookDeleteFailedMessage": "删除失败：{error}",
   "@errorBookCreatedAt": {
     "placeholders": {
       "date": {
@@ -1918,6 +1970,13 @@
   "@errorBookKnowledgeLinkSnack": {
     "placeholders": {
       "nodeName": {
+        "type": "String"
+      }
+    }
+  },
+  "@errorBookDeleteFailedMessage": {
+    "placeholders": {
+      "error": {
         "type": "String"
       }
     }

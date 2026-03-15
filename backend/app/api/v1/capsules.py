@@ -40,6 +40,7 @@ class CuriosityCapsuleSchema(BaseModel):
     quality_score: float | None = None
     feedback_count: int = 0
     share_count: int = 0
+    personalization_context: dict | None = None
 
     class Config:
         from_attributes = True
@@ -414,4 +415,3 @@ async def get_capsule_detail(
         **capsule.__dict__,
         is_favorite=is_fav,
     )
-

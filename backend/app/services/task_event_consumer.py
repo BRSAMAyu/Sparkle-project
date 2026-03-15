@@ -14,6 +14,7 @@ from app.db.session import AsyncSessionLocal
 from app.models.task import Task
 from app.orchestration.adaptive_replanner import AdaptiveReplanner
 from app.services.behavior_signal_collector import BehaviorSignalCollector
+from app.services.cognitive.auto_fragment_collector import AutoFragmentCollector
 from app.services.community_signal_bridge import CommunitySignalBridge
 
 
@@ -78,9 +79,24 @@ class TaskEventConsumer:
 
                 estimated = event.get("estimated_minutes", 0)
                 actual = event.get("actual_minutes", 0)
-                completion_rate = actual / estimated if estimated > 0 else 1.0
+                completion_rate = event.get("completion_rate")
+                if completion_rate is None:
+                    completion_rate = actual / estimated if estimated > 0 else 1.0
                 await collector.handle_task_completed_event(event)
                 await bridge.handle_group_task_completed(event)
+
+                try:
+                    auto_collector = AutoFragmentCollector(db)
+                    await auto_collector.collect_from_task_completion(
+                        user_id=user_id,
+                        task_id=task_id,
+                        estimated_minutes=estimated if estimated else None,
+                        actual_minutes=actual if actual else None,
+                        completion_rate=completion_rate,
+                        difficulty=event.get("difficulty"),
+                    )
+                except Exception as exc:
+                    logger.warning(f"Auto fragment collection failed for task {task_id}: {exc}")
 
                 plan_id = event.get("plan_id")
                 if not plan_id or plan_id == "None":

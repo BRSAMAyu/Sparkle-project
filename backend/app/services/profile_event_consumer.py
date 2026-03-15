@@ -15,6 +15,7 @@ from app.core.event_bus import EventBus
 from app.db.session import AsyncSessionLocal
 from app.services.error_book_signal_processor import ErrorBookSignalProcessor
 from app.services.focus_signal_processor import FocusSignalProcessor
+from app.services.cognitive.auto_fragment_collector import AutoFragmentCollector
 from app.services.personalization.engine import invalidate_personalization_cache
 from app.services.system_update_service import SystemUpdateService, build_system_update
 
@@ -145,6 +146,19 @@ class ProfileEventConsumer:
             async with AsyncSessionLocal() as db:
                 processor = ErrorBookSignalProcessor(db, self.redis)
                 await processor.process_error_created(UUID(user_id))
+                auto_collector = AutoFragmentCollector(db)
+                error_id_value = event.get("error_id")
+                error_id = None
+                if error_id_value:
+                    try:
+                        error_id = UUID(str(error_id_value))
+                    except ValueError:
+                        error_id = None
+                await auto_collector.collect_from_error_pattern(
+                    user_id=UUID(user_id),
+                    error_id=error_id,
+                    linked_node_ids=event.get("linked_node_ids") or [],
+                )
         except Exception as exc:
             logger.error(f"Failed to handle error created event: {exc}")
 

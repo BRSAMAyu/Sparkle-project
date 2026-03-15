@@ -9,6 +9,7 @@ from app.core.event_bus import event_bus
 from app.models.focus import FocusSession, FocusStatus, FocusType
 from app.models.task import Task, TaskStatus
 from app.models.user import User
+from app.services.cognitive.auto_fragment_collector import AutoFragmentCollector
 from app.services.llm_service import llm_service
 
 
@@ -143,6 +144,18 @@ class FocusService:
         except Exception as e:
             import logging
             logging.warning(f"Focus session event publish failed: {e}")
+
+        try:
+            auto_collector = AutoFragmentCollector(db)
+            await auto_collector.collect_from_focus_session(
+                user_id=user_id,
+                session_id=session.id,
+                duration_minutes=duration_minutes,
+                status=status,
+            )
+        except Exception as e:
+            import logging
+            logging.warning(f"Auto fragment collection failed for focus session: {e}")
 
         return {
             "session": session,

@@ -10,6 +10,8 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.event_bus import event_bus
+from app.core.event_types import CAPSULE_FEEDBACK_SUBMITTED, CAPSULE_REGENERATE_REQUESTED
 from app.models.capsule_feedback import CapsuleFeedback, FeedbackCategory
 from app.models.curiosity_capsule import CuriosityCapsule
 from app.services.personalization.preference_service import PreferenceService
@@ -108,6 +110,33 @@ class CapsuleFeedbackService:
 
         await db.commit()
         await db.refresh(feedback)
+
+        await event_bus.publish(
+            CAPSULE_FEEDBACK_SUBMITTED,
+            {
+                "event_type": CAPSULE_FEEDBACK_SUBMITTED,
+                "user_id": str(user_id),
+                "capsule_id": str(capsule_id),
+                "rating": rating,
+                "helpful": helpful,
+                "category": category,
+                "depth_delta": depth_delta,
+                "curiosity_delta": curiosity_delta,
+            },
+        )
+
+        if abs(depth_delta or 0) > 0.15 or abs(curiosity_delta or 0) > 0.15:
+            await event_bus.publish(
+                CAPSULE_REGENERATE_REQUESTED,
+                {
+                    "event_type": CAPSULE_REGENERATE_REQUESTED,
+                    "user_id": str(user_id),
+                    "capsule_id": str(capsule_id),
+                    "trigger_reason": "significant_feedback",
+                    "depth_delta": depth_delta,
+                    "curiosity_delta": curiosity_delta,
+                },
+            )
 
         return feedback
 

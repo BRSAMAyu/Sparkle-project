@@ -230,6 +230,8 @@ class CapsuleGenerationService:
                     index=index,
                 )
 
+                personalization_context = self._build_personalization_context(user_context)
+
                 # 创建胶囊
                 capsule = CuriosityCapsule(
                     user_id=user_id,
@@ -244,7 +246,12 @@ class CapsuleGenerationService:
                         "depth_level": depth_level.value,
                         "subjects_studied": [s.get("title") for s in user_context.get("recent_tasks", [])],
                         "generated_at": _utcnow().isoformat(),
+                        "dominant_pattern": user_context.get("dominant_pattern"),
+                        "behavior_patterns": [
+                            p.get("name") for p in user_context.get("behavior_patterns", []) if p.get("name")
+                        ],
                     },
+                    personalization_context=personalization_context,
                     quality_score=content_data.get("quality_score", 0.5),
                 )
 
@@ -273,6 +280,69 @@ class CapsuleGenerationService:
         # 所有模型都失败了
         logger.error(f"[CapsuleGen] All models failed for user {user_id}: {last_error}")
         return None
+
+    def _build_personalization_context(self, user_context: dict[str, Any]) -> dict[str, Any] | None:
+        patterns = user_context.get("behavior_patterns") or []
+        if not patterns:
+            return None
+
+        return {
+            "based_on_patterns": [p.get("name") for p in patterns if p.get("name")],
+            "dominant_pattern": user_context.get("dominant_pattern"),
+            "confidence_scores": {
+                p.get("name"): p.get("confidence")
+                for p in patterns
+                if p.get("name") and p.get("confidence") is not None
+            },
+        }
+
+    def _build_personalized_prompt(self, user_context: dict[str, Any], depth_level: DepthLevel) -> str:
+        depth_instruction = {
+            DepthLevel.SHALLOW: "简洁明了，一两句话点出核心",
+            DepthLevel.MEDIUM: "适度展开，包含背景、核心、延伸建议",
+            DepthLevel.DEEP: "深度解析，包含原理、应用、拓展思考",
+        }
+
+        base_prompt = f"""你是Sparkle AI学习助手的知识胶囊生成器。
+
+任务：基于用户最近的学习内容，生成一个"好奇心胶囊"——一个简短有趣的知识拓展。
+
+风格要求：
+- {depth_instruction[depth_level]}
+- 引人入胜，激发好奇心
+- 与主题直接相关
+- 使用Markdown格式
+
+输出格式（JSON）：
+{{
+    "title": "吸引人的标题",
+    "content": "胶囊内容（Markdown格式）",
+    "quality_score": 0.8  // 0.0-1.0 内容质量自评
+}}"""
+
+        patterns = user_context.get("behavior_patterns") or []
+        if patterns:
+            pattern_hints: list[str] = []
+            for pattern in patterns:
+                name = pattern.get("name")
+                solution_hint = pattern.get("solution_hint")
+                if name == "Planning Optimism":
+                    pattern_hints.append("用户倾向于低估任务时间，可以生成关于时间管理技巧的内容")
+                elif name == "Focus Decay":
+                    pattern_hints.append("用户近期专注力下降，可以生成关于恢复精力的内容")
+                elif name == "Procrastination":
+                    pattern_hints.append("用户有拖延倾向，可以生成关于克服拖延的技巧")
+                elif name and solution_hint:
+                    pattern_hints.append(f"用户模式「{name}」提示：{solution_hint}")
+                elif name:
+                    pattern_hints.append(f"结合用户模式「{name}」生成更贴合的内容")
+
+            if pattern_hints:
+                base_prompt += "\n\n个性化建议（基于用户行为模式）：\n" + "\n".join(
+                    f"- {hint}" for hint in pattern_hints
+                )
+
+        return base_prompt
 
     async def _generate_content(
         self,
@@ -304,28 +374,7 @@ class CapsuleGenerationService:
             topic = selected_task.get("title", "学习内容")
 
         # 构建prompt
-        depth_instruction = {
-            DepthLevel.SHALLOW: "简洁明了，一两句话点出核心",
-            DepthLevel.MEDIUM: "适度展开，包含背景、核心、延伸建议",
-            DepthLevel.DEEP: "深度解析，包含原理、应用、拓展思考",
-        }
-
-        system_prompt = f"""你是Sparkle AI学习助手的知识胶囊生成器。
-
-任务：基于用户最近的学习内容，生成一个"好奇心胶囊"——一个简短有趣的知识拓展。
-
-风格要求：
-- {depth_instruction[depth_level]}
-- 引人入胜，激发好奇心
-- 与主题直接相关
-- 使用Markdown格式
-
-输出格式（JSON）：
-{{
-    "title": "吸引人的标题",
-    "content": "胶囊内容（Markdown格式）",
-    "quality_score": 0.8  // 0.0-1.0 内容质量自评
-}}"""
+        system_prompt = self._build_personalized_prompt(user_context, depth_level)
 
         user_prompt = f"""用户最近学习了：{topic}
 
@@ -402,6 +451,11 @@ class CapsuleGenerationService:
                     return tag.strip()
             return None
 
+        from app.services.cognitive_service import CognitiveService
+
+        cognitive_service = CognitiveService(db)
+        patterns = await cognitive_service.get_user_patterns(user_id, min_confidence=0.6)
+
         return {
             "user_id": str(user_id),
             "nickname": user.nickname or "学习者",
@@ -422,6 +476,16 @@ class CapsuleGenerationService:
                     if subject
                 }
             ),
+            "behavior_patterns": [
+                {
+                    "name": pattern.pattern_name,
+                    "type": pattern.pattern_type,
+                    "confidence": pattern.confidence_score,
+                    "solution_hint": pattern.solution_text,
+                }
+                for pattern in patterns[:3]
+            ],
+            "dominant_pattern": patterns[0].pattern_name if patterns else None,
         }
 
     @staticmethod

@@ -33,6 +33,7 @@ from app.db.init_db import init_db
 from app.db.session import AsyncSessionLocal
 from app.orchestration.summarization_worker import create_summarization_worker
 from app.services.achievement_event_consumer import AchievementEventConsumer
+from app.services.capsule_event_consumer import CapsuleEventConsumer
 from app.services.galaxy_event_consumer import GalaxyEventConsumer
 from app.services.job_service import JobService
 from app.services.preference_event_consumer import PreferenceEventConsumer
@@ -131,6 +132,11 @@ async def lifespan(app: FastAPI):
         cognitive_consumer = CognitiveEventConsumer(event_bus=event_bus, redis_client=cache_service.redis)
         cognitive_consumer_task = asyncio.create_task(cognitive_consumer.start())
         app.state.cognitive_consumer_task = cognitive_consumer_task
+
+    if cache_service.redis:
+        capsule_consumer = CapsuleEventConsumer(event_bus=event_bus)
+        capsule_consumer_task = asyncio.create_task(capsule_consumer.start())
+        app.state.capsule_consumer_task = capsule_consumer_task
 
     nudge_consumer = NudgeEventConsumer(event_bus=event_bus)
     nudge_consumer_task = asyncio.create_task(nudge_consumer.start())

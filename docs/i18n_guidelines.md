@@ -177,5 +177,6 @@ Text(filterType.label(context))
 ## 更新日志
 
 - 2026-03-15: 完成Phase 1-3，覆盖error_book, community, task_monitor, plan, auth, tools, knowledge, seed_library, translation, memory模块
-- 新增约150+翻译键
+- 新增约180+翻译键
 - 建立长期维护机制
+- 完成error_detail_screen.dart国际化（约30个翻译键）

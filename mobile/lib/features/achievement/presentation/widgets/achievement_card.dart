@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/rarity_badge.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 
@@ -366,7 +367,7 @@ class AchievementCard extends StatelessWidget {
                   const SizedBox(height: DS.spacing16),
                   _buildProgressBar(height: 8),
                   const SizedBox(height: DS.spacing8),
-                  _buildProgressText(),
+                  _buildProgressText(context),
                 ],
               ],
             );
@@ -506,7 +507,7 @@ class AchievementCard extends StatelessWidget {
     );
   }
 
-  Widget _buildProgressText() {
+  Widget _buildProgressText(BuildContext context) {
     final userProgress = achievement.userProgress;
 
     if (userProgress == null) {
@@ -518,7 +519,7 @@ class AchievementCard extends StatelessWidget {
       runSpacing: DS.spacing4,
       children: [
         Text(
-          '进度',
+          context.l10n.achievementProgress,
           style: TextStyle(
             fontSize: DS.fontSizeXs,
             color: DS.textSecondary,

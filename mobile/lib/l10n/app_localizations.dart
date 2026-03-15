@@ -1784,6 +1784,312 @@ abstract class AppLocalizations {
   /// **'新！'**
   String get achievementNew;
 
+  /// No description provided for @achievementSearch.
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索成就'**
+  String get achievementSearch;
+
+  /// No description provided for @achievementFilter.
+  ///
+  /// In zh, this message translates to:
+  /// **'筛选'**
+  String get achievementFilter;
+
+  /// No description provided for @achievementFilterActive.
+  ///
+  /// In zh, this message translates to:
+  /// **'筛选中'**
+  String get achievementFilterActive;
+
+  /// No description provided for @achievementAll.
+  ///
+  /// In zh, this message translates to:
+  /// **'全部'**
+  String get achievementAll;
+
+  /// No description provided for @achievementStatusUnlocked.
+  ///
+  /// In zh, this message translates to:
+  /// **'已解锁'**
+  String get achievementStatusUnlocked;
+
+  /// No description provided for @achievementStatusLocked.
+  ///
+  /// In zh, this message translates to:
+  /// **'未解锁'**
+  String get achievementStatusLocked;
+
+  /// No description provided for @achievementStatusInProgress.
+  ///
+  /// In zh, this message translates to:
+  /// **'进行中'**
+  String get achievementStatusInProgress;
+
+  /// No description provided for @achievementCategoryStreak.
+  ///
+  /// In zh, this message translates to:
+  /// **'连胜'**
+  String get achievementCategoryStreak;
+
+  /// No description provided for @achievementCategoryMilestone.
+  ///
+  /// In zh, this message translates to:
+  /// **'里程碑'**
+  String get achievementCategoryMilestone;
+
+  /// No description provided for @achievementCategoryMastery.
+  ///
+  /// In zh, this message translates to:
+  /// **'精通'**
+  String get achievementCategoryMastery;
+
+  /// No description provided for @achievementCategoryExploration.
+  ///
+  /// In zh, this message translates to:
+  /// **'探索'**
+  String get achievementCategoryExploration;
+
+  /// No description provided for @achievementCategoryTask.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务'**
+  String get achievementCategoryTask;
+
+  /// No description provided for @achievementNoMatch.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有找到匹配的成就'**
+  String get achievementNoMatch;
+
+  /// No description provided for @achievementAdjustFilter.
+  ///
+  /// In zh, this message translates to:
+  /// **'试试调整筛选条件'**
+  String get achievementAdjustFilter;
+
+  /// No description provided for @achievementFilterSheet.
+  ///
+  /// In zh, this message translates to:
+  /// **'筛选成就'**
+  String get achievementFilterSheet;
+
+  /// No description provided for @achievementRarity.
+  ///
+  /// In zh, this message translates to:
+  /// **'稀有度'**
+  String get achievementRarity;
+
+  /// No description provided for @achievementStatus.
+  ///
+  /// In zh, this message translates to:
+  /// **'状态'**
+  String get achievementStatus;
+
+  /// No description provided for @achievementApplyFilter.
+  ///
+  /// In zh, this message translates to:
+  /// **'应用筛选'**
+  String get achievementApplyFilter;
+
+  /// No description provided for @achievementDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'描述'**
+  String get achievementDescription;
+
+  /// No description provided for @achievementNoDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无描述'**
+  String get achievementNoDescription;
+
+  /// No description provided for @achievementPrerequisites.
+  ///
+  /// In zh, this message translates to:
+  /// **'前置成就'**
+  String get achievementPrerequisites;
+
+  /// No description provided for @achievementPrerequisitesHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'需要先完成以下成就：'**
+  String get achievementPrerequisitesHint;
+
+  /// No description provided for @achievementRewards.
+  ///
+  /// In zh, this message translates to:
+  /// **'奖励'**
+  String get achievementRewards;
+
+  /// No description provided for @achievementUnlockRewards.
+  ///
+  /// In zh, this message translates to:
+  /// **'解锁奖励'**
+  String get achievementUnlockRewards;
+
+  /// No description provided for @achievementRewardPhotons.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 光子'**
+  String achievementRewardPhotons(Object count);
+
+  /// No description provided for @achievementRewardTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'称号'**
+  String get achievementRewardTitle;
+
+  /// No description provided for @achievementRewardSkin.
+  ///
+  /// In zh, this message translates to:
+  /// **'星系皮肤'**
+  String get achievementRewardSkin;
+
+  /// No description provided for @achievementRewardXp.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 经验'**
+  String achievementRewardXp(Object count);
+
+  /// No description provided for @achievementRewardMystery.
+  ///
+  /// In zh, this message translates to:
+  /// **'神秘奖励'**
+  String get achievementRewardMystery;
+
+  /// No description provided for @achievementStatType.
+  ///
+  /// In zh, this message translates to:
+  /// **'类型'**
+  String get achievementStatType;
+
+  /// No description provided for @achievementCategory.
+  ///
+  /// In zh, this message translates to:
+  /// **'分类'**
+  String get achievementCategory;
+
+  /// No description provided for @achievementUnlockedAt.
+  ///
+  /// In zh, this message translates to:
+  /// **'解锁时间'**
+  String get achievementUnlockedAt;
+
+  /// No description provided for @achievementShareCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'分享次数'**
+  String get achievementShareCount;
+
+  /// No description provided for @achievementUnlockRank.
+  ///
+  /// In zh, this message translates to:
+  /// **'解锁排名'**
+  String get achievementUnlockRank;
+
+  /// No description provided for @achievementFirstUnlocker.
+  ///
+  /// In zh, this message translates to:
+  /// **'首位解锁者'**
+  String get achievementFirstUnlocker;
+
+  /// No description provided for @achievementNotFound.
+  ///
+  /// In zh, this message translates to:
+  /// **'成就未找到'**
+  String get achievementNotFound;
+
+  /// No description provided for @achievementShareLocked.
+  ///
+  /// In zh, this message translates to:
+  /// **'解锁后才可以分享这个成就'**
+  String get achievementShareLocked;
+
+  /// No description provided for @achievementCompletionRate.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成率'**
+  String get achievementCompletionRate;
+
+  /// No description provided for @achievementTotalLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'总成就'**
+  String get achievementTotalLabel;
+
+  /// No description provided for @achievementPhotons.
+  ///
+  /// In zh, this message translates to:
+  /// **'光子'**
+  String get achievementPhotons;
+
+  /// No description provided for @achievementOverallProgress.
+  ///
+  /// In zh, this message translates to:
+  /// **'总体进度'**
+  String get achievementOverallProgress;
+
+  /// No description provided for @achievementRarityDistribution.
+  ///
+  /// In zh, this message translates to:
+  /// **'稀有度分布'**
+  String get achievementRarityDistribution;
+
+  /// No description provided for @achievementHiddenCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'隐藏: {count}'**
+  String achievementHiddenCount(Object count);
+
+  /// No description provided for @achievementTypeMastery.
+  ///
+  /// In zh, this message translates to:
+  /// **'精通'**
+  String get achievementTypeMastery;
+
+  /// No description provided for @achievementTypeTaskComplete.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务'**
+  String get achievementTypeTaskComplete;
+
+  /// No description provided for @achievementTypeNodeExplore.
+  ///
+  /// In zh, this message translates to:
+  /// **'探索'**
+  String get achievementTypeNodeExplore;
+
+  /// No description provided for @achievementTypeStudyTime.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习时长'**
+  String get achievementTypeStudyTime;
+
+  /// No description provided for @achievementTypeSocial.
+  ///
+  /// In zh, this message translates to:
+  /// **'社交'**
+  String get achievementTypeSocial;
+
+  /// No description provided for @achievementTypeContract.
+  ///
+  /// In zh, this message translates to:
+  /// **'契约'**
+  String get achievementTypeContract;
+
+  /// No description provided for @achievementTypeSprint.
+  ///
+  /// In zh, this message translates to:
+  /// **'冲刺'**
+  String get achievementTypeSprint;
+
+  /// No description provided for @streakDetails.
+  ///
+  /// In zh, this message translates to:
+  /// **'连胜详情'**
+  String get streakDetails;
+
   /// No description provided for @taskStatusPending.
   ///
   /// In zh, this message translates to:
@@ -9031,6 +9337,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'复习功能即将上线'**
   String get errorBookReviewInProgress;
+
+  /// No description provided for @errorBookDeleteFailedMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除失败：{error}'**
+  String errorBookDeleteFailedMessage(String error);
 
   /// No description provided for @errorBookCognitiveFilter.
   ///

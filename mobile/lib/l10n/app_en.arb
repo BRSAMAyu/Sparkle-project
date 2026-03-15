@@ -296,6 +296,57 @@
   "achievementStatsPoints": "Points",
   "achievementStatsStreak": "Day Streak",
   "achievementNew": "New!",
+  "achievementSearch": "Search achievements",
+  "achievementFilter": "Filter",
+  "achievementFilterActive": "Filtering",
+  "achievementAll": "All",
+  "achievementStatusUnlocked": "Unlocked",
+  "achievementStatusLocked": "Locked",
+  "achievementStatusInProgress": "In Progress",
+  "achievementCategoryStreak": "Streak",
+  "achievementCategoryMilestone": "Milestone",
+  "achievementCategoryMastery": "Mastery",
+  "achievementCategoryExploration": "Exploration",
+  "achievementCategoryTask": "Tasks",
+  "achievementNoMatch": "No matching achievements found",
+  "achievementAdjustFilter": "Try adjusting your filters",
+  "achievementFilterSheet": "Filter Achievements",
+  "achievementRarity": "Rarity",
+  "achievementStatus": "Status",
+  "achievementApplyFilter": "Apply Filters",
+  "achievementDescription": "Description",
+  "achievementNoDescription": "No description yet",
+  "achievementPrerequisites": "Prerequisites",
+  "achievementPrerequisitesHint": "Complete these achievements first:",
+  "achievementRewards": "Rewards",
+  "achievementUnlockRewards": "Unlock Rewards",
+  "achievementRewardPhotons": "{count} Photons",
+  "achievementRewardTitle": "Title",
+  "achievementRewardSkin": "Galaxy Skin",
+  "achievementRewardXp": "{count} XP",
+  "achievementRewardMystery": "Mystery Reward",
+  "achievementStatType": "Type",
+  "achievementCategory": "Category",
+  "achievementUnlockedAt": "Unlocked At",
+  "achievementShareCount": "Share Count",
+  "achievementUnlockRank": "Unlock Rank",
+  "achievementFirstUnlocker": "First Unlocker",
+  "achievementNotFound": "Achievement not found",
+  "achievementShareLocked": "Unlock this achievement to share it",
+  "achievementCompletionRate": "Completion Rate",
+  "achievementTotalLabel": "Total Achievements",
+  "achievementPhotons": "Photons",
+  "achievementOverallProgress": "Overall Progress",
+  "achievementRarityDistribution": "Rarity Distribution",
+  "achievementHiddenCount": "Hidden: {count}",
+  "achievementTypeMastery": "Mastery",
+  "achievementTypeTaskComplete": "Tasks",
+  "achievementTypeNodeExplore": "Exploration",
+  "achievementTypeStudyTime": "Study Time",
+  "achievementTypeSocial": "Social",
+  "achievementTypeContract": "Contract",
+  "achievementTypeSprint": "Sprint",
+  "streakDetails": "Streak Details",
 
   "taskStatusPending": "Pending",
   "taskStatusInProgress": "In Progress",
@@ -1901,6 +1952,7 @@
   "errorBookEditInProgress": "Edit feature coming soon",
   "errorBookReanalyzing": "Reanalyzing...",
   "errorBookReviewInProgress": "Review feature coming soon",
+  "errorBookDeleteFailedMessage": "Delete failed: {error}",
   "@errorBookCreatedAt": {
     "placeholders": {
       "date": {
@@ -1918,6 +1970,13 @@
   "@errorBookKnowledgeLinkSnack": {
     "placeholders": {
       "nodeName": {
+        "type": "String"
+      }
+    }
+  },
+  "@errorBookDeleteFailedMessage": {
+    "placeholders": {
+      "error": {
         "type": "String"
       }
     }

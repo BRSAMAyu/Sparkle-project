@@ -880,6 +880,166 @@ class AppLocalizationsEn extends AppLocalizations {
   String get achievementNew => 'New!';
 
   @override
+  String get achievementSearch => 'Search achievements';
+
+  @override
+  String get achievementFilter => 'Filter';
+
+  @override
+  String get achievementFilterActive => 'Filtering';
+
+  @override
+  String get achievementAll => 'All';
+
+  @override
+  String get achievementStatusUnlocked => 'Unlocked';
+
+  @override
+  String get achievementStatusLocked => 'Locked';
+
+  @override
+  String get achievementStatusInProgress => 'In Progress';
+
+  @override
+  String get achievementCategoryStreak => 'Streak';
+
+  @override
+  String get achievementCategoryMilestone => 'Milestone';
+
+  @override
+  String get achievementCategoryMastery => 'Mastery';
+
+  @override
+  String get achievementCategoryExploration => 'Exploration';
+
+  @override
+  String get achievementCategoryTask => 'Tasks';
+
+  @override
+  String get achievementNoMatch => 'No matching achievements found';
+
+  @override
+  String get achievementAdjustFilter => 'Try adjusting your filters';
+
+  @override
+  String get achievementFilterSheet => 'Filter Achievements';
+
+  @override
+  String get achievementRarity => 'Rarity';
+
+  @override
+  String get achievementStatus => 'Status';
+
+  @override
+  String get achievementApplyFilter => 'Apply Filters';
+
+  @override
+  String get achievementDescription => 'Description';
+
+  @override
+  String get achievementNoDescription => 'No description yet';
+
+  @override
+  String get achievementPrerequisites => 'Prerequisites';
+
+  @override
+  String get achievementPrerequisitesHint =>
+      'Complete these achievements first:';
+
+  @override
+  String get achievementRewards => 'Rewards';
+
+  @override
+  String get achievementUnlockRewards => 'Unlock Rewards';
+
+  @override
+  String achievementRewardPhotons(Object count) {
+    return '$count Photons';
+  }
+
+  @override
+  String get achievementRewardTitle => 'Title';
+
+  @override
+  String get achievementRewardSkin => 'Galaxy Skin';
+
+  @override
+  String achievementRewardXp(Object count) {
+    return '$count XP';
+  }
+
+  @override
+  String get achievementRewardMystery => 'Mystery Reward';
+
+  @override
+  String get achievementStatType => 'Type';
+
+  @override
+  String get achievementCategory => 'Category';
+
+  @override
+  String get achievementUnlockedAt => 'Unlocked At';
+
+  @override
+  String get achievementShareCount => 'Share Count';
+
+  @override
+  String get achievementUnlockRank => 'Unlock Rank';
+
+  @override
+  String get achievementFirstUnlocker => 'First Unlocker';
+
+  @override
+  String get achievementNotFound => 'Achievement not found';
+
+  @override
+  String get achievementShareLocked => 'Unlock this achievement to share it';
+
+  @override
+  String get achievementCompletionRate => 'Completion Rate';
+
+  @override
+  String get achievementTotalLabel => 'Total Achievements';
+
+  @override
+  String get achievementPhotons => 'Photons';
+
+  @override
+  String get achievementOverallProgress => 'Overall Progress';
+
+  @override
+  String get achievementRarityDistribution => 'Rarity Distribution';
+
+  @override
+  String achievementHiddenCount(Object count) {
+    return 'Hidden: $count';
+  }
+
+  @override
+  String get achievementTypeMastery => 'Mastery';
+
+  @override
+  String get achievementTypeTaskComplete => 'Tasks';
+
+  @override
+  String get achievementTypeNodeExplore => 'Exploration';
+
+  @override
+  String get achievementTypeStudyTime => 'Study Time';
+
+  @override
+  String get achievementTypeSocial => 'Social';
+
+  @override
+  String get achievementTypeContract => 'Contract';
+
+  @override
+  String get achievementTypeSprint => 'Sprint';
+
+  @override
+  String get streakDetails => 'Streak Details';
+
+  @override
   String get taskStatusPending => 'Pending';
 
   @override
@@ -5033,6 +5193,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get errorBookReviewInProgress => 'Review feature coming soon';
+
+  @override
+  String errorBookDeleteFailedMessage(String error) {
+    return 'Delete failed: $error';
+  }
 
   @override
   String errorBookCognitiveFilter(String dimension) {

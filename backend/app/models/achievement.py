@@ -59,6 +59,8 @@ class Achievement(BaseModel):
     id = Column(String(50), primary_key=True)  # 字符串ID用于标识，如 "streak_7"
     name = Column(String(100), nullable=False)
     description = Column(String(500))
+    name_i18n = Column(JSON, default=dict, nullable=True)
+    description_i18n = Column(JSON, default=dict, nullable=True)
     icon_url = Column(String(500))
 
     # 分类
@@ -103,6 +105,34 @@ class Achievement(BaseModel):
 
     def __repr__(self):
         return f"<Achievement(id={self.id}, name={self.name}, rarity={self.rarity})>"
+
+    @staticmethod
+    def _normalize_locale(locale: str | None) -> str | None:
+        if not locale:
+            return None
+        primary = locale.split(",")[0].strip()
+        if not primary:
+            return None
+        primary = primary.split(";")[0].strip()
+        if not primary:
+            return None
+        return primary.split("-")[0].lower()
+
+    def get_localized_name(self, locale: str | None) -> str:
+        language = self._normalize_locale(locale)
+        if language and isinstance(self.name_i18n, dict):
+            value = self.name_i18n.get(language)
+            if value:
+                return value
+        return self.name
+
+    def get_localized_description(self, locale: str | None) -> str | None:
+        language = self._normalize_locale(locale)
+        if language and isinstance(self.description_i18n, dict):
+            value = self.description_i18n.get(language)
+            if value:
+                return value
+        return self.description
 
 
 class UserAchievement(BaseModel):

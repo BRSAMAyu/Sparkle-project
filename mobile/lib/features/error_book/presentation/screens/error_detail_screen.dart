@@ -77,7 +77,7 @@ class ErrorDetailScreen extends ConsumerWidget {
                       value: 'delete',
                       child: Row(
                         children: [
-                          const Icon(Icons.delete_outline, color: DS.error),
+                          Icon(Icons.delete_outline, color: DS.error),
                           const SizedBox(width: DS.spacing12),
                           Text(
                             l10n.errorBookDelete,
@@ -197,7 +197,7 @@ class ErrorDetailScreen extends ConsumerWidget {
               ],
               const Spacer(),
               // 掌握度
-              _buildMasteryBadge(theme, error.masteryLevel),
+              _buildMasteryBadge(context, theme, error.masteryLevel),
             ],
           ),
           const SizedBox(height: DS.spacing12),
@@ -225,7 +225,7 @@ class ErrorDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildMasteryBadge(ThemeData theme, double mastery) {
+  Widget _buildMasteryBadge(BuildContext context, ThemeData theme, double mastery) {
     final color = mastery >= 0.8
         ? DS.success
         : mastery >= 0.5
@@ -1004,7 +1004,7 @@ class ErrorDetailScreen extends ConsumerWidget {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(context.l10n.errorBookDeleteFailed(e.toString())),
+              content: Text(context.l10n.errorBookDeleteFailedMessage(e.toString())),
               backgroundColor: DS.error,
               behavior: SnackBarBehavior.floating,
             ),

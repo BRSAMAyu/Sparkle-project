@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/achievement_card.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/achievement_stats_panel.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/streak_indicator.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 
 /// 成就列表视图模式
@@ -37,7 +39,10 @@ class AchievementFilterOptions {
         status: status ?? this.status,
       );
 
-  bool get hasFilters => category != null || rarity != null || status != null;
+  bool get hasFilters =>
+      category != null ||
+      rarity != null ||
+      (status != null && status != AchievementStatus.all);
 }
 
 /// 成就状态筛选
@@ -72,6 +77,7 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(achievementProvider);
+    final l10n = context.l10n;
 
     return SparklePageScaffold(
       role: SparklePageRole.immersive,
@@ -81,17 +87,17 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen> {
           slivers: [
             // 顶部统计面板
             SliverToBoxAdapter(
-              child: _buildHeader(context, state),
+              child: _buildHeader(context, state, l10n),
             ),
 
             // 筛选栏
             SliverToBoxAdapter(
-              child: _buildFilterBar(context),
+              child: _buildFilterBar(context, l10n),
             ),
 
             // 分类标签
             SliverToBoxAdapter(
-              child: _buildCategoryTabs(context, state),
+              child: _buildCategoryTabs(context, l10n),
             ),
 
             // 内容区域
@@ -101,7 +107,7 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen> {
               )
             else if (state.error != null)
               SliverFillRemaining(
-                child: _buildErrorView(context, state.error!),
+                child: _buildErrorView(context, state.error!, l10n),
               )
             else
               _buildAchievementContent(state),
@@ -111,7 +117,11 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen> {
     );
   }
 
-  Widget _buildHeader(BuildContext context, AchievementState state) =>
+  Widget _buildHeader(
+    BuildContext context,
+    AchievementState state,
+    AppLocalizations l10n,
+  ) =>
       Container(
         padding: const EdgeInsets.all(DS.spacing16),
         decoration: BoxDecoration(
@@ -141,7 +151,7 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen> {
                       const SizedBox(width: DS.spacing8),
                       Expanded(
                         child: Text(
-                          '成就',
+                          l10n.achievementTitle,
                           style: TextStyle(
                             fontSize: DS.fontSizeXl,
                             fontWeight: DS.fontWeightBold,
@@ -214,7 +224,8 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen> {
         ),
       );
 
-  Widget _buildFilterBar(BuildContext context) => Container(
+  Widget _buildFilterBar(BuildContext context, AppLocalizations l10n) =>
+      Container(
         padding: const EdgeInsets.symmetric(
           horizontal: DS.spacing16,
           vertical: DS.spacing12,
@@ -241,7 +252,7 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen> {
                     child: TextField(
                       controller: _searchController,
                       decoration: InputDecoration(
-                        hintText: '搜索成就',
+                        hintText: l10n.achievementSearch,
                         hintStyle: TextStyle(
                           fontSize: DS.fontSizeSm,
                           color: DS.textSecondary,
@@ -281,7 +292,7 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen> {
                   const SizedBox(height: DS.spacing12),
                   SizedBox(
                     width: double.infinity,
-                    child: _buildFilterButton(),
+                    child: _buildFilterButton(l10n),
                   ),
                 ],
               );
@@ -291,14 +302,14 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen> {
               children: [
                 Expanded(child: search),
                 const SizedBox(width: DS.spacing12),
-                _buildFilterButton(),
+                _buildFilterButton(l10n),
               ],
             );
           },
         ),
       );
 
-  Widget _buildFilterButton() {
+  Widget _buildFilterButton(AppLocalizations l10n) {
     final hasFilters = _filterOptions.hasFilters;
 
     return GestureDetector(
@@ -328,7 +339,9 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen> {
             ),
             const SizedBox(width: DS.spacing8),
             Text(
-              hasFilters ? '筛选中' : '筛选',
+              hasFilters
+                  ? l10n.achievementFilterActive
+                  : l10n.achievementFilter,
               style: TextStyle(
                 fontSize: DS.fontSizeSm,
                 color: hasFilters ? DS.brandPrimary : DS.textSecondary,
@@ -341,11 +354,22 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen> {
     );
   }
 
-  Widget _buildCategoryTabs(BuildContext context, AchievementState state) {
-    final categories = ['全部', '已解锁', '进行中', '里程碑', '连胜', '精通', '探索'];
+  Widget _buildCategoryTabs(BuildContext context, AppLocalizations l10n) {
+    final categories = [
+      l10n.achievementAll,
+      l10n.achievementStatusUnlocked,
+      l10n.achievementStatusInProgress,
+      l10n.achievementCategoryMilestone,
+      l10n.achievementCategoryStreak,
+      l10n.achievementCategoryMastery,
+      l10n.achievementCategoryExploration,
+      l10n.achievementCategoryTask,
+    ];
     final selectedCategory = _filterOptions.status != null
-        ? _getStatusName(_filterOptions.status!)
-        : '全部';
+        ? _getStatusName(_filterOptions.status!, l10n)
+        : _filterOptions.category != null
+            ? _getCategoryLocalizedName(_filterOptions.category!, l10n)
+            : l10n.achievementAll;
 
     return Container(
       height: 48,
@@ -361,16 +385,20 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen> {
             padding: EdgeInsets.only(
               right: index == categories.length - 1 ? 0 : DS.spacing12,
             ),
-            child: _buildCategoryChip(category, isSelected),
+            child: _buildCategoryChip(category, isSelected, l10n),
           );
         },
       ),
     );
   }
 
-  Widget _buildCategoryChip(String category, bool isSelected) =>
+  Widget _buildCategoryChip(
+    String category,
+    bool isSelected,
+    AppLocalizations l10n,
+  ) =>
       GestureDetector(
-        onTap: () => _selectCategory(category),
+        onTap: () => _selectCategory(category, l10n),
         child: Container(
           padding: const EdgeInsets.symmetric(
             horizontal: DS.spacing16,
@@ -399,8 +427,8 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen> {
     final filteredAchievements = _filterAchievements(state.achievements);
 
     if (filteredAchievements.isEmpty) {
-      return SliverFillRemaining(
-        child: _buildEmptyView(context),
+    return SliverFillRemaining(
+        child: _buildEmptyView(context, context.l10n),
       );
     }
 
@@ -468,7 +496,7 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen> {
     );
   }
 
-  Widget _buildEmptyView(BuildContext context) => Center(
+  Widget _buildEmptyView(BuildContext context, AppLocalizations l10n) => Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -479,7 +507,7 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen> {
             ),
             const SizedBox(height: DS.spacing16),
             Text(
-              '没有找到匹配的成就',
+              l10n.achievementNoMatch,
               style: TextStyle(
                 fontSize: DS.fontSizeBase,
                 color: DS.textSecondary,
@@ -487,7 +515,7 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen> {
             ),
             const SizedBox(height: DS.spacing8),
             Text(
-              '试试调整筛选条件',
+              l10n.achievementAdjustFilter,
               style: TextStyle(
                 fontSize: DS.fontSizeSm,
                 color: DS.textTertiary,
@@ -497,7 +525,12 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen> {
         ),
       );
 
-  Widget _buildErrorView(BuildContext context, String error) => Center(
+  Widget _buildErrorView(
+    BuildContext context,
+    String error,
+    AppLocalizations l10n,
+  ) =>
+      Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -508,7 +541,7 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen> {
             ),
             const SizedBox(height: DS.spacing16),
             Text(
-              '加载失败',
+              l10n.loadingFailed,
               style: TextStyle(
                 fontSize: DS.fontSizeBase,
                 color: DS.textSecondary,
@@ -525,7 +558,7 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen> {
             ),
             const SizedBox(height: DS.spacing16),
             SparkleButton.outline(
-              label: '重试',
+              label: l10n.retry,
               onPressed: () {
                 ref.read(achievementProvider.notifier).loadInitialData();
               },
@@ -588,49 +621,79 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen> {
     return filtered;
   }
 
-  void _selectCategory(String category) {
+  void _selectCategory(String category, AppLocalizations l10n) {
     AchievementStatus? status;
 
-    switch (category) {
-      case '已解锁':
-        status = AchievementStatus.unlocked;
-      case '进行中':
-        status = AchievementStatus.inProgress;
-      case '全部':
-        status = AchievementStatus.all;
-      default:
-        // Map category names to achievement categories
-        final categoryMap = {
-          '里程碑': 'milestone',
-          '连胜': 'streak',
-          '精通': 'mastery',
-          '探索': 'exploration',
-        };
-        setState(() {
-          _filterOptions = _filterOptions.copyWith(
-            category: categoryMap[category],
-          );
-        });
-        return;
+    if (category == l10n.achievementAll) {
+      setState(() {
+        _filterOptions = _filterOptions.copyWith(
+          status: null,
+          category: null,
+        );
+      });
+      return;
+    }
+
+    if (category == l10n.achievementStatusUnlocked) {
+      status = AchievementStatus.unlocked;
+    } else if (category == l10n.achievementStatusInProgress) {
+      status = AchievementStatus.inProgress;
+    } else {
+      // Map category names to achievement categories
+      final categoryMap = {
+        l10n.achievementCategoryMilestone: 'milestone',
+        l10n.achievementCategoryStreak: 'streak',
+        l10n.achievementCategoryMastery: 'mastery',
+        l10n.achievementCategoryExploration: 'exploration',
+        l10n.achievementCategoryTask: 'tasks',
+      };
+      setState(() {
+        _filterOptions = _filterOptions.copyWith(
+          category: categoryMap[category],
+          status: null,
+        );
+      });
+      return;
     }
 
     setState(() {
       _filterOptions = _filterOptions.copyWith(
         status: status,
+        category: null,
       );
     });
   }
 
-  String _getStatusName(AchievementStatus status) {
+  String _getStatusName(AchievementStatus status, AppLocalizations l10n) {
     switch (status) {
       case AchievementStatus.all:
-        return '全部';
+        return l10n.achievementAll;
       case AchievementStatus.unlocked:
-        return '已解锁';
+        return l10n.achievementStatusUnlocked;
       case AchievementStatus.locked:
-        return '未解锁';
+        return l10n.achievementStatusLocked;
       case AchievementStatus.inProgress:
-        return '进行中';
+        return l10n.achievementStatusInProgress;
+    }
+  }
+
+  String _getCategoryLocalizedName(String category, AppLocalizations l10n) {
+    switch (category) {
+      case 'milestone':
+        return l10n.achievementCategoryMilestone;
+      case 'streak':
+        return l10n.achievementCategoryStreak;
+      case 'mastery':
+        return l10n.achievementCategoryMastery;
+      case 'exploration':
+      case 'node_explore':
+        return l10n.achievementCategoryExploration;
+      case 'tasks':
+      case 'task':
+      case 'task_complete':
+        return l10n.achievementCategoryTask;
+      default:
+        return category;
     }
   }
 
@@ -658,6 +721,7 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen> {
   }
 
   void _showStreakDetails(BuildContext context) {
+    final l10n = context.l10n;
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -680,9 +744,9 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen> {
                 borderRadius: DS.borderRadiusFull,
               ),
             ),
-            const Text(
-              '连胜详情',
-              style: TextStyle(
+            Text(
+              l10n.streakDetails,
+              style: const TextStyle(
                 fontSize: DS.fontSizeXl,
                 fontWeight: DS.fontWeightBold,
               ),
@@ -697,7 +761,7 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen> {
 }
 
 /// 筛选面板
-class _AchievementFilterSheet extends StatelessWidget {
+class _AchievementFilterSheet extends StatefulWidget {
   const _AchievementFilterSheet({
     required this.currentOptions,
     required this.onApply,
@@ -707,6 +771,20 @@ class _AchievementFilterSheet extends StatelessWidget {
   final AchievementFilterOptions currentOptions;
   final void Function(AchievementFilterOptions) onApply;
   final VoidCallback onClear;
+
+  @override
+  State<_AchievementFilterSheet> createState() =>
+      _AchievementFilterSheetState();
+}
+
+class _AchievementFilterSheetState extends State<_AchievementFilterSheet> {
+  late AchievementFilterOptions _options;
+
+  @override
+  void initState() {
+    super.initState();
+    _options = widget.currentOptions;
+  }
 
   @override
   Widget build(BuildContext context) => Container(
@@ -735,35 +813,35 @@ class _AchievementFilterSheet extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  '筛选成就',
-                  style: TextStyle(
+                Text(
+                  context.l10n.achievementFilterSheet,
+                  style: const TextStyle(
                     fontSize: DS.fontSizeLg,
                     fontWeight: DS.fontWeightBold,
                   ),
                 ),
                 SparkleButton.ghost(
-                  label: '清除',
-                  onPressed: onClear,
+                  label: context.l10n.commonClear,
+                  onPressed: widget.onClear,
                 ),
               ],
             ),
             const SizedBox(height: DS.spacing16),
 
             // 稀有度筛选
-            _buildRarityFilter(),
+            _buildRarityFilter(context.l10n),
             const SizedBox(height: DS.spacing16),
 
             // 状态筛选
-            _buildStatusFilter(),
+            _buildStatusFilter(context.l10n),
             const SizedBox(height: DS.spacing24),
 
             // 应用按钮
             SizedBox(
               width: double.infinity,
               child: SparkleButton.primary(
-                label: '应用筛选',
-                onPressed: () => onApply(currentOptions),
+                label: context.l10n.achievementApplyFilter,
+                onPressed: () => widget.onApply(_options),
                 expand: true,
               ),
             ),
@@ -771,11 +849,11 @@ class _AchievementFilterSheet extends StatelessWidget {
         ),
       );
 
-  Widget _buildRarityFilter() => Column(
+  Widget _buildRarityFilter(AppLocalizations l10n) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '稀有度',
+            l10n.achievementRarity,
             style: TextStyle(
               fontSize: DS.fontSizeSm,
               fontWeight: DS.fontWeightSemibold,
@@ -787,12 +865,16 @@ class _AchievementFilterSheet extends StatelessWidget {
             spacing: DS.spacing8,
             runSpacing: DS.spacing8,
             children: AchievementRarity.values.map((rarity) {
-              final isSelected = currentOptions.rarity == rarity;
+              final isSelected = _options.rarity == rarity;
               return _buildFilterChip(
-                _getRarityName(rarity),
+                _getRarityName(rarity, l10n),
                 isSelected,
                 onTap: () {
-                  // Update rarity filter
+                  setState(() {
+                    _options = _options.copyWith(
+                      rarity: _options.rarity == rarity ? null : rarity,
+                    );
+                  });
                 },
               );
             }).toList(),
@@ -800,11 +882,11 @@ class _AchievementFilterSheet extends StatelessWidget {
         ],
       );
 
-  Widget _buildStatusFilter() => Column(
+  Widget _buildStatusFilter(AppLocalizations l10n) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '状态',
+            l10n.achievementStatus,
             style: TextStyle(
               fontSize: DS.fontSizeSm,
               fontWeight: DS.fontWeightSemibold,
@@ -816,12 +898,23 @@ class _AchievementFilterSheet extends StatelessWidget {
             spacing: DS.spacing8,
             runSpacing: DS.spacing8,
             children: AchievementStatus.values.map((status) {
-              final isSelected = currentOptions.status == status;
+              final isSelected = status == AchievementStatus.all
+                  ? _options.status == null ||
+                      _options.status == AchievementStatus.all
+                  : _options.status == status;
               return _buildFilterChip(
-                _getStatusDisplayName(status),
+                _getStatusDisplayName(status, l10n),
                 isSelected,
                 onTap: () {
-                  // Update status filter
+                  setState(() {
+                    if (status == AchievementStatus.all) {
+                      _options = _options.copyWith(status: null);
+                    } else {
+                      _options = _options.copyWith(
+                        status: _options.status == status ? null : status,
+                      );
+                    }
+                  });
                 },
               );
             }).toList(),
@@ -860,29 +953,29 @@ class _AchievementFilterSheet extends StatelessWidget {
         ),
       );
 
-  String _getRarityName(AchievementRarity rarity) {
+  String _getRarityName(AchievementRarity rarity, AppLocalizations l10n) {
     switch (rarity) {
       case AchievementRarity.common:
-        return '普通';
+        return l10n.achievementRarityCommon;
       case AchievementRarity.rare:
-        return '稀有';
+        return l10n.achievementRarityRare;
       case AchievementRarity.epic:
-        return '史诗';
+        return l10n.achievementRarityEpic;
       case AchievementRarity.legendary:
-        return '传说';
+        return l10n.achievementRarityLegendary;
     }
   }
 
-  String _getStatusDisplayName(AchievementStatus status) {
+  String _getStatusDisplayName(AchievementStatus status, AppLocalizations l10n) {
     switch (status) {
       case AchievementStatus.all:
-        return '全部';
+        return l10n.achievementAll;
       case AchievementStatus.unlocked:
-        return '已解锁';
+        return l10n.achievementStatusUnlocked;
       case AchievementStatus.locked:
-        return '未解锁';
+        return l10n.achievementStatusLocked;
       case AchievementStatus.inProgress:
-        return '进行中';
+        return l10n.achievementStatusInProgress;
     }
   }
 }

@@ -1,0 +1,130 @@
+{
+  "streak_7": {
+    "name": "Weekly Persistence",
+    "description": "Study for 7 consecutive days to build a learning habit"
+  },
+  "streak_30": {
+    "name": "Monthly Champion",
+    "description": "30 days of consecutive learning, your perseverance is admirable"
+  },
+  "streak_100": {
+    "name": "Hundred-Day Conqueror",
+    "description": "100 consecutive days of learning, a remarkable achievement"
+  },
+  "streak_365": {
+    "name": "Yearly Legend",
+    "description": "365 consecutive days of learning, your legend endures"
+  },
+  "first_light": {
+    "name": "First Light",
+    "description": "Unlock your first knowledge node"
+  },
+  "nodes_10": {
+    "name": "Sparkfire Rising",
+    "description": "Unlock 10 knowledge nodes"
+  },
+  "nodes_50": {
+    "name": "Knowledge Nova",
+    "description": "Unlock 50 knowledge nodes"
+  },
+  "nodes_100": {
+    "name": "Starmap Explorer",
+    "description": "Unlock 100 knowledge nodes"
+  },
+  "nodes_500": {
+    "name": "Knowledge Navigator",
+    "description": "Unlock 500 knowledge nodes"
+  },
+  "all_sectors": {
+    "name": "All-Sector Mastery",
+    "description": "Unlock knowledge nodes across all 7 sectors"
+  },
+  "math_master": {
+    "name": "Math Master",
+    "description": "Reach 80% mastery in mathematics"
+  },
+  "physics_master": {
+    "name": "Physics Master",
+    "description": "Reach 80% mastery in physics"
+  },
+  "study_1hour": {
+    "name": "One Hour Learner",
+    "description": "Accumulate 1 hour of study time"
+  },
+  "study_10hours": {
+    "name": "Ten Hour Learner",
+    "description": "Accumulate 10 hours of study time"
+  },
+  "study_100hours": {
+    "name": "Hundred Hour Learner",
+    "description": "Accumulate 100 hours of study time"
+  },
+  "study_1000hours": {
+    "name": "Thousand Hour Learner",
+    "description": "Accumulate 1,000 hours of study time"
+  },
+  "tasks_1": {
+    "name": "First Task",
+    "description": "Complete your first learning task"
+  },
+  "tasks_10": {
+    "name": "Task Achiever",
+    "description": "Complete 10 learning tasks"
+  },
+  "tasks_100": {
+    "name": "Task Expert",
+    "description": "Complete 100 learning tasks"
+  },
+  "night_owl": {
+    "name": "Night Owl Scholar",
+    "description": "Study 10 times between 23:00 and 05:00"
+  },
+  "early_bird": {
+    "name": "Early Bird",
+    "description": "Study 10 times between 05:00 and 08:00"
+  },
+  "perfectionist": {
+    "name": "Perfectionist",
+    "description": "Reach 100% mastery on a single knowledge node"
+  },
+  "speed_learner": {
+    "name": "Speed Learner",
+    "description": "Unlock 20 new knowledge nodes within 24 hours"
+  },
+  "weekend_warrior": {
+    "name": "Weekend Warrior",
+    "description": "Have study records on four consecutive weekends"
+  },
+  "sprint_first": {
+    "name": "First Sprint",
+    "description": "Complete your first sprint plan"
+  },
+  "sprint_5": {
+    "name": "Sprint Specialist",
+    "description": "Complete 5 sprint plans"
+  },
+  "sprint_10": {
+    "name": "Sprint Master",
+    "description": "Complete 10 sprint plans"
+  },
+  "sprint_perfect_1": {
+    "name": "Perfect Debut",
+    "description": "Finish your first sprint with a 100% completion rate"
+  },
+  "sprint_perfect_5": {
+    "name": "Perfect Form",
+    "description": "Finish 5 sprints with a 100% completion rate"
+  },
+  "sprint_streak_3": {
+    "name": "Three-Sprint Streak",
+    "description": "Complete 3 sprint plans in a row"
+  },
+  "sprint_streak_10": {
+    "name": "Sprint Legend",
+    "description": "Complete 10 sprint plans in a row"
+  },
+  "sprint_ahead": {
+    "name": "Ahead of Schedule",
+    "description": "Finish a sprint early by reaching 100% before the target date"
+  }
+}

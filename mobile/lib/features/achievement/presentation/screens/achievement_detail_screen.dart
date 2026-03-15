@@ -5,9 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/rarity_badge.dart';
 import 'package:sparkle/features/user/presentation/widgets/achievement_share_dialog.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 
 /// 成就详情页面
@@ -55,6 +58,7 @@ class _AchievementDetailScreenState
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(achievementProvider);
+    final l10n = context.l10n;
 
     if (state.isLoading) {
       return SparklePageScaffold(
@@ -72,7 +76,7 @@ class _AchievementDetailScreenState
       return SparklePageScaffold(
         role: SparklePageRole.immersive,
         appBar: AppBar(),
-        child: _buildNotFoundView(),
+        child: _buildNotFoundView(l10n),
       );
     }
 
@@ -87,7 +91,7 @@ class _AchievementDetailScreenState
 
             // 内容区域
             SliverToBoxAdapter(
-              child: _buildContent(achievement),
+              child: _buildContent(achievement, l10n),
             ),
           ],
         ),
@@ -225,56 +229,63 @@ class _AchievementDetailScreenState
     );
   }
 
-  Widget _buildContent(AchievementWithProgress achievement) => Container(
+  Widget _buildContent(
+    AchievementWithProgress achievement,
+    AppLocalizations l10n,
+  ) =>
+      Container(
         padding: const EdgeInsets.all(DS.spacing20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // 名称和解锁状态
-            _buildTitleSection(achievement),
+            _buildTitleSection(achievement, l10n),
             const SizedBox(height: DS.spacing24),
 
             // 描述
             if (achievement.achievement.description != null) ...[
-              _buildSectionTitle('描述'),
+              _buildSectionTitle(l10n.achievementDescription),
               const SizedBox(height: DS.spacing8),
-              _buildDescription(achievement),
+              _buildDescription(achievement, l10n),
               const SizedBox(height: DS.spacing24),
             ],
 
             // 进度（未解锁时）
             if (!achievement.isUnlocked) ...[
-              _buildSectionTitle('进度'),
+              _buildSectionTitle(l10n.achievementProgress),
               const SizedBox(height: DS.spacing12),
-              _buildProgressCard(achievement),
+              _buildProgressCard(achievement, l10n),
               const SizedBox(height: DS.spacing24),
             ],
 
             // 前置成就
             if (achievement.achievement.prerequisites?.isNotEmpty ?? false) ...[
-              _buildSectionTitle('前置成就'),
+              _buildSectionTitle(l10n.achievementPrerequisites),
               const SizedBox(height: DS.spacing12),
-              _buildPrerequisites(achievement),
+              _buildPrerequisites(achievement, l10n),
               const SizedBox(height: DS.spacing24),
             ],
 
             // 奖励
             if (achievement.achievement.rewardConfig?.isNotEmpty ?? false) ...[
-              _buildSectionTitle('奖励'),
+              _buildSectionTitle(l10n.achievementRewards),
               const SizedBox(height: DS.spacing12),
-              _buildRewards(achievement),
+              _buildRewards(achievement, l10n),
               const SizedBox(height: DS.spacing24),
             ],
 
             // 统计信息
-            _buildStats(achievement),
+            _buildStats(achievement, l10n),
 
             const SizedBox(height: DS.spacing40),
           ],
         ),
       );
 
-  Widget _buildTitleSection(AchievementWithProgress achievement) =>
+  Widget _buildTitleSection(
+    AchievementWithProgress achievement,
+    AppLocalizations l10n,
+  ) =>
       LayoutBuilder(
         builder: (context, constraints) {
           final compact = constraints.maxWidth < 420;
@@ -308,7 +319,7 @@ class _AchievementDetailScreenState
                             color: DS.semanticSuccess,
                           ),
                           Text(
-                            '已解锁',
+                            l10n.achievementStatusUnlocked,
                             style: TextStyle(
                               fontSize: DS.fontSizeSm,
                               color: DS.semanticSuccess,
@@ -322,7 +333,7 @@ class _AchievementDetailScreenState
                             color: DS.textTertiary,
                           ),
                           Text(
-                            '未解锁',
+                            l10n.achievementStatusLocked,
                             style: TextStyle(
                               fontSize: DS.fontSizeSm,
                               color: DS.textTertiary,
@@ -330,7 +341,7 @@ class _AchievementDetailScreenState
                           ),
                         ],
                         Text(
-                          _getTypeName(achievement.achievement.type),
+                          _getTypeName(achievement.achievement.type, l10n),
                           style: TextStyle(
                             fontSize: DS.fontSizeSm,
                             color: DS.textSecondary,
@@ -368,7 +379,11 @@ class _AchievementDetailScreenState
         ),
       );
 
-  Widget _buildDescription(AchievementWithProgress achievement) => Container(
+  Widget _buildDescription(
+    AchievementWithProgress achievement,
+    AppLocalizations l10n,
+  ) =>
+      Container(
         padding: const EdgeInsets.all(DS.spacing16),
         decoration: BoxDecoration(
           color: DS.surfaceSecondary,
@@ -376,7 +391,7 @@ class _AchievementDetailScreenState
           border: Border.all(color: DS.border),
         ),
         child: Text(
-          achievement.achievement.description ?? '暂无描述',
+          achievement.achievement.description ?? l10n.achievementNoDescription,
           style: TextStyle(
             fontSize: DS.fontSizeBase,
             color: DS.textPrimary,
@@ -385,7 +400,10 @@ class _AchievementDetailScreenState
         ),
       );
 
-  Widget _buildProgressCard(AchievementWithProgress achievement) {
+  Widget _buildProgressCard(
+    AchievementWithProgress achievement,
+    AppLocalizations l10n,
+  ) {
     final userProgress = achievement.userProgress;
     final progress = achievement.progressPercentage / 100;
     final rarityColor =
@@ -406,7 +424,7 @@ class _AchievementDetailScreenState
             runSpacing: DS.spacing8,
             children: [
               Text(
-                '完成进度',
+                l10n.completionProgress,
                 style: TextStyle(
                   fontSize: DS.fontSizeBase,
                   fontWeight: DS.fontWeightSemibold,
@@ -477,7 +495,10 @@ class _AchievementDetailScreenState
     );
   }
 
-  Widget _buildPrerequisites(AchievementWithProgress achievement) {
+  Widget _buildPrerequisites(
+    AchievementWithProgress achievement,
+    AppLocalizations l10n,
+  ) {
     final prerequisites = achievement.achievement.prerequisites ?? [];
     final state = ref.watch(achievementProvider);
 
@@ -492,7 +513,7 @@ class _AchievementDetailScreenState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '需要先完成以下成就：',
+            l10n.achievementPrerequisitesHint,
             style: TextStyle(
               fontSize: DS.fontSizeSm,
               color: DS.textSecondary,
@@ -542,7 +563,10 @@ class _AchievementDetailScreenState
     );
   }
 
-  Widget _buildRewards(AchievementWithProgress achievement) {
+  Widget _buildRewards(
+    AchievementWithProgress achievement,
+    AppLocalizations l10n,
+  ) {
     final rewards = achievement.achievement.rewardConfig ?? [];
 
     return Container(
@@ -571,7 +595,7 @@ class _AchievementDetailScreenState
               ),
               const SizedBox(width: DS.spacing8),
               Text(
-                '解锁奖励',
+                l10n.achievementUnlockRewards,
                 style: TextStyle(
                   fontSize: DS.fontSizeSm,
                   fontWeight: DS.fontWeightSemibold,
@@ -584,7 +608,7 @@ class _AchievementDetailScreenState
           ...rewards.map(
             (reward) => Padding(
               padding: const EdgeInsets.only(bottom: DS.spacing8),
-              child: _buildRewardItem(reward),
+              child: _buildRewardItem(reward, l10n),
             ),
           ),
         ],
@@ -592,29 +616,42 @@ class _AchievementDetailScreenState
     );
   }
 
-  Widget _buildRewardItem(Map<String, dynamic> reward) {
+  Widget _buildRewardItem(
+    Map<String, dynamic> reward,
+    AppLocalizations l10n,
+  ) {
     final type = reward['type'] as String? ?? 'unknown';
-    final amount = reward['amount'] as int? ?? 0;
+    final rawAmount = reward['amount'] ?? reward['quantity'] ?? 0;
+    final amount = rawAmount is num ? rawAmount.toInt() : 0;
+    final displayName =
+        reward['name'] as String? ?? reward['display'] as String?;
 
     String icon;
     String label;
 
     switch (type) {
+      case 'photon':
       case 'photons':
         icon = '💎';
-        label = '$amount 光子';
+        label = l10n.achievementRewardPhotons(amount);
       case 'title':
         icon = '🏅';
-        label = reward['name'] as String? ?? '称号';
+        label = displayName ?? l10n.achievementRewardTitle;
+      case 'galaxy_skin':
       case 'skin':
         icon = '🎨';
-        label = reward['name'] as String? ?? '星系皮肤';
+        label = displayName ?? l10n.achievementRewardSkin;
       case 'xp':
         icon = '⭐';
-        label = '$amount 经验';
+        label = l10n.achievementRewardXp(amount);
+      case 'freeze_charge':
+        icon = '🧊';
+        label = amount > 0
+            ? '${l10n.streakFreezeCharges} x$amount'
+            : l10n.streakFreezeCharges;
       default:
         icon = '🎁';
-        label = '神秘奖励';
+        label = l10n.achievementRewardMystery;
     }
 
     return Row(
@@ -634,7 +671,10 @@ class _AchievementDetailScreenState
     );
   }
 
-  Widget _buildStats(AchievementWithProgress achievement) {
+  Widget _buildStats(
+    AchievementWithProgress achievement,
+    AppLocalizations l10n,
+  ) {
     final userProgress = achievement.userProgress;
 
     return Container(
@@ -648,32 +688,35 @@ class _AchievementDetailScreenState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildStatRow(
-            '类型',
-            _getTypeName(achievement.achievement.type),
+            l10n.achievementStatType,
+            _getTypeName(achievement.achievement.type, l10n),
           ),
           _buildStatRow(
-            '稀有度',
-            _getRarityName(achievement.achievement.rarity),
+            l10n.achievementRarity,
+            _getRarityName(achievement.achievement.rarity, l10n),
           ),
           if (achievement.achievement.category != null)
             _buildStatRow(
-              '分类',
-              achievement.achievement.category!,
+              l10n.achievementCategory,
+              _getCategoryLocalizedName(
+                achievement.achievement.category!,
+                l10n,
+              ),
             ),
           if (userProgress?.unlockedAt != null)
             _buildStatRow(
-              '解锁时间',
+              l10n.achievementUnlockedAt,
               _formatDate(userProgress!.unlockedAt!),
             ),
           if (userProgress?.shareCount != null && userProgress!.shareCount > 0)
             _buildStatRow(
-              '分享次数',
+              l10n.achievementShareCount,
               '${userProgress.shareCount}',
             ),
           if (userProgress?.isFirstUnlocker ?? false)
             _buildStatRow(
-              '解锁排名',
-              '首位解锁者',
+              l10n.achievementUnlockRank,
+              l10n.achievementFirstUnlocker,
               highlight: true,
             ),
         ],
@@ -711,7 +754,7 @@ class _AchievementDetailScreenState
         ),
       );
 
-  Widget _buildNotFoundView() => Center(
+  Widget _buildNotFoundView(AppLocalizations l10n) => Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -721,9 +764,9 @@ class _AchievementDetailScreenState
               color: DS.semanticError,
             ),
             const SizedBox(height: DS.spacing16),
-            const Text(
-              '成就未找到',
-              style: TextStyle(
+            Text(
+              l10n.achievementNotFound,
+              style: const TextStyle(
                 fontSize: DS.fontSizeLg,
                 fontWeight: DS.fontWeightSemibold,
               ),
@@ -757,46 +800,71 @@ class _AchievementDetailScreenState
     }
   }
 
-  String _getTypeName(AchievementType type) {
+  String _getTypeName(AchievementType type, AppLocalizations l10n) {
     switch (type) {
       case AchievementType.streak:
-        return '连胜';
+        return l10n.achievementTypeStreak;
       case AchievementType.mastery:
-        return '精通';
+        return l10n.achievementTypeMastery;
       case AchievementType.taskComplete:
-        return '任务';
+        return l10n.achievementTypeTaskComplete;
       case AchievementType.nodeExplore:
-        return '探索';
+        return l10n.achievementTypeNodeExplore;
       case AchievementType.studyTime:
-        return '学习';
+        return l10n.achievementTypeStudyTime;
       case AchievementType.hidden:
-        return '隐藏';
+        return l10n.achievementTypeHidden;
       case AchievementType.milestone:
-        return '里程碑';
+        return l10n.achievementTypeMilestone;
       case AchievementType.social:
-        return '社交';
+        return l10n.achievementTypeSocial;
       case AchievementType.contract:
-        return '契约';
+        return l10n.achievementTypeContract;
       case AchievementType.sprint:
-        return '冲刺';
+        return l10n.achievementTypeSprint;
     }
   }
 
-  String _getRarityName(AchievementRarity rarity) {
+  String _getRarityName(AchievementRarity rarity, AppLocalizations l10n) {
     switch (rarity) {
       case AchievementRarity.common:
-        return '普通';
+        return l10n.achievementRarityCommon;
       case AchievementRarity.rare:
-        return '稀有';
+        return l10n.achievementRarityRare;
       case AchievementRarity.epic:
-        return '史诗';
+        return l10n.achievementRarityEpic;
       case AchievementRarity.legendary:
-        return '传说';
+        return l10n.achievementRarityLegendary;
     }
   }
 
-  String _formatDate(DateTime date) =>
-      '${date.year}年${date.month}月${date.day}日';
+  String _getCategoryLocalizedName(String category, AppLocalizations l10n) {
+    switch (category) {
+      case 'milestone':
+        return l10n.achievementCategoryMilestone;
+      case 'streak':
+        return l10n.achievementCategoryStreak;
+      case 'mastery':
+        return l10n.achievementCategoryMastery;
+      case 'exploration':
+      case 'node_explore':
+        return l10n.achievementCategoryExploration;
+      case 'tasks':
+      case 'task':
+      case 'task_complete':
+        return l10n.achievementCategoryTask;
+      case 'study_time':
+        return l10n.achievementTypeStudyTime;
+      case 'sprint':
+        return l10n.achievementTypeSprint;
+      case 'hidden':
+        return l10n.achievementTypeHidden;
+      default:
+        return category;
+    }
+  }
+
+  String _formatDate(DateTime date) => Formatters.formatDateMedium(date);
 
   void _togglePin(AchievementWithProgress achievement) {
     final isPinned = achievement.userProgress?.isPinned ?? false;
@@ -809,7 +877,7 @@ class _AchievementDetailScreenState
 
   void _shareAchievement(AchievementWithProgress achievement) {
     if (!achievement.isUnlocked) {
-      AppFeedback.info(context, '解锁后才可以分享这个成就');
+      AppFeedback.info(context, context.l10n.achievementShareLocked);
       return;
     }
 

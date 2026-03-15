@@ -24,6 +24,7 @@ class CuriosityCapsuleCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final rawPatterns = capsule.personalizationContext?['based_on_patterns'];
     // 1. Resolve base material (NeoGlass)
     var material = AppMaterials.neoGlass;
 
@@ -114,6 +115,17 @@ class CuriosityCapsuleCard extends ConsumerWidget {
                     // Divider line (optional, maybe just space)
                     const SizedBox(height: DS.sm),
 
+                    if (rawPatterns is List)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: DS.spacing8),
+                        child: _buildPersonalizationBadge(
+                          context,
+                          patterns: List<String>.from(
+                            rawPatterns,
+                          ),
+                        ),
+                      ),
+
                     MarkdownBody(
                       data: capsule.content,
                       styleSheet: MarkdownStyleSheet(
@@ -168,6 +180,30 @@ class CuriosityCapsuleCard extends ConsumerWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildPersonalizationBadge(BuildContext context, {required List<String> patterns}) {
+    if (patterns.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: DS.prismPurple.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.psychology, size: 14, color: DS.prismPurple),
+          const SizedBox(width: 4),
+          Text(
+            "基于你的${patterns.first}模式",
+            style: const TextStyle(fontSize: 11, color: DS.prismPurple),
+          ),
+        ],
       ),
     );
   }
