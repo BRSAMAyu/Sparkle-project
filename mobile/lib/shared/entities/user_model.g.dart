@@ -10,6 +10,7 @@ UserModel _$UserModelFromJson(Map<String, dynamic> json) => UserModel(
       id: json['id'] as String,
       username: json['username'] as String,
       email: json['email'] as String,
+      emailVerified: json['email_verified'] as bool? ?? false,
       flameLevel: (json['flame_level'] as num).toInt(),
       flameBrightness: (json['flame_brightness'] as num).toDouble(),
       depthPreference: (json['depth_preference'] as num).toDouble(),
@@ -18,7 +19,7 @@ UserModel _$UserModelFromJson(Map<String, dynamic> json) => UserModel(
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
       nickname: json['nickname'] as String?,
-      avatarUrl: json['avatarUrl'] as String?,
+      avatarUrl: json['avatar_url'] as String?,
       avatarStatus:
           $enumDecodeNullable(_$AvatarStatusEnumMap, json['avatar_status']) ??
               AvatarStatus.approved,
@@ -36,14 +37,16 @@ UserModel _$UserModelFromJson(Map<String, dynamic> json) => UserModel(
       equippedSkinSource: json['equipped_skin_source'] as String?,
       equippedTitle: json['equipped_title'] as String?,
       equippedTitleSource: json['equipped_title_source'] as String?,
+      registrationSource: json['registration_source'] as String?,
     );
 
 Map<String, dynamic> _$UserModelToJson(UserModel instance) => <String, dynamic>{
       'id': instance.id,
       'username': instance.username,
       'email': instance.email,
+      'email_verified': instance.emailVerified,
       'nickname': instance.nickname,
-      'avatarUrl': instance.avatarUrl,
+      'avatar_url': instance.avatarUrl,
       'avatar_status': _$AvatarStatusEnumMap[instance.avatarStatus]!,
       'pending_avatar_url': instance.pendingAvatarUrl,
       'flame_level': instance.flameLevel,
@@ -61,6 +64,7 @@ Map<String, dynamic> _$UserModelToJson(UserModel instance) => <String, dynamic>{
       'equipped_skin_source': instance.equippedSkinSource,
       'equipped_title': instance.equippedTitle,
       'equipped_title_source': instance.equippedTitleSource,
+      'registration_source': instance.registrationSource,
     };
 
 const _$AvatarStatusEnumMap = {

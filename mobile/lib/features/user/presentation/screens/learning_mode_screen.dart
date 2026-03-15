@@ -60,7 +60,7 @@ class _LearningModeScreenState extends ConsumerState<LearningModeScreen> {
     } catch (e) {
       if (mounted) {
         AppFeedback.error(
-            context, context.l10n.learningModeSaveFailed(e.toString()));
+            context, context.l10n.learningModeSaveFailed(e.toString()),);
       }
     } finally {
       if (mounted) {
@@ -77,7 +77,6 @@ class _LearningModeScreenState extends ConsumerState<LearningModeScreen> {
         appBar: AppBar(
           leading: SparkleIconButton(
             variant: ButtonVariant.ghost,
-            size: DS.touchTargetMinSize,
             icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
           ),

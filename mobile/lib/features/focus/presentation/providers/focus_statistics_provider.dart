@@ -499,7 +499,7 @@ FocusStatisticsRepository localStatisticsRepo(Ref ref) {
 /// Persists the user's selected statistics view period (today/week/month).
 final statsViewPeriodProvider =
     StateNotifierProvider<StatsViewPeriodNotifier, StatsViewPeriod>(
-        (ref) => StatsViewPeriodNotifier());
+        (ref) => StatsViewPeriodNotifier(),);
 
 /// Notifier for the stats view period
 class StatsViewPeriodNotifier extends EnumPersistentNotifier<StatsViewPeriod> {

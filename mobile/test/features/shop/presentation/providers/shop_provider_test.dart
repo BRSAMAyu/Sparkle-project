@@ -930,7 +930,6 @@ void main() {
 class _FakeAuthNotifier extends AuthNotifier {
   _FakeAuthNotifier() : super(_UnusedAuthRepository()) {
     state = AuthState(
-      isLoading: false,
       isAuthenticated: true,
       user: UserModel(
         id: '00000000-0000-0000-0000-000000000001',
@@ -942,8 +941,8 @@ class _FakeAuthNotifier extends AuthNotifier {
         curiosityPreference: 0.5,
         isActive: true,
         status: UserStatus.online,
-        createdAt: DateTime(2026, 1, 1),
-        updatedAt: DateTime(2026, 1, 1),
+        createdAt: DateTime(2026, 1),
+        updatedAt: DateTime(2026, 1),
       ),
     );
   }
@@ -977,8 +976,8 @@ class _UnusedAuthRepository extends AuthRepository {
         curiosityPreference: 0.5,
         isActive: true,
         status: UserStatus.online,
-        createdAt: DateTime(2026, 1, 1),
-        updatedAt: DateTime(2026, 1, 1),
+        createdAt: DateTime(2026, 1),
+        updatedAt: DateTime(2026, 1),
       );
 
   @override

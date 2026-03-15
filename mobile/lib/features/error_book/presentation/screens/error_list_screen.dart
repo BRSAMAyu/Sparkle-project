@@ -67,7 +67,6 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
       appBar: AppBar(
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
-          size: DS.touchTargetMinSize,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
@@ -75,7 +74,6 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
         actions: [
           SparkleIconButton(
             variant: ButtonVariant.ghost,
-            size: DS.touchTargetMinSize,
             icon: Icon(_showSearch ? Icons.close : Icons.search),
             onPressed: () {
               setState(() {
@@ -89,7 +87,6 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
           ),
           SparkleIconButton(
             variant: ButtonVariant.ghost,
-            size: DS.touchTargetMinSize,
             icon: const Icon(Icons.filter_list),
             onPressed: () => _showFilterDialog(context),
           ),
@@ -119,6 +116,11 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
             ),
           ],
         ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _navigateToAddError(context),
+        icon: const Icon(Icons.add),
+        label: const Text('添加错题'),
       ),
       child: ContentConstraint(
         child: Column(
@@ -202,11 +204,6 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _navigateToAddError(context),
-        icon: const Icon(Icons.add),
-        label: const Text('添加错题'),
-      ),
     );
   }
 
@@ -237,7 +234,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
 
           return Container(
             padding: const EdgeInsets.symmetric(
-                horizontal: DS.spacing6, vertical: 2),
+                horizontal: DS.spacing6, vertical: 2,),
             decoration: BoxDecoration(
               color: type == 'needReview'
                   ? DS.error

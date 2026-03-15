@@ -51,7 +51,6 @@ class _FocusStatisticsScreenState extends ConsumerState<FocusStatisticsScreen> {
         actions: [
           SparkleIconButton(
             variant: ButtonVariant.ghost,
-            size: DS.touchTargetMinSize,
             icon: const Icon(Icons.sync),
             onPressed: state.isRefreshing
                 ? null

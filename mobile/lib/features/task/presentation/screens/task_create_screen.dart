@@ -349,8 +349,9 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                                 )
                                 .toList(),
                             onChanged: (v) {
-                              if (v != null)
+                              if (v != null) {
                                 setState(() => _estimatedMinutes = v);
+                              }
                             },
                           ),
                           const SizedBox(height: DS.lg),
@@ -398,8 +399,9 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                                 )
                                 .toList(),
                             onChanged: (v) {
-                              if (v != null)
+                              if (v != null) {
                                 setState(() => _estimatedMinutes = v);
+                              }
                             },
                           ),
                         ),
@@ -462,7 +464,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                   leading: const Icon(Icons.calendar_today),
                   shape: RoundedRectangleBorder(
                     side: BorderSide(
-                        color: DS.brandPrimary.withValues(alpha: 0.4)),
+                        color: DS.brandPrimary.withValues(alpha: 0.4),),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   onTap: () async {
@@ -514,7 +516,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                         Row(
                           children: [
                             Icon(Icons.lightbulb,
-                                color: DS.prismPurple, size: 20),
+                                color: DS.prismPurple, size: 20,),
                             const SizedBox(width: DS.sm),
                             const Text(
                               '行为模式建议',

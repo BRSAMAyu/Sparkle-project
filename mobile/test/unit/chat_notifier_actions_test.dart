@@ -43,7 +43,7 @@ void main() {
       action: 'confirm',
       toolResultId: 'tool-123',
       widgetType: 'task_card',
-    )).called(1);
+    ),).called(1);
   });
 
   test('dismissAction sends intervention reject feedback for intervention', () {
@@ -58,7 +58,7 @@ void main() {
       requestId: 'int-789',
       feedbackType: 'reject',
       extraData: {'widget_type': 'intervention'},
-    )).called(1);
+    ),).called(1);
     verifyNoMoreInteractions(repo);
   });
 

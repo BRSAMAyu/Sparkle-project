@@ -106,7 +106,6 @@ class _TaskReminderSettingsScreenState
         title: const Text('任务提醒设置'),
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
-          size: DS.touchTargetMinSize,
           icon: const Icon(Icons.arrow_back_ios_new),
           onPressed: () => Navigator.pop(context),
         ),
@@ -277,6 +276,6 @@ extension TaskReminderSettingsConfigExt on TaskReminderConfig {
   static const List<int> defaultReminders = [
     1440,
     60,
-    15
+    15,
   ]; // 1 day, 1 hour, 15 min
 }

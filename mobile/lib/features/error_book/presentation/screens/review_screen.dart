@@ -59,7 +59,6 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
       appBar: AppBar(
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
-          size: DS.touchTargetMinSize,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
@@ -69,7 +68,6 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
             message: '退出复习',
             child: SparkleIconButton(
               variant: ButtonVariant.ghost,
-              size: DS.touchTargetMinSize,
               icon: const Icon(Icons.close),
               onPressed: () => _confirmExit(context),
             ),
@@ -101,7 +99,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
               children: [
                 // 进度条
                 _buildProgressBar(
-                    context, _currentIndex, filteredErrors.length),
+                    context, _currentIndex, filteredErrors.length,),
 
                 // 卡片内容
                 Expanded(
@@ -150,7 +148,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
 
     return Container(
       padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing16, vertical: DS.spacing12),
+          horizontal: DS.spacing16, vertical: DS.spacing12,),
       child: Column(
         children: [
           Row(

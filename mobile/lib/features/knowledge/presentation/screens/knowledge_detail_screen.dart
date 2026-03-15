@@ -88,14 +88,12 @@ class KnowledgeDetailScreen extends ConsumerWidget {
             surfaceTintColor: Colors.transparent,
             leading: SparkleIconButton(
               variant: ButtonVariant.ghost,
-              size: DS.touchTargetMinSize,
               icon: Icon(Icons.arrow_back, color: DS.textPrimary),
               onPressed: () => context.pop(),
             ),
             actions: [
               SparkleIconButton(
                 variant: ButtonVariant.ghost,
-                size: DS.touchTargetMinSize,
                 icon: Icon(
                   detail.userStats.isFavorite ? Icons.star : Icons.star_border,
                   color: detail.userStats.isFavorite
@@ -115,9 +113,9 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                     end: Alignment.bottomRight,
                     colors: [
                       Color.lerp(
-                          DS.surfaceCanvas, sectorStyle.primaryColor, 0.28)!,
+                          DS.surfaceCanvas, sectorStyle.primaryColor, 0.28,)!,
                       Color.lerp(
-                          DS.surfaceCanvas, sectorStyle.glowColor, 0.16)!,
+                          DS.surfaceCanvas, sectorStyle.glowColor, 0.16,)!,
                       DS.surfaceCanvas,
                     ],
                   ),

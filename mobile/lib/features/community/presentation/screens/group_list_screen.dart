@@ -21,7 +21,6 @@ class GroupListScreen extends ConsumerWidget {
       appBar: AppBar(
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
-          size: DS.touchTargetMinSize,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
@@ -30,7 +29,6 @@ class GroupListScreen extends ConsumerWidget {
         actions: [
           SparkleIconButton(
             variant: ButtonVariant.ghost,
-            size: DS.touchTargetMinSize,
             icon: const Icon(Icons.search),
             onPressed: () {
               context.push('/community/groups/search');
@@ -46,8 +44,7 @@ class GroupListScreen extends ConsumerWidget {
         },
       ),
       child: groupsState.when(
-        data: (groups) {
-          return ContentConstraint(
+        data: (groups) => ContentConstraint(
             child: RefreshIndicator(
               onRefresh: () async =>
                   ref.read(myGroupsProvider.notifier).refresh(),
@@ -85,8 +82,7 @@ class GroupListScreen extends ConsumerWidget {
                 ],
               ),
             ),
-          );
-        },
+          ),
         loading: () => const _GroupListLoading(),
         error: (error, stackTrace) => Center(
           child: CustomErrorWidget.page(

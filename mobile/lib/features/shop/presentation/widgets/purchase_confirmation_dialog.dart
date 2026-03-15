@@ -173,7 +173,7 @@ class _PurchaseConfirmationDialogState
                       Expanded(
                         child: Text(
                           context.l10n.shopBalanceAfterPurchase,
-                          style: TextStyle(fontWeight: FontWeight.bold),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ),
                       const SizedBox(width: DS.spacing12),

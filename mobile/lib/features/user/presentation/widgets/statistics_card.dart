@@ -140,8 +140,7 @@ class _WeeklyTrendChart extends StatelessWidget {
               tooltipMargin: 10,
               fitInsideHorizontally: true,
               fitInsideVertically: true,
-              getTooltipItems: (touchedSpots) => touchedSpots.map((spot) {
-                return LineTooltipItem(
+              getTooltipItems: (touchedSpots) => touchedSpots.map((spot) => LineTooltipItem(
                   '${longDays[spot.x.toInt()]}\n${context.l10n.statisticsLearningIndex(spot.y.toStringAsFixed(0))}',
                   TextStyle(
                     color: DS.textPrimary,
@@ -149,8 +148,7 @@ class _WeeklyTrendChart extends StatelessWidget {
                     fontWeight: DS.fontWeightMedium,
                     height: 1.35,
                   ),
-                );
-              }).toList(),
+                )).toList(),
             ),
           ),
           lineBarsData: [

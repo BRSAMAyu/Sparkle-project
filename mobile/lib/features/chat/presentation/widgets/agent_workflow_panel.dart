@@ -310,7 +310,7 @@ class _AgentTimelineRow extends StatelessWidget {
                   Row(
                     children: [
                       Icon(_mapAgentIcon(entry.icon),
-                          size: 13, color: agentColor),
+                          size: 13, color: agentColor,),
                       const SizedBox(width: DS.spacing4),
                       Text(
                         entry.displayName,
@@ -377,7 +377,7 @@ class _StatusDot extends StatelessWidget {
     }
 
     if (status == 'error') {
-      return Icon(Icons.error, size: size, color: Colors.red);
+      return const Icon(Icons.error, size: size, color: Colors.red);
     }
 
     return Container(
@@ -417,8 +417,7 @@ class _StatusLabel extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
       decoration: BoxDecoration(
         color: status == 'error'
@@ -435,5 +434,4 @@ class _StatusLabel extends StatelessWidget {
         ),
       ),
     );
-  }
 }

@@ -43,7 +43,6 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
       appBar: AppBar(
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
-          size: DS.touchTargetMinSize,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
@@ -384,7 +383,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     } catch (e) {
       if (mounted) {
         AppFeedback.error(
-            context, l10n.generationFailedWithDetail(e.toString()));
+            context, l10n.generationFailedWithDetail(e.toString()),);
       }
     } finally {
       if (mounted) {

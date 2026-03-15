@@ -81,7 +81,6 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
       appBar: AppBar(
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
-          size: DS.touchTargetMinSize,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
@@ -93,9 +92,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
               variant: ButtonVariant.ghost,
               onPressed: _isSubmitting
                   ? null
-                  : () {
-                      _submit();
-                    },
+                  : _submit,
               loading: _isSubmitting,
               icon: const Icon(Icons.check),
               label: _isSubmitting ? '保存中...' : '保存',

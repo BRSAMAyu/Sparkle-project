@@ -144,7 +144,7 @@ void main() {
 
       await tester.enterText(find.byType(TextField).at(0), '联调昵称');
       await tester.enterText(
-          find.byType(TextField).at(1), 'integration@example.com');
+          find.byType(TextField).at(1), 'integration@example.com',);
       await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();
 
@@ -380,7 +380,6 @@ Future<void> _pumpRouterPage(
 class _FakeAuthNotifier extends AuthNotifier {
   _FakeAuthNotifier() : super(_UnusedRef(), _UnusedAuthRepository()) {
     state = AuthState(
-      isLoading: false,
       isAuthenticated: true,
       user: _buildUser(),
     );
@@ -439,8 +438,8 @@ UserModel _buildUser() => UserModel(
       curiosityPreference: 0.5,
       isActive: true,
       status: UserStatus.online,
-      createdAt: DateTime(2026, 1, 1),
-      updatedAt: DateTime(2026, 1, 1),
+      createdAt: DateTime(2026, 1),
+      updatedAt: DateTime(2026, 1),
     );
 
 class _UnusedAuthRepository extends AuthRepository {
@@ -493,7 +492,7 @@ class _FakeCommunityRepository extends CommunityRepository {
         createdAt: DateTime(2026, 3, 6),
         user: const PostUser(
             id: '00000000-0000-0000-0000-000000000001',
-            username: 'router_test_user'),
+            username: 'router_test_user',),
       ),
     );
     return 'post-created-1';

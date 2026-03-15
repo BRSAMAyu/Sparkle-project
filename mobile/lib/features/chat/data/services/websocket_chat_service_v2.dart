@@ -1171,7 +1171,7 @@ class WebSocketChatServiceV2 {
               finishReason != 'NULL' &&
               finishReason.isNotEmpty) {
             _log(
-                '📌 Detected finish_reason in raw message: $finishReason, sending DoneEvent');
+                '📌 Detected finish_reason in raw message: $finishReason, sending DoneEvent',);
             _safeAdd(
               _messageStreamController!,
               DoneEvent(
@@ -1245,7 +1245,7 @@ class WebSocketChatServiceV2 {
       // 🔧 P0-2: 通知用户有消息未发送
       if (_pendingMessages.isNotEmpty) {
         _log(
-            '⚠️ Discarding ${_pendingMessages.length} pending messages due to auth failure');
+            '⚠️ Discarding ${_pendingMessages.length} pending messages due to auth failure',);
         if (_messageStreamController != null) {
           _safeAdd(
             _messageStreamController!,
@@ -1265,7 +1265,7 @@ class WebSocketChatServiceV2 {
     _401ErrorCount++;
 
     _log(
-        '🔑 Detected 401 error, refreshing token... ($_401ErrorCount/$_max401Retries)');
+        '🔑 Detected 401 error, refreshing token... ($_401ErrorCount/$_max401Retries)',);
 
     try {
       // 发送刷新中的提示
@@ -1327,7 +1327,7 @@ class WebSocketChatServiceV2 {
       // 🔧 P0-2: 通知用户有消息未发送
       if (_pendingMessages.isNotEmpty) {
         _log(
-            '⚠️ Discarding ${_pendingMessages.length} pending messages due to token refresh failure');
+            '⚠️ Discarding ${_pendingMessages.length} pending messages due to token refresh failure',);
         if (_messageStreamController != null) {
           _safeAdd(
             _messageStreamController!,
@@ -1470,7 +1470,7 @@ class WebSocketChatServiceV2 {
   /// 发送消息 (TODO-A7)
   void _sendMessage(Map<String, dynamic> payload) {
     _log(
-        '📤 Attempting to send message, isConnected: $isConnected, channel: ${_channel != null}');
+        '📤 Attempting to send message, isConnected: $isConnected, channel: ${_channel != null}',);
     if (!isConnected) {
       _log('⚠️  Cannot send: not connected');
       // TODO-A7: Pending Limit

@@ -38,9 +38,8 @@ class LeaderboardRepository {
           username: 'Demo User ${i + 1}',
           score: (1000 - (i * 50)).toDouble(),
           scoreLabel: '${1000 - (i * 50)} XP',
-          avatarUrl: null,
           change: i % 3 == 0 ? 1 : (i % 3 == 1 ? -1 : 0),
-        )),
+        ),),
         totalParticipants: 100,
         lastUpdated: DateTime.now(),
       );
@@ -89,9 +88,8 @@ class LeaderboardRepository {
           username: 'Nearby User ${i + 1}',
           score: (850 - (i * 50)).toDouble(),
           scoreLabel: '${850 - (i * 50)} XP',
-          avatarUrl: null,
           change: 0,
-        )),
+        ),),
       );
     }
 
@@ -138,7 +136,6 @@ class LeaderboardRepository {
           username: 'Demo Champion',
           score: 1000.0,
           scoreLabel: '1000 XP',
-          avatarUrl: null,
           change: 0,
         ),
         LeaderboardEntry(
@@ -147,7 +144,6 @@ class LeaderboardRepository {
           username: 'Demo Second',
           score: 950.0,
           scoreLabel: '950 XP',
-          avatarUrl: null,
           change: 1,
         ),
         LeaderboardEntry(
@@ -156,7 +152,6 @@ class LeaderboardRepository {
           username: 'Demo Third',
           score: 900.0,
           scoreLabel: '900 XP',
-          avatarUrl: null,
           change: -1,
         ),
       ];

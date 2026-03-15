@@ -167,7 +167,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                     color: DS.brandPrimaryConst,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                        color: widget.agentColor.withValues(alpha: 0.2)),
+                        color: widget.agentColor.withValues(alpha: 0.2),),
                     boxShadow: [
                       BoxShadow(
                         color: DS.brandPrimary.withValues(alpha: 0.03),

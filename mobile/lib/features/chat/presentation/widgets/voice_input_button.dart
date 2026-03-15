@@ -70,12 +70,10 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
   }
 
   /// 显示权限申请对话框
-  Future<void> _showPermissionDialog() {
-    return showAppPermissionDialog(
+  Future<void> _showPermissionDialog() => showAppPermissionDialog(
       context,
       permission: AppPermissionKind.microphone,
     );
-  }
 
   /// 开始录音
   Future<void> _startRecording() async {

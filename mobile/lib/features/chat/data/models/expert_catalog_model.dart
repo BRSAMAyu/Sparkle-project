@@ -7,15 +7,13 @@ class ExpertCatalogMode {
     required this.enabled,
   });
 
-  factory ExpertCatalogMode.fromJson(Map<String, dynamic> json) {
-    return ExpertCatalogMode(
+  factory ExpertCatalogMode.fromJson(Map<String, dynamic> json) => ExpertCatalogMode(
       id: json['id'] as String? ?? '',
       label: json['label'] as String? ?? '',
       description: json['description'] as String? ?? '',
       entryChatMode: json['entry_chat_mode'] as String? ?? '',
       enabled: json['enabled'] as bool? ?? false,
     );
-  }
 
   final String id;
   final String label;

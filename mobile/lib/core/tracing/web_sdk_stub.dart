@@ -3,7 +3,7 @@
 library;
 
 class WebTracerProvider {
-  WebTracerProvider({required dynamic timeProvider});
+  WebTracerProvider();
 }
 
 class WebTimeProvider {}

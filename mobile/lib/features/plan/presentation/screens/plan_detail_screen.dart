@@ -26,7 +26,6 @@ class PlanDetailScreen extends ConsumerWidget {
         appBar: AppBar(
           leading: SparkleIconButton(
             variant: ButtonVariant.ghost,
-            size: DS.touchTargetMinSize,
             icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
           ),
@@ -37,7 +36,6 @@ class PlanDetailScreen extends ConsumerWidget {
                 message: '分享计划',
                 child: SparkleIconButton(
                   variant: ButtonVariant.ghost,
-                  size: DS.touchTargetMinSize,
                   icon: const Icon(Icons.share_outlined),
                   onPressed: () => showShareResourceSheet(
                     context,

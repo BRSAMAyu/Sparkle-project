@@ -116,10 +116,10 @@ class InteractiveTaskCard extends ConsumerWidget {
   }
 
   Widget _buildExpandedContent(
-          BuildContext context, WidgetRef ref, TaskModel task) =>
+          BuildContext context, WidgetRef ref, TaskModel task,) =>
       Container(
         padding: const EdgeInsets.fromLTRB(
-            DS.spacing12, 0, DS.spacing12, DS.spacing12),
+            DS.spacing12, 0, DS.spacing12, DS.spacing12,),
         decoration: BoxDecoration(
           border: Border(
             top: BorderSide(
@@ -360,7 +360,7 @@ class InteractiveTaskCard extends ConsumerWidget {
             onPressed: () {
               Navigator.pop(context);
               unawaited(
-                  ref.read(taskListProvider.notifier).abandonTask(task.id));
+                  ref.read(taskListProvider.notifier).abandonTask(task.id),);
             },
           ),
         ],
@@ -380,7 +380,6 @@ class _QuickCompleteButton extends ConsumerWidget {
         child: SparkleIconButton(
           icon: const Icon(Icons.check_circle_outline_rounded),
           variant: ButtonVariant.ghost,
-          size: DS.touchTargetMinSize,
           onPressed: () async {
             await ref
                 .read(taskListProvider.notifier)

@@ -113,7 +113,7 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
                               DS.info
                                   .withValues(alpha: 0.25), // Deep - blue tint
                               DS.warning.withValues(
-                                  alpha: 0.15), // Shallow - warm tint
+                                  alpha: 0.15,), // Shallow - warm tint
                             ],
                           ),
                         ),
@@ -125,9 +125,9 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
                           gradient: LinearGradient(
                             colors: [
                               DS.brandSecondary.withValues(
-                                  alpha: 0.15), // Focus - purple tint
+                                  alpha: 0.15,), // Focus - purple tint
                               DS.semanticSuccess.withValues(
-                                  alpha: 0.2), // Curious - green tint
+                                  alpha: 0.2,), // Curious - green tint
                             ],
                           ),
                         ),
@@ -242,7 +242,7 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
             child: RotatedBox(
               quarterTurns: 1,
               child: Text(context.l10n.learningModeCuriosityHigh,
-                  style: textStyle),
+                  style: textStyle,),
             ),
           ),
         ),

@@ -887,7 +887,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
     final trimmed = content.trim();
     final strongPatterns = <RegExp>[
       RegExp(r'(^|\n)#{1,6}\s', multiLine: true),
-      RegExp(r'```'),
+      RegExp('```'),
       RegExp(r'`[^`\n]+`'),
       RegExp(r'\[[^\]]+\]\([^)]+\)'),
       RegExp(r'(^|\n)>\s', multiLine: true),

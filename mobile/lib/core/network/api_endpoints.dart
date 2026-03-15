@@ -9,7 +9,13 @@ class ApiEndpoints {
   static const String register = '/auth/register';
   static const String login = '/auth/login';
   static const String refresh = '/auth/refresh';
+  static const String forgotPassword = '/auth/forgot-password';
+  static const String resetPassword = '/auth/reset-password';
+  static const String sendVerification = '/auth/send-verification';
+  static const String verifyEmail = '/auth/verify-email';
+  static const String logout = '/auth/logout';
   static const String me = '/users/me';
+  static const String setPassword = '/users/me/set-password';
 
   // Files
   static const String filesPrepareUpload = '/files/upload/prepare';

@@ -187,9 +187,6 @@ class DagExecutionSignal {
       return null;
     }
     final payload = data;
-    if (payload == null) {
-      return null;
-    }
 
     int? asInt(String camel, String snake) =>
         (payload[camel] ?? payload[snake]) as int?;
@@ -239,14 +236,14 @@ class DagExecutionSignal {
         return '$name 执行完成';
       case 'layer_end':
         final layer = layerNumber ?? 0;
-        if (aborted == true) {
+        if (aborted ?? false) {
           return '第$layer层已中断';
         }
         return '第$layer层执行完成';
       case 'execution_aborted':
         return reason ?? 'DAG 执行中断';
       case 'execution_end':
-        if (aborted == true) {
+        if (aborted ?? false) {
           return abortReason ?? 'DAG 执行结束（中断）';
         }
         return 'DAG 执行完成';
@@ -1003,8 +1000,7 @@ class AgentActivityEvent extends ChatStreamEvent {
     super.promptVersion,
   });
 
-  factory AgentActivityEvent.fromJson(Map<String, dynamic> json) {
-    return AgentActivityEvent(
+  factory AgentActivityEvent.fromJson(Map<String, dynamic> json) => AgentActivityEvent(
       agentId: json['agent_id'] as String? ?? '',
       status: json['status'] as String? ?? 'pending',
       displayName: json['display_name'] as String? ?? json['agent_id'] as String? ?? '',
@@ -1014,7 +1010,6 @@ class AgentActivityEvent extends ChatStreamEvent {
       durationMs: (json['duration_ms'] as num?)?.toDouble(),
       resultSummary: json['result_summary'] as String?,
     );
-  }
 
   final String agentId;
   final String status;
@@ -1039,7 +1034,7 @@ class TransparencyData {
       TransparencyData(
         steps: (json['steps'] as List<dynamic>?)
                 ?.map(
-                    (e) => TransparencyStep.fromJson(e as Map<String, dynamic>))
+                    (e) => TransparencyStep.fromJson(e as Map<String, dynamic>),)
                 .toList() ??
             [],
         totalDurationMs: json['totalDurationMs'] as int? ?? 0,

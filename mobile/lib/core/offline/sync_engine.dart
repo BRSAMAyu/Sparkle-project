@@ -106,12 +106,12 @@ class SyncEngine {
   }
 
   Future<void> processNow(
-      {bool force = false, bool skipConnectivity = false}) async {
+      {bool force = false, bool skipConnectivity = false,}) async {
     await _processOutbox(force: force, skipConnectivity: skipConnectivity);
   }
 
   Future<void> _processOutbox(
-      {bool force = false, bool skipConnectivity = false}) async {
+      {bool force = false, bool skipConnectivity = false,}) async {
     if (_isProcessing) return;
 
     // Check connectivity
@@ -243,7 +243,7 @@ class SyncEngine {
   }
 
   Future<void> _sendMasteryUpdate(
-      Map<String, dynamic> payload, OutboxItem item) async {
+      Map<String, dynamic> payload, OutboxItem item,) async {
     // P3: Use Protobuf Binary Protocol
     final traceId = item.traceId ?? TracingService.instance.createTraceId();
     final requestId = item.uuid ?? item.id.toString();
@@ -319,7 +319,7 @@ class SyncEngine {
   }
 
   Future<void> _sendInterventionPassiveSignal(
-      Map<String, dynamic> payload) async {
+      Map<String, dynamic> payload,) async {
     await _apiClient.post<dynamic>(
       ApiEndpoints.interventionsPassiveSignals,
       data: payload,

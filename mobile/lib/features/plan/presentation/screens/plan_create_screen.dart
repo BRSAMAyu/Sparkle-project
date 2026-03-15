@@ -22,10 +22,9 @@ class PlanCreateScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(planType == 'growth'
             ? l10n.createGrowthPlan
-            : l10n.createSprintPlan),
+            : l10n.createSprintPlan,),
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
-          size: DS.touchTargetMinSize,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),

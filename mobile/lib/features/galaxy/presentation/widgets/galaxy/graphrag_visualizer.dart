@@ -369,7 +369,7 @@ class GraphRAGTrace {
         graphSearchCount: json['graph_search_count'] as int,
         userInterestCount: json['user_interest_count'] as int,
         timing: (json['timing'] as Map<String, dynamic>?)?.map(
-                (key, value) => MapEntry(key, (value as num).toDouble())) ??
+                (key, value) => MapEntry(key, (value as num).toDouble()),) ??
             const <String, double>{},
       );
   final String traceId;

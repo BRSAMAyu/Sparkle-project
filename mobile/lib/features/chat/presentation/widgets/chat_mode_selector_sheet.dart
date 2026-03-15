@@ -27,7 +27,7 @@ class ChatModeSelectorSheet extends ConsumerWidget {
           .map((expert) => ChatModeExpert(
                 expertId: expert.id,
                 displayName: expert.displayName,
-              ))
+              ),)
           .toList(),
       loading: () => <ChatMode>[],
       error: (_, __) => <ChatMode>[],
@@ -82,7 +82,6 @@ class ChatModeSelectorSheet extends ConsumerWidget {
                     icon: const Icon(Icons.close),
                     onPressed: () => Navigator.pop(context),
                     variant: ButtonVariant.ghost,
-                    size: DS.touchTargetMinSize,
                   ),
                 ],
               ),

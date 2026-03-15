@@ -312,7 +312,6 @@ class _PlanSelectorSheet extends StatelessWidget {
                     icon: const Icon(Icons.close),
                     onPressed: () => Navigator.pop(context),
                     variant: ButtonVariant.ghost,
-                    size: DS.touchTargetMinSize,
                   ),
                 ],
               ),

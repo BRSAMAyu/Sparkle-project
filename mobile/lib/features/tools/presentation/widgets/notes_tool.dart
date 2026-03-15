@@ -105,7 +105,6 @@ class _NotesToolState extends State<NotesTool> {
       subtitle: '用于快速承接灵感、会议碎片和任务切片。内容会自动保存，适合做短时外脑。',
       accentColor: accent,
       compactHeader: true,
-      fillHeight: false,
       heroChips: [
         ToolHeroChip(
           label: _savedAt == null

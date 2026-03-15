@@ -65,7 +65,6 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
           variant: ButtonVariant.ghost,
-          size: DS.touchTargetMinSize,
         ),
         title: Row(
           children: [
@@ -112,7 +111,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                   return ListView.builder(
                     reverse: true,
                     padding: const EdgeInsets.symmetric(
-                        horizontal: DS.spacing8, vertical: DS.spacing16),
+                        horizontal: DS.spacing8, vertical: DS.spacing16,),
                     itemCount: messages.length,
                     itemBuilder: (context, index) {
                       final message = messages[index];
@@ -120,7 +119,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                         message: message,
                         currentUserId: currentUser?.id,
                         onQuote: (msg) => setState(() =>
-                            notifier.setQuote(msg as PrivateMessageInfo?)),
+                            notifier.setQuote(msg as PrivateMessageInfo?),),
                         onRevoke: (msg) => notifier
                             .revokeMessage((msg as PrivateMessageInfo).id),
                       );

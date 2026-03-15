@@ -226,7 +226,6 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
                   child: AnimatedStarBackground(
                     fadeInDuration: Duration(milliseconds: 420),
                     starCount: 88,
-                    enableTwinkle: true,
                   ),
                 ),
                 Positioned.fill(

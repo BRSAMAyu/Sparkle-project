@@ -137,7 +137,6 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
       floatingActionButton: SparkleIconButton(
         icon: const Icon(Icons.add),
         onPressed: () => _showAddEventDialog(context),
-        variant: ButtonVariant.primary,
         size: 56,
       ),
       child: Stack(
@@ -184,7 +183,6 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
               icon: const Icon(Icons.arrow_back_ios_new),
               onPressed: () => context.pop(),
               variant: ButtonVariant.ghost,
-              size: DS.touchTargetMinSize,
             ),
             Text(
               context.l10n.calendarTitle,
@@ -491,7 +489,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                     right: 1,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 4, vertical: 1),
+                          horizontal: 4, vertical: 1,),
                       decoration: BoxDecoration(
                         color: markerColor,
                         borderRadius: BorderRadius.circular(8),

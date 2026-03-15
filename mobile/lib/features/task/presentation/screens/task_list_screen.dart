@@ -55,7 +55,6 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
       appBar: AppBar(
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
-          size: DS.touchTargetMinSize,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
@@ -113,7 +112,6 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
         actions: [
           SparkleIconButton(
             variant: ButtonVariant.ghost,
-            size: DS.touchTargetMinSize,
             icon: Icon(
               _isSearching ? Icons.close_rounded : Icons.search_rounded,
               size: DS.iconSizeBase,
@@ -254,7 +252,7 @@ class _FilterChips extends ConsumerWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(
-          vertical: DS.spacing12, horizontal: DS.spacing16),
+          vertical: DS.spacing12, horizontal: DS.spacing16,),
       decoration: BoxDecoration(
         color: DS.brandPrimaryConst,
         boxShadow: DS.shadowSm,

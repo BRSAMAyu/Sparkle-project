@@ -182,7 +182,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       return const [];
     }
     return raw
-        .map((item) => _normalizeUxActionItem(item))
+        .map(_normalizeUxActionItem)
         .where((item) => item.isNotEmpty)
         .toList();
   }

@@ -136,7 +136,6 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
       subtitle: '把一闪而过的疑点及时落地成错题线索，减少“知道有问题但没记住”的损耗。',
       accentColor: accent,
       compactHeader: true,
-      fillHeight: false,
       heroChips: [
         ToolHeroChip(
           label: _subjects.isEmpty ? '等待科目加载' : '${_subjects.length} 个科目',

@@ -75,7 +75,6 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         appBar: AppBar(
           leading: SparkleIconButton(
             variant: ButtonVariant.ghost,
-            size: DS.touchTargetMinSize,
             icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
           ),
@@ -108,7 +107,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                     decoration: InputDecoration(
                       hintText: "What's on your mind?",
                       hintStyle: TextStyle(
-                          color: DS.textSecondary.withValues(alpha: 0.7)),
+                          color: DS.textSecondary.withValues(alpha: 0.7),),
                       border: InputBorder.none,
                     ),
                   ),
@@ -120,7 +119,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                       prefixText: '# ',
                       hintText: 'Topic (optional)',
                       hintStyle: TextStyle(
-                          color: DS.textSecondary.withValues(alpha: 0.7)),
+                          color: DS.textSecondary.withValues(alpha: 0.7),),
                       border: InputBorder.none,
                     ),
                   ),
@@ -130,7 +129,6 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                     children: [
                       SparkleIconButton(
                         variant: ButtonVariant.ghost,
-                        size: DS.touchTargetMinSize,
                         icon: Icon(
                           Icons.image_outlined,
                           color: _selectedImage != null
@@ -141,7 +139,6 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                       ),
                       SparkleIconButton(
                         variant: ButtonVariant.ghost,
-                        size: DS.touchTargetMinSize,
                         icon: Icon(
                           Icons.location_on_outlined,
                           color: _selectedLocation != null

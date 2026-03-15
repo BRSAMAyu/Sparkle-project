@@ -77,8 +77,7 @@ class _ThemeHarnessState extends State<_ThemeHarness> {
   ThemeMode _themeMode = ThemeMode.light;
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
+  Widget build(BuildContext context) => MaterialApp(
       theme: AppThemes.lightTheme,
       darkTheme: AppThemes.darkTheme,
       themeMode: _themeMode,
@@ -104,5 +103,4 @@ class _ThemeHarnessState extends State<_ThemeHarness> {
         ),
       ),
     );
-  }
 }

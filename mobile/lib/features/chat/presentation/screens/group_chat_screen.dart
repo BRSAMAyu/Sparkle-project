@@ -104,7 +104,6 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
           variant: ButtonVariant.ghost,
-          size: DS.touchTargetMinSize,
         ),
         title: groupInfoState.when(
           data: (group) => InkWell(
@@ -115,11 +114,11 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(group.name,
-                    style: const TextStyle(fontSize: DS.fontSizeBase)),
+                    style: const TextStyle(fontSize: DS.fontSizeBase),),
                 Text(
                   '${group.memberCount} members',
                   style: TextStyle(
-                      fontSize: DS.fontSizeXs, color: DS.brandPrimary54),
+                      fontSize: DS.fontSizeXs, color: DS.brandPrimary54,),
                 ),
               ],
             ),
@@ -140,20 +139,17 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
             },
             semanticLabel: '群文件',
             variant: ButtonVariant.ghost,
-            size: DS.touchTargetMinSize,
           ),
           SparkleIconButton(
             icon: Icon(Icons.local_fire_department, color: DS.brandPrimary),
             onPressed: _showCheckinDialog,
             semanticLabel: 'Check-in',
             variant: ButtonVariant.ghost,
-            size: DS.touchTargetMinSize,
           ),
           SparkleIconButton(
             icon: const Icon(Icons.search),
             onPressed: _showSearchSheet,
             variant: ButtonVariant.ghost,
-            size: DS.touchTargetMinSize,
           ),
           SparkleIconButton(
             icon: const Icon(Icons.info_outline),
@@ -166,7 +162,6 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
               );
             },
             variant: ButtonVariant.ghost,
-            size: DS.touchTargetMinSize,
           ),
         ],
       ),
@@ -182,7 +177,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
 
                   if (mergedMessages.isEmpty) {
                     return const Center(
-                        child: Text('No messages yet. Say hi!'));
+                        child: Text('No messages yet. Say hi!'),);
                   }
                   return ListView.builder(
                     reverse: true,
@@ -220,19 +215,19 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                             ? null
                             : (msg) => ref
                                 .read(
-                                    groupChatProvider(widget.groupId).notifier)
+                                    groupChatProvider(widget.groupId).notifier,)
                                 .revokeMessage(msg.id),
                         onEdit: isCommunityAgentMessage(message)
                             ? null
                             : (msg, content) => ref
                                 .read(
-                                    groupChatProvider(widget.groupId).notifier)
+                                    groupChatProvider(widget.groupId).notifier,)
                                 .editMessage(msg.id, content),
                         onReaction: isCommunityAgentMessage(message)
                             ? null
                             : (msg, emoji) => ref
                                 .read(
-                                    groupChatProvider(widget.groupId).notifier)
+                                    groupChatProvider(widget.groupId).notifier,)
                                 .toggleReaction(msg.id, emoji),
                         onThread: _openThread,
                       );
@@ -391,7 +386,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
   }) =>
       Padding(
         padding: const EdgeInsets.fromLTRB(
-            DS.spacing16, DS.spacing8, DS.spacing16, 0),
+            DS.spacing16, DS.spacing8, DS.spacing16, 0,),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -422,14 +417,14 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                   Text(
                     '仅你可见',
                     style: TextStyle(
-                        fontSize: DS.fontSizeSm, color: DS.neutral500),
+                        fontSize: DS.fontSizeSm, color: DS.neutral500,),
                   ),
                 const Spacer(),
                 if (agentState.isSending)
                   Text(
                     'AI处理中...',
                     style: TextStyle(
-                        fontSize: DS.fontSizeSm, color: DS.brandPrimary70),
+                        fontSize: DS.fontSizeSm, color: DS.brandPrimary70,),
                   ),
               ],
             ),
@@ -580,7 +575,7 @@ class _AgentQuickChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ActionChip(
         label: Text(label,
-            style: TextStyle(fontSize: DS.fontSizeSm, color: DS.brandPrimary)),
+            style: TextStyle(fontSize: DS.fontSizeSm, color: DS.brandPrimary),),
         backgroundColor: DS.brandPrimary.withValues(alpha: 0.1),
         onPressed: onTap,
       );

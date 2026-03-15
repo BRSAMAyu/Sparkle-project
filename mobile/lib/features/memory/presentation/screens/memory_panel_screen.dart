@@ -107,7 +107,6 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
             icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
             variant: ButtonVariant.ghost,
-            size: DS.touchTargetMinSize,
           ),
           title: Text(
             '记忆面板',
@@ -124,7 +123,6 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
               icon: const Icon(Icons.refresh),
               onPressed: _loadAll,
               variant: ButtonVariant.ghost,
-              size: DS.touchTargetMinSize,
             ),
           ],
         ),
@@ -310,7 +308,6 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
                       : MemoryViewMode.compact;
                 }),
                 variant: ButtonVariant.ghost,
-                size: DS.touchTargetMinSize,
               ),
             ],
           ),
@@ -331,7 +328,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
         title: item.prefKey,
         subtitle: _formatPreferenceSubtitle(item),
         badge: MemoryEvidenceBadge(
-            status: _statusFor(item.evidenceMissing, item.evidenceRefs)),
+            status: _statusFor(item.evidenceMissing, item.evidenceRefs),),
         correctionCount: item.correctionCount,
         footer: _buildPreferenceFooter(item),
         onTap: () => _openDetail(
@@ -344,7 +341,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
         title: item.title,
         subtitle: item.status,
         badge: MemoryEvidenceBadge(
-            status: _statusFor(item.evidenceMissing, item.evidenceRefs)),
+            status: _statusFor(item.evidenceMissing, item.evidenceRefs),),
         correctionCount: item.correctionCount,
         onTap: () => _openDetail(
           context,
@@ -356,7 +353,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
         title: item.summary,
         subtitle: _formatUpdated(item.occurredAt),
         badge: MemoryEvidenceBadge(
-            status: _statusFor(item.evidenceMissing, item.evidenceRefs)),
+            status: _statusFor(item.evidenceMissing, item.evidenceRefs),),
         correctionCount: item.correctionCount,
         onTap: () => _openDetail(
           context,
@@ -368,7 +365,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
     final isPinned = _pinnedIds.contains(entry.id);
     final preference = entry.detailArgs.preference;
     final showAdjust =
-        preference?.sourceType == 'ai_inferred' && preference?.adjustable == true;
+        preference?.sourceType == 'ai_inferred' && (preference?.adjustable ?? false);
     final subtitle = [
       _entryTypeLabel(entry.type),
       _formatUpdated(entry.updatedAt),

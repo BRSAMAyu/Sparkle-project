@@ -152,7 +152,6 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
         scrolledUnderElevation: 0,
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
-          size: DS.touchTargetMinSize,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
@@ -170,7 +169,6 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
             message: focusMode ? '专注模式开启中' : '开启专注模式',
             child: SparkleIconButton(
               variant: ButtonVariant.ghost,
-              size: DS.touchTargetMinSize,
               icon: Icon(
                 focusMode
                     ? Icons.do_not_disturb_on
@@ -192,7 +190,6 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
             message: '搜索',
             child: SparkleIconButton(
               variant: ButtonVariant.ghost,
-              size: DS.touchTargetMinSize,
               icon: const Icon(Icons.search),
               onPressed: _showSearchOptions,
             ),
@@ -201,7 +198,6 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
             message: '添加',
             child: SparkleIconButton(
               variant: ButtonVariant.ghost,
-              size: DS.touchTargetMinSize,
               icon: const Icon(Icons.person_add_outlined),
               onPressed: _showAddOptions,
             ),
@@ -214,6 +210,14 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
           labelStyle: const TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
+      floatingActionButton: Tooltip(
+        message: _tabController.index == 0 ? '添加好友' : '创建群组',
+        child: SparkleIconButton(
+          size: 56,
+          icon: const Icon(Icons.add),
+          onPressed: _handleFabPressed,
+        ),
+      ),
       child: ContentConstraint(
         child: TabBarView(
           controller: _tabController,
@@ -221,14 +225,6 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
             _FriendsListTab(),
             _GroupsListTab(),
           ],
-        ),
-      ),
-      floatingActionButton: Tooltip(
-        message: _tabController.index == 0 ? '添加好友' : '创建群组',
-        child: SparkleIconButton(
-          size: 56,
-          icon: const Icon(Icons.add),
-          onPressed: _handleFabPressed,
         ),
       ),
     );

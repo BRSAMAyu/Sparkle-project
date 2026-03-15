@@ -1,5 +1,5 @@
 import 'package:intl/intl.dart';
-import '../services/i18n_service.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 /// Localized formatters for dates, times, durations, and numbers.
 ///

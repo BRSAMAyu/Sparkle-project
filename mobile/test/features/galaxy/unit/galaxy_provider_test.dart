@@ -542,7 +542,6 @@ void main() {
         mockRepository.graphResult = NetworkResult.success(
           GalaxyGraphResponse(
             nodes: _generateMockNodes(3),
-            edges: const [],
             userFlameIntensity: 0.5,
           ),
         );

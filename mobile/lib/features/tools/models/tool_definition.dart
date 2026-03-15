@@ -122,20 +122,16 @@ class ToolDefinition {
   }
 
   /// Get search terms based on current locale
-  List<String> getLocalizedSearchTerms() {
-    return I18nService.instance.isEnglish && searchTermsEn.isNotEmpty
+  List<String> getLocalizedSearchTerms() => I18nService.instance.isEnglish && searchTermsEn.isNotEmpty
         ? searchTermsEn
         : searchTerms;
-  }
 
   /// Convert snake_case or kebab-case to CamelCase for key lookup
-  String _toCamelCase(String input) {
-    return input
+  String _toCamelCase(String input) => input
         .split(RegExp(r'[_\-]'))
         .map((part) =>
             part.isEmpty ? '' : '${part[0].toUpperCase()}${part.substring(1)}')
         .join();
-  }
 
   /// Helper to get localized string from AppLocalizations via dynamic key
   String? _getLocalizedString(AppLocalizations l10n, String key) {

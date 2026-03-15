@@ -38,7 +38,6 @@ class _GroupSearchScreenState extends ConsumerState<GroupSearchScreen> {
       appBar: AppBar(
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
-          size: DS.touchTargetMinSize,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
@@ -57,7 +56,6 @@ class _GroupSearchScreenState extends ConsumerState<GroupSearchScreen> {
         actions: [
           SparkleIconButton(
             variant: ButtonVariant.ghost,
-            size: DS.touchTargetMinSize,
             icon: const Icon(Icons.search),
             onPressed: _handleSearch,
           ),

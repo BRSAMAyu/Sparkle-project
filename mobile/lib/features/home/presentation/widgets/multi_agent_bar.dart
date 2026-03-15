@@ -34,7 +34,7 @@ class MultiAgentBar extends ConsumerWidget {
           .map((expert) => ChatModeExpert(
                 expertId: expert.id,
                 displayName: expert.displayName,
-              ))
+              ),)
           .toList(),
       loading: () => <ChatMode>[],
       error: (_, __) => <ChatMode>[],

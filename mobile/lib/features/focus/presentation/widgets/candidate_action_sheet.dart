@@ -96,7 +96,7 @@ class _CandidateActionSheetState extends ConsumerState<CandidateActionSheet> {
                   children: [
                     Text(
                       l10n.focusCandidateTitle,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontWeight: DS.fontWeightBold,
                         fontSize: 16,
                       ),

@@ -154,7 +154,6 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
       subtitle: '用来做快速词义确认、例句生成和关联词扩展，查询结果可以直接收进本地生词本。',
       accentColor: accent,
       compactHeader: true,
-      fillHeight: false,
       heroChips: [
         ToolHeroChip(
           label: _isInLocalWordbook ? '已在生词本中' : '可加入生词本',
@@ -274,7 +273,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                                   if (phonetic != null || partOfSpeech != null)
                                     Padding(
                                       padding: const EdgeInsets.only(
-                                          top: DS.spacing8),
+                                          top: DS.spacing8,),
                                       child: Wrap(
                                         spacing: DS.spacing8,
                                         runSpacing: DS.spacing8,
@@ -296,12 +295,12 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                                             DecoratedBox(
                                               decoration: BoxDecoration(
                                                 color: accent.withValues(
-                                                    alpha: 0.12),
+                                                    alpha: 0.12,),
                                                 borderRadius:
                                                     DS.borderRadiusFull,
                                                 border: Border.all(
                                                   color: accent.withValues(
-                                                      alpha: 0.18),
+                                                      alpha: 0.18,),
                                                 ),
                                               ),
                                               child: Padding(
@@ -366,7 +365,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                             ...examples.take(3).map(
                                   (example) => Padding(
                                     padding: const EdgeInsets.only(
-                                        bottom: DS.spacing8),
+                                        bottom: DS.spacing8,),
                                     child: Text(
                                       '• $example',
                                       style: Theme.of(context)

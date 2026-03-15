@@ -233,7 +233,6 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
       subtitle: '面向学习和任务场景的双栏翻译器，支持自动存档、评分和收藏，便于后续回看。',
       accentColor: accent,
       compactHeader: true,
-      fillHeight: false,
       headerAction: SparkleIconButton(
         onPressed: () => unawaited(context.push(TranslationRoutes.history)),
         icon: const Icon(Icons.history_rounded),

@@ -30,7 +30,6 @@ class _SyncCenterScreenState extends ConsumerState<SyncCenterScreen> {
         appBar: AppBar(
           leading: SparkleIconButton(
             variant: ButtonVariant.ghost,
-            size: DS.touchTargetMinSize,
             icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
           ),
@@ -64,6 +63,31 @@ class _SyncCenterScreenState extends ConsumerState<SyncCenterScreen> {
               Tab(text: context.l10n.syncCenterTabWaitingAck),
               Tab(text: context.l10n.syncCenterTabPending),
             ],
+          ),
+        ),
+        bottomNavigationBar: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              DS.spacing16,
+              0,
+              DS.spacing16,
+              DS.spacing16,
+            ),
+            child: SparkleButton(
+              onPressed: () async {
+                await service.retryFailed();
+                if (context.mounted) {
+                  AppFeedback.success(
+                    context,
+                    context.l10n.syncCenterRetryFailedTriggered,
+                  );
+                }
+              },
+              icon: const Icon(Icons.sync),
+              label: context.l10n.syncCenterRetryFailed,
+              expand: true,
+            ),
           ),
         ),
         child: ContentConstraint(
@@ -175,31 +199,6 @@ class _SyncCenterScreenState extends ConsumerState<SyncCenterScreen> {
             ),
           ),
         ),
-        bottomNavigationBar: SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              DS.spacing16,
-              0,
-              DS.spacing16,
-              DS.spacing16,
-            ),
-            child: SparkleButton(
-              onPressed: () async {
-                await service.retryFailed();
-                if (context.mounted) {
-                  AppFeedback.success(
-                    context,
-                    context.l10n.syncCenterRetryFailedTriggered,
-                  );
-                }
-              },
-              icon: const Icon(Icons.sync),
-              label: context.l10n.syncCenterRetryFailed,
-              expand: true,
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -233,7 +232,7 @@ class _StatsView extends StatelessWidget {
         const SizedBox(height: DS.spacing12),
         Text(
           context.l10n.syncCenterByTopic,
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: DS.spacing8),
         if (topicEntries.isEmpty)

@@ -137,7 +137,7 @@ class DraggableTaskCard extends ConsumerWidget {
                   ),
                 ),
                 Icon(Icons.drag_indicator,
-                    color: DS.brandPrimary38Const, size: 20),
+                    color: DS.brandPrimary38Const, size: 20,),
               ],
             ),
           ),

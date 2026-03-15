@@ -285,7 +285,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
       begin: const Offset(0, -0.1),
       end: Offset.zero,
     ).animate(
-        CurvedAnimation(parent: _slideInController, curve: Curves.easeOut));
+        CurvedAnimation(parent: _slideInController, curve: Curves.easeOut),);
     _slideInController.forward();
   }
 

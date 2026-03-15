@@ -68,7 +68,6 @@ class _ToolButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: DS.borderSubtle,
-              width: 1,
             ),
           ),
           child: Column(

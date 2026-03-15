@@ -92,7 +92,7 @@ class BackgroundTaskNotifier extends StateNotifier<BackgroundTaskState> {
 /// Provider for background tasks
 final backgroundTaskProvider =
     StateNotifierProvider<BackgroundTaskNotifier, BackgroundTaskState>(
-        (ref) => BackgroundTaskNotifier());
+        (ref) => BackgroundTaskNotifier(),);
 
 /// Task monitor screen
 class TaskMonitorScreen extends ConsumerStatefulWidget {
@@ -129,7 +129,6 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
           icon: const Icon(Icons.arrow_back_ios_new),
           onPressed: () => Navigator.pop(context),
           variant: ButtonVariant.ghost,
-          size: DS.touchTargetMinSize,
         ),
       ),
       child: ContentConstraint(

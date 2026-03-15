@@ -82,7 +82,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
-                      '无法启动任务: ${error is DioException ? error.message : error.toString()}'),
+                      '无法启动任务: ${error is DioException ? error.message : error.toString()}',),
                   backgroundColor: DS.error,
                 ),
               );
@@ -318,7 +318,6 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
             appBar: AppBar(
               leading: SparkleIconButton(
                 variant: ButtonVariant.ghost,
-                size: DS.touchTargetMinSize,
                 icon: const Icon(Icons.arrow_back),
                 onPressed: () async {
                   final shouldPop = await _onWillPop();

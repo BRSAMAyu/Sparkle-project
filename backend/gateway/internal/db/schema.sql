@@ -3724,7 +3724,7 @@ CREATE TABLE users (
     username character varying(100) NOT NULL,
     email character varying(255) NOT NULL,
     hashed_password character varying(255) NOT NULL,
-    email_verified boolean NOT NULL,
+    email_verified boolean DEFAULT false NOT NULL,
     full_name character varying(100),
     nickname character varying(100),
     avatar_url character varying(500),
@@ -10084,4 +10084,3 @@ ALTER TABLE ONLY word_books
 --
 -- PostgreSQL database dump complete
 --
-

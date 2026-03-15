@@ -18,7 +18,6 @@ void main() {
       handler.handlePointerDown(
         const PointerDownEvent(
           pointer: 1,
-          timeStamp: Duration.zero,
           position: Offset(20, 20),
         ),
       );
@@ -45,7 +44,6 @@ void main() {
       handler.handlePointerDown(
         const PointerDownEvent(
           pointer: 1,
-          timeStamp: Duration.zero,
           position: Offset(30, 30),
         ),
       );
@@ -82,7 +80,7 @@ void main() {
       tester,
     ) async {
       final commands = <GalaxyGestureCommand>[];
-      final hit = const GalaxyNodeHit(
+      const hit = GalaxyNodeHit(
         nodeId: 'node-1',
         worldPosition: Offset.zero,
         distance: 0,
@@ -92,7 +90,6 @@ void main() {
       handler.handlePointerDown(
         const PointerDownEvent(
           pointer: 1,
-          timeStamp: Duration.zero,
           position: Offset(50, 50),
         ),
       );

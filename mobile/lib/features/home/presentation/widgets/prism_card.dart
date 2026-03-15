@@ -151,13 +151,13 @@ class _PrismCardState extends ConsumerState<PrismCard>
                           color: DS.prismPurple.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                              color: DS.prismPurple.withValues(alpha: 0.3)),
+                              color: DS.prismPurple.withValues(alpha: 0.3),),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(Icons.error_outline,
-                                size: 12, color: DS.prismPurple),
+                                size: 12, color: DS.prismPurple,),
                             const SizedBox(width: DS.spacing4),
                             Text(
                               '复习弱项: 分析',

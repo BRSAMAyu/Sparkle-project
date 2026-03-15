@@ -7,7 +7,7 @@
 /// - User preferences
 library;
 
-import 'enhanced_intent_classifier.dart';
+import 'package:sparkle/features/home/domain/services/enhanced_intent_classifier.dart';
 
 class ContextAwareIntentClassifier {
   const ContextAwareIntentClassifier._();
@@ -35,7 +35,7 @@ class ContextAwareIntentClassifier {
         );
       } else if (currentScore < 0.6) {
         // Not confidently predicted, but sprint keywords exist
-        return IntentClassification(
+        return const IntentClassification(
           type: EnhancedIntentType.sprint,
           confidence: 0.7,
         );
@@ -50,7 +50,7 @@ class ContextAwareIntentClassifier {
         return baseResult;  // Already correct
       } else if (baseResult == null || baseResult.confidence < 0.6) {
         // Weak prediction, but study keywords detected during study time
-        return IntentClassification(
+        return const IntentClassification(
           type: EnhancedIntentType.learn,
           confidence: 0.65,
         );
@@ -67,7 +67,7 @@ class ContextAwareIntentClassifier {
     if (recentTaskCreationCount >= 2 &&
         _containsTaskKeywords(text) &&
         (baseResult == null || baseResult.confidence < 0.7)) {
-      return IntentClassification(
+      return const IntentClassification(
         type: EnhancedIntentType.task,
         confidence: 0.75,
       );

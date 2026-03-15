@@ -6,14 +6,22 @@ SELECT * FROM users WHERE apple_id = $1 LIMIT 1;
 
 -- name: CreateSocialUser :one
 INSERT INTO users (
-    id, username, email, hashed_password, nickname, 
-    registration_source, is_active, apple_id, updated_at, created_at
+    id, username, email, hashed_password, nickname,
+    email_verified, registration_source, is_active, apple_id, updated_at, created_at
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
 RETURNING *;
 
 -- name: UpdateUserLastLogin :exec
 UPDATE users SET last_login_at = NOW(), updated_at = NOW() WHERE id = $1;
+
+-- name: LinkAppleUser :one
+UPDATE users
+SET apple_id = COALESCE(apple_id, $2),
+    email_verified = TRUE,
+    updated_at = NOW()
+WHERE id = $1
+RETURNING *;
 
 -- name: CreateUser :one
 INSERT INTO users (id, email, hashed_password, full_name, is_active, is_superuser, created_at, updated_at)

@@ -28,7 +28,7 @@ class SprintView extends ConsumerWidget {
     // 冲刺有任务
     if (sprintTasks.isNotEmpty) {
       return _buildSprintTasks(
-          context, ref, sprintTasks, dashboardState.sprint!);
+          context, ref, sprintTasks, dashboardState.sprint!,);
     }
 
     // 冲刺无任务
@@ -170,7 +170,6 @@ class _SprintHeader extends ConsumerWidget {
               onPressed: () => context.push(PlanRoutes.sprintHistory),
               variant: ButtonVariant.ghost,
               semanticLabel: '冲刺历史',
-              size: DS.touchTargetMinSize,
             ),
             const SizedBox(width: DS.spacing4),
             // Actions menu button
@@ -190,14 +189,14 @@ class _SprintHeader extends ConsumerWidget {
                 foregroundColor: DS.brandPrimary,
               ),
               onSelected: (value) => _handleMenuSelection(
-                  context, ref, value, sprint.id, sprint.name),
+                  context, ref, value, sprint.id, sprint.name,),
               itemBuilder: (context) => [
                 PopupMenuItem(
                   value: 'complete',
                   child: Row(
                     children: [
                       Icon(Icons.check_circle_rounded,
-                          color: DS.semanticSuccess),
+                          color: DS.semanticSuccess,),
                       const SizedBox(width: DS.spacing12),
                       const Text('完成冲刺'),
                     ],

@@ -90,17 +90,26 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
         actions: [
           SparkleIconButton(
             variant: ButtonVariant.ghost,
-            size: DS.touchTargetMinSize,
             icon: const Icon(Icons.refresh),
             onPressed: _applyFilters,
           ),
           SparkleIconButton(
             variant: ButtonVariant.ghost,
-            size: DS.touchTargetMinSize,
             icon: const Icon(Icons.filter_list),
             onPressed: _showFilterDialog,
           ),
         ],
+      ),
+      floatingActionButton: SparkleIconButton(
+        size: DS.touchTargetMinSize + DS.spacing8,
+        onPressed: () async {
+          final result =
+              await context.push<bool>(SeedLibraryRoutes.createLibrary);
+          if (result ?? false) {
+            _applyFilters();
+          }
+        },
+        icon: const Icon(Icons.add),
       ),
       child: ContentConstraint(
         child: Column(
@@ -177,18 +186,6 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
             ),
           ],
         ),
-      ),
-      floatingActionButton: SparkleIconButton(
-        size: DS.touchTargetMinSize + DS.spacing8,
-        variant: ButtonVariant.primary,
-        onPressed: () async {
-          final result =
-              await context.push<bool>(SeedLibraryRoutes.createLibrary);
-          if (result ?? false) {
-            _applyFilters();
-          }
-        },
-        icon: const Icon(Icons.add),
       ),
     );
   }

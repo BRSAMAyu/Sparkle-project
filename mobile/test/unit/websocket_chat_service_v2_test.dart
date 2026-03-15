@@ -648,7 +648,7 @@ void main() {
         expect(events.length, 1);
         expect(events.first, isA<TextEvent>());
         expect(
-            (events.first as TextEvent).metadata?['some_other_field'], 'value');
+            (events.first as TextEvent).metadata?['some_other_field'], 'value',);
 
         await sub.cancel();
       });
@@ -680,7 +680,7 @@ void main() {
         expect(events.length, 1);
         expect(events.first, isA<PlanReviewWidgetEvent>());
         expect((events.first as PlanReviewWidgetEvent).reviewData['plan_id'],
-            'plan-123');
+            'plan-123',);
 
         await sub.cancel();
       });
@@ -893,7 +893,7 @@ void main() {
 
         expect((events[1] as TransparencyStepEvent).currentStep, 2);
         expect(
-            (events[1] as TransparencyStepEvent).stepName, '执行工具: calculator');
+            (events[1] as TransparencyStepEvent).stepName, '执行工具: calculator',);
 
         await sub.cancel();
       });

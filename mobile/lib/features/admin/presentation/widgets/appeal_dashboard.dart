@@ -400,7 +400,7 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
 
         if (mounted) {
           AppFeedback.success(
-              context, result.message ?? '决策已提交: ${decision.label}');
+              context, result.message ?? '决策已提交: ${decision.label}',);
         }
       } else {
         if (mounted) {
@@ -1007,7 +1007,7 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
                 _buildInfoRow(theme, '审查ID', caseData.reviewId),
                 _buildInfoRow(theme, '用户ID', caseData.userId),
                 _buildInfoRow(
-                    theme, '创建时间', _formatDateTime(caseData.createdAt)),
+                    theme, '创建时间', _formatDateTime(caseData.createdAt),),
                 if (caseData.assignedTo != null)
                   _buildInfoRow(theme, '分配给', caseData.assignedTo!),
 

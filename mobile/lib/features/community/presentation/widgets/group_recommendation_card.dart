@@ -94,7 +94,6 @@ class GroupRecommendationCard extends StatelessWidget {
                     if (onDismiss != null)
                       SparkleIconButton(
                         variant: ButtonVariant.ghost,
-                        size: DS.touchTargetMinSize,
                         icon: const Icon(Icons.close),
                         onPressed: onDismiss,
                       ),
@@ -135,7 +134,6 @@ class GroupRecommendationCard extends StatelessWidget {
                     SparkleButton(
                       label: joinLabel,
                       size: ButtonSize.small,
-                      variant: ButtonVariant.primary,
                       onPressed: onJoin,
                     ),
                   ],

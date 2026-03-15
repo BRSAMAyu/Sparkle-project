@@ -145,7 +145,7 @@ class SubjectChip extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(subject.icon,
-              size: compact ? DS.spacing12 : 14, color: subject.color),
+              size: compact ? DS.spacing12 : 14, color: subject.color,),
           SizedBox(width: compact ? 2 : DS.spacing4),
           Text(
             subject.label,

@@ -110,7 +110,7 @@ class AuthInterceptor extends Interceptor {
         // Refresh token failed, logout user
         unawaited(_ref.read(authRepositoryProvider).logout(
               keepDemoMode: DemoDataService.isDemoMode,
-            ));
+            ),);
         return super.onError(err, handler);
       }
     }

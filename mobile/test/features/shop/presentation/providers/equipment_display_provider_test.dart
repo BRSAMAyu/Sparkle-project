@@ -109,9 +109,7 @@ class _FakeAchievementRepository extends AchievementRepository {
 class _SourceAwareAuthNotifier extends AuthNotifier {
   _SourceAwareAuthNotifier() : super(_UnusedAuthRepository()) {
     state = AuthState(
-      isLoading: false,
       isAuthenticated: true,
-      user: null,
     );
   }
 
@@ -133,8 +131,8 @@ UserModel _achievementTitleUser() => UserModel(
       curiosityPreference: 0.5,
       isActive: true,
       status: UserStatus.online,
-      createdAt: DateTime(2026, 1, 1),
-      updatedAt: DateTime(2026, 1, 1),
+      createdAt: DateTime(2026, 1),
+      updatedAt: DateTime(2026, 1),
       equippedTitle: 'night_owl',
       equippedTitleSource: 'achievement',
     );

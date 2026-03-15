@@ -87,12 +87,10 @@ class GalaxyEdgeModel {
   final bool bidirectional;
   Map<String, dynamic> toJson() => _$GalaxyEdgeModelToJson(this);
 
-  static EdgeRelationType _parseRelationType(String? raw) {
-    return EdgeRelationType.values.firstWhere(
+  static EdgeRelationType _parseRelationType(String? raw) => EdgeRelationType.values.firstWhere(
       (type) => type.name == raw || _relationWireValue(type) == raw,
       orElse: () => EdgeRelationType.related,
     );
-  }
 
   static String _relationWireValue(EdgeRelationType type) {
     switch (type) {

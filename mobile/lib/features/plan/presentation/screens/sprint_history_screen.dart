@@ -21,7 +21,6 @@ class SprintHistoryScreen extends ConsumerWidget {
       appBar: AppBar(
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
-          size: DS.touchTargetMinSize,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
@@ -29,7 +28,6 @@ class SprintHistoryScreen extends ConsumerWidget {
         actions: [
           SparkleIconButton(
             variant: ButtonVariant.ghost,
-            size: DS.touchTargetMinSize,
             icon: const Icon(Icons.refresh),
             onPressed: () => ref.read(sprintHistoryProvider.notifier).refresh(),
           ),
@@ -43,7 +41,7 @@ class SprintHistoryScreen extends ConsumerWidget {
   }
 
   Widget _buildBody(
-      BuildContext context, SprintHistoryState state, AppLocalizations l10n) {
+      BuildContext context, SprintHistoryState state, AppLocalizations l10n,) {
     if (state.isLoading && state.items.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -92,7 +90,7 @@ class SprintHistoryScreen extends ConsumerWidget {
       );
 
   Widget _buildErrorState(
-          BuildContext context, String error, AppLocalizations l10n) =>
+          BuildContext context, String error, AppLocalizations l10n,) =>
       Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

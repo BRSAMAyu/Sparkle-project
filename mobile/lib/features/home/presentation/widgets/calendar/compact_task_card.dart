@@ -124,7 +124,7 @@ class CompactTaskCard extends ConsumerWidget {
   }
 
   Widget _buildQuickActionButton(
-      BuildContext context, WidgetRef ref, TaskModel task) {
+      BuildContext context, WidgetRef ref, TaskModel task,) {
     switch (task.status) {
       case TaskStatus.pending:
         return _ActionButton(

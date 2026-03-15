@@ -203,7 +203,6 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
               icon: const Icon(Icons.close),
               onPressed: () => Navigator.of(context).pop(),
               variant: ButtonVariant.ghost,
-              size: DS.touchTargetMinSize,
             ),
             Expanded(
               child: Column(
@@ -232,7 +231,6 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
               ),
               onPressed: _isAutoPlaying ? _stopAutoPlay : _startAutoPlay,
               variant: ButtonVariant.ghost,
-              size: DS.touchTargetMinSize,
             ),
           ],
         ),

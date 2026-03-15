@@ -78,7 +78,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go('/login'),
           variant: ButtonVariant.ghost,
-          size: DS.touchTargetMinSize,
         ),
         title: Text(l10n.register),
         elevation: 0,
@@ -164,7 +163,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                 () => _isPasswordVisible = !_isPasswordVisible,
                               ),
                               variant: ButtonVariant.ghost,
-                              size: DS.touchTargetMinSize,
                             ),
                           ),
                           validator: (value) {
@@ -194,7 +192,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         SparkleButton(
                           label: l10n.register,
                           onPressed: authState.isLoading ? null : _submit,
-                          variant: ButtonVariant.primary,
                           expand: true,
                           loading: authState.isLoading,
                           disabled: authState.isLoading,
