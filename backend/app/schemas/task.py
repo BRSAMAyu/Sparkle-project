@@ -249,6 +249,7 @@ class SubTaskCreate(BaseModel):
     title: str = Field(min_length=1, max_length=255, description="Subtask title")
     description: str | None = Field(default=None, description="Subtask description")
     order: int | None = Field(default=0, description="Display order")
+    knowledge_node_id: UUID | None = Field(default=None, description="Linked knowledge node ID")
 
 class SubTaskUpdate(BaseModel):
     """Update subtask"""
@@ -256,6 +257,7 @@ class SubTaskUpdate(BaseModel):
     description: str | None = Field(default=None, description="Subtask description")
     status: SubTaskStatus | None = Field(default=None, description="Subtask status")
     order: int | None = Field(default=None, description="Display order")
+    knowledge_node_id: UUID | None = Field(default=None, description="Linked knowledge node ID")
 
 class SubTaskDetail(BaseSchema):
     """Subtask detailed information"""
@@ -265,6 +267,7 @@ class SubTaskDetail(BaseSchema):
     order: int = Field(description="Display order")
     status: SubTaskStatus = Field(description="Subtask status")
     completed_at: datetime | None = Field(default=None, description="Completion time")
+    knowledge_node_id: UUID | None = Field(default=None, description="Linked knowledge node ID")
 
 class SubTaskReorderRequest(BaseModel):
     """Reorder subtasks"""

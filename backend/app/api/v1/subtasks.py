@@ -23,7 +23,7 @@ def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
 
-async def _verify_task_ownership(task_id: UUID, user_id: int, db: AsyncSession) -> Task:
+async def _verify_task_ownership(task_id: UUID, user_id: UUID, db: AsyncSession) -> Task: # type: ignore
     """Verify that the task exists and belongs to the user"""
     result = await db.execute(
         select(Task).where(
@@ -49,7 +49,7 @@ async def get_subtasks(
     Get all subtasks for a task
     """
     # Verify task ownership
-    await _verify_task_ownership(task_id, current_user.id, db)
+    await _verify_task_ownership(task_id, current_user.id, db) # type: ignore
 
     # Get subtasks ordered by order field
     result = await db.execute(
@@ -73,7 +73,7 @@ async def create_subtask(
     Create a new subtask
     """
     # Verify task ownership
-    task = await _verify_task_ownership(task_id, current_user.id, db)
+    task = await _verify_task_ownership(task_id, current_user.id, db) # type: ignore
 
     # Get the next order value if not provided
     if subtask_in.order is None or subtask_in.order == 0:
@@ -88,13 +88,12 @@ async def create_subtask(
     else:
         next_order = subtask_in.order
 
-    subtask = SubTask(
-        parent_task_id=task_id,
-        title=subtask_in.title,
-        description=subtask_in.description,
-        order=next_order,
-        status=SubTaskStatus.PENDING
-    )
+    subtask = SubTask()
+    setattr(subtask, "parent_task_id", task_id)
+    setattr(subtask, "title", subtask_in.title)
+    setattr(subtask, "description", subtask_in.description)
+    setattr(subtask, "order", next_order)
+    setattr(subtask, "status", SubTaskStatus.PENDING)
 
     db.add(subtask)
     await db.commit()
@@ -128,7 +127,7 @@ async def update_subtask(
         raise NotFoundError(message="Subtask not found")
 
     # Verify parent task ownership
-    await _verify_task_ownership(subtask.parent_task_id, current_user.id, db)
+    await _verify_task_ownership(subtask.parent_task_id, current_user.id, db) # type: ignore
 
     # Update fields
     update_data = subtask_in.model_dump(exclude_unset=True)
@@ -137,9 +136,24 @@ async def update_subtask(
 
     # Set completed_at when status changes to COMPLETED
     if subtask_in.status == SubTaskStatus.COMPLETED and subtask.completed_at is None:
-        subtask.completed_at = _utcnow()
+        setattr(subtask, "completed_at", _utcnow())
+        if getattr(subtask, "knowledge_node_id", None):
+            try:
+                from app.services.galaxy.stats_service import GalaxyStatsService
+                import logging
+                stats_service = GalaxyStatsService(db)
+                await stats_service.spark_node(
+                    user_id=current_user.id, # type: ignore
+                    node_id=getattr(subtask, "knowledge_node_id"), # type: ignore
+                    study_minutes=25,
+                    task_id=getattr(subtask, "parent_task_id", None), # type: ignore
+                    trigger_expansion=True
+                )
+            except Exception as e:
+                import logging
+                logging.error(f"Failed to spark node {getattr(subtask, 'knowledge_node_id', 'unknown')} on subtask completion: {e}")
     elif subtask_in.status and subtask_in.status != SubTaskStatus.COMPLETED:
-        subtask.completed_at = None
+        setattr(subtask, "completed_at", None)
 
     await db.commit()
     await db.refresh(subtask)
@@ -180,7 +194,7 @@ async def delete_subtask(
     parent_task_id = subtask.parent_task_id
 
     # Verify parent task ownership
-    task = await _verify_task_ownership(parent_task_id, current_user.id, db)
+    task = await _verify_task_ownership(parent_task_id, current_user.id, db) # type: ignore
 
     await db.delete(subtask)
     await db.commit()
@@ -216,12 +230,12 @@ async def reorder_subtasks(
         raise HTTPException(status_code=400, detail="One or more subtasks not found")
 
     # Verify all subtasks belong to the same parent task owned by user
-    parent_task_id = subtasks[0].parent_task_id
+    parent_task_id = getattr(subtasks[0], "parent_task_id")
     for subtask in subtasks:
-        if subtask.parent_task_id != parent_task_id:
+        if getattr(subtask, "parent_task_id") != parent_task_id:
             raise HTTPException(status_code=400, detail="Subtasks must belong to the same parent task")
 
-    await _verify_task_ownership(parent_task_id, current_user.id, db)
+    await _verify_task_ownership(parent_task_id, current_user.id, db) # type: ignore
 
     # Update order for each subtask
     for item in request.subtask_orders:

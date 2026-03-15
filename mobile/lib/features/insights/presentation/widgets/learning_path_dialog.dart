@@ -6,6 +6,8 @@ import 'package:sparkle/features/insights/data/models/learning_path_node.dart';
 import 'package:sparkle/features/insights/data/repositories/learning_path_repository.dart';
 import 'package:sparkle/features/insights/presentation/providers/learning_path_provider.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
+import 'dart:async';
+
 import 'package:sparkle/shared/entities/task_model.dart';
 
 class LearningPathDialog extends ConsumerWidget {
@@ -61,6 +63,13 @@ class LearningPathDialog extends ConsumerWidget {
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (err, stack) => Center(child: Text('加载失败：$err')),
           ),
+        ),
+        const SizedBox(height: DS.lg),
+        SparkleButton.primary(
+          label: '一键生成学习计划',
+          icon: const Icon(Icons.auto_awesome),
+          expand: true,
+          onPressed: () => _handleCreateFullPlan(context, ref),
         ),
       ],
     );
@@ -270,6 +279,22 @@ class LearningPathDialog extends ConsumerWidget {
     } catch (e) {
       if (!parentContext.mounted) return;
       AppFeedback.error(parentContext, '生成失败: $e');
+    }
+  }
+
+  Future<void> _handleCreateFullPlan(BuildContext context, WidgetRef ref) async {
+    AppFeedback.loading(context, '正在生成全路径计划...');
+    try {
+      final response = await ref
+          .read(learningPathRepositoryProvider)
+          .generateFullPathPlan(targetNodeId);
+      if (!context.mounted) return;
+      AppFeedback.success(context, '学习计划已生成');
+      Navigator.of(context).pop();
+      unawaited(context.push('/plans/${response.planId}'));
+    } catch (e) {
+      if (!context.mounted) return;
+      AppFeedback.error(context, '生成失败: $e');
     }
   }
 

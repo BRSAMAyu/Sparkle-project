@@ -36,7 +36,7 @@ def upgrade() -> None:
 
     op.create_table(
         "user_sessions",
-        sa.Column("user_id", sa.String(length=36), nullable=False),
+        sa.Column("user_id", sa.UUID(), nullable=False),
         sa.Column("session_id", sa.String(length=64), nullable=False),
         sa.Column("device_id", sa.String(length=255), nullable=True),
         sa.Column("device_name", sa.String(length=255), nullable=True),
@@ -47,7 +47,7 @@ def upgrade() -> None:
         sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.true()),
         sa.Column("revoked_at", sa.DateTime(), nullable=True),
         sa.Column("last_active_at", sa.DateTime(), nullable=False),
-        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("updated_at", sa.DateTime(), nullable=False),
         sa.Column("deleted_at", sa.DateTime(), nullable=True),
@@ -67,13 +67,13 @@ def upgrade() -> None:
 
     op.create_table(
         "auth_audit_log",
-        sa.Column("user_id", sa.String(length=36), nullable=True),
+        sa.Column("user_id", sa.UUID(), nullable=True),
         sa.Column("action", sa.String(length=64), nullable=False),
         sa.Column("ip_address", sa.String(length=45), nullable=True),
         sa.Column("user_agent", sa.String(length=500), nullable=True),
         sa.Column("metadata", sa.JSON(), nullable=True),
         sa.Column("occurred_at", sa.DateTime(), nullable=False),
-        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("updated_at", sa.DateTime(), nullable=False),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"]),

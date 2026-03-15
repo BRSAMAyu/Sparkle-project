@@ -383,7 +383,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
 
                               // 2. Timer Area (Auxiliary)
                               Text(
-                                '页面内计时器',
+                                l10n.taskExecutionTimerLabel,
                                 style: TextStyle(
                                   fontSize: DS.fontSizeSm,
                                   color: DS.neutral500,
@@ -454,7 +454,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                                       ),
                                       const SizedBox(width: DS.spacing12),
                                       Text(
-                                        '执行指南',
+                                        l10n.taskExecutionGuideTitle,
                                         style: Theme.of(context)
                                             .textTheme
                                             .titleMedium
@@ -479,7 +479,8 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                                       ),
                                       child: MarkdownBody(
                                         data:
-                                            activeTask.guideContent ?? '暂无执行指南',
+                                            activeTask.guideContent ??
+                                                l10n.taskExecutionGuideEmpty,
                                         styleSheet: MarkdownStyleSheet(
                                           p: Theme.of(context)
                                               .textTheme
@@ -569,7 +570,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                             ),
                             const SizedBox(height: DS.spacing24),
                             Text(
-                              '任务完成',
+                              l10n.taskExecutionCompletedTitle,
                               style: Theme.of(context)
                                   .textTheme
                                   .headlineSmall
@@ -590,7 +591,9 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                                 border: Border.all(color: DS.borderSubtle),
                               ),
                               child: Text(
-                                '+${activeTask.difficulty * 10} 经验值',
+                                l10n.taskExecutionExpGained(
+                                  activeTask.difficulty * 10,
+                                ),
                                 style: Theme.of(context)
                                     .textTheme
                                     .titleMedium
@@ -602,7 +605,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                             ),
                             const SizedBox(height: DS.spacing16),
                             Text(
-                              '轻点任意位置可继续',
+                              l10n.taskExecutionTapToContinue,
                               style: Theme.of(context)
                                   .textTheme
                                   .bodyMedium
@@ -610,7 +613,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                             ),
                             const SizedBox(height: DS.spacing16),
                             SparkleButton.ghost(
-                              label: '跳过动画',
+                              label: l10n.taskExecutionSkipAnimation,
                               onPressed: _skipCelebration,
                             ),
                           ],
@@ -651,7 +654,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                 const SizedBox(width: DS.md),
                 Expanded(
                   child: Text(
-                    '进入沉浸专注模式',
+                    context.l10n.taskExecutionEnterFocus,
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: DS.fontWeightBold,
@@ -662,21 +665,39 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
               ],
             ),
             const SizedBox(height: DS.md),
-            const Wrap(
+            Wrap(
               spacing: DS.md,
               runSpacing: DS.xs,
               children: [
-                _FeatureChip(icon: Icons.fullscreen, label: '全屏专注'),
-                _FeatureChip(icon: Icons.access_time_rounded, label: '翻页时钟'),
-                _FeatureChip(icon: Icons.star_rounded, label: '星空背景'),
-                _FeatureChip(icon: Icons.visibility_off_rounded, label: '分心检测'),
-                _FeatureChip(icon: Icons.psychology_rounded, label: 'AI教练'),
-                _FeatureChip(icon: Icons.emoji_events_rounded, label: '火苗奖励'),
+                _FeatureChip(
+                  icon: Icons.fullscreen,
+                  label: context.l10n.taskExecutionFeatureFullscreen,
+                ),
+                _FeatureChip(
+                  icon: Icons.access_time_rounded,
+                  label: context.l10n.taskExecutionFeatureFlipClock,
+                ),
+                _FeatureChip(
+                  icon: Icons.star_rounded,
+                  label: context.l10n.taskExecutionFeatureStarfield,
+                ),
+                _FeatureChip(
+                  icon: Icons.visibility_off_rounded,
+                  label: context.l10n.taskExecutionFeatureDistraction,
+                ),
+                _FeatureChip(
+                  icon: Icons.psychology_rounded,
+                  label: context.l10n.taskExecutionFeatureCoach,
+                ),
+                _FeatureChip(
+                  icon: Icons.emoji_events_rounded,
+                  label: context.l10n.taskExecutionFeatureReward,
+                ),
               ],
             ),
             const SizedBox(height: DS.lg),
             CustomButton.primary(
-              text: '立即开始',
+              text: context.l10n.taskExecutionStartNow,
               icon: Icons.arrow_forward_rounded,
               customGradient: _taskWarmActionGradient(context),
               onPressed: () {
@@ -707,14 +728,14 @@ class _TimerControls extends StatelessWidget {
             runSpacing: DS.spacing8,
             children: [
               CustomButton.secondary(
-                text: '番茄钟',
+                text: context.l10n.taskTimerPomodoro,
                 icon: Icons.timer,
                 onPressed: onTogglePomodoro,
                 size: CustomButtonSize.small,
               ),
               ...[15, 25, 45, 60].map(
                 (minutes) => CustomButton.secondary(
-                  text: '$minutes 分钟',
+                  text: context.l10n.taskTimerMinutes(minutes),
                   onPressed: () => onSetPreset(minutes),
                   size: CustomButtonSize.small,
                 ),
@@ -792,7 +813,7 @@ class _BottomControls extends ConsumerWidget {
                   ),
                   const SizedBox(width: DS.spacing12),
                   Text(
-                    '完成任务',
+                    context.l10n.taskExecutionCompleteTitle,
                     style: DS.titleLarge.copyWith(
                       fontWeight: DS.fontWeightBold,
                     ),
@@ -808,7 +829,7 @@ class _BottomControls extends ConsumerWidget {
                     Icon(Icons.timer_outlined, color: DS.primaryBase),
                     const SizedBox(width: DS.spacing8),
                     Text(
-                      '用时：$minutes 分钟',
+                      context.l10n.taskExecutionElapsedMinutes(minutes),
                       style: DS.bodyMedium.copyWith(
                         fontWeight: DS.fontWeightMedium,
                       ),
@@ -819,9 +840,9 @@ class _BottomControls extends ConsumerWidget {
               const SizedBox(height: DS.spacing16),
               TextField(
                 controller: noteController,
-                decoration: const InputDecoration(
-                  labelText: '笔记（选填）',
-                  hintText: '记录一些学习心得...',
+                decoration: InputDecoration(
+                  labelText: context.l10n.taskExecutionNoteLabel,
+                  hintText: context.l10n.taskExecutionNoteHint,
                 ),
                 maxLines: 3,
               ),
@@ -830,14 +851,14 @@ class _BottomControls extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: CustomButton.text(
-                      text: '取消',
+                      text: context.l10n.cancel,
                       onPressed: () => Navigator.of(ctx).pop(),
                     ),
                   ),
                   const SizedBox(width: DS.spacing12),
                   Expanded(
                     child: CustomButton.primary(
-                      text: '确认完成',
+                      text: context.l10n.taskExecutionConfirmComplete,
                       icon: Icons.check_rounded,
                       customGradient: _taskWarmActionGradient(context),
                       onPressed: () {
@@ -883,7 +904,7 @@ class _BottomControls extends ConsumerWidget {
           children: [
             Expanded(
               child: CustomButton.text(
-                text: '放弃',
+                text: context.l10n.taskExecutionAbandon,
                 onPressed: () => _abandonTask(context, ref),
                 // Use error color for text if possible, or leave as primary/custom
               ),
@@ -892,7 +913,7 @@ class _BottomControls extends ConsumerWidget {
             Expanded(
               flex: 2,
               child: CustomButton.primary(
-                text: '完成任务',
+                text: context.l10n.taskExecutionCompleteTitle,
                 customGradient: _taskWarmActionGradient(context),
                 onPressed: () => _showCompleteDialog(context, ref),
               ),
@@ -1082,46 +1103,53 @@ class _TaskExitConfirmationDialogState
   }
 
   String _getTitle() {
+    final l10n = context.l10n;
     switch (_currentStep) {
       case _TaskExitStep.first:
-        return '确定要离开任务吗？';
+        return l10n.taskExitTitleStep1;
       case _TaskExitStep.second:
-        return '专注统计';
+        return l10n.taskExitTitleStep2;
       case _TaskExitStep.third:
-        return '最后确认';
+        return l10n.taskExitTitleStep3;
     }
   }
 
   String _getMessage() {
+    final l10n = context.l10n;
     switch (_currentStep) {
       case _TaskExitStep.first:
-        return '你正在执行任务，离开可能会影响专注效果。';
+        return l10n.taskExitMessageStep1;
       case _TaskExitStep.second:
-        return '你已经专注了 ${widget.elapsedMinutes} 分钟 ${widget.elapsedSeconds % 60} 秒。';
+        return l10n.taskExitMessageStep2(
+          widget.elapsedMinutes,
+          widget.elapsedSeconds % 60,
+        );
       case _TaskExitStep.third:
-        return '再坚持一下！现在离开会中断你的专注记录。';
+        return l10n.taskExitMessageStep3;
     }
   }
 
   String _getCancelText() {
+    final l10n = context.l10n;
     switch (_currentStep) {
       case _TaskExitStep.first:
-        return '继续执行';
+        return l10n.taskExitCancelStep1;
       case _TaskExitStep.second:
-        return '返回';
+        return l10n.taskExitCancelStep2;
       case _TaskExitStep.third:
-        return '取消';
+        return l10n.taskExitCancelStep3;
     }
   }
 
   String _getConfirmText() {
+    final l10n = context.l10n;
     switch (_currentStep) {
       case _TaskExitStep.first:
-        return '确认离开';
+        return l10n.taskExitConfirmStep1;
       case _TaskExitStep.second:
-        return '继续';
+        return l10n.taskExitConfirmStep2;
       case _TaskExitStep.third:
-        return '确定离开';
+        return l10n.taskExitConfirmStep3;
     }
   }
 }

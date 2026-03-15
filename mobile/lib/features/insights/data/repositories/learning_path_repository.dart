@@ -81,4 +81,30 @@ class LearningPathRepository {
       throw Exception('An unexpected error occurred');
     }
   }
+
+  Future<LearningPathPlanResponse> generateFullPathPlan(
+      String targetNodeId,) async {
+    if (DemoDataService.isDemoMode) {
+      return LearningPathPlanResponse(
+        planId: 'mock_full_plan_${DateTime.now().millisecondsSinceEpoch}',
+        planSummary: '这是一键生成的全路径计划',
+        tasks: [],
+      );
+    }
+    try {
+      final response = await _apiClient.post<dynamic>(
+        ApiEndpoints.learningPathFullPlan(targetNodeId),
+      );
+      final data =
+          ApiResponseParser.unwrapMap(response.data, action: 'generateFullPathPlan');
+      return LearningPathPlanResponse.fromJson(data);
+    } on DioException catch (e) {
+      throw Exception(
+        (e.response?.data as Map<String, dynamic>?)?['detail'] ??
+            'Failed to generate full path learning plan',
+      );
+    } catch (_) {
+      throw Exception('An unexpected error occurred');
+    }
+  }
 }

@@ -53,7 +53,7 @@ class AuthAuditLog(HardDeleteBaseModel):
     action = Column(String(64), nullable=False, index=True)
     ip_address = Column(String(45), nullable=True)
     user_agent = Column(String(500), nullable=True)
-    metadata = Column(JSON, nullable=True)
+    metadata_ = Column("metadata", JSON, nullable=True)
     occurred_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
 
 

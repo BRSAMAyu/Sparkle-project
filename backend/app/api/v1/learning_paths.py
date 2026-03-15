@@ -14,10 +14,13 @@ from app.api.deps import get_current_user, get_current_user_id, get_db
 from app.core.cache import cache_service
 from app.core.exceptions import QuotaExceededError
 from app.models.plan import PlanType
+from app.models.task import SubTaskStatus
 from app.models.user import User
 from app.schemas.plan import PlanCreate
+from app.schemas.task import SubTaskCreate, TaskCreate
 from app.services.graph_reasoning_service import GraphReasoningService
 from app.services.plan_service import PlanService
+from app.services.task_service import TaskService
 from app.tools.plan_tools import GenerateTasksForPlanTool
 from app.tools.schemas import GenerateTasksForPlanParams
 
@@ -59,7 +62,7 @@ async def generate_learning_path_plan(
 
     返回 plan_id、plan_summary、tasks 等信息。
     """
-    path = await service.generate_learning_path(current_user.id, target_node_id)
+    path = await service.generate_learning_path(current_user.id, target_node_id) # type: ignore
     if not path:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -67,7 +70,7 @@ async def generate_learning_path_plan(
         )
 
     target_node = next((node for node in path if node.get("is_target")), None)
-    target_name = target_node.get("name") if target_node else "目标节点"
+    target_name = str(target_node.get("name", "目标节点")) if target_node else "目标节点"
     path_summary = _format_path_summary(path)
 
     user_query = (
@@ -151,6 +154,116 @@ async def generate_learning_path_plan(
         "plan_id": str(plan.id),
         "plan_summary": plan_summary,
         "tasks": tasks_payload,
+    }
+
+
+@router.post("/{target_node_id}/full-plan")
+async def generate_full_path_plan(
+    target_node_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    service: GraphReasoningService = Depends(get_graph_reasoning_service),
+):
+    """
+    Generate a full learning plan where every step makes the Galaxy alive.
+    Filters out mastered nodes and sequentially creates subtasks.
+    """
+    # 1. 获取路径，过滤 mastered
+    path = await service.generate_learning_path(current_user.id, target_node_id)
+    if not path:
+        raise HTTPException(status_code=404, detail="未找到学习路径")
+
+    active_nodes = [n for n in path if n.get("status") != "mastered"]
+    if not active_nodes:
+        raise HTTPException(status_code=400, detail="所有节点已掌握，无需生成计划")
+
+    target_node = next((n for n in path if n.get("is_target")), active_nodes[-1])
+    target_name = target_node.get("name", "目标节点")
+
+    # 2. 生成计划摘要（复用 TaskDecompositionWorkflow）
+    path_summary = _format_path_summary(active_nodes)
+    user_query = f"为目标「{target_name}」生成学习计划。\n路径：\n{path_summary}"
+    
+    context = EnhancedAgentContext(
+        user_id=str(current_user.id),
+        session_id=f"full-plan-{target_node_id}",
+        conversation_history=[],
+        user_query=user_query,
+        knowledge_context=path_summary,
+        db_session=db,
+    )
+    workflow = TaskDecompositionWorkflow(None)
+    result = await workflow.execute(user_query, context)
+    plan_summary = result.final_response
+
+    # 3. 创建 Plan
+    plan_description = _truncate_text(plan_summary, 1200)
+    plan = await PlanService.create(
+        db=db,
+        obj_in=PlanCreate(
+            name=f"学习路径：{target_name}",
+            type=PlanType.GROWTH,
+            description=plan_description,
+            subject=target_name,
+            daily_available_minutes=60,
+        ),
+        user_id=current_user.id, # type: ignore
+        redis_client=cache_service.redis,
+    )
+
+    # 4. 创建父任务
+    from app.models.task import TaskType
+    parent_task = await TaskService.create(
+        db=db,
+        obj_in=TaskCreate(
+            title=f"学习路径：{target_name}",
+            type=TaskType.LEARNING,
+            plan_id=plan.id, # type: ignore
+            estimated_minutes=sum(25 for _ in active_nodes),
+            difficulty=2,
+            knowledge_node_id=target_node_id,
+        ),
+        user_id=current_user.id, # type: ignore
+    )
+
+    # 5. 按拓扑顺序创建 SubTask 链
+    from app.models.task import SubTask
+    
+    order = 1
+    for node in active_nodes:
+        is_target = node.get("is_target", False)
+        # Parse ID if it's string
+        node_id = UUID(node["id"]) if isinstance(node["id"], str) else node["id"]
+
+        if is_target:
+            # 目标节点拆 2-3 条
+            for label in ["理解核心概念", "练习巩固", "综合应用"]:
+                subtask = SubTask()
+                setattr(subtask, "parent_task_id", parent_task.id)
+                setattr(subtask, "title", f"{label}：{node['name']}")
+                setattr(subtask, "order", order)
+                setattr(subtask, "knowledge_node_id", node_id)
+                setattr(subtask, "status", SubTaskStatus.PENDING)
+                db.add(subtask)
+                order += 1
+        else:
+            # 前置节点 1 条
+            subtask = SubTask()
+            setattr(subtask, "parent_task_id", parent_task.id)
+            setattr(subtask, "title", f"学习：{node['name']}")
+            setattr(subtask, "order", order)
+            setattr(subtask, "knowledge_node_id", node_id)
+            setattr(subtask, "status", SubTaskStatus.PENDING)
+            db.add(subtask)
+            order += 1
+
+    await db.commit()
+
+    return {
+        "plan_id": str(plan.id),
+        "plan_summary": plan_summary,
+        "parent_task_id": str(parent_task.id),
+        "subtask_count": order - 1,
     }
 
 

@@ -94,6 +94,9 @@ class ApiEndpoints {
   static String learningPathPlan(String targetNodeId) =>
       '/learning-paths/$targetNodeId/plan';
 
+  static String learningPathFullPlan(String targetNodeId) =>
+      '/learning-paths/$targetNodeId/full-plan';
+
   // Community - Friends
   static const String communityFeed = '/community/feed';
   static const String communityPosts = '/community/posts';

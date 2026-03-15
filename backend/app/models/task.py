@@ -157,6 +157,7 @@ class SubTask(BaseModel):
     __tablename__ = "subtasks"
 
     parent_task_id = Column(GUID(), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False, index=True)
+    knowledge_node_id = Column(GUID(), ForeignKey("knowledge_nodes.id", ondelete="SET NULL"), nullable=True, index=True)
 
     # 基本信息
     title = Column(String(255), nullable=False)
