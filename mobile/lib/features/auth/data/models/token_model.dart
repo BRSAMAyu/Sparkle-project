@@ -6,7 +6,7 @@ part 'token_model.g.dart';
 class TokenResponse {
   TokenResponse({
     required this.accessToken,
-    required this.refreshToken,
+    this.refreshToken,
     this.tokenType = 'bearer',
     this.expiresIn,
   });
@@ -17,7 +17,7 @@ class TokenResponse {
   @JsonKey(name: 'access_token')
   final String accessToken;
   @JsonKey(name: 'refresh_token')
-  final String refreshToken;
+  final String? refreshToken;
   @JsonKey(name: 'token_type')
   final String tokenType;
   @JsonKey(name: 'expires_in')

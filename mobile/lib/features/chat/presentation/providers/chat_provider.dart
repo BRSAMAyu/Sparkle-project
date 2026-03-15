@@ -401,6 +401,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       isSending: true,
       streamingContent: '',
       activeTools: const [],
+      agentActivities: const [],
       clearDagExecution: true,
       clearError: true,
     );
@@ -425,6 +426,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
     bool? pendingReasoningActive;
     int? pendingReasoningStartTime;
     var planContextInjected = false;
+    List<Map<String, dynamic>>? snapshotAgentActivities;
 
     void flushPending({bool immediate = false}) {
       void applyPending() {
@@ -771,6 +773,16 @@ class ChatNotifier extends StateNotifier<ChatState> {
         } else if (event is ModeSuggestionEvent) {
           accumulatedModeSuggestion = event.suggestion;
           flushPending();
+        } else if (event is AgentActivityEvent) {
+          final activities = [...state.agentActivities];
+          final idx = activities.indexWhere((item) => item.agentId == event.agentId);
+          if (idx >= 0) {
+            activities[idx] = event;
+          } else {
+            activities.add(event);
+          }
+          state = state.copyWith(agentActivities: activities);
+          flushPending();
         } else if (event is SprintModeSwitchEvent) {
           // Sprint Mode Switch Event
           _handleSprintModeSwitch(event);
@@ -784,6 +796,23 @@ class ChatNotifier extends StateNotifier<ChatState> {
           flushPending(immediate: true);
           if (state.activeTools.isNotEmpty) {
             state = state.copyWith(activeTools: []);
+          }
+          if (state.agentActivities.isNotEmpty) {
+            snapshotAgentActivities = state.agentActivities
+                .map(
+                  (item) => {
+                    'agent_id': item.agentId,
+                    'status': item.status,
+                    'display_name': item.displayName,
+                    'icon': item.icon,
+                    'color': item.color,
+                    'description': item.description,
+                    if (item.durationMs != null) 'duration_ms': item.durationMs,
+                    if (item.resultSummary != null)
+                      'result_summary': item.resultSummary,
+                  },
+                )
+                .toList();
           }
           // 🔧 修复：清除状态指示器（"思考中"/"生成中"等）
           state = state.copyWith(
@@ -825,6 +854,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
           orchestrationTrace: accumulatedOrchestrationTrace,
           modeSuggestion: accumulatedModeSuggestion,
           aiStatus: lastAiStatus, // 持久化最后的 AI 状态（如：EXECUTING_TOOL）
+          agentActivities: snapshotAgentActivities ?? const [],
           reasoningSteps: accumulatedReasoningSteps.isNotEmpty
               ? accumulatedReasoningSteps
               : null,
@@ -844,6 +874,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
           clearDagExecution: true,
           clearAiStatus: true,
           clearReasoning: true, // Clear real-time reasoning state
+          agentActivities: const [],
         );
       } else {
         state = state.copyWith(
@@ -852,6 +883,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
           clearDagExecution: true,
           clearAiStatus: true,
           clearReasoning: true,
+          agentActivities: const [],
         );
       }
     } catch (e) {
@@ -866,6 +898,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
         isSending: false,
         streamingContent: '',
         clearDagExecution: true,
+        agentActivities: const [],
         error: errorMessage,
         errorCode: 'UNKNOWN',
         isErrorRetryable: true, // 未知错误默认可重试

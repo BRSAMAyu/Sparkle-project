@@ -796,7 +796,7 @@ async def websocket_endpoint(
             return
 
         # 验证 Token
-        payload = decode_token(auth_token, expected_type="access")
+        payload = await decode_token(auth_token, expected_type="access")
         user_id = payload.get("sub")
         if not user_id:
             await websocket.close(code=4003)
@@ -1607,7 +1607,7 @@ async def user_websocket_endpoint(
     """
     user_id = None
     try:
-        payload = decode_token(token, expected_type="access")
+        payload = await decode_token(token, expected_type="access")
         user_id = payload.get("sub")
         if not user_id:
             await websocket.close(code=4003)

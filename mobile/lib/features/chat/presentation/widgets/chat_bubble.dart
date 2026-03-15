@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/action_card.dart';
+import 'package:sparkle/features/chat/presentation/widgets/agent_workflow_panel.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart';
 import 'package:sparkle/features/chat/presentation/widgets/assistant_message_metadata_tray.dart';
 import 'package:sparkle/features/chat/presentation/widgets/mode_suggestion_card.dart';
@@ -332,6 +333,9 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
     final modeSuggestion = widget.message is ChatMessageModel
         ? (widget.message as ChatMessageModel).modeSuggestion
         : null;
+    final agentActivities = widget.message is ChatMessageModel
+        ? (widget.message as ChatMessageModel).agentActivities
+        : const <Map<String, dynamic>>[];
     final bubble = Container(
       margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
       child: Column(
@@ -567,6 +571,17 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                 ),
                                 child: OrchestrationTracePanel(
                                   traceData: orchestrationTrace,
+                                ),
+                              ),
+                            if (!isUser && agentActivities.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  top: 8.0,
+                                  right: 8.0,
+                                  left: 8.0,
+                                ),
+                                child: AgentWorkflowPanel(
+                                  snapshotActivities: agentActivities,
                                 ),
                               ),
                             ..._actionableWidgets.map(

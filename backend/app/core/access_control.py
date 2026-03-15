@@ -18,7 +18,7 @@ async def verify_token(request: Request, credentials: HTTPAuthorizationCredentia
 
     token = credentials.credentials
     try:
-        decode_token(token, expected_type="access")
+        await decode_token(token, expected_type="access")
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid token")
 

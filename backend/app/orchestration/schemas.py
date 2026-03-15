@@ -129,6 +129,7 @@ class ExecutablePlan:
     agents_involved: list[str] = field(default_factory=list)  # NEW
     collaboration_mode: Literal["single", "sequential", "parallel"] = "single"  # NEW
     collaboration_order: list[dict[str, str]] = field(default_factory=list)  # NEW
+    collaboration_narrative: str | None = None  # Phase 3: Collaboration narrative
 
     risk_flags: list[str] = field(default_factory=list)
     tool_calls: list[ToolCallSpec] = field(default_factory=list)
@@ -184,6 +185,7 @@ class ExecutablePlan:
             "agents_involved": self.agents_involved,
             "collaboration_mode": self.collaboration_mode,
             "collaboration_order": self.collaboration_order,
+            "collaboration_narrative": self.collaboration_narrative,
             "risk_flags": self.risk_flags,
             "tool_calls": [
                 {

@@ -164,6 +164,20 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
           }
         }
 
+        // Check for agent activity events
+        if (metadata != null && metadata['event_type'] == 'agent_activity') {
+          final activityPayload = metadata['payload'] as String?;
+          if (activityPayload != null && activityPayload.isNotEmpty) {
+            try {
+              final activityData =
+                  json.decode(activityPayload) as Map<String, dynamic>;
+              return AgentActivityEvent.fromJson(activityData);
+            } catch (e) {
+              debugPrint('Failed to parse agent activity: $e');
+            }
+          }
+        }
+
         // Check for state change events (计划归档/恢复/删除等重大状态变更)
         if (metadata != null && metadata['state_change_event'] != null) {
           final stateChangeData =

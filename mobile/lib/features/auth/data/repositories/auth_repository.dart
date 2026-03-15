@@ -155,14 +155,28 @@ class AuthRepository {
       await clearTokens();
       return;
     }
-    // In a real app, you might want to call a server endpoint to invalidate the token
-    await clearTokens();
+    // Attempt server-side logout (token revocation), but always clear local tokens.
+    try {
+      final refreshToken = await getRefreshToken();
+      await _apiClient.post<dynamic>(
+        '/auth/logout',
+        data: {
+          if (refreshToken != null && refreshToken.isNotEmpty)
+            'refresh_token': refreshToken,
+        },
+      );
+    } catch (_) {
+      // Ignore network errors; client-side logout should still proceed.
+    } finally {
+      await clearTokens();
+    }
   }
 
   Future<TokenResponse> refreshToken() async {
     final currentRefreshToken = await getRefreshToken();
     if (currentRefreshToken == null || currentRefreshToken.isEmpty) {
-      throw Exception('No refresh token available.');
+      await clearTokens();
+      throw Exception('Session expired. Please log in again.');
     }
     try {
       final response = await _apiClient.post<Map<String, dynamic>>(
@@ -285,20 +299,29 @@ class AuthRepository {
       key: AppConstants.keyAccessToken,
       value: tokenResponse.accessToken,
     );
-    await _storage.write(
-      key: AppConstants.keyRefreshToken,
-      value: tokenResponse.refreshToken,
-    );
+    if (tokenResponse.refreshToken != null &&
+        tokenResponse.refreshToken!.isNotEmpty) {
+      await _storage.write(
+        key: AppConstants.keyRefreshToken,
+        value: tokenResponse.refreshToken,
+      );
+    } else {
+      await _storage.delete(key: AppConstants.keyRefreshToken);
+      await _storage.delete(key: _legacyRefreshTokenKey);
+    }
 
     // Keep legacy keys during migration so older code paths do not lose session.
     await _storage.write(
       key: _legacyAccessTokenKey,
       value: tokenResponse.accessToken,
     );
-    await _storage.write(
-      key: _legacyRefreshTokenKey,
-      value: tokenResponse.refreshToken,
-    );
+    if (tokenResponse.refreshToken != null &&
+        tokenResponse.refreshToken!.isNotEmpty) {
+      await _storage.write(
+        key: _legacyRefreshTokenKey,
+        value: tokenResponse.refreshToken,
+      );
+    }
   }
 
   Future<void> clearTokens() async {

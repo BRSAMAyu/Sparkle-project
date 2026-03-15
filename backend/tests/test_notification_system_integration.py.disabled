@@ -85,7 +85,7 @@ async def test_user(db: AsyncSession) -> User:
 @pytest.fixture
 def auth_token(test_user: User) -> str:
     """Generate auth token for WebSocket"""
-    return create_access_token(data={"sub": test_user.email})
+    return create_access_token(data={"sub": str(test_user.id)})
 
 
 @pytest.fixture
@@ -735,8 +735,8 @@ class TestFullNotificationFlow:
         await db.refresh(other_user)
 
         # Get tokens for both users
-        token1 = create_access_token(data={"sub": test_user.email})
-        token2 = create_access_token(data={"sub": other_user.email})
+        token1 = create_access_token(data={"sub": str(test_user.id)})
+        token2 = create_access_token(data={"sub": str(other_user.id)})
 
         # Connect both users
         uri1 = f"{websocket_url}?token={token1}"

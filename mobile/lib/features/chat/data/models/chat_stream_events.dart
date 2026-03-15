@@ -983,6 +983,49 @@ class ModeSuggestionEvent extends ChatStreamEvent {
   double get confidence => (suggestion['confidence'] as num?)?.toDouble() ?? 0.0;
 }
 
+// ============================================
+// Agent Activity Events
+// ============================================
+
+class AgentActivityEvent extends ChatStreamEvent {
+  AgentActivityEvent({
+    required this.agentId,
+    required this.status,
+    required this.displayName,
+    required this.icon,
+    required this.color,
+    required this.description,
+    this.durationMs,
+    this.resultSummary,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+  });
+
+  factory AgentActivityEvent.fromJson(Map<String, dynamic> json) {
+    return AgentActivityEvent(
+      agentId: json['agent_id'] as String? ?? '',
+      status: json['status'] as String? ?? 'pending',
+      displayName: json['display_name'] as String? ?? json['agent_id'] as String? ?? '',
+      icon: json['icon'] as String? ?? 'bot',
+      color: json['color'] as String? ?? '#636E72',
+      description: json['description'] as String? ?? '',
+      durationMs: (json['duration_ms'] as num?)?.toDouble(),
+      resultSummary: json['result_summary'] as String?,
+    );
+  }
+
+  final String agentId;
+  final String status;
+  final String displayName;
+  final String icon;
+  final String color;
+  final String description;
+  final double? durationMs;
+  final String? resultSummary;
+}
+
 /// 透明度数据模型
 class TransparencyData {
   const TransparencyData({

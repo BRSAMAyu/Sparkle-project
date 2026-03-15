@@ -75,6 +75,7 @@ class LangGraphPlanner:
         persona_constraints: Any | None = None,
         state_overrides: dict[str, Any] | None = None,
         planning_constraints: dict[str, Any] | None = None,
+        stream_callback: Any | None = None,
     ) -> ExecutablePlan:
         """Generate execution plan from LangGraph
 
@@ -162,7 +163,10 @@ class LangGraphPlanner:
             initial_state.update(state_overrides)
 
         # Execute planning graph (stops at tool_calls, does NOT execute tools)
-        config = {"configurable": {"thread_id": session_id}}
+        configurable: dict[str, Any] = {"thread_id": session_id}
+        if stream_callback:
+            configurable["stream_callback"] = stream_callback
+        config = {"configurable": configurable}
         final_state = None
 
         logger.info(f"Starting LangGraph planning for session {session_id}")
@@ -250,6 +254,7 @@ class LangGraphPlanner:
         agents_involved = langgraph_state.get("collaboration_agents", [])
         collaboration_mode = langgraph_state.get("collaboration_mode", "single")
         collaboration_order = langgraph_state.get("collaboration_order", [])
+        collaboration_narrative = langgraph_state.get("collaboration_narrative")
 
         # Phase 4: Extract plan_version and plan_id
         plan_version = langgraph_state.get("_plan_version", 1)
@@ -337,6 +342,7 @@ class LangGraphPlanner:
             agents_involved=agents_involved,
             collaboration_mode=collaboration_mode,
             collaboration_order=collaboration_order,
+            collaboration_narrative=collaboration_narrative,
             tool_calls=tool_calls,
             fallback_strategy={
                 "on_validation_fail": "replan",

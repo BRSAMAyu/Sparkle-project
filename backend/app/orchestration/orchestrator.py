@@ -2781,6 +2781,33 @@ class ChatOrchestrator:
         expert_metadata = final_state.context_data.get("expert_routing_metadata")
         if isinstance(expert_metadata, dict):
             response_metadata.update(expert_metadata)
+        agents_involved = []
+        if executable_plan and executable_plan.agents_involved:
+            agents_involved = [
+                str(agent).strip()
+                for agent in executable_plan.agents_involved
+                if str(agent).strip()
+            ]
+        if not agents_involved and isinstance(user_context_payload, dict):
+            raw_trace = user_context_payload.get("orchestration_trace")
+            if isinstance(raw_trace, str) and raw_trace:
+                try:
+                    raw_trace = json.loads(raw_trace)
+                except Exception:
+                    raw_trace = None
+            if isinstance(raw_trace, dict):
+                trace_agents = raw_trace.get("agents")
+                if isinstance(trace_agents, list):
+                    agents_involved = [
+                        str(agent).strip()
+                        for agent in trace_agents
+                        if str(agent).strip()
+                    ]
+        if agents_involved:
+            response_metadata["agents_involved"] = json.dumps(
+                agents_involved,
+                ensure_ascii=False,
+            )
         selected_experts = final_state.context_data.get("selected_experts")
         if isinstance(selected_experts, list) and selected_experts:
             response_metadata["selected_experts"] = json.dumps(
@@ -3721,7 +3748,21 @@ class ChatOrchestrator:
                 persona_constraints=persona_constraints,
                 state_overrides=state_overrides or None,
                 planning_constraints=planning_constraints or None,
+                stream_callback=stream_callback,
             )
+
+            collaboration_narrative = (
+                executable_plan.collaboration_narrative
+                if executable_plan and getattr(executable_plan, "collaboration_narrative", None)
+                else None
+            )
+            if collaboration_narrative:
+                state.context_data["collaboration_narrative"] = collaboration_narrative
+                if isinstance(user_context_payload, dict):
+                    user_context_payload["collaboration_narrative"] = collaboration_narrative
+                existing_context = state.context_data.get("user_context")
+                if isinstance(existing_context, dict):
+                    existing_context["collaboration_narrative"] = collaboration_narrative
 
             if orchestration_trace is not None and executable_plan is not None:
                 mode_step = orchestration_trace.latest_step("mode_strategy")

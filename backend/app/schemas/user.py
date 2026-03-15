@@ -58,9 +58,30 @@ class PasswordChange(BaseModel):
     old_password: str = Field(description="Old password")
     new_password: str = Field(min_length=6, max_length=100, description="New password")
 
+class SetPasswordRequest(BaseModel):
+    """Set password (no old password)"""
+    new_password: str = Field(min_length=6, max_length=100, description="New password")
+
 class RefreshTokenRequest(BaseModel):
     """Refresh token request"""
     refresh_token: str = Field(description="Refresh token")
+
+class LogoutRequest(BaseModel):
+    """Logout request (refresh token optional)"""
+    refresh_token: str | None = Field(default=None, description="Refresh token")
+
+class ForgotPasswordRequest(BaseModel):
+    """Forgot password request"""
+    email: EmailStr = Field(description="Email")
+
+class ResetPasswordRequest(BaseModel):
+    """Reset password request"""
+    token: str = Field(description="Reset token")
+    new_password: str = Field(min_length=6, max_length=100, description="New password")
+
+class VerifyEmailRequest(BaseModel):
+    """Verify email request"""
+    token: str = Field(description="Verification token")
 
 class SocialLoginRequest(BaseModel):
     """Social login request"""
@@ -78,6 +99,7 @@ class UserBase(BaseModel):
     id: UUID = Field(description="User ID")
     username: str = Field(description="Username")
     email: str = Field(description="Email")
+    email_verified: bool = Field(default=False, description="Email verified")
     nickname: str | None = Field(description="Nickname")
     avatar_url: str | None = Field(description="Avatar URL")
     avatar_status: AvatarStatus = Field(default=AvatarStatus.APPROVED, description="Avatar status")
@@ -102,6 +124,7 @@ class UserProfile(UserBase):
     equipped_title: str | None = Field(default=None, description="Equipped title ID")
     equipped_title_source: str | None = Field(default=None, description="Equipped title source")
     push_preferences: Optional["PushPreferenceResponse"] = Field(default=None, description="Push notification preferences")
+    registration_source: str | None = Field(default=None, description="Registration source")
 
 class UserFlameStatus(BaseModel):
     """User flame status"""
