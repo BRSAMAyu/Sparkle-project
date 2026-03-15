@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/components/molecules/stepper_indicator.dart';
 import 'package:sparkle/core/design/components/organisms/expandable_section.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
 
 /// 透明模式面板 - 显示 AI 处理过程的透明度信息
@@ -70,18 +71,18 @@ class TransparencyPanel extends StatelessWidget {
         ),
         child: Column(
           children: [
-            _buildHeader(),
+            _buildHeader(context),
             // 只有在有时间线数据时才显示步骤指示器
             if (transparencyData != null && transparencyData!.steps.isNotEmpty) ...[
               _buildStepper(),
               Divider(height: 1, color: DS.neutral200),
             ],
-            _buildCompactInfo(),
+            _buildCompactInfo(context),
             // 可展开详情区域
             if (activeTools.isNotEmpty ||
                 totalTokens != null ||
                 transparencyData != null)
-              _buildExpandableDetails(),
+            _buildExpandableDetails(context),
           ],
         ),
       ),
@@ -89,7 +90,7 @@ class TransparencyPanel extends StatelessWidget {
   }
 
   /// 标题栏（带渐变装饰条）
-  Widget _buildHeader() => Stack(
+  Widget _buildHeader(BuildContext context) => Stack(
       children: [
         Positioned(
           left: 0,
@@ -117,14 +118,14 @@ class TransparencyPanel extends StatelessWidget {
               ),
               const SizedBox(width: DS.spacing8),
               Text(
-                '透明模式',
+                context.l10n.chatTransparencyTitle,
                 style: TextStyle(
                   fontWeight: DS.fontWeightSemibold,
                   color: DS.textPrimary,
                 ),
               ),
               const Spacer(),
-              if (status != null) _statusChip(status!),
+              if (status != null) _statusChip(context, status!),
             ],
           ),
         ),
@@ -132,19 +133,19 @@ class TransparencyPanel extends StatelessWidget {
     );
 
   /// 状态徽标
-  Widget _statusChip(String status) {
+  Widget _statusChip(BuildContext context, String status) {
     Color color;
     String label;
     switch (status.toUpperCase()) {
       case 'THINKING':
         color = DS.primaryBase;
-        label = '思考中';
+        label = context.l10n.aiStatusThinking;
       case 'GENERATING':
         color = DS.info;
-        label = '生成中';
+        label = context.l10n.aiStatusGenerating;
       case 'EXECUTING_TOOL':
         color = DS.warning;
-        label = '执行工具';
+        label = context.l10n.aiStatusExecutingTool;
       default:
         color = DS.neutral600;
         label = status;
@@ -184,7 +185,7 @@ class TransparencyPanel extends StatelessWidget {
   }
 
   /// 紧凑信息行
-  Widget _buildCompactInfo() => Padding(
+  Widget _buildCompactInfo(BuildContext context) => Padding(
       padding: const EdgeInsets.all(DS.spacing12),
       child: Column(
         children: [
@@ -209,7 +210,10 @@ class TransparencyPanel extends StatelessWidget {
                 const SizedBox(width: DS.spacing12),
               ],
               if (activeTools.isNotEmpty) ...[
-                _infoIcon(Icons.build_rounded, '${activeTools.length} 个工具'),
+                _infoIcon(
+                  Icons.build_rounded,
+                  context.l10n.chatActiveToolsCount(activeTools.length),
+                ),
               ],
             ],
           ),
@@ -233,14 +237,14 @@ class TransparencyPanel extends StatelessWidget {
     );
 
   /// 可展开详情区域（智能展开）
-  Widget _buildExpandableDetails() => Padding(
+  Widget _buildExpandableDetails(BuildContext context) => Padding(
       padding: const EdgeInsets.fromLTRB(DS.spacing12, 0, DS.spacing12, DS.spacing12),
       child: Column(
         children: [
           // 工具详情 - 智能展开（有工具时自动展开）
           if (activeTools.isNotEmpty)
             ExpandableSection(
-              title: '活跃工具',
+              title: context.l10n.chatActiveTools,
               leading: Icon(Icons.build_rounded, size: 16, color: DS.neutral600),
               smartExpand: true,
               initiallyExpanded: true,
@@ -269,7 +273,7 @@ class TransparencyPanel extends StatelessWidget {
           // Token 详情 - 智能展开（有数据时自动展开）
           if (totalTokens != null)
             ExpandableSection(
-              title: 'Token 统计',
+              title: context.l10n.chatTokenStats,
               leading: Icon(Icons.token, size: 16, color: DS.neutral600),
               trailing: Text(
                 totalTokens!.toString(),
@@ -283,20 +287,38 @@ class TransparencyPanel extends StatelessWidget {
               backgroundColor: DS.surfaceSecondary,
               child: Column(
                 children: [
-                  if (promptTokens != null) _statRow('Prompt Tokens', promptTokens.toString()),
-                  if (completionTokens != null) _statRow('Completion Tokens', completionTokens.toString()),
-                  if (dailyTokens != null && dailyTokenLimit != null) _statRow('今日使用', '$dailyTokens / $dailyTokenLimit'),
-                  if (dailyCostMicroUsd != null) _statRow('成本估算', _formatCost(dailyCostMicroUsd) ?? '-'),
+                  if (promptTokens != null)
+                    _statRow(
+                      context.l10n.chatPromptTokens,
+                      promptTokens.toString(),
+                    ),
+                  if (completionTokens != null)
+                    _statRow(
+                      context.l10n.chatCompletionTokens,
+                      completionTokens.toString(),
+                    ),
+                  if (dailyTokens != null && dailyTokenLimit != null)
+                    _statRow(
+                      context.l10n.chatTokenUsageToday,
+                      '$dailyTokens / $dailyTokenLimit',
+                    ),
+                  if (dailyCostMicroUsd != null)
+                    _statRow(
+                      context.l10n.chatTokenCostEstimate,
+                      _formatCost(dailyCostMicroUsd) ?? '-',
+                    ),
                 ],
               ),
             ),
           // 步骤详情（完整垂直时间线） - 智能展开
           if (transparencyData != null && transparencyData!.steps.isNotEmpty)
             ExpandableSection(
-              title: '执行步骤',
+              title: context.l10n.chatExecutionSteps,
               leading: Icon(Icons.timeline_rounded, size: 16, color: DS.neutral600),
               trailing: Text(
-                '${transparencyData!.steps.length} 个步骤',
+                context.l10n.chatExecutionStepsCount(
+                  transparencyData!.steps.length,
+                ),
                 style: TextStyle(
                   fontSize: DS.fontSizeXs,
                   color: DS.neutral600,

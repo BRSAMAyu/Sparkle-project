@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 /// Plan Context Summary Widget
@@ -139,9 +141,11 @@ class _PlanContextSnapshotCardState extends State<_PlanContextSnapshotCard>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final plan = widget.plan;
-    final planName = plan?.name ?? '计划上下文';
-    final statusLabel = _statusLabel(widget.contextData.status, plan?.isActive);
+    final planName = plan?.name ?? l10n.planContextTitle;
+    final statusLabel =
+        _statusLabel(widget.contextData.status, plan?.isActive, l10n);
     final statusColor = _statusColor(widget.contextData.status, plan?.isActive);
     final summary = _taskSummary();
 
@@ -202,12 +206,14 @@ class _PlanContextSnapshotCardState extends State<_PlanContextSnapshotCard>
             ],
           ),
           const SizedBox(height: DS.spacing12),
-          _buildProgress(summary),
+          _buildProgress(l10n, summary),
           AnimatedSize(
             duration: AnimationSystem.normal,
             curve: AnimationSystem.smooth,
             alignment: Alignment.topCenter,
-            child: _expanded ? _buildExpandedContent() : _buildCollapsedHint(),
+            child: _expanded
+                ? _buildExpandedContent(l10n)
+                : _buildCollapsedHint(l10n),
           ),
         ],
       ),
@@ -222,7 +228,7 @@ class _PlanContextSnapshotCardState extends State<_PlanContextSnapshotCard>
     return {'total': total, 'completed': completed};
   }
 
-  Widget _buildProgress(Map<String, int> summary) {
+  Widget _buildProgress(AppLocalizations l10n, Map<String, int> summary) {
     final total = summary['total'] ?? 0;
     final completed = summary['completed'] ?? 0;
     final progress = total > 0 ? completed / total : 0.0;
@@ -233,14 +239,14 @@ class _PlanContextSnapshotCardState extends State<_PlanContextSnapshotCard>
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              '任务进度',
+              l10n.planTaskProgress,
               style: TextStyle(
                 fontSize: DS.fontSizeXs,
                 color: widget.isDark ? DS.neutral400 : DS.neutral600,
               ),
             ),
             Text(
-              '$completed/$total',
+              l10n.tasksCompleted(completed, total),
               style: TextStyle(
                 fontSize: DS.fontSizeXs,
                 color: widget.isDark ? DS.neutral300 : DS.neutral600,
@@ -263,7 +269,7 @@ class _PlanContextSnapshotCardState extends State<_PlanContextSnapshotCard>
     );
   }
 
-  Widget _buildCollapsedHint() {
+  Widget _buildCollapsedHint(AppLocalizations l10n) {
     final factCount = widget.contextData.facts.length;
     final feedbackCount = widget.contextData.recentFeedback.length;
     return Padding(
@@ -277,7 +283,7 @@ class _PlanContextSnapshotCardState extends State<_PlanContextSnapshotCard>
           ),
           const SizedBox(width: DS.spacing6),
           Text(
-            '包含 $factCount 条事实 · $feedbackCount 条反馈',
+            l10n.planFactsFeedbackSummary(factCount, feedbackCount),
             style: TextStyle(
               fontSize: DS.fontSizeXs,
               color: widget.isDark ? DS.neutral400 : DS.neutral600,
@@ -288,7 +294,7 @@ class _PlanContextSnapshotCardState extends State<_PlanContextSnapshotCard>
     );
   }
 
-  Widget _buildExpandedContent() {
+  Widget _buildExpandedContent(AppLocalizations l10n) {
     final facts = widget.contextData.facts.entries.toList();
     final feedbacks = widget.contextData.recentFeedback;
     return Padding(
@@ -298,7 +304,7 @@ class _PlanContextSnapshotCardState extends State<_PlanContextSnapshotCard>
         children: [
           if (facts.isNotEmpty) ...[
             Text(
-              '关键事实',
+              l10n.planKeyFacts,
               style: TextStyle(
                 fontSize: DS.fontSizeXs,
                 color: widget.isDark ? DS.neutral400 : DS.neutral600,
@@ -334,7 +340,7 @@ class _PlanContextSnapshotCardState extends State<_PlanContextSnapshotCard>
           if (feedbacks.isNotEmpty) ...[
             const SizedBox(height: DS.spacing12),
             Text(
-              '最近反馈',
+              l10n.planRecentFeedback,
               style: TextStyle(
                 fontSize: DS.fontSizeXs,
                 color: widget.isDark ? DS.neutral400 : DS.neutral600,
@@ -357,7 +363,7 @@ class _PlanContextSnapshotCardState extends State<_PlanContextSnapshotCard>
                     const SizedBox(width: DS.spacing6),
                     Expanded(
                       child: Text(
-                        content.isEmpty ? '（无内容）' : content,
+                        content.isEmpty ? l10n.planNoContent : content,
                         style: TextStyle(
                           fontSize: DS.fontSizeXs,
                           color: widget.isDark ? DS.neutral200 : DS.neutral700,
@@ -374,26 +380,30 @@ class _PlanContextSnapshotCardState extends State<_PlanContextSnapshotCard>
     );
   }
 
-  String _statusLabel(String? status, bool? isActive) {
+  String _statusLabel(
+    String? status,
+    bool? isActive,
+    AppLocalizations l10n,
+  ) {
     if (status != null) {
       switch (status) {
         case 'active':
-          return '进行中';
+          return l10n.planStatusActive;
         case 'paused':
-          return '已暂停';
+          return l10n.planStatusPaused;
         case 'completed':
-          return '已完成';
+          return l10n.planStatusCompleted;
         case 'archived':
-          return '已归档';
+          return l10n.planStatusArchived;
       }
     }
     if (isActive ?? false) {
-      return '进行中';
+      return l10n.planStatusActive;
     }
     if (isActive == false) {
-      return '已完成';
+      return l10n.planStatusCompleted;
     }
-    return '状态未知';
+    return l10n.planStatusUnknown;
   }
 
   Color _statusColor(String? status, bool? isActive) {
@@ -424,6 +434,7 @@ class _PlanContextCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final planColor = _getPlanColor();
 
     return Container(
@@ -476,7 +487,7 @@ class _PlanContextCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
-                      _getPlanTypeLabel(),
+                      _getPlanTypeLabel(l10n),
                       style: TextStyle(
                         fontSize: DS.fontSizeXs,
                         color: DS.neutral500,
@@ -491,16 +502,16 @@ class _PlanContextCard extends StatelessWidget {
           const SizedBox(height: DS.spacing12),
 
           // Progress Bar
-          _buildProgressBar(planColor),
+          _buildProgressBar(l10n, planColor),
           const SizedBox(height: DS.spacing12),
 
           // Days Remaining or Mastery Level
-          _buildMetadataRow(planColor),
+          _buildMetadataRow(l10n, planColor),
           const SizedBox(height: DS.spacing12),
 
           // Next Tasks
           if (plan.tasks != null && plan.tasks!.isNotEmpty)
-            _buildNextTasksSection(context),
+            _buildNextTasksSection(context, l10n),
         ],
       ),
     );
@@ -528,21 +539,21 @@ class _PlanContextCard extends StatelessWidget {
     );
   }
 
-  Widget _buildProgressBar(Color planColor) => Column(
+  Widget _buildProgressBar(AppLocalizations l10n, Color planColor) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '完成进度',
+                l10n.planProgressLabel,
                 style: TextStyle(
                   fontSize: DS.fontSizeXs,
                   color: DS.neutral500,
                 ),
               ),
               Text(
-                '${_getCompletedTasks()}/${_getTotalTasks()} 任务',
+                l10n.tasksCompleted(_getCompletedTasks(), _getTotalTasks()),
                 style: TextStyle(
                   fontSize: DS.fontSizeXs,
                   color: DS.neutral500,
@@ -563,26 +574,26 @@ class _PlanContextCard extends StatelessWidget {
         ],
       );
 
-  Widget _buildMetadataRow(Color planColor) {
+  Widget _buildMetadataRow(AppLocalizations l10n, Color planColor) {
     String metadata;
     IconData icon;
 
     if (plan.type == PlanType.sprint && plan.targetDate != null) {
       final daysRemaining = plan.targetDate!.difference(DateTime.now()).inDays;
       if (daysRemaining > 0) {
-        metadata = '剩 $daysRemaining 天';
+        metadata = l10n.planDaysRemaining(daysRemaining);
         icon = Icons.schedule;
       } else if (daysRemaining == 0) {
-        metadata = '今天截止';
+        metadata = l10n.planDueToday;
         icon = Icons.today;
       } else {
-        metadata = '已超期 ${-daysRemaining} 天';
+        metadata = l10n.planOverdueDays(-daysRemaining);
         icon = Icons.warning_amber_rounded;
       }
     } else {
       // Growth plan - show mastery level
       final mastery = (plan.masteryLevel * 100).toInt();
-      metadata = '目标掌握度 $mastery%';
+      metadata = l10n.planTargetMastery(mastery);
       icon = Icons.stars_rounded;
     }
 
@@ -602,7 +613,7 @@ class _PlanContextCard extends StatelessWidget {
     );
   }
 
-  Widget _buildNextTasksSection(BuildContext context) {
+  Widget _buildNextTasksSection(BuildContext context, AppLocalizations l10n) {
     final nextTasks = _getNextTasks();
     if (nextTasks.isEmpty) return const SizedBox.shrink();
 
@@ -612,7 +623,7 @@ class _PlanContextCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '即将执行',
+          l10n.planUpcomingTasks,
           style: TextStyle(
             fontSize: DS.fontSizeXs,
             color: DS.neutral500,
@@ -668,12 +679,12 @@ class _PlanContextCard extends StatelessWidget {
     }
   }
 
-  String _getPlanTypeLabel() {
+  String _getPlanTypeLabel(AppLocalizations l10n) {
     switch (plan.type) {
       case PlanType.sprint:
-        return '冲刺计划';
+        return l10n.planTypeSprint;
       case PlanType.growth:
-        return '成长计划';
+        return l10n.planTypeGrowth;
     }
   }
 

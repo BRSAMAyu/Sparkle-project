@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_bubble.dart';
 import 'package:sparkle/features/task/presentation/providers/task_chat_provider.dart';
@@ -64,7 +65,7 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
                   ),
                   const SizedBox(width: DS.spacing12),
                   Text(
-                    'AI 学习助手',
+                    context.l10n.taskChatAssistantTitle,
                     style: TextStyle(
                       fontWeight: DS.fontWeightBold,
                       color: DS.neutral900,
@@ -84,7 +85,7 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Text(
-                "${lastMessage.role == MessageRole.user ? '我' : 'AI'}: ${lastMessage.content}",
+                "${lastMessage.role == MessageRole.user ? context.l10n.chatLabelMe : context.l10n.chatLabelAssistant}: ${lastMessage.content}",
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(color: DS.neutral600, fontSize: 12),
@@ -99,7 +100,7 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
               child: messages.isEmpty
                   ? Center(
                       child: Text(
-                        '有问题尽管问我！',
+                        context.l10n.taskChatEmptyPrompt,
                         style: TextStyle(color: DS.neutral400),
                       ),
                     )
@@ -118,8 +119,8 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
                   Expanded(
                     child: TextField(
                       controller: _controller,
-                      decoration: const InputDecoration(
-                        hintText: '输入问题...',
+                      decoration: InputDecoration(
+                        hintText: context.l10n.taskChatInputHint,
                         border: InputBorder.none,
                         contentPadding: EdgeInsets.symmetric(horizontal: 16),
                       ),

@@ -8,7 +8,6 @@ import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/chat/data/models/chat_mode.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/expert_catalog_provider.dart';
-
 /// Chat Mode Selector Sheet
 ///
 /// Bottom sheet for selecting a chat mode.
@@ -132,10 +131,103 @@ class ChatModeSelectorSheet extends ConsumerWidget {
                         ),
                       ),
                     ],
+                    const SizedBox(height: DS.spacing8),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: DS.spacing20,
+                      ),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          context.l10n.chatModeCustomTeamLabel,
+                          style: TextStyle(
+                            fontSize: DS.fontSizeXs,
+                            fontWeight: DS.fontWeightSemibold,
+                            color: DS.neutral500,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: DS.spacing8),
+                    _TeamEntryTile(isDark: isDark),
                     const SizedBox(height: DS.spacing16),
                   ],
                 ),
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Sentinel returned when user wants to open the team builder instead of
+/// selecting a predefined mode.
+const openTeamBuilderSentinel = '_open_team_builder_';
+
+class _TeamEntryTile extends StatelessWidget {
+  const _TeamEntryTile({required this.isDark});
+
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    const color = Color(0xFF5C6BC0);
+    return InkWell(
+      onTap: () {
+        unawaited(HapticFeedback.lightImpact());
+        // Pop with sentinel string — the caller (pill) handles opening
+        // the team sheet to avoid using a dead context.
+        Navigator.pop(context, openTeamBuilderSentinel);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing20,
+          vertical: DS.spacing16,
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(DS.spacing12),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.15),
+                borderRadius: DS.borderRadius12,
+              ),
+              child: const Icon(
+                Icons.groups_rounded,
+                color: color,
+                size: DS.iconSizeBase,
+              ),
+            ),
+            const SizedBox(width: DS.spacing16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    context.l10n.chatModeCustomTeamTitle,
+                    style: TextStyle(
+                      fontSize: DS.fontSizeBase,
+                      fontWeight: DS.fontWeightMedium,
+                      color: isDark ? DS.textPrimary : DS.neutral900,
+                    ),
+                  ),
+                  const SizedBox(height: DS.spacing4),
+                  Text(
+                    context.l10n.chatModeCustomTeamSubtitle,
+                    style: TextStyle(
+                      fontSize: DS.fontSizeXs,
+                      color: DS.neutral500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: DS.neutral400,
+              size: DS.iconSizeBase,
             ),
           ],
         ),

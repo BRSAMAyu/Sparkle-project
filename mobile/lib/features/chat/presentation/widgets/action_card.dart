@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/motion.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/focus_action_card.dart';
 import 'package:sparkle/features/task/presentation/widgets/task_card.dart';
@@ -246,7 +248,11 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                                   : Icons.unfold_more_rounded,
                               size: DS.iconSizeSm,
                             ),
-                            label: Text(_detailsExpanded ? '收起' : '展开'),
+                            label: Text(
+                              _detailsExpanded
+                                  ? context.l10n.commonCollapse
+                                  : context.l10n.commonExpand,
+                            ),
                           ),
                         ),
                       ],
@@ -447,58 +453,61 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
   }
 
   String _getTitleForAction(String type) {
+    final l10n = I18nService.instance.l10n;
     switch (type) {
       case 'create_task':
-        return 'AI建议：创建任务';
+        return l10n.chatActionTitleCreateTask;
       case 'task_list':
-        return 'AI任务拆解';
+        return l10n.chatActionTitleTaskList;
       case 'create_plan':
-        return 'AI建议：创建计划';
+        return l10n.chatActionTitleCreatePlan;
       case 'update_preference':
-        return 'AI建议：更新偏好';
+        return l10n.chatActionTitleUpdatePreference;
       case 'add_error':
-        return 'AI建议：记录错题';
+        return l10n.chatActionTitleAddError;
       case 'focus_card':
-        return 'AI建议：专注冲刺';
+        return l10n.chatActionTitleFocusSprint;
       case 'system_update':
-        return '系统更新';
+        return l10n.chatActionTitleSystemUpdate;
       case 'nightly_review':
-        return '夜间复盘';
+        return l10n.chatActionTitleNightlyReview;
       case 'execution_summary':
-        return '执行结果摘要';
+        return l10n.chatActionTitleExecutionSummary;
       case 'evolution_card':
-        return '系统进化';
+        return l10n.chatActionTitleEvolution;
       case 'progress_card':
-        return '成长回顾';
+        return l10n.chatActionTitleProgress;
       case 'reflection_card':
-        return '反思引导';
+        return l10n.chatActionTitleReflection;
       case 'source_summary':
-        return '依据与来源';
+        return l10n.chatActionTitleSourceSummary;
       case 'next_actions':
-        return '下一步';
+        return l10n.chatActionTitleNextActions;
       case 'continuity_banner':
-        return '上下文';
+        return l10n.chatActionTitleContinuity;
       case 'mode_explanation':
-        return '协作模式';
+        return l10n.chatActionTitleModeExplanation;
       case 'blocked_input_request':
-        return '继续前需要你确认';
+        return l10n.chatActionTitleBlockedInput;
       default:
-        return 'AI建议操作';
+        return l10n.chatActionTitleDefault;
     }
   }
 
   String _getConfirmLabel(String type) {
+    final l10n = I18nService.instance.l10n;
     if (type == 'nightly_review') {
-      return '已复盘';
+      return l10n.chatActionReviewed;
     }
-    return '确认';
+    return l10n.confirm;
   }
 
   String _getDismissLabel(String type) {
+    final l10n = I18nService.instance.l10n;
     if (type == 'nightly_review') {
-      return '稍后';
+      return l10n.chatActionLater;
     }
-    return '忽略';
+    return l10n.chatActionIgnore;
   }
 
   Widget _buildContentForAction(BuildContext context, WidgetPayload action) {
@@ -687,11 +696,12 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
   }
 
   String _collapsedPreviewText(WidgetPayload action) {
+    final l10n = I18nService.instance.l10n;
     switch (action.type) {
       case 'source_summary':
         return action.data['headline']?.toString() ??
             action.data['evidence_summary']?.toString() ??
-            '查看来源';
+            l10n.chatActionViewSources;
       case 'next_actions':
         final actions = (action.data['actions'] as List<dynamic>? ?? [])
             .whereType<Map<dynamic, dynamic>>()
@@ -700,20 +710,22 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             .take(2)
             .join(' · ');
         return actions.isNotEmpty
-            ? '建议操作：$actions'
-            : (action.data['title']?.toString() ?? '查看下一步');
+            ? l10n.chatActionSuggestedActions(actions)
+            : (action.data['title']?.toString() ??
+                l10n.chatActionViewNextSteps);
       case 'continuity_banner':
       case 'mode_explanation':
         return action.data['message']?.toString() ??
             action.data['description']?.toString() ??
             action.data['label']?.toString() ??
-            '查看详情';
+            l10n.viewDetails;
       default:
         return '';
     }
   }
 
   Widget _buildTaskListContent(BuildContext context, WidgetPayload action) {
+    final l10n = context.l10n;
     final tasks = action.data['tasks'] as List<dynamic>? ?? [];
     if (tasks.isEmpty) return const SizedBox.shrink();
 
@@ -722,8 +734,11 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       children: [
         ...tasks.take(5).map((item) {
           final task = item as Map<String, dynamic>;
-          final title = task['title']?.toString() ?? '未命名任务';
+          final title = task['title']?.toString() ?? l10n.taskUntitled;
           final minutes = task['estimated_minutes']?.toString() ?? '30';
+          final minutesValue = int.tryParse(minutes);
+          final minutesLabel =
+              minutesValue != null ? l10n.durationMinutes(minutesValue) : minutes;
 
           return Padding(
             padding: const EdgeInsets.only(bottom: DS.spacing8),
@@ -763,7 +778,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '$minutes 分钟',
+                          minutesLabel,
                           style:
                               Theme.of(context).textTheme.bodySmall?.copyWith(
                                     color: DS.neutral600,
@@ -781,7 +796,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
           Padding(
             padding: const EdgeInsets.only(top: DS.spacing4),
             child: Text(
-              '以及其他 ${tasks.length - 5} 个任务...',
+              l10n.chatTaskListMoreCount(tasks.length - 5),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DS.neutral500,
                     fontStyle: FontStyle.italic,
@@ -822,7 +837,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         if (rawTodos.isNotEmpty) ...[
           const SizedBox(height: DS.spacing12),
           Text(
-            '明日待办',
+            context.l10n.chatNightlyReviewTodos,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   fontWeight: DS.fontWeightSemibold,
                 ),
@@ -865,6 +880,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
   }
 
   Widget _buildExecutionSummary(BuildContext context, WidgetPayload action) {
+    final l10n = context.l10n;
     final status = action.data['status']?.toString() ?? 'success';
     final impact = action.data['impact_summary']?.toString() ?? '';
     final nextAction = action.data['next_action']?.toString() ?? '';
@@ -893,10 +909,10 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
           ),
           child: Text(
             status == 'failed'
-                ? '执行失败'
+                ? l10n.chatExecutionFailed
                 : status == 'partial'
-                    ? '部分完成'
-                    : '执行完成',
+                    ? l10n.chatExecutionPartial
+                    : l10n.chatExecutionCompleted,
             style: TextStyle(
               color: statusColor,
               fontWeight: DS.fontWeightSemibold,
@@ -937,7 +953,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         if (nextAction.isNotEmpty) ...[
           const SizedBox(height: DS.spacing12),
           Text(
-            '下一步：$nextAction',
+            l10n.chatNextActionLabel(nextAction),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: DS.neutral600,
                 ),
@@ -948,6 +964,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
   }
 
   Widget _buildSourceSummary(BuildContext context, WidgetPayload action) {
+    final l10n = context.l10n;
     final headline = action.data['headline']?.toString() ?? '';
     final focus = action.data['first_screen_focus']?.toString() ?? '';
     final confidenceBand = action.data['confidence_band']?.toString() ?? '';
@@ -996,7 +1013,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         ],
         if (whyThisAnswer.isNotEmpty) ...[
           Text(
-            '为什么这样回答',
+            l10n.chatWhyThisAnswer,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: DS.neutral600,
                   fontWeight: DS.fontWeightSemibold,
@@ -1021,7 +1038,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         if (citations.isNotEmpty) ...[
           const SizedBox(height: DS.spacing12),
           ...citations.take(3).map((citation) {
-            final title = citation['title']?.toString() ?? '未命名来源';
+            final title =
+                citation['title']?.toString() ?? l10n.chatSourceUntitled;
             final sectionTitle = citation['section_title']?.toString() ?? '';
             return Padding(
               padding: const EdgeInsets.only(bottom: DS.spacing8),
@@ -1061,6 +1079,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
   }
 
   Widget _buildNextActions(BuildContext context, WidgetPayload action) {
+    final l10n = context.l10n;
     final title = action.data['title']?.toString() ?? '';
     final recoveryMessage = action.data['recovery_message']?.toString() ?? '';
     final actions = (action.data['actions'] as List<dynamic>? ?? [])
@@ -1157,7 +1176,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         if (retryOptions.isNotEmpty) ...[
           const SizedBox(height: DS.spacing12),
           Text(
-            '如果这轮还不够，可以这样继续：',
+            l10n.chatNextActionsRetryHint,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: DS.neutral600,
                 ),
@@ -1190,8 +1209,10 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
   }
 
   Widget _buildEvolutionCard(BuildContext context, WidgetPayload action) {
+    final l10n = context.l10n;
     final evolutionKind = action.data['evolution_kind']?.toString() ?? '';
-    final headline = action.data['headline']?.toString() ?? '系统正在继续适应你';
+    final headline = action.data['headline']?.toString() ??
+        l10n.chatEvolutionHeadlineDefault;
     final summary = action.data['summary']?.toString() ?? '';
     final insightText = action.data['insight_text']?.toString() ?? '';
     final evidenceSummary = action.data['evidence_summary']?.toString() ?? '';
@@ -1259,7 +1280,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             if (why.isNotEmpty) ...[
               const SizedBox(height: DS.spacing6),
               Text(
-                '为什么：$why',
+                l10n.chatEvolutionWhy(why),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: DS.neutral700,
                     ),
@@ -1268,7 +1289,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             if (effect.isNotEmpty) ...[
               const SizedBox(height: DS.spacing6),
               Text(
-                '预期效果：$effect',
+                l10n.chatEvolutionExpectedEffect(effect),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: DS.neutral700,
                     ),
@@ -1318,7 +1339,9 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
           ],
           if (confidence != null) ...[
             const SizedBox(height: DS.spacing8),
-            _buildMetaPill('置信度 ${(confidence * 100).toInt()}%'),
+            _buildMetaPill(
+              l10n.chatConfidenceLabel((confidence * 100).toInt()),
+            ),
           ],
         ],
         if (evolutionKind == 'weekly_learning_report') ...[
@@ -1344,7 +1367,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
           if (oneKeyAdjustment.isNotEmpty) ...[
             const SizedBox(height: DS.spacing8),
             Text(
-              '下周我会这样继续适配：$oneKeyAdjustment',
+              l10n.chatEvolutionNextWeekPlan(oneKeyAdjustment),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DS.neutral700,
               ),
@@ -1394,11 +1417,11 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
           ),
           const SizedBox(height: DS.spacing8),
           _buildMetaPill(
-            '${comparison['before_label'] ?? '之前'}: ${comparison['before_value'] ?? '-'}',
+            '${comparison['before_label'] ?? l10n.chatComparisonBefore}: ${comparison['before_value'] ?? '-'}',
           ),
           const SizedBox(height: DS.spacing6),
           _buildMetaPill(
-            '${comparison['after_label'] ?? '现在'}: ${comparison['after_value'] ?? '-'}',
+            '${comparison['after_label'] ?? l10n.chatComparisonAfter}: ${comparison['after_value'] ?? '-'}',
           ),
           if ((comparison['why_it_matters']?.toString() ?? '').isNotEmpty) ...[
             const SizedBox(height: DS.spacing8),
@@ -1441,7 +1464,9 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         ],
         if (alignmentScore != null) ...[
           const SizedBox(height: DS.spacing8),
-          _buildMetaPill('画像对齐度 ${(alignmentScore * 100).toInt()}%'),
+          _buildMetaPill(
+            l10n.chatAlignmentScoreLabel((alignmentScore * 100).toInt()),
+          ),
         ],
         if (evolutionKind == 'plan_reasoning' &&
             evidenceSummary.isNotEmpty &&
@@ -1460,7 +1485,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             tilePadding: EdgeInsets.zero,
             childrenPadding: EdgeInsets.zero,
             title: Text(
-              '查看规划依据',
+              l10n.chatViewPlanRationale,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: DS.info,
                     fontWeight: DS.fontWeightSemibold,
@@ -1476,7 +1501,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         if (recommendedAction != null) ...[
           const SizedBox(height: DS.spacing12),
           CustomButton.primary(
-            text: recommendedAction['label']?.toString() ?? '继续',
+            text: recommendedAction['label']?.toString() ?? l10n.commonContinue,
             onPressed: () => unawaited(
               widget.onWidgetAction?.call(
                 recommendedAction['type']?.toString() ?? 'prompt',
@@ -1493,7 +1518,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             tilePadding: EdgeInsets.zero,
             childrenPadding: EdgeInsets.zero,
             title: Text(
-              '了解详情',
+              l10n.commonLearnMore,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: DS.info,
                     fontWeight: DS.fontWeightSemibold,
@@ -1510,6 +1535,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
   }
 
   Widget _buildProgressCard(BuildContext context, WidgetPayload action) {
+    final l10n = context.l10n;
     final highlights = (action.data['highlights'] as List<dynamic>? ?? [])
         .map((e) => '$e')
         .where((e) => e.isNotEmpty)
@@ -1540,7 +1566,10 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         if ((streakInfo['current_streak'] ?? 0) != 0) ...[
           const SizedBox(height: DS.spacing8),
           _buildMetaPill(
-            '当前连胜 ${streakInfo['current_streak']} 天 / 最长 ${streakInfo['max_streak'] ?? 0} 天',
+            l10n.chatStreakSummary(
+              streakInfo['current_streak'] ?? 0,
+              streakInfo['max_streak'] ?? 0,
+            ),
           ),
         ],
         if (comparisons.isNotEmpty) ...[
@@ -1549,7 +1578,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             tilePadding: EdgeInsets.zero,
             childrenPadding: EdgeInsets.zero,
             title: Text(
-              '查看对比数据',
+              l10n.chatViewComparisonData,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: DS.success,
                     fontWeight: DS.fontWeightSemibold,
@@ -1571,7 +1600,12 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(_formatParamKey(entry.key)),
-                    Text('${value['current'] ?? '-'} / 上期 ${value['previous'] ?? '-'}'),
+                    Text(
+                      l10n.chatComparisonCurrentPrevious(
+                        value['current'] ?? '-',
+                        value['previous'] ?? '-',
+                      ),
+                    ),
                   ],
                 ),
               );
@@ -1594,7 +1628,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
 
     if (submitted) {
       return Text(
-        '谢谢你的反馈，我会据此优化后续计划。',
+        context.l10n.chatFeedbackThanks,
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: DS.neutral700,
             ),
@@ -1656,8 +1690,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
           controller: _reflectionController,
           minLines: 1,
           maxLines: 3,
-          decoration: const InputDecoration(
-            hintText: '可选补充说明',
+          decoration: InputDecoration(
+            hintText: context.l10n.chatOptionalNotesHint,
             border: OutlineInputBorder(),
             isDense: true,
           ),
@@ -1666,7 +1700,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         Align(
           alignment: Alignment.centerRight,
           child: CustomButton.primary(
-            text: '提交反馈',
+            text: context.l10n.chatSubmitFeedback,
             onPressed: submit,
             size: CustomButtonSize.small,
             customGradient: DS.warningGradient,
@@ -1819,28 +1853,30 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       );
 
   String _mapConfidenceLabel(String band) {
+    final l10n = I18nService.instance.l10n;
     switch (band) {
       case 'high':
-        return '可信度高';
+        return l10n.chatConfidenceHigh;
       case 'cautious':
-        return '结论需审慎';
+        return l10n.chatConfidenceCautious;
       default:
-        return '可信度中等';
+        return l10n.chatConfidenceMedium;
     }
   }
 
   String _mapCompletionLabel(String state) {
+    final l10n = I18nService.instance.l10n;
     switch (state) {
       case 'done':
-        return '本轮已完成';
+        return l10n.chatCompletionDone;
       case 'partial':
-        return '部分完成';
+        return l10n.chatCompletionPartial;
       case 'needs_input':
-        return '等待你补充';
+        return l10n.chatCompletionNeedsInput;
       case 'blocked':
-        return '当前受阻';
+        return l10n.chatCompletionBlocked;
       default:
-        return '处理中';
+        return l10n.chatCompletionProcessing;
     }
   }
 

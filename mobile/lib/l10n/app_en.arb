@@ -1681,5 +1681,161 @@
   "patternTypeCognitive": "Cognitive bias",
   "patternTypeEmotional": "Emotional pattern",
   "patternTypeExecution": "Execution habit",
-  "patternTypeDefault": "Behavior pattern"
+  "patternTypeDefault": "Behavior pattern",
+  "chatTitle": "AI Learning Assistant",
+  "chatSubtitle": "Here to help anytime",
+  "chatHistoryTitle": "Chat History",
+  "chatNewConversation": "New chat",
+  "chatHistoryLoadFailed": "Failed to load: {error}",
+  "@chatHistoryLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "chatHistoryLoadMoreFailed": "Failed to load more: {error}",
+  "@chatHistoryLoadMoreFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "chatHistoryEmpty": "No history yet",
+  "chatSessionUntitled": "Untitled session",
+  "chatInvalidNavigationTarget": "Cannot resolve navigation target",
+  "chatNavigationFailed": "Navigation failed, please try again",
+  "chatSessionDataError": "Session data error, please try again",
+  "chatWelcomeTitle": "Hi, I'm your AI tutor",
+  "chatWelcomeSubtitle": "What do you want to do today?",
+  "chatQuickActionNewTask": "Create micro task",
+  "chatQuickActionNewTaskPrompt": "Help me create a new micro task",
+  "chatQuickActionLongPlan": "Create long-term plan",
+  "chatQuickActionLongPlanPrompt": "Help me create a long-term study plan",
+  "chatQuickActionErrorAttribution": "Error attribution",
+  "chatQuickActionErrorAttributionPrompt": "I want to analyze recent errors",
+  "chatModeStandard": "Standard chat",
+  "chatPlanUnbound": "No plan linked",
+  "chatFileProcessing": "File is processing and will be available for chat soon",
+  "chatPromptDeepAnalysis1": "Give a summary first, then show the rationale",
+  "chatPromptDeepAnalysis2": "Only show key conclusions and risks",
+  "chatPromptDeepAnalysis3": "Add a counterpoint to calibrate me",
+  "chatPromptStudyPlan1": "Start with what I can do today",
+  "chatPromptStudyPlan2": "Split into today and this week",
+  "chatPromptStudyPlan3": "Lower the difficulty one level",
+  "chatPromptErrorDiagnosis1": "Identify the root cause and evidence",
+  "chatPromptErrorDiagnosis2": "Give one targeted repair exercise",
+  "chatPromptErrorDiagnosis3": "How do I avoid repeating this next time?",
+  "chatPromptExpertAuto1": "Auto-pick experts and give me a synthesis",
+  "chatPromptExpertAuto2": "Tell me who you invited this round",
+  "chatPromptExpertAuto3": "Compress results into an action list",
+  "chatPromptDefault1": "Answer my question directly",
+  "chatPromptDefault2": "Give me a 3-step action list first",
+  "chatPromptDefault3": "Continue based on my current plan",
+  "chatHelpful": "Helpful",
+  "chatNotHelpful": "Not helpful",
+  "chatQuote": "Quote",
+  "chatCopy": "Copy",
+  "chatCopied": "Copied to clipboard",
+  "chatUndo": "Undo",
+  "chatRecalledSelf": "You recalled a message",
+  "chatRecalledPeer": "The other side recalled a message",
+  "chatRead": "Read",
+  "chatAgentNavigator": "Galaxy Navigator",
+  "chatAgentExamStrategist": "Exam Strategist",
+  "chatAgentTimeCoach": "Time Coach",
+  "chatAgentDeepAnalyst": "Deep Analyst",
+  "chatAgentCorrectionExpert": "Correction Expert",
+  "chatAgentLearningBuddy": "Learning Buddy",
+  "chatAgentMathExpert": "Math Expert",
+  "chatAgentCodingExpert": "Coding Expert",
+  "chatAgentWritingExpert": "Writing Expert",
+  "chatAgentScienceExpert": "Science Expert",
+  "chatAgentSearchExpert": "Search Expert",
+  "chatCollabParallel": "Parallel collaboration",
+  "chatCollabDebate": "Debate collaboration",
+  "chatCollabDelegation": "Delegation collaboration",
+  "chatCollabSequential": "Sequential collaboration",
+  "chatCollabExpert": "Expert collaboration",
+  "chatTeamSheetTitle": "Build your expert team",
+  "chatTeamSheetAvailableExperts": "Available experts",
+  "chatTeamSheetNoExperts": "No experts available",
+  "chatTeamSheetLoading": "Loading expert catalog...",
+  "chatTeamSheetLoadFailed": "Failed to load, please try again",
+  "chatTeamSheetCollaborationMode": "Collaboration mode",
+  "chatTeamSheetSelectedExperts": "Selected {count} experts",
+  "@chatTeamSheetSelectedExperts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatTeamSheetEnterExpert": "Enter expert mode",
+  "chatTeamSheetStartCollaboration": "Start collaboration",
+  "chatCollabAuto": "Auto",
+  "chatCollabAutoDesc": "The system picks the best collaboration mode for your question",
+  "chatCollabSequentialShort": "Sequential",
+  "chatCollabSequentialDesc": "Experts analyze one by one, and later experts can build on earlier conclusions",
+  "chatCollabParallelShort": "Parallel",
+  "chatCollabParallelDesc": "All experts analyze at the same time, then results are merged",
+  "chatCollabDebateShort": "Debate",
+  "chatCollabDebateDesc": "Experts analyze independently, cross-review, and converge on consensus",
+  "chatCollabDelegationShort": "Delegation",
+  "chatCollabDelegationDesc": "The lead expert splits tasks and delegates to others, then summarizes",
+  "chatLabelMe": "Me",
+  "chatLabelAssistant": "AI Assistant",
+  "chatNoContent": "No content",
+  "chatTransparencyTitle": "Transparency",
+  "chatActiveToolsCount": "{count} tools",
+  "@chatActiveToolsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatActiveTools": "Active tools",
+  "chatTokenStats": "Token stats",
+  "chatPromptTokens": "Prompt tokens",
+  "chatCompletionTokens": "Completion tokens",
+  "chatTokenUsageToday": "Today used",
+  "chatTokenCostEstimate": "Cost estimate",
+  "chatExecutionSteps": "Execution steps",
+  "chatExecutionStepsCount": "{count} steps",
+  "@chatExecutionStepsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatModeSelect": "Choose mode",
+  "chatModeExpertDirect": "Expert direct",
+  "chatModeTeamSummary": "{count} experts · {mode}",
+  "@chatModeTeamSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "mode": {
+        "type": "String"
+      }
+    }
+  },
+  "chatModeCustomTeamLabel": "Custom team",
+  "chatModeCustomTeamTitle": "Custom expert team",
+  "chatModeCustomTeamSubtitle": "Choose experts and a collaboration mode",
+  "chatMetadataContinuity": "Continuity",
+  "chatMetadataEvidence": "Evidence",
+  "chatMetadataNext": "Next steps",
+  "chatMetadataCollaboration": "Collaboration",
+  "chatLoginRequired": "Please log in first",
+  "chatReviewRegenerationRequested": "Regeneration requested",
+  "chatReviewHumanReviewRequested": "Manual review requested",
+  "chatReviewOverrideAcceptedEvenFail": "Accepted content (despite failing review)",
+  "chatReviewOverrideRejectedEvenPass": "Rejected content (despite passing review)",
+  "chatSubmitFailedRetry": "Submit failed, please try again",
+  "chatAppealSubmitted": "Appeal submitted, processing..."
 }

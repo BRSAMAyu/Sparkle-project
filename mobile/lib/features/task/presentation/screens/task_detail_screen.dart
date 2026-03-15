@@ -9,6 +9,8 @@ import 'package:sparkle/core/design/widgets/custom_button.dart'
     hide ButtonVariant;
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
@@ -31,12 +33,12 @@ class TaskDetailScreen extends ConsumerWidget {
           loading: () => Center(
             child: LoadingIndicator.circular(
               showText: true,
-              loadingText: '加载任务详情...',
+              loadingText: context.l10n.taskDetailLoading,
             ),
           ),
           error: (err, stack) => CustomErrorWidget.page(
             context: context,
-            message: '任务加载失败：$err',
+            message: context.l10n.taskDetailLoadFailed(err.toString()),
             onRetry: () => ref.refresh(taskDetailProvider(taskId)),
           ),
         ),
@@ -66,7 +68,7 @@ class _TaskDetailView extends ConsumerWidget {
                           _buildInfoSection(context),
                           const SizedBox(height: DS.spacing24),
                           Text(
-                            '执行指南',
+                            context.l10n.taskGuideTitle,
                             style: Theme.of(context)
                                 .textTheme
                                 .titleLarge
@@ -178,8 +180,7 @@ class _TaskDetailView extends ConsumerWidget {
                           children: [
                             Chip(
                               label: Text(
-                                toBeginningOfSentenceCase(task.type.name) ??
-                                    task.type.name,
+                                _taskTypeLabel(context, task.type),
                                 style: const TextStyle(fontSize: DS.fontSizeSm),
                               ),
                               backgroundColor:
@@ -192,8 +193,7 @@ class _TaskDetailView extends ConsumerWidget {
                             ),
                             Chip(
                               label: Text(
-                                toBeginningOfSentenceCase(task.status.name) ??
-                                    task.status.name,
+                                _taskStatusLabel(context, task.status),
                                 style: const TextStyle(fontSize: DS.fontSizeSm),
                               ),
                               backgroundColor: _getStatusColor(task.status)
@@ -220,8 +220,10 @@ class _TaskDetailView extends ConsumerWidget {
         children: [
           _InfoTileCard(
             icon: Icons.timer_outlined,
-            title: '预计时长',
-            content: '${task.estimatedMinutes} 分钟',
+            title: context.l10n.taskEstimatedDuration,
+            content: Formatters.formatDuration(
+              Duration(minutes: task.estimatedMinutes),
+            ),
             gradient: DS.primaryGradient,
           ),
           const SizedBox(height: DS.spacing12),
@@ -230,7 +232,7 @@ class _TaskDetailView extends ConsumerWidget {
               Expanded(
                 child: _InfoTileCard(
                   icon: Icons.star_border,
-                  title: '难度',
+                  title: context.l10n.taskDifficulty,
                   content: '${task.difficulty} / 5',
                   gradient: DS.warningGradient,
                 ),
@@ -239,7 +241,7 @@ class _TaskDetailView extends ConsumerWidget {
               Expanded(
                 child: _InfoTileCard(
                   icon: Icons.local_fire_department,
-                  title: '消耗能量',
+                  title: context.l10n.taskEnergyCost,
                   content: '${task.energyCost} / 5',
                   gradient: DS.errorGradient,
                 ),
@@ -250,7 +252,7 @@ class _TaskDetailView extends ConsumerWidget {
             const SizedBox(height: DS.spacing12),
             _InfoTileCard(
               icon: Icons.calendar_today,
-              title: '截止日期',
+              title: context.l10n.taskDeadline,
               content: DateFormat.yMMMd().format(task.dueDate!),
               gradient: DS.infoGradient,
             ),
@@ -267,7 +269,7 @@ class _TaskDetailView extends ConsumerWidget {
           boxShadow: DS.shadowSm,
         ),
         child: MarkdownBody(
-          data: task.guideContent ?? '暂无执行指南',
+          data: task.guideContent ?? context.l10n.taskGuideEmpty,
           styleSheet: MarkdownStyleSheet(
             h1: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: DS.fontWeightBold,
@@ -316,6 +318,40 @@ class _TaskDetailView extends ConsumerWidget {
           ),
         ),
       );
+
+  String _taskTypeLabel(BuildContext context, TaskType type) {
+    final l10n = context.l10n;
+    switch (type) {
+      case TaskType.learning:
+        return l10n.taskTypeLearning;
+      case TaskType.training:
+        return l10n.taskTypeTraining;
+      case TaskType.errorFix:
+        return l10n.taskTypeFix;
+      case TaskType.reflection:
+        return l10n.taskTypeReflection;
+      case TaskType.social:
+        return l10n.taskTypeSocial;
+      case TaskType.planning:
+        return l10n.taskTypePlanning;
+      case TaskType.ocr:
+        return l10n.taskTypeLearning;
+    }
+  }
+
+  String _taskStatusLabel(BuildContext context, TaskStatus status) {
+    final l10n = context.l10n;
+    switch (status) {
+      case TaskStatus.pending:
+        return l10n.taskStatusPending;
+      case TaskStatus.inProgress:
+        return l10n.taskStatusInProgress;
+      case TaskStatus.completed:
+        return l10n.taskStatusCompleted;
+      case TaskStatus.abandoned:
+        return l10n.taskStatusAbandoned;
+    }
+  }
 
   Color _getStatusColor(TaskStatus status) {
     switch (status) {
@@ -466,7 +502,7 @@ class _BottomActionBar extends ConsumerWidget {
               children: [
                 Expanded(
                   child: CustomButton.secondary(
-                    text: '编辑',
+                    text: context.l10n.commonEdit,
                     icon: Icons.edit_outlined,
                     onPressed: () {
                       HapticFeedback.mediumImpact();
@@ -479,7 +515,7 @@ class _BottomActionBar extends ConsumerWidget {
                 Expanded(
                   flex: 2,
                   child: CustomButton.primary(
-                    text: '开始任务',
+                    text: context.l10n.taskStart,
                     icon: Icons.play_arrow_rounded,
                     onPressed: () {
                       HapticFeedback.heavyImpact();
@@ -513,20 +549,20 @@ class _BottomActionBar extends ConsumerWidget {
                           shape: const RoundedRectangleBorder(
                             borderRadius: DS.borderRadius20,
                           ),
-                          title: const Text(
-                            '删除任务',
-                            style: TextStyle(
+                          title: Text(
+                            context.l10n.taskDeleteTitle,
+                            style: const TextStyle(
                               fontWeight: DS.fontWeightBold,
                             ),
                           ),
-                          content: const Text('确定要删除这个任务吗？此操作无法撤销。'),
+                          content: Text(context.l10n.taskDeleteConfirm),
                           actions: [
                             CustomButton.text(
-                              text: '取消',
+                              text: context.l10n.cancel,
                               onPressed: () => Navigator.of(ctx).pop(),
                             ),
                             CustomButton.primary(
-                              text: '删除',
+                              text: context.l10n.commonDelete,
                               icon: Icons.delete_rounded,
                               onPressed: () {
                                 HapticFeedback.heavyImpact();

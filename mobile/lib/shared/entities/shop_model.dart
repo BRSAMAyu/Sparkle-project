@@ -1,4 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 part 'shop_model.g.dart';
 
@@ -106,15 +107,16 @@ class ShopItem {
 
   /// 获取物品类型显示名称
   String get itemTypeName {
+    final l10n = I18nService.instance.l10n;
     switch (itemType) {
       case ShopItemType.skin:
-        return '皮肤';
+        return l10n.shopItemTypeSkin;
       case ShopItemType.title:
-        return '称号';
+        return l10n.shopItemTypeTitle;
       case ShopItemType.consumable:
-        return '消耗品';
+        return l10n.shopItemTypeConsumable;
       case ShopItemType.boost:
-        return '加成';
+        return l10n.shopItemTypeBoost;
     }
   }
 

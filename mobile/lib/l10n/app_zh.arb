@@ -1681,5 +1681,161 @@
   "patternTypeCognitive": "认知偏差",
   "patternTypeEmotional": "情绪模式",
   "patternTypeExecution": "执行习惯",
-  "patternTypeDefault": "行为模式"
+  "patternTypeDefault": "行为模式",
+  "chatTitle": "AI学习助手",
+  "chatSubtitle": "随时为你解答",
+  "chatHistoryTitle": "历史对话",
+  "chatNewConversation": "新建对话",
+  "chatHistoryLoadFailed": "加载失败：{error}",
+  "@chatHistoryLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "chatHistoryLoadMoreFailed": "加载更多失败：{error}",
+  "@chatHistoryLoadMoreFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "chatHistoryEmpty": "暂无历史记录",
+  "chatSessionUntitled": "未命名会话",
+  "chatInvalidNavigationTarget": "无法识别跳转地址",
+  "chatNavigationFailed": "页面跳转失败，请重试",
+  "chatSessionDataError": "会话数据异常，请重试",
+  "chatWelcomeTitle": "你好，我是你的 AI 导师",
+  "chatWelcomeSubtitle": "今天想做点什么？",
+  "chatQuickActionNewTask": "新建微任务",
+  "chatQuickActionNewTaskPrompt": "帮我创建一个新的微任务",
+  "chatQuickActionLongPlan": "生成长期计划",
+  "chatQuickActionLongPlanPrompt": "帮我生成一个长期学习计划",
+  "chatQuickActionErrorAttribution": "错误归因",
+  "chatQuickActionErrorAttributionPrompt": "我想分析一下最近的错误原因",
+  "chatModeStandard": "标准对话",
+  "chatPlanUnbound": "未绑定计划",
+  "chatFileProcessing": "文件处理中，完成后可用于对话",
+  "chatPromptDeepAnalysis1": "先给综合判断，再展开依据",
+  "chatPromptDeepAnalysis2": "只看关键结论和风险",
+  "chatPromptDeepAnalysis3": "补一个反方观点帮我校准",
+  "chatPromptStudyPlan1": "先按今天能开始的节奏排",
+  "chatPromptStudyPlan2": "拆成今天/本周两个层级",
+  "chatPromptStudyPlan3": "按我现在水平再降一点难度",
+  "chatPromptErrorDiagnosis1": "先定位错因和证据",
+  "chatPromptErrorDiagnosis2": "给我一条针对性修复练习",
+  "chatPromptErrorDiagnosis3": "告诉我下次怎么避免再错",
+  "chatPromptExpertAuto1": "自动选专家给我综合结论",
+  "chatPromptExpertAuto2": "先告诉我这轮请了谁",
+  "chatPromptExpertAuto3": "把专家结果压成执行清单",
+  "chatPromptDefault1": "直接回答我的当前问题",
+  "chatPromptDefault2": "先给我 3 步执行清单",
+  "chatPromptDefault3": "结合我当前计划继续推进",
+  "chatHelpful": "有帮助",
+  "chatNotHelpful": "没帮助",
+  "chatQuote": "引用",
+  "chatCopy": "复制",
+  "chatCopied": "已复制到剪贴板",
+  "chatUndo": "撤销",
+  "chatRecalledSelf": "你撤回了一条消息",
+  "chatRecalledPeer": "对方撤回了一条消息",
+  "chatRead": "已读",
+  "chatAgentNavigator": "星图导航",
+  "chatAgentExamStrategist": "考试策略师",
+  "chatAgentTimeCoach": "时间教练",
+  "chatAgentDeepAnalyst": "深度分析师",
+  "chatAgentCorrectionExpert": "纠错专家",
+  "chatAgentLearningBuddy": "学伴",
+  "chatAgentMathExpert": "数学专家",
+  "chatAgentCodingExpert": "编程专家",
+  "chatAgentWritingExpert": "写作专家",
+  "chatAgentScienceExpert": "理科专家",
+  "chatAgentSearchExpert": "搜索专家",
+  "chatCollabParallel": "并行协作",
+  "chatCollabDebate": "辩论协作",
+  "chatCollabDelegation": "委派协作",
+  "chatCollabSequential": "分步协作",
+  "chatCollabExpert": "专家协作",
+  "chatTeamSheetTitle": "组建你的专家团队",
+  "chatTeamSheetAvailableExperts": "可选专家",
+  "chatTeamSheetNoExperts": "暂无可用专家",
+  "chatTeamSheetLoading": "专家目录加载中…",
+  "chatTeamSheetLoadFailed": "加载失败，请稍后重试",
+  "chatTeamSheetCollaborationMode": "协作方式",
+  "chatTeamSheetSelectedExperts": "已选 {count} 位专家",
+  "@chatTeamSheetSelectedExperts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatTeamSheetEnterExpert": "进入专家直达",
+  "chatTeamSheetStartCollaboration": "开始协作",
+  "chatCollabAuto": "自动",
+  "chatCollabAutoDesc": "系统根据问题类型自动选择最佳协作方式",
+  "chatCollabSequentialShort": "分步",
+  "chatCollabSequentialDesc": "专家按顺序依次分析，后者可参考前者结论",
+  "chatCollabParallelShort": "并行",
+  "chatCollabParallelDesc": "所有专家同时分析，最后汇总各方观点",
+  "chatCollabDebateShort": "辩论",
+  "chatCollabDebateDesc": "专家独立分析后交叉审阅，最终给出共识结论",
+  "chatCollabDelegationShort": "委派",
+  "chatCollabDelegationDesc": "主专家拆解任务后分派给其他专家执行",
+  "chatLabelMe": "我",
+  "chatLabelAssistant": "AI助手",
+  "chatNoContent": "无内容",
+  "chatTransparencyTitle": "透明模式",
+  "chatActiveToolsCount": "{count} 个工具",
+  "@chatActiveToolsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatActiveTools": "活跃工具",
+  "chatTokenStats": "Token 统计",
+  "chatPromptTokens": "Prompt Tokens",
+  "chatCompletionTokens": "Completion Tokens",
+  "chatTokenUsageToday": "今日使用",
+  "chatTokenCostEstimate": "成本估算",
+  "chatExecutionSteps": "执行步骤",
+  "chatExecutionStepsCount": "{count} 个步骤",
+  "@chatExecutionStepsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatModeSelect": "选择模式",
+  "chatModeExpertDirect": "专家直达",
+  "chatModeTeamSummary": "{count}位专家·{mode}",
+  "@chatModeTeamSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "mode": {
+        "type": "String"
+      }
+    }
+  },
+  "chatModeCustomTeamLabel": "自定义团队",
+  "chatModeCustomTeamTitle": "自定义专家团队",
+  "chatModeCustomTeamSubtitle": "选择参与专家和协作方式",
+  "chatMetadataContinuity": "承接上文",
+  "chatMetadataEvidence": "依据",
+  "chatMetadataNext": "下一步",
+  "chatMetadataCollaboration": "协作",
+  "chatLoginRequired": "请先登录",
+  "chatReviewRegenerationRequested": "已请求重新生成",
+  "chatReviewHumanReviewRequested": "已提交人工审查请求",
+  "chatReviewOverrideAcceptedEvenFail": "已接受内容（尽管未通过审查）",
+  "chatReviewOverrideRejectedEvenPass": "已拒绝内容（尽管审查通过）",
+  "chatSubmitFailedRetry": "提交失败，请重试",
+  "chatAppealSubmitted": "申诉已提交，正在处理..."
 }

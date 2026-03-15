@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.dart';
@@ -120,6 +121,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final chatState = ref.watch(chatProvider);
     final messages = chatState.messages;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = context.l10n;
     String? latestAssistantMessageId;
     for (final message in messages.reversed) {
       if (message.role == MessageRole.assistant) {
@@ -153,7 +155,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         leading: SparkleIconButton(
           icon: Icon(Icons.arrow_back_rounded, color: DS.textSecondary),
           onPressed: () => _handleExitChat(context),
-          semanticLabel: '返回',
+          semanticLabel: l10n.back,
           variant: ButtonVariant.ghost,
         ),
         title: Row(
@@ -177,7 +179,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'AI学习助手',
+                  l10n.chatTitle,
                   style: TextStyle(
                     color: DS.textPrimary,
                     fontWeight: DS.fontWeightBold,
@@ -185,7 +187,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   ),
                 ),
                 Text(
-                  '随时为你解答',
+                  l10n.chatSubtitle,
                   style: TextStyle(
                     color: DS.textSecondary,
                     fontSize: DS.fontSizeXs,
@@ -199,13 +201,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           SparkleIconButton(
             icon: Icon(Icons.history, color: DS.textSecondary),
             onPressed: () => _showHistoryBottomSheet(context),
-            semanticLabel: '历史对话',
+            semanticLabel: l10n.chatHistoryTitle,
             variant: ButtonVariant.ghost,
           ),
           SparkleIconButton(
             icon: Icon(Icons.add_comment_outlined, color: DS.textSecondary),
             onPressed: () => ref.read(chatProvider.notifier).startNewSession(),
-            semanticLabel: '新建对话',
+            semanticLabel: l10n.chatNewConversation,
             variant: ButtonVariant.ghost,
           ),
         ],
@@ -545,7 +547,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           ),
                           const SizedBox(width: DS.md),
                           Text(
-                            '历史对话',
+                            l10n.chatHistoryTitle,
                             style: DS.titleLarge.copyWith(
                               color: DS.textPrimary,
                               fontWeight: FontWeight.w700,
@@ -582,7 +584,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                 SizedBox(
                                   height: 200,
                                   child: Center(
-                                    child: Text('加载失败: ${snapshot.error}'),
+                                    child: Text(
+                                      l10n.chatHistoryLoadFailed(
+                                        '${snapshot.error}',
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ],
@@ -593,11 +599,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           if (sessions.isEmpty) {
                             return ListView(
                               controller: scrollController,
-                              children: const [
-                                SizedBox(
-                                  height: 200,
-                                  child: Center(child: Text('暂无历史记录')),
-                                ),
+                              children: [
+                                const SizedBox(height: 200),
+                                Center(child: Text(l10n.chatHistoryEmpty)),
                               ],
                             );
                           }
@@ -639,7 +643,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                       ),
                                     ),
                                     title: Text(
-                                      (session['title'] as String?) ?? '未命名会话',
+                                      (session['title'] as String?) ??
+                                          l10n.chatSessionUntitled,
                                       style: DS.bodyLarge.copyWith(
                                         color: DS.textPrimary,
                                         fontWeight: isCurrent
@@ -694,7 +699,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final router = GoRouter.of(context);
     final targetUri = Uri.tryParse(route);
     if (targetUri == null) {
-      AppFeedback.error(context, '无法识别跳转地址');
+      AppFeedback.error(context, context.l10n.chatInvalidNavigationTarget);
       return;
     }
 
@@ -711,7 +716,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       await router.push(route);
     } catch (_) {
       if (mounted) {
-        AppFeedback.error(context, '页面跳转失败，请重试');
+        AppFeedback.error(context, context.l10n.chatNavigationFailed);
       }
     }
   }
@@ -727,7 +732,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     final sessionId = session['id']?.toString() ?? '';
     if (sessionId.isEmpty) {
-      AppFeedback.error(context, '会话数据异常，请重试');
+      AppFeedback.error(context, context.l10n.chatSessionDataError);
       return;
     }
 
@@ -781,7 +786,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 ),
                 const SizedBox(height: DS.xl),
                 Text(
-                  '你好，我是你的 AI 导师',
+                  context.l10n.chatWelcomeTitle,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: DS.textPrimary,
@@ -789,7 +794,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 ),
                 const SizedBox(height: DS.sm),
                 Text(
-                  '今天想做点什么？',
+                  context.l10n.chatWelcomeSubtitle,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: DS.textSecondary,
                       ),
@@ -805,35 +810,43 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       children: [
                         _QuickActionChip(
                           icon: Icons.add_task_rounded,
-                          label: '新建微任务',
+                          label: context.l10n.chatQuickActionNewTask,
                           color: DS.brandPrimaryConst,
                           isNarrow: isNarrow,
                           onTap: () => unawaited(
                             ref
                                 .read(chatProvider.notifier)
-                                .sendMessage('帮我创建一个新的微任务'),
+                                .sendMessage(
+                                  context.l10n.chatQuickActionNewTaskPrompt,
+                                ),
                           ),
                         ),
                         _QuickActionChip(
                           icon: Icons.calendar_month_rounded,
-                          label: '生成长期计划',
+                          label: context.l10n.chatQuickActionLongPlan,
                           color: DS.capsuleAccent,
                           isNarrow: isNarrow,
                           onTap: () => unawaited(
                             ref
                                 .read(chatProvider.notifier)
-                                .sendMessage('帮我生成一个长期学习计划'),
+                                .sendMessage(
+                                  context.l10n.chatQuickActionLongPlanPrompt,
+                                ),
                           ),
                         ),
                         _QuickActionChip(
                           icon: Icons.bug_report_rounded,
-                          label: '错误归因',
+                          label: context.l10n.chatQuickActionErrorAttribution,
                           color: DS.brandPrimaryConst,
                           isNarrow: isNarrow,
                           onTap: () => unawaited(
                             ref
                                 .read(chatProvider.notifier)
-                                .sendMessage('我想分析一下最近的错误原因'),
+                                .sendMessage(
+                                  context
+                                      .l10n
+                                      .chatQuickActionErrorAttributionPrompt,
+                                ),
                           ),
                         ),
                       ],
@@ -926,7 +939,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final showExpandedContext = !isCompactMobile || _showContextControls;
     final transparentMode = ref.watch(transparentModeProvider);
     final currentMode = ref.watch(chatModeProvider);
-    final dynamicPrompts = _buildPromptStarters(currentMode.apiValue);
+    final dynamicPrompts =
+        _buildPromptStarters(context, currentMode.apiValue);
     final activePlanId = ref.watch(activePlanProvider);
     final activePlans =
         ref.watch(planListProvider.select((s) => s.activePlans));
@@ -949,9 +963,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               child: _ChatContextToggle(
                 isExpanded: _showContextControls,
                 modeLabel: currentMode.apiValue == 'standard'
-                    ? '标准对话'
+                    ? context.l10n.chatModeStandard
                     : currentMode.label,
-                planLabel: activePlan?.name ?? '未绑定计划',
+                planLabel: activePlan?.name ?? context.l10n.chatPlanUnbound,
                 onTap: () {
                   setState(() {
                     _showContextControls = !_showContextControls;
@@ -1019,7 +1033,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             },
             onFileUploaded: (StoredFile file) {
               if (file.status != 'processed') {
-                AppFeedback.info(context, '文件处理中，完成后可用于对话');
+                AppFeedback.info(context, context.l10n.chatFileProcessing);
                 return;
               }
               ref.read(chatProvider.notifier).addAttachment(file);
@@ -1047,18 +1061,38 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     return media.orientation == Orientation.portrait && media.size.width < 430;
   }
 
-  List<String> _buildPromptStarters(String mode) {
+  List<String> _buildPromptStarters(BuildContext context, String mode) {
     switch (mode) {
       case 'deep_analysis':
-        return const ['先给综合判断，再展开依据', '只看关键结论和风险', '补一个反方观点帮我校准'];
+        return [
+          context.l10n.chatPromptDeepAnalysis1,
+          context.l10n.chatPromptDeepAnalysis2,
+          context.l10n.chatPromptDeepAnalysis3,
+        ];
       case 'study_plan':
-        return const ['先按今天能开始的节奏排', '拆成今天/本周两个层级', '按我现在水平再降一点难度'];
+        return [
+          context.l10n.chatPromptStudyPlan1,
+          context.l10n.chatPromptStudyPlan2,
+          context.l10n.chatPromptStudyPlan3,
+        ];
       case 'error_diagnosis':
-        return const ['先定位错因和证据', '给我一条针对性修复练习', '告诉我下次怎么避免再错'];
+        return [
+          context.l10n.chatPromptErrorDiagnosis1,
+          context.l10n.chatPromptErrorDiagnosis2,
+          context.l10n.chatPromptErrorDiagnosis3,
+        ];
       case 'expert_auto':
-        return const ['自动选专家给我综合结论', '先告诉我这轮请了谁', '把专家结果压成执行清单'];
+        return [
+          context.l10n.chatPromptExpertAuto1,
+          context.l10n.chatPromptExpertAuto2,
+          context.l10n.chatPromptExpertAuto3,
+        ];
       default:
-        return const ['直接回答我的当前问题', '先给我 3 步执行清单', '结合我当前计划继续推进'];
+        return [
+          context.l10n.chatPromptDefault1,
+          context.l10n.chatPromptDefault2,
+          context.l10n.chatPromptDefault3,
+        ];
     }
   }
 }
@@ -1133,7 +1167,7 @@ class _ChatContextToggle extends StatelessWidget {
                 const SizedBox(width: DS.spacing8),
                 Expanded(
                   child: Text(
-                    '$modeLabel · ${planLabel.isEmpty ? '未绑定计划' : planLabel}',
+                    '$modeLabel · ${planLabel.isEmpty ? context.l10n.chatPlanUnbound : planLabel}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: DS.bodySmall.copyWith(

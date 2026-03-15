@@ -7,6 +7,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/features/task/presentation/widgets/task_card.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
@@ -70,7 +71,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                     fontSize: DS.fontSizeBase,
                   ),
                   decoration: InputDecoration(
-                    hintText: '搜索任务...',
+                    hintText: context.l10n.taskSearchHint,
                     border: InputBorder.none,
                     hintStyle: TextStyle(
                       color: DS.textSecondary,
@@ -99,7 +100,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                     ),
                     const SizedBox(width: DS.spacing16),
                     Text(
-                      '我的任务',
+                      context.l10n.taskListTitle,
                       style: TextStyle(
                         color: DS.textPrimary,
                         fontWeight: DS.fontWeightBold,
@@ -164,7 +165,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
       return Center(
         child: LoadingIndicator.circular(
           showText: true,
-          loadingText: '加载任务中...',
+          loadingText: context.l10n.taskListLoading,
         ),
       );
     }
@@ -288,7 +289,7 @@ class _FilterChips extends ConsumerWidget {
                   ),
                   child: Center(
                     child: Text(
-                      _getFilterLabel(filter),
+                      _getFilterLabel(context, filter),
                       style: TextStyle(
                         color: isSelected ? DS.brandPrimary : DS.neutral700,
                         fontWeight: isSelected
@@ -307,16 +308,17 @@ class _FilterChips extends ConsumerWidget {
     );
   }
 
-  String _getFilterLabel(TaskFilterOptions filter) {
+  String _getFilterLabel(BuildContext context, TaskFilterOptions filter) {
+    final l10n = context.l10n;
     switch (filter) {
       case TaskFilterOptions.all:
-        return '全部';
+        return l10n.taskFilterAll;
       case TaskFilterOptions.pending:
-        return '待办';
+        return l10n.taskStatusPending;
       case TaskFilterOptions.inProgress:
-        return '进行中';
+        return l10n.taskStatusInProgress;
       case TaskFilterOptions.completed:
-        return '已完成';
+        return l10n.taskStatusCompleted;
     }
   }
 }

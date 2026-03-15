@@ -3,11 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/task/data/models/task_nudge.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 class TaskCreateScreen extends ConsumerStatefulWidget {
@@ -168,15 +170,15 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
             _showNudgesAfterCreation = true;
             _isSubmitting = false;
           });
-          AppFeedback.info(context, '任务已创建，但有以下建议');
+          AppFeedback.info(context, context.l10n.taskCreatedWithSuggestions);
         } else {
           context.pop(); // Go back to task list
-          AppFeedback.success(context, '任务创建成功');
+          AppFeedback.success(context, context.l10n.taskCreateSuccess);
         }
       }
     } catch (e) {
       if (mounted) {
-        AppFeedback.error(context, '创建失败: $e');
+        AppFeedback.error(context, context.l10n.taskCreateFailed(e.toString()));
       }
     } finally {
       if (mounted && _nudges.isEmpty) {
@@ -198,7 +200,10 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
         _showNudgesAfterCreation = false;
       }
     });
-    AppFeedback.success(context, '已应用: ${nudge.title}');
+    AppFeedback.success(
+      context,
+      context.l10n.taskNudgeApplied(nudge.title),
+    );
   }
 
   void _dismissNudges() {
@@ -210,10 +215,12 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => SparklePageScaffold(
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return SparklePageScaffold(
         role: SparklePageRole.content,
         appBar: AppBar(
-          title: const Text('新建任务'),
+          title: Text(l10n.taskCreateTitle),
         ),
         child: ContentConstraint(
           child: Form(
@@ -224,14 +231,14 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                 // Title
                 TextFormField(
                   controller: _titleController,
-                  decoration: const InputDecoration(
-                    labelText: '任务标题',
-                    hintText: '例如：完成数学第三章习题',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: l10n.taskTitleLabel,
+                    hintText: l10n.taskTitleHint,
+                    border: const OutlineInputBorder(),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return '请输入标题';
+                      return l10n.taskTitleRequired;
                     }
                     return null;
                   },
@@ -248,8 +255,8 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          '建议关联知识点',
+                        Text(
+                          l10n.taskSuggestedKnowledge,
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 12,
@@ -285,9 +292,9 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                 // Type Selector
                 DropdownButtonFormField<TaskType>(
                   initialValue: _selectedType,
-                  decoration: const InputDecoration(
-                    labelText: '任务类型',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: l10n.taskTypeLabel,
+                    border: const OutlineInputBorder(),
                   ),
                   items: TaskType.values
                       .map(
@@ -297,7 +304,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                             children: [
                               Icon(_getTypeIcon(type), size: 18),
                               const SizedBox(width: DS.sm),
-                              Text(_getTypeLabel(type)),
+                              Text(_getTypeLabel(l10n, type)),
                             ],
                           ),
                         ),
@@ -314,11 +321,11 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                 // Tags
                 TextFormField(
                   controller: _tagsController,
-                  decoration: const InputDecoration(
-                    labelText: '标签 (用逗号分隔)',
-                    hintText: '数学, 习题, 重点',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.label_outline),
+                  decoration: InputDecoration(
+                    labelText: l10n.taskTagsLabel,
+                    hintText: l10n.taskTagsHint,
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.label_outline),
                   ),
                 ),
                 const SizedBox(height: DS.lg),
@@ -333,10 +340,10 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                         children: [
                           DropdownButtonFormField<int>(
                             initialValue: _estimatedMinutes,
-                            decoration: const InputDecoration(
-                              labelText: '预计时长',
-                              border: OutlineInputBorder(),
-                              prefixIcon: Icon(Icons.timer_outlined),
+                            decoration: InputDecoration(
+                              labelText: l10n.taskEstimatedDurationLabel,
+                              border: const OutlineInputBorder(),
+                              prefixIcon: const Icon(Icons.timer_outlined),
                             ),
                             items: ({15, 25, 45, 60, 90, 120, _estimatedMinutes}
                                     .toList()
@@ -344,7 +351,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                                 .map(
                                   (m) => DropdownMenuItem(
                                     value: m,
-                                    child: Text('$m 分钟'),
+                                    child: Text(l10n.taskMinutesOption(m)),
                                   ),
                                 )
                                 .toList(),
@@ -357,16 +364,16 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                           const SizedBox(height: DS.lg),
                           DropdownButtonFormField<int>(
                             initialValue: _difficulty,
-                            decoration: const InputDecoration(
-                              labelText: '难度',
-                              border: OutlineInputBorder(),
-                              prefixIcon: Icon(Icons.bar_chart),
+                            decoration: InputDecoration(
+                              labelText: l10n.taskDifficultyLabel,
+                              border: const OutlineInputBorder(),
+                              prefixIcon: const Icon(Icons.bar_chart),
                             ),
                             items: [1, 2, 3, 4, 5]
                                 .map(
                                   (l) => DropdownMenuItem(
                                     value: l,
-                                    child: Text('Level $l'),
+                                    child: Text(l10n.taskDifficultyLevel(l)),
                                   ),
                                 )
                                 .toList(),
@@ -383,10 +390,10 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                         Expanded(
                           child: DropdownButtonFormField<int>(
                             initialValue: _estimatedMinutes,
-                            decoration: const InputDecoration(
-                              labelText: '预计时长',
-                              border: OutlineInputBorder(),
-                              prefixIcon: Icon(Icons.timer_outlined),
+                            decoration: InputDecoration(
+                              labelText: l10n.taskEstimatedDurationLabel,
+                              border: const OutlineInputBorder(),
+                              prefixIcon: const Icon(Icons.timer_outlined),
                             ),
                             items: ({15, 25, 45, 60, 90, 120, _estimatedMinutes}
                                     .toList()
@@ -394,7 +401,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                                 .map(
                                   (m) => DropdownMenuItem(
                                     value: m,
-                                    child: Text('$m 分钟'),
+                                    child: Text(l10n.taskMinutesOption(m)),
                                   ),
                                 )
                                 .toList(),
@@ -409,16 +416,16 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                         Expanded(
                           child: DropdownButtonFormField<int>(
                             initialValue: _difficulty,
-                            decoration: const InputDecoration(
-                              labelText: '难度',
-                              border: OutlineInputBorder(),
-                              prefixIcon: Icon(Icons.bar_chart),
+                            decoration: InputDecoration(
+                              labelText: l10n.taskDifficultyLabel,
+                              border: const OutlineInputBorder(),
+                              prefixIcon: const Icon(Icons.bar_chart),
                             ),
                             items: [1, 2, 3, 4, 5]
                                 .map(
                                   (l) => DropdownMenuItem(
                                     value: l,
-                                    child: Text('Level $l'),
+                                    child: Text(l10n.taskDifficultyLevel(l)),
                                   ),
                                 )
                                 .toList(),
@@ -436,16 +443,16 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                 // Energy Cost
                 DropdownButtonFormField<int>(
                   initialValue: _energyCost,
-                  decoration: const InputDecoration(
-                    labelText: '能量消耗',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.bolt),
+                  decoration: InputDecoration(
+                    labelText: l10n.taskEnergyCostLabel,
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.bolt),
                   ),
                   items: [1, 2, 3, 4, 5]
                       .map(
                         (l) => DropdownMenuItem(
                           value: l,
-                          child: Text('$l 火苗'),
+                          child: Text(l10n.taskEnergyCostValue(l)),
                         ),
                       )
                       .toList(),
@@ -455,11 +462,11 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
 
                 // Due Date
                 ListTile(
-                  title: const Text('截止日期'),
+                  title: Text(l10n.taskDeadlineLabel),
                   subtitle: Text(
                     _dueDate == null
-                        ? '未设置'
-                        : DateFormat('yyyy-MM-dd').format(_dueDate!),
+                        ? l10n.taskDueDateUnset
+                        : Formatters.formatDateShort(_dueDate!),
                   ),
                   leading: const Icon(Icons.calendar_today),
                   shape: RoundedRectangleBorder(
@@ -491,8 +498,8 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
 
                 // AI Guide Switch
                 SwitchListTile(
-                  title: const Text('生成 AI 执行指南'),
-                  subtitle: const Text('根据任务类型和你的偏好生成分步指导'),
+                  title: Text(l10n.taskGenerateGuideTitle),
+                  subtitle: Text(l10n.taskGenerateGuideSubtitle),
                   value: _generateGuide,
                   onChanged: (v) => setState(() => _generateGuide = v),
                   secondary: const Icon(Icons.auto_awesome),
@@ -518,9 +525,9 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                             Icon(Icons.lightbulb,
                                 color: DS.prismPurple, size: 20,),
                             const SizedBox(width: DS.sm),
-                            const Text(
-                              '行为模式建议',
-                              style: TextStyle(
+                            Text(
+                              l10n.taskNudgeTitle,
+                              style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,
                               ),
@@ -552,7 +559,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                                         ),
                                         if (nudge.suggestedValue != null)
                                           SparkleButton(
-                                            label: '应用',
+                                            label: l10n.taskNudgeApply,
                                             variant: ButtonVariant.ghost,
                                             onPressed: () => _applyNudge(nudge),
                                           ),
@@ -569,7 +576,9 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                                     if (nudge.confidence != null) ...[
                                       const SizedBox(height: 4),
                                       Text(
-                                        '置信度: ${(nudge.confidence! * 100).toInt()}%',
+                                        l10n.taskNudgeConfidence(
+                                          (nudge.confidence! * 100).toInt(),
+                                        ),
                                         style: TextStyle(
                                           fontSize: 10,
                                           color: DS.textTertiary,
@@ -587,7 +596,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
                             SparkleButton(
-                              label: '忽略建议',
+                              label: l10n.taskNudgeDismiss,
                               variant: ButtonVariant.ghost,
                               onPressed: _dismissNudges,
                             ),
@@ -612,7 +621,9 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                           ),
                         )
                       : const Icon(Icons.check),
-                  label: Text(_isSubmitting ? '创建中...' : '创建任务'),
+                  label: Text(
+                    _isSubmitting ? l10n.taskCreating : l10n.taskCreateAction,
+                  ),
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
@@ -642,22 +653,22 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
     }
   }
 
-  String _getTypeLabel(TaskType type) {
+  String _getTypeLabel(AppLocalizations l10n, TaskType type) {
     switch (type) {
       case TaskType.learning:
-        return '学习';
+        return l10n.taskTypeLearning;
       case TaskType.training:
-        return '训练';
+        return l10n.taskTypeTraining;
       case TaskType.errorFix:
-        return '改错';
+        return l10n.taskTypeFix;
       case TaskType.reflection:
-        return '反思';
+        return l10n.taskTypeReflection;
       case TaskType.social:
-        return '社交';
+        return l10n.taskTypeSocial;
       case TaskType.planning:
-        return '规划';
+        return l10n.taskTypePlanning;
       case TaskType.ocr:
-        return 'OCR';
+        return l10n.taskTypeOcr;
     }
   }
 }

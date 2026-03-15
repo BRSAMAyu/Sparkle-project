@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/galaxy/data/services/galaxy_performance_monitor.dart';
 
 /// Galaxy监控集成服务
@@ -89,12 +90,15 @@ class GalaxyMonitoringIntegration {
   }
 
   void _checkForWarnings(PerformanceReport report) {
+    final l10n = I18nService.instance.l10n;
     // FPS过低警告
     if (report.averageFps < performanceThresholds.criticalFps) {
       _warningController.add(
         PerformanceWarning(
           type: WarningType.lowFps,
-          message: 'FPS严重不足: ${report.averageFps.toStringAsFixed(1)}',
+          message: l10n.galaxyPerfLowFpsCritical(
+            report.averageFps.toStringAsFixed(1),
+          ),
           severity: WarningSeverity.critical,
           report: report,
         ),
@@ -103,7 +107,9 @@ class GalaxyMonitoringIntegration {
       _warningController.add(
         PerformanceWarning(
           type: WarningType.lowFps,
-          message: 'FPS偏低: ${report.averageFps.toStringAsFixed(1)}',
+          message: l10n.galaxyPerfLowFpsWarning(
+            report.averageFps.toStringAsFixed(1),
+          ),
           severity: WarningSeverity.warning,
           report: report,
         ),
@@ -115,7 +121,9 @@ class GalaxyMonitoringIntegration {
       _warningController.add(
         PerformanceWarning(
           type: WarningType.jank,
-          message: '卡顿率过高: ${(report.jankRate * 100).toStringAsFixed(1)}%',
+          message: l10n.galaxyPerfHighJank(
+            (report.jankRate * 100).toStringAsFixed(1),
+          ),
           severity: WarningSeverity.warning,
           report: report,
         ),
@@ -128,7 +136,9 @@ class GalaxyMonitoringIntegration {
       _warningController.add(
         PerformanceWarning(
           type: WarningType.slowRender,
-          message: '渲染时间过长: ${report.averageFrameTimeMs.toStringAsFixed(1)}ms',
+          message: l10n.galaxyPerfSlowRender(
+            report.averageFrameTimeMs.toStringAsFixed(1),
+          ),
           severity: report.averageFrameTimeMs > 50
               ? WarningSeverity.critical
               : WarningSeverity.warning,
@@ -195,19 +205,20 @@ class GalaxyMonitoringIntegration {
   }
 
   List<String> _generateRecommendations(PerformanceReport report) {
+    final l10n = I18nService.instance.l10n;
     final recommendations = <String>[];
 
     if (report.averageFps < 30) {
-      recommendations.add('建议减少可见节点数量');
-      recommendations.add('考虑禁用粒子效果');
+      recommendations.add(l10n.galaxyPerfRecommendationReduceNodes);
+      recommendations.add(l10n.galaxyPerfRecommendationDisableParticles);
     }
 
     if (report.jankRate > 0.1) {
-      recommendations.add('检测到频繁卡顿，建议优化布局计算');
+      recommendations.add(l10n.galaxyPerfRecommendationOptimizeLayout);
     }
 
     if (_currentQuality < 0.5) {
-      recommendations.add('当前处于低质量模式，性能可能不足');
+      recommendations.add(l10n.galaxyPerfRecommendationLowQualityMode);
     }
 
     return recommendations;
@@ -298,13 +309,14 @@ class PerformanceSummary {
   final List<String> recommendations;
 
   String get statusText {
+    final l10n = I18nService.instance.l10n;
     switch (status) {
       case PerformanceStatus.optimal:
-        return '性能良好';
+        return l10n.galaxyPerfStatusOptimal;
       case PerformanceStatus.degraded:
-        return '性能下降';
+        return l10n.galaxyPerfStatusDegraded;
       case PerformanceStatus.critical:
-        return '性能严重不足';
+        return l10n.galaxyPerfStatusCritical;
     }
   }
 

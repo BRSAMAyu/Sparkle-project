@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// 智能体推理气泡组件
 ///
@@ -83,7 +84,9 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text((cite['title'] as String?) ?? '详情'),
+        title: Text(
+          (cite['title'] as String?) ?? context.l10n.viewDetails,
+        ),
         content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -94,7 +97,9 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                   padding: const EdgeInsets.only(bottom: 8.0),
                   child: Chip(
                     label: Text(
-                      '相关度: ${((cite['score'] as num) * 100).toStringAsFixed(0)}%',
+                      context.l10n.chatCitationRelevance(
+                        ((cite['score'] as num) * 100).toStringAsFixed(0),
+                      ),
                     ),
                     backgroundColor: widget.agentColor.withValues(alpha: 0.1),
                     labelStyle:
@@ -110,7 +115,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
         ),
         actions: [
           SparkleButton.ghost(
-            label: '关闭',
+            label: context.l10n.commonClose,
             onPressed: () => Navigator.pop(context),
           ),
         ],
@@ -138,7 +143,9 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
               Icon(Icons.library_books, size: 14, color: widget.agentColor),
               const SizedBox(width: DS.xs),
               Text(
-                '引用来源 (${widget.citations!.length})',
+                context.l10n.chatCitationSourcesCount(
+                  widget.citations!.length,
+                ),
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: widget.agentColor,
                       fontWeight: FontWeight.bold,
@@ -155,7 +162,8 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
             itemCount: widget.citations!.length,
             itemBuilder: (context, index) {
               final cite = widget.citations![index];
-              final title = (cite['title'] as String?) ?? '未知来源';
+              final title =
+                  (cite['title'] as String?) ?? context.l10n.chatSourceUnknown;
               final content = (cite['content'] as String?) ?? '';
               return GestureDetector(
                 onTap: () => _showCitationDetails(context, cite),
@@ -269,7 +277,9 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                         ),
                         if (widget.confidence != null)
                           Text(
-                            '置信度: ${(widget.confidence! * 100).toStringAsFixed(0)}%',
+                            context.l10n.chatConfidenceLabel(
+                              (widget.confidence! * 100).toStringAsFixed(0),
+                            ),
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant,
                             ),
@@ -339,7 +349,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        '推理过程',
+                        context.l10n.chatReasoningProcess,
                         style: theme.textTheme.labelLarge?.copyWith(
                           color: widget.agentColor,
                           fontWeight: FontWeight.w600,
@@ -438,7 +448,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
                 const SizedBox(width: DS.sm),
                 Expanded(
                   child: Text(
-                    '多专家协作回答',
+                    context.l10n.chatMultiAgentCollab,
                     style: theme.textTheme.titleMedium?.copyWith(
                       color: DS.prismPurple,
                       fontWeight: FontWeight.bold,
@@ -446,7 +456,9 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
                   ),
                 ),
                 Chip(
-                  label: Text('${contributions.length} 位专家'),
+                  label: Text(
+                    context.l10n.chatTeamExpertsCount(contributions.length),
+                  ),
                   backgroundColor: DS.prismPurple.withValues(alpha: 0.18),
                   labelStyle: TextStyle(
                     color: DS.prismPurple,
@@ -496,7 +508,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        '综合建议',
+                        context.l10n.chatSynthesisSuggestions,
                         style: theme.textTheme.labelLarge?.copyWith(
                           color: DS.prismPurple,
                           fontWeight: FontWeight.bold,

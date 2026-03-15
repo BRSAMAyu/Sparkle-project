@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/user/data/models/account_security_model.dart';
 
@@ -41,37 +43,36 @@ class _SecurityLogScreenState extends ConsumerState<SecurityLogScreen> {
   }
 
   String _formatTime(DateTime value) {
-    final local = value.toLocal();
-    final two = (int n) => n.toString().padLeft(2, '0');
-    return '${local.year}-${two(local.month)}-${two(local.day)} ${two(local.hour)}:${two(local.minute)}';
+    return Formatters.formatDateTime(value.toLocal());
   }
 
   String _actionLabel(String action) {
+    final l10n = context.l10n;
     switch (action) {
       case 'login':
-        return '登录成功';
+        return l10n.securityLogActionLoginSuccess;
       case 'login_failed':
-        return '登录失败';
+        return l10n.securityLogActionLoginFailed;
       case 'logout':
-        return '退出登录';
+        return l10n.securityLogActionLogout;
       case 'register':
-        return '注册账号';
+        return l10n.securityLogActionRegister;
       case 'password_change':
-        return '修改密码';
+        return l10n.securityLogActionPasswordChange;
       case 'password_reset':
-        return '重置密码';
+        return l10n.securityLogActionPasswordReset;
       case 'social_link':
-        return '绑定社交账号';
+        return l10n.securityLogActionSocialLink;
       case 'social_unlink':
-        return '解绑社交账号';
+        return l10n.securityLogActionSocialUnlink;
       case 'account_delete':
-        return '注销账号';
+        return l10n.securityLogActionAccountDelete;
       case 'token_refresh':
-        return '刷新登录状态';
+        return l10n.securityLogActionTokenRefresh;
       case 'email_verify':
-        return '验证邮箱';
+        return l10n.securityLogActionEmailVerify;
       case 'guest_upgrade':
-        return '游客升级';
+        return l10n.securityLogActionGuestUpgrade;
       default:
         return action;
     }
@@ -86,7 +87,7 @@ class _SecurityLogScreenState extends ConsumerState<SecurityLogScreen> {
             icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
           ),
-          title: const Text('安全日志'),
+          title: Text(context.l10n.securityLogTitle),
           centerTitle: true,
         ),
         child: ContentConstraint(
@@ -97,7 +98,7 @@ class _SecurityLogScreenState extends ConsumerState<SecurityLogScreen> {
               children: [
                 GraphiteCardSurface(
                   child: Text(
-                    '这里保留最近的登录、安全与账号变更记录，方便你排查异常行为。',
+                    context.l10n.securityLogIntro,
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ),
@@ -108,8 +109,8 @@ class _SecurityLogScreenState extends ConsumerState<SecurityLogScreen> {
                     child: Center(child: CircularProgressIndicator()),
                   )
                 else if (_logs.isEmpty)
-                  const GraphiteCardSurface(
-                    child: Text('最近 30 天内还没有安全日志。'),
+                  GraphiteCardSurface(
+                    child: Text(context.l10n.securityLogEmpty),
                   )
                 else
                   ..._logs.map(
@@ -127,19 +128,26 @@ class _SecurityLogScreenState extends ConsumerState<SecurityLogScreen> {
                                   ?.copyWith(fontWeight: FontWeight.w700),
                             ),
                             const SizedBox(height: DS.spacing8),
-                            Text('发生时间：${_formatTime(item.occurredAt)}'),
+                            Text(
+                              context.l10n.securityLogOccurredAt(
+                                _formatTime(item.occurredAt),
+                              ),
+                            ),
                             if ((item.ipAddress ?? '').isNotEmpty)
                               Text('IP：${item.ipAddress}'),
                             if ((item.userAgent ?? '').isNotEmpty)
                               Text(
-                                '设备：${item.userAgent}',
+                                context.l10n
+                                    .securityLogDevice(item.userAgent!),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
                             if ((item.metadata ?? const {}).isNotEmpty) ...[
                               const SizedBox(height: DS.spacing8),
                               Text(
-                                '附加信息：${item.metadata}',
+                                context.l10n.securityLogAdditionalInfo(
+                                  item.metadata.toString(),
+                                ),
                                 style: Theme.of(context)
                                     .textTheme
                                     .bodySmall

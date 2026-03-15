@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/galaxy/data/services/galaxy_layout_engine.dart';
 import 'package:sparkle/features/galaxy/domain/entities/galaxy_llm_protocol.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_config.dart';
@@ -71,7 +72,9 @@ class GalaxyLLMService {
           return _handleBatchOperation(action.batchActions ?? []);
       }
     } catch (e) {
-      return LLMActionResult.failure('操作失败: $e');
+      return LLMActionResult.failure(
+        I18nService.instance.l10n.galaxyLLMActionFailed(e.toString()),
+      );
     }
   }
 

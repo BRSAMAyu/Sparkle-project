@@ -147,7 +147,7 @@ class ProfileScreen extends ConsumerWidget {
                                     ),
                                     const SizedBox(width: DS.sm),
                                     Text(
-                                      'Brightness ${(user.flameBrightness * 100).toInt()}%',
+                                      '${l10n.brightness} ${(user.flameBrightness * 100).toInt()}%',
                                       style: DS.labelSmall.copyWith(
                                         color: DS.textSecondary,
                                       ),
@@ -181,7 +181,7 @@ class ProfileScreen extends ConsumerWidget {
               _buildSettingsTile(
                 context,
                 icon: Icons.upgrade_rounded,
-                title: '升级游客账号',
+                title: l10n.profileUpgradeGuest,
                 accentColor: const Color(0xFFC37D3A),
                 onTap: () {
                   context.push(UserRoutes.guestUpgrade);
@@ -192,7 +192,7 @@ class ProfileScreen extends ConsumerWidget {
             _buildSettingsTile(
               context,
               icon: Icons.person_outline_rounded,
-              title: '个人资料',
+              title: l10n.profilePersonalInfo,
               accentColor: const Color(0xFF9B7A72),
               onTap: () {
                 context.push(UserRoutes.editProfile);
@@ -232,7 +232,7 @@ class ProfileScreen extends ConsumerWidget {
             _buildSettingsTile(
               context,
               icon: Icons.link_rounded,
-              title: '关联账号',
+              title: l10n.profileLinkedAccounts,
               accentColor: const Color(0xFF7A8C64),
               onTap: () {
                 context.push(UserRoutes.socialAccounts);
@@ -242,7 +242,7 @@ class ProfileScreen extends ConsumerWidget {
             _buildSettingsTile(
               context,
               icon: Icons.devices_rounded,
-              title: '登录设备管理',
+              title: l10n.profileSessionManagement,
               accentColor: const Color(0xFF5E8197),
               onTap: () {
                 context.push(UserRoutes.sessionManagement);
@@ -252,7 +252,7 @@ class ProfileScreen extends ConsumerWidget {
             _buildSettingsTile(
               context,
               icon: Icons.shield_outlined,
-              title: '安全日志',
+              title: l10n.profileSecurityLog,
               accentColor: const Color(0xFF8A7AAE),
               onTap: () {
                 context.push(UserRoutes.securityLog);
@@ -295,7 +295,7 @@ class ProfileScreen extends ConsumerWidget {
             _buildSettingsTile(
               context,
               icon: Icons.delete_forever_rounded,
-              title: '注销账号',
+              title: l10n.profileDeleteAccount,
               accentColor: const Color(0xFFB84F45),
               isDestructive: true,
               onTap: () {

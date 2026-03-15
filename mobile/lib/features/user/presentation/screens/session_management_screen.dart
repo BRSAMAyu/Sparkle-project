@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/user/data/models/account_security_model.dart';
 
@@ -81,19 +83,18 @@ class _SessionManagementScreenState
   }
 
   String _formatTime(DateTime value) {
-    final local = value.toLocal();
-    final two = (int n) => n.toString().padLeft(2, '0');
-    return '${local.year}-${two(local.month)}-${two(local.day)} ${two(local.hour)}:${two(local.minute)}';
+    return Formatters.formatDateTime(value.toLocal());
   }
 
   String _deviceTitle(UserSessionModel session) {
+    final l10n = context.l10n;
     if ((session.deviceName ?? '').isNotEmpty) {
       return session.deviceName!;
     }
     if ((session.deviceType ?? '').isNotEmpty) {
       return session.deviceType!.toUpperCase();
     }
-    return '未知设备';
+    return l10n.sessionManagementUnknownDevice;
   }
 
   @override
@@ -105,7 +106,7 @@ class _SessionManagementScreenState
             icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
           ),
-          title: const Text('登录设备管理'),
+          title: Text(context.l10n.sessionManagementTitle),
           centerTitle: true,
         ),
         child: ContentConstraint(
@@ -119,12 +120,12 @@ class _SessionManagementScreenState
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '这里会展示最近活跃的登录设备。若你怀疑账号在陌生设备上登录，可以一键下线其他设备。',
+                        context.l10n.sessionManagementIntro,
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                       const SizedBox(height: DS.spacing16),
                       SparkleButton(
-                        label: '下线其他设备',
+                        label: context.l10n.sessionManagementRevokeOthers,
                         variant: ButtonVariant.destructive,
                         expand: true,
                         loading: _isRevokingOthers,
@@ -144,8 +145,8 @@ class _SessionManagementScreenState
                     child: Center(child: CircularProgressIndicator()),
                   )
                 else if (_sessions.isEmpty)
-                  const GraphiteCardSurface(
-                    child: Text('当前还没有可展示的会话记录。'),
+                  GraphiteCardSurface(
+                    child: Text(context.l10n.sessionManagementEmpty),
                   )
                 else
                   ..._sessions.map(
@@ -183,13 +184,23 @@ class _SessionManagementScreenState
                                       color: DS.success.withValues(alpha: 0.12),
                                       borderRadius: BorderRadius.circular(999),
                                     ),
-                                    child: const Text('当前设备'),
+                                    child: Text(
+                                      context.l10n.sessionManagementCurrent,
+                                    ),
                                   ),
                               ],
                             ),
                             const SizedBox(height: DS.spacing12),
-                            Text('最近活跃：${_formatTime(session.lastActiveAt)}'),
-                            Text('首次登录：${_formatTime(session.createdAt)}'),
+                            Text(
+                              context.l10n.sessionManagementLastActive(
+                                _formatTime(session.lastActiveAt),
+                              ),
+                            ),
+                            Text(
+                              context.l10n.sessionManagementFirstLogin(
+                                _formatTime(session.createdAt),
+                              ),
+                            ),
                             if ((session.ipAddress ?? '').isNotEmpty)
                               Text('IP：${session.ipAddress}'),
                             if ((session.userAgent ?? '').isNotEmpty)
@@ -203,13 +214,15 @@ class _SessionManagementScreenState
                               alignment: Alignment.centerRight,
                               child: session.isCurrent
                                   ? Text(
-                                      '当前设备请使用“退出登录”处理',
+                                      context.l10n
+                                          .sessionManagementCurrentHint,
                                       style: TextStyle(
                                         color: DS.textSecondary,
                                       ),
                                     )
                                   : SparkleButton(
-                                      label: '下线此设备',
+                                      label: context
+                                          .l10n.sessionManagementRevokeThis,
                                       variant: ButtonVariant.outline,
                                       loading:
                                           _busySessionId == session.sessionId,

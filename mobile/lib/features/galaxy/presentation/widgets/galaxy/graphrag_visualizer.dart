@@ -3,6 +3,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 /// 必杀技 A: GraphRAG 检索可视化组件
 ///
@@ -104,6 +106,7 @@ class _GraphRAGVisualizerState extends State<GraphRAGVisualizer>
       return const SizedBox.shrink();
     }
 
+    final l10n = context.l10n;
     final trace = widget.trace!;
 
     return Align(
@@ -154,7 +157,7 @@ class _GraphRAGVisualizerState extends State<GraphRAGVisualizer>
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        'AI 检索中...',
+                        l10n.galaxyGraphRagSearching,
                         style: TextStyle(
                           color: DS.brandPrimary.withValues(alpha: 0.8),
                           fontSize: 12,
@@ -177,7 +180,7 @@ class _GraphRAGVisualizerState extends State<GraphRAGVisualizer>
               // 统计信息
               Padding(
                 padding: const EdgeInsets.fromLTRB(DS.md, 0, DS.md, DS.sm),
-                child: _buildStats(trace),
+                child: _buildStats(l10n, trace),
               ),
             ],
           ),
@@ -201,21 +204,21 @@ class _GraphRAGVisualizerState extends State<GraphRAGVisualizer>
     );
   }
 
-  Widget _buildStats(GraphRAGTrace trace) => Row(
+  Widget _buildStats(AppLocalizations l10n, GraphRAGTrace trace) => Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _buildStatItem(
-            '向量',
+            l10n.galaxyGraphRagVector,
             trace.vectorSearchCount.toString(),
             DS.brandPrimary.shade400,
           ),
           _buildStatItem(
-            '图谱',
+            l10n.galaxyGraphRagGraph,
             trace.graphSearchCount.toString(),
             DS.prismPurple,
           ),
           _buildStatItem(
-            '时间',
+            l10n.galaxyGraphRagTime,
             '${(trace.timing['total'] ?? 0).toStringAsFixed(2)}s',
             DS.brandPrimary70,
           ),

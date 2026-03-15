@@ -1,0 +1,413 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/features/chat/data/models/chat_mode.dart';
+import 'package:sparkle/features/chat/data/models/expert_catalog_model.dart';
+import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.dart';
+import 'package:sparkle/features/chat/presentation/providers/expert_catalog_provider.dart';
+
+class AgentTeamSheet extends ConsumerStatefulWidget {
+  const AgentTeamSheet({super.key});
+
+  @override
+  ConsumerState<AgentTeamSheet> createState() => _AgentTeamSheetState();
+}
+
+class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
+  final Set<String> _selectedAgents = {};
+  String _collaborationMode = 'auto';
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final catalogAsync = ref.watch(multiAgentCatalogProvider);
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: isDark ? DS.surfaceSecondary : DS.surfacePrimaryElevated,
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(DS.spacing24),
+        ),
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: DS.spacing20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Handle bar
+              Container(
+                width: DS.spacing40,
+                height: DS.spacing4,
+                margin: const EdgeInsets.symmetric(vertical: DS.spacing12),
+                decoration: BoxDecoration(
+                  color: isDark ? DS.neutral700 : DS.neutral300,
+                  borderRadius: BorderRadius.circular(DS.spacing4 / 2),
+                ),
+              ),
+
+              // Header
+              Row(
+                children: [
+                  Icon(Icons.groups_rounded, color: DS.primaryBase),
+                  const SizedBox(width: DS.spacing12),
+                  Text(
+                    context.l10n.chatTeamSheetTitle,
+                    style: TextStyle(
+                      fontSize: DS.fontSizeLg,
+                      fontWeight: DS.fontWeightBold,
+                      color: isDark ? DS.textPrimary : DS.neutral900,
+                    ),
+                  ),
+                  const Spacer(),
+                  SparkleIconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                    variant: ButtonVariant.ghost,
+                  ),
+                ],
+              ),
+              const SizedBox(height: DS.spacing16),
+
+              // Expert selection section
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  context.l10n.chatTeamSheetAvailableExperts,
+                  style: TextStyle(
+                    fontSize: DS.fontSizeSm,
+                    fontWeight: DS.fontWeightSemibold,
+                    color: DS.neutral500,
+                  ),
+                ),
+              ),
+              const SizedBox(height: DS.spacing8),
+              catalogAsync.when(
+                data: (catalog) {
+                  final experts =
+                      catalog.experts.where((e) => e.enabled).toList();
+                  if (experts.isEmpty) {
+                    return _emptyHint(context.l10n.chatTeamSheetNoExperts);
+                  }
+                  return _buildExpertGrid(experts);
+                },
+                loading: () =>
+                    _emptyHint(context.l10n.chatTeamSheetLoading),
+                error: (_, __) =>
+                    _emptyHint(context.l10n.chatTeamSheetLoadFailed),
+              ),
+
+              const SizedBox(height: DS.spacing16),
+
+              // Collaboration mode section
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  context.l10n.chatTeamSheetCollaborationMode,
+                  style: TextStyle(
+                    fontSize: DS.fontSizeSm,
+                    fontWeight: DS.fontWeightSemibold,
+                    color: DS.neutral500,
+                  ),
+                ),
+              ),
+              const SizedBox(height: DS.spacing8),
+              _buildModeSelector(),
+
+              // Selected agents summary (only when >0)
+              if (_selectedAgents.isNotEmpty) ...[
+                const SizedBox(height: DS.spacing16),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    context
+                        .l10n
+                        .chatTeamSheetSelectedExperts(_selectedAgents.length),
+                    style: TextStyle(
+                      fontSize: DS.fontSizeSm,
+                      fontWeight: DS.fontWeightSemibold,
+                      color: DS.neutral600,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: DS.spacing8),
+                _buildSelectedChips(),
+              ],
+
+              const SizedBox(height: DS.spacing20),
+
+              // Confirm button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _selectedAgents.isEmpty
+                      ? null
+                      : () {
+                          final mode = _buildMode();
+                          ref
+                              .read(chatModeNotifierProvider.notifier)
+                              .setMode(mode);
+                          if (mode.apiValue != 'standard') {
+                            ref
+                                .read(lastMultiAgentModeProvider.notifier)
+                                .state = mode;
+                          }
+                          Navigator.pop(context);
+                        },
+                  child: Text(
+                    _selectedAgents.length <= 1
+                        ? context.l10n.chatTeamSheetEnterExpert
+                        : context.l10n.chatTeamSheetStartCollaboration,
+                  ),
+                ),
+              ),
+              const SizedBox(height: DS.spacing16),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _emptyHint(String text) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: DS.spacing12),
+        child: Text(
+          text,
+          style: TextStyle(fontSize: DS.fontSizeSm, color: DS.neutral500),
+        ),
+      );
+
+  Widget _buildExpertGrid(List<ExpertCatalogExpert> experts) => Wrap(
+        spacing: DS.spacing8,
+        runSpacing: DS.spacing8,
+        children: experts.map((expert) {
+          final color = _agentColor(expert.id);
+          final isSelected = _selectedAgents.contains(expert.id);
+          return FilterChip(
+            selected: isSelected,
+            label: Text(expert.displayName),
+            avatar: isSelected
+                ? null
+                : Icon(_agentIcon(expert.id), size: 16, color: color),
+            backgroundColor: DS.surfacePrimary,
+            selectedColor: color.withValues(alpha: 0.16),
+            checkmarkColor: color,
+            labelStyle: TextStyle(
+              color: isSelected ? color : DS.textPrimary,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+            ),
+            onSelected: (selected) {
+              setState(() {
+                if (selected) {
+                  _selectedAgents.add(expert.id);
+                } else {
+                  _selectedAgents.remove(expert.id);
+                }
+              });
+            },
+          );
+        }).toList(),
+      );
+
+  Widget _buildModeSelector() => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: DS.spacing8,
+            children: _collaborationModes(context).map((entry) {
+              final isSelected = _collaborationMode == entry.value;
+              return ChoiceChip(
+                label: Text(entry.label),
+                selected: isSelected,
+                selectedColor: DS.brandPrimary.withValues(alpha: 0.16),
+                labelStyle: TextStyle(
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                  color: isSelected ? DS.brandPrimary : DS.textPrimary,
+                ),
+                onSelected: (_) =>
+                    setState(() => _collaborationMode = entry.value),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: DS.spacing6),
+          Text(
+            _collaborationModes(context)
+                .firstWhere((e) => e.value == _collaborationMode)
+                .description,
+            style: TextStyle(fontSize: DS.fontSizeXs, color: DS.neutral500),
+          ),
+        ],
+      );
+
+  Widget _buildSelectedChips() => Wrap(
+        spacing: DS.spacing6,
+        runSpacing: DS.spacing6,
+        children: _selectedAgents.map((agentId) {
+          final color = _agentColor(agentId);
+          return Chip(
+            label: Text(
+              _resolveLabel(agentId),
+              style: TextStyle(color: color, fontSize: DS.fontSizeXs),
+            ),
+            backgroundColor: color.withValues(alpha: 0.12),
+            deleteIconColor: color.withValues(alpha: 0.6),
+            onDeleted: () => setState(() => _selectedAgents.remove(agentId)),
+          );
+        }).toList(),
+      );
+
+  /// Resolve display label: prefer catalog name, fallback to hardcoded map.
+  String _resolveLabel(String agentId) {
+    final catalog = ref.read(multiAgentCatalogProvider).valueOrNull;
+    if (catalog != null) {
+      for (final expert in catalog.experts) {
+        if (expert.id == agentId) return expert.displayName;
+      }
+    }
+    return _agentLabelFallback(agentId);
+  }
+
+  ChatMode _buildMode() {
+    if (_selectedAgents.length <= 1) {
+      final agentId =
+          _selectedAgents.isNotEmpty ? _selectedAgents.first : 'study_buddy';
+      return ChatModeExpert(
+        expertId: agentId,
+        displayName: _resolveLabel(agentId),
+      );
+    }
+    return ChatModeTeam(
+      selectedAgents: _selectedAgents.toList(),
+      collaborationMode: _collaborationMode,
+    );
+  }
+
+  IconData _agentIcon(String agentId) {
+    switch (agentId) {
+      case 'galaxy_guide':
+        return Icons.explore_outlined;
+      case 'exam_oracle':
+        return Icons.quiz_outlined;
+      case 'time_tutor':
+        return Icons.schedule_outlined;
+      case 'deep_analyst':
+        return Icons.psychology_outlined;
+      case 'error_analyst':
+        return Icons.bug_report_outlined;
+      case 'math_agent':
+        return Icons.functions_outlined;
+      case 'code_agent':
+        return Icons.code_outlined;
+      case 'writing_agent':
+        return Icons.edit_note_outlined;
+      case 'science_agent':
+        return Icons.science_outlined;
+      case 'search_agent':
+        return Icons.search_outlined;
+      case 'study_buddy':
+        return Icons.school_outlined;
+      default:
+        return Icons.smart_toy_outlined;
+    }
+  }
+
+  Color _agentColor(String agentId) {
+    switch (agentId) {
+      case 'galaxy_guide':
+        return const Color(0xFF6C5CE7);
+      case 'exam_oracle':
+        return const Color(0xFFE17055);
+      case 'time_tutor':
+        return const Color(0xFF00B894);
+      case 'deep_analyst':
+        return const Color(0xFF0984E3);
+      case 'error_analyst':
+        return const Color(0xFFD63031);
+      case 'math_agent':
+        return const Color(0xFF6C5CE7);
+      case 'code_agent':
+        return const Color(0xFF00CEC9);
+      case 'writing_agent':
+        return const Color(0xFFE84393);
+      case 'science_agent':
+        return const Color(0xFF00B894);
+      case 'search_agent':
+        return const Color(0xFF636E72);
+      case 'study_buddy':
+        return const Color(0xFFFDCB6E);
+      default:
+        return DS.neutral500;
+    }
+  }
+
+  String _agentLabelFallback(String agentId) {
+    final l10n = I18nService.instance.l10n;
+    switch (agentId) {
+      case 'galaxy_guide':
+        return l10n.chatAgentNavigator;
+      case 'exam_oracle':
+        return l10n.chatAgentExamStrategist;
+      case 'time_tutor':
+        return l10n.chatAgentTimeCoach;
+      case 'deep_analyst':
+        return l10n.chatAgentDeepAnalyst;
+      case 'error_analyst':
+        return l10n.chatAgentCorrectionExpert;
+      case 'math_agent':
+        return l10n.chatAgentMathExpert;
+      case 'code_agent':
+        return l10n.chatAgentCodingExpert;
+      case 'writing_agent':
+        return l10n.chatAgentWritingExpert;
+      case 'science_agent':
+        return l10n.chatAgentScienceExpert;
+      case 'search_agent':
+        return l10n.chatAgentSearchExpert;
+      case 'study_buddy':
+        return l10n.chatAgentLearningBuddy;
+      default:
+        return agentId.replaceAll('_', ' ');
+    }
+  }
+}
+
+/// Collaboration mode metadata for the UI.
+class _CollaborationModeEntry {
+  const _CollaborationModeEntry(this.label, this.value, this.description);
+  final String label;
+  final String value;
+  final String description;
+}
+
+List<_CollaborationModeEntry> _collaborationModes(BuildContext context) {
+  final l10n = context.l10n;
+  return [
+    _CollaborationModeEntry(
+      l10n.chatCollabAuto,
+      'auto',
+      l10n.chatCollabAutoDesc,
+    ),
+    _CollaborationModeEntry(
+      l10n.chatCollabSequentialShort,
+      'sequential',
+      l10n.chatCollabSequentialDesc,
+    ),
+    _CollaborationModeEntry(
+      l10n.chatCollabParallelShort,
+      'parallel',
+      l10n.chatCollabParallelDesc,
+    ),
+    _CollaborationModeEntry(
+      l10n.chatCollabDebateShort,
+      'debate',
+      l10n.chatCollabDebateDesc,
+    ),
+    _CollaborationModeEntry(
+      l10n.chatCollabDelegationShort,
+      'delegation',
+      l10n.chatCollabDelegationDesc,
+    ),
+  ];
+}

@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class GalaxySimulationSettingsSheet extends StatelessWidget {
   const GalaxySimulationSettingsSheet({
@@ -30,6 +31,7 @@ class GalaxySimulationSettingsSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final backgroundColor = isDarkMode
         ? const Color(0xEE0E1523)
         : Colors.white.withValues(alpha: 0.95);
@@ -75,7 +77,7 @@ class GalaxySimulationSettingsSheet extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              '星图动力学',
+                              l10n.galaxySimulationTitle,
                               style: TextStyle(
                                 color: titleColor,
                                 fontSize: 18,
@@ -84,7 +86,7 @@ class GalaxySimulationSettingsSheet extends StatelessWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              '调节引力、斥力、向心力和生成动画速率。',
+                              l10n.galaxySimulationSubtitle,
                               style: TextStyle(
                                 color: bodyColor,
                                 fontSize: 12,
@@ -97,13 +99,13 @@ class GalaxySimulationSettingsSheet extends StatelessWidget {
                       TextButton.icon(
                         onPressed: onReset,
                         icon: const Icon(Icons.restart_alt_rounded, size: 18),
-                        label: const Text('恢复默认'),
+                        label: Text(l10n.galaxySimulationReset),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
                   _SliderTile(
-                    label: '引力',
+                    label: l10n.galaxySimulationGravity,
                     valueLabel: springStrength.toStringAsFixed(3),
                     value: springStrength,
                     min: 0.02,
@@ -111,7 +113,7 @@ class GalaxySimulationSettingsSheet extends StatelessWidget {
                     onChanged: onSpringChanged,
                   ),
                   _SliderTile(
-                    label: '斥力',
+                    label: l10n.galaxySimulationRepulsion,
                     valueLabel: repulsionStrength.toStringAsFixed(0),
                     value: repulsionStrength,
                     min: 6000,
@@ -119,7 +121,7 @@ class GalaxySimulationSettingsSheet extends StatelessWidget {
                     onChanged: onRepulsionChanged,
                   ),
                   _SliderTile(
-                    label: '向心力',
+                    label: l10n.galaxySimulationCenterGravity,
                     valueLabel: centerGravity.toStringAsFixed(4),
                     value: centerGravity,
                     min: 0.0006,
@@ -127,7 +129,7 @@ class GalaxySimulationSettingsSheet extends StatelessWidget {
                     onChanged: onCenterGravityChanged,
                   ),
                   _SliderTile(
-                    label: '生成速率',
+                    label: l10n.galaxySimulationReplaySpeed,
                     valueLabel: '${replaySpeed.toStringAsFixed(1)}x',
                     value: replaySpeed,
                     min: 0.4,

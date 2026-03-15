@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_config.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
 
@@ -16,8 +17,10 @@ class GalaxyNodePreviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final sectorStyle = SectorConfig.getStyle(node.sector);
+    final sectorName = SectorConfig.getLocalizedName(node.sector);
     final sectorColor = sectorStyle.primaryColorFor(isDarkMode: isDarkMode);
     final glowColor = sectorStyle.glowColorFor(isDarkMode: isDarkMode);
     final backgroundColor = isDarkMode
@@ -80,7 +83,10 @@ class GalaxyNodePreviewCard extends StatelessWidget {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            '${sectorStyle.name} · 重要度 ${node.importance}',
+                            l10n.galaxyNodePreviewSubtitle(
+                              sectorName,
+                              node.importance,
+                            ),
                             style: TextStyle(
                               color: secondaryColor,
                               fontSize: 12,
@@ -117,7 +123,9 @@ class GalaxyNodePreviewCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  node.isUnlocked ? '已解锁' : '待探索',
+                  node.isUnlocked
+                      ? l10n.galaxyNodeUnlocked
+                      : l10n.galaxyNodeLocked,
                   style: TextStyle(
                     color: sectorColor,
                     fontSize: 12,
@@ -147,7 +155,7 @@ class GalaxyNodePreviewCard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: _CardActionButton(
-                        label: '聚焦查看',
+                        label: l10n.galaxyNodeFocus,
                         icon: Icons.center_focus_strong_rounded,
                         color: sectorColor,
                         onPressed: onFocus,
@@ -156,7 +164,7 @@ class GalaxyNodePreviewCard extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: _CardActionButton(
-                        label: '查看关联',
+                        label: l10n.galaxyNodeInspectConnections,
                         icon: Icons.hub_rounded,
                         color: glowColor,
                         onPressed: onInspectConnections,

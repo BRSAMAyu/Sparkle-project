@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_config.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
 
@@ -127,46 +128,59 @@ class GalaxyAccessibilityService {
 
   /// Generate semantic label for a node
   String getNodeSemanticLabel(GalaxyNodeModel node) {
-    final sectorStyle = SectorConfig.getStyle(node.sector);
+    final l10n = I18nService.instance.l10n;
+    final sectorName = SectorConfig.getLocalizedName(node.sector);
     final buffer = StringBuffer()
-      ..write('${sectorStyle.name}领域的知识节点: ${node.name}. ');
+      ..write(l10n.galaxyA11yNodePrefix(sectorName, node.name));
 
     if (node.isUnlocked) {
       buffer
-        ..write('已解锁. ')
-        ..write('掌握度: ${node.masteryScore.toStringAsFixed(0)}%. ')
-        ..write('学习次数: ${node.studyCount}次. ');
+        ..write(l10n.galaxyA11yNodeUnlocked)
+        ..write(l10n.galaxyA11yNodeMastery(
+          node.masteryScore.toStringAsFixed(0),
+        ))
+        ..write(l10n.galaxyA11yNodeStudyCount(node.studyCount));
     } else {
-      buffer.write('未解锁. ');
+      buffer.write(l10n.galaxyA11yNodeLocked);
     }
 
-    buffer.write('重要程度: ${_importanceLabel(node.importance)}. ');
+    buffer.write(
+      l10n.galaxyA11yNodeImportance(_importanceLabel(node.importance)),
+    );
 
     return buffer.toString();
   }
 
   String _importanceLabel(int importance) => switch (importance) {
-        1 => '入门级',
-        2 => '基础级',
-        3 => '进阶级',
-        4 => '高级',
-        5 => '核心级',
-        _ => '普通',
+        1 => I18nService.instance.l10n.galaxyImportanceEntry,
+        2 => I18nService.instance.l10n.galaxyImportanceBasic,
+        3 => I18nService.instance.l10n.galaxyImportanceIntermediate,
+        4 => I18nService.instance.l10n.galaxyImportanceAdvanced,
+        5 => I18nService.instance.l10n.galaxyImportanceCore,
+        _ => I18nService.instance.l10n.galaxyImportanceNormal,
       };
 
   /// Generate semantic label for a cluster
   String getClusterSemanticLabel(
           String name, int nodeCount, double avgMastery,) =>
-      '知识集群: $name. 包含$nodeCount个知识点. 平均掌握度: ${avgMastery.toStringAsFixed(0)}%.';
+      I18nService.instance.l10n.galaxyA11yClusterLabel(
+        name,
+        nodeCount,
+        avgMastery.toStringAsFixed(0),
+      );
 
   /// Generate semantic label for a sector
   String getSectorSemanticLabel(SectorEnum sector, int nodeCount) {
-    final style = SectorConfig.getStyle(sector);
-    return '${style.name}领域. 包含$nodeCount个知识点. 双击查看详情.';
+    final sectorName = SectorConfig.getLocalizedName(sector);
+    return I18nService.instance.l10n.galaxyA11ySectorLabel(
+      sectorName,
+      nodeCount,
+    );
   }
 
   /// Generate hint for navigation
-  String getNavigationHint() => '使用双指捏合缩放, 单指拖动平移, 双击节点查看详情.';
+  String getNavigationHint() =>
+      I18nService.instance.l10n.galaxyA11yNavigationHint;
 
   // ============================================
   // Accessibility Actions
@@ -174,7 +188,11 @@ class GalaxyAccessibilityService {
 
   /// Build semantic node for a galaxy node
   CustomSemanticsAction buildNodeAction(GalaxyNodeModel node) =>
-      CustomSemanticsAction(label: node.isUnlocked ? '开始学习' : '解锁节点');
+      CustomSemanticsAction(
+        label: node.isUnlocked
+            ? I18nService.instance.l10n.galaxyA11yActionStartLearning
+            : I18nService.instance.l10n.galaxyA11yActionUnlockNode,
+      );
 
   /// Announce message for screen readers
   Future<void> announce(String message) async {
@@ -195,12 +213,14 @@ class GalaxyAccessibilityService {
   /// Announce zoom level change
   Future<void> announceZoomLevel(double scale) async {
     final percentage = (scale * 100).toStringAsFixed(0);
-    await announce('缩放级别: $percentage%');
+    await announce(
+      I18nService.instance.l10n.galaxyA11yZoomLevel(percentage),
+    );
   }
 
   /// Announce navigation to new area
   Future<void> announceNavigation(String areaName) async {
-    await announce('导航至: $areaName');
+    await announce(I18nService.instance.l10n.galaxyA11yNavigateTo(areaName));
   }
 
   // ============================================
@@ -285,7 +305,9 @@ class GalaxyNodeSemantics extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Semantics(
         label: accessibilityService.getNodeSemanticLabel(node),
-        hint: node.isUnlocked ? '双击开始学习' : '双击解锁',
+        hint: node.isUnlocked
+            ? I18nService.instance.l10n.galaxyA11yHintStartLearning
+            : I18nService.instance.l10n.galaxyA11yHintUnlockNode,
         button: true,
         onTap: onTap,
         onLongPress: onLongPress,

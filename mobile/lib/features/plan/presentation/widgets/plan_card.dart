@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/motion.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// 计划卡片组件
 /// 用于在聊天中显示 AI 生成的计划
@@ -48,6 +49,7 @@ class _PlanCardState extends State<PlanCard>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final title = widget.data['title'] as String;
     final planType = widget.data['type'] as String;
     final description = widget.data['description'] as String?;
@@ -107,7 +109,7 @@ class _PlanCardState extends State<PlanCard>
                         color: Theme.of(context).hintColor,
                       ),
                       const SizedBox(width: DS.spacing4),
-                      Text('目标日期: $targetDate'),
+                      Text(l10n.planTargetDate(targetDate)),
                       const SizedBox(width: DS.spacing16),
                     ],
                     if (mastery != null) ...[
@@ -117,7 +119,9 @@ class _PlanCardState extends State<PlanCard>
                         color: Theme.of(context).hintColor,
                       ),
                       const SizedBox(width: DS.spacing4),
-                      Text('目标掌握度: ${(mastery * 100).toInt()}%'),
+                      Text(
+                        l10n.planTargetMastery((mastery * 100).toInt()),
+                      ),
                     ],
                     const Spacer(),
                     // Just a visual indicator now - not interactive so smaller is acceptable
@@ -168,9 +172,9 @@ class _PlanCardState extends State<PlanCard>
   Widget _buildPlanTypeChip(BuildContext context, String type) {
     final color = context.colors.getPlanColor(type);
     final label = type == 'sprint'
-        ? '冲刺计划'
+        ? context.l10n.planTypeSprint
         : type == 'growth'
-            ? '成长计划'
+            ? context.l10n.planTypeGrowth
             : type;
 
     return Container(

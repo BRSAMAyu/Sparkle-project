@@ -4,8 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/chat/data/models/chat_mode.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.dart';
+import 'package:sparkle/features/chat/presentation/widgets/agent_team_sheet.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_mode_selector_sheet.dart';
 
 /// Chat Mode Selector Pill Widget
@@ -48,19 +51,30 @@ class ChatModeSelectorPill extends ConsumerWidget {
   }
 
   void _showModeSelector(BuildContext context, WidgetRef ref) {
-    HapticFeedback.lightImpact();
+    unawaited(HapticFeedback.lightImpact());
     unawaited(
-      showModalBottomSheet<ChatMode>(
+      showModalBottomSheet<Object>(
         context: context,
         backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
         isScrollControlled: true,
         builder: (context) => const ChatModeSelectorSheet(),
-      ).then((selectedMode) {
-        if (selectedMode != null) {
-          ref.read(chatModeNotifierProvider.notifier).setMode(selectedMode);
-          // Also update last multi-agent mode if not standard
-          if (selectedMode.apiValue != 'standard') {
-            ref.read(lastMultiAgentModeProvider.notifier).state = selectedMode;
+      ).then((result) {
+        if (!context.mounted) return;
+        if (result == openTeamBuilderSentinel) {
+          unawaited(
+            showModalBottomSheet<void>(
+              context: context,
+              backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
+              isScrollControlled: true,
+              builder: (_) => const AgentTeamSheet(),
+            ),
+          );
+          return;
+        }
+        if (result is ChatMode) {
+          ref.read(chatModeNotifierProvider.notifier).setMode(result);
+          if (result.apiValue != 'standard') {
+            ref.read(lastMultiAgentModeProvider.notifier).state = result;
           }
         }
       }),
@@ -101,7 +115,7 @@ class _UnselectedPill extends StatelessWidget {
               ),
               const SizedBox(width: DS.spacing6),
               Text(
-                '选择模式',
+                context.l10n.chatModeSelect,
                 style: TextStyle(
                   color: DS.textSecondary,
                   fontSize: DS.fontSizeSm,
@@ -132,10 +146,32 @@ class _SelectedPill extends StatelessWidget {
   final VoidCallback onTap;
 
   String get _displayLabel {
+    final l10n = I18nService.instance.l10n;
     if (mode.apiValue.startsWith(expertChatModePrefix)) {
-      return '专家直达';
+      return l10n.chatModeExpertDirect;
+    }
+    if (mode is ChatModeTeam) {
+      final team = mode as ChatModeTeam;
+      final modeLabel = _formatTeamMode(team.collaborationMode);
+      return l10n.chatModeTeamSummary(team.selectedAgents.length, modeLabel);
     }
     return mode.label;
+  }
+
+  String _formatTeamMode(String mode) {
+    final l10n = I18nService.instance.l10n;
+    switch (mode) {
+      case 'parallel':
+        return l10n.chatCollabParallelShort;
+      case 'debate':
+        return l10n.chatCollabDebateShort;
+      case 'delegation':
+        return l10n.chatCollabDelegationShort;
+      case 'sequential':
+        return l10n.chatCollabSequentialShort;
+      default:
+        return l10n.chatCollabAuto;
+    }
   }
 
   @override
@@ -174,8 +210,11 @@ class _SelectedPill extends StatelessWidget {
               const SizedBox(width: DS.spacing6),
               ConstrainedBox(
                 constraints: BoxConstraints(
-                  maxWidth:
-                      mode.apiValue.startsWith(expertChatModePrefix) ? 84 : 120,
+                  maxWidth: mode is ChatModeTeam
+                      ? 140
+                      : (mode.apiValue.startsWith(expertChatModePrefix)
+                          ? 84
+                          : 120),
                 ),
                 child: Text(
                   _displayLabel,

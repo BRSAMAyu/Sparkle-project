@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/utils/error_messages.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
@@ -214,6 +215,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
     Map<String, dynamic>? uxEnvelope,
   ) {
     if (uxEnvelope == null || uxEnvelope.isEmpty) return;
+    final l10n = I18nService.instance.l10n;
 
     void addWidget(String type, Map<String, dynamic>? data) {
       if (data == null || data.isEmpty) return;
@@ -252,7 +254,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
       final nextActions = _normalizeUxActionList(nextActionsRaw);
       final retryOptions = _normalizeUxActionList(retryOptionsRaw);
       addWidget('next_actions', {
-        'title': followthrough['next_actions_title']?.toString() ?? '下一步建议',
+        'title':
+            followthrough['next_actions_title']?.toString() ??
+                l10n.chatNextActionsTitle,
         'actions': nextActions,
         'retry_options': retryOptions,
         'recovery_message': followthrough['recovery_message'],
@@ -277,7 +281,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
       final completionState = result['completion_state']?.toString();
       if (completionState == 'needs_input' || completionState == 'blocked') {
         addWidget('blocked_input_request', {
-          'title': result['headline']?.toString() ?? '继续前我还需要你确认一下',
+          'title': result['headline']?.toString() ??
+              l10n.chatBlockedInputTitle,
           'reason': result['why_this_answer'],
           'failure_kind': result['failure_kind'],
           'recovery_message': followthrough is Map<String, dynamic>
@@ -313,7 +318,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
           type: 'evolution_card',
           data: {
             'evolution_kind': evolutionKind,
-            'headline': data['title']?.toString() ?? '系统正在继续适应你',
+            'headline': data['title']?.toString() ??
+                I18nService.instance.l10n.chatEvolutionHeadlineDefault,
             'summary': data['description']?.toString() ?? '',
             if (metadata['insight_text'] != null)
               'insight_text': metadata['insight_text'],
@@ -674,7 +680,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
           state = state.copyWith(
             error: actionSuggestion.isEmpty
                 ? userFriendlyMessage
-                : '$userFriendlyMessage\n建议：$actionSuggestion',
+                : I18nService.instance.l10n.chatErrorWithSuggestion(
+                    userFriendlyMessage,
+                    actionSuggestion,
+                  ),
             errorCode: event.code,
             isErrorRetryable: isRetryable,
             isSending: false,
@@ -697,7 +706,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
           // 显示"正在使用工具: xxx"
           lastAiStatus = 'EXECUTING_TOOL';
           pendingAiStatus = 'EXECUTING_TOOL';
-          pendingAiStatusDetails = '正在使用 ${event.toolName}...';
+          pendingAiStatusDetails =
+              I18nService.instance.l10n.chatUsingTool(event.toolName);
           final nextTools = List<String>.from(state.activeTools);
           if (!nextTools.contains(event.toolName)) {
             nextTools.add(event.toolName);
@@ -733,8 +743,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
                     ? 'file_only'
                     : 'mixed',
                 'evidence_summary': event.citations.isNotEmpty
-                    ? '这轮回答带有可展开的依据来源。'
-                    : '这轮回答没有附带可展开的引用来源。',
+                    ? I18nService.instance.l10n.chatSourcesAvailable
+                    : I18nService.instance.l10n.chatSourcesUnavailable,
                 'citations': event.citations,
               },
             ),
@@ -880,8 +890,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
             reasoningStartTime != null) {
           final durationMs =
               DateTime.now().millisecondsSinceEpoch - reasoningStartTime;
-          reasoningSummary =
-              '完成于 ${(durationMs / 1000).toStringAsFixed(1)}s，${accumulatedReasoningSteps.length}个步骤';
+          reasoningSummary = I18nService.instance.l10n.chatReasoningSummary(
+            (durationMs / 1000).toStringAsFixed(1),
+            accumulatedReasoningSteps.length,
+          );
         }
 
         final aiMessage = ChatMessageModel(

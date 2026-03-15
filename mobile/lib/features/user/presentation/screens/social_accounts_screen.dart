@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/social_auth_service.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/user/data/models/account_security_model.dart';
@@ -46,7 +47,7 @@ class _SocialAccountsScreenState extends ConsumerState<SocialAccountsScreen> {
 
   Future<void> _link(String provider) async {
     if (provider == 'wechat' && !SocialAuthService().isWeChatAvailable) {
-      AppFeedback.info(context, '微信 SDK 未初始化，请检查配置。');
+      AppFeedback.info(context, context.l10n.socialAccountsWeChatUnavailable);
       return;
     }
 
@@ -79,16 +80,20 @@ class _SocialAccountsScreenState extends ConsumerState<SocialAccountsScreen> {
     final confirmed = await showDialog<bool>(
           context: context,
           builder: (dialogContext) => AlertDialog(
-            title: Text('解绑${_providerLabel(provider)}'),
-            content: const Text('解绑后，该方式将不能再用于登录当前账号。'),
+            title: Text(
+              context.l10n.socialAccountsUnlinkTitle(
+                _providerLabel(provider),
+              ),
+            ),
+            content: Text(context.l10n.socialAccountsUnlinkMessage),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(dialogContext).pop(false),
-                child: const Text('取消'),
+                child: Text(context.l10n.cancel),
               ),
               FilledButton(
                 onPressed: () => Navigator.of(dialogContext).pop(true),
-                child: const Text('确认解绑'),
+                child: Text(context.l10n.socialAccountsUnlinkConfirm),
               ),
             ],
           ),
@@ -128,13 +133,14 @@ class _SocialAccountsScreenState extends ConsumerState<SocialAccountsScreen> {
   }
 
   String _providerLabel(String provider) {
+    final l10n = context.l10n;
     switch (provider) {
       case 'google':
-        return 'Google';
+        return l10n.google;
       case 'apple':
-        return 'Apple';
+        return l10n.apple;
       case 'wechat':
-        return '微信';
+        return l10n.wechat;
       default:
         return provider;
     }
@@ -162,7 +168,7 @@ class _SocialAccountsScreenState extends ConsumerState<SocialAccountsScreen> {
             icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
           ),
-          title: const Text('关联账号'),
+          title: Text(context.l10n.socialAccountsTitle),
           centerTitle: true,
         ),
         child: ContentConstraint(
@@ -173,7 +179,7 @@ class _SocialAccountsScreenState extends ConsumerState<SocialAccountsScreen> {
               children: [
                 GraphiteCardSurface(
                   child: Text(
-                    '你可以在这里绑定更多登录方式，提升账号找回与多端登录的灵活性。',
+                    context.l10n.socialAccountsIntro,
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ),
@@ -211,10 +217,12 @@ class _SocialAccountsScreenState extends ConsumerState<SocialAccountsScreen> {
                                   const SizedBox(height: DS.spacing4),
                                   Text(
                                     account.linked
-                                        ? '已绑定，可用于登录或找回账号'
+                                        ? context.l10n.socialAccountsLinked
                                         : account.provider == 'wechat'
-                                            ? '等待微信登录接入完成后可绑定'
-                                            : '未绑定，建议补充一个备用登录方式',
+                                            ? context
+                                                .l10n.socialAccountsWeChatPending
+                                            : context
+                                                .l10n.socialAccountsUnlinkedHint,
                                     style: Theme.of(context)
                                         .textTheme
                                         .bodyMedium
@@ -228,7 +236,7 @@ class _SocialAccountsScreenState extends ConsumerState<SocialAccountsScreen> {
                               width: 110,
                               child: account.linked
                                   ? SparkleButton(
-                                      label: '解绑',
+                                      label: context.l10n.socialAccountsUnlink,
                                       variant: ButtonVariant.outline,
                                       loading:
                                           _busyProvider == account.provider,
@@ -241,7 +249,7 @@ class _SocialAccountsScreenState extends ConsumerState<SocialAccountsScreen> {
                                           : null,
                                     )
                                   : SparkleButton(
-                                      label: '绑定',
+                                      label: context.l10n.socialAccountsLink,
                                       loading:
                                           _busyProvider == account.provider,
                                       onPressed: _busyProvider == null

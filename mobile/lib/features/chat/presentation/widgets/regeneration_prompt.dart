@@ -2,20 +2,38 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// Regeneration type options
 enum RegenerationType {
-  improveQuality('improve_quality', '提升质量', Icons.auto_awesome),
-  fixIssues('fix_issues', '修复问题', Icons.build_outlined),
-  changeStyle('change_style', '改变风格', Icons.style_outlined),
-  addDetails('add_details', '添加细节', Icons.add_circle_outline),
-  simplify('simplify', '简化内容', Icons.compress),
-  custom('custom', '自定义', Icons.edit_outlined);
+  improveQuality('improve_quality', Icons.auto_awesome),
+  fixIssues('fix_issues', Icons.build_outlined),
+  changeStyle('change_style', Icons.style_outlined),
+  addDetails('add_details', Icons.add_circle_outline),
+  simplify('simplify', Icons.compress),
+  custom('custom', Icons.edit_outlined);
 
-  const RegenerationType(this.value, this.label, this.icon);
+  const RegenerationType(this.value, this.icon);
   final String value;
-  final String label;
   final IconData icon;
+
+  String label(BuildContext context) {
+    final l10n = context.l10n;
+    switch (this) {
+      case RegenerationType.improveQuality:
+        return l10n.regenTypeImproveQuality;
+      case RegenerationType.fixIssues:
+        return l10n.regenTypeFixIssues;
+      case RegenerationType.changeStyle:
+        return l10n.regenTypeChangeStyle;
+      case RegenerationType.addDetails:
+        return l10n.regenTypeAddDetails;
+      case RegenerationType.simplify:
+        return l10n.regenTypeSimplify;
+      case RegenerationType.custom:
+        return l10n.regenTypeCustom;
+    }
+  }
 }
 
 /// Regeneration status
@@ -127,14 +145,14 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
   late AnimationController _animationController;
   late Animation<double> _progressAnimation;
 
-  final List<String> _availableHints = [
-    '更准确的信息',
-    '更详细的解释',
-    '更简洁的表达',
-    '更友好的语气',
-    '添加示例',
-    '修正错误',
-  ];
+  List<String> _availableHints(BuildContext context) => [
+        context.l10n.regenHintMoreAccurate,
+        context.l10n.regenHintMoreDetailed,
+        context.l10n.regenHintMoreConcise,
+        context.l10n.regenHintFriendlierTone,
+        context.l10n.regenHintAddExamples,
+        context.l10n.regenHintFixErrors,
+      ];
 
   @override
   void initState() {
@@ -291,7 +309,7 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  '正在重新生成内容...',
+                  context.l10n.regenProgressTitle,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -335,8 +353,9 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
                 Expanded(
                   child: Text(
                     result.success
-                        ? '重新生成成功'
-                        : result.improvementSummary ?? '重新生成失败',
+                        ? context.l10n.regenResultSuccess
+                        : result.improvementSummary ??
+                            context.l10n.regenResultFailed,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color:
                           result.success ? DS.success : theme.colorScheme.error,
@@ -351,7 +370,7 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
           if (result.success && result.changesMade.isNotEmpty) ...[
             const SizedBox(height: 12),
             Text(
-              '改进内容：',
+              context.l10n.regenImprovementsTitle,
               style: theme.textTheme.labelMedium?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
@@ -397,7 +416,9 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    '质量提升 +${(result.scoreImprovement * 100).toStringAsFixed(0)}%',
+                    context.l10n.regenQualityImprovement(
+                      (result.scoreImprovement * 100).toStringAsFixed(0),
+                    ),
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: DS.success,
                       fontWeight: FontWeight.w600,
@@ -437,14 +458,14 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      '重新生成失败，请重试',
+                      context.l10n.regenRetryMessage,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.error,
                       ),
                     ),
                   ),
                   SparkleButton(
-                    label: '重试',
+                    label: context.l10n.commonRetry,
                     icon: const Icon(Icons.refresh_rounded),
                     onPressed: _submitRegeneration,
                     variant: ButtonVariant.ghost,
@@ -469,7 +490,7 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
           children: [
             // Regeneration type selection
             Text(
-              '选择改进类型',
+              context.l10n.regenSelectType,
               style: theme.textTheme.labelMedium?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
@@ -486,7 +507,7 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
                     children: [
                       Icon(type.icon, size: 16),
                       const SizedBox(width: 4),
-                      Text(type.label),
+                      Text(type.label(context)),
                     ],
                   ),
                   selected: isSelected,
@@ -502,7 +523,7 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
 
             // Improvement hints
             Text(
-              '改进提示（可选）',
+              context.l10n.regenHintsOptional,
               style: theme.textTheme.labelMedium?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
@@ -511,7 +532,7 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: _availableHints.map((hint) {
+              children: _availableHints(context).map((hint) {
                 final isSelected = _selectedHints.contains(hint);
                 return FilterChip(
                   label: Text(hint),
@@ -536,7 +557,7 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
                 controller: _customInstructionsController,
                 maxLines: 3,
                 decoration: InputDecoration(
-                  hintText: '请输入您的具体要求...',
+                  hintText: context.l10n.regenCustomHint,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -547,7 +568,9 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
 
             // Submit button
             SparkleButton(
-              label: _isSubmitting ? '处理中...' : '开始重新生成',
+              label: _isSubmitting
+                  ? context.l10n.commonProcessing
+                  : context.l10n.regenStart,
               onPressed: _selectedType != null && !_isSubmitting
                   ? _submitRegeneration
                   : null,
@@ -595,32 +618,36 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
   }
 
   String _getStatusTitle() {
+    final l10n = context.l10n;
     switch (widget.status) {
       case RegenerationStatus.idle:
-        return '重新生成内容';
+        return l10n.regenTitleIdle;
       case RegenerationStatus.pending:
-        return '等待处理...';
+        return l10n.regenTitlePending;
       case RegenerationStatus.inProgress:
-        return '正在重新生成';
+        return l10n.regenTitleInProgress;
       case RegenerationStatus.completed:
-        return widget.result?.success ?? false ? '重新生成完成' : '重新生成失败';
+        return widget.result?.success ?? false
+            ? l10n.regenTitleCompleted
+            : l10n.regenTitleFailed;
       case RegenerationStatus.failed:
-        return '重新生成失败';
+        return l10n.regenTitleFailed;
     }
   }
 
   String _getStatusDescription() {
+    final l10n = context.l10n;
     switch (widget.status) {
       case RegenerationStatus.idle:
         return '';
       case RegenerationStatus.pending:
-        return '请求已提交，正在排队';
+        return l10n.regenDescPending;
       case RegenerationStatus.inProgress:
-        return '正在根据您的反馈改进内容';
+        return l10n.regenDescInProgress;
       case RegenerationStatus.completed:
-        return widget.result?.improvementSummary ?? '已完成内容改进';
+        return widget.result?.improvementSummary ?? l10n.regenDescCompleted;
       case RegenerationStatus.failed:
-        return '请重试或联系支持';
+        return l10n.regenDescFailed;
     }
   }
 

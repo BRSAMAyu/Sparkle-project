@@ -3683,6 +3683,8 @@ class ChatOrchestrator:
                 planning_constraints["required_agents"] = list(mode_strategy.required_agents)
             if mode_strategy and mode_strategy.preferred_agents:
                 planning_constraints["preferred_agents"] = list(mode_strategy.preferred_agents)
+            if mode_strategy and mode_strategy.excluded_agents:
+                planning_constraints["excluded_agents"] = list(mode_strategy.excluded_agents)
             if mode_strategy and mode_strategy.output_structure:
                 planning_constraints["required_output_structure"] = list(mode_strategy.output_structure)
 

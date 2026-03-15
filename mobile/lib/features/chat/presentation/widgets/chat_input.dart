@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/chat/presentation/widgets/voice_input_button.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/file/file.dart';
@@ -58,7 +59,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
               widget.onFileUploaded?.call(file);
             },
             onError: (message) => AppFeedback.error(context, message),
-            secondaryActionLabel: '文档清洗',
+            secondaryActionLabel: context.l10n.chatInputDocumentClean,
             onSecondaryAction: () {
               Navigator.pop(context);
               unawaited(
@@ -429,7 +430,9 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '引用 ${widget.quotedMessage!.sender.displayName}',
+                    context.l10n.chatQuotePrefix(
+                      widget.quotedMessage!.sender.displayName,
+                    ),
                     style: TextStyle(
                       fontSize: DS.fontSizeXs,
                       fontWeight: DS.fontWeightBold,

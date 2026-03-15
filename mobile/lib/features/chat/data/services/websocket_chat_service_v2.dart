@@ -5,8 +5,9 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/constants/api_constants.dart';
-import 'package:sparkle/core/tracing/tracing_service.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/tracing/tracing_service.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
@@ -1205,6 +1206,7 @@ class WebSocketChatServiceV2 {
 
   /// 处理401错误：自动刷新Token并重连
   Future<void> _handle401Error() async {
+    final l10n = I18nService.instance.l10n;
     if (_disposed) return;
 
     // 防止并发刷新
@@ -1223,7 +1225,7 @@ class WebSocketChatServiceV2 {
           _messageStreamController!,
           ErrorEvent(
             code: 'AUTH_FAILED',
-            message: '登录已过期，请重新登录',
+            message: l10n.chatAuthExpired,
             retryable: false,
           ),
         );
@@ -1251,7 +1253,9 @@ class WebSocketChatServiceV2 {
             _messageStreamController!,
             ErrorEvent(
               code: 'MESSAGES_LOST',
-              message: '${_pendingMessages.length} 条消息发送失败，请重新登录后重试',
+              message: l10n.chatPendingMessagesFailed(
+                _pendingMessages.length,
+              ),
               retryable: false,
             ),
           );
@@ -1274,7 +1278,7 @@ class WebSocketChatServiceV2 {
           _messageStreamController!,
           ErrorEvent(
             code: 'TOKEN_REFRESHING',
-            message: '正在刷新登录状态...',
+            message: l10n.chatAuthRefreshing,
             retryable: false,
           ),
         );
@@ -1305,7 +1309,7 @@ class WebSocketChatServiceV2 {
           _messageStreamController!,
           ErrorEvent(
             code: 'AUTH_FAILED',
-            message: '登录已过期，请重新登录',
+            message: l10n.chatAuthExpired,
             retryable: false,
           ),
         );
@@ -1333,7 +1337,9 @@ class WebSocketChatServiceV2 {
             _messageStreamController!,
             ErrorEvent(
               code: 'MESSAGES_LOST',
-              message: '${_pendingMessages.length} 条消息发送失败，请重新登录后重试',
+              message: l10n.chatPendingMessagesFailed(
+                _pendingMessages.length,
+              ),
               retryable: false,
             ),
           );

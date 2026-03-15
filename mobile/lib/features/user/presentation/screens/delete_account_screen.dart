@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/social_auth_service.dart';
 import 'package:sparkle/features/auth/auth.dart';
 
@@ -51,11 +52,11 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
   Future<void> _reauthWithSocial() async {
     final provider = _socialProvider;
     if (provider == null) {
-      AppFeedback.info(context, '当前账号没有可用于重新验证的社交登录方式。');
+      AppFeedback.info(context, context.l10n.deleteAccountNoSocialProvider);
       return;
     }
     if (provider == 'wechat' && !SocialAuthService().isWeChatAvailable) {
-      AppFeedback.info(context, '微信 SDK 未初始化，请先设置密码后再注销。');
+      AppFeedback.info(context, context.l10n.deleteAccountWeChatUnavailable);
       return;
     }
 
@@ -79,7 +80,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
         _provider = provider;
         _providerToken = providerToken;
       });
-      AppFeedback.success(context, '已完成重新验证，可以继续注销账号。');
+      AppFeedback.success(context, context.l10n.deleteAccountReauthSuccess);
     } catch (e) {
       if (!mounted) return;
       AppFeedback.error(context, e.toString());
@@ -92,15 +93,15 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
 
   Future<void> _submit() async {
     if (_confirmationController.text.trim().toUpperCase() != 'DELETE') {
-      AppFeedback.info(context, '请输入 DELETE 以确认注销');
+      AppFeedback.info(context, context.l10n.deleteAccountRequireDeleteInput);
       return;
     }
     if (!_isGuest && _requiresPassword && _passwordController.text.isEmpty) {
-      AppFeedback.info(context, '请输入当前密码');
+      AppFeedback.info(context, context.l10n.deleteAccountRequirePassword);
       return;
     }
     if (!_isGuest && !_requiresPassword && (_providerToken?.isEmpty ?? true)) {
-      AppFeedback.info(context, '请先完成社交账号重新验证');
+      AppFeedback.info(context, context.l10n.deleteAccountRequireReauth);
       return;
     }
 
@@ -113,7 +114,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
             providerToken: !_requiresPassword ? _providerToken : null,
           );
       if (!mounted) return;
-      AppFeedback.success(context, '账号已注销');
+      AppFeedback.success(context, context.l10n.deleteAccountSuccess);
       context.go('/login');
     } catch (e) {
       if (!mounted) return;
@@ -131,83 +132,91 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
         appBar: AppBar(
           leading: SparkleIconButton(
             variant: ButtonVariant.ghost,
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => context.pop(),
-          ),
-          title: const Text('注销账号'),
-          centerTitle: true,
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
         ),
-        child: ContentConstraint(
-          child: ListView(
-            padding: const EdgeInsets.all(DS.spacing24),
-            children: [
-              const GraphiteCardSurface(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '注销前请确认',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                      ),
+        title: Text(context.l10n.deleteAccountTitle),
+        centerTitle: true,
+      ),
+      child: ContentConstraint(
+        child: ListView(
+          padding: const EdgeInsets.all(DS.spacing24),
+          children: [
+            GraphiteCardSurface(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    context.l10n.deleteAccountChecklistTitle,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
                     ),
-                    SizedBox(height: DS.spacing12),
-                    Text('1. 当前账号会立即失效，所有设备会被强制下线。'),
-                    Text('2. 账号资料会进入删除流程，后续可能无法恢复。'),
-                    Text('3. 如果你只是想临时退出，建议使用普通登出。'),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: DS.spacing12),
+                  Text(context.l10n.deleteAccountChecklistItem1),
+                  Text(context.l10n.deleteAccountChecklistItem2),
+                  Text(context.l10n.deleteAccountChecklistItem3),
+                ],
               ),
-              const SizedBox(height: DS.spacing16),
-              GraphiteCardSurface(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      '输入 DELETE 确认',
-                      style: TextStyle(
+            ),
+            const SizedBox(height: DS.spacing16),
+            GraphiteCardSurface(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    context.l10n.deleteAccountConfirmInputTitle,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: DS.spacing12),
+                  TextField(
+                    controller: _confirmationController,
+                    decoration: InputDecoration(
+                      hintText: context.l10n.deleteAccountConfirmInputHint,
+                      border: const OutlineInputBorder(),
+                    ),
+                  ),
+                  if (_requiresPassword) ...[
+                    const SizedBox(height: DS.spacing16),
+                    Text(
+                      context.l10n.deleteAccountPasswordLabel,
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: DS.spacing12),
                     TextField(
-                      controller: _confirmationController,
-                      decoration: const InputDecoration(
-                        hintText: '请输入 DELETE',
-                        border: OutlineInputBorder(),
+                      controller: _passwordController,
+                      obscureText: true,
+                      decoration: InputDecoration(
+                        hintText: context.l10n.deleteAccountPasswordHint,
+                        border: const OutlineInputBorder(),
                       ),
                     ),
-                    if (_requiresPassword) ...[
-                      const SizedBox(height: DS.spacing16),
-                      const Text(
-                        '当前密码',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                        ),
+                  ] else if (!_isGuest) ...[
+                    const SizedBox(height: DS.spacing16),
+                    Text(
+                      context.l10n.deleteAccountSocialReauthNotice(
+                        _socialProvider == 'apple'
+                            ? 'Apple'
+                            : _socialProvider == 'google'
+                                ? 'Google'
+                                : context.l10n.deleteAccountSocialProvider,
                       ),
-                      const SizedBox(height: DS.spacing12),
-                      TextField(
-                        controller: _passwordController,
-                        obscureText: true,
-                        decoration: const InputDecoration(
-                          hintText: '请输入当前密码',
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                    ] else if (!_isGuest) ...[
-                      const SizedBox(height: DS.spacing16),
-                      Text(
-                        '当前账号需要通过${_socialProvider == 'apple' ? 'Apple' : _socialProvider == 'google' ? 'Google' : '社交账号'}重新验证后才能注销。',
-                      ),
-                      const SizedBox(height: DS.spacing12),
-                      SparkleButton(
-                        label: _providerToken == null ? '重新验证身份' : '已完成验证',
-                        variant: ButtonVariant.outline,
-                        expand: true,
-                        loading: _isLoading,
+                    ),
+                    const SizedBox(height: DS.spacing12),
+                    SparkleButton(
+                      label: _providerToken == null
+                          ? context.l10n.deleteAccountReauthButton
+                          : context.l10n.deleteAccountReauthDone,
+                      variant: ButtonVariant.outline,
+                      expand: true,
+                      loading: _isLoading,
                         onPressed: _isLoading
                             ? null
                             : () {
@@ -217,7 +226,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
                     ],
                     const SizedBox(height: DS.spacing24),
                     SparkleButton(
-                      label: '确认注销账号',
+                      label: context.l10n.deleteAccountConfirmButton,
                       variant: ButtonVariant.destructive,
                       expand: true,
                       loading: _isLoading,

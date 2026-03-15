@@ -38,6 +38,7 @@ extension ChatNotifierActions on ChatNotifier {
     String actionType,
     Map<String, dynamic> payload,
   ) async {
+    final l10n = I18nService.instance.l10n;
     switch (actionType) {
       case 'prompt':
         final prompt = _actionString(payload, 'prompt').isNotEmpty
@@ -62,7 +63,7 @@ extension ChatNotifierActions on ChatNotifier {
         await switchPlanSession(planId);
         state = state.copyWith(
           lastActionStatus: 'plan_switched',
-          lastActionMessage: '已切换到对应计划上下文',
+          lastActionMessage: l10n.chatPlanContextSwitched,
         );
         return;
       case 'open_task':
@@ -100,7 +101,7 @@ extension ChatNotifierActions on ChatNotifier {
             );
         state = state.copyWith(
           lastActionStatus: 'reflection_submitted',
-          lastActionMessage: '谢谢你的反馈，我会据此优化后续计划。',
+          lastActionMessage: l10n.chatFeedbackThanks,
         );
         return;
       default:
@@ -314,7 +315,8 @@ extension ChatNotifierActions on ChatNotifier {
     state = state.copyWith(
       pendingAchievementUnlock: event,
       lastActionStatus: 'achievement_unlocked',
-      lastActionMessage: '${event.name} 解锁！',
+      lastActionMessage: I18nService.instance.l10n
+          .chatAchievementUnlocked(event.name),
     );
 
     // Clear after delay
@@ -386,19 +388,20 @@ extension ChatNotifierActions on ChatNotifier {
   }
 
   String _getDefaultStatusMessage(String status) {
+    final l10n = I18nService.instance.l10n;
     switch (status) {
       case 'confirmed':
-        return '✅ 已确认';
+        return l10n.chatActionStatusConfirmed;
       case 'dismissed':
-        return '❌ 已忽略';
+        return l10n.chatActionStatusDismissed;
       case 'processing':
-        return '⏳ 处理中...';
+        return l10n.chatActionStatusProcessing;
       case 'completed':
-        return '✅ 已完成';
+        return l10n.chatActionStatusCompleted;
       case 'failed':
-        return '❌ 操作失败';
+        return l10n.chatActionStatusFailed;
       default:
-        return '📝 状态更新: $status';
+        return l10n.chatActionStatusUpdate(status);
     }
   }
 
@@ -469,17 +472,18 @@ extension ChatNotifierActions on ChatNotifier {
   }
 
   String _getPlanReviewStatusMessage(String status) {
+    final l10n = I18nService.instance.l10n;
     switch (status) {
       case 'approved':
-        return '✅ 计划已批准';
+        return l10n.chatPlanReviewApproved;
       case 'rejected':
-        return '❌ 计划已取消';
+        return l10n.chatPlanReviewRejected;
       case 'modify_requested':
-        return '📝 请提供修改要求...';
+        return l10n.chatPlanReviewModifyRequested;
       case 'acknowledged':
-        return '✅ 反馈已收到';
+        return l10n.chatPlanReviewAcknowledged;
       default:
-        return '📋 计划状态更新: $status';
+        return l10n.chatPlanReviewStatusUpdate(status);
     }
   }
 
@@ -559,28 +563,31 @@ extension ChatNotifierActions on ChatNotifier {
     double scoreDelta,
     int rounds,
   ) {
-    final roundsInfo = rounds > 1 ? ' ($rounds轮)' : '';
+    final l10n = I18nService.instance.l10n;
+    final roundsInfo = rounds > 1 ? l10n.chatRoundsInfo(rounds) : '';
+    final scoreDeltaPct = (scoreDelta * 100).toInt();
     switch (outcome) {
       case 'fixed':
-        return '✅ 内容已优化$roundsInfo，分数提升 +${(scoreDelta * 100).toInt()}%';
+        return l10n.chatReflectionFixed(roundsInfo, scoreDeltaPct);
       case 'improved':
-        return '📈 内容有所改善$roundsInfo，分数提升 +${(scoreDelta * 100).toInt()}%';
+        return l10n.chatReflectionImproved(roundsInfo, scoreDeltaPct);
       case 'no_change':
-        return 'ℹ️ 优化尝试完成，内容无明显变化';
+        return l10n.chatReflectionNoChange;
       case 'degraded':
-        return '⚠️ 优化尝试未达预期，保留原内容';
+        return l10n.chatReflectionDegraded;
       case 'failed':
-        return '❌ 优化失败，请稍后重试';
+        return l10n.chatReflectionFailed;
       default:
-        return '🔄 反思处理完成: $outcome';
+        return l10n.chatReflectionStatusUpdate(outcome);
     }
   }
 
   /// Get score label for a given score
   String _getScoreLabelForScore(double score) {
-    if (score >= 0.9) return '优秀';
-    if (score >= 0.7) return '良好';
-    if (score >= 0.5) return '及格';
-    return '需改进';
+    final l10n = I18nService.instance.l10n;
+    if (score >= 0.9) return l10n.contentReviewScoreExcellent;
+    if (score >= 0.7) return l10n.contentReviewScoreGood;
+    if (score >= 0.5) return l10n.contentReviewScorePass;
+    return l10n.contentReviewScoreNeedsWork;
   }
 }

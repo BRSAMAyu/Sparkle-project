@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// 任务列表组件
 /// 用于在聊天中批量显示 AI 生成的任务
@@ -28,7 +29,7 @@ class TaskListWidget extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '批量创建任务 (${tasks.length}个)',
+              context.l10n.taskBatchCreateTitle(tasks.length),
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -39,7 +40,7 @@ class TaskListWidget extends StatelessWidget {
             Align(
               alignment: Alignment.bottomRight,
               child: SparkleButton(
-                label: '查看所有任务',
+                label: context.l10n.taskViewAll,
                 variant: ButtonVariant.ghost,
                 icon: const Icon(Icons.arrow_forward_ios, size: 16),
                 onPressed: () {
@@ -117,21 +118,22 @@ class TaskListWidget extends StatelessWidget {
   }
 
   Widget _buildStatusChip(BuildContext context, String status) {
+    final l10n = context.l10n;
     Color color;
     String label;
     switch (status) {
       case 'pending':
         color = DS.brandPrimary;
-        label = '待办';
+        label = l10n.taskStatusPending;
       case 'in_progress':
         color = DS.brandPrimary;
-        label = '进行中';
+        label = l10n.taskStatusInProgress;
       case 'completed':
         color = DS.success;
-        label = '已完成';
+        label = l10n.taskStatusCompleted;
       case 'abandoned':
         color = DS.error;
-        label = '已放弃';
+        label = l10n.taskStatusAbandoned;
       default:
         color = DS.brandPrimary;
         label = status;

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// 多智能体协作时间线组件
 ///
@@ -91,7 +92,7 @@ class _AgentCollaborationTimelineState extends State<AgentCollaborationTimeline>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '多专家协作时间线',
+                  context.l10n.chatCollabTimelineTitle,
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -100,7 +101,7 @@ class _AgentCollaborationTimelineState extends State<AgentCollaborationTimeline>
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  _getWorkflowDisplayName(),
+                  _getWorkflowDisplayName(context),
                   style: TextStyle(
                     fontSize: 12,
                     color: DS.prismPurple.withValues(alpha: 0.82),
@@ -283,7 +284,7 @@ class _AgentCollaborationTimelineState extends State<AgentCollaborationTimeline>
             ),
             const SizedBox(width: DS.xs),
             Text(
-              '查看详情',
+              context.l10n.viewDetails,
               style: TextStyle(
                 fontSize: 12,
                 color: step.agentColor,
@@ -315,18 +316,19 @@ class _AgentCollaborationTimelineState extends State<AgentCollaborationTimeline>
         ],
       );
 
-  String _getWorkflowDisplayName() {
+  String _getWorkflowDisplayName(BuildContext context) {
+    final l10n = context.l10n;
     switch (widget.workflowType) {
       case 'task_decomposition':
-        return '任务分解协作模式';
+        return l10n.chatWorkflowTaskDecomposition;
       case 'progressive_exploration':
-        return '渐进式深度探索模式';
+        return l10n.chatWorkflowProgressiveExploration;
       case 'error_diagnosis':
-        return '错题诊断循环模式';
+        return l10n.chatWorkflowErrorDiagnosis;
       case 'expert_routing':
-        return '专家路由模式';
+        return l10n.chatWorkflowExpertRouting;
       default:
-        return '协作模式';
+        return l10n.chatWorkflowDefault;
     }
   }
 

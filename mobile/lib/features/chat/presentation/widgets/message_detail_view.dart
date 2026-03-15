@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -137,7 +138,9 @@ class MessageDetailView extends StatelessWidget {
                 ),
                 const SizedBox(width: 4),
                 Text(
-                  isUserMessage ? '我' : 'AI助手',
+                  isUserMessage
+                      ? context.l10n.chatLabelMe
+                      : context.l10n.chatLabelAssistant,
                   style: TextStyle(
                     color: roleTextColor,
                     fontSize: 12,
@@ -165,7 +168,7 @@ class MessageDetailView extends StatelessWidget {
           SparkleIconButton(
             icon: const Icon(Icons.close, size: DS.iconSizeSm),
             onPressed: () => Navigator.of(context).pop(),
-            semanticLabel: '关闭',
+            semanticLabel: context.l10n.close,
             variant: ButtonVariant.ghost,
           ),
         ],
@@ -177,7 +180,7 @@ class MessageDetailView extends StatelessWidget {
     if (message.content.isEmpty) {
       return Center(
         child: Text(
-          '无内容',
+          context.l10n.chatNoContent,
           style: TextStyle(
             color: DS.textTertiary,
             fontSize: 14,
@@ -324,10 +327,13 @@ class MessageDetailView extends StatelessWidget {
           // 复制按钮
           _ActionButton(
             icon: Icons.copy,
-            label: '复制',
+            label: context.l10n.chatCopy,
             onPressed: () {
               Clipboard.setData(ClipboardData(text: message.content));
-              AppFeedback.info(context, '已复制到剪贴板');
+              AppFeedback.info(
+                context,
+                context.l10n.chatCopiedToClipboard,
+              );
             },
           ),
 

@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
 import 'package:record/record.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
@@ -59,7 +60,11 @@ class AudioRecordingService {
         },
         onError: (Object error) {
           _logger.e('WebSocket error: $error');
-          onError('WebSocket连接失败: $error');
+          onError(
+            I18nService.instance.l10n.chatAudioWsConnectFailed(
+              error.toString(),
+            ),
+          );
           stopRecording();
         },
         onDone: () {
@@ -87,7 +92,11 @@ class AudioRecordingService {
         },
         onError: (Object error) {
           _logger.e('Audio stream error: $error');
-          onError('音频录制失败: $error');
+          onError(
+            I18nService.instance.l10n.chatAudioRecordFailed(
+              error.toString(),
+            ),
+          );
           stopRecording();
         },
         onDone: () {
@@ -115,7 +124,7 @@ class AudioRecordingService {
       _logger.d('Recording started successfully');
     } catch (e) {
       _logger.e('Failed to start recording: $e');
-      onError('录制启动失败: $e');
+      onError(I18nService.instance.l10n.chatAudioStartFailed(e.toString()));
       stopRecording();
     }
   }
@@ -162,7 +171,7 @@ class AudioRecordingService {
       }
     } catch (e) {
       _logger.e('Failed to parse WebSocket message: $e');
-      onError('解析消息失败: $e');
+      onError(I18nService.instance.l10n.chatAudioParseFailed(e.toString()));
     }
   }
 

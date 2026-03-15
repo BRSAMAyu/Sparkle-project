@@ -173,7 +173,10 @@ def _normalize_order(order: list[Any], default_task: str) -> list[dict[str, str]
             resolved = resolve_node_name(str(agent))
             if not resolved:
                 continue
-            normalized.append({"agent": resolved, "task": str(item.get("task") or default_task)})
+            task_value = str(item.get("task") or "").strip()
+            if not task_value or task_value == "mode_required":
+                task_value = default_task
+            normalized.append({"agent": resolved, "task": task_value})
         elif isinstance(item, str):
             resolved = resolve_node_name(item)
             if resolved:
@@ -396,9 +399,19 @@ async def analyze_collaboration_plan(
     user_id = str(state.get("user_id") or "").strip()
     redis_client = (config or {}).get("configurable", {}).get("redis_client")
     intent_type = _planning_intent_type(state)
+    planning_constraints = state.get("_planning_constraints") or {}
+    excluded_agents = {
+        str(agent).strip()
+        for agent in (planning_constraints.get("excluded_agents") or [])
+        if str(agent).strip()
+    }
     scoring_service = AgentScoringService(redis_client)
     fast_plan = _analyze_collaboration_needs_fast(message)
     available_agents = await _build_available_agents(user_id=user_id, redis_client=redis_client)
+    if excluded_agents:
+        available_agents = [
+            agent for agent in available_agents if agent.get("id") not in excluded_agents
+        ]
     quality_by_agent = {item["id"]: float(item.get("quality_score") or 0.5) for item in available_agents}
 
     if fast_plan is not None:
@@ -434,6 +447,32 @@ async def analyze_collaboration_plan(
                 "agents": [],
                 "order": [],
             }
+
+    if excluded_agents and isinstance(plan, dict):
+        filtered_agents = [
+            str(agent).strip()
+            for agent in (plan.get("agents") or [])
+            if str(agent).strip() and str(agent).strip() not in excluded_agents
+        ]
+        filtered_order = [
+            item
+            for item in (plan.get("order") or [])
+            if isinstance(item, dict) and str(item.get("agent") or "").strip() not in excluded_agents
+        ]
+        if len(filtered_agents) <= 1:
+            primary_agent = filtered_agents[0] if filtered_agents else plan.get("primary_agent")
+            return {
+                "mode": "single",
+                "primary_agent": primary_agent or _classify_primary_agent(message),
+                "agents": [],
+                "order": [],
+                "reasoning": plan.get("reasoning", ""),
+            }
+        plan = {
+            **plan,
+            "agents": filtered_agents,
+            "order": filtered_order,
+        }
 
     if plan.get("mode") in {"sequential", "parallel"} and redis_client and user_id:
         explored_agents = await scoring_service.maybe_apply_exploration(

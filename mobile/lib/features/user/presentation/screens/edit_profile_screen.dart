@@ -220,27 +220,28 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   }
 
   Future<void> _verifyEmailWithCode() async {
+    final l10n = context.l10n;
     final controller = TextEditingController();
     final token = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('输入邮箱验证码'),
+        title: Text(l10n.editProfileVerifyEmailTitle),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(
-            hintText: '请输入邮件中的验证码',
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            hintText: l10n.editProfileVerifyEmailHint,
+            border: const OutlineInputBorder(),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             onPressed: () =>
                 Navigator.of(dialogContext).pop(controller.text.trim()),
-            child: const Text('验证'),
+            child: Text(l10n.editProfileVerifyEmailConfirm),
           ),
         ],
       ),
@@ -422,15 +423,15 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                       ListTile(
                         leading: Icon(Icons.lock_reset_rounded,
                             color: DS.primaryBase,),
-                        title: Text(
-                          _isSocialAccount
-                              ? '设置密码'
+                          title: Text(
+                            _isSocialAccount
+                              ? l10n.editProfileSetPassword
                               : l10n.editProfileResetPassword,
                           style: const TextStyle(
                               fontSize: 15, fontWeight: FontWeight.w500,),
                         ),
                         subtitle: _isSocialAccount
-                            ? const Text('社交账号首次设置密码后，可使用邮箱密码登录')
+                            ? Text(l10n.editProfileSetPasswordHint)
                             : null,
                         trailing: const Icon(Icons.chevron_right_rounded),
                         onTap: () {
@@ -449,14 +450,16 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                               : DS.warning,
                         ),
                         title: Text(
-                          (user?.emailVerified ?? false) ? '邮箱已验证' : '邮箱未验证',
+                          (user?.emailVerified ?? false)
+                              ? l10n.editProfileEmailVerified
+                              : l10n.editProfileEmailUnverified,
                           style: const TextStyle(
                               fontSize: 15, fontWeight: FontWeight.w500,),
                         ),
                         subtitle: Text(
                           (user?.emailVerified ?? false)
-                              ? '你的邮箱已完成验证'
-                              : '验证后可修改密码并增强账号安全',
+                              ? l10n.editProfileEmailVerifiedDesc
+                              : l10n.editProfileEmailUnverifiedDesc,
                         ),
                         trailing: (user?.emailVerified ?? false)
                             ? null
@@ -476,12 +479,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                               TextButton(
                                 onPressed:
                                     _isLoading ? null : _verifyEmailWithCode,
-                                child: const Text('输入验证码'),
+                                child: Text(l10n.editProfileEnterCode),
                               ),
                               TextButton(
                                 onPressed:
                                     _isLoading ? null : _sendVerificationEmail,
-                                child: const Text('发送邮件'),
+                                child: Text(l10n.editProfileSendEmail),
                               ),
                             ],
                           ),
@@ -514,13 +517,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                             : l10n.editProfileFullAccount,
                       ),
                       _buildInfoRow(
-                        '注册方式',
+                        l10n.editProfileRegistrationMethod,
                         switch (user?.registrationSource) {
-                          'google' => 'Google',
-                          'apple' => 'Apple',
-                          'wechat' => '微信',
-                          'guest' => '游客',
-                          _ => '邮箱',
+                          'google' => l10n.google,
+                          'apple' => l10n.apple,
+                          'wechat' => l10n.wechat,
+                          'guest' => l10n.editProfileGuestAccount,
+                          _ => l10n.email,
                         },
                       ),
                     ],

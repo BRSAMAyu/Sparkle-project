@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/task/presentation/providers/task_drag_provider.dart';
 import 'package:sparkle/features/task/presentation/widgets/task_card.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
@@ -30,6 +32,7 @@ class DraggableTaskCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     if (!enableDrag) {
       return TaskCard(
         task: task,
@@ -124,8 +127,8 @@ class DraggableTaskCard extends ConsumerWidget {
                           const SizedBox(width: 4),
                           Text(
                             task.dueDate != null
-                                ? '${task.dueDate!.month}月${task.dueDate!.day}日'
-                                : '未设置',
+                                ? Formatters.formatDateMonthDay(task.dueDate!)
+                                : l10n.taskDueDateUnset,
                             style: TextStyle(
                               color: DS.brandPrimary54,
                               fontSize: 11,

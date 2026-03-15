@@ -16,6 +16,7 @@ def create_specialist_node(
     *,
     agent_id: str,
     planning_prompt: str,
+    system_prompt: str | None = None,
     task_prompt_prefix: str | None = None,
     toolset: list | None = None,
 ) -> Callable[[SparkleState, dict | None], dict]:
@@ -36,9 +37,31 @@ def create_specialist_node(
             task_prefix = task_prompt_prefix or "Collaboration task"
             messages.append(HumanMessage(content=f"[{task_prefix}] {collaboration_context}"))
 
+        def _build_prompt(prompt: str) -> str:
+            prompt = prompt.strip()
+            collaboration_mode = str(state.get("collaboration_mode") or "").strip()
+            collaboration_agents = [
+                str(agent).strip()
+                for agent in (state.get("collaboration_agents") or [])
+                if str(agent).strip()
+            ]
+            other_agents = [agent for agent in collaboration_agents if agent != agent_id]
+            if collaboration_mode and other_agents:
+                prompt += (
+                    "\n\n## 协作须知\n"
+                    f"协作模式：{collaboration_mode}\n"
+                    f"其他参与专家：{', '.join(other_agents)}\n"
+                    "只输出你擅长的部分，避免重复他人内容。\n"
+                    "关键论点可简短标注你的专家身份，便于聚合。"
+                )
+            return prompt
+
         if state.get("planning_mode") or state.get("_planning_mode"):
             messages = list(messages)
-            messages.insert(0, SystemMessage(content=planning_prompt))
+            messages.insert(0, SystemMessage(content=_build_prompt(planning_prompt)))
+        elif system_prompt:
+            messages = list(messages)
+            messages.insert(0, SystemMessage(content=_build_prompt(system_prompt)))
 
         llm = LLMFactory.get_llm(agent_id)
         if toolset:

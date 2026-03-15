@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_config.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
 
@@ -26,6 +27,7 @@ class GalaxySearchPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final foreground = isDarkMode ? Colors.white : const Color(0xFF111827);
     final secondary = isDarkMode
         ? Colors.white.withValues(alpha: 0.64)
@@ -69,7 +71,7 @@ class GalaxySearchPanel extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          '搜索知识节点',
+                          l10n.galaxySearchTitle,
                           style: TextStyle(
                             color: foreground,
                             fontSize: 16,
@@ -95,7 +97,7 @@ class GalaxySearchPanel extends StatelessWidget {
                       fontWeight: FontWeight.w500,
                     ),
                     decoration: InputDecoration(
-                      hintText: '输入名称、标签或扇区',
+                      hintText: l10n.galaxySearchHint,
                       hintStyle: TextStyle(color: secondary),
                       prefixIcon: Icon(Icons.search_rounded, color: secondary),
                       filled: true,
@@ -118,7 +120,7 @@ class GalaxySearchPanel extends StatelessWidget {
                         : results.isEmpty
                             ? Center(
                                 child: Text(
-                                  '没有匹配结果',
+                                  l10n.galaxySearchNoResults,
                                   style: TextStyle(
                                     color: secondary,
                                     fontSize: 13,
@@ -139,6 +141,10 @@ class GalaxySearchPanel extends StatelessWidget {
                                   final node = results[index];
                                   final sectorStyle =
                                       SectorConfig.getStyle(node.sector);
+                                  final sectorName =
+                                      SectorConfig.getLocalizedName(
+                                    node.sector,
+                                  );
                                   final color = sectorStyle.primaryColorFor(
                                     isDarkMode: isDarkMode,
                                   );
@@ -170,7 +176,11 @@ class GalaxySearchPanel extends StatelessWidget {
                                       ),
                                     ),
                                     subtitle: Text(
-                                      '${sectorStyle.name} · 掌握 ${node.masteryScore}% · 重要度 ${node.importance}',
+                                      l10n.galaxySearchResultSubtitle(
+                                        sectorName,
+                                        node.masteryScore,
+                                        node.importance,
+                                      ),
                                       style: TextStyle(
                                         color: secondary,
                                         fontSize: 12,
@@ -203,6 +213,7 @@ class _SearchHint extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final secondary = isDarkMode
         ? Colors.white.withValues(alpha: 0.62)
         : Colors.black.withValues(alpha: 0.56);
@@ -218,7 +229,7 @@ class _SearchHint extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            '实时筛选节点并直接飞行定位',
+            l10n.galaxySearchHintDetail,
             style: TextStyle(
               color: secondary,
               fontSize: 13,

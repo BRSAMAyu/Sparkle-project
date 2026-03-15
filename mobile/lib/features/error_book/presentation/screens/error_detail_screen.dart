@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
 import 'package:sparkle/features/error_book/data/models/error_semantic_summary.dart';
 import 'package:sparkle/features/error_book/data/providers/error_book_provider.dart';
@@ -23,6 +25,7 @@ class ErrorDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final errorAsync = ref.watch(errorDetailProvider(errorId));
 
     return SparklePageScaffold(
@@ -33,12 +36,12 @@ class ErrorDetailScreen extends ConsumerWidget {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        title: const Text('错题详情'),
+        title: Text(l10n.errorBookDetailTitle),
         actions: [
           // 编辑按钮
           errorAsync.whenOrNull(
                 data: (error) => Tooltip(
-                  message: '编辑',
+                  message: l10n.errorBookEdit,
                   child: SparkleIconButton(
                     variant: ButtonVariant.ghost,
                     icon: const Icon(Icons.edit_outlined),
@@ -60,13 +63,13 @@ class ErrorDetailScreen extends ConsumerWidget {
                     }
                   },
                   itemBuilder: (context) => [
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'reanalyze',
                       child: Row(
                         children: [
-                          Icon(Icons.psychology_outlined),
-                          SizedBox(width: DS.spacing12),
-                          Text('重新分析'),
+                          const Icon(Icons.psychology_outlined),
+                          const SizedBox(width: DS.spacing12),
+                          Text(l10n.errorBookReanalyze),
                         ],
                       ),
                     ),
@@ -74,10 +77,10 @@ class ErrorDetailScreen extends ConsumerWidget {
                       value: 'delete',
                       child: Row(
                         children: [
-                          Icon(Icons.delete_outline, color: DS.error),
+                          const Icon(Icons.delete_outline, color: DS.error),
                           const SizedBox(width: DS.spacing12),
                           Text(
-                            '删除错题',
+                            l10n.errorBookDelete,
                             style: TextStyle(color: DS.error),
                           ),
                         ],
@@ -209,7 +212,8 @@ class ErrorDetailScreen extends ConsumerWidget {
               ),
               const SizedBox(width: 4),
               Text(
-                '创建于 ${_formatDateTime(error.createdAt)}',
+                context.l10n
+                    .errorBookCreatedAt(_formatDateTime(error.createdAt)),
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -250,7 +254,9 @@ class ErrorDetailScreen extends ConsumerWidget {
           ),
           const SizedBox(width: 4),
           Text(
-            '掌握度 ${(mastery * 100).toInt()}%',
+            context.l10n.errorBookMasteryPercent(
+              (mastery * 100).toInt(),
+            ),
             style: theme.textTheme.labelMedium?.copyWith(
               color: color,
               fontWeight: FontWeight.w600,
@@ -279,7 +285,7 @@ class ErrorDetailScreen extends ConsumerWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildSectionHeader(context, '同类错因总结'),
+              _buildSectionHeader(context, context.l10n.errorBookSimilarSummary),
               Padding(
                 padding: const EdgeInsets.symmetric(
                     horizontal: DS.spacing16, vertical: DS.spacing12,),
@@ -290,13 +296,16 @@ class ErrorDetailScreen extends ConsumerWidget {
                         summary.rootCause!.isNotEmpty) ...[
                       _buildLabeledText(
                         context,
-                        label: '主要错因',
+                        label: context.l10n.errorBookRootCause,
                         value: summary.rootCause!,
                       ),
                       const SizedBox(height: DS.spacing12),
                     ],
                     if (summary.strategies.isNotEmpty) ...[
-                      _buildSectionSubtitle(context, '建议策略'),
+                      _buildSectionSubtitle(
+                        context,
+                        context.l10n.errorBookStrategySuggestions,
+                      ),
                       const SizedBox(height: DS.spacing8),
                       Wrap(
                         spacing: 8,
@@ -311,12 +320,15 @@ class ErrorDetailScreen extends ConsumerWidget {
                       const SizedBox(height: DS.spacing12),
                     ],
                     if (summary.similarErrors.isNotEmpty) ...[
-                      _buildSectionSubtitle(context, '同类错题'),
+                      _buildSectionSubtitle(
+                        context,
+                        context.l10n.errorBookSimilarErrors,
+                      ),
                       const SizedBox(height: DS.spacing8),
                       ...summary.similarErrors.map(
                         (item) => _buildBulletText(
                           context,
-                          '${item.subjectCode} • ${item.rootCause ?? '同类错因'}',
+                          '${item.subjectCode} • ${item.rootCause ?? context.l10n.errorBookSimilarCauseFallback}',
                         ),
                       ),
                     ],
@@ -434,7 +446,7 @@ class ErrorDetailScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '题目内容',
+            context.l10n.errorBookQuestionContent,
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w600,
             ),
@@ -472,7 +484,7 @@ class ErrorDetailScreen extends ConsumerWidget {
                       ),
                       const SizedBox(width: DS.spacing8),
                       Text(
-                        '图片加载失败',
+                        context.l10n.errorBookImageLoadFailed,
                         style: TextStyle(color: theme.colorScheme.error),
                       ),
                     ],
@@ -495,7 +507,7 @@ class ErrorDetailScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '答案对比',
+            context.l10n.errorBookAnswerComparison,
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w600,
             ),
@@ -505,7 +517,7 @@ class ErrorDetailScreen extends ConsumerWidget {
           // 你的答案
           _buildAnswerCard(
             context: context,
-            label: '你的答案',
+            label: context.l10n.errorBookYourAnswer,
             content: error.userAnswer,
             icon: Icons.edit_outlined,
             color: theme.colorScheme.error,
@@ -516,7 +528,7 @@ class ErrorDetailScreen extends ConsumerWidget {
           // 正确答案
           _buildAnswerCard(
             context: context,
-            label: '正确答案',
+            label: context.l10n.errorBookCorrectAnswer,
             content: error.correctAnswer,
             icon: Icons.check_circle_outline,
             color: DS.success,
@@ -590,7 +602,7 @@ class ErrorDetailScreen extends ConsumerWidget {
                 ),
                 const SizedBox(width: DS.spacing8),
                 Text(
-                  'AI 智能分析',
+                  context.l10n.errorBookAiAnalysis,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
@@ -628,7 +640,7 @@ class ErrorDetailScreen extends ConsumerWidget {
               ),
               const SizedBox(width: DS.spacing8),
               Text(
-                '关联知识点',
+                context.l10n.errorBookKnowledgeLinks,
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
@@ -644,12 +656,15 @@ class ErrorDetailScreen extends ConsumerWidget {
                   (link) => ActionChip(
                     avatar: const Icon(Icons.timeline, size: 16),
                     label: Text(link.nodeName),
-                    tooltip: '跳转到知识星图',
+                    tooltip: context.l10n.errorBookKnowledgeLinkTooltip,
                     onPressed: () {
                       // TODO: 导航到知识星图对应节点
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('跳转到知识点: ${link.nodeName}'),
+                          content: Text(
+                            context.l10n
+                                .errorBookKnowledgeLinkSnack(link.nodeName),
+                          ),
                           behavior: SnackBarBehavior.floating,
                         ),
                       );
@@ -673,7 +688,7 @@ class ErrorDetailScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '复习统计',
+            context.l10n.errorBookReviewStats,
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w600,
             ),
@@ -684,7 +699,7 @@ class ErrorDetailScreen extends ConsumerWidget {
               children: [
                 _buildStatCard(
                   context: context,
-                  label: '复习次数',
+                  label: context.l10n.errorBookReviewCount,
                   value: error.reviewCount.toString(),
                   icon: Icons.repeat,
                   color: DS.info,
@@ -692,7 +707,7 @@ class ErrorDetailScreen extends ConsumerWidget {
                 const SizedBox(height: DS.spacing12),
                 _buildStatCard(
                   context: context,
-                  label: '掌握度',
+                  label: context.l10n.masteryScore,
                   value: '${(error.masteryLevel * 100).toInt()}%',
                   icon: Icons.trending_up,
                   color: error.masteryLevel >= 0.8
@@ -709,7 +724,7 @@ class ErrorDetailScreen extends ConsumerWidget {
                 Expanded(
                   child: _buildStatCard(
                     context: context,
-                    label: '复习次数',
+                    label: context.l10n.errorBookReviewCount,
                     value: error.reviewCount.toString(),
                     icon: Icons.repeat,
                     color: DS.info,
@@ -719,7 +734,7 @@ class ErrorDetailScreen extends ConsumerWidget {
                 Expanded(
                   child: _buildStatCard(
                     context: context,
-                    label: '掌握度',
+                    label: context.l10n.masteryScore,
                     value: '${(error.masteryLevel * 100).toInt()}%',
                     icon: Icons.trending_up,
                     color: error.masteryLevel >= 0.8
@@ -735,7 +750,7 @@ class ErrorDetailScreen extends ConsumerWidget {
           if (error.lastReviewedAt != null)
             _buildInfoRow(
               context,
-              '上次复习',
+              context.l10n.errorBookLastReview,
               _formatDateTime(error.lastReviewedAt!),
               Icons.history,
             ),
@@ -743,7 +758,7 @@ class ErrorDetailScreen extends ConsumerWidget {
             const SizedBox(height: DS.spacing8),
             _buildInfoRow(
               context,
-              '下次复习',
+              context.l10n.errorBookNextReview,
               _formatDateTime(error.nextReviewAt!),
               Icons.event,
             ),
@@ -847,7 +862,7 @@ class ErrorDetailScreen extends ConsumerWidget {
           child: FilledButton.icon(
             onPressed: () => _startReview(context, ref, error),
             icon: const Icon(Icons.play_circle_outline),
-            label: const Text('开始复习'),
+            label: Text(context.l10n.errorBookStartReview),
             style: FilledButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
               textStyle: const TextStyle(
@@ -870,9 +885,9 @@ class ErrorDetailScreen extends ConsumerWidget {
               color: DS.error,
             ),
             const SizedBox(height: DS.spacing16),
-            const Text(
-              '加载失败',
-              style: TextStyle(
+            Text(
+              context.l10n.errorBookLoadFailed,
+              style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w500,
               ),
@@ -892,7 +907,7 @@ class ErrorDetailScreen extends ConsumerWidget {
                 ref.invalidate(errorDetailProvider(errorId));
               },
               icon: const Icon(Icons.refresh),
-              label: const Text('重试'),
+              label: Text(context.l10n.retry),
             ),
           ],
         ),
@@ -900,30 +915,18 @@ class ErrorDetailScreen extends ConsumerWidget {
 
   String _formatDateTime(DateTime dateTime) {
     final now = DateTime.now();
-    final diff = now.difference(dateTime);
-
-    if (diff.inDays == 0) {
-      if (diff.inHours == 0) {
-        if (diff.inMinutes == 0) {
-          return '刚刚';
-        }
-        return '${diff.inMinutes} 分钟前';
-      }
-      return '${diff.inHours} 小时前';
-    } else if (diff.inDays == 1) {
-      return '昨天';
-    } else if (diff.inDays < 7) {
-      return '${diff.inDays} 天前';
-    } else {
-      return '${dateTime.year}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.day.toString().padLeft(2, '0')}';
+    final diffDays = now.difference(dateTime).inDays.abs();
+    if (diffDays < 7) {
+      return Formatters.formatRelativeTime(dateTime);
     }
+    return Formatters.formatDateShort(dateTime);
   }
 
   void _navigateToEdit(BuildContext context, ErrorRecord error) {
     // TODO: 实现编辑功能
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('编辑功能开发中...'),
+      SnackBar(
+        content: Text(context.l10n.errorBookEditInProgress),
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -948,7 +951,7 @@ class ErrorDetailScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(width: DS.spacing12),
-            const Text('AI 正在重新分析...'),
+            Text(context.l10n.errorBookReanalyzing),
           ],
         ),
         duration: const Duration(seconds: 2),
@@ -965,19 +968,19 @@ class ErrorDetailScreen extends ConsumerWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('确认删除'),
-        content: const Text('删除后将无法恢复，是否继续？'),
+        title: Text(context.l10n.errorBookDeleteConfirmTitle),
+        content: Text(context.l10n.errorBookDeleteConfirmMessage),
         actions: [
           SparkleButton.ghost(
             onPressed: () => Navigator.of(context).pop(false),
-            label: '取消',
+            label: context.l10n.cancel,
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: FilledButton.styleFrom(
               backgroundColor: DS.error,
             ),
-            child: const Text('删除'),
+            child: Text(context.l10n.delete),
           ),
         ],
       ),
@@ -991,7 +994,7 @@ class ErrorDetailScreen extends ConsumerWidget {
           Navigator.of(context).pop(true); // 返回列表页
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('删除成功'),
+              content: Text(context.l10n.errorBookDeleteSuccess),
               backgroundColor: DS.success,
               behavior: SnackBarBehavior.floating,
             ),
@@ -1001,7 +1004,7 @@ class ErrorDetailScreen extends ConsumerWidget {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('删除失败: $e'),
+              content: Text(context.l10n.errorBookDeleteFailed(e.toString())),
               backgroundColor: DS.error,
               behavior: SnackBarBehavior.floating,
             ),
@@ -1018,8 +1021,8 @@ class ErrorDetailScreen extends ConsumerWidget {
   ) {
     // TODO: 导航到复习页面
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('复习功能开发中...'),
+      SnackBar(
+        content: Text(context.l10n.errorBookReviewInProgress),
         behavior: SnackBarBehavior.floating,
       ),
     );

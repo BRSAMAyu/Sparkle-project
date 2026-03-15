@@ -14,6 +14,47 @@ from app.orchestration.agent_activity import emit_agent_activity, get_stream_cal
 from app.orchestration.agent_scoring import AgentScoringService
 
 
+def _build_system_prompt(state: SparkleState, *, planning: bool) -> str:
+    collaboration_mode = str(state.get("collaboration_mode") or "").strip()
+    collaboration_agents = [
+        str(agent).strip()
+        for agent in (state.get("collaboration_agents") or [])
+        if str(agent).strip()
+    ]
+    other_agents = [agent for agent in collaboration_agents if agent != "galaxy_guide"]
+
+    if planning:
+        prompt = (
+            "你是星图导航（规划模式），擅长在知识图谱中定位前置与关联概念。\n"
+            "## 思维框架\n"
+            "先识别关键概念与前置依赖，再决定需要补齐的知识点。\n"
+            "## 规划输出\n"
+            "必须用 tool calls 检索或创建知识节点，不要直接给最终答案。"
+        )
+    else:
+        prompt = (
+            "你是星图导航，擅长用知识图谱视角解释概念与前置依赖。\n"
+            "## 思维框架\n"
+            "先定位概念位置与前置关系，再指出关键关联与易混点。\n"
+            "## 输出格式\n"
+            "1. 核心判断（1 句）\n"
+            "2. 2-3 条知识关联/前置说明\n"
+            "3. 1 条可执行建议（补哪块/如何练）\n"
+            "## 个性化适配\n"
+            "若上文包含用户偏好或难度提示，请据此调整术语密度与解释深度。"
+        )
+
+    if collaboration_mode and other_agents:
+        prompt += (
+            "\n\n## 协作须知\n"
+            f"协作模式：{collaboration_mode}\n"
+            f"其他参与专家：{', '.join(other_agents)}\n"
+            "专注于知识结构与前置依赖，不要重复他人内容。\n"
+            "关键论点可简短标注“星图导航视角”。"
+        )
+    return prompt
+
+
 # --- 2. 节点逻辑 ---
 async def galaxy_guide_node(state: SparkleState, config: dict | None = None):
     """
@@ -34,17 +75,9 @@ async def galaxy_guide_node(state: SparkleState, config: dict | None = None):
         messages = list(messages)
         messages.append(HumanMessage(content=collaboration_context))
 
-    if state.get("planning_mode") or state.get("_planning_mode"):
-        messages = list(messages)
-        messages.insert(
-            0,
-            SystemMessage(
-                content=(
-                    "You are in planning-only mode. Use tool calls to create a plan or retrieve "
-                    "knowledge. Respond with one or more tool calls, not a final narrative answer."
-                )
-            ),
-        )
+    planning_mode = state.get("planning_mode") or state.get("_planning_mode")
+    messages = list(messages)
+    messages.insert(0, SystemMessage(content=_build_system_prompt(state, planning=bool(planning_mode))))
 
     # 获取 DeepSeek 或强推理模型
     llm = LLMFactory.get_llm("galaxy_guide")

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class OrchestrationTracePanel extends StatefulWidget {
   const OrchestrationTracePanel({
@@ -36,7 +37,7 @@ class _OrchestrationTracePanelState extends State<OrchestrationTracePanel> {
         key: PageStorageKey<String>('orchestration_trace_${widget.hashCode}'),
         initiallyExpanded: _expanded,
         onExpansionChanged: (value) => setState(() => _expanded = value),
-        title: Text('系统调度过程', style: titleStyle),
+        title: Text(context.l10n.chatOrchestrationTraceTitle, style: titleStyle),
         children: [
           Padding(
             padding: const EdgeInsets.only(
@@ -92,7 +93,10 @@ class _TraceStepTile extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label.isNotEmpty ? label : '决策步骤', style: theme.textTheme.bodyMedium),
+          Text(
+            label.isNotEmpty ? label : context.l10n.chatOrchestrationTraceStep,
+            style: theme.textTheme.bodyMedium,
+          ),
           if (decision.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 4),

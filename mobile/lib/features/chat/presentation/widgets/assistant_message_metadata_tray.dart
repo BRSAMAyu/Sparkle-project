@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 
 class AssistantMessageMetadataTray extends StatefulWidget {
@@ -42,7 +43,7 @@ class _AssistantMessageMetadataTrayState
       badges.add(
         _MetadataBadge(
           icon: _statusIcon(widget.status!),
-          label: _statusLabel(widget.status!),
+          label: _statusLabel(context, widget.status!),
           isCompact: true,
           selected: _expandedKey == 'status',
           onTap: () => _toggle('status'),
@@ -53,7 +54,7 @@ class _AssistantMessageMetadataTrayState
       badges.add(
         _MetadataBadge(
           icon: Icons.link_rounded,
-          label: '承接上文',
+          label: context.l10n.chatMetadataContinuity,
           selected: false,
           onTap: () {},
           enabled: false,
@@ -64,7 +65,7 @@ class _AssistantMessageMetadataTrayState
       badges.add(
         _MetadataBadge(
           icon: Icons.auto_awesome_rounded,
-          label: _shortModeLabel(mode.data),
+          label: _shortModeLabel(context, mode.data),
           selected: false,
           onTap: () {},
           enabled: false,
@@ -75,7 +76,7 @@ class _AssistantMessageMetadataTrayState
       badges.add(
         _MetadataBadge(
           icon: Icons.library_books_outlined,
-          label: '依据',
+          label: context.l10n.chatMetadataEvidence,
           selected: _expandedKey == sources.type,
           onTap: () => _toggle(sources.type),
           iconOnlyWhenCollapsed: true,
@@ -86,7 +87,7 @@ class _AssistantMessageMetadataTrayState
       badges.add(
         _MetadataBadge(
           icon: Icons.bookmark_added_rounded,
-          label: '下一步',
+          label: context.l10n.chatMetadataNext,
           selected: _expandedKey == nextActions.type,
           onTap: () => _toggle(nextActions.type),
           iconOnlyWhenCollapsed: true,
@@ -206,9 +207,9 @@ class _AssistantMessageMetadataTrayState
     });
   }
 
-  String _shortModeLabel(Map<String, dynamic> data) {
+  String _shortModeLabel(BuildContext context, Map<String, dynamic> data) {
     final label = data['label']?.toString().trim() ?? '';
-    if (label.isEmpty) return '协作';
+    if (label.isEmpty) return context.l10n.chatMetadataCollaboration;
     if (label.length <= 4) return label;
     return '${label.substring(0, 4)}…';
   }
@@ -230,18 +231,18 @@ class _AssistantMessageMetadataTrayState
     }
   }
 
-  String _statusLabel(String status) {
+  String _statusLabel(BuildContext context, String status) {
     switch (status.toUpperCase()) {
       case 'THINKING':
-        return '正在思考';
+        return context.l10n.aiStatusThinking;
       case 'SEARCHING':
-        return '正在检索';
+        return context.l10n.aiStatusSearching;
       case 'EXECUTING_TOOL':
-        return '正在调用工具';
+        return context.l10n.aiStatusExecutingTool;
       case 'GENERATING':
-        return '正在生成';
+        return context.l10n.aiStatusGenerating;
       case 'IDLE':
-        return '已完成';
+        return context.l10n.aiStatusReady;
       default:
         return status;
     }

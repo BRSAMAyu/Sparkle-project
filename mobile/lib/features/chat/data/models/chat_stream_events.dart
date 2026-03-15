@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/models/intervention.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
@@ -219,34 +220,35 @@ class DagExecutionSignal {
   }
 
   String? get statusDetails {
+    final l10n = I18nService.instance.l10n;
     switch (event) {
       case 'layer_start':
         final layer = layerNumber ?? 0;
         final total = totalLayers ?? 0;
         final count = toolNames?.length ?? stepIds?.length ?? 0;
-        return 'DAG 第$layer/$total层，$count个步骤并行执行';
+        return l10n.chatDagLayerStart(layer, total, count);
       case 'step_completed':
-        final name = toolName ?? 'step';
+        final name = toolName ?? l10n.chatDagStepFallback;
         if (success == false) {
-          return '$name 执行失败';
+          return l10n.chatDagStepFailed(name);
         }
         if (durationMs != null) {
-          return '$name 执行完成 (${durationMs}ms)';
+          return l10n.chatDagStepCompletedWithDuration(name, durationMs!);
         }
-        return '$name 执行完成';
+        return l10n.chatDagStepCompleted(name);
       case 'layer_end':
         final layer = layerNumber ?? 0;
         if (aborted ?? false) {
-          return '第$layer层已中断';
+          return l10n.chatDagLayerAborted(layer);
         }
-        return '第$layer层执行完成';
+        return l10n.chatDagLayerCompleted(layer);
       case 'execution_aborted':
-        return reason ?? 'DAG 执行中断';
+        return reason ?? l10n.chatDagExecutionAbortedDefault;
       case 'execution_end':
         if (aborted ?? false) {
-          return abortReason ?? 'DAG 执行结束（中断）';
+          return abortReason ?? l10n.chatDagExecutionEndAbortedDefault;
         }
-        return 'DAG 执行完成';
+        return l10n.chatDagExecutionCompleted;
       default:
         return null;
     }
@@ -476,12 +478,13 @@ class StateChangeEvent extends ChatStreamEvent {
   }
 
   List<InterventionAction> _getActions() {
+    final l10n = I18nService.instance.l10n;
     // For plan changes, offer to view the plan
     if (planId != null && changeType.startsWith('plan_')) {
       return [
-        const InterventionAction(
+        InterventionAction(
           id: 'view_plan',
-          label: '查看计划',
+          label: l10n.chatInterventionViewPlan,
           type: 'navigation',
         ),
       ];
@@ -490,9 +493,9 @@ class StateChangeEvent extends ChatStreamEvent {
     // For settings changes, offer to view settings
     if (changeType == 'user_settings_updated') {
       return [
-        const InterventionAction(
+        InterventionAction(
           id: 'view_settings',
-          label: '查看设置',
+          label: l10n.chatInterventionViewSettings,
           type: 'navigation',
         ),
       ];
@@ -500,9 +503,9 @@ class StateChangeEvent extends ChatStreamEvent {
 
     // Default: just acknowledge
     return [
-      const InterventionAction(
+      InterventionAction(
         id: 'acknowledge',
-        label: '知道了',
+        label: l10n.commonOk,
         type: 'secondary',
       ),
     ];
@@ -1110,15 +1113,16 @@ class TransparencyStep {
 
   /// 获取本地化状态标签
   String get statusLabel {
+    final l10n = I18nService.instance.l10n;
     switch (status) {
       case 'pending':
-        return '等待中';
+        return l10n.statusPending;
       case 'in_progress':
-        return '进行中';
+        return l10n.statusInProgress;
       case 'completed':
-        return '已完成';
+        return l10n.statusCompleted;
       case 'failed':
-        return '失败';
+        return l10n.statusFailed;
       default:
         return status;
     }
@@ -1281,15 +1285,16 @@ class TimelineStep {
 
   /// 获取本地化状态标签
   String getStatusLabel() {
+    final l10n = I18nService.instance.l10n;
     switch (status) {
       case 'completed':
-        return '已完成';
+        return l10n.statusCompleted;
       case 'failed':
-        return '失败';
+        return l10n.statusFailed;
       case 'in_progress':
-        return '进行中';
+        return l10n.statusInProgress;
       case 'pending':
-        return '等待中';
+        return l10n.statusPending;
       default:
         return status;
     }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/chat/data/models/chat_mode.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.dart';
 
@@ -35,7 +36,7 @@ class _ModeSuggestionCardState extends ConsumerState<ModeSuggestionCard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '系统建议切换模式',
+              context.l10n.chatModeSuggestionTitle,
               style: Theme.of(context).textTheme.titleSmall,
             ),
             if (reason.isNotEmpty)
@@ -50,7 +51,7 @@ class _ModeSuggestionCardState extends ConsumerState<ModeSuggestionCard> {
             Row(
               children: [
                 SparkleButton.primary(
-                  label: '切换',
+                  label: context.l10n.chatModeSwitch,
                   onPressed: () {
                     final mode = ChatMode.fromApiValue(suggestedMode);
                     ref.read(chatModeProvider.notifier).setMode(mode);
@@ -60,7 +61,7 @@ class _ModeSuggestionCardState extends ConsumerState<ModeSuggestionCard> {
                 ),
                 const SizedBox(width: DS.sm),
                 SparkleButton.ghost(
-                  label: '保持当前',
+                  label: context.l10n.chatModeKeepCurrent,
                   onPressed: () => setState(() => _dismissed = true),
                 ),
               ],

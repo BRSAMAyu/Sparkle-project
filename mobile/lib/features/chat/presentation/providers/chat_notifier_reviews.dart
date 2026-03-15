@@ -20,7 +20,7 @@ extension ChatNotifierReviews on ChatNotifier {
       debugPrint('⚠️ User not authenticated');
       state = state.copyWith(
         lastActionStatus: 'error',
-        lastActionMessage: '请先登录',
+        lastActionMessage: I18nService.instance.l10n.chatLoginRequired,
       );
       return false;
     }
@@ -123,7 +123,8 @@ extension ChatNotifierReviews on ChatNotifier {
     state = state.copyWith(
       clearPendingContentReview: true,
       lastActionStatus: 'rejected',
-      lastActionMessage: '已请求重新生成',
+      lastActionMessage:
+          I18nService.instance.l10n.chatReviewRegenerationRequested,
     );
 
     Future.delayed(const Duration(seconds: 2), () {
@@ -149,7 +150,8 @@ extension ChatNotifierReviews on ChatNotifier {
   void requestHumanReview() {
     state = state.copyWith(
       lastActionStatus: 'human_review_requested',
-      lastActionMessage: '已提交人工审查请求',
+      lastActionMessage:
+          I18nService.instance.l10n.chatReviewHumanReviewRequested,
     );
 
     Future.delayed(const Duration(seconds: 2), () {
@@ -178,7 +180,7 @@ extension ChatNotifierReviews on ChatNotifier {
       debugPrint('⚠️ User not authenticated');
       state = state.copyWith(
         lastActionStatus: 'error',
-        lastActionMessage: '请先登录',
+        lastActionMessage: I18nService.instance.l10n.chatLoginRequired,
       );
       return false;
     }
@@ -204,8 +206,14 @@ extension ChatNotifierReviews on ChatNotifier {
           lastActionStatus: 'override_submitted',
           lastActionMessage: result.message ??
               (newDecision == 'passed'
-                  ? '已接受内容（尽管未通过审查）'
-                  : '已拒绝内容（尽管审查通过）'),
+                  ? I18nService
+                      .instance
+                      .l10n
+                      .chatReviewOverrideAcceptedEvenFail
+                  : I18nService
+                      .instance
+                      .l10n
+                      .chatReviewOverrideRejectedEvenPass),
           clearPendingContentReview: true,
         );
 
@@ -220,7 +228,8 @@ extension ChatNotifierReviews on ChatNotifier {
       } else {
         state = state.copyWith(
           lastActionStatus: 'error',
-          lastActionMessage: result.message ?? '提交失败，请重试',
+          lastActionMessage:
+              result.message ?? I18nService.instance.l10n.chatSubmitFailedRetry,
         );
         return false;
       }
@@ -228,7 +237,7 @@ extension ChatNotifierReviews on ChatNotifier {
       debugPrint('❌ Review override error: $e');
       state = state.copyWith(
         lastActionStatus: 'error',
-        lastActionMessage: '提交失败，请重试',
+        lastActionMessage: I18nService.instance.l10n.chatSubmitFailedRetry,
       );
       return false;
     }
@@ -246,7 +255,7 @@ extension ChatNotifierReviews on ChatNotifier {
       debugPrint('⚠️ User not authenticated');
       state = state.copyWith(
         lastActionStatus: 'error',
-        lastActionMessage: '请先登录',
+        lastActionMessage: I18nService.instance.l10n.chatLoginRequired,
       );
       return false;
     }
@@ -269,7 +278,8 @@ extension ChatNotifierReviews on ChatNotifier {
       if (result.success) {
         state = state.copyWith(
           lastActionStatus: 'appeal_submitted',
-          lastActionMessage: result.message ?? '申诉已提交，正在处理...',
+          lastActionMessage:
+              result.message ?? I18nService.instance.l10n.chatAppealSubmitted,
         );
 
         Future.delayed(const Duration(seconds: 2), () {
@@ -283,7 +293,8 @@ extension ChatNotifierReviews on ChatNotifier {
       } else {
         state = state.copyWith(
           lastActionStatus: 'error',
-          lastActionMessage: result.message ?? '提交失败，请重试',
+          lastActionMessage:
+              result.message ?? I18nService.instance.l10n.chatSubmitFailedRetry,
         );
         return false;
       }
@@ -291,7 +302,7 @@ extension ChatNotifierReviews on ChatNotifier {
       debugPrint('❌ Review appeal error: $e');
       state = state.copyWith(
         lastActionStatus: 'error',
-        lastActionMessage: '提交失败，请重试',
+        lastActionMessage: I18nService.instance.l10n.chatSubmitFailedRetry,
       );
       return false;
     }

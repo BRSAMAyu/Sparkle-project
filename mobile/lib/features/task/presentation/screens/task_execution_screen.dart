@@ -7,6 +7,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart'
     hide ButtonVariant;
 import 'package:sparkle/core/design/widgets/success_animation.dart';
@@ -82,7 +83,11 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
-                      '无法启动任务: ${error is DioException ? error.message : error.toString()}',),
+                      context.l10n.taskExecutionStartFailed(
+                        error is DioException
+                            ? (error.message ?? error.toString())
+                            : error.toString(),
+                      ),),
                   backgroundColor: DS.error,
                 ),
               );
@@ -153,7 +158,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
         });
         if (result == null) {
           _finishCompletionFlow(showFeedbackDialog: false);
-          AppFeedback.error(context, '任务完成同步失败，请稍后重试');
+          AppFeedback.error(context, context.l10n.taskExecutionSyncFailed);
           return;
         }
         final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ??
@@ -241,14 +246,14 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
       _pomodoroCycle = 1;
       _currentTimerDuration = 5 * 60; // Short break
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('番茄工作时间结束！休息一下。')),
+        SnackBar(content: Text(context.l10n.pomodoroWorkFinished)),
       );
     } else if (_pomodoroCycle == 1) {
       // Short break completed
       _pomodoroCycle = 0;
       _currentTimerDuration = 25 * 60; // Next work phase
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('休息时间结束！开始新的工作。')),
+        SnackBar(content: Text(context.l10n.pomodoroBreakFinished)),
       );
     }
     // Extend for long breaks if desired
@@ -257,6 +262,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final activeTask = ref.watch(activeTaskProvider);
 
     if (activeTask == null) {
@@ -283,7 +289,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
               ),
               const SizedBox(height: DS.spacing16),
               Text(
-                '未选择任务',
+                l10n.taskExecutionNoTask,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: DS.fontWeightBold,
                       color: DS.neutral700,
@@ -291,7 +297,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
               ),
               const SizedBox(height: DS.spacing24),
               CustomButton.primary(
-                text: '返回',
+                text: l10n.back,
                 icon: Icons.arrow_back,
                 onPressed: () => context.pop(),
               ),

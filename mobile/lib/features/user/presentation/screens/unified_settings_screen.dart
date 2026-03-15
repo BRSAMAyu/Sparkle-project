@@ -411,7 +411,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     AppLocalizations l10n,
     Map<String, dynamic>? weeklyAgenda,
   ) {
-    final summary = _buildWeeklyAgendaSummary(weeklyAgenda);
+    final summary = _buildWeeklyAgendaSummary(l10n, weeklyAgenda);
     return AnimatedContainer(
       duration: const Duration(milliseconds: 220),
       curve: Curves.easeOutCubic,
@@ -492,10 +492,13 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     );
   }
 
-  String _buildWeeklyAgendaSummary(Map<String, dynamic>? weeklyAgenda) {
+  String _buildWeeklyAgendaSummary(
+    AppLocalizations l10n,
+    Map<String, dynamic>? weeklyAgenda,
+  ) {
     final rawGrid = weeklyAgenda?['grid'];
     if (rawGrid is! List || rawGrid.isEmpty) {
-      return '默认收起，点击后展开 24 小时编辑网格。';
+      return l10n.weeklyAgendaCollapsedHint;
     }
 
     final busyCount = rawGrid.where((slot) => slot == 'busy').length;
@@ -503,8 +506,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         rawGrid.where((slot) => slot == 'fragmented').length;
     final activeCount = busyCount + fragmentedCount;
     if (activeCount == 0) {
-      return '当前未标记时间段，点击后开始编辑。';
+      return l10n.weeklyAgendaEmptyHint;
     }
-    return '已标记 $activeCount 个时间段，繁忙 $busyCount，碎片 $fragmentedCount。';
+    return l10n.weeklyAgendaSummary(activeCount, busyCount, fragmentedCount);
   }
 }

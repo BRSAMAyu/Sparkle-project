@@ -6,6 +6,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/action_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart';
@@ -250,7 +252,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                     widget.message is ChatMessageModel)
                   ListTile(
                     leading: const Icon(Icons.thumb_up_alt_rounded),
-                    title: const Text('有帮助'),
+                    title: Text(context.l10n.chatHelpful),
                     onTap: () {
                       Navigator.pop(context);
                       widget.onResponseFeedback!(
@@ -266,7 +268,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                     widget.message is ChatMessageModel)
                   ListTile(
                     leading: const Icon(Icons.thumb_down_alt_rounded),
-                    title: const Text('没帮助'),
+                    title: Text(context.l10n.chatNotHelpful),
                     onTap: () {
                       Navigator.pop(context);
                       widget.onResponseFeedback!(
@@ -279,7 +281,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                     widget.message is PrivateMessageInfo)
                   ListTile(
                     leading: const Icon(Icons.format_quote_rounded),
-                    title: const Text('引用'),
+                    title: Text(context.l10n.chatQuote),
                     onTap: () {
                       if (mounted) {
                         Navigator.pop(context);
@@ -289,21 +291,24 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                   ),
                 ListTile(
                   leading: const Icon(Icons.copy_rounded),
-                  title: const Text('复制'),
+                  title: Text(context.l10n.chatCopy),
                   onTap: () {
                     unawaited(
                       Clipboard.setData(ClipboardData(text: _content)),
                     );
                     if (mounted) {
                       Navigator.pop(context);
-                      AppFeedback.info(context, '已复制到剪贴板');
+                      AppFeedback.info(context, context.l10n.chatCopied);
                     }
                   },
                 ),
                 if (canRevoke && widget.onRevoke != null)
                   ListTile(
                     leading: Icon(Icons.undo_rounded, color: DS.error),
-                    title: Text('撤销', style: TextStyle(color: DS.error)),
+                    title: Text(
+                      context.l10n.chatUndo,
+                      style: TextStyle(color: DS.error),
+                    ),
                     onTap: () {
                       if (mounted) {
                         Navigator.pop(context);
@@ -752,7 +757,9 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 12),
           child: Text(
-            _isUser ? '你撤回了一条消息' : '对方撤回了一条消息',
+            _isUser
+                ? context.l10n.chatRecalledSelf
+                : context.l10n.chatRecalledPeer,
             style: TextStyle(
               fontSize: 12,
               color: DS.neutral400,
@@ -793,7 +800,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
           Padding(
             padding: const EdgeInsets.only(left: 2),
             child: Text(
-              '已读',
+              context.l10n.chatRead,
               style: TextStyle(
                 fontSize: 10,
                 color: DS.info,
@@ -1015,46 +1022,48 @@ Color _chatBubbleHexToColor(String hex, BuildContext context) {
 }
 
 String _formatAgentLabel(String raw) {
+  final l10n = I18nService.instance.l10n;
   switch (raw) {
     case 'galaxy_guide':
-      return '星图导航';
+      return l10n.chatAgentNavigator;
     case 'exam_oracle':
-      return '考试策略师';
+      return l10n.chatAgentExamStrategist;
     case 'time_tutor':
-      return '时间教练';
+      return l10n.chatAgentTimeCoach;
     case 'deep_analyst':
-      return '深度分析师';
+      return l10n.chatAgentDeepAnalyst;
     case 'error_analyst':
-      return '纠错专家';
+      return l10n.chatAgentCorrectionExpert;
     case 'study_buddy':
-      return '学伴';
+      return l10n.chatAgentLearningBuddy;
     case 'math_agent':
-      return '数学专家';
+      return l10n.chatAgentMathExpert;
     case 'code_agent':
-      return '编程专家';
+      return l10n.chatAgentCodingExpert;
     case 'writing_agent':
-      return '写作专家';
+      return l10n.chatAgentWritingExpert;
     case 'science_agent':
-      return '理科专家';
+      return l10n.chatAgentScienceExpert;
     case 'search_agent':
-      return '搜索专家';
+      return l10n.chatAgentSearchExpert;
     default:
       return raw.replaceAll('_', ' ').trim();
   }
 }
 
 String _formatCollaborationModeLabel(String? mode) {
+  final l10n = I18nService.instance.l10n;
   switch ((mode ?? '').trim()) {
     case 'parallel':
-      return '并行协作';
+      return l10n.chatCollabParallel;
     case 'debate':
-      return '辩论协作';
+      return l10n.chatCollabDebate;
     case 'delegation':
-      return '委派协作';
+      return l10n.chatCollabDelegation;
     case 'sequential':
-      return '分步协作';
+      return l10n.chatCollabSequential;
     default:
-      return '专家协作';
+      return l10n.chatCollabExpert;
   }
 }
 

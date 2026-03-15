@@ -62,9 +62,10 @@ extension ChatNotifierHistory on ChatNotifier {
         conversationId: conversationId,
       );
     } catch (e) {
+      final l10n = I18nService.instance.l10n;
       final errorMessage = ErrorMessages.getUserFriendlyMessage(
         'UNKNOWN',
-        '加载历史失败: $e',
+        l10n.chatHistoryLoadFailed('$e'),
       );
 
       state = state.copyWith(
@@ -126,9 +127,10 @@ extension ChatNotifierHistory on ChatNotifier {
         hasMoreMessages: hasMore,
       );
     } catch (e) {
+      final l10n = I18nService.instance.l10n;
       final errorMessage = ErrorMessages.getUserFriendlyMessage(
         'UNKNOWN',
-        '加载更多消息失败: $e',
+        l10n.chatHistoryLoadMoreFailed('$e'),
       );
 
       state = state.copyWith(

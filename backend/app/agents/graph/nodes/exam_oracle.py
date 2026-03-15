@@ -14,6 +14,47 @@ from app.core.metrics import AGENT_PERFORMANCE_RECORDED_TOTAL
 from app.orchestration.agent_activity import emit_agent_activity, get_stream_callback
 from app.orchestration.agent_scoring import AgentScoringService
 
+# --- prompt helpers ---
+def _build_system_prompt(state: SparkleState, *, planning: bool) -> str:
+    collaboration_mode = str(state.get("collaboration_mode") or "").strip()
+    collaboration_agents = [
+        str(agent).strip()
+        for agent in (state.get("collaboration_agents") or [])
+        if str(agent).strip()
+    ]
+    other_agents = [agent for agent in collaboration_agents if agent != "exam_oracle"]
+
+    if planning:
+        prompt = (
+            "你是考试策略师（规划模式），擅长将考试目标拆成可执行的里程碑与任务。\n"
+            "## 思维框架\n"
+            "先识别考试重点与得分结构，再规划阶段目标与练习节奏。\n"
+            "## 规划输出\n"
+            "必须用 tool calls 生成考试相关计划或任务，不要直接给最终答案。"
+        )
+    else:
+        prompt = (
+            "你是考试策略师，擅长把目标与得分策略转成具体的复习路径。\n"
+            "## 思维框架\n"
+            "先指出关键得分点，再给出优先级与冲刺建议。\n"
+            "## 输出格式\n"
+            "1. 核心判断（1 句）\n"
+            "2. 2-3 条得分策略/重点\n"
+            "3. 1 条可执行的复习建议\n"
+            "## 个性化适配\n"
+            "若上文包含用户偏好或难度提示，请据此调整强度与节奏。"
+        )
+
+    if collaboration_mode and other_agents:
+        prompt += (
+            "\n\n## 协作须知\n"
+            f"协作模式：{collaboration_mode}\n"
+            f"其他参与专家：{', '.join(other_agents)}\n"
+            "专注于考试重点与得分策略，不要重复他人内容。\n"
+            "关键论点可简短标注“考试策略视角”。"
+        )
+    return prompt
+
 # --- 2. 节点逻辑 (Node Logic) ---
 
 async def exam_oracle_node(state: SparkleState, config: dict | None = None):
@@ -35,18 +76,9 @@ async def exam_oracle_node(state: SparkleState, config: dict | None = None):
         messages = list(messages)
         messages.append(HumanMessage(content=collaboration_context))
 
-    if state.get("planning_mode") or state.get("_planning_mode"):
-        messages = list(messages)
-        messages.insert(
-            0,
-            SystemMessage(
-                content=(
-                    "You are in planning-only mode. Use tool calls to create exam-focused plans "
-                    "and tasks (create_plan, generate_tasks_for_plan, create_task, query_knowledge). "
-                    "Do not provide a final narrative response."
-                )
-            ),
-        )
+    planning_mode = state.get("planning_mode") or state.get("_planning_mode")
+    messages = list(messages)
+    messages.insert(0, SystemMessage(content=_build_system_prompt(state, planning=bool(planning_mode))))
 
     # 使用强推理模型 (GPT-4o) 处理复杂分析
     llm = LLMFactory.get_llm("exam_oracle")

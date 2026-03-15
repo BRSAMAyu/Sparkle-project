@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/social_auth_service.dart';
 import 'package:sparkle/features/auth/auth.dart';
 
@@ -36,7 +37,7 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
   Future<void> _upgradeWithEmail() async {
     if (!_formKey.currentState!.validate()) return;
     if (!_acceptedTos || !_acceptedPrivacy) {
-      AppFeedback.info(context, '请先同意用户协议与隐私政策');
+      AppFeedback.info(context, context.l10n.guestUpgradeAcceptPoliciesRequired);
       return;
     }
 
@@ -52,7 +53,7 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
             agreedLocale: agreedLocale,
           );
       if (!mounted) return;
-      AppFeedback.success(context, '游客账号已升级，欢迎回来。');
+      AppFeedback.success(context, context.l10n.guestUpgradeSuccess);
       context.go('/profile');
     } catch (e) {
       if (!mounted) return;
@@ -66,7 +67,7 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
 
   Future<void> _upgradeWithSocial(String provider) async {
     if (!_acceptedTos || !_acceptedPrivacy) {
-      AppFeedback.info(context, '请先同意用户协议与隐私政策');
+      AppFeedback.info(context, context.l10n.guestUpgradeAcceptPoliciesRequired);
       return;
     }
 
@@ -97,7 +98,10 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
             agreedLocale: agreedLocale,
           );
       if (!mounted) return;
-      AppFeedback.success(context, '游客账号已升级，后续可以使用社交账号直接登录。');
+      AppFeedback.success(
+        context,
+        context.l10n.guestUpgradeSocialSuccess,
+      );
       context.go('/profile');
     } catch (e) {
       if (!mounted) return;
@@ -110,7 +114,9 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => SparklePageScaffold(
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return SparklePageScaffold(
         role: SparklePageRole.settings,
         appBar: AppBar(
           leading: SparkleIconButton(
@@ -118,7 +124,7 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
             icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
           ),
-          title: const Text('升级游客账号'),
+          title: Text(l10n.guestUpgradeTitle),
           centerTitle: true,
         ),
         child: ContentConstraint(
@@ -127,7 +133,7 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
             children: [
               GraphiteCardSurface(
                 child: Text(
-                  '把当前游客账号升级为正式账号后，你的学习记录和个人数据会保留下来，后续也能在新设备上继续使用。',
+                  l10n.guestUpgradeIntro,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
               ),
@@ -139,13 +145,13 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
                     children: [
                       TextFormField(
                         controller: _usernameController,
-                        decoration: const InputDecoration(
-                          labelText: '用户名',
-                          border: OutlineInputBorder(),
+                        decoration: InputDecoration(
+                          labelText: l10n.username,
+                          border: const OutlineInputBorder(),
                         ),
                         validator: (value) {
                           if (value == null || value.trim().length < 3) {
-                            return '用户名至少 3 个字符';
+                            return l10n.guestUpgradeUsernameMinLength;
                           }
                           return null;
                         },
@@ -153,15 +159,15 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
                       const SizedBox(height: DS.spacing16),
                       TextFormField(
                         controller: _emailController,
-                        decoration: const InputDecoration(
-                          labelText: '邮箱',
-                          border: OutlineInputBorder(),
+                        decoration: InputDecoration(
+                          labelText: l10n.email,
+                          border: const OutlineInputBorder(),
                         ),
                         validator: (value) {
                           if (value == null ||
                               !RegExp(r'^[^@]+@[^@]+\.[^@]+')
                                   .hasMatch(value.trim())) {
-                            return '请输入有效邮箱';
+                            return l10n.invalidEmail;
                           }
                           return null;
                         },
@@ -170,13 +176,13 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
                       TextFormField(
                         controller: _passwordController,
                         obscureText: true,
-                        decoration: const InputDecoration(
-                          labelText: '密码',
-                          border: OutlineInputBorder(),
+                        decoration: InputDecoration(
+                          labelText: l10n.password,
+                          border: const OutlineInputBorder(),
                         ),
                         validator: (value) {
                           if (value == null || value.trim().length < 8) {
-                            return '密码至少 8 位';
+                            return l10n.guestUpgradePasswordMinLength;
                           }
                           return null;
                         },
@@ -185,13 +191,13 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
                       TextFormField(
                         controller: _confirmPasswordController,
                         obscureText: true,
-                        decoration: const InputDecoration(
-                          labelText: '确认密码',
-                          border: OutlineInputBorder(),
+                        decoration: InputDecoration(
+                          labelText: l10n.confirmPassword,
+                          border: const OutlineInputBorder(),
                         ),
                         validator: (value) {
                           if (value != _passwordController.text) {
-                            return '两次输入的密码不一致';
+                            return l10n.passwordsDoNotMatch;
                           }
                           return null;
                         },
@@ -202,14 +208,14 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
                         value: _acceptedTos,
                         onChanged: (value) =>
                             setState(() => _acceptedTos = value ?? false),
-                        title: const Text('同意《用户协议》'),
+                        title: Text(l10n.guestUpgradeAgreeTerms),
                         controlAffinity: ListTileControlAffinity.leading,
                       ),
                       Align(
                         alignment: Alignment.centerLeft,
                         child: TextButton(
                           onPressed: () => context.push('/legal/terms'),
-                          child: const Text('查看用户协议'),
+                          child: Text(l10n.guestUpgradeViewTerms),
                         ),
                       ),
                       CheckboxListTile(
@@ -217,19 +223,19 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
                         value: _acceptedPrivacy,
                         onChanged: (value) =>
                             setState(() => _acceptedPrivacy = value ?? false),
-                        title: const Text('同意《隐私政策》'),
+                        title: Text(l10n.guestUpgradeAgreePrivacy),
                         controlAffinity: ListTileControlAffinity.leading,
                       ),
                       Align(
                         alignment: Alignment.centerLeft,
                         child: TextButton(
                           onPressed: () => context.push('/legal/privacy'),
-                          child: const Text('查看隐私政策'),
+                          child: Text(l10n.guestUpgradeViewPrivacy),
                         ),
                       ),
                       const SizedBox(height: DS.spacing16),
                       SparkleButton(
-                        label: '升级为邮箱账号',
+                        label: l10n.guestUpgradeWithEmail,
                         expand: true,
                         loading: _isLoading,
                         onPressed: _isLoading
@@ -248,7 +254,7 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      '或者直接绑定一个社交账号',
+                      l10n.guestUpgradeSocialSectionTitle,
                       style: Theme.of(context)
                           .textTheme
                           .titleMedium
@@ -256,7 +262,7 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
                     ),
                     const SizedBox(height: DS.spacing16),
                     SparkleButton(
-                      label: '使用 Google 升级',
+                      label: l10n.guestUpgradeWithGoogle,
                       variant: ButtonVariant.outline,
                       expand: true,
                       loading: _isLoading,
@@ -268,7 +274,7 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
                     ),
                     const SizedBox(height: DS.spacing12),
                     SparkleButton(
-                      label: '使用 Apple 升级',
+                      label: l10n.guestUpgradeWithApple,
                       variant: ButtonVariant.outline,
                       expand: true,
                       loading: _isLoading,
@@ -279,12 +285,12 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
                             },
                     ),
                     if (SocialAuthService().isWeChatAvailable) ...[
-                      const SizedBox(height: DS.spacing12),
-                      SparkleButton(
-                        label: '使用微信升级',
-                        variant: ButtonVariant.outline,
-                        expand: true,
-                        loading: _isLoading,
+                    const SizedBox(height: DS.spacing12),
+                    SparkleButton(
+                      label: l10n.guestUpgradeWithWeChat,
+                      variant: ButtonVariant.outline,
+                      expand: true,
+                      loading: _isLoading,
                         onPressed: _isLoading
                             ? null
                             : () {
@@ -298,5 +304,6 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
             ],
           ),
         ),
-      );
+    );
+  }
 }

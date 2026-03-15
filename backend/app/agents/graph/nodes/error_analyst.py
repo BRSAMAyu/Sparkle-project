@@ -10,12 +10,45 @@ from app.orchestration.agent_activity import emit_agent_activity, get_stream_cal
 from app.orchestration.agent_scoring import AgentScoringService
 
 
-ERROR_ANALYST_PLANNING_PROMPT = (
-    "You are in planning-only mode for error diagnosis. "
-    "Classify error type, identify root cause, and use tool calls "
-    "(query_error_history, record_error) as needed. "
-    "Do not provide final narrative answers."
-)
+def _build_system_prompt(state: SparkleState, *, planning: bool) -> str:
+    collaboration_mode = str(state.get("collaboration_mode") or "").strip()
+    collaboration_agents = [
+        str(agent).strip()
+        for agent in (state.get("collaboration_agents") or [])
+        if str(agent).strip()
+    ]
+    other_agents = [agent for agent in collaboration_agents if agent != "error_analyst"]
+
+    if planning:
+        prompt = (
+            "你是纠错专家（规划模式）。\n"
+            "## 思维框架\n"
+            "先分类错误类型，再定位根因与修复路径。\n"
+            "## 规划输出\n"
+            "必须用 tool calls 记录/检索错因，不要直接给最终答案。"
+        )
+    else:
+        prompt = (
+            "你是纠错专家，擅长定位错误根因并给出修复与防复发策略。\n"
+            "## 思维框架\n"
+            "先分类错误，再给出根因与针对性矫正动作。\n"
+            "## 输出格式\n"
+            "1. 核心判断（1 句）\n"
+            "2. 2-3 条根因/改正点\n"
+            "3. 1 条防复发建议\n"
+            "## 个性化适配\n"
+            "若上文包含用户偏好或难度提示，请据此调整解释深度。"
+        )
+
+    if collaboration_mode and other_agents:
+        prompt += (
+            "\n\n## 协作须知\n"
+            f"协作模式：{collaboration_mode}\n"
+            f"其他参与专家：{', '.join(other_agents)}\n"
+            "专注于错误诊断与修复，不要重复他人内容。\n"
+            "关键论点可简短标注“纠错专家视角”。"
+        )
+    return prompt
 
 
 async def error_analyst_node(state: SparkleState, config: dict | None = None):
@@ -33,9 +66,9 @@ async def error_analyst_node(state: SparkleState, config: dict | None = None):
         messages = list(messages)
         messages.append(HumanMessage(content=collaboration_context))
 
-    if state.get("planning_mode") or state.get("_planning_mode"):
-        messages = list(messages)
-        messages.insert(0, SystemMessage(content=ERROR_ANALYST_PLANNING_PROMPT))
+    planning_mode = state.get("planning_mode") or state.get("_planning_mode")
+    messages = list(messages)
+    messages.insert(0, SystemMessage(content=_build_system_prompt(state, planning=bool(planning_mode))))
 
     llm = LLMFactory.get_llm("error_analyst")
     llm_with_tools = llm.bind_tools([record_error, query_error_history])

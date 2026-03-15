@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
 
 IconData _mapAgentIcon(String icon) {
@@ -334,7 +336,7 @@ class _SequentialTimeline extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => _WorkflowShell(
-        title: '${entries.length} 位专家协作',
+        title: context.l10n.chatWorkflowExpertsCount(entries.length),
         icon: Icons.account_tree,
         identities: _buildIdentityModels(entries),
         narrative: narrative,
@@ -365,9 +367,9 @@ class _ParallelAgentRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => _WorkflowShell(
-        title: '${entries.length} 位专家并行协作',
+        title: context.l10n.chatWorkflowParallelCount(entries.length),
         icon: Icons.view_week,
-        subtitle: '多个专家在独立分析不同侧面，系统随后会统一整合。',
+        subtitle: context.l10n.chatWorkflowParallelSubtitle,
         identities: _buildIdentityModels(entries),
         narrative: narrative,
         totalDuration: _totalDuration(entries, parallel: true),
@@ -397,9 +399,9 @@ class _DebateTimeline extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => _WorkflowShell(
-        title: '多视角辩论协作',
+        title: context.l10n.chatWorkflowDebateTitle,
         icon: Icons.compare_arrows,
-        subtitle: '专家先独立分析，再交叉评审，最后由系统综合差异观点。',
+        subtitle: context.l10n.chatWorkflowDebateSubtitle,
         identities: _buildIdentityModels(entries),
         narrative: narrative,
         totalDuration: _totalDuration(entries, parallel: true),
@@ -419,9 +421,9 @@ class _DebateTimeline extends StatelessWidget {
                   .toList(),
             ),
             const SizedBox(height: DS.spacing10),
-            const _FooterBanner(
+            _FooterBanner(
               icon: Icons.gavel_rounded,
-              label: '系统正在综合各方观点与评审意见',
+              label: context.l10n.chatWorkflowDebateProcessing,
             ),
           ],
         ),
@@ -442,9 +444,9 @@ class _DelegationTree extends StatelessWidget {
     final lead = entries.first;
     final delegates = entries.length > 1 ? entries.sublist(1) : const <_AgentEntry>[];
     return _WorkflowShell(
-      title: '委派式协作',
+      title: context.l10n.chatWorkflowDelegationTitle,
       icon: Icons.hub_rounded,
-      subtitle: '主专家先拆分任务，再把子任务委派给其他专家并汇总结果。',
+      subtitle: context.l10n.chatWorkflowDelegationSubtitle,
       identities: _buildIdentityModels(entries),
       narrative: narrative,
       totalDuration: _totalDuration(entries),
@@ -596,7 +598,7 @@ class _ParallelAgentCard extends StatelessWidget {
           if (entry.phase != null && entry.phase!.isNotEmpty) ...[
             const SizedBox(height: DS.spacing4),
             Text(
-              '阶段: ${entry.phase}',
+              context.l10n.chatWorkflowPhaseLabel(entry.phase!),
               style: TextStyle(
                 fontSize: 10,
                 color: theme.colorScheme.onSurfaceVariant,
@@ -803,15 +805,16 @@ class _StatusLabel extends StatelessWidget {
   final Color color;
 
   String get _label {
+    final l10n = I18nService.instance.l10n;
     switch (status) {
       case 'pending':
-        return '等待中';
+        return l10n.chatWorkflowStatusWaiting;
       case 'active':
-        return '进行中';
+        return l10n.chatWorkflowStatusActive;
       case 'completed':
-        return '完成';
+        return l10n.chatWorkflowStatusDone;
       case 'error':
-        return '异常';
+        return l10n.chatWorkflowStatusError;
       default:
         return status;
     }

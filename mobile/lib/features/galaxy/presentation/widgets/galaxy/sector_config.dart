@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
 
 /// Sector visual style configuration tuned for the galaxy canvas.
@@ -195,6 +196,26 @@ class SectorConfig {
 
   static SectorStyle getStyle(SectorEnum sector) =>
       styles[sector] ?? styles[SectorEnum.voidSector]!;
+
+  static String getLocalizedName(SectorEnum sector) {
+    final l10n = I18nService.instance.l10n;
+    switch (sector) {
+      case SectorEnum.cosmos:
+        return l10n.galaxySectorCosmos;
+      case SectorEnum.tech:
+        return l10n.galaxySectorTech;
+      case SectorEnum.art:
+        return l10n.galaxySectorArt;
+      case SectorEnum.civilization:
+        return l10n.galaxySectorCivilization;
+      case SectorEnum.life:
+        return l10n.galaxySectorLife;
+      case SectorEnum.wisdom:
+        return l10n.galaxySectorWisdom;
+      case SectorEnum.voidSector:
+        return l10n.galaxySectorVoid;
+    }
+  }
 
   static Color getColor(
     SectorEnum sector, {

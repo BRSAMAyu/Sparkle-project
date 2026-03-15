@@ -8,6 +8,7 @@ import 'package:flutter/physics.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/galaxy/data/repositories/enhanced_galaxy_repository.dart';
 import 'package:sparkle/features/galaxy/data/services/galaxy_accessibility_service.dart';
 import 'package:sparkle/features/galaxy/data/services/galaxy_force_engine.dart';
@@ -250,7 +251,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     if (!preserveCamera) {
       setState(() {
         _isLoading = false;
-        _loadError = result.error ?? '知识星图加载失败';
+        _loadError = result.error ?? context.l10n.galaxyLoadFailed;
       });
     }
   }
@@ -1700,11 +1701,11 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
             );
 
             if (_isLoading) {
-              return const _StatusPanel(
+              return _StatusPanel(
                 backgroundColor: backgroundColor,
                 foregroundColor: Colors.white,
-                title: '知识星图加载中',
-                message: '正在生成你的学习星图骨架',
+                title: context.l10n.galaxyLoadingTitle,
+                message: context.l10n.galaxyLoadingMessage,
                 showLoader: true,
               );
             }
@@ -1713,9 +1714,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
               return _StatusPanel(
                 backgroundColor: backgroundColor,
                 foregroundColor: isDarkMode ? Colors.white : Colors.black,
-                title: '知识星图加载失败',
+                title: context.l10n.galaxyLoadFailedTitle,
                 message: '$_loadError',
-                actionLabel: '重试',
+                actionLabel: context.l10n.retry,
                 onAction: _loadGraph,
               );
             }
@@ -1724,9 +1725,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
               return _StatusPanel(
                 backgroundColor: backgroundColor,
                 foregroundColor: isDarkMode ? Colors.white : Colors.black,
-                title: '暂无星图数据',
-                message: '开始你的第一次学习，点亮第一颗星。',
-                actionLabel: '重新加载',
+                title: context.l10n.galaxyEmptyTitle,
+                message: context.l10n.galaxyEmptyMessage,
+                actionLabel: context.l10n.galaxyReload,
                 onAction: _loadGraph,
               );
             }
@@ -2066,21 +2067,21 @@ class _GalaxyOverviewStats extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               _OverviewMetric(
-                label: '节点',
+                label: context.l10n.galaxyOverviewNodes,
                 value: stats.totalNodes.toDouble(),
                 suffix: '',
                 isDarkMode: isDarkMode,
               ),
               const SizedBox(width: 14),
               _OverviewMetric(
-                label: '解锁',
+                label: context.l10n.galaxyOverviewUnlocked,
                 value: stats.unlockRatio * 100,
                 suffix: '%',
                 isDarkMode: isDarkMode,
               ),
               const SizedBox(width: 14),
               _OverviewMetric(
-                label: '掌握',
+                label: context.l10n.galaxyOverviewMastery,
                 value: stats.masteryAverage.toDouble(),
                 suffix: '%',
                 isDarkMode: isDarkMode,

@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/chat/presentation/widgets/ai_status_indicator.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_input.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
@@ -36,35 +37,35 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
       showDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Daily Check-in'),
+          title: Text(context.l10n.communityCheckInTitle),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: durationController,
-                decoration: const InputDecoration(
-                  labelText: 'Duration (minutes)',
-                  suffixText: 'min',
+                decoration: InputDecoration(
+                  labelText: context.l10n.communityCheckInDurationLabel,
+                  suffixText: context.l10n.commonMinutesShort,
                 ),
                 keyboardType: TextInputType.number,
               ),
               const SizedBox(height: DS.lg),
               TextField(
                 controller: messageController,
-                decoration: const InputDecoration(
-                  labelText: 'Message (optional)',
-                  hintText: 'What did you learn today?',
+                decoration: InputDecoration(
+                  labelText: context.l10n.communityCheckInMessageLabel,
+                  hintText: context.l10n.communityCheckInMessageHint,
                 ),
               ),
             ],
           ),
           actions: [
             SparkleButton.ghost(
-              label: 'Cancel',
+              label: context.l10n.cancel,
               onPressed: () => Navigator.pop(context),
             ),
             SparkleButton.primary(
-              label: 'Check-in',
+              label: context.l10n.communityCheckInAction,
               onPressed: () async {
                 final duration = int.tryParse(durationController.text) ?? 0;
                 final message = messageController.text;
@@ -78,10 +79,16 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                   // Refresh chat to see the checkin message
                   ref.invalidate(groupChatProvider(widget.groupId));
 
-                  AppFeedback.success(context, 'Checked in successfully!');
+                  AppFeedback.success(
+                    context,
+                    context.l10n.communityCheckInSuccess,
+                  );
                 } catch (e) {
                   if (!context.mounted) return;
-                  AppFeedback.error(context, 'Failed: $e');
+                  AppFeedback.error(
+                    context,
+                    context.l10n.communityCheckInFailed(e.toString()),
+                  );
                 }
               },
             ),
@@ -116,15 +123,15 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                 Text(group.name,
                     style: const TextStyle(fontSize: DS.fontSizeBase),),
                 Text(
-                  '${group.memberCount} members',
+                  context.l10n.communityGroupMembersCount(group.memberCount),
                   style: TextStyle(
                       fontSize: DS.fontSizeXs, color: DS.brandPrimary54,),
                 ),
               ],
             ),
           ),
-          loading: () => const Text('Chat'),
-          error: (_, __) => const Text('Chat'),
+          loading: () => Text(context.l10n.communityChatTitle),
+          error: (_, __) => Text(context.l10n.communityChatTitle),
         ),
         actions: [
           SparkleIconButton(
@@ -137,13 +144,13 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                 ),
               );
             },
-            semanticLabel: '群文件',
+            semanticLabel: context.l10n.communityGroupFiles,
             variant: ButtonVariant.ghost,
           ),
           SparkleIconButton(
             icon: Icon(Icons.local_fire_department, color: DS.brandPrimary),
             onPressed: _showCheckinDialog,
-            semanticLabel: 'Check-in',
+            semanticLabel: context.l10n.communityCheckInAction,
             variant: ButtonVariant.ghost,
           ),
           SparkleIconButton(
@@ -176,8 +183,9 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                       agentState.streamingContent.isEmpty;
 
                   if (mergedMessages.isEmpty) {
-                    return const Center(
-                        child: Text('No messages yet. Say hi!'),);
+                    return Center(
+                      child: Text(context.l10n.communityChatEmpty),
+                    );
                   }
                   return ListView.builder(
                     reverse: true,
@@ -190,7 +198,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                           padding: EdgeInsets.only(bottom: DS.spacing16),
                           child: AiStatusIndicator(
                             status: 'THINKING',
-                            details: 'AI助手正在整理思路...',
+                            details: context.l10n.communityAgentThinking,
                           ),
                         );
                       }
@@ -265,7 +273,9 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
             ),
             ChatInput(
               enabled: !_agentMode || !agentState.isSending,
-              hintText: _agentMode ? '向AI提问（仅你可见）' : '输入消息...',
+              hintText: _agentMode
+                  ? context.l10n.communityAgentPromptHint
+                  : context.l10n.communityMessageInputHint,
               fileUploadGroupId: widget.groupId,
               onFileUploaded: (file) async {
                 try {
@@ -275,17 +285,26 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                     file.id,
                   );
                   if (!context.mounted) return;
-                  AppFeedback.success(context, '文件已分享至群聊');
+                  AppFeedback.success(
+                    context,
+                    context.l10n.communityFileSharedSuccess,
+                  );
                 } catch (e) {
                   if (!context.mounted) return;
-                  AppFeedback.error(context, '分享失败: $e');
+                  AppFeedback.error(
+                    context,
+                    context.l10n.communityFileSharedFailed(e.toString()),
+                  );
                 }
               },
               quotedMessage: !_agentMode && _quotedMessage != null
                   ? PrivateMessageInfo(
                       id: _quotedMessage!.id,
                       sender: _quotedMessage!.sender ??
-                          UserBrief(id: '', username: 'Unknown'),
+                          UserBrief(
+                            id: '',
+                            username: context.l10n.commonUnknown,
+                          ),
                       receiver: UserBrief(id: '', username: ''),
                       messageType: _quotedMessage!.messageType,
                       content: _quotedMessage!.content,
@@ -394,7 +413,11 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
               children: [
                 FilterChip(
                   selected: _agentMode,
-                  label: Text(_agentMode ? 'AI协作已开启' : 'AI协作'),
+                  label: Text(
+                    _agentMode
+                        ? context.l10n.communityAgentCollabOn
+                        : context.l10n.communityAgentCollabOff,
+                  ),
                   avatar: Icon(
                     Icons.auto_awesome,
                     size: DS.iconSizeXs,
@@ -415,14 +438,14 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                 const SizedBox(width: DS.spacing8),
                 if (_agentMode)
                   Text(
-                    '仅你可见',
+                    context.l10n.communityAgentOnlyYou,
                     style: TextStyle(
                         fontSize: DS.fontSizeSm, color: DS.neutral500,),
                   ),
                 const Spacer(),
                 if (agentState.isSending)
                   Text(
-                    'AI处理中...',
+                    context.l10n.communityAgentProcessing,
                     style: TextStyle(
                         fontSize: DS.fontSizeSm, color: DS.brandPrimary70,),
                   ),
@@ -436,27 +459,27 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                   runSpacing: DS.spacing4,
                   children: [
                     _AgentQuickChip(
-                      label: '总结讨论',
+                      label: context.l10n.communityAgentQuickSummary,
                       onTap: () => _sendAgentPrompt(
-                        prompt: '请用3条要点总结当前讨论，并给出下一步建议。',
+                        prompt: context.l10n.communityAgentQuickSummaryPrompt,
                         agentState: agentState,
                         groupInfo: groupInfo,
                         messages: messages,
                       ),
                     ),
                     _AgentQuickChip(
-                      label: '生成提醒',
+                      label: context.l10n.communityAgentQuickReminder,
                       onTap: () => _sendAgentPrompt(
-                        prompt: '请给群里写一句温和的学习提醒，保持积极友好的语气。',
+                        prompt: context.l10n.communityAgentQuickReminderPrompt,
                         agentState: agentState,
                         groupInfo: groupInfo,
                         messages: messages,
                       ),
                     ),
                     _AgentQuickChip(
-                      label: '共识整理',
+                      label: context.l10n.communityAgentQuickConsensus,
                       onTap: () => _sendAgentPrompt(
-                        prompt: '请找出群里目前的共识和待确认的问题，列表化输出。',
+                        prompt: context.l10n.communityAgentQuickConsensusPrompt,
                         agentState: agentState,
                         groupInfo: groupInfo,
                         messages: messages,
@@ -523,8 +546,8 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                     const SizedBox(height: DS.spacing16),
                     TextField(
                       controller: controller,
-                      decoration: const InputDecoration(
-                        hintText: '搜索群消息',
+                      decoration: InputDecoration(
+                        hintText: context.l10n.communitySearchGroupMessages,
                         prefixIcon: Icon(Icons.search),
                       ),
                       onSubmitted: (value) async {
@@ -544,9 +567,11 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                           itemBuilder: (context, index) {
                             final msg = results[index];
                             return ListTile(
-                              title: Text(msg.content ?? '消息'),
+                              title: Text(
+                                msg.content ?? context.l10n.communityMessageFallback,
+                              ),
                               subtitle: Text(
-                                '${msg.sender?.displayName ?? '成员'} • ${msg.createdAt}',
+                                '${msg.sender?.displayName ?? context.l10n.communityMemberFallback} • ${msg.createdAt}',
                               ),
                               onTap: () => Navigator.pop(context),
                             );
