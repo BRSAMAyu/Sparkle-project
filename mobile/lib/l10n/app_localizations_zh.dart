@@ -1589,6 +1589,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get commonOk => '确定';
 
   @override
+  String get commonCancel => '取消';
+
+  @override
   String get commonSave => '保存';
 
   @override
@@ -3536,6 +3539,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get subtaskEmpty => '暂无子任务';
 
   @override
+  String get subtaskTitle => '子任务';
+
+  @override
   String get taskFeedbackSubmitted => '反馈已提交';
 
   @override
@@ -4728,6 +4734,96 @@ class AppLocalizationsZh extends AppLocalizations {
   String get errorBookDeleteConfirmMessage => '删除后无法恢复，确定要删除这道错题吗？';
 
   @override
+  String get errorBookDetailTitle => '错题详情';
+
+  @override
+  String get errorBookEdit => '编辑';
+
+  @override
+  String get errorBookReanalyze => '重新分析';
+
+  @override
+  String get errorBookDelete => '删除';
+
+  @override
+  String errorBookCreatedAt(String date) {
+    return '创建于 $date';
+  }
+
+  @override
+  String errorBookMasteryPercent(int percent) {
+    return '$percent%掌握';
+  }
+
+  @override
+  String get errorBookSimilarSummary => '同类错因分析';
+
+  @override
+  String get errorBookRootCause => '根本原因';
+
+  @override
+  String get errorBookStrategySuggestions => '策略建议';
+
+  @override
+  String get errorBookSimilarErrors => '相似错误';
+
+  @override
+  String get errorBookSimilarCauseFallback => '未分类';
+
+  @override
+  String get errorBookQuestionContent => '题目内容';
+
+  @override
+  String get errorBookImageLoadFailed => '图片加载失败';
+
+  @override
+  String get errorBookAnswerComparison => '答案对比';
+
+  @override
+  String get errorBookYourAnswer => '你的答案';
+
+  @override
+  String get errorBookCorrectAnswer => '正确答案';
+
+  @override
+  String get errorBookAiAnalysis => 'AI 分析';
+
+  @override
+  String get errorBookKnowledgeLinks => '关联知识点';
+
+  @override
+  String get errorBookKnowledgeLinkTooltip => '查看学习路径';
+
+  @override
+  String errorBookKnowledgeLinkSnack(String nodeName) {
+    return '即将跳转到 $nodeName 知识点';
+  }
+
+  @override
+  String get errorBookReviewStats => '复习统计';
+
+  @override
+  String get errorBookLastReview => '上次复习';
+
+  @override
+  String get errorBookNextReview => '下次复习';
+
+  @override
+  String get errorBookStartReview => '开始复习';
+
+  @override
+  String get errorBookLoadFailed => '加载失败';
+
+  @override
+  String get errorBookEditInProgress => '编辑功能即将上线';
+
+  @override
+  String get errorBookReanalyzing => '正在重新分析...';
+
+  @override
+  String get errorBookReviewInProgress => '复习功能即将上线';
+
+  @override
   String errorBookCognitiveFilter(String dimension) {
     return '正针对 \"$dimension\" 维度进行针对性复习';
   }
@@ -4936,4 +5032,613 @@ class AppLocalizationsZh extends AppLocalizations {
   String communityMembers(int count) {
     return '$count 成员';
   }
+
+  @override
+  String get taskMonitorTitle => '后台任务监控';
+
+  @override
+  String get taskMonitorFilterAll => '全部';
+
+  @override
+  String get taskMonitorFilterRunning => '运行中';
+
+  @override
+  String get taskMonitorFilterCompleted => '已完成';
+
+  @override
+  String get taskMonitorFilterFailed => '失败';
+
+  @override
+  String get taskMonitorEmpty => '暂无后台任务';
+
+  @override
+  String get taskMonitorStatusPending => '等待中';
+
+  @override
+  String get taskMonitorStatusCancelled => '已取消';
+
+  @override
+  String get planHistoryTitle => '历史计划';
+
+  @override
+  String get planHistoryEmpty => '暂无历史计划';
+
+  @override
+  String get planHistoryRestore => '恢复计划';
+
+  @override
+  String get planHistoryRestoreSuccess => '计划已恢复';
+
+  @override
+  String get planHistoryDeleteConfirm => '确定要删除这个历史计划吗？';
+
+  @override
+  String get planTypeSprint => '冲刺计划';
+
+  @override
+  String get planTypeGrowth => '成长计划';
+
+  @override
+  String planProgressPercent(String percent) {
+    return '$percent% 完成';
+  }
+
+  @override
+  String get authForgotPassword => '忘记密码？';
+
+  @override
+  String get authUserAgreement => '用户协议';
+
+  @override
+  String get authPrivacyPolicy => '隐私政策';
+
+  @override
+  String get authLoginAgreement => '登录即表示你同意';
+
+  @override
+  String get authAnd => '和';
+
+  @override
+  String get authDemoLogin => '演示账号登录';
+
+  @override
+  String get authResetPassword => '重置密码';
+
+  @override
+  String get authResetPasswordHint => '请输入您的邮箱，我们将发送重置密码链接';
+
+  @override
+  String get authSendResetEmail => '发送重置邮件';
+
+  @override
+  String get authResetEmailSent => '重置邮件已发送';
+
+  @override
+  String get authBackToLogin => '返回登录';
+
+  @override
+  String get authForgotPasswordTitle => '忘记密码';
+
+  @override
+  String get authForgotPasswordHint => '输入注册邮箱，我们会发送一封包含重置码的邮件给你。';
+
+  @override
+  String get authInvalidEmail => '请输入有效邮箱';
+
+  @override
+  String get authHaveResetCode => '我已经有重置码';
+
+  @override
+  String get toolsLibraryTitle => '工具库';
+
+  @override
+  String get toolsTabBrowse => '浏览';
+
+  @override
+  String get toolsTabManage => '管理';
+
+  @override
+  String get toolsSearchHint => '搜索工具、能力或关键词';
+
+  @override
+  String get toolsRecentTitle => '最近使用';
+
+  @override
+  String get toolsManagePinned => '管理固定';
+
+  @override
+  String get toolsCategoryInput => '输入处理';
+
+  @override
+  String get toolsCategoryStudy => '学习辅助';
+
+  @override
+  String get toolsCategoryEfficiency => '效率辅助';
+
+  @override
+  String get toolsCategoryCognition => '认知洞察';
+
+  @override
+  String get toolsNoTools => '暂无工具';
+
+  @override
+  String get toolsPinnedEmpty => '还没有固定的工具';
+
+  @override
+  String get toolsManageHint => '首页首屏显示前 4 个，展开显示前 8 个。拖动可调整顺序。';
+
+  @override
+  String get toolsBackToBrowse => '回到浏览';
+
+  @override
+  String get toolsPositionFirstScreen => '首屏';
+
+  @override
+  String get toolsPositionExpanded => '展开区';
+
+  @override
+  String get toolsPositionMore => '更多页';
+
+  @override
+  String get knowledgeLoadFailed => '知识节点加载失败';
+
+  @override
+  String get knowledgeReload => '重新加载';
+
+  @override
+  String get knowledgeGeneratePath => '生成学习路径';
+
+  @override
+  String get knowledgeDescription => '描述';
+
+  @override
+  String get knowledgeNoDescription => '暂无描述';
+
+  @override
+  String get knowledgeRelatedNodes => '相关节点';
+
+  @override
+  String get knowledgePrerequisites => '前置知识';
+
+  @override
+  String get knowledgeMasteryProgress => '掌握进度';
+
+  @override
+  String get knowledgeKeywords => '关键词';
+
+  @override
+  String get knowledgeEstimated => '预计';
+
+  @override
+  String get knowledgeMinutes => '分钟';
+
+  @override
+  String get knowledgeRelatedTasks => '相关任务';
+
+  @override
+  String get knowledgeRelatedPlans => '相关计划';
+
+  @override
+  String get knowledgeMastery => '掌握度';
+
+  @override
+  String get knowledgeStudyMinutes => '学习分钟';
+
+  @override
+  String get knowledgeStudyCount => '学习次数';
+
+  @override
+  String get knowledgeNextReview => '下次复习';
+
+  @override
+  String get knowledgeDecayPaused => '遗忘衰减已暂停';
+
+  @override
+  String get knowledgeToday => '今天';
+
+  @override
+  String get knowledgeTomorrow => '明天';
+
+  @override
+  String knowledgeDaysLater(int days) {
+    return '$days天后';
+  }
+
+  @override
+  String knowledgeWeeksLater(int weeks) {
+    return '$weeks周后';
+  }
+
+  @override
+  String get seedLibraryTitle => '种子库';
+
+  @override
+  String get seedLibrarySearchHint => '搜索种子库...';
+
+  @override
+  String get seedLibraryCreate => '创建种子库';
+
+  @override
+  String get seedLibraryNotFound => '种子库不存在';
+
+  @override
+  String get seedLibraryDeleteConfirm => '确定要删除这个种子库吗？此操作不可撤销。';
+
+  @override
+  String get seedLibraryEmpty => '还没有创建种子库';
+
+  @override
+  String get seedLibraryCreateFirst => '创建一个新的种子库开始使用';
+
+  @override
+  String seedLibraryItemCount(int count) {
+    return '$count 个条目';
+  }
+
+  @override
+  String seedLibraryLastUpdated(String date) {
+    return '最后更新: $date';
+  }
+
+  @override
+  String get seedLibraryDetail => '种子库详情';
+
+  @override
+  String get seedLibraryFilter => '筛选';
+
+  @override
+  String get seedLibraryCategory => '分类';
+
+  @override
+  String get seedLibraryVisibility => '可见性';
+
+  @override
+  String get seedLibraryClear => '清除';
+
+  @override
+  String get seedLibraryApply => '应用';
+
+  @override
+  String get seedLibrarySubscribe => '订阅';
+
+  @override
+  String get seedLibraryUnsubscribe => '取消订阅';
+
+  @override
+  String get seedLibraryContentItems => '内容项';
+
+  @override
+  String get seedLibraryNoContent => '暂无内容';
+
+  @override
+  String get seedLibraryContent => '内容';
+
+  @override
+  String get seedLibrarySubscribers => '订阅者';
+
+  @override
+  String get seedLibraryUsage => '使用';
+
+  @override
+  String get seedLibraryQualityScore => '质量分';
+
+  @override
+  String get seedLibraryDeleteTitle => '删除种子库';
+
+  @override
+  String seedLibraryDeleteFailed(String error) {
+    return '删除失败：$error';
+  }
+
+  @override
+  String get translationHistoryTitle => '翻译历史';
+
+  @override
+  String get translationClearHistory => '清空历史';
+
+  @override
+  String get translationTranslating => '翻译中...';
+
+  @override
+  String get translationSaveToVocabulary => '保存到生词卡';
+
+  @override
+  String get translationCopy => '复制';
+
+  @override
+  String get translationCopied => '已复制';
+
+  @override
+  String get translationSearchHint => '搜索翻译记录...';
+
+  @override
+  String get translationNoHistory => '暂无翻译记录';
+
+  @override
+  String get translationStartTranslate => '开始翻译文本后会显示在这里';
+
+  @override
+  String get translationClearConfirm => '确定要清空所有翻译历史吗？';
+
+  @override
+  String get translationClearConfirmDetail => '此操作不可撤销';
+
+  @override
+  String get translationClearAll => '清空历史';
+
+  @override
+  String get translationFilterAll => '全部';
+
+  @override
+  String get translationFilterFavorites => '收藏';
+
+  @override
+  String get translationFilterImportant => '重要';
+
+  @override
+  String get translationFilterRecent => '最近';
+
+  @override
+  String get translationNoSearchResults => '未找到结果';
+
+  @override
+  String get translationTryOtherKeywords => '尝试其他关键词';
+
+  @override
+  String get translationNoFavorites => '暂无收藏';
+
+  @override
+  String get translationNoFavoritesHint => '给翻译打星标收藏起来';
+
+  @override
+  String get translationNoImportant => '暂无重要翻译';
+
+  @override
+  String get translationNoImportantHint => '给4星及以上的翻译会显示在这里';
+
+  @override
+  String get translationNoRecordsHint => '使用翻译功能后会自动保存';
+
+  @override
+  String get translationRating => '评分';
+
+  @override
+  String get translationSelectImportance => '选择重要程度';
+
+  @override
+  String get translationDelete => '删除翻译';
+
+  @override
+  String get translationDeleteConfirm => '确定要删除这条翻译记录吗？';
+
+  @override
+  String get translationOriginal => '原文';
+
+  @override
+  String get translationTranslated => '译文';
+
+  @override
+  String get translationHistorySessionOnly => '历史记录仅在当前会话有效';
+
+  @override
+  String get translationJustNow => '刚刚';
+
+  @override
+  String translationMinutesAgo(int minutes) {
+    return '$minutes分钟前';
+  }
+
+  @override
+  String translationHoursAgo(int hours) {
+    return '$hours小时前';
+  }
+
+  @override
+  String get translationToday => '今天';
+
+  @override
+  String get translationYesterday => '昨天';
+
+  @override
+  String translationDaysAgo(int days) {
+    return '$days天前';
+  }
+
+  @override
+  String get translationSourceLanguage => '源语言';
+
+  @override
+  String get translationTargetLanguage => '目标语言';
+
+  @override
+  String get translationSwapLanguages => '交换语言';
+
+  @override
+  String get translationDetectLanguage => '检测语言';
+
+  @override
+  String get translationHistoryEmpty => '暂无翻译历史';
+
+  @override
+  String get memoryEvidenceChain => '证据链';
+
+  @override
+  String get memoryNoEvidence => '暂无证据';
+
+  @override
+  String get memoryCurrentVersion => '当前版本';
+
+  @override
+  String get memoryVersionHistory => '版本历史';
+
+  @override
+  String get memorySortNewest => '最新';
+
+  @override
+  String get memorySortOldest => '最旧';
+
+  @override
+  String get memorySortImportance => '重要度';
+
+  @override
+  String get memoryEvidenceResolveFailed => '证据解析失败';
+
+  @override
+  String get memoryStatus => '状态';
+
+  @override
+  String get memoryGoalDate => '目标日期';
+
+  @override
+  String get memoryDeadline => '截止时间';
+
+  @override
+  String get memoryLastUpdated => '最后更新';
+
+  @override
+  String get memorySource => '来源';
+
+  @override
+  String get memoryOccurredAt => '发生时间';
+
+  @override
+  String get memoryImportanceScore => '重要度';
+
+  @override
+  String get memoryRetractedAt => '撤回时间';
+
+  @override
+  String get memoryUpdate => '更新';
+
+  @override
+  String get memoryConfidence => '置信度';
+
+  @override
+  String get memoryDiff => 'Diff';
+
+  @override
+  String get memoryRevertToVersion => '撤回到此版本';
+
+  @override
+  String get memoryNeedEnableRetraction => '需要开启 ENABLE_MEMORY_RETRACTION';
+
+  @override
+  String get memoryInitialVersion => '初始版本';
+
+  @override
+  String get memoryNoChanges => '无变化';
+
+  @override
+  String get memoryRevertNotEnabled => 'Revert 功能尚未启用';
+
+  @override
+  String get memoryWhyThisMemory => 'Why this memory?';
+
+  @override
+  String get memoryEvidenceCount => 'Evidence';
+
+  @override
+  String get memoryVersions => 'Versions';
+
+  @override
+  String get memoryBudget => 'Budget';
+
+  @override
+  String get memoryViewEvidence => '查看证据';
+
+  @override
+  String get memoryAllowedCapture => '已允许捕获';
+
+  @override
+  String get memoryCaptureLevel => '捕获级别';
+
+  @override
+  String get memoryTypeNone => '无';
+
+  @override
+  String get memoryTypePreference => '偏好';
+
+  @override
+  String get memoryTypeGoal => '目标';
+
+  @override
+  String get memoryTypeEpisodic => '经历';
+
+  @override
+  String get memoryDisabledHint => '当前已关闭长期记忆，后续不会记录此类记忆。';
+
+  @override
+  String get memoryPreferenceDisabledHint => '当前设置已关闭偏好捕获，后续不会记录此类记忆。';
+
+  @override
+  String get memoryGoalDisabledHint => '当前设置已关闭目标捕获，后续不会记录此类记忆。';
+
+  @override
+  String get memoryEpisodicDisabledHint => '当前设置已关闭经历捕获，后续不会记录此类记忆。';
+
+  @override
+  String get memorySourceBlockedHint => '该来源已被屏蔽，后续不会记录此类记忆。';
+
+  @override
+  String get memoryKeyBlockedHint => '该偏好已被屏蔽，后续不会记录此类记忆。';
+
+  @override
+  String get memoryExplanationPreference =>
+      'Captured because your preference updated recently.';
+
+  @override
+  String get memoryExplanationEpisodic =>
+      'Captured because this experience was marked important.';
+
+  @override
+  String get memoryExplanationGoal =>
+      'Captured to keep your active goals visible.';
+
+  @override
+  String get memoryCopied => '已复制记忆内容';
+
+  @override
+  String get memoryExportView => '导出视图';
+
+  @override
+  String get memoryCorrectionActions => '纠错操作';
+
+  @override
+  String get memoryCorrectionReject => 'Not true';
+
+  @override
+  String get memoryCorrectionNoLongerApplies => 'No longer applies';
+
+  @override
+  String get memoryCorrectionLowerConfidence => 'Lower confidence';
+
+  @override
+  String get memoryCorrectionMerge => 'Merge';
+
+  @override
+  String get memoryMergeComingSoon => '合并功能即将上线';
+
+  @override
+  String get memoryCorrectionSubmitted => '已提交纠错';
+
+  @override
+  String get memoryCorrectionFailed => '纠错失败';
+
+  @override
+  String get memoryHistoryLoadFailed => '历史记录加载失败';
+
+  @override
+  String get memorySettingsLoadFailed => '加载记忆设置失败';
+
+  @override
+  String get memoryAddEvidence => '添加证据';
+
+  @override
+  String get memoryEvidenceType => '证据类型';
+
+  @override
+  String get memoryEvidenceSource => '来源';
+
+  @override
+  String get memoryEvidenceContent => '内容';
 }

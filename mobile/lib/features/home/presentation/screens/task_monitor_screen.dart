@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/shared/entities/background_task_model.dart';
 
 /// Background task state
@@ -48,13 +49,23 @@ class BackgroundTaskState {
 
 /// Background task filter
 enum BackgroundTaskFilter {
-  all('全部'),
-  running('运行中'),
-  completed('已完成'),
-  failed('失败');
+  all,
+  running,
+  completed,
+  failed;
 
-  final String label;
-  const BackgroundTaskFilter(this.label);
+  String label(BuildContext context) {
+    switch (this) {
+      case BackgroundTaskFilter.all:
+        return context.l10n.taskMonitorFilterAll;
+      case BackgroundTaskFilter.running:
+        return context.l10n.taskMonitorFilterRunning;
+      case BackgroundTaskFilter.completed:
+        return context.l10n.taskMonitorFilterCompleted;
+      case BackgroundTaskFilter.failed:
+        return context.l10n.taskMonitorFilterFailed;
+    }
+  }
 }
 
 /// Background task notifier
@@ -124,7 +135,7 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
     return SparklePageScaffold(
       role: SparklePageRole.content,
       appBar: AppBar(
-        title: const Text('后台任务监控'),
+        title: Text(context.l10n.taskMonitorTitle),
         leading: SparkleIconButton(
           icon: const Icon(Icons.arrow_back_ios_new),
           onPressed: () => Navigator.pop(context),
@@ -153,15 +164,16 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
     );
   }
 
-  Widget _buildFilterChips(BackgroundTaskFilter selectedFilter) => Container(
-        padding: const EdgeInsets.symmetric(vertical: DS.md, horizontal: DS.sm),
-        child: Wrap(
-          spacing: DS.sm,
-          children: BackgroundTaskFilter.values.map((filter) {
-            final isSelected = selectedFilter == filter;
-            return FilterChip(
-              label: Text(filter.label),
-              selected: isSelected,
+  Widget _buildFilterChips(BackgroundTaskFilter selectedFilter) => Builder(
+        builder: (context) => Container(
+          padding: const EdgeInsets.symmetric(vertical: DS.md, horizontal: DS.sm),
+          child: Wrap(
+            spacing: DS.sm,
+            children: BackgroundTaskFilter.values.map((filter) {
+              final isSelected = selectedFilter == filter;
+              return FilterChip(
+                label: Text(filter.label(context)),
+                selected: isSelected,
               onSelected: (_) {
                 ref.read(backgroundTaskProvider.notifier).setFilter(filter);
               },
@@ -175,6 +187,7 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
               side: BorderSide.none,
             );
           }).toList(),
+          ),
         ),
       );
 
@@ -189,7 +202,7 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
             ),
             const SizedBox(height: DS.md),
             Text(
-              '暂无后台任务',
+              context.l10n.taskMonitorEmpty,
               style: TextStyle(
                 color: DS.brandPrimary54,
                 fontSize: 16,
@@ -246,7 +259,7 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
                     ],
                   ),
                 ),
-                _buildStatusChip(task.status),
+                _buildStatusChip(task.status, context),
               ],
             ),
             if (task.isActive || task.isFailed) ...[
@@ -280,7 +293,7 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
                     },
                     icon: Icon(Icons.refresh, size: 16, color: DS.primaryBase),
                     label: Text(
-                      '重试',
+                      context.l10n.commonRetry,
                       style: TextStyle(color: DS.primaryBase, fontSize: 13),
                     ),
                   ),
@@ -327,25 +340,25 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
     return Icon(icon, color: color, size: 20);
   }
 
-  Widget _buildStatusChip(BackgroundTaskStatus status) {
+  Widget _buildStatusChip(BackgroundTaskStatus status, BuildContext context) {
     String label;
     Color color;
 
     switch (status) {
       case BackgroundTaskStatus.pending:
-        label = '等待中';
+        label = context.l10n.taskMonitorStatusPending;
         color = DS.brandPrimary38;
       case BackgroundTaskStatus.running:
-        label = '运行中';
+        label = context.l10n.taskMonitorFilterRunning;
         color = DS.primaryBase;
       case BackgroundTaskStatus.completed:
-        label = '已完成';
+        label = context.l10n.taskMonitorFilterCompleted;
         color = DS.semanticSuccess;
       case BackgroundTaskStatus.failed:
-        label = '失败';
+        label = context.l10n.taskMonitorFilterFailed;
         color = DS.semanticError;
       case BackgroundTaskStatus.cancelled:
-        label = '已取消';
+        label = context.l10n.taskMonitorStatusCancelled;
         color = DS.brandPrimary38;
     }
 

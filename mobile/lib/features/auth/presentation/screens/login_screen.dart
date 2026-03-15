@@ -169,7 +169,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             onPressed: authState.isLoading
                                 ? null
                                 : () => context.go('/forgot-password'),
-                            child: const Text('忘记密码？'),
+                            child: Text(l10n.authForgotPassword),
                           ),
                         ),
                         const SizedBox(height: DS.xl),
@@ -237,20 +237,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           spacing: DS.spacing4,
                           children: [
                             Text(
-                              '登录即表示你同意',
+                              l10n.authLoginAgreement,
                               style: Theme.of(context).textTheme.bodySmall,
                             ),
                             TextButton(
                               onPressed: () => context.push('/legal/terms'),
-                              child: const Text('用户协议'),
+                              child: Text(l10n.authUserAgreement),
                             ),
                             Text(
-                              '和',
+                              l10n.authAnd,
                               style: Theme.of(context).textTheme.bodySmall,
                             ),
                             TextButton(
                               onPressed: () => context.push('/legal/privacy'),
-                              child: const Text('隐私政策'),
+                              child: Text(l10n.authPrivacyPolicy),
                             ),
                           ],
                         ),
@@ -271,7 +271,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                         const SizedBox(height: DS.sm),
                         SparkleButton(
-                          label: '演示账号登录',
+                          label: l10n.authDemoLogin,
                           onPressed: authState.isLoading
                               ? null
                               : () async {

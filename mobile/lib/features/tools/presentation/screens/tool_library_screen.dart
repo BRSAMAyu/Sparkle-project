@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
 import 'package:sparkle/features/tools/models/tool_preferences.dart';
 import 'package:sparkle/features/tools/providers/tool_preferences_provider.dart';
@@ -49,16 +50,17 @@ class _ToolLibraryScreenState extends ConsumerState<ToolLibraryScreen>
         .map(ToolRegistry.tryGetById)
         .whereType<ToolDefinition>()
         .toList();
+    final l10n = context.l10n;
 
     return SparklePageScaffold(
       role: SparklePageRole.content,
       appBar: AppBar(
-        title: const Text('工具库'),
+        title: Text(l10n.toolsLibraryTitle),
         bottom: TabBar(
           controller: _tabController,
-          tabs: const [
-            Tab(text: '浏览'),
-            Tab(text: '管理'),
+          tabs: [
+            Tab(text: l10n.toolsTabBrowse),
+            Tab(text: l10n.toolsTabManage),
           ],
         ),
       ),
@@ -95,13 +97,15 @@ class _ToolLibraryScreenState extends ConsumerState<ToolLibraryScreen>
       grouped.putIfAbsent(tool.category, () => <ToolDefinition>[]).add(tool);
     }
 
+    final l10n = context.l10n;
+
     return ListView(
       padding: const EdgeInsets.all(DS.spacing16),
       children: [
         TextField(
           controller: _searchController,
           decoration: InputDecoration(
-            hintText: '搜索工具、能力或关键词',
+            hintText: l10n.toolsSearchHint,
             prefixIcon: const Icon(Icons.search_rounded),
             suffixIcon: query.isEmpty
                 ? null
@@ -114,8 +118,8 @@ class _ToolLibraryScreenState extends ConsumerState<ToolLibraryScreen>
         if (recentTools.isNotEmpty && query.isEmpty) ...[
           const SizedBox(height: DS.spacing20),
           _SectionHeader(
-            title: '最近使用',
-            actionLabel: '管理固定',
+            title: l10n.toolsRecentTitle,
+            actionLabel: l10n.toolsManagePinned,
             onTap: () {
               _tabController.animateTo(1);
             },
@@ -145,7 +149,7 @@ class _ToolLibraryScreenState extends ConsumerState<ToolLibraryScreen>
         ],
         const SizedBox(height: DS.spacing20),
         for (final entry in grouped.entries) ...[
-          _SectionHeader(title: _categoryLabel(entry.key)),
+          _SectionHeader(title: _categoryLabel(entry.key, context)),
           const SizedBox(height: DS.spacing12),
           Wrap(
             spacing: DS.spacing12,
@@ -176,6 +180,8 @@ class _ToolLibraryScreenState extends ConsumerState<ToolLibraryScreen>
 
   Widget _buildManageTab(BuildContext context, ToolPreferences prefs) {
     final pinned = prefs.pinnedToolIds.map(ToolRegistry.getById).toList();
+    final l10n = context.l10n;
+
     return Column(
       children: [
         Padding(
@@ -189,14 +195,14 @@ class _ToolLibraryScreenState extends ConsumerState<ToolLibraryScreen>
             children: [
               Expanded(
                 child: Text(
-                  '首页首屏显示前 4 个，展开显示前 8 个。拖动可调整顺序。',
+                  l10n.toolsManageHint,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: DS.textSecondary,
                       ),
                 ),
               ),
               SparkleButton.ghost(
-                label: '回到浏览',
+                label: l10n.toolsBackToBrowse,
                 onPressed: () => _tabController.animateTo(0),
               ),
             ],
@@ -211,6 +217,11 @@ class _ToolLibraryScreenState extends ConsumerState<ToolLibraryScreen>
                 .reorderPinned(oldIndex, newIndex),
             itemBuilder: (context, index) {
               final tool = pinned[index];
+              final positionLabel = index < 4
+                  ? l10n.toolsPositionFirstScreen
+                  : index < 8
+                      ? l10n.toolsPositionExpanded
+                      : l10n.toolsPositionMore;
               return Card(
                 key: ValueKey(tool.id),
                 margin: const EdgeInsets.only(bottom: DS.spacing12),
@@ -218,7 +229,7 @@ class _ToolLibraryScreenState extends ConsumerState<ToolLibraryScreen>
                   leading: Icon(tool.icon, color: DS.brandPrimaryConst),
                   title: Text(tool.title),
                   subtitle: Text(
-                    '${index < 4 ? '首屏' : index < 8 ? '展开区' : '更多页'} · ${_categoryLabel(tool.category)}',
+                    '$positionLabel · ${_categoryLabel(tool.category, context)}',
                   ),
                   trailing: IconButton(
                     onPressed: () => ref
@@ -235,16 +246,17 @@ class _ToolLibraryScreenState extends ConsumerState<ToolLibraryScreen>
     );
   }
 
-  String _categoryLabel(ToolCategory category) {
+  String _categoryLabel(ToolCategory category, BuildContext context) {
+    final l10n = context.l10n;
     switch (category) {
       case ToolCategory.input:
-        return '输入处理';
+        return l10n.toolsCategoryInput;
       case ToolCategory.study:
-        return '学习辅助';
+        return l10n.toolsCategoryStudy;
       case ToolCategory.efficiency:
-        return '效率辅助';
+        return l10n.toolsCategoryEfficiency;
       case ToolCategory.cognition:
-        return '认知洞察';
+        return l10n.toolsCategoryCognition;
     }
   }
 }
@@ -357,7 +369,7 @@ class _LibraryToolCard extends StatelessWidget {
                 ),
                 const SizedBox(height: DS.spacing8),
                 Text(
-                  _categoryLabel(tool.category),
+                  _categoryLabel(tool.category, context),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
@@ -387,16 +399,17 @@ class _LibraryToolCard extends StatelessWidget {
   }
 }
 
-String _categoryLabel(ToolCategory category) {
+String _categoryLabel(ToolCategory category, BuildContext context) {
+  final l10n = context.l10n;
   switch (category) {
     case ToolCategory.input:
-      return '输入处理';
+      return l10n.toolsCategoryInput;
     case ToolCategory.study:
-      return '学习辅助';
+      return l10n.toolsCategoryStudy;
     case ToolCategory.efficiency:
-      return '效率辅助';
+      return l10n.toolsCategoryEfficiency;
     case ToolCategory.cognition:
-      return '认知洞察';
+      return l10n.toolsCategoryCognition;
   }
 }
 

@@ -7,7 +7,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Path, Query
 from loguru import logger
-from sqlalchemy import desc, func, select
+from sqlalchemy import desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
@@ -67,7 +67,14 @@ async def list_tasks(
     if plan_id:
         query = query.where(Task.plan_id == plan_id)
     if tags:
-        pass # Tag filtering implementation pending DB specific JSON operators
+        # Check if task tags contain any of the filter tags (OR logic)
+        # Uses JSONB @> operator for PostgreSQL, falls back to LIKE for SQLite
+        tag_conditions = []
+        for tag in tags:
+            # PostgreSQL: tags @> '["tag"]' checks if array contains the tag
+            # Using contains for JSONB array
+            tag_conditions.append(Task.tags.op('@>')(f'["{tag}"]'))
+        query = query.where(or_(*tag_conditions))
     if due_date_start:
         query = query.where(Task.due_date >= due_date_start)
     if due_date_end:

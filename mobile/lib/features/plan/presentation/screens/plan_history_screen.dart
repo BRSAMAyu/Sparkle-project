@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 
@@ -21,12 +22,12 @@ class PlanHistoryScreen extends ConsumerWidget {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        title: const Text('历史计划'),
+        title: Text(context.l10n.planHistoryTitle),
       ),
       child: ContentConstraint(
         child: RefreshIndicator(
           onRefresh: () => ref.read(planListProvider.notifier).refresh(),
-          child: _buildBody(context, archivedPlans, planState.isLoading),
+          child: _buildBody(context, ref, archivedPlans, planState.isLoading),
         ),
       ),
     );
@@ -34,6 +35,7 @@ class PlanHistoryScreen extends ConsumerWidget {
 
   Widget _buildBody(
     BuildContext context,
+    WidgetRef ref,
     List<PlanModel> plans,
     bool isLoading,
   ) {
@@ -42,8 +44,8 @@ class PlanHistoryScreen extends ConsumerWidget {
     }
 
     if (plans.isEmpty) {
-      return const Center(
-        child: Text('暂无历史计划'),
+      return Center(
+        child: Text(context.l10n.planHistoryEmpty),
       );
     }
 
@@ -57,7 +59,9 @@ class PlanHistoryScreen extends ConsumerWidget {
       children: grouped.entries
           .map(
             (entry) => _PlanHistorySection(
-              title: entry.key == PlanType.sprint ? '冲刺计划' : '成长计划',
+              title: entry.key == PlanType.sprint
+                  ? context.l10n.planTypeSprint
+                  : context.l10n.planTypeGrowth,
               plans: entry.value,
             ),
           )
@@ -94,10 +98,12 @@ class _PlanHistorySection extends ConsumerWidget {
                 child: ListTile(
                   title: Text(plan.name),
                   subtitle: Text(
-                    '${(plan.progress * 100).toStringAsFixed(0)}% 完成',
+                    context.l10n.planProgressPercent(
+                      (plan.progress * 100).toStringAsFixed(0),
+                    ),
                   ),
                   trailing: Tooltip(
-                    message: '恢复计划',
+                    message: context.l10n.planHistoryRestore,
                     child: SparkleIconButton(
                       variant: ButtonVariant.ghost,
                       icon: const Icon(Icons.restore_rounded),
@@ -106,7 +112,7 @@ class _PlanHistorySection extends ConsumerWidget {
                             .read(planListProvider.notifier)
                             .restorePlan(plan.id);
                         if (context.mounted) {
-                          AppFeedback.success(context, '计划已恢复');
+                          AppFeedback.success(context, context.l10n.planHistoryRestoreSuccess);
                         }
                       },
                     ),

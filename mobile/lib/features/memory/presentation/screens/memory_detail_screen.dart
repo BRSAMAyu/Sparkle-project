@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/services/memory_api_service.dart';
 import 'package:sparkle/features/memory/presentation/widgets/evidence_drawer.dart';
@@ -153,7 +154,7 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
         return;
       }
       setState(() {
-        _historyError = '历史记录加载失败: $e';
+        _historyError = '${context.l10n.memoryHistoryLoadFailed}: $e';
         _loadingHistory = false;
       });
     }
@@ -177,7 +178,7 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
         return;
       }
       setState(() {
-        _settingsError = '加载记忆设置失败: $e';
+        _settingsError = '${context.l10n.memorySettingsLoadFailed}: $e';
       });
     }
   }
@@ -249,7 +250,7 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
               children: [
                 MemoryEvidenceBadge(status: _evidenceStatus),
                 const SizedBox(width: DS.sm),
-                Text('当前版本', style: Theme.of(context).textTheme.bodyMedium),
+                Text(context.l10n.memoryCurrentVersion, style: Theme.of(context).textTheme.bodyMedium),
               ],
             ),
             const SizedBox(height: DS.md),
@@ -284,7 +285,7 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
               _buildWhyMemorySection(),
             ],
             const SizedBox(height: DS.lg),
-            Text('版本历史', style: Theme.of(context).textTheme.titleMedium),
+            Text(context.l10n.memoryVersionHistory, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: DS.sm),
             if (_loadingHistory)
               const Center(child: CircularProgressIndicator())

@@ -59,6 +59,8 @@ class TaskModel {
     this.userNote,
     this.dueDate,
     this.knowledgeNodeId,
+    this.subtasksTotal = 0,
+    this.subtasksCompleted = 0,
     this.syncStatus = TaskSyncStatus.synced,
     this.syncError,
     this.retryToken,
@@ -95,6 +97,10 @@ class TaskModel {
   final DateTime? dueDate;
   @JsonKey(name: 'knowledge_node_id')
   final String? knowledgeNodeId;
+  @JsonKey(name: 'subtasks_total')
+  final int subtasksTotal;
+  @JsonKey(name: 'subtasks_completed')
+  final int subtasksCompleted;
   @JsonKey(name: 'created_at')
   final DateTime createdAt;
   @JsonKey(name: 'updated_at')
@@ -128,6 +134,8 @@ class TaskModel {
     int? priority,
     DateTime? dueDate,
     String? knowledgeNodeId,
+    int? subtasksTotal,
+    int? subtasksCompleted,
     DateTime? createdAt,
     DateTime? updatedAt,
     TaskSyncStatus? syncStatus,
@@ -153,6 +161,8 @@ class TaskModel {
         priority: priority ?? this.priority,
         dueDate: dueDate ?? this.dueDate,
         knowledgeNodeId: knowledgeNodeId ?? this.knowledgeNodeId,
+        subtasksTotal: subtasksTotal ?? this.subtasksTotal,
+        subtasksCompleted: subtasksCompleted ?? this.subtasksCompleted,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
         syncStatus: syncStatus ?? this.syncStatus,

@@ -699,7 +699,7 @@ class ErrorDetailScreen extends ConsumerWidget {
               children: [
                 _buildStatCard(
                   context: context,
-                  label: context.l10n.errorBookReviewCount,
+                  label: context.l10n.errorBookReviewCount(error.reviewCount),
                   value: error.reviewCount.toString(),
                   icon: Icons.repeat,
                   color: DS.info,
@@ -724,7 +724,7 @@ class ErrorDetailScreen extends ConsumerWidget {
                 Expanded(
                   child: _buildStatCard(
                     context: context,
-                    label: context.l10n.errorBookReviewCount,
+                    label: context.l10n.errorBookReviewCount(error.reviewCount),
                     value: error.reviewCount.toString(),
                     icon: Icons.repeat,
                     color: DS.info,

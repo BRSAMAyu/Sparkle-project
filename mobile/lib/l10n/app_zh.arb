@@ -505,6 +505,7 @@
   "commonYes": "是",
   "commonNo": "否",
   "commonOk": "确定",
+  "commonCancel": "取消",
   "commonSave": "保存",
   "commonDelete": "删除",
   "commonEdit": "编辑",
@@ -1214,6 +1215,7 @@
   "subtaskAddHint": "添加子任务...",
   "subtaskAddTooltip": "添加子任务",
   "subtaskEmpty": "暂无子任务",
+  "subtaskTitle": "子任务",
   "taskFeedbackSubmitted": "反馈已提交",
   "taskFeedbackPreferenceUpdated": "偏好已更新",
   "taskFeedbackView": "查看",
@@ -1871,6 +1873,55 @@
   "errorBookDeleteFailed": "删除失败",
   "errorBookDeleteConfirmTitle": "确认删除",
   "errorBookDeleteConfirmMessage": "删除后无法恢复，确定要删除这道错题吗？",
+  "errorBookDetailTitle": "错题详情",
+  "errorBookEdit": "编辑",
+  "errorBookReanalyze": "重新分析",
+  "errorBookDelete": "删除",
+  "errorBookCreatedAt": "创建于 {date}",
+  "errorBookMasteryPercent": "{percent}%掌握",
+  "errorBookSimilarSummary": "同类错因分析",
+  "errorBookRootCause": "根本原因",
+  "errorBookStrategySuggestions": "策略建议",
+  "errorBookSimilarErrors": "相似错误",
+  "errorBookSimilarCauseFallback": "未分类",
+  "errorBookQuestionContent": "题目内容",
+  "errorBookImageLoadFailed": "图片加载失败",
+  "errorBookAnswerComparison": "答案对比",
+  "errorBookYourAnswer": "你的答案",
+  "errorBookCorrectAnswer": "正确答案",
+  "errorBookAiAnalysis": "AI 分析",
+  "errorBookKnowledgeLinks": "关联知识点",
+  "errorBookKnowledgeLinkTooltip": "查看学习路径",
+  "errorBookKnowledgeLinkSnack": "即将跳转到 {nodeName} 知识点",
+  "errorBookReviewStats": "复习统计",
+  "errorBookLastReview": "上次复习",
+  "errorBookNextReview": "下次复习",
+  "errorBookStartReview": "开始复习",
+  "errorBookLoadFailed": "加载失败",
+  "errorBookEditInProgress": "编辑功能即将上线",
+  "errorBookReanalyzing": "正在重新分析...",
+  "errorBookReviewInProgress": "复习功能即将上线",
+  "@errorBookCreatedAt": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "@errorBookMasteryPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "@errorBookKnowledgeLinkSnack": {
+    "placeholders": {
+      "nodeName": {
+        "type": "String"
+      }
+    }
+  },
   "errorBookCognitiveFilter": "正针对 \"{dimension}\" 维度进行针对性复习",
   "@errorBookCognitiveFilter": {
     "placeholders": {
@@ -2002,5 +2053,274 @@
         "type": "int"
       }
     }
-  }
+  },
+
+  "taskMonitorTitle": "后台任务监控",
+  "taskMonitorFilterAll": "全部",
+  "taskMonitorFilterRunning": "运行中",
+  "taskMonitorFilterCompleted": "已完成",
+  "taskMonitorFilterFailed": "失败",
+  "taskMonitorEmpty": "暂无后台任务",
+  "taskMonitorStatusPending": "等待中",
+  "taskMonitorStatusCancelled": "已取消",
+
+  "planHistoryTitle": "历史计划",
+  "planHistoryEmpty": "暂无历史计划",
+  "planHistoryRestore": "恢复计划",
+  "planHistoryRestoreSuccess": "计划已恢复",
+  "planHistoryDeleteConfirm": "确定要删除这个历史计划吗？",
+  "planTypeSprint": "冲刺计划",
+  "planTypeGrowth": "成长计划",
+  "planProgressPercent": "{percent}% 完成",
+  "@planProgressPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+
+  "authForgotPassword": "忘记密码？",
+  "authUserAgreement": "用户协议",
+  "authPrivacyPolicy": "隐私政策",
+  "authLoginAgreement": "登录即表示你同意",
+  "authAnd": "和",
+  "authDemoLogin": "演示账号登录",
+  "authResetPassword": "重置密码",
+  "authResetPasswordHint": "请输入您的邮箱，我们将发送重置密码链接",
+  "authSendResetEmail": "发送重置邮件",
+  "authResetEmailSent": "重置邮件已发送",
+  "authBackToLogin": "返回登录",
+  "authForgotPasswordTitle": "忘记密码",
+  "authForgotPasswordHint": "输入注册邮箱，我们会发送一封包含重置码的邮件给你。",
+  "authInvalidEmail": "请输入有效邮箱",
+  "authHaveResetCode": "我已经有重置码",
+
+  "toolsLibraryTitle": "工具库",
+  "toolsTabBrowse": "浏览",
+  "toolsTabManage": "管理",
+  "toolsSearchHint": "搜索工具、能力或关键词",
+  "toolsRecentTitle": "最近使用",
+  "toolsManagePinned": "管理固定",
+  "toolsCategoryInput": "输入处理",
+  "toolsCategoryStudy": "学习辅助",
+  "toolsCategoryEfficiency": "效率辅助",
+  "toolsCategoryCognition": "认知洞察",
+  "toolsNoTools": "暂无工具",
+  "toolsPinnedEmpty": "还没有固定的工具",
+  "toolsSearchHint": "搜索工具、能力或关键词",
+  "toolsRecentTitle": "最近使用",
+  "toolsManagePinned": "管理固定",
+  "toolsManageHint": "首页首屏显示前 4 个，展开显示前 8 个。拖动可调整顺序。",
+  "toolsBackToBrowse": "回到浏览",
+  "toolsPositionFirstScreen": "首屏",
+  "toolsPositionExpanded": "展开区",
+  "toolsPositionMore": "更多页",
+
+  "knowledgeLoadFailed": "知识节点加载失败",
+  "knowledgeReload": "重新加载",
+  "knowledgeGeneratePath": "生成学习路径",
+  "knowledgeDescription": "描述",
+  "knowledgeNoDescription": "暂无描述",
+  "knowledgeRelatedNodes": "相关节点",
+  "knowledgePrerequisites": "前置知识",
+  "knowledgeMasteryProgress": "掌握进度",
+  "knowledgeKeywords": "关键词",
+  "knowledgeEstimated": "预计",
+  "knowledgeMinutes": "分钟",
+  "knowledgeRelatedTasks": "相关任务",
+  "knowledgeRelatedPlans": "相关计划",
+  "knowledgeMastery": "掌握度",
+  "knowledgeStudyMinutes": "学习分钟",
+  "knowledgeStudyCount": "学习次数",
+  "knowledgeNextReview": "下次复习",
+  "knowledgeDecayPaused": "遗忘衰减已暂停",
+  "knowledgeToday": "今天",
+  "knowledgeTomorrow": "明天",
+  "knowledgeDaysLater": "{days}天后",
+  "knowledgeWeeksLater": "{weeks}周后",
+  "@knowledgeDaysLater": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "@knowledgeWeeksLater": {
+    "placeholders": {
+      "weeks": {
+        "type": "int"
+      }
+    }
+  },
+
+  "seedLibraryTitle": "种子库",
+  "seedLibrarySearchHint": "搜索种子库...",
+  "seedLibraryCreate": "创建种子库",
+  "seedLibraryNotFound": "种子库不存在",
+  "seedLibraryDeleteConfirm": "确定要删除这个种子库吗？此操作不可撤销。",
+  "seedLibraryEmpty": "还没有创建种子库",
+  "seedLibraryCreateFirst": "创建一个新的种子库开始使用",
+  "seedLibraryItemCount": "{count} 个条目",
+  "@seedLibraryItemCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "seedLibraryLastUpdated": "最后更新: {date}",
+  "seedLibraryDetail": "种子库详情",
+  "seedLibraryFilter": "筛选",
+  "seedLibraryCategory": "分类",
+  "seedLibraryVisibility": "可见性",
+  "seedLibraryClear": "清除",
+  "seedLibraryApply": "应用",
+  "seedLibrarySubscribe": "订阅",
+  "seedLibraryUnsubscribe": "取消订阅",
+  "seedLibraryContentItems": "内容项",
+  "seedLibraryNoContent": "暂无内容",
+  "seedLibraryContent": "内容",
+  "seedLibrarySubscribers": "订阅者",
+  "seedLibraryUsage": "使用",
+  "seedLibraryQualityScore": "质量分",
+  "seedLibraryDeleteTitle": "删除种子库",
+  "seedLibraryDeleteFailed": "删除失败：{error}",
+  "@seedLibraryDeleteFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@seedLibraryLastUpdated": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "translationHistoryTitle": "翻译历史",
+  "translationClearHistory": "清空历史",
+  "translationTranslating": "翻译中...",
+  "translationSaveToVocabulary": "保存到生词卡",
+  "translationCopy": "复制",
+  "translationCopied": "已复制",
+  "translationSearchHint": "搜索翻译记录...",
+  "translationNoHistory": "暂无翻译记录",
+  "translationStartTranslate": "开始翻译文本后会显示在这里",
+  "translationClearConfirm": "确定要清空所有翻译历史吗？",
+  "translationClearConfirmDetail": "此操作不可撤销",
+  "translationClearAll": "清空历史",
+  "translationFilterAll": "全部",
+  "translationFilterFavorites": "收藏",
+  "translationFilterImportant": "重要",
+  "translationFilterRecent": "最近",
+  "translationNoSearchResults": "未找到结果",
+  "translationTryOtherKeywords": "尝试其他关键词",
+  "translationNoFavorites": "暂无收藏",
+  "translationNoFavoritesHint": "给翻译打星标收藏起来",
+  "translationNoImportant": "暂无重要翻译",
+  "translationNoImportantHint": "给4星及以上的翻译会显示在这里",
+  "translationNoRecordsHint": "使用翻译功能后会自动保存",
+  "translationRating": "评分",
+  "translationSelectImportance": "选择重要程度",
+  "translationDelete": "删除翻译",
+  "translationDeleteConfirm": "确定要删除这条翻译记录吗？",
+  "translationOriginal": "原文",
+  "translationTranslated": "译文",
+  "translationHistorySessionOnly": "历史记录仅在当前会话有效",
+  "translationJustNow": "刚刚",
+  "translationMinutesAgo": "{minutes}分钟前",
+  "translationHoursAgo": "{hours}小时前",
+  "translationToday": "今天",
+  "translationYesterday": "昨天",
+  "translationDaysAgo": "{days}天前",
+  "@translationMinutesAgo": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "@translationHoursAgo": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "@translationDaysAgo": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "translationSourceLanguage": "源语言",
+  "translationTargetLanguage": "目标语言",
+  "translationSwapLanguages": "交换语言",
+  "translationDetectLanguage": "检测语言",
+  "translationHistoryEmpty": "暂无翻译历史",
+
+  "memoryEvidenceChain": "证据链",
+  "memoryNoEvidence": "暂无证据",
+  "memoryCurrentVersion": "当前版本",
+  "memoryVersionHistory": "版本历史",
+  "memorySortNewest": "最新",
+  "memorySortOldest": "最旧",
+  "memorySortImportance": "重要度",
+  "memoryEvidenceResolveFailed": "证据解析失败",
+  "memoryStatus": "状态",
+  "memoryGoalDate": "目标日期",
+  "memoryDeadline": "截止时间",
+  "memoryLastUpdated": "最后更新",
+  "memorySource": "来源",
+  "memoryOccurredAt": "发生时间",
+  "memoryImportanceScore": "重要度",
+  "memoryRetractedAt": "撤回时间",
+  "memoryUpdate": "更新",
+  "memoryConfidence": "置信度",
+  "memoryDiff": "Diff",
+  "memoryRevertToVersion": "撤回到此版本",
+  "memoryNeedEnableRetraction": "需要开启 ENABLE_MEMORY_RETRACTION",
+  "memoryInitialVersion": "初始版本",
+  "memoryNoChanges": "无变化",
+  "memoryRevertNotEnabled": "Revert 功能尚未启用",
+  "memoryWhyThisMemory": "Why this memory?",
+  "memoryEvidenceCount": "Evidence",
+  "memoryVersions": "Versions",
+  "memoryBudget": "Budget",
+  "memoryViewEvidence": "查看证据",
+  "memoryAllowedCapture": "已允许捕获",
+  "memoryCaptureLevel": "捕获级别",
+  "memoryTypeNone": "无",
+  "memoryTypePreference": "偏好",
+  "memoryTypeGoal": "目标",
+  "memoryTypeEpisodic": "经历",
+  "memoryDisabledHint": "当前已关闭长期记忆，后续不会记录此类记忆。",
+  "memoryPreferenceDisabledHint": "当前设置已关闭偏好捕获，后续不会记录此类记忆。",
+  "memoryGoalDisabledHint": "当前设置已关闭目标捕获，后续不会记录此类记忆。",
+  "memoryEpisodicDisabledHint": "当前设置已关闭经历捕获，后续不会记录此类记忆。",
+  "memorySourceBlockedHint": "该来源已被屏蔽，后续不会记录此类记忆。",
+  "memoryKeyBlockedHint": "该偏好已被屏蔽，后续不会记录此类记忆。",
+  "memoryExplanationPreference": "Captured because your preference updated recently.",
+  "memoryExplanationEpisodic": "Captured because this experience was marked important.",
+  "memoryExplanationGoal": "Captured to keep your active goals visible.",
+  "memoryCopied": "已复制记忆内容",
+  "memoryExportView": "导出视图",
+  "memoryCorrectionActions": "纠错操作",
+  "memoryCorrectionReject": "Not true",
+  "memoryCorrectionNoLongerApplies": "No longer applies",
+  "memoryCorrectionLowerConfidence": "Lower confidence",
+  "memoryCorrectionMerge": "Merge",
+  "memoryMergeComingSoon": "合并功能即将上线",
+  "memoryCorrectionSubmitted": "已提交纠错",
+  "memoryCorrectionFailed": "纠错失败",
+  "memoryHistoryLoadFailed": "历史记录加载失败",
+  "memorySettingsLoadFailed": "加载记忆设置失败",
+  "memoryAddEvidence": "添加证据",
+  "memoryEvidenceType": "证据类型",
+  "memoryEvidenceSource": "来源",
+  "memoryEvidenceContent": "内容"
 }

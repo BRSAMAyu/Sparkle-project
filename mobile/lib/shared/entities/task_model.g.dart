@@ -33,6 +33,8 @@ TaskModel _$TaskModelFromJson(Map<String, dynamic> json) => TaskModel(
           ? null
           : DateTime.parse(json['due_date'] as String),
       knowledgeNodeId: json['knowledge_node_id'] as String?,
+      subtasksTotal: (json['subtasks_total'] as num?)?.toInt() ?? 0,
+      subtasksCompleted: (json['subtasks_completed'] as num?)?.toInt() ?? 0,
     );
 
 Map<String, dynamic> _$TaskModelToJson(TaskModel instance) => <String, dynamic>{
@@ -54,6 +56,8 @@ Map<String, dynamic> _$TaskModelToJson(TaskModel instance) => <String, dynamic>{
       'priority': instance.priority,
       'due_date': instance.dueDate?.toIso8601String(),
       'knowledge_node_id': instance.knowledgeNodeId,
+      'subtasks_total': instance.subtasksTotal,
+      'subtasks_completed': instance.subtasksCompleted,
       'created_at': instance.createdAt.toIso8601String(),
       'updated_at': instance.updatedAt.toIso8601String(),
     };

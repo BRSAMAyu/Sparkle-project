@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
 import 'package:sparkle/features/insights/presentation/widgets/learning_path_dialog.dart';
 import 'package:sparkle/features/knowledge/data/models/knowledge_detail_model.dart';
@@ -14,6 +15,7 @@ class KnowledgeDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final detailAsync = ref.watch(knowledgeDetailProvider(nodeId));
+    final l10n = context.l10n;
 
     return detailAsync.when(
       loading: () => const GraphiteScaffold(
@@ -27,7 +29,7 @@ class KnowledgeDetailScreen extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                '知识节点加载失败',
+                l10n.knowledgeLoadFailed,
                 style: DS.titleLarge.copyWith(color: DS.textPrimary),
               ),
               const SizedBox(height: DS.lg),
@@ -38,7 +40,7 @@ class KnowledgeDetailScreen extends ConsumerWidget {
               ),
               const SizedBox(height: DS.lg),
               SparkleButton.primary(
-                label: '重新加载',
+                label: l10n.knowledgeReload,
                 onPressed: () =>
                     ref.invalidate(knowledgeDetailProvider(nodeId)),
               ),
@@ -57,11 +59,12 @@ class KnowledgeDetailScreen extends ConsumerWidget {
   ) {
     final sectorStyle = SectorConfig.getStyle(detail.node.sector);
     final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     return SparklePageScaffold(
       role: SparklePageRole.content,
       floatingActionButton: SparkleButton(
-        label: '生成学习路径',
+        label: l10n.knowledgeGeneratePath,
         icon: const Icon(Icons.timeline),
         onPressed: () {
           showModalBottomSheet<void>(
@@ -69,7 +72,7 @@ class KnowledgeDetailScreen extends ConsumerWidget {
             isScrollControlled: true,
             backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
             builder: (context) => GraphiteModalSurface(
-              title: '生成学习路径',
+              title: l10n.knowledgeGeneratePath,
               child: LearningPathDialog(
                 targetNodeId: nodeId,
                 targetNodeName: detail.node.name,
@@ -188,7 +191,7 @@ class KnowledgeDetailScreen extends ConsumerWidget {
             SliverToBoxAdapter(
               child: ContentConstraint(
                 child: _SectionCard(
-                  title: '描述',
+                  title: context.l10n.knowledgeDescription,
                   child: Text(
                     detail.node.description!,
                     style: theme.textTheme.bodyMedium,
@@ -202,7 +205,7 @@ class KnowledgeDetailScreen extends ConsumerWidget {
             SliverToBoxAdapter(
               child: ContentConstraint(
                 child: _SectionCard(
-                  title: '关键词',
+                  title: context.l10n.knowledgeKeywords,
                   child: Wrap(
                     spacing: 8,
                     runSpacing: 8,
@@ -225,7 +228,7 @@ class KnowledgeDetailScreen extends ConsumerWidget {
             SliverToBoxAdapter(
               child: ContentConstraint(
                 child: _SectionCard(
-                  title: '相关知识',
+                  title: context.l10n.knowledgeRelatedNodes,
                   child: Column(
                     children: detail.relations.map((relation) {
                       final isSource = relation.sourceNodeId == nodeId;
@@ -259,7 +262,7 @@ class KnowledgeDetailScreen extends ConsumerWidget {
             SliverToBoxAdapter(
               child: ContentConstraint(
                 child: _SectionCard(
-                  title: '相关任务',
+                  title: context.l10n.knowledgeRelatedTasks,
                   child: Column(
                     children: detail.relatedTasks
                         .map(
@@ -271,7 +274,8 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                                   : DS.brandPrimary,
                             ),
                             title: Text(task.title),
-                            subtitle: Text('预计 ${task.estimatedMinutes} 分钟'),
+                            subtitle: Text(
+                              '${context.l10n.knowledgeEstimated} ${task.estimatedMinutes} ${context.l10n.knowledgeMinutes}'),
                             trailing: const Icon(Icons.chevron_right),
                             onTap: () {
                               context.push('/tasks/${task.id}');
@@ -289,7 +293,7 @@ class KnowledgeDetailScreen extends ConsumerWidget {
             SliverToBoxAdapter(
               child: ContentConstraint(
                 child: _SectionCard(
-                  title: '相关计划',
+                  title: context.l10n.knowledgeRelatedPlans,
                   child: Column(
                     children: detail.relatedPlans
                         .map(
@@ -302,7 +306,9 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                             ),
                             title: Text(plan.title),
                             subtitle: Text(
-                              plan.planType == 'sprint' ? '冲刺计划' : '成长计划',
+                              plan.planType == 'sprint'
+                                  ? context.l10n.planTypeSprint
+                                  : context.l10n.planTypeGrowth,
                             ),
                             trailing: const Icon(Icons.chevron_right),
                             onTap: () {
@@ -369,7 +375,7 @@ class _MasteryCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    '掌握度',
+                    context.l10n.knowledgeMastery,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   Container(
@@ -420,18 +426,18 @@ class _MasteryCard extends StatelessWidget {
                   _StatItem(
                     icon: Icons.timer,
                     value: '${stats.totalStudyMinutes}',
-                    label: '学习分钟',
+                    label: context.l10n.knowledgeStudyMinutes,
                   ),
                   _StatItem(
                     icon: Icons.repeat,
                     value: '${stats.studyCount}',
-                    label: '学习次数',
+                    label: context.l10n.knowledgeStudyCount,
                   ),
                   if (stats.nextReviewAt != null)
                     _StatItem(
                       icon: Icons.event,
-                      value: _formatReviewDate(stats.nextReviewAt!),
-                      label: '下次复习',
+                      value: _formatReviewDate(context, stats.nextReviewAt!),
+                      label: context.l10n.knowledgeNextReview,
                     ),
                 ],
               ),
@@ -454,7 +460,7 @@ class _MasteryCard extends StatelessWidget {
                       ),
                       const SizedBox(width: DS.smConst),
                       Text(
-                        '遗忘衰减已暂停',
+                        context.l10n.knowledgeDecayPaused,
                         style: DS.bodyMedium.copyWith(color: DS.textPrimary),
                       ),
                     ],
@@ -474,13 +480,13 @@ class _MasteryCard extends StatelessWidget {
     return DS.brandPrimary;
   }
 
-  String _formatReviewDate(DateTime date) {
+  String _formatReviewDate(BuildContext context, DateTime date) {
     final now = DateTime.now();
     final diff = date.difference(now);
-    if (diff.inDays == 0) return '今天';
-    if (diff.inDays == 1) return '明天';
-    if (diff.inDays < 7) return '${diff.inDays}天后';
-    return '${(diff.inDays / 7).floor()}周后';
+    if (diff.inDays == 0) return context.l10n.knowledgeToday;
+    if (diff.inDays == 1) return context.l10n.knowledgeTomorrow;
+    if (diff.inDays < 7) return context.l10n.knowledgeDaysLater(diff.inDays);
+    return context.l10n.knowledgeWeeksLater((diff.inDays / 7).floor());
   }
 }
 

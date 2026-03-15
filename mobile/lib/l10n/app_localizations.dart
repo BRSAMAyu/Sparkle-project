@@ -3002,6 +3002,12 @@ abstract class AppLocalizations {
   /// **'确定'**
   String get commonOk;
 
+  /// No description provided for @commonCancel.
+  ///
+  /// In zh, this message translates to:
+  /// **'取消'**
+  String get commonCancel;
+
   /// No description provided for @commonSave.
   ///
   /// In zh, this message translates to:
@@ -6632,6 +6638,12 @@ abstract class AppLocalizations {
   /// **'暂无子任务'**
   String get subtaskEmpty;
 
+  /// No description provided for @subtaskTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'子任务'**
+  String get subtaskTitle;
+
   /// No description provided for @taskFeedbackSubmitted.
   ///
   /// In zh, this message translates to:
@@ -8852,6 +8864,174 @@ abstract class AppLocalizations {
   /// **'删除后无法恢复，确定要删除这道错题吗？'**
   String get errorBookDeleteConfirmMessage;
 
+  /// No description provided for @errorBookDetailTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'错题详情'**
+  String get errorBookDetailTitle;
+
+  /// No description provided for @errorBookEdit.
+  ///
+  /// In zh, this message translates to:
+  /// **'编辑'**
+  String get errorBookEdit;
+
+  /// No description provided for @errorBookReanalyze.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新分析'**
+  String get errorBookReanalyze;
+
+  /// No description provided for @errorBookDelete.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除'**
+  String get errorBookDelete;
+
+  /// No description provided for @errorBookCreatedAt.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建于 {date}'**
+  String errorBookCreatedAt(String date);
+
+  /// No description provided for @errorBookMasteryPercent.
+  ///
+  /// In zh, this message translates to:
+  /// **'{percent}%掌握'**
+  String errorBookMasteryPercent(int percent);
+
+  /// No description provided for @errorBookSimilarSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'同类错因分析'**
+  String get errorBookSimilarSummary;
+
+  /// No description provided for @errorBookRootCause.
+  ///
+  /// In zh, this message translates to:
+  /// **'根本原因'**
+  String get errorBookRootCause;
+
+  /// No description provided for @errorBookStrategySuggestions.
+  ///
+  /// In zh, this message translates to:
+  /// **'策略建议'**
+  String get errorBookStrategySuggestions;
+
+  /// No description provided for @errorBookSimilarErrors.
+  ///
+  /// In zh, this message translates to:
+  /// **'相似错误'**
+  String get errorBookSimilarErrors;
+
+  /// No description provided for @errorBookSimilarCauseFallback.
+  ///
+  /// In zh, this message translates to:
+  /// **'未分类'**
+  String get errorBookSimilarCauseFallback;
+
+  /// No description provided for @errorBookQuestionContent.
+  ///
+  /// In zh, this message translates to:
+  /// **'题目内容'**
+  String get errorBookQuestionContent;
+
+  /// No description provided for @errorBookImageLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'图片加载失败'**
+  String get errorBookImageLoadFailed;
+
+  /// No description provided for @errorBookAnswerComparison.
+  ///
+  /// In zh, this message translates to:
+  /// **'答案对比'**
+  String get errorBookAnswerComparison;
+
+  /// No description provided for @errorBookYourAnswer.
+  ///
+  /// In zh, this message translates to:
+  /// **'你的答案'**
+  String get errorBookYourAnswer;
+
+  /// No description provided for @errorBookCorrectAnswer.
+  ///
+  /// In zh, this message translates to:
+  /// **'正确答案'**
+  String get errorBookCorrectAnswer;
+
+  /// No description provided for @errorBookAiAnalysis.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 分析'**
+  String get errorBookAiAnalysis;
+
+  /// No description provided for @errorBookKnowledgeLinks.
+  ///
+  /// In zh, this message translates to:
+  /// **'关联知识点'**
+  String get errorBookKnowledgeLinks;
+
+  /// No description provided for @errorBookKnowledgeLinkTooltip.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看学习路径'**
+  String get errorBookKnowledgeLinkTooltip;
+
+  /// No description provided for @errorBookKnowledgeLinkSnack.
+  ///
+  /// In zh, this message translates to:
+  /// **'即将跳转到 {nodeName} 知识点'**
+  String errorBookKnowledgeLinkSnack(String nodeName);
+
+  /// No description provided for @errorBookReviewStats.
+  ///
+  /// In zh, this message translates to:
+  /// **'复习统计'**
+  String get errorBookReviewStats;
+
+  /// No description provided for @errorBookLastReview.
+  ///
+  /// In zh, this message translates to:
+  /// **'上次复习'**
+  String get errorBookLastReview;
+
+  /// No description provided for @errorBookNextReview.
+  ///
+  /// In zh, this message translates to:
+  /// **'下次复习'**
+  String get errorBookNextReview;
+
+  /// No description provided for @errorBookStartReview.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始复习'**
+  String get errorBookStartReview;
+
+  /// No description provided for @errorBookLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载失败'**
+  String get errorBookLoadFailed;
+
+  /// No description provided for @errorBookEditInProgress.
+  ///
+  /// In zh, this message translates to:
+  /// **'编辑功能即将上线'**
+  String get errorBookEditInProgress;
+
+  /// No description provided for @errorBookReanalyzing.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在重新分析...'**
+  String get errorBookReanalyzing;
+
+  /// No description provided for @errorBookReviewInProgress.
+  ///
+  /// In zh, this message translates to:
+  /// **'复习功能即将上线'**
+  String get errorBookReviewInProgress;
+
   /// No description provided for @errorBookCognitiveFilter.
   ///
   /// In zh, this message translates to:
@@ -9235,6 +9415,1182 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'{count} 成员'**
   String communityMembers(int count);
+
+  /// No description provided for @taskMonitorTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'后台任务监控'**
+  String get taskMonitorTitle;
+
+  /// No description provided for @taskMonitorFilterAll.
+  ///
+  /// In zh, this message translates to:
+  /// **'全部'**
+  String get taskMonitorFilterAll;
+
+  /// No description provided for @taskMonitorFilterRunning.
+  ///
+  /// In zh, this message translates to:
+  /// **'运行中'**
+  String get taskMonitorFilterRunning;
+
+  /// No description provided for @taskMonitorFilterCompleted.
+  ///
+  /// In zh, this message translates to:
+  /// **'已完成'**
+  String get taskMonitorFilterCompleted;
+
+  /// No description provided for @taskMonitorFilterFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'失败'**
+  String get taskMonitorFilterFailed;
+
+  /// No description provided for @taskMonitorEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无后台任务'**
+  String get taskMonitorEmpty;
+
+  /// No description provided for @taskMonitorStatusPending.
+  ///
+  /// In zh, this message translates to:
+  /// **'等待中'**
+  String get taskMonitorStatusPending;
+
+  /// No description provided for @taskMonitorStatusCancelled.
+  ///
+  /// In zh, this message translates to:
+  /// **'已取消'**
+  String get taskMonitorStatusCancelled;
+
+  /// No description provided for @planHistoryTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'历史计划'**
+  String get planHistoryTitle;
+
+  /// No description provided for @planHistoryEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无历史计划'**
+  String get planHistoryEmpty;
+
+  /// No description provided for @planHistoryRestore.
+  ///
+  /// In zh, this message translates to:
+  /// **'恢复计划'**
+  String get planHistoryRestore;
+
+  /// No description provided for @planHistoryRestoreSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'计划已恢复'**
+  String get planHistoryRestoreSuccess;
+
+  /// No description provided for @planHistoryDeleteConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'确定要删除这个历史计划吗？'**
+  String get planHistoryDeleteConfirm;
+
+  /// No description provided for @planTypeSprint.
+  ///
+  /// In zh, this message translates to:
+  /// **'冲刺计划'**
+  String get planTypeSprint;
+
+  /// No description provided for @planTypeGrowth.
+  ///
+  /// In zh, this message translates to:
+  /// **'成长计划'**
+  String get planTypeGrowth;
+
+  /// No description provided for @planProgressPercent.
+  ///
+  /// In zh, this message translates to:
+  /// **'{percent}% 完成'**
+  String planProgressPercent(String percent);
+
+  /// No description provided for @authForgotPassword.
+  ///
+  /// In zh, this message translates to:
+  /// **'忘记密码？'**
+  String get authForgotPassword;
+
+  /// No description provided for @authUserAgreement.
+  ///
+  /// In zh, this message translates to:
+  /// **'用户协议'**
+  String get authUserAgreement;
+
+  /// No description provided for @authPrivacyPolicy.
+  ///
+  /// In zh, this message translates to:
+  /// **'隐私政策'**
+  String get authPrivacyPolicy;
+
+  /// No description provided for @authLoginAgreement.
+  ///
+  /// In zh, this message translates to:
+  /// **'登录即表示你同意'**
+  String get authLoginAgreement;
+
+  /// No description provided for @authAnd.
+  ///
+  /// In zh, this message translates to:
+  /// **'和'**
+  String get authAnd;
+
+  /// No description provided for @authDemoLogin.
+  ///
+  /// In zh, this message translates to:
+  /// **'演示账号登录'**
+  String get authDemoLogin;
+
+  /// No description provided for @authResetPassword.
+  ///
+  /// In zh, this message translates to:
+  /// **'重置密码'**
+  String get authResetPassword;
+
+  /// No description provided for @authResetPasswordHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入您的邮箱，我们将发送重置密码链接'**
+  String get authResetPasswordHint;
+
+  /// No description provided for @authSendResetEmail.
+  ///
+  /// In zh, this message translates to:
+  /// **'发送重置邮件'**
+  String get authSendResetEmail;
+
+  /// No description provided for @authResetEmailSent.
+  ///
+  /// In zh, this message translates to:
+  /// **'重置邮件已发送'**
+  String get authResetEmailSent;
+
+  /// No description provided for @authBackToLogin.
+  ///
+  /// In zh, this message translates to:
+  /// **'返回登录'**
+  String get authBackToLogin;
+
+  /// No description provided for @authForgotPasswordTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'忘记密码'**
+  String get authForgotPasswordTitle;
+
+  /// No description provided for @authForgotPasswordHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'输入注册邮箱，我们会发送一封包含重置码的邮件给你。'**
+  String get authForgotPasswordHint;
+
+  /// No description provided for @authInvalidEmail.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入有效邮箱'**
+  String get authInvalidEmail;
+
+  /// No description provided for @authHaveResetCode.
+  ///
+  /// In zh, this message translates to:
+  /// **'我已经有重置码'**
+  String get authHaveResetCode;
+
+  /// No description provided for @toolsLibraryTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'工具库'**
+  String get toolsLibraryTitle;
+
+  /// No description provided for @toolsTabBrowse.
+  ///
+  /// In zh, this message translates to:
+  /// **'浏览'**
+  String get toolsTabBrowse;
+
+  /// No description provided for @toolsTabManage.
+  ///
+  /// In zh, this message translates to:
+  /// **'管理'**
+  String get toolsTabManage;
+
+  /// No description provided for @toolsSearchHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索工具、能力或关键词'**
+  String get toolsSearchHint;
+
+  /// No description provided for @toolsRecentTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近使用'**
+  String get toolsRecentTitle;
+
+  /// No description provided for @toolsManagePinned.
+  ///
+  /// In zh, this message translates to:
+  /// **'管理固定'**
+  String get toolsManagePinned;
+
+  /// No description provided for @toolsCategoryInput.
+  ///
+  /// In zh, this message translates to:
+  /// **'输入处理'**
+  String get toolsCategoryInput;
+
+  /// No description provided for @toolsCategoryStudy.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习辅助'**
+  String get toolsCategoryStudy;
+
+  /// No description provided for @toolsCategoryEfficiency.
+  ///
+  /// In zh, this message translates to:
+  /// **'效率辅助'**
+  String get toolsCategoryEfficiency;
+
+  /// No description provided for @toolsCategoryCognition.
+  ///
+  /// In zh, this message translates to:
+  /// **'认知洞察'**
+  String get toolsCategoryCognition;
+
+  /// No description provided for @toolsNoTools.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无工具'**
+  String get toolsNoTools;
+
+  /// No description provided for @toolsPinnedEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有固定的工具'**
+  String get toolsPinnedEmpty;
+
+  /// No description provided for @toolsManageHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'首页首屏显示前 4 个，展开显示前 8 个。拖动可调整顺序。'**
+  String get toolsManageHint;
+
+  /// No description provided for @toolsBackToBrowse.
+  ///
+  /// In zh, this message translates to:
+  /// **'回到浏览'**
+  String get toolsBackToBrowse;
+
+  /// No description provided for @toolsPositionFirstScreen.
+  ///
+  /// In zh, this message translates to:
+  /// **'首屏'**
+  String get toolsPositionFirstScreen;
+
+  /// No description provided for @toolsPositionExpanded.
+  ///
+  /// In zh, this message translates to:
+  /// **'展开区'**
+  String get toolsPositionExpanded;
+
+  /// No description provided for @toolsPositionMore.
+  ///
+  /// In zh, this message translates to:
+  /// **'更多页'**
+  String get toolsPositionMore;
+
+  /// No description provided for @knowledgeLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'知识节点加载失败'**
+  String get knowledgeLoadFailed;
+
+  /// No description provided for @knowledgeReload.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新加载'**
+  String get knowledgeReload;
+
+  /// No description provided for @knowledgeGeneratePath.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成学习路径'**
+  String get knowledgeGeneratePath;
+
+  /// No description provided for @knowledgeDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'描述'**
+  String get knowledgeDescription;
+
+  /// No description provided for @knowledgeNoDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无描述'**
+  String get knowledgeNoDescription;
+
+  /// No description provided for @knowledgeRelatedNodes.
+  ///
+  /// In zh, this message translates to:
+  /// **'相关节点'**
+  String get knowledgeRelatedNodes;
+
+  /// No description provided for @knowledgePrerequisites.
+  ///
+  /// In zh, this message translates to:
+  /// **'前置知识'**
+  String get knowledgePrerequisites;
+
+  /// No description provided for @knowledgeMasteryProgress.
+  ///
+  /// In zh, this message translates to:
+  /// **'掌握进度'**
+  String get knowledgeMasteryProgress;
+
+  /// No description provided for @knowledgeKeywords.
+  ///
+  /// In zh, this message translates to:
+  /// **'关键词'**
+  String get knowledgeKeywords;
+
+  /// No description provided for @knowledgeEstimated.
+  ///
+  /// In zh, this message translates to:
+  /// **'预计'**
+  String get knowledgeEstimated;
+
+  /// No description provided for @knowledgeMinutes.
+  ///
+  /// In zh, this message translates to:
+  /// **'分钟'**
+  String get knowledgeMinutes;
+
+  /// No description provided for @knowledgeRelatedTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'相关任务'**
+  String get knowledgeRelatedTasks;
+
+  /// No description provided for @knowledgeRelatedPlans.
+  ///
+  /// In zh, this message translates to:
+  /// **'相关计划'**
+  String get knowledgeRelatedPlans;
+
+  /// No description provided for @knowledgeMastery.
+  ///
+  /// In zh, this message translates to:
+  /// **'掌握度'**
+  String get knowledgeMastery;
+
+  /// No description provided for @knowledgeStudyMinutes.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习分钟'**
+  String get knowledgeStudyMinutes;
+
+  /// No description provided for @knowledgeStudyCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习次数'**
+  String get knowledgeStudyCount;
+
+  /// No description provided for @knowledgeNextReview.
+  ///
+  /// In zh, this message translates to:
+  /// **'下次复习'**
+  String get knowledgeNextReview;
+
+  /// No description provided for @knowledgeDecayPaused.
+  ///
+  /// In zh, this message translates to:
+  /// **'遗忘衰减已暂停'**
+  String get knowledgeDecayPaused;
+
+  /// No description provided for @knowledgeToday.
+  ///
+  /// In zh, this message translates to:
+  /// **'今天'**
+  String get knowledgeToday;
+
+  /// No description provided for @knowledgeTomorrow.
+  ///
+  /// In zh, this message translates to:
+  /// **'明天'**
+  String get knowledgeTomorrow;
+
+  /// No description provided for @knowledgeDaysLater.
+  ///
+  /// In zh, this message translates to:
+  /// **'{days}天后'**
+  String knowledgeDaysLater(int days);
+
+  /// No description provided for @knowledgeWeeksLater.
+  ///
+  /// In zh, this message translates to:
+  /// **'{weeks}周后'**
+  String knowledgeWeeksLater(int weeks);
+
+  /// No description provided for @seedLibraryTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'种子库'**
+  String get seedLibraryTitle;
+
+  /// No description provided for @seedLibrarySearchHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索种子库...'**
+  String get seedLibrarySearchHint;
+
+  /// No description provided for @seedLibraryCreate.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建种子库'**
+  String get seedLibraryCreate;
+
+  /// No description provided for @seedLibraryNotFound.
+  ///
+  /// In zh, this message translates to:
+  /// **'种子库不存在'**
+  String get seedLibraryNotFound;
+
+  /// No description provided for @seedLibraryDeleteConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'确定要删除这个种子库吗？此操作不可撤销。'**
+  String get seedLibraryDeleteConfirm;
+
+  /// No description provided for @seedLibraryEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有创建种子库'**
+  String get seedLibraryEmpty;
+
+  /// No description provided for @seedLibraryCreateFirst.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建一个新的种子库开始使用'**
+  String get seedLibraryCreateFirst;
+
+  /// No description provided for @seedLibraryItemCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 个条目'**
+  String seedLibraryItemCount(int count);
+
+  /// No description provided for @seedLibraryLastUpdated.
+  ///
+  /// In zh, this message translates to:
+  /// **'最后更新: {date}'**
+  String seedLibraryLastUpdated(String date);
+
+  /// No description provided for @seedLibraryDetail.
+  ///
+  /// In zh, this message translates to:
+  /// **'种子库详情'**
+  String get seedLibraryDetail;
+
+  /// No description provided for @seedLibraryFilter.
+  ///
+  /// In zh, this message translates to:
+  /// **'筛选'**
+  String get seedLibraryFilter;
+
+  /// No description provided for @seedLibraryCategory.
+  ///
+  /// In zh, this message translates to:
+  /// **'分类'**
+  String get seedLibraryCategory;
+
+  /// No description provided for @seedLibraryVisibility.
+  ///
+  /// In zh, this message translates to:
+  /// **'可见性'**
+  String get seedLibraryVisibility;
+
+  /// No description provided for @seedLibraryClear.
+  ///
+  /// In zh, this message translates to:
+  /// **'清除'**
+  String get seedLibraryClear;
+
+  /// No description provided for @seedLibraryApply.
+  ///
+  /// In zh, this message translates to:
+  /// **'应用'**
+  String get seedLibraryApply;
+
+  /// No description provided for @seedLibrarySubscribe.
+  ///
+  /// In zh, this message translates to:
+  /// **'订阅'**
+  String get seedLibrarySubscribe;
+
+  /// No description provided for @seedLibraryUnsubscribe.
+  ///
+  /// In zh, this message translates to:
+  /// **'取消订阅'**
+  String get seedLibraryUnsubscribe;
+
+  /// No description provided for @seedLibraryContentItems.
+  ///
+  /// In zh, this message translates to:
+  /// **'内容项'**
+  String get seedLibraryContentItems;
+
+  /// No description provided for @seedLibraryNoContent.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无内容'**
+  String get seedLibraryNoContent;
+
+  /// No description provided for @seedLibraryContent.
+  ///
+  /// In zh, this message translates to:
+  /// **'内容'**
+  String get seedLibraryContent;
+
+  /// No description provided for @seedLibrarySubscribers.
+  ///
+  /// In zh, this message translates to:
+  /// **'订阅者'**
+  String get seedLibrarySubscribers;
+
+  /// No description provided for @seedLibraryUsage.
+  ///
+  /// In zh, this message translates to:
+  /// **'使用'**
+  String get seedLibraryUsage;
+
+  /// No description provided for @seedLibraryQualityScore.
+  ///
+  /// In zh, this message translates to:
+  /// **'质量分'**
+  String get seedLibraryQualityScore;
+
+  /// No description provided for @seedLibraryDeleteTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除种子库'**
+  String get seedLibraryDeleteTitle;
+
+  /// No description provided for @seedLibraryDeleteFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除失败：{error}'**
+  String seedLibraryDeleteFailed(String error);
+
+  /// No description provided for @translationHistoryTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'翻译历史'**
+  String get translationHistoryTitle;
+
+  /// No description provided for @translationClearHistory.
+  ///
+  /// In zh, this message translates to:
+  /// **'清空历史'**
+  String get translationClearHistory;
+
+  /// No description provided for @translationTranslating.
+  ///
+  /// In zh, this message translates to:
+  /// **'翻译中...'**
+  String get translationTranslating;
+
+  /// No description provided for @translationSaveToVocabulary.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存到生词卡'**
+  String get translationSaveToVocabulary;
+
+  /// No description provided for @translationCopy.
+  ///
+  /// In zh, this message translates to:
+  /// **'复制'**
+  String get translationCopy;
+
+  /// No description provided for @translationCopied.
+  ///
+  /// In zh, this message translates to:
+  /// **'已复制'**
+  String get translationCopied;
+
+  /// No description provided for @translationSearchHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索翻译记录...'**
+  String get translationSearchHint;
+
+  /// No description provided for @translationNoHistory.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无翻译记录'**
+  String get translationNoHistory;
+
+  /// No description provided for @translationStartTranslate.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始翻译文本后会显示在这里'**
+  String get translationStartTranslate;
+
+  /// No description provided for @translationClearConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'确定要清空所有翻译历史吗？'**
+  String get translationClearConfirm;
+
+  /// No description provided for @translationClearConfirmDetail.
+  ///
+  /// In zh, this message translates to:
+  /// **'此操作不可撤销'**
+  String get translationClearConfirmDetail;
+
+  /// No description provided for @translationClearAll.
+  ///
+  /// In zh, this message translates to:
+  /// **'清空历史'**
+  String get translationClearAll;
+
+  /// No description provided for @translationFilterAll.
+  ///
+  /// In zh, this message translates to:
+  /// **'全部'**
+  String get translationFilterAll;
+
+  /// No description provided for @translationFilterFavorites.
+  ///
+  /// In zh, this message translates to:
+  /// **'收藏'**
+  String get translationFilterFavorites;
+
+  /// No description provided for @translationFilterImportant.
+  ///
+  /// In zh, this message translates to:
+  /// **'重要'**
+  String get translationFilterImportant;
+
+  /// No description provided for @translationFilterRecent.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近'**
+  String get translationFilterRecent;
+
+  /// No description provided for @translationNoSearchResults.
+  ///
+  /// In zh, this message translates to:
+  /// **'未找到结果'**
+  String get translationNoSearchResults;
+
+  /// No description provided for @translationTryOtherKeywords.
+  ///
+  /// In zh, this message translates to:
+  /// **'尝试其他关键词'**
+  String get translationTryOtherKeywords;
+
+  /// No description provided for @translationNoFavorites.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无收藏'**
+  String get translationNoFavorites;
+
+  /// No description provided for @translationNoFavoritesHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'给翻译打星标收藏起来'**
+  String get translationNoFavoritesHint;
+
+  /// No description provided for @translationNoImportant.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无重要翻译'**
+  String get translationNoImportant;
+
+  /// No description provided for @translationNoImportantHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'给4星及以上的翻译会显示在这里'**
+  String get translationNoImportantHint;
+
+  /// No description provided for @translationNoRecordsHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'使用翻译功能后会自动保存'**
+  String get translationNoRecordsHint;
+
+  /// No description provided for @translationRating.
+  ///
+  /// In zh, this message translates to:
+  /// **'评分'**
+  String get translationRating;
+
+  /// No description provided for @translationSelectImportance.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择重要程度'**
+  String get translationSelectImportance;
+
+  /// No description provided for @translationDelete.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除翻译'**
+  String get translationDelete;
+
+  /// No description provided for @translationDeleteConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'确定要删除这条翻译记录吗？'**
+  String get translationDeleteConfirm;
+
+  /// No description provided for @translationOriginal.
+  ///
+  /// In zh, this message translates to:
+  /// **'原文'**
+  String get translationOriginal;
+
+  /// No description provided for @translationTranslated.
+  ///
+  /// In zh, this message translates to:
+  /// **'译文'**
+  String get translationTranslated;
+
+  /// No description provided for @translationHistorySessionOnly.
+  ///
+  /// In zh, this message translates to:
+  /// **'历史记录仅在当前会话有效'**
+  String get translationHistorySessionOnly;
+
+  /// No description provided for @translationJustNow.
+  ///
+  /// In zh, this message translates to:
+  /// **'刚刚'**
+  String get translationJustNow;
+
+  /// No description provided for @translationMinutesAgo.
+  ///
+  /// In zh, this message translates to:
+  /// **'{minutes}分钟前'**
+  String translationMinutesAgo(int minutes);
+
+  /// No description provided for @translationHoursAgo.
+  ///
+  /// In zh, this message translates to:
+  /// **'{hours}小时前'**
+  String translationHoursAgo(int hours);
+
+  /// No description provided for @translationToday.
+  ///
+  /// In zh, this message translates to:
+  /// **'今天'**
+  String get translationToday;
+
+  /// No description provided for @translationYesterday.
+  ///
+  /// In zh, this message translates to:
+  /// **'昨天'**
+  String get translationYesterday;
+
+  /// No description provided for @translationDaysAgo.
+  ///
+  /// In zh, this message translates to:
+  /// **'{days}天前'**
+  String translationDaysAgo(int days);
+
+  /// No description provided for @translationSourceLanguage.
+  ///
+  /// In zh, this message translates to:
+  /// **'源语言'**
+  String get translationSourceLanguage;
+
+  /// No description provided for @translationTargetLanguage.
+  ///
+  /// In zh, this message translates to:
+  /// **'目标语言'**
+  String get translationTargetLanguage;
+
+  /// No description provided for @translationSwapLanguages.
+  ///
+  /// In zh, this message translates to:
+  /// **'交换语言'**
+  String get translationSwapLanguages;
+
+  /// No description provided for @translationDetectLanguage.
+  ///
+  /// In zh, this message translates to:
+  /// **'检测语言'**
+  String get translationDetectLanguage;
+
+  /// No description provided for @translationHistoryEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无翻译历史'**
+  String get translationHistoryEmpty;
+
+  /// No description provided for @memoryEvidenceChain.
+  ///
+  /// In zh, this message translates to:
+  /// **'证据链'**
+  String get memoryEvidenceChain;
+
+  /// No description provided for @memoryNoEvidence.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无证据'**
+  String get memoryNoEvidence;
+
+  /// No description provided for @memoryCurrentVersion.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前版本'**
+  String get memoryCurrentVersion;
+
+  /// No description provided for @memoryVersionHistory.
+  ///
+  /// In zh, this message translates to:
+  /// **'版本历史'**
+  String get memoryVersionHistory;
+
+  /// No description provided for @memorySortNewest.
+  ///
+  /// In zh, this message translates to:
+  /// **'最新'**
+  String get memorySortNewest;
+
+  /// No description provided for @memorySortOldest.
+  ///
+  /// In zh, this message translates to:
+  /// **'最旧'**
+  String get memorySortOldest;
+
+  /// No description provided for @memorySortImportance.
+  ///
+  /// In zh, this message translates to:
+  /// **'重要度'**
+  String get memorySortImportance;
+
+  /// No description provided for @memoryEvidenceResolveFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'证据解析失败'**
+  String get memoryEvidenceResolveFailed;
+
+  /// No description provided for @memoryStatus.
+  ///
+  /// In zh, this message translates to:
+  /// **'状态'**
+  String get memoryStatus;
+
+  /// No description provided for @memoryGoalDate.
+  ///
+  /// In zh, this message translates to:
+  /// **'目标日期'**
+  String get memoryGoalDate;
+
+  /// No description provided for @memoryDeadline.
+  ///
+  /// In zh, this message translates to:
+  /// **'截止时间'**
+  String get memoryDeadline;
+
+  /// No description provided for @memoryLastUpdated.
+  ///
+  /// In zh, this message translates to:
+  /// **'最后更新'**
+  String get memoryLastUpdated;
+
+  /// No description provided for @memorySource.
+  ///
+  /// In zh, this message translates to:
+  /// **'来源'**
+  String get memorySource;
+
+  /// No description provided for @memoryOccurredAt.
+  ///
+  /// In zh, this message translates to:
+  /// **'发生时间'**
+  String get memoryOccurredAt;
+
+  /// No description provided for @memoryImportanceScore.
+  ///
+  /// In zh, this message translates to:
+  /// **'重要度'**
+  String get memoryImportanceScore;
+
+  /// No description provided for @memoryRetractedAt.
+  ///
+  /// In zh, this message translates to:
+  /// **'撤回时间'**
+  String get memoryRetractedAt;
+
+  /// No description provided for @memoryUpdate.
+  ///
+  /// In zh, this message translates to:
+  /// **'更新'**
+  String get memoryUpdate;
+
+  /// No description provided for @memoryConfidence.
+  ///
+  /// In zh, this message translates to:
+  /// **'置信度'**
+  String get memoryConfidence;
+
+  /// No description provided for @memoryDiff.
+  ///
+  /// In zh, this message translates to:
+  /// **'Diff'**
+  String get memoryDiff;
+
+  /// No description provided for @memoryRevertToVersion.
+  ///
+  /// In zh, this message translates to:
+  /// **'撤回到此版本'**
+  String get memoryRevertToVersion;
+
+  /// No description provided for @memoryNeedEnableRetraction.
+  ///
+  /// In zh, this message translates to:
+  /// **'需要开启 ENABLE_MEMORY_RETRACTION'**
+  String get memoryNeedEnableRetraction;
+
+  /// No description provided for @memoryInitialVersion.
+  ///
+  /// In zh, this message translates to:
+  /// **'初始版本'**
+  String get memoryInitialVersion;
+
+  /// No description provided for @memoryNoChanges.
+  ///
+  /// In zh, this message translates to:
+  /// **'无变化'**
+  String get memoryNoChanges;
+
+  /// No description provided for @memoryRevertNotEnabled.
+  ///
+  /// In zh, this message translates to:
+  /// **'Revert 功能尚未启用'**
+  String get memoryRevertNotEnabled;
+
+  /// No description provided for @memoryWhyThisMemory.
+  ///
+  /// In zh, this message translates to:
+  /// **'Why this memory?'**
+  String get memoryWhyThisMemory;
+
+  /// No description provided for @memoryEvidenceCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'Evidence'**
+  String get memoryEvidenceCount;
+
+  /// No description provided for @memoryVersions.
+  ///
+  /// In zh, this message translates to:
+  /// **'Versions'**
+  String get memoryVersions;
+
+  /// No description provided for @memoryBudget.
+  ///
+  /// In zh, this message translates to:
+  /// **'Budget'**
+  String get memoryBudget;
+
+  /// No description provided for @memoryViewEvidence.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看证据'**
+  String get memoryViewEvidence;
+
+  /// No description provided for @memoryAllowedCapture.
+  ///
+  /// In zh, this message translates to:
+  /// **'已允许捕获'**
+  String get memoryAllowedCapture;
+
+  /// No description provided for @memoryCaptureLevel.
+  ///
+  /// In zh, this message translates to:
+  /// **'捕获级别'**
+  String get memoryCaptureLevel;
+
+  /// No description provided for @memoryTypeNone.
+  ///
+  /// In zh, this message translates to:
+  /// **'无'**
+  String get memoryTypeNone;
+
+  /// No description provided for @memoryTypePreference.
+  ///
+  /// In zh, this message translates to:
+  /// **'偏好'**
+  String get memoryTypePreference;
+
+  /// No description provided for @memoryTypeGoal.
+  ///
+  /// In zh, this message translates to:
+  /// **'目标'**
+  String get memoryTypeGoal;
+
+  /// No description provided for @memoryTypeEpisodic.
+  ///
+  /// In zh, this message translates to:
+  /// **'经历'**
+  String get memoryTypeEpisodic;
+
+  /// No description provided for @memoryDisabledHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前已关闭长期记忆，后续不会记录此类记忆。'**
+  String get memoryDisabledHint;
+
+  /// No description provided for @memoryPreferenceDisabledHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前设置已关闭偏好捕获，后续不会记录此类记忆。'**
+  String get memoryPreferenceDisabledHint;
+
+  /// No description provided for @memoryGoalDisabledHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前设置已关闭目标捕获，后续不会记录此类记忆。'**
+  String get memoryGoalDisabledHint;
+
+  /// No description provided for @memoryEpisodicDisabledHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前设置已关闭经历捕获，后续不会记录此类记忆。'**
+  String get memoryEpisodicDisabledHint;
+
+  /// No description provided for @memorySourceBlockedHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'该来源已被屏蔽，后续不会记录此类记忆。'**
+  String get memorySourceBlockedHint;
+
+  /// No description provided for @memoryKeyBlockedHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'该偏好已被屏蔽，后续不会记录此类记忆。'**
+  String get memoryKeyBlockedHint;
+
+  /// No description provided for @memoryExplanationPreference.
+  ///
+  /// In zh, this message translates to:
+  /// **'Captured because your preference updated recently.'**
+  String get memoryExplanationPreference;
+
+  /// No description provided for @memoryExplanationEpisodic.
+  ///
+  /// In zh, this message translates to:
+  /// **'Captured because this experience was marked important.'**
+  String get memoryExplanationEpisodic;
+
+  /// No description provided for @memoryExplanationGoal.
+  ///
+  /// In zh, this message translates to:
+  /// **'Captured to keep your active goals visible.'**
+  String get memoryExplanationGoal;
+
+  /// No description provided for @memoryCopied.
+  ///
+  /// In zh, this message translates to:
+  /// **'已复制记忆内容'**
+  String get memoryCopied;
+
+  /// No description provided for @memoryExportView.
+  ///
+  /// In zh, this message translates to:
+  /// **'导出视图'**
+  String get memoryExportView;
+
+  /// No description provided for @memoryCorrectionActions.
+  ///
+  /// In zh, this message translates to:
+  /// **'纠错操作'**
+  String get memoryCorrectionActions;
+
+  /// No description provided for @memoryCorrectionReject.
+  ///
+  /// In zh, this message translates to:
+  /// **'Not true'**
+  String get memoryCorrectionReject;
+
+  /// No description provided for @memoryCorrectionNoLongerApplies.
+  ///
+  /// In zh, this message translates to:
+  /// **'No longer applies'**
+  String get memoryCorrectionNoLongerApplies;
+
+  /// No description provided for @memoryCorrectionLowerConfidence.
+  ///
+  /// In zh, this message translates to:
+  /// **'Lower confidence'**
+  String get memoryCorrectionLowerConfidence;
+
+  /// No description provided for @memoryCorrectionMerge.
+  ///
+  /// In zh, this message translates to:
+  /// **'Merge'**
+  String get memoryCorrectionMerge;
+
+  /// No description provided for @memoryMergeComingSoon.
+  ///
+  /// In zh, this message translates to:
+  /// **'合并功能即将上线'**
+  String get memoryMergeComingSoon;
+
+  /// No description provided for @memoryCorrectionSubmitted.
+  ///
+  /// In zh, this message translates to:
+  /// **'已提交纠错'**
+  String get memoryCorrectionSubmitted;
+
+  /// No description provided for @memoryCorrectionFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'纠错失败'**
+  String get memoryCorrectionFailed;
+
+  /// No description provided for @memoryHistoryLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'历史记录加载失败'**
+  String get memoryHistoryLoadFailed;
+
+  /// No description provided for @memorySettingsLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载记忆设置失败'**
+  String get memorySettingsLoadFailed;
+
+  /// No description provided for @memoryAddEvidence.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加证据'**
+  String get memoryAddEvidence;
+
+  /// No description provided for @memoryEvidenceType.
+  ///
+  /// In zh, this message translates to:
+  /// **'证据类型'**
+  String get memoryEvidenceType;
+
+  /// No description provided for @memoryEvidenceSource.
+  ///
+  /// In zh, this message translates to:
+  /// **'来源'**
+  String get memoryEvidenceSource;
+
+  /// No description provided for @memoryEvidenceContent.
+  ///
+  /// In zh, this message translates to:
+  /// **'内容'**
+  String get memoryEvidenceContent;
 }
 
 class _AppLocalizationsDelegate

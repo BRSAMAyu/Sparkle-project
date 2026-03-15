@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/seed_library/data/models/seed_library_model.dart';
 import 'package:sparkle/features/seed_library/presentation/providers/seed_library_provider.dart';
 import 'package:sparkle/features/seed_library/presentation/widgets/seed_item_card.dart';
@@ -29,7 +30,7 @@ class _SeedLibraryDetailScreenState
     return SparklePageScaffold(
       role: SparklePageRole.content,
       appBar: AppBar(
-        title: Text(state.library?.name ?? '种子库详情'),
+        title: Text(state.library?.name ?? context.l10n.seedLibraryDetail),
         actions: [
           if (state.library != null &&
               state.library!.ownerId == null) // Editable check
@@ -58,7 +59,7 @@ class _SeedLibraryDetailScreenState
               PopupMenuItem(
                 value: 'subscribe',
                 child: Text(
-                  state.isSubscribed ? '取消订阅' : '订阅',
+                  state.isSubscribed ? context.l10n.seedLibraryUnsubscribe : context.l10n.seedLibrarySubscribe,
                 ),
               ),
             ],
@@ -92,7 +93,7 @@ class _SeedLibraryDetailScreenState
                   .loadLibrary(),
               variant: ButtonVariant.destructive,
               icon: const Icon(Icons.refresh),
-              label: '重试',
+              label: context.l10n.commonRetry,
             ),
           ],
         ),
@@ -100,7 +101,7 @@ class _SeedLibraryDetailScreenState
     }
 
     if (state.library == null) {
-      return const Center(child: Text('种子库不存在'));
+      return Center(child: Text(context.l10n.seedLibraryNotFound));
     }
 
     final library = state.library!;
@@ -170,26 +171,26 @@ class _SeedLibraryDetailScreenState
                           context,
                           Icons.article_outlined,
                           '${library.itemCount}',
-                          '内容',
+                          context.l10n.seedLibraryContent,
                         ),
                         _buildStatItem(
                           context,
                           Icons.people_outline,
                           '${library.subscriberCount}',
-                          '订阅者',
+                          context.l10n.seedLibrarySubscribers,
                         ),
                         _buildStatItem(
                           context,
                           Icons.visibility_outlined,
                           '${library.usageCount}',
-                          '使用',
+                          context.l10n.seedLibraryUsage,
                         ),
                         if (library.qualityScore != null)
                           _buildStatItem(
                             context,
                             Icons.star,
                             library.qualityScore!.toStringAsFixed(1),
-                            '质量分',
+                            context.l10n.seedLibraryQualityScore,
                           ),
                       ],
                     ),
@@ -225,7 +226,7 @@ class _SeedLibraryDetailScreenState
                 child: Row(
                   children: [
                     Text(
-                      '内容项',
+                      context.l10n.seedLibraryContentItems,
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                     const Spacer(),
@@ -234,7 +235,7 @@ class _SeedLibraryDetailScreenState
                         // TODO: Show filter dialog
                       },
                       icon: const Icon(Icons.filter_list, size: DS.iconSizeXs),
-                      label: '筛选',
+                      label: context.l10n.seedLibraryFilter,
                     ),
                   ],
                 ),
@@ -255,7 +256,7 @@ class _SeedLibraryDetailScreenState
                               size: DS.spacing64, color: DS.textTertiary,),
                           const SizedBox(height: DS.spacing16),
                           Text(
-                            '暂无内容',
+                            context.l10n.seedLibraryNoContent,
                             style:
                                 Theme.of(context).textTheme.bodyLarge?.copyWith(
                                       color: DS.textSecondary,
@@ -328,12 +329,12 @@ class _SeedLibraryDetailScreenState
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('删除种子库'),
-        content: const Text('确定要删除这个种子库吗？此操作不可撤销。'),
+        title: Text(context.l10n.seedLibraryDeleteTitle),
+        content: Text(context.l10n.seedLibraryDeleteConfirm),
         actions: [
           SparkleButton.ghost(
             onPressed: () => Navigator.pop(context),
-            label: '取消',
+            label: context.l10n.commonCancel,
           ),
           SparkleButton.destructive(
             onPressed: () async {
@@ -347,11 +348,11 @@ class _SeedLibraryDetailScreenState
                 }
               } catch (e) {
                 if (context.mounted) {
-                  AppFeedback.error(context, '删除失败：$e');
+                  AppFeedback.error(context, context.l10n.seedLibraryDeleteFailed(e.toString()));
                 }
               }
             },
-            label: '删除',
+            label: context.l10n.commonDelete,
           ),
         ],
       ),

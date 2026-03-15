@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/seed_library/data/models/seed_library_model.dart';
 import 'package:sparkle/features/seed_library/presentation/providers/seed_library_provider.dart';
 import 'package:sparkle/features/seed_library/presentation/widgets/seed_library_card.dart';
@@ -86,7 +87,7 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
     return SparklePageScaffold(
       role: SparklePageRole.content,
       appBar: AppBar(
-        title: const Text('种子库'),
+        title: Text(context.l10n.seedLibraryTitle),
         actions: [
           SparkleIconButton(
             variant: ButtonVariant.ghost,
@@ -123,7 +124,7 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
                 child: TextField(
                   controller: _searchController,
                   decoration: InputDecoration(
-                    hintText: '搜索种子库...',
+                    hintText: context.l10n.seedLibrarySearchHint,
                     prefixIcon: const Icon(Icons.search),
                     suffixIcon: _searchController.text.isNotEmpty
                         ? SparkleIconButton(
@@ -214,7 +215,7 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
             const SizedBox(height: DS.spacing16),
             SparkleButton(
               onPressed: _applyFilters,
-              label: '重试',
+              label: context.l10n.commonRetry,
               icon: const Icon(Icons.refresh),
               variant: ButtonVariant.destructive,
             ),
@@ -235,12 +236,12 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
             ),
             const SizedBox(height: DS.spacing16),
             Text(
-              '暂无种子库',
+              context.l10n.seedLibraryEmpty,
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: DS.spacing8),
             Text(
-              '创建一个新的种子库开始使用',
+              context.l10n.seedLibraryCreateFirst,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: DS.textSecondary,
                   ),
@@ -285,12 +286,12 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('筛选'),
+        title: Text(context.l10n.seedLibraryFilter),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('分类', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text(context.l10n.seedLibraryCategory, style: const TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: DS.spacing8),
             Wrap(
               spacing: DS.spacing8,
@@ -308,7 +309,7 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
               }).toList(),
             ),
             const SizedBox(height: DS.spacing16),
-            const Text('可见性', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text(context.l10n.seedLibraryVisibility, style: const TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: DS.spacing8),
             Wrap(
               spacing: DS.spacing8,
@@ -337,14 +338,14 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
               Navigator.pop(context);
               _applyFilters();
             },
-            label: '清除',
+            label: context.l10n.seedLibraryClear,
           ),
           SparkleButton(
             onPressed: () {
               Navigator.pop(context);
               _applyFilters();
             },
-            label: '应用',
+            label: context.l10n.seedLibraryApply,
           ),
         ],
       ),

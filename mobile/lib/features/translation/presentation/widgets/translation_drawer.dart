@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// Translation history item
 class TranslationHistoryItem {
@@ -101,7 +102,7 @@ class TranslationDrawer extends ConsumerWidget {
         children: [
           // Header
           AppBar(
-            title: const Text('翻译历史'),
+            title: Text(context.l10n.translationHistoryTitle),
             backgroundColor: DS.brandPrimary,
             foregroundColor: DS.textOnPrimary,
             elevation: 0,
@@ -112,7 +113,7 @@ class TranslationDrawer extends ConsumerWidget {
                   onPressed: () {
                     _showClearConfirmation(context, ref);
                   },
-                  semanticLabel: '清空历史',
+                  semanticLabel: context.l10n.translationClearAll,
                   variant: ButtonVariant.ghost,
                 ),
             ],
@@ -121,7 +122,7 @@ class TranslationDrawer extends ConsumerWidget {
           // Content
           Expanded(
             child: history.isEmpty
-                ? _buildEmptyState()
+                ? _buildEmptyState(context)
                 : ListView.builder(
                     itemCount: history.length,
                     itemBuilder: (context, index) {
@@ -146,7 +147,7 @@ class TranslationDrawer extends ConsumerWidget {
                 const SizedBox(width: DS.xs),
                 Expanded(
                   child: Text(
-                    '历史记录仅在当前会话有效',
+                    context.l10n.translationHistorySessionOnly,
                     style: TextStyle(fontSize: 12, color: DS.neutral600),
                   ),
                 ),
@@ -158,19 +159,19 @@ class TranslationDrawer extends ConsumerWidget {
     );
   }
 
-  Widget _buildEmptyState() => Center(
+  Widget _buildEmptyState(BuildContext context) => Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.translate, size: 64, color: DS.neutral300),
             const SizedBox(height: DS.md),
             Text(
-              '暂无翻译记录',
+              context.l10n.translationNoHistory,
               style: TextStyle(fontSize: 16, color: DS.neutral600),
             ),
             const SizedBox(height: DS.xs),
             Text(
-              '开始翻译文本后会显示在这里',
+              context.l10n.translationStartTranslate,
               style: TextStyle(fontSize: 13, color: DS.neutral500),
             ),
           ],
@@ -230,7 +231,7 @@ class TranslationDrawer extends ConsumerWidget {
                   ),
                   const SizedBox(width: DS.xs),
                   Text(
-                    _formatTime(item.timestamp),
+                    _formatTime(context, item.timestamp),
                     style: TextStyle(
                       fontSize: 10,
                       color: DS.neutral600,
@@ -251,7 +252,7 @@ class TranslationDrawer extends ConsumerWidget {
                             .read(translationHistoryProvider.notifier)
                             .markAsSaved(item.id);
                       },
-                      semanticLabel: '保存到生词卡',
+                      semanticLabel: context.l10n.translationSaveToVocabulary,
                       variant: ButtonVariant.ghost,
                     )
                   : null),
@@ -262,16 +263,16 @@ class TranslationDrawer extends ConsumerWidget {
         ),
       );
 
-  String _formatTime(DateTime timestamp) {
+  String _formatTime(BuildContext context, DateTime timestamp) {
     final now = DateTime.now();
     final diff = now.difference(timestamp);
 
     if (diff.inMinutes < 1) {
-      return '刚刚';
+      return context.l10n.translationJustNow;
     } else if (diff.inMinutes < 60) {
-      return '${diff.inMinutes}分钟前';
+      return context.l10n.translationMinutesAgo(diff.inMinutes);
     } else if (diff.inHours < 24) {
-      return '${diff.inHours}小时前';
+      return context.l10n.translationHoursAgo(diff.inHours);
     } else {
       return '${timestamp.month}/${timestamp.day}';
     }
@@ -288,7 +289,7 @@ class TranslationDrawer extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                '原文',
+                context.l10n.translationOriginal,
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -302,7 +303,7 @@ class TranslationDrawer extends ConsumerWidget {
               ),
               const SizedBox(height: DS.md),
               Text(
-                '译文',
+                context.l10n.translationTranslated,
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -322,7 +323,7 @@ class TranslationDrawer extends ConsumerWidget {
         ),
         actions: [
           SparkleButton.ghost(
-            label: '关闭',
+            label: context.l10n.commonClose,
             onPressed: () => Navigator.of(context).pop(),
           ),
         ],
@@ -334,15 +335,15 @@ class TranslationDrawer extends ConsumerWidget {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('清空翻译历史'),
-        content: const Text('确定要清空所有翻译历史记录吗？此操作不可撤销。'),
+        title: Text(context.l10n.translationClearAll),
+        content: Text(context.l10n.translationClearConfirm),
         actions: [
           SparkleButton.ghost(
-            label: '取消',
+            label: context.l10n.commonCancel,
             onPressed: () => Navigator.of(context).pop(),
           ),
           SparkleButton.destructive(
-            label: '清空',
+            label: context.l10n.translationClearAll,
             onPressed: () {
               ref.read(translationHistoryProvider.notifier).clearHistory();
               Navigator.of(context).pop();

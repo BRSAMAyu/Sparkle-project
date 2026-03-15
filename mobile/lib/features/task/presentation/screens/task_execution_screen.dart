@@ -14,10 +14,12 @@ import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/plan/presentation/widgets/plan_context_summary.dart';
 import 'package:sparkle/features/task/data/models/task_completion_result.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
+import 'package:sparkle/features/task/presentation/providers/subtask_provider.dart';
 import 'package:sparkle/features/task/presentation/widgets/blocking_interceptor_dialog.dart';
 import 'package:sparkle/features/task/presentation/widgets/quick_tools_panel.dart';
 import 'package:sparkle/features/task/presentation/widgets/task_chat_panel.dart';
 import 'package:sparkle/features/task/presentation/widgets/task_feedback_dialog.dart';
+import 'package:sparkle/features/task/presentation/widgets/subtask_list_widget.dart';
 import 'package:sparkle/features/task/presentation/widgets/timer_widget.dart';
 import 'package:sparkle/features/task/task_routes.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
@@ -512,6 +514,73 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                                     ),
                                   ],
                                 ),
+                              ),
+                              const SizedBox(height: DS.spacing16),
+
+                              // Subtasks Section (if task has subtasks)
+                              Consumer(
+                                builder: (context, ref, child) {
+                                  final subtaskState = ref.watch(
+                                    subtaskNotifierProvider(activeTask.id),
+                                  );
+                                  if (subtaskState.total == 0) {
+                                    return const SizedBox.shrink();
+                                  }
+
+                                  return GraphiteCardSurface(
+                                    padding: EdgeInsets.zero,
+                                    child: ExpansionTile(
+                                      shape: const Border(),
+                                      tilePadding: const EdgeInsets.symmetric(
+                                        horizontal: DS.spacing16,
+                                        vertical: DS.spacing12,
+                                      ),
+                                      title: Row(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(10),
+                                            decoration: BoxDecoration(
+                                              color: DS.surfaceSecondary,
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                color: DS.borderSubtle,
+                                              ),
+                                            ),
+                                            child: Icon(
+                                              Icons.checklist,
+                                              color: DS.primaryBase,
+                                              size: 22,
+                                            ),
+                                          ),
+                                          const SizedBox(width: DS.spacing12),
+                                          Text(
+                                            '${l10n.subtaskTitle} (${subtaskState.completed}/${subtaskState.total})',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .titleMedium
+                                                ?.copyWith(
+                                                  fontWeight: DS.fontWeightBold,
+                                                  color: DS.neutral900,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                      children: [
+                                        Padding(
+                                          padding: const EdgeInsets.all(
+                                            DS.spacing16,
+                                          ),
+                                          child: SubtaskListWidget(
+                                            parentTaskId: activeTask.id,
+                                            onSubtaskToggle: (_) {},
+                                            onSubtaskDelete: (_) {},
+                                            readOnly: true,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
                               ),
                               const SizedBox(height: DS.spacing16),
 

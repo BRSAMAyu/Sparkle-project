@@ -10,6 +10,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/utils/theme_utils.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
+import 'package:sparkle/features/task/presentation/widgets/subtask_list_widget.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 class TaskCard extends ConsumerStatefulWidget {
@@ -263,6 +264,29 @@ class _TaskCardState extends ConsumerState<TaskCard>
                                             ),
                                           ],
                                         ),
+                                        // Subtask progress indicator
+                                        if (widget.task.subtasksTotal > 0) ...[
+                                          const SizedBox(height: 8),
+                                          Row(
+                                            children: [
+                                              Icon(
+                                                Icons.checklist,
+                                                size: 14,
+                                                color: context
+                                                    .sparkleColors.textSecondary,
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Expanded(
+                                                child: SubtaskProgressIndicator(
+                                                  completed:
+                                                      widget.task.subtasksCompleted,
+                                                  total: widget.task.subtasksTotal,
+                                                  showLabel: true,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
                                         if (!widget.compact) ...[
                                           const SizedBox(height: 8),
                                           Row(

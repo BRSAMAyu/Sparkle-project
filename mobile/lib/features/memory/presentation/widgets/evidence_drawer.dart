@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/services/evidence_resolve_service.dart';
 import 'package:sparkle/features/memory/presentation/widgets/evidence_cards.dart';
@@ -78,7 +79,7 @@ class _EvidenceDrawerContentState
         return;
       }
       setState(() {
-        _error = '证据解析失败: $e';
+        _error = '${context.l10n.memoryEvidenceResolveFailed}: $e';
         _loading = false;
       });
     }
@@ -92,7 +93,7 @@ class _EvidenceDrawerContentState
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('证据链', style: Theme.of(context).textTheme.titleLarge),
+              Text(context.l10n.memoryEvidenceChain, style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: DS.sm),
               if (!AppFeatureFlags.enableEvidenceViewer)
                 Text(
@@ -106,7 +107,7 @@ class _EvidenceDrawerContentState
               else if (_error != null)
                 Text(_error!)
               else if (_resolved.isEmpty)
-                Text('暂无证据', style: Theme.of(context).textTheme.bodyMedium)
+                Text(context.l10n.memoryNoEvidence, style: Theme.of(context).textTheme.bodyMedium)
               else
                 Flexible(child: _buildGroupedEvidence()),
             ],

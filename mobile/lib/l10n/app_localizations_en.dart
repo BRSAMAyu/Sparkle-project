@@ -1685,6 +1685,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonOk => 'OK';
 
   @override
+  String get commonCancel => 'Cancel';
+
+  @override
   String get commonSave => 'Save';
 
   @override
@@ -3696,6 +3699,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get subtaskEmpty => 'No subtasks yet';
 
   @override
+  String get subtaskTitle => 'Subtasks';
+
+  @override
   String get taskFeedbackSubmitted => 'Feedback submitted';
 
   @override
@@ -4939,6 +4945,96 @@ class AppLocalizationsEn extends AppLocalizations {
       'This cannot be undone. Delete this error?';
 
   @override
+  String get errorBookDetailTitle => 'Error Details';
+
+  @override
+  String get errorBookEdit => 'Edit';
+
+  @override
+  String get errorBookReanalyze => 'Reanalyze';
+
+  @override
+  String get errorBookDelete => 'Delete';
+
+  @override
+  String errorBookCreatedAt(String date) {
+    return 'Created at $date';
+  }
+
+  @override
+  String errorBookMasteryPercent(int percent) {
+    return '$percent% Mastery';
+  }
+
+  @override
+  String get errorBookSimilarSummary => 'Similar Error Analysis';
+
+  @override
+  String get errorBookRootCause => 'Root Cause';
+
+  @override
+  String get errorBookStrategySuggestions => 'Strategy Suggestions';
+
+  @override
+  String get errorBookSimilarErrors => 'Similar Errors';
+
+  @override
+  String get errorBookSimilarCauseFallback => 'Uncategorized';
+
+  @override
+  String get errorBookQuestionContent => 'Question Content';
+
+  @override
+  String get errorBookImageLoadFailed => 'Image Load Failed';
+
+  @override
+  String get errorBookAnswerComparison => 'Answer Comparison';
+
+  @override
+  String get errorBookYourAnswer => 'Your Answer';
+
+  @override
+  String get errorBookCorrectAnswer => 'Correct Answer';
+
+  @override
+  String get errorBookAiAnalysis => 'AI Analysis';
+
+  @override
+  String get errorBookKnowledgeLinks => 'Knowledge Links';
+
+  @override
+  String get errorBookKnowledgeLinkTooltip => 'View Learning Path';
+
+  @override
+  String errorBookKnowledgeLinkSnack(String nodeName) {
+    return 'Navigating to $nodeName knowledge point';
+  }
+
+  @override
+  String get errorBookReviewStats => 'Review Statistics';
+
+  @override
+  String get errorBookLastReview => 'Last Review';
+
+  @override
+  String get errorBookNextReview => 'Next Review';
+
+  @override
+  String get errorBookStartReview => 'Start Review';
+
+  @override
+  String get errorBookLoadFailed => 'Load Failed';
+
+  @override
+  String get errorBookEditInProgress => 'Edit feature coming soon';
+
+  @override
+  String get errorBookReanalyzing => 'Reanalyzing...';
+
+  @override
+  String get errorBookReviewInProgress => 'Review feature coming soon';
+
+  @override
   String errorBookCognitiveFilter(String dimension) {
     return 'Reviewing specifically for \"$dimension\" dimension';
   }
@@ -5150,4 +5246,631 @@ class AppLocalizationsEn extends AppLocalizations {
   String communityMembers(int count) {
     return '$count members';
   }
+
+  @override
+  String get taskMonitorTitle => 'Background Tasks';
+
+  @override
+  String get taskMonitorFilterAll => 'All';
+
+  @override
+  String get taskMonitorFilterRunning => 'Running';
+
+  @override
+  String get taskMonitorFilterCompleted => 'Completed';
+
+  @override
+  String get taskMonitorFilterFailed => 'Failed';
+
+  @override
+  String get taskMonitorEmpty => 'No background tasks';
+
+  @override
+  String get taskMonitorStatusPending => 'Pending';
+
+  @override
+  String get taskMonitorStatusCancelled => 'Cancelled';
+
+  @override
+  String get planHistoryTitle => 'Plan History';
+
+  @override
+  String get planHistoryEmpty => 'No plan history';
+
+  @override
+  String get planHistoryRestore => 'Restore Plan';
+
+  @override
+  String get planHistoryRestoreSuccess => 'Plan restored';
+
+  @override
+  String get planHistoryDeleteConfirm => 'Delete this plan history?';
+
+  @override
+  String get planTypeSprint => 'Sprint Plan';
+
+  @override
+  String get planTypeGrowth => 'Growth Plan';
+
+  @override
+  String planProgressPercent(String percent) {
+    return '$percent% Complete';
+  }
+
+  @override
+  String get authForgotPassword => 'Forgot Password?';
+
+  @override
+  String get authUserAgreement => 'User Agreement';
+
+  @override
+  String get authPrivacyPolicy => 'Privacy Policy';
+
+  @override
+  String get authLoginAgreement => 'By logging in, you agree to';
+
+  @override
+  String get authAnd => 'and';
+
+  @override
+  String get authDemoLogin => 'Demo Account Login';
+
+  @override
+  String get authResetPassword => 'Reset Password';
+
+  @override
+  String get authResetPasswordHint =>
+      'Enter your email and we\'ll send you a reset link';
+
+  @override
+  String get authSendResetEmail => 'Send Reset Email';
+
+  @override
+  String get authResetEmailSent => 'Reset email sent';
+
+  @override
+  String get authBackToLogin => 'Back to Login';
+
+  @override
+  String get authForgotPasswordTitle => 'Forgot Password';
+
+  @override
+  String get authForgotPasswordHint =>
+      'Enter your registered email and we\'ll send you a reset code.';
+
+  @override
+  String get authInvalidEmail => 'Please enter a valid email';
+
+  @override
+  String get authHaveResetCode => 'I already have a reset code';
+
+  @override
+  String get toolsLibraryTitle => 'Tool Library';
+
+  @override
+  String get toolsTabBrowse => 'Browse';
+
+  @override
+  String get toolsTabManage => 'Manage';
+
+  @override
+  String get toolsSearchHint => 'Search tools or keywords';
+
+  @override
+  String get toolsRecentTitle => 'Recently Used';
+
+  @override
+  String get toolsManagePinned => 'Manage Pinned';
+
+  @override
+  String get toolsCategoryInput => 'Input Processing';
+
+  @override
+  String get toolsCategoryStudy => 'Study Aids';
+
+  @override
+  String get toolsCategoryEfficiency => 'Efficiency';
+
+  @override
+  String get toolsCategoryCognition => 'Cognitive Insights';
+
+  @override
+  String get toolsNoTools => 'No tools available';
+
+  @override
+  String get toolsPinnedEmpty => 'No pinned tools yet';
+
+  @override
+  String get toolsManageHint =>
+      'Home screen shows top 4, expanded shows top 8. Drag to reorder.';
+
+  @override
+  String get toolsBackToBrowse => 'Back to Browse';
+
+  @override
+  String get toolsPositionFirstScreen => 'First Screen';
+
+  @override
+  String get toolsPositionExpanded => 'Expanded Area';
+
+  @override
+  String get toolsPositionMore => 'More Page';
+
+  @override
+  String get knowledgeLoadFailed => 'Failed to load knowledge node';
+
+  @override
+  String get knowledgeReload => 'Reload';
+
+  @override
+  String get knowledgeGeneratePath => 'Generate Learning Path';
+
+  @override
+  String get knowledgeDescription => 'Description';
+
+  @override
+  String get knowledgeNoDescription => 'No description';
+
+  @override
+  String get knowledgeRelatedNodes => 'Related Nodes';
+
+  @override
+  String get knowledgePrerequisites => 'Prerequisites';
+
+  @override
+  String get knowledgeMasteryProgress => 'Mastery Progress';
+
+  @override
+  String get knowledgeKeywords => 'Keywords';
+
+  @override
+  String get knowledgeEstimated => 'Estimated';
+
+  @override
+  String get knowledgeMinutes => 'minutes';
+
+  @override
+  String get knowledgeRelatedTasks => 'Related Tasks';
+
+  @override
+  String get knowledgeRelatedPlans => 'Related Plans';
+
+  @override
+  String get knowledgeMastery => 'Mastery';
+
+  @override
+  String get knowledgeStudyMinutes => 'Study Minutes';
+
+  @override
+  String get knowledgeStudyCount => 'Study Count';
+
+  @override
+  String get knowledgeNextReview => 'Next Review';
+
+  @override
+  String get knowledgeDecayPaused => 'Forgetting Decay Paused';
+
+  @override
+  String get knowledgeToday => 'Today';
+
+  @override
+  String get knowledgeTomorrow => 'Tomorrow';
+
+  @override
+  String knowledgeDaysLater(int days) {
+    return '$days days later';
+  }
+
+  @override
+  String knowledgeWeeksLater(int weeks) {
+    return '$weeks weeks later';
+  }
+
+  @override
+  String get seedLibraryTitle => 'Seed Library';
+
+  @override
+  String get seedLibrarySearchHint => 'Search seed libraries...';
+
+  @override
+  String get seedLibraryCreate => 'Create Seed Library';
+
+  @override
+  String get seedLibraryNotFound => 'Seed library not found';
+
+  @override
+  String get seedLibraryDeleteConfirm =>
+      'Delete this seed library? This action cannot be undone.';
+
+  @override
+  String get seedLibraryEmpty => 'No seed libraries yet';
+
+  @override
+  String get seedLibraryCreateFirst =>
+      'Create a new seed library to get started';
+
+  @override
+  String seedLibraryItemCount(int count) {
+    return '$count items';
+  }
+
+  @override
+  String seedLibraryLastUpdated(String date) {
+    return 'Last updated: $date';
+  }
+
+  @override
+  String get seedLibraryDetail => 'Seed Library Details';
+
+  @override
+  String get seedLibraryFilter => 'Filter';
+
+  @override
+  String get seedLibraryCategory => 'Category';
+
+  @override
+  String get seedLibraryVisibility => 'Visibility';
+
+  @override
+  String get seedLibraryClear => 'Clear';
+
+  @override
+  String get seedLibraryApply => 'Apply';
+
+  @override
+  String get seedLibrarySubscribe => 'Subscribe';
+
+  @override
+  String get seedLibraryUnsubscribe => 'Unsubscribe';
+
+  @override
+  String get seedLibraryContentItems => 'Content Items';
+
+  @override
+  String get seedLibraryNoContent => 'No content yet';
+
+  @override
+  String get seedLibraryContent => 'Content';
+
+  @override
+  String get seedLibrarySubscribers => 'Subscribers';
+
+  @override
+  String get seedLibraryUsage => 'Usage';
+
+  @override
+  String get seedLibraryQualityScore => 'Quality Score';
+
+  @override
+  String get seedLibraryDeleteTitle => 'Delete Seed Library';
+
+  @override
+  String seedLibraryDeleteFailed(String error) {
+    return 'Delete failed: $error';
+  }
+
+  @override
+  String get translationHistoryTitle => 'Translation History';
+
+  @override
+  String get translationClearHistory => 'Clear History';
+
+  @override
+  String get translationTranslating => 'Translating...';
+
+  @override
+  String get translationSaveToVocabulary => 'Save to Vocabulary';
+
+  @override
+  String get translationCopy => 'Copy';
+
+  @override
+  String get translationCopied => 'Copied';
+
+  @override
+  String get translationSearchHint => 'Search translation records...';
+
+  @override
+  String get translationNoHistory => 'No translation records';
+
+  @override
+  String get translationStartTranslate =>
+      'Translations will appear here after you start';
+
+  @override
+  String get translationClearConfirm =>
+      'Are you sure you want to clear all translation history?';
+
+  @override
+  String get translationClearConfirmDetail => 'This action cannot be undone';
+
+  @override
+  String get translationClearAll => 'Clear History';
+
+  @override
+  String get translationFilterAll => 'All';
+
+  @override
+  String get translationFilterFavorites => 'Favorites';
+
+  @override
+  String get translationFilterImportant => 'Important';
+
+  @override
+  String get translationFilterRecent => 'Recent';
+
+  @override
+  String get translationNoSearchResults => 'No results found';
+
+  @override
+  String get translationTryOtherKeywords => 'Try other keywords';
+
+  @override
+  String get translationNoFavorites => 'No favorites yet';
+
+  @override
+  String get translationNoFavoritesHint => 'Star translations to save them';
+
+  @override
+  String get translationNoImportant => 'No important translations';
+
+  @override
+  String get translationNoImportantHint =>
+      '4-star and above translations will appear here';
+
+  @override
+  String get translationNoRecordsHint =>
+      'Translations are automatically saved when used';
+
+  @override
+  String get translationRating => 'Rating';
+
+  @override
+  String get translationSelectImportance => 'Select importance level';
+
+  @override
+  String get translationDelete => 'Delete Translation';
+
+  @override
+  String get translationDeleteConfirm =>
+      'Are you sure you want to delete this translation?';
+
+  @override
+  String get translationOriginal => 'Original';
+
+  @override
+  String get translationTranslated => 'Translation';
+
+  @override
+  String get translationHistorySessionOnly =>
+      'History is only valid for the current session';
+
+  @override
+  String get translationJustNow => 'Just now';
+
+  @override
+  String translationMinutesAgo(int minutes) {
+    return '${minutes}m ago';
+  }
+
+  @override
+  String translationHoursAgo(int hours) {
+    return '${hours}h ago';
+  }
+
+  @override
+  String get translationToday => 'Today';
+
+  @override
+  String get translationYesterday => 'Yesterday';
+
+  @override
+  String translationDaysAgo(int days) {
+    return '${days}d ago';
+  }
+
+  @override
+  String get translationSourceLanguage => 'Source Language';
+
+  @override
+  String get translationTargetLanguage => 'Target Language';
+
+  @override
+  String get translationSwapLanguages => 'Swap Languages';
+
+  @override
+  String get translationDetectLanguage => 'Detect Language';
+
+  @override
+  String get translationHistoryEmpty => 'No translation history';
+
+  @override
+  String get memoryEvidenceChain => 'Evidence Chain';
+
+  @override
+  String get memoryNoEvidence => 'No Evidence';
+
+  @override
+  String get memoryCurrentVersion => 'Current Version';
+
+  @override
+  String get memoryVersionHistory => 'Version History';
+
+  @override
+  String get memorySortNewest => 'Newest';
+
+  @override
+  String get memorySortOldest => 'Oldest';
+
+  @override
+  String get memorySortImportance => 'Importance';
+
+  @override
+  String get memoryEvidenceResolveFailed => 'Evidence resolve failed';
+
+  @override
+  String get memoryStatus => 'Status';
+
+  @override
+  String get memoryGoalDate => 'Goal Date';
+
+  @override
+  String get memoryDeadline => 'Deadline';
+
+  @override
+  String get memoryLastUpdated => 'Last Updated';
+
+  @override
+  String get memorySource => 'Source';
+
+  @override
+  String get memoryOccurredAt => 'Occurred At';
+
+  @override
+  String get memoryImportanceScore => 'Importance';
+
+  @override
+  String get memoryRetractedAt => 'Retracted At';
+
+  @override
+  String get memoryUpdate => 'Update';
+
+  @override
+  String get memoryConfidence => 'Confidence';
+
+  @override
+  String get memoryDiff => 'Diff';
+
+  @override
+  String get memoryRevertToVersion => 'Revert to this version';
+
+  @override
+  String get memoryNeedEnableRetraction =>
+      'Need to enable ENABLE_MEMORY_RETRACTION';
+
+  @override
+  String get memoryInitialVersion => 'Initial version';
+
+  @override
+  String get memoryNoChanges => 'No changes';
+
+  @override
+  String get memoryRevertNotEnabled => 'Revert feature not enabled';
+
+  @override
+  String get memoryWhyThisMemory => 'Why this memory?';
+
+  @override
+  String get memoryEvidenceCount => 'Evidence';
+
+  @override
+  String get memoryVersions => 'Versions';
+
+  @override
+  String get memoryBudget => 'Budget';
+
+  @override
+  String get memoryViewEvidence => 'View Evidence';
+
+  @override
+  String get memoryAllowedCapture => 'Allowed capture';
+
+  @override
+  String get memoryCaptureLevel => 'Capture level';
+
+  @override
+  String get memoryTypeNone => 'None';
+
+  @override
+  String get memoryTypePreference => 'Preferences';
+
+  @override
+  String get memoryTypeGoal => 'Goals';
+
+  @override
+  String get memoryTypeEpisodic => 'Episodic';
+
+  @override
+  String get memoryDisabledHint =>
+      'Long-term memory is currently disabled, such memories will not be recorded.';
+
+  @override
+  String get memoryPreferenceDisabledHint =>
+      'Preference capture is currently disabled, such memories will not be recorded.';
+
+  @override
+  String get memoryGoalDisabledHint =>
+      'Goal capture is currently disabled, such memories will not be recorded.';
+
+  @override
+  String get memoryEpisodicDisabledHint =>
+      'Episodic capture is currently disabled, such memories will not be recorded.';
+
+  @override
+  String get memorySourceBlockedHint =>
+      'This source is blocked, such memories will not be recorded.';
+
+  @override
+  String get memoryKeyBlockedHint =>
+      'This preference is blocked, such memories will not be recorded.';
+
+  @override
+  String get memoryExplanationPreference =>
+      'Captured because your preference updated recently.';
+
+  @override
+  String get memoryExplanationEpisodic =>
+      'Captured because this experience was marked important.';
+
+  @override
+  String get memoryExplanationGoal =>
+      'Captured to keep your active goals visible.';
+
+  @override
+  String get memoryCopied => 'Memory content copied';
+
+  @override
+  String get memoryExportView => 'Export View';
+
+  @override
+  String get memoryCorrectionActions => 'Correction Actions';
+
+  @override
+  String get memoryCorrectionReject => 'Not true';
+
+  @override
+  String get memoryCorrectionNoLongerApplies => 'No longer applies';
+
+  @override
+  String get memoryCorrectionLowerConfidence => 'Lower confidence';
+
+  @override
+  String get memoryCorrectionMerge => 'Merge';
+
+  @override
+  String get memoryMergeComingSoon => 'Merge feature coming soon';
+
+  @override
+  String get memoryCorrectionSubmitted => 'Correction submitted';
+
+  @override
+  String get memoryCorrectionFailed => 'Correction failed';
+
+  @override
+  String get memoryHistoryLoadFailed => 'Failed to load history';
+
+  @override
+  String get memorySettingsLoadFailed => 'Failed to load memory settings';
+
+  @override
+  String get memoryAddEvidence => 'Add Evidence';
+
+  @override
+  String get memoryEvidenceType => 'Evidence Type';
+
+  @override
+  String get memoryEvidenceSource => 'Source';
+
+  @override
+  String get memoryEvidenceContent => 'Content';
 }

@@ -505,6 +505,7 @@
   "commonYes": "Yes",
   "commonNo": "No",
   "commonOk": "OK",
+  "commonCancel": "Cancel",
   "commonSave": "Save",
   "commonDelete": "Delete",
   "commonEdit": "Edit",
@@ -1214,6 +1215,7 @@
   "subtaskAddHint": "Add a subtask...",
   "subtaskAddTooltip": "Add subtask",
   "subtaskEmpty": "No subtasks yet",
+  "subtaskTitle": "Subtasks",
   "taskFeedbackSubmitted": "Feedback submitted",
   "taskFeedbackPreferenceUpdated": "Preferences updated",
   "taskFeedbackView": "View",
@@ -1871,6 +1873,55 @@
   "errorBookDeleteFailed": "Delete Failed",
   "errorBookDeleteConfirmTitle": "Confirm Delete",
   "errorBookDeleteConfirmMessage": "This cannot be undone. Delete this error?",
+  "errorBookDetailTitle": "Error Details",
+  "errorBookEdit": "Edit",
+  "errorBookReanalyze": "Reanalyze",
+  "errorBookDelete": "Delete",
+  "errorBookCreatedAt": "Created at {date}",
+  "errorBookMasteryPercent": "{percent}% Mastery",
+  "errorBookSimilarSummary": "Similar Error Analysis",
+  "errorBookRootCause": "Root Cause",
+  "errorBookStrategySuggestions": "Strategy Suggestions",
+  "errorBookSimilarErrors": "Similar Errors",
+  "errorBookSimilarCauseFallback": "Uncategorized",
+  "errorBookQuestionContent": "Question Content",
+  "errorBookImageLoadFailed": "Image Load Failed",
+  "errorBookAnswerComparison": "Answer Comparison",
+  "errorBookYourAnswer": "Your Answer",
+  "errorBookCorrectAnswer": "Correct Answer",
+  "errorBookAiAnalysis": "AI Analysis",
+  "errorBookKnowledgeLinks": "Knowledge Links",
+  "errorBookKnowledgeLinkTooltip": "View Learning Path",
+  "errorBookKnowledgeLinkSnack": "Navigating to {nodeName} knowledge point",
+  "errorBookReviewStats": "Review Statistics",
+  "errorBookLastReview": "Last Review",
+  "errorBookNextReview": "Next Review",
+  "errorBookStartReview": "Start Review",
+  "errorBookLoadFailed": "Load Failed",
+  "errorBookEditInProgress": "Edit feature coming soon",
+  "errorBookReanalyzing": "Reanalyzing...",
+  "errorBookReviewInProgress": "Review feature coming soon",
+  "@errorBookCreatedAt": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "@errorBookMasteryPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "@errorBookKnowledgeLinkSnack": {
+    "placeholders": {
+      "nodeName": {
+        "type": "String"
+      }
+    }
+  },
   "errorBookCognitiveFilter": "Reviewing specifically for \"{dimension}\" dimension",
   "@errorBookCognitiveFilter": {
     "placeholders": {
@@ -2002,5 +2053,261 @@
         "type": "int"
       }
     }
-  }
+  },
+
+  "taskMonitorTitle": "Background Tasks",
+  "taskMonitorFilterAll": "All",
+  "taskMonitorFilterRunning": "Running",
+  "taskMonitorFilterCompleted": "Completed",
+  "taskMonitorFilterFailed": "Failed",
+  "taskMonitorEmpty": "No background tasks",
+  "taskMonitorStatusPending": "Pending",
+  "taskMonitorStatusCancelled": "Cancelled",
+
+  "planHistoryTitle": "Plan History",
+  "planHistoryEmpty": "No plan history",
+  "planHistoryRestore": "Restore Plan",
+  "planHistoryRestoreSuccess": "Plan restored",
+  "planHistoryDeleteConfirm": "Delete this plan history?",
+  "planTypeSprint": "Sprint Plan",
+  "planTypeGrowth": "Growth Plan",
+  "planProgressPercent": "{percent}% Complete",
+  "@planProgressPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+
+  "authForgotPassword": "Forgot Password?",
+  "authUserAgreement": "User Agreement",
+  "authPrivacyPolicy": "Privacy Policy",
+  "authLoginAgreement": "By logging in, you agree to",
+  "authAnd": "and",
+  "authDemoLogin": "Demo Account Login",
+  "authResetPassword": "Reset Password",
+  "authResetPasswordHint": "Enter your email and we'll send you a reset link",
+  "authSendResetEmail": "Send Reset Email",
+  "authResetEmailSent": "Reset email sent",
+  "authBackToLogin": "Back to Login",
+  "authForgotPasswordTitle": "Forgot Password",
+  "authForgotPasswordHint": "Enter your registered email and we'll send you a reset code.",
+  "authInvalidEmail": "Please enter a valid email",
+  "authHaveResetCode": "I already have a reset code",
+
+  "toolsLibraryTitle": "Tool Library",
+  "toolsTabBrowse": "Browse",
+  "toolsTabManage": "Manage",
+  "toolsSearchHint": "Search tools or keywords",
+  "toolsRecentTitle": "Recently Used",
+  "toolsManagePinned": "Manage Pinned",
+  "toolsCategoryInput": "Input Processing",
+  "toolsCategoryStudy": "Study Aids",
+  "toolsCategoryEfficiency": "Efficiency",
+  "toolsCategoryCognition": "Cognitive Insights",
+  "toolsNoTools": "No tools available",
+  "toolsPinnedEmpty": "No pinned tools yet",
+  "toolsSearchHint": "Search tools or keywords",
+  "toolsRecentTitle": "Recently Used",
+  "toolsManagePinned": "Manage Pinned",
+  "toolsManageHint": "Home screen shows top 4, expanded shows top 8. Drag to reorder.",
+  "toolsBackToBrowse": "Back to Browse",
+  "toolsPositionFirstScreen": "First Screen",
+  "toolsPositionExpanded": "Expanded Area",
+  "toolsPositionMore": "More Page",
+
+  "knowledgeLoadFailed": "Failed to load knowledge node",
+  "knowledgeReload": "Reload",
+  "knowledgeGeneratePath": "Generate Learning Path",
+  "knowledgeDescription": "Description",
+  "knowledgeNoDescription": "No description",
+  "knowledgeRelatedNodes": "Related Nodes",
+  "knowledgePrerequisites": "Prerequisites",
+  "knowledgeMasteryProgress": "Mastery Progress",
+  "knowledgeKeywords": "Keywords",
+  "knowledgeEstimated": "Estimated",
+  "knowledgeMinutes": "minutes",
+  "knowledgeRelatedTasks": "Related Tasks",
+  "knowledgeRelatedPlans": "Related Plans",
+  "knowledgeMastery": "Mastery",
+  "knowledgeStudyMinutes": "Study Minutes",
+  "knowledgeStudyCount": "Study Count",
+  "knowledgeNextReview": "Next Review",
+  "knowledgeDecayPaused": "Forgetting Decay Paused",
+  "knowledgeToday": "Today",
+  "knowledgeTomorrow": "Tomorrow",
+  "knowledgeDaysLater": "{days} days later",
+  "knowledgeWeeksLater": "{weeks} weeks later",
+  "@knowledgeDaysLater": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "@knowledgeWeeksLater": {
+    "placeholders": {
+      "weeks": {
+        "type": "int"
+      }
+    }
+  },
+
+  "seedLibraryTitle": "Seed Library",
+  "seedLibrarySearchHint": "Search seed libraries...",
+  "seedLibraryCreate": "Create Seed Library",
+  "seedLibraryNotFound": "Seed library not found",
+  "seedLibraryDeleteConfirm": "Delete this seed library? This action cannot be undone.",
+  "seedLibraryEmpty": "No seed libraries yet",
+  "seedLibraryCreateFirst": "Create a new seed library to get started",
+  "seedLibraryItemCount": "{count} items",
+  "seedLibraryLastUpdated": "Last updated: {date}",
+  "seedLibraryDetail": "Seed Library Details",
+  "seedLibraryFilter": "Filter",
+  "seedLibraryCategory": "Category",
+  "seedLibraryVisibility": "Visibility",
+  "seedLibraryClear": "Clear",
+  "seedLibraryApply": "Apply",
+  "seedLibrarySubscribe": "Subscribe",
+  "seedLibraryUnsubscribe": "Unsubscribe",
+  "seedLibraryContentItems": "Content Items",
+  "seedLibraryNoContent": "No content yet",
+  "seedLibraryContent": "Content",
+  "seedLibrarySubscribers": "Subscribers",
+  "seedLibraryUsage": "Usage",
+  "seedLibraryQualityScore": "Quality Score",
+  "seedLibraryDeleteTitle": "Delete Seed Library",
+  "seedLibraryDeleteFailed": "Delete failed: {error}",
+  "@seedLibraryDeleteFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+
+  "translationHistoryTitle": "Translation History",
+  "translationClearHistory": "Clear History",
+  "translationTranslating": "Translating...",
+  "translationSaveToVocabulary": "Save to Vocabulary",
+  "translationCopy": "Copy",
+  "translationCopied": "Copied",
+  "translationSearchHint": "Search translation records...",
+  "translationNoHistory": "No translation records",
+  "translationStartTranslate": "Translations will appear here after you start",
+  "translationClearConfirm": "Are you sure you want to clear all translation history?",
+  "translationClearConfirmDetail": "This action cannot be undone",
+  "translationClearAll": "Clear History",
+  "translationFilterAll": "All",
+  "translationFilterFavorites": "Favorites",
+  "translationFilterImportant": "Important",
+  "translationFilterRecent": "Recent",
+  "translationNoSearchResults": "No results found",
+  "translationTryOtherKeywords": "Try other keywords",
+  "translationNoFavorites": "No favorites yet",
+  "translationNoFavoritesHint": "Star translations to save them",
+  "translationNoImportant": "No important translations",
+  "translationNoImportantHint": "4-star and above translations will appear here",
+  "translationNoRecordsHint": "Translations are automatically saved when used",
+  "translationRating": "Rating",
+  "translationSelectImportance": "Select importance level",
+  "translationDelete": "Delete Translation",
+  "translationDeleteConfirm": "Are you sure you want to delete this translation?",
+  "translationOriginal": "Original",
+  "translationTranslated": "Translation",
+  "translationHistorySessionOnly": "History is only valid for the current session",
+  "translationJustNow": "Just now",
+  "translationMinutesAgo": "{minutes}m ago",
+  "translationHoursAgo": "{hours}h ago",
+  "translationToday": "Today",
+  "translationYesterday": "Yesterday",
+  "translationDaysAgo": "{days}d ago",
+  "@translationMinutesAgo": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "@translationHoursAgo": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "@translationDaysAgo": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "translationSourceLanguage": "Source Language",
+  "translationTargetLanguage": "Target Language",
+  "translationSwapLanguages": "Swap Languages",
+  "translationDetectLanguage": "Detect Language",
+  "translationHistoryEmpty": "No translation history",
+
+  "memoryEvidenceChain": "Evidence Chain",
+  "memoryNoEvidence": "No Evidence",
+  "memoryCurrentVersion": "Current Version",
+  "memoryVersionHistory": "Version History",
+  "memorySortNewest": "Newest",
+  "memorySortOldest": "Oldest",
+  "memorySortImportance": "Importance",
+  "memoryEvidenceResolveFailed": "Evidence resolve failed",
+  "memoryStatus": "Status",
+  "memoryGoalDate": "Goal Date",
+  "memoryDeadline": "Deadline",
+  "memoryLastUpdated": "Last Updated",
+  "memorySource": "Source",
+  "memoryOccurredAt": "Occurred At",
+  "memoryImportanceScore": "Importance",
+  "memoryRetractedAt": "Retracted At",
+  "memoryUpdate": "Update",
+  "memoryConfidence": "Confidence",
+  "memoryDiff": "Diff",
+  "memoryRevertToVersion": "Revert to this version",
+  "memoryNeedEnableRetraction": "Need to enable ENABLE_MEMORY_RETRACTION",
+  "memoryInitialVersion": "Initial version",
+  "memoryNoChanges": "No changes",
+  "memoryRevertNotEnabled": "Revert feature not enabled",
+  "memoryWhyThisMemory": "Why this memory?",
+  "memoryEvidenceCount": "Evidence",
+  "memoryVersions": "Versions",
+  "memoryBudget": "Budget",
+  "memoryViewEvidence": "View Evidence",
+  "memoryAllowedCapture": "Allowed capture",
+  "memoryCaptureLevel": "Capture level",
+  "memoryTypeNone": "None",
+  "memoryTypePreference": "Preferences",
+  "memoryTypeGoal": "Goals",
+  "memoryTypeEpisodic": "Episodic",
+  "memoryDisabledHint": "Long-term memory is currently disabled, such memories will not be recorded.",
+  "memoryPreferenceDisabledHint": "Preference capture is currently disabled, such memories will not be recorded.",
+  "memoryGoalDisabledHint": "Goal capture is currently disabled, such memories will not be recorded.",
+  "memoryEpisodicDisabledHint": "Episodic capture is currently disabled, such memories will not be recorded.",
+  "memorySourceBlockedHint": "This source is blocked, such memories will not be recorded.",
+  "memoryKeyBlockedHint": "This preference is blocked, such memories will not be recorded.",
+  "memoryExplanationPreference": "Captured because your preference updated recently.",
+  "memoryExplanationEpisodic": "Captured because this experience was marked important.",
+  "memoryExplanationGoal": "Captured to keep your active goals visible.",
+  "memoryCopied": "Memory content copied",
+  "memoryExportView": "Export View",
+  "memoryCorrectionActions": "Correction Actions",
+  "memoryCorrectionReject": "Not true",
+  "memoryCorrectionNoLongerApplies": "No longer applies",
+  "memoryCorrectionLowerConfidence": "Lower confidence",
+  "memoryCorrectionMerge": "Merge",
+  "memoryMergeComingSoon": "Merge feature coming soon",
+  "memoryCorrectionSubmitted": "Correction submitted",
+  "memoryCorrectionFailed": "Correction failed",
+  "memoryHistoryLoadFailed": "Failed to load history",
+  "memorySettingsLoadFailed": "Failed to load memory settings",
+  "memoryAddEvidence": "Add Evidence",
+  "memoryEvidenceType": "Evidence Type",
+  "memoryEvidenceSource": "Source",
+  "memoryEvidenceContent": "Content"
 }

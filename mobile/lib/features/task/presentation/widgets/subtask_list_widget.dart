@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/features/task/presentation/providers/subtask_provider.dart';
 import 'package:sparkle/shared/entities/subtask_model.dart';
 
 /// Provider for subtask list state
@@ -79,59 +80,135 @@ class _SubtaskListWidgetState extends ConsumerState<SubtaskListWidget> {
       );
 
   Widget _buildProgressIndicator() => Consumer(
-        builder: (context, ref, child) => const SizedBox.shrink(),
+        builder: (context, ref, child) {
+          final state = ref.watch(subtaskNotifierProvider(widget.parentTaskId));
+          if (state.total == 0) return const SizedBox.shrink();
+          return SubtaskProgressIndicator(
+            completed: state.completed,
+            total: state.total,
+          );
+        },
       );
 
-  Widget _buildQuickAddInput() => Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _titleController,
-              style: TextStyle(color: DS.brandPrimaryConst, fontSize: 14),
-              decoration: InputDecoration(
-                hintText: context.l10n.subtaskAddHint,
-                hintStyle:
-                    TextStyle(color: DS.brandPrimary38Const, fontSize: 14),
-                border: InputBorder.none,
-                filled: true,
-                fillColor: DS.brandPrimary10,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: DS.md,
-                  vertical: DS.sm,
+  Widget _buildQuickAddInput() => Consumer(
+        builder: (context, ref, child) {
+          return Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _titleController,
+                  style: TextStyle(color: DS.brandPrimaryConst, fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText: context.l10n.subtaskAddHint,
+                    hintStyle:
+                        TextStyle(color: DS.brandPrimary38Const, fontSize: 14),
+                    border: InputBorder.none,
+                    filled: true,
+                    fillColor: DS.brandPrimary10,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: DS.md,
+                      vertical: DS.sm,
+                    ),
+                    isDense: true,
+                  ),
+                  onSubmitted: (value) {
+                    if (value.trim().isNotEmpty) {
+                      _addSubtask(ref, value.trim());
+                      _titleController.clear();
+                    }
+                  },
                 ),
-                isDense: true,
               ),
-              onSubmitted: (value) {
-                if (value.trim().isNotEmpty) {
-                  widget.onSubtaskAdd?.call(widget.parentTaskId, value.trim());
-                  _titleController.clear();
-                }
-              },
-            ),
-          ),
-          const SizedBox(width: DS.sm),
-          Tooltip(
-            message: context.l10n.subtaskAddTooltip,
-            child: SparkleIconButton(
-              variant: ButtonVariant.ghost,
-              size: 36,
-              onPressed: () {
-                if (_titleController.text.trim().isNotEmpty) {
-                  widget.onSubtaskAdd?.call(
-                    widget.parentTaskId,
-                    _titleController.text.trim(),
-                  );
-                  _titleController.clear();
-                }
-              },
-              icon: Icon(Icons.add_circle, color: DS.primaryBase),
-            ),
-          ),
-        ],
+              const SizedBox(width: DS.sm),
+              Tooltip(
+                message: context.l10n.subtaskAddTooltip,
+                child: SparkleIconButton(
+                  variant: ButtonVariant.ghost,
+                  size: 36,
+                  onPressed: () {
+                    if (_titleController.text.trim().isNotEmpty) {
+                      _addSubtask(ref, _titleController.text.trim());
+                      _titleController.clear();
+                    }
+                  },
+                  icon: Icon(Icons.add_circle, color: DS.primaryBase),
+                ),
+              ),
+            ],
+          );
+        },
       );
+
+  void _addSubtask(WidgetRef ref, String title) {
+    ref
+        .read(subtaskNotifierProvider(widget.parentTaskId).notifier)
+        .addSubtask(SubTaskCreate(title: title));
+    // Also call the callback if provided for backwards compatibility
+    widget.onSubtaskAdd?.call(widget.parentTaskId, title);
+  }
 
   Widget _buildSubtaskList() => Consumer(
-        builder: (context, ref, child) => _buildEmptyState(),
+        builder: (context, ref, child) {
+          final state = ref.watch(subtaskNotifierProvider(widget.parentTaskId));
+
+          if (state.isLoading) {
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(DS.lg),
+                child: CircularProgressIndicator(),
+              ),
+            );
+          }
+
+          if (state.error != null) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(DS.lg),
+                child: Column(
+                  children: [
+                    Icon(Icons.error_outline, color: DS.semanticError, size: 32),
+                    const SizedBox(height: DS.sm),
+                    Text(
+                      'Error: ${state.error}',
+                      style: TextStyle(color: DS.semanticError, fontSize: 14),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: DS.sm),
+                    SparkleButton(
+                      label: context.l10n.retry,
+                      variant: ButtonVariant.ghost,
+                      onPressed: () => ref
+                          .read(subtaskNotifierProvider(widget.parentTaskId).notifier)
+                          .refresh(),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          if (state.subtasks.isEmpty) {
+            return _buildEmptyState();
+          }
+
+          return ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: state.subtasks.length,
+            itemBuilder: (context, index) {
+              final subtask = state.subtasks[index];
+              return SubtaskItemWidget(
+                subtask: subtask,
+                onToggle: () => ref
+                    .read(subtaskNotifierProvider(widget.parentTaskId).notifier)
+                    .toggleSubtask(subtask),
+                onDelete: () => ref
+                    .read(subtaskNotifierProvider(widget.parentTaskId).notifier)
+                    .deleteSubtask(subtask.id),
+              );
+            },
+          );
+        },
       );
 
   Widget _buildEmptyState() => Container(

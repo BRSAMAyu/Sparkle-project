@@ -58,6 +58,7 @@ from app.api.v1 import (
     statistics,
     stt,
     subjects,
+    subtasks,
     suggestions,  # Vision Item 3
     tasks,
     translation,
@@ -86,6 +87,7 @@ api_router.include_router(error_book.router)  # Prefix is defined in router itse
 api_router.include_router(learning_paths.router)  # Already has prefix /learning-paths
 api_router.include_router(chat.router, prefix="/chat", tags=["chat"])
 api_router.include_router(tasks.router, prefix="/tasks", tags=["tasks"])
+api_router.include_router(subtasks.router, tags=["subtasks"])
 api_router.include_router(plans.router, prefix="/plans", tags=["plans"])
 api_router.include_router(subjects.router, prefix="/subjects", tags=["subjects"])
 api_router.include_router(statistics.router, prefix="/stats", tags=["statistics"])
