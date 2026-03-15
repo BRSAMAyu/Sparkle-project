@@ -75,6 +75,8 @@ from app.orchestration.chat_modes import (
 from app.orchestration.expert_strategy import ExpertStrategyV1
 from app.orchestration.mode_workflow_config import get_mode_strategy, get_workflow_config
 from app.orchestration.multi_agent_adapter import MultiAgentWorkflowAdapter, execute_multi_agent_workflow
+from app.orchestration.agent_memory import AgentMemoryService
+from app.orchestration.agent_scoring import AgentScoringService
 from app.orchestration.orchestration_trace import OrchestrationTrace
 from app.orchestration.persona_aware_planner import PersonaAwarePlanner
 from app.orchestration.observability_logger import observability_logger
@@ -2808,6 +2810,36 @@ class ChatOrchestrator:
                 agents_involved,
                 ensure_ascii=False,
             )
+            if executable_plan and getattr(executable_plan, "collaboration_mode", None):
+                response_metadata["collaboration_mode"] = executable_plan.collaboration_mode
+            collaboration_narrative = (
+                getattr(executable_plan, "collaboration_narrative", None)
+                if executable_plan is not None
+                else None
+            )
+            if collaboration_narrative:
+                response_metadata["collaboration_narrative"] = str(collaboration_narrative)
+            if self.redis:
+                try:
+                    route_intent = self._extract_route_intent(route_decision.reason)
+                    scoring_service = AgentScoringService(self.redis)
+                    await scoring_service.bind_response_to_recent_records(
+                        user_id=user_id,
+                        session_id=session_id,
+                        response_id=response_id,
+                        agents=agents_involved,
+                        intent_type=route_intent,
+                    )
+                    await scoring_service.store_response_agent_mapping(
+                        response_id=response_id,
+                        user_id=user_id,
+                        session_id=session_id,
+                        agents=agents_involved,
+                        intent_type=route_intent,
+                        workflow_id=workflow_id,
+                    )
+                except Exception as exc:
+                    logger.debug(f"Failed to persist agent response mapping: {exc}")
         selected_experts = final_state.context_data.get("selected_experts")
         if isinstance(selected_experts, list) and selected_experts:
             response_metadata["selected_experts"] = json.dumps(
@@ -3642,6 +3674,9 @@ class ChatOrchestrator:
             chat_mode = str(state.context_data.get("chat_mode", CHAT_MODE_STANDARD))
             mode_strategy = get_mode_strategy(chat_mode)
             mode_config = get_workflow_config(chat_mode)
+            route_intent = self._extract_route_intent(route_decision.reason)
+            if route_intent:
+                planning_constraints["route_intent"] = route_intent
             if mode_strategy and mode_strategy.collaboration_mode != "auto":
                 planning_constraints["collaboration_mode"] = mode_strategy.collaboration_mode
             if mode_strategy and mode_strategy.required_agents:
@@ -3750,6 +3785,24 @@ class ChatOrchestrator:
                 planning_constraints=planning_constraints or None,
                 stream_callback=stream_callback,
             )
+
+            if self.redis and isinstance(user_context_payload, dict) and executable_plan is not None:
+                agent_ids = [
+                    str(agent).strip()
+                    for agent in (getattr(executable_plan, "agents_involved", []) or [])
+                    if str(agent).strip()
+                ]
+                if agent_ids:
+                    try:
+                        memory_context = await AgentMemoryService(self.redis).get_multi_agent_prompt_context(
+                            agent_ids=agent_ids,
+                            user_id=user_id,
+                        )
+                        if memory_context:
+                            state.context_data["agent_memory_context"] = memory_context
+                            user_context_payload["agent_memory_context"] = memory_context
+                    except Exception as exc:
+                        logger.debug(f"Failed to hydrate agent memory context: {exc}")
 
             collaboration_narrative = (
                 executable_plan.collaboration_narrative

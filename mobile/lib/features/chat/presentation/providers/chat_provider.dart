@@ -417,6 +417,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
     Map<String, dynamic>? accumulatedUxEnvelope;
     Map<String, dynamic>? accumulatedOrchestrationTrace;
     Map<String, dynamic>? accumulatedModeSuggestion;
+    String? accumulatedCollaborationNarrative;
+    String? accumulatedCollaborationMode;
+    List<String>? accumulatedAgentsInvolved;
     final accumulatedReasoningSteps = <ReasoningStep>[];
     int? reasoningStartTime;
     String? pendingStreamingContent;
@@ -537,6 +540,13 @@ class ChatNotifier extends StateNotifier<ChatState> {
             final fallbackReason = metadata['fallback_reason'];
             final routeConfidence = metadata['route_confidence'];
             final expertEntrySource = metadata['expert_entry_source'];
+            final collaborationNarrative =
+                metadata['collaboration_narrative']?.toString();
+            final collaborationMode =
+                metadata['collaboration_mode']?.toString();
+            final agentsInvolved = _parseSelectedExperts(
+              metadata['agents_involved'],
+            );
             if (selectedExpertsRaw != null ||
                 routingStrategy != null ||
                 fallbackReason != null ||
@@ -551,6 +561,17 @@ class ChatNotifier extends StateNotifier<ChatState> {
                 'route_confidence': routeConfidence,
                 'expert_entry_source': expertEntrySource,
               };
+            }
+            if (collaborationNarrative != null &&
+                collaborationNarrative.trim().isNotEmpty) {
+              accumulatedCollaborationNarrative = collaborationNarrative.trim();
+            }
+            if (collaborationMode != null &&
+                collaborationMode.trim().isNotEmpty) {
+              accumulatedCollaborationMode = collaborationMode.trim();
+            }
+            if (agentsInvolved.isNotEmpty) {
+              accumulatedAgentsInvolved = agentsInvolved;
             }
           }
           // 流式文本片段（delta）
@@ -602,6 +623,13 @@ class ChatNotifier extends StateNotifier<ChatState> {
             final fallbackReason = metadata['fallback_reason'];
             final routeConfidence = metadata['route_confidence'];
             final expertEntrySource = metadata['expert_entry_source'];
+            final collaborationNarrative =
+                metadata['collaboration_narrative']?.toString();
+            final collaborationMode =
+                metadata['collaboration_mode']?.toString();
+            final agentsInvolved = _parseSelectedExperts(
+              metadata['agents_involved'],
+            );
             if (selectedExpertsRaw != null ||
                 routingStrategy != null ||
                 fallbackReason != null ||
@@ -616,6 +644,17 @@ class ChatNotifier extends StateNotifier<ChatState> {
                 'route_confidence': routeConfidence,
                 'expert_entry_source': expertEntrySource,
               };
+            }
+            if (collaborationNarrative != null &&
+                collaborationNarrative.trim().isNotEmpty) {
+              accumulatedCollaborationNarrative = collaborationNarrative.trim();
+            }
+            if (collaborationMode != null &&
+                collaborationMode.trim().isNotEmpty) {
+              accumulatedCollaborationMode = collaborationMode.trim();
+            }
+            if (agentsInvolved.isNotEmpty) {
+              accumulatedAgentsInvolved = agentsInvolved;
             }
           }
           accumulatedContent = event.content;
@@ -810,6 +849,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
                     if (item.durationMs != null) 'duration_ms': item.durationMs,
                     if (item.resultSummary != null)
                       'result_summary': item.resultSummary,
+                    if (item.collaborationMode != null)
+                      'collaboration_mode': item.collaborationMode,
+                    if (item.phase != null) 'phase': item.phase,
                   },
                 )
                 .toList();
@@ -853,6 +895,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
           agentCollaboration: accumulatedCollaboration,
           orchestrationTrace: accumulatedOrchestrationTrace,
           modeSuggestion: accumulatedModeSuggestion,
+          collaborationNarrative: accumulatedCollaborationNarrative,
+          collaborationMode: accumulatedCollaborationMode,
+          agentsInvolved: accumulatedAgentsInvolved ?? const [],
           aiStatus: lastAiStatus, // 持久化最后的 AI 状态（如：EXECUTING_TOOL）
           agentActivities: snapshotAgentActivities ?? const [],
           reasoningSteps: accumulatedReasoningSteps.isNotEmpty

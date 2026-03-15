@@ -54,10 +54,13 @@ class _SocialAccountsScreenState extends ConsumerState<SocialAccountsScreen> {
     try {
       final result = await _signIn(provider);
       if (result == null) return;
+      final socialProvider = result.provider;
+      final socialToken = result.token;
+      final socialOpenId = result.openid;
       final message = await ref.read(authProvider.notifier).linkSocial(
-            provider: result.provider,
-            token: result.token,
-            openid: result.openid,
+            provider: socialProvider,
+            token: socialToken,
+            openid: socialOpenId,
           );
       if (!mounted) return;
       AppFeedback.success(context, message);
@@ -120,7 +123,7 @@ class _SocialAccountsScreenState extends ConsumerState<SocialAccountsScreen> {
       case 'wechat':
         return SocialAuthService().signInWithWeChat();
       default:
-        return Future.value(null);
+        return Future<SocialAuthResult?>.value();
     }
   }
 
@@ -239,7 +242,6 @@ class _SocialAccountsScreenState extends ConsumerState<SocialAccountsScreen> {
                                     )
                                   : SparkleButton(
                                       label: '绑定',
-                                      variant: ButtonVariant.primary,
                                       loading:
                                           _busyProvider == account.provider,
                                       onPressed: _busyProvider == null

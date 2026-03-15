@@ -115,3 +115,13 @@ def resolve_node_name(target: str | None) -> str | None:
         if target_norm in spec.aliases:
             return spec.node_name
     return None
+
+
+def get_node_function(target: str | None):
+    resolved = resolve_node_name(target)
+    if not resolved:
+        return None
+    for spec in GRAPH_EXPERT_SPECS:
+        if spec.node_name == resolved:
+            return spec.node_handler
+    return None

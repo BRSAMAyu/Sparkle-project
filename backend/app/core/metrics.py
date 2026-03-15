@@ -218,6 +218,41 @@ SESSION_FEEDBACK_CONFIDENCE_BUCKET = get_or_create_metric(
     ['signal_type', 'bucket']
 )
 
+AGENT_PERFORMANCE_RECORDED_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_agent_performance_recorded_total',
+    'Total recorded agent performance samples',
+    ['agent_id', 'success']
+)
+
+AGENT_FEEDBACK_LINKED_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_agent_feedback_linked_total',
+    'Total response feedback events linked back to participating agents',
+    ['feedback_type']
+)
+
+AGENT_ROUTING_QUALITY_PROMPT_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_agent_routing_quality_prompt_total',
+    'Total routing prompts enriched with agent quality summaries',
+    ['layer']
+)
+
+AGENT_COLLAB_DECISION_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_agent_collab_decision_total',
+    'Total collaboration decisions by source',
+    ['source', 'intent_type']
+)
+
+AGENT_COMBINATION_EXPLORATION_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_agent_combination_exploration_total',
+    'Total exploratory agent-combination selections',
+    ['intent_type']
+)
+
 # 装饰器：用于测量函数执行时间并记录指标
 def track_latency(module, method):
     """Decorator to track function execution latency and record metrics."""

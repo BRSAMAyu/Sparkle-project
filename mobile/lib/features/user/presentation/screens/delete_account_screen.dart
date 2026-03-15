@@ -73,10 +73,11 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
           result = null;
       }
       if (result == null) return;
+      final providerToken = result.token;
       if (!mounted) return;
       setState(() {
         _provider = provider;
-        _providerToken = result.token;
+        _providerToken = providerToken;
       });
       AppFeedback.success(context, '已完成重新验证，可以继续注销账号。');
     } catch (e) {
@@ -140,10 +141,10 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
           child: ListView(
             padding: const EdgeInsets.all(DS.spacing24),
             children: [
-              GraphiteCardSurface(
+              const GraphiteCardSurface(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
+                  children: [
                     Text(
                       '注销前请确认',
                       style: TextStyle(

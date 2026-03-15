@@ -166,6 +166,8 @@ class LangGraphPlanner:
         configurable: dict[str, Any] = {"thread_id": session_id}
         if stream_callback:
             configurable["stream_callback"] = stream_callback
+        if self.redis:
+            configurable["redis_client"] = self.redis
         config = {"configurable": configurable}
         final_state = None
 
@@ -311,6 +313,8 @@ class LangGraphPlanner:
         # Get active_agent for rationale
         active_agent = langgraph_state.get("active_agent")
         if active_agent:
+            if collaboration_mode == "single" and not agents_involved:
+                agents_involved = [str(active_agent)]
             if collaboration_mode != "single" and agents_involved:
                 rationale = f"Planned via collaboration: {', '.join(agents_involved)}"
             else:

@@ -7,7 +7,6 @@ import 'package:logger/logger.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 class SocialAuthResult {
-
   SocialAuthResult({
     required this.provider,
     required this.token,
@@ -32,6 +31,7 @@ class SocialAuthService {
   factory SocialAuthService() => _instance;
   SocialAuthService._internal();
   static final SocialAuthService _instance = SocialAuthService._internal();
+  final fluwx.Fluwx _weChat = fluwx.Fluwx();
 
   final Logger _logger = Logger();
 
@@ -41,6 +41,8 @@ class SocialAuthService {
   /// When empty the SDK is considered unavailable and [signInWithWeChat]
   /// will throw [UnsupportedError].
   String _weChatAppId = const String.fromEnvironment('WECHAT_APP_ID');
+  String _weChatUniversalLink =
+      const String.fromEnvironment('WECHAT_UNIVERSAL_LINK');
 
   /// Whether the WeChat SDK has been successfully registered on this device.
   bool get isWeChatAvailable => _weChatInitialized;
@@ -51,7 +53,7 @@ class SocialAuthService {
   /// SDK will not be registered and [signInWithWeChat] will be unavailable.
   ///
   /// On platforms where WeChat is not supported (web, desktop) this is a no-op.
-  Future<void> initWeChat({String? appId}) async {
+  Future<void> initWeChat({String? appId, String? universalLink}) async {
     final effectiveAppId = appId ?? _weChatAppId;
     if (effectiveAppId.isEmpty) {
       _logger.w('WeChat App ID not configured — skipping SDK init');
@@ -61,19 +63,27 @@ class SocialAuthService {
 
     try {
       _weChatAppId = effectiveAppId;
+      _weChatUniversalLink = universalLink ?? _weChatUniversalLink;
 
-      // Universal Link is required on iOS; Android uses the app signature.
-      // Replace with your own universal-link domain once configured.
-      final universalLink = Platform.isIOS
-          ? 'https://your-domain.com/app/'
-          : '';
+      if (Platform.isIOS && _weChatUniversalLink.isEmpty) {
+        _logger.w(
+          'WeChat universal link not configured — skipping SDK init on iOS',
+        );
+        return;
+      }
 
-      await fluwx.registerWxApi(
+      final registered = await _weChat.registerApi(
         appId: effectiveAppId,
-        universalLink: universalLink,
+        universalLink: Platform.isIOS ? _weChatUniversalLink : null,
       );
-      _weChatInitialized = true;
-      _logger.i('WeChat SDK initialized (appId=${effectiveAppId.substring(0, 4)}…)');
+      _weChatInitialized = registered;
+      if (registered) {
+        _logger.i(
+          'WeChat SDK initialized (appId=${effectiveAppId.substring(0, 4)}...)',
+        );
+      } else {
+        _logger.w('WeChat SDK registration returned false');
+      }
     } catch (e) {
       _logger.e('WeChat SDK init failed: $e');
     }
@@ -81,8 +91,8 @@ class SocialAuthService {
 
   // --- Google Sign In ---
   final GoogleSignIn _googleSignIn = GoogleSignIn(
-    // scopes: ['email', 'profile'], // Default scopes are usually enough
-  );
+      // scopes: ['email', 'profile'], // Default scopes are usually enough
+      );
 
   Future<SocialAuthResult?> signInWithGoogle() async {
     try {
@@ -91,8 +101,7 @@ class SocialAuthService {
         return null; // User canceled
       }
 
-      final googleAuth =
-          await googleUser.authentication;
+      final googleAuth = await googleUser.authentication;
 
       return SocialAuthResult(
         provider: 'google',
@@ -151,48 +160,52 @@ class SocialAuthService {
       );
     }
 
-    final installed = await fluwx.isWeChatInstalled;
+    final installed = await _weChat.isWeChatInstalled;
     if (!installed) {
       throw UnsupportedError('请先安装微信客户端');
     }
 
-    // Send OAuth request — WeChat will callback via onWeChatResponse.
-    final sent = await fluwx.sendWeChatAuth(
-      scope: 'snsapi_userinfo',
-      state: 'sparkle_login',
+    final sent = await _weChat.authBy(
+      which: fluwx.NormalAuth(
+        scope: 'snsapi_userinfo',
+        state: 'sparkle_login',
+      ),
     );
     if (!sent) {
-      _logger.e('WeChat sendAuth returned false');
+      _logger.e('WeChat authBy returned false');
       return null;
     }
 
-    // Listen for the single auth response.
     final completer = Completer<SocialAuthResult?>();
-    late final StreamSubscription<fluwx.BaseWeChatResponse> subscription;
+    late final fluwx.FluwxCancelable cancelable;
 
-    subscription = fluwx.weChatResponseEventHandler.listen((response) {
+    cancelable = _weChat.addSubscriber((response) {
       if (response is fluwx.WeChatAuthResponse) {
-        subscription.cancel();
-        if (response.errCode != 0 || response.code == null) {
-          _logger.w('WeChat auth denied or failed: errCode=${response.errCode}');
-          completer.complete(null);
+        cancelable.cancel();
+        if (!response.isSuccessful || response.code == null) {
+          _logger
+              .w('WeChat auth denied or failed: errCode=${response.errCode}');
+          if (!completer.isCompleted) {
+            completer.complete(null);
+          }
         } else {
-          completer.complete(
-            SocialAuthResult(
-              provider: 'wechat',
-              // Send the auth code to the backend; it will do the code→token exchange.
-              token: response.code!,
-            ),
-          );
+          final authCode = response.code!;
+          if (!completer.isCompleted) {
+            completer.complete(
+              SocialAuthResult(
+                provider: 'wechat',
+                token: authCode,
+              ),
+            );
+          }
         }
       }
     });
 
-    // Timeout after 2 minutes.
     return completer.future.timeout(
       const Duration(minutes: 2),
       onTimeout: () {
-        subscription.cancel();
+        cancelable.cancel();
         _logger.w('WeChat auth timed out');
         return null;
       },

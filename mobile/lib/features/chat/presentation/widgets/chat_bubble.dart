@@ -8,12 +8,12 @@ import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/action_card.dart';
-import 'package:sparkle/features/chat/presentation/widgets/agent_workflow_panel.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart';
+import 'package:sparkle/features/chat/presentation/widgets/agent_workflow_panel.dart';
 import 'package:sparkle/features/chat/presentation/widgets/assistant_message_metadata_tray.dart';
+import 'package:sparkle/features/chat/presentation/widgets/message_detail_view.dart';
 import 'package:sparkle/features/chat/presentation/widgets/mode_suggestion_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/orchestration_trace_panel.dart';
-import 'package:sparkle/features/chat/presentation/widgets/message_detail_view.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/presentation/providers/community_agent_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -333,6 +333,15 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
     final modeSuggestion = widget.message is ChatMessageModel
         ? (widget.message as ChatMessageModel).modeSuggestion
         : null;
+    final collaborationNarrative = widget.message is ChatMessageModel
+        ? (widget.message as ChatMessageModel).collaborationNarrative
+        : null;
+    final collaborationMode = widget.message is ChatMessageModel
+        ? (widget.message as ChatMessageModel).collaborationMode
+        : null;
+    final agentsInvolved = widget.message is ChatMessageModel
+        ? (widget.message as ChatMessageModel).agentsInvolved
+        : const <String>[];
     final agentActivities = widget.message is ChatMessageModel
         ? (widget.message as ChatMessageModel).agentActivities
         : const <Map<String, dynamic>>[];
@@ -573,6 +582,24 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                   traceData: orchestrationTrace,
                                 ),
                               ),
+                            if (!isUser &&
+                                agentActivities.isEmpty &&
+                                ((collaborationNarrative != null &&
+                                        collaborationNarrative.isNotEmpty) ||
+                                    agentsInvolved.isNotEmpty))
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  top: 8.0,
+                                  right: 8.0,
+                                  left: 8.0,
+                                ),
+                                child: _CollaborationSignatureCard(
+                                  narrative: collaborationNarrative,
+                                  collaborationMode: collaborationMode,
+                                  agentIds: agentsInvolved,
+                                  activitySnapshots: agentActivities,
+                                ),
+                              ),
                             if (!isUser && agentActivities.isNotEmpty)
                               Padding(
                                 padding: const EdgeInsets.only(
@@ -582,6 +609,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                 ),
                                 child: AgentWorkflowPanel(
                                   snapshotActivities: agentActivities,
+                                  narrative: collaborationNarrative,
                                 ),
                               ),
                             ..._actionableWidgets.map(
@@ -977,5 +1005,169 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
         ),
       ),
     );
+  }
+}
+
+Color _chatBubbleHexToColor(String hex, BuildContext context) {
+  final cleaned = hex.replaceFirst('#', '');
+  final normalized = cleaned.length == 6 ? 'FF$cleaned' : cleaned;
+  return Color(int.tryParse(normalized, radix: 16) ?? 0xFF6B7280);
+}
+
+String _formatAgentLabel(String raw) {
+  switch (raw) {
+    case 'galaxy_guide':
+      return '星图导航';
+    case 'exam_oracle':
+      return '考试策略师';
+    case 'time_tutor':
+      return '时间教练';
+    case 'deep_analyst':
+      return '深度分析师';
+    case 'error_analyst':
+      return '纠错专家';
+    case 'study_buddy':
+      return '学伴';
+    case 'math_agent':
+      return '数学专家';
+    case 'code_agent':
+      return '编程专家';
+    case 'writing_agent':
+      return '写作专家';
+    case 'science_agent':
+      return '理科专家';
+    case 'search_agent':
+      return '搜索专家';
+    default:
+      return raw.replaceAll('_', ' ').trim();
+  }
+}
+
+String _formatCollaborationModeLabel(String? mode) {
+  switch ((mode ?? '').trim()) {
+    case 'parallel':
+      return '并行协作';
+    case 'debate':
+      return '辩论协作';
+    case 'delegation':
+      return '委派协作';
+    case 'sequential':
+      return '分步协作';
+    default:
+      return '专家协作';
+  }
+}
+
+class _CollaborationSignatureCard extends StatelessWidget {
+  const _CollaborationSignatureCard({
+    required this.agentIds,
+    required this.activitySnapshots,
+    this.narrative,
+    this.collaborationMode,
+  });
+
+  final String? narrative;
+  final String? collaborationMode;
+  final List<String> agentIds;
+  final List<Map<String, dynamic>> activitySnapshots;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final chips = _buildChips(context);
+    return Container(
+      padding: const EdgeInsets.all(DS.spacing10),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.32),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.auto_awesome_rounded,
+                size: 14,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(width: DS.spacing6),
+              Text(
+                _formatCollaborationModeLabel(collaborationMode),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            ],
+          ),
+          if (chips.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing8),
+            Wrap(
+              spacing: DS.spacing6,
+              runSpacing: DS.spacing6,
+              children: chips,
+            ),
+          ],
+          if (narrative != null && narrative!.trim().isNotEmpty) ...[
+            const SizedBox(height: DS.spacing8),
+            Text(
+              narrative!,
+              style: TextStyle(
+                fontSize: 11,
+                height: 1.45,
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildChips(BuildContext context) {
+    final seen = <String>{};
+    final widgets = <Widget>[];
+    for (final agentId in agentIds) {
+      final normalized = agentId.trim();
+      if (normalized.isEmpty || !seen.add(normalized)) {
+        continue;
+      }
+      final snapshot = activitySnapshots.cast<Map<String, dynamic>?>().firstWhere(
+        (item) => item?['agent_id']?.toString() == normalized,
+        orElse: () => null,
+      );
+      final label = snapshot?['display_name']?.toString() ?? _formatAgentLabel(normalized);
+      final color = _chatBubbleHexToColor(
+        snapshot?['color']?.toString() ?? '#6B7280',
+        context,
+      );
+      widgets.add(
+        Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing8,
+            vertical: DS.spacing4,
+          ),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: color.withValues(alpha: 0.18)),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
+        ),
+      );
+    }
+    return widgets;
   }
 }

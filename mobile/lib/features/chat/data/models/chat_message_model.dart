@@ -41,6 +41,9 @@ class ChatMessageModel {
     this.uxEnvelope,
     this.orchestrationTrace,
     this.modeSuggestion,
+    this.collaborationNarrative,
+    this.collaborationMode,
+    this.agentsInvolved = const [],
     this.agentActivities = const [],
   })  : id = id ?? const Uuid().v4(),
         createdAt = createdAt ?? DateTime.now();
@@ -114,6 +117,15 @@ class ChatMessageModel {
   final Map<String, dynamic>? modeSuggestion;
 
   @JsonKey(includeFromJson: false, includeToJson: false)
+  final String? collaborationNarrative;
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  final String? collaborationMode;
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  final List<String> agentsInvolved;
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
   final List<Map<String, dynamic>> agentActivities;
 
   Map<String, dynamic> toJson() => _$ChatMessageModelToJson(this);
@@ -145,6 +157,9 @@ class ChatMessageModel {
     Map<String, dynamic>? uxEnvelope,
     Map<String, dynamic>? orchestrationTrace,
     Map<String, dynamic>? modeSuggestion,
+    String? collaborationNarrative,
+    String? collaborationMode,
+    List<String>? agentsInvolved,
     List<Map<String, dynamic>>? agentActivities,
   }) =>
       ChatMessageModel(
@@ -174,6 +189,10 @@ class ChatMessageModel {
         uxEnvelope: uxEnvelope ?? this.uxEnvelope,
         orchestrationTrace: orchestrationTrace ?? this.orchestrationTrace,
         modeSuggestion: modeSuggestion ?? this.modeSuggestion,
+        collaborationNarrative:
+            collaborationNarrative ?? this.collaborationNarrative,
+        collaborationMode: collaborationMode ?? this.collaborationMode,
+        agentsInvolved: agentsInvolved ?? this.agentsInvolved,
         agentActivities: agentActivities ?? this.agentActivities,
       );
 }

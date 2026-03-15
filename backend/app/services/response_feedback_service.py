@@ -11,10 +11,16 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.core.metrics import RESPONSE_FEEDBACK_DEDUPE_TOTAL, RESPONSE_FEEDBACK_INGESTED
+from app.core.metrics import (
+    AGENT_FEEDBACK_LINKED_TOTAL,
+    RESPONSE_FEEDBACK_DEDUPE_TOTAL,
+    RESPONSE_FEEDBACK_INGESTED,
+)
 from app.learning.prompt_bandit import PromptBandit
 from app.models.context_pack import ContextPackFeedback, ContextPackRun
 from app.models.response_feedback import ResponseFeedback
+from app.orchestration.agent_memory import AgentMemoryService
+from app.orchestration.agent_scoring import AgentScoringService
 from app.services.budget_tuning_service import BudgetTuningService
 from app.services.content_quality_evaluator import ContentQualityEvaluator
 
@@ -116,6 +122,34 @@ class ResponseFeedbackService:
             reasons,
             meta or {},
         )
+        if self.redis:
+            linked_agents = await AgentScoringService(self.redis).apply_response_feedback(
+                user_id=user_id,
+                response_id=response_id,
+                feedback_type="up" if feedback_type == ResponseFeedback.FEEDBACK_UP else "down",
+            )
+            if linked_agents:
+                AGENT_FEEDBACK_LINKED_TOTAL.labels(
+                    feedback_type="up" if feedback_type == ResponseFeedback.FEEDBACK_UP else "down"
+                ).inc()
+                try:
+                    memory_service = AgentMemoryService(self.redis)
+                    safe_ints = []
+                    for r in (reasons or []):
+                        try:
+                            safe_ints.append(int(r))
+                        except (ValueError, TypeError):
+                            pass
+                    normalized_reasons = self.normalize_reasons(safe_ints)
+                    for agent_id in linked_agents:
+                        await memory_service.infer_preferences_from_feedback(
+                            agent_id=agent_id,
+                            user_id=user_id,
+                            feedback_type="up" if feedback_type == ResponseFeedback.FEEDBACK_UP else "down",
+                            reasons=normalized_reasons,
+                        )
+                except Exception as exc:
+                    logger.debug(f"Failed to propagate feedback to agent memory: {exc}")
 
         # Opportunistically evaluate and auto-seed high-quality responses.
         try:

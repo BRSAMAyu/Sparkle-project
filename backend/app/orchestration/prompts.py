@@ -187,6 +187,10 @@ AGENT_SYSTEM_PROMPT = """你是 Sparkle（星火），一个智能学习助手�
 
 
 
+{agent_memory_section}
+
+
+
 ## 当前用户上下文
 
 {user_context}
@@ -272,6 +276,10 @@ MODE_SYSTEM_PROMPTS = {
 
 
 {persona_section}
+
+
+
+{agent_memory_section}
 
 
 
@@ -377,6 +385,10 @@ MODE_SYSTEM_PROMPTS = {
 
 
 
+{agent_memory_section}
+
+
+
 ## 当前用户上下文
 
 {user_context}
@@ -476,6 +488,10 @@ MODE_SYSTEM_PROMPTS = {
 
 
 {persona_section}
+
+
+
+{agent_memory_section}
 
 
 
@@ -646,6 +662,7 @@ def build_system_prompt(
     orchestration_trace = None
     mode_strategy_payload = None
     persona_constraints_summary = ""
+    agent_memory_context = ""
     collaboration_narrative = ""
     if isinstance(user_context, dict):
         raw_trace = user_context.get("orchestration_trace")
@@ -667,6 +684,7 @@ def build_system_prompt(
             mode_strategy_payload = raw_strategy
 
         persona_constraints_summary = str(user_context.get("persona_constraints_summary") or "").strip()
+        agent_memory_context = str(user_context.get("agent_memory_context") or "").strip()
         collaboration_narrative = str(user_context.get("collaboration_narrative") or "").strip()
 
 
@@ -796,6 +814,10 @@ def build_system_prompt(
     if persona_constraints_summary:
         persona_section = "\n## 用户画像提示 [L2 引导]\n" + persona_constraints_summary
 
+    agent_memory_section = ""
+    if agent_memory_context:
+        agent_memory_section = "\n## 专家交互记忆 [L2 引导]\n" + agent_memory_context
+
     understanding_depth_section = ""
     if isinstance(understanding_depth_hint, dict):
         natural_hint = str(understanding_depth_hint.get("natural_hint") or "").strip()
@@ -849,6 +871,11 @@ def build_system_prompt(
                 persona_section,
                 reason="本轮以精简为主；画像信息仅作轻量提示。",
             )
+        if agent_memory_section:
+            agent_memory_section = _soften_section(
+                agent_memory_section,
+                reason="本轮以精简为主；交互记忆仅作轻量提示。",
+            )
     elif feedback_mode == "expand":
         preference_instructions = _soften_section(
             preference_instructions,
@@ -878,6 +905,7 @@ def build_system_prompt(
         "collaboration_narrative_section": collaboration_narrative_section,
         "mode_strategy_section": mode_strategy_section,
         "persona_section": persona_section,
+        "agent_memory_section": agent_memory_section,
         "cognitive_prism_section": cognitive_prism_section,
         "conversation_history_section": f"[优先级：L3 背景]\n{conversation_history_section}".strip() if conversation_history_section else "",
         "task_awareness_section": f"[优先级：L3 背景]\n{TASK_AWARENESS_SECTION}".strip(),
@@ -894,6 +922,7 @@ def build_system_prompt(
             "collaboration_narrative_section": 2,
             "mode_strategy_section": 2,
             "persona_section": 2,
+            "agent_memory_section": 2,
             "cognitive_prism_section": cognitive_priority,
             "conversation_history_section": 3,
             "task_awareness_section": 3,
@@ -908,6 +937,7 @@ def build_system_prompt(
     collaboration_narrative_section = section_map["collaboration_narrative_section"]
     mode_strategy_section = section_map["mode_strategy_section"]
     persona_section = section_map["persona_section"]
+    agent_memory_section = section_map["agent_memory_section"]
     cognitive_prism_section = section_map["cognitive_prism_section"]
     conversation_history_section = section_map["conversation_history_section"]
     task_awareness_section = section_map["task_awareness_section"]
@@ -930,6 +960,7 @@ def build_system_prompt(
                 collaboration_narrative_section=collaboration_narrative_section,
                 mode_strategy_section=mode_strategy_section,
                 persona_section=persona_section,
+                agent_memory_section=agent_memory_section,
                 context_briefing_section=context_briefing_section,
                 task_awareness_section=task_awareness_section,
                 cognitive_prism_section=cognitive_prism_section,
@@ -966,6 +997,8 @@ def build_system_prompt(
              prompt += f"\n\n{mode_strategy_section}"
         if persona_section:
              prompt += f"\n\n{persona_section}"
+        if agent_memory_section:
+             prompt += f"\n\n{agent_memory_section}"
         if understanding_depth_section:
              prompt += f"\n\n{understanding_depth_section}"
 

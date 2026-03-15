@@ -49,7 +49,19 @@ AGENT_DISPLAY_CONFIG: dict[str, dict[str, str]] = {
         "color": "#6C5CE7",
         "description": "数学推理与解题",
     },
+    "math_agent": {
+        "display_name": "数学专家",
+        "icon": "calculator",
+        "color": "#6C5CE7",
+        "description": "数学推理与解题",
+    },
     "code_expert": {
+        "display_name": "编程专家",
+        "icon": "code",
+        "color": "#00CEC9",
+        "description": "代码分析与编写",
+    },
+    "code_agent": {
         "display_name": "编程专家",
         "icon": "code",
         "color": "#00CEC9",
@@ -61,13 +73,31 @@ AGENT_DISPLAY_CONFIG: dict[str, dict[str, str]] = {
         "color": "#E84393",
         "description": "文本写作与润色",
     },
+    "writing_agent": {
+        "display_name": "写作专家",
+        "icon": "pen",
+        "color": "#E84393",
+        "description": "文本写作与润色",
+    },
     "science_expert": {
         "display_name": "理科专家",
         "icon": "flask",
         "color": "#00B894",
         "description": "自然科学分析",
     },
+    "science_agent": {
+        "display_name": "理科专家",
+        "icon": "flask",
+        "color": "#00B894",
+        "description": "自然科学分析",
+    },
     "search_expert": {
+        "display_name": "搜索专家",
+        "icon": "search",
+        "color": "#636E72",
+        "description": "信息检索与整合",
+    },
+    "search_agent": {
         "display_name": "搜索专家",
         "icon": "search",
         "color": "#636E72",

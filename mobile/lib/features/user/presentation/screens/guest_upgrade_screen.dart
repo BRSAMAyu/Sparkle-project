@@ -15,8 +15,6 @@ class GuestUpgradeScreen extends ConsumerStatefulWidget {
 }
 
 class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
-  static const _tosVersion = 'v1';
-  static const _privacyVersion = 'v1';
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -42,6 +40,7 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
       return;
     }
 
+    final agreedLocale = Localizations.localeOf(context).toLanguageTag();
     setState(() => _isLoading = true);
     try {
       await ref.read(authProvider.notifier).upgradeGuest(
@@ -50,9 +49,7 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
             password: _passwordController.text.trim(),
             acceptedTos: _acceptedTos,
             acceptedPrivacy: _acceptedPrivacy,
-            tosVersion: _tosVersion,
-            privacyVersion: _privacyVersion,
-            agreedLocale: Localizations.localeOf(context).toLanguageTag(),
+            agreedLocale: agreedLocale,
           );
       if (!mounted) return;
       AppFeedback.success(context, '游客账号已升级，欢迎回来。');
@@ -73,6 +70,7 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
       return;
     }
 
+    final agreedLocale = Localizations.localeOf(context).toLanguageTag();
     setState(() => _isLoading = true);
     try {
       final SocialAuthResult? result;
@@ -87,15 +85,16 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
           result = null;
       }
       if (result == null) return;
+      final socialProvider = result.provider;
+      final socialToken = result.token;
+      final socialOpenId = result.openid;
       await ref.read(authProvider.notifier).upgradeGuestWithSocial(
-            provider: result.provider,
-            token: result.token,
-            openid: result.openid,
+            provider: socialProvider,
+            token: socialToken,
+            openid: socialOpenId,
             acceptedTos: _acceptedTos,
             acceptedPrivacy: _acceptedPrivacy,
-            tosVersion: _tosVersion,
-            privacyVersion: _privacyVersion,
-            agreedLocale: Localizations.localeOf(context).toLanguageTag(),
+            agreedLocale: agreedLocale,
           );
       if (!mounted) return;
       AppFeedback.success(context, '游客账号已升级，后续可以使用社交账号直接登录。');
@@ -231,7 +230,6 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
                       const SizedBox(height: DS.spacing16),
                       SparkleButton(
                         label: '升级为邮箱账号',
-                        variant: ButtonVariant.primary,
                         expand: true,
                         loading: _isLoading,
                         onPressed: _isLoading

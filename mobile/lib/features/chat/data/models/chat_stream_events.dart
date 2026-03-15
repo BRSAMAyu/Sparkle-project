@@ -994,13 +994,22 @@ class AgentActivityEvent extends ChatStreamEvent {
     required this.description,
     this.durationMs,
     this.resultSummary,
+    this.collaborationMode,
+    this.phase,
     super.responseId,
     super.traceId,
     super.workflowId,
     super.promptVersion,
   });
 
-  factory AgentActivityEvent.fromJson(Map<String, dynamic> json) => AgentActivityEvent(
+  factory AgentActivityEvent.fromJson(Map<String, dynamic> json) {
+    final rawMeta = json['metadata'];
+    final metadata = rawMeta is Map<String, dynamic>
+        ? rawMeta
+        : rawMeta is Map
+            ? Map<String, dynamic>.from(rawMeta)
+            : const <String, dynamic>{};
+    return AgentActivityEvent(
       agentId: json['agent_id'] as String? ?? '',
       status: json['status'] as String? ?? 'pending',
       displayName: json['display_name'] as String? ?? json['agent_id'] as String? ?? '',
@@ -1009,7 +1018,11 @@ class AgentActivityEvent extends ChatStreamEvent {
       description: json['description'] as String? ?? '',
       durationMs: (json['duration_ms'] as num?)?.toDouble(),
       resultSummary: json['result_summary'] as String?,
+      collaborationMode:
+          metadata['collaboration_mode']?.toString() ?? json['collaboration_mode'] as String?,
+      phase: metadata['phase']?.toString() ?? json['phase'] as String?,
     );
+  }
 
   final String agentId;
   final String status;
@@ -1019,6 +1032,8 @@ class AgentActivityEvent extends ChatStreamEvent {
   final String description;
   final double? durationMs;
   final String? resultSummary;
+  final String? collaborationMode;
+  final String? phase;
 }
 
 /// 透明度数据模型

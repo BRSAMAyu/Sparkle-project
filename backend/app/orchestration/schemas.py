@@ -127,7 +127,7 @@ class ExecutablePlan:
 
     # Phase 3: Multi-Agent Collaboration metadata
     agents_involved: list[str] = field(default_factory=list)  # NEW
-    collaboration_mode: Literal["single", "sequential", "parallel"] = "single"  # NEW
+    collaboration_mode: Literal["single", "sequential", "parallel", "debate", "delegation"] = "single"  # NEW
     collaboration_order: list[dict[str, str]] = field(default_factory=list)  # NEW
     collaboration_narrative: str | None = None  # Phase 3: Collaboration narrative
 

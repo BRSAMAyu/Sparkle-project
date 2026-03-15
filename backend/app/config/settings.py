@@ -430,6 +430,9 @@ class Settings(BaseSettings):
     ENABLE_WEEKLY_LEARNING_REPORT: bool = False
     ENABLE_PROGRESS_COMPARISONS: bool = False
     ENABLE_SUMMARIZATION_WORKER: bool = True
+    ENABLE_AGENT_QUALITY_FEEDBACK: bool = True
+    ENABLE_AGENT_LLM_COLLAB_ROUTING: bool = True
+    AGENT_COMBINATION_EXPLORATION_RATE: float = 0.1
 
     # Optional Graph Sync Worker
     ENABLE_GRAPH_SYNC_WORKER: bool = False
