@@ -81,7 +81,7 @@ async def websocket_endpoint(websocket: WebSocket):
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
     try:
-        decode_token(token, expected_type="access")
+        await decode_token(token, expected_type="access")
     except Exception:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return

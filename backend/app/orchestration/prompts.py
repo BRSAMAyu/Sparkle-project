@@ -175,6 +175,10 @@ AGENT_SYSTEM_PROMPT = """你是 Sparkle（星火），一个智能学习助手�
 
 
 
+{collaboration_narrative_section}
+
+
+
 {mode_strategy_section}
 
 
@@ -256,6 +260,10 @@ MODE_SYSTEM_PROMPTS = {
 
 
 {orchestration_context_section}
+
+
+
+{collaboration_narrative_section}
 
 
 
@@ -357,6 +365,10 @@ MODE_SYSTEM_PROMPTS = {
 
 
 
+{collaboration_narrative_section}
+
+
+
 {mode_strategy_section}
 
 
@@ -452,6 +464,10 @@ MODE_SYSTEM_PROMPTS = {
 
 
 {orchestration_context_section}
+
+
+
+{collaboration_narrative_section}
 
 
 
@@ -630,6 +646,7 @@ def build_system_prompt(
     orchestration_trace = None
     mode_strategy_payload = None
     persona_constraints_summary = ""
+    collaboration_narrative = ""
     if isinstance(user_context, dict):
         raw_trace = user_context.get("orchestration_trace")
         if isinstance(raw_trace, str) and raw_trace:
@@ -650,6 +667,7 @@ def build_system_prompt(
             mode_strategy_payload = raw_strategy
 
         persona_constraints_summary = str(user_context.get("persona_constraints_summary") or "").strip()
+        collaboration_narrative = str(user_context.get("collaboration_narrative") or "").strip()
 
 
     # 1. 首先检查 AgentProfile 是否有专用 prompt
@@ -750,6 +768,14 @@ def build_system_prompt(
         if summary_lines:
             orchestration_context_section = "\n## 编排上下文 [L2 引导]\n" + "\n".join(summary_lines)
 
+    collaboration_narrative_section = ""
+    if collaboration_narrative:
+        collaboration_narrative_section = (
+            "\n## 协作叙事提示 [L2 引导]\n"
+            "请在回答开头用一句自然的话提及协作过程，不要像系统通知。\n"
+            f"{collaboration_narrative}"
+        )
+
     mode_strategy_section = ""
     if isinstance(mode_strategy_payload, dict):
         output_structure = mode_strategy_payload.get("output_structure") or []
@@ -813,6 +839,11 @@ def build_system_prompt(
                 orchestration_context_section,
                 reason="本轮以精简为主；编排背景只保留最小必要信息。",
             )
+        if collaboration_narrative_section:
+            collaboration_narrative_section = _soften_section(
+                collaboration_narrative_section,
+                reason="本轮以精简为主；协作提示仅作轻量说明。",
+            )
         if persona_section:
             persona_section = _soften_section(
                 persona_section,
@@ -844,6 +875,7 @@ def build_system_prompt(
         "dual_core_section": dual_core_section,
         "understanding_depth_section": understanding_depth_section,
         "orchestration_context_section": orchestration_context_section,
+        "collaboration_narrative_section": collaboration_narrative_section,
         "mode_strategy_section": mode_strategy_section,
         "persona_section": persona_section,
         "cognitive_prism_section": cognitive_prism_section,
@@ -859,6 +891,7 @@ def build_system_prompt(
             "dual_core_section": 2,
             "understanding_depth_section": 2,
             "orchestration_context_section": 2,
+            "collaboration_narrative_section": 2,
             "mode_strategy_section": 2,
             "persona_section": 2,
             "cognitive_prism_section": cognitive_priority,
@@ -872,6 +905,7 @@ def build_system_prompt(
     dual_core_section = section_map["dual_core_section"]
     understanding_depth_section = section_map["understanding_depth_section"]
     orchestration_context_section = section_map["orchestration_context_section"]
+    collaboration_narrative_section = section_map["collaboration_narrative_section"]
     mode_strategy_section = section_map["mode_strategy_section"]
     persona_section = section_map["persona_section"]
     cognitive_prism_section = section_map["cognitive_prism_section"]
@@ -893,6 +927,7 @@ def build_system_prompt(
                 dual_core_section=dual_core_section,
                 understanding_depth_section=understanding_depth_section,
                 orchestration_context_section=orchestration_context_section,
+                collaboration_narrative_section=collaboration_narrative_section,
                 mode_strategy_section=mode_strategy_section,
                 persona_section=persona_section,
                 context_briefing_section=context_briefing_section,
@@ -925,6 +960,8 @@ def build_system_prompt(
              prompt += f"\n\n## 双核心路由指令 [L2 引导]\n{dual_core_instruction}"
         if orchestration_context_section:
              prompt += f"\n\n{orchestration_context_section}"
+        if collaboration_narrative_section:
+             prompt += f"\n\n{collaboration_narrative_section}"
         if mode_strategy_section:
              prompt += f"\n\n{mode_strategy_section}"
         if persona_section:

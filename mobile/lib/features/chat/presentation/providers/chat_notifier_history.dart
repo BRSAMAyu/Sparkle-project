@@ -50,6 +50,7 @@ extension ChatNotifierHistory on ChatNotifier {
       clearPendingContentReview: true,
       clearTransparency: true,
       activeTools: const [],
+      agentActivities: const [],
       reasoningSteps: const [],
       pendingInterventions: const [],
     );

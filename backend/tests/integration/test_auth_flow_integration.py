@@ -31,6 +31,7 @@ from app.models.user import User
 from app.core.security import (
     create_access_token,
     decode_token,
+    decode_token_sync,
     get_password_hash,
     verify_password
 )
@@ -68,7 +69,7 @@ async def test_user_with_password(db: AsyncSession) -> User:
 @pytest.fixture
 def valid_token(test_user_with_password: User) -> str:
     """Generate a valid JWT token"""
-    return create_access_token(data={"sub": test_user_with_password.email})
+    return create_access_token(data={"sub": str(test_user_with_password.id)})
 
 
 @pytest.fixture
@@ -82,7 +83,7 @@ def expired_token(test_user_with_password: User) -> str:
 
     # Encode manually with expired timestamp
     payload = {
-        "sub": test_user_with_password.email,
+        "sub": str(test_user_with_password.id),
         "exp": past_time,
         "iat": datetime.now(UTC),
         "aud": settings.JWT_AUDIENCE,
@@ -115,7 +116,7 @@ class TestJWTTokens:
     def test_create_access_token(self, test_user_with_password: User):
         """Test creating access token"""
         token = create_access_token(
-            data={"sub": test_user_with_password.email}
+            data={"sub": str(test_user_with_password.id)}
         )
 
         assert isinstance(token, str)
@@ -129,7 +130,7 @@ class TestJWTTokens:
             audience=settings.JWT_AUDIENCE,
         )
 
-        assert payload["sub"] == test_user_with_password.email
+        assert payload["sub"] == str(test_user_with_password.id)
         assert "exp" in payload
         assert "iat" in payload
 
@@ -138,7 +139,7 @@ class TestJWTTokens:
         from app.core.security import create_access_token
 
         token = create_access_token(
-            data={"sub": test_user_with_password.email},
+            data={"sub": str(test_user_with_password.id)},
             expires_delta=timedelta(minutes=30)
         )
 
@@ -157,30 +158,30 @@ class TestJWTTokens:
         # Should be approximately 30 minutes (give or take a few seconds)
         assert 1790 <= time_diff <= 1810
 
-    def test_verify_valid_token(self, valid_token: str):
+    def test_verify_valid_token(self, valid_token: str, test_user_with_password: User):
         """Test verifying a valid token"""
-        payload = decode_token(valid_token)
+        payload = decode_token_sync(valid_token)
 
         assert payload is not None
         assert "sub" in payload
-        assert payload["sub"] == "auth_test@example.com"
+        assert payload["sub"] == str(test_user_with_password.id)
 
     def test_verify_expired_token(self, expired_token: str):
         """Test verifying an expired token"""
         with pytest.raises(JWTError):
-            decode_token(expired_token)
+            decode_token_sync(expired_token)
 
     def test_verify_invalid_token(self):
         """Test verifying an invalid token"""
         invalid_token = "not.a.valid.token"
         with pytest.raises(JWTError):
-            decode_token(invalid_token)
+            decode_token_sync(invalid_token)
 
     def test_token_with_different_secret(self, test_user_with_password: User):
         """Test token created with different secret fails verification"""
         # Create token with wrong secret
         payload = {
-            "sub": test_user_with_password.email,
+            "sub": str(test_user_with_password.id),
             "exp": datetime.now(UTC) + timedelta(minutes=30),
             "aud": settings.JWT_AUDIENCE,
             "iss": settings.JWT_ISSUER,
@@ -194,7 +195,7 @@ class TestJWTTokens:
 
         # Should fail verification
         with pytest.raises(JWTError):
-            decode_token(token)
+            decode_token_sync(token)
 
 
 # ============================================================
@@ -384,14 +385,14 @@ class TestUserLoginFlow:
         assert verify_password(password, user.hashed_password) is True
 
         # Generate token
-        token = create_access_token(data={"sub": user.email})
+        token = create_access_token(data={"sub": str(user.id)})
 
         assert token is not None
 
         # Verify token
-        payload = decode_token(token)
+        payload = await decode_token(token)
         assert payload is not None
-        assert payload["sub"] == email
+        assert payload["sub"] == str(user.id)
 
     @pytest.mark.asyncio
     async def test_login_with_wrong_password(
@@ -441,17 +442,17 @@ class TestTokenRefresh:
         """Test refreshing token before expiration"""
         # Create initial token
         initial_token = create_access_token(
-            data={"sub": test_user_with_password.email}
+            data={"sub": str(test_user_with_password.id)}
         )
 
         # Simulate refresh (create new token)
         new_token = create_access_token(
-            data={"sub": test_user_with_password.email}
+            data={"sub": str(test_user_with_password.id)}
         )
 
         # Both tokens should be valid
-        assert decode_token(initial_token) is not None
-        assert decode_token(new_token) is not None
+        assert decode_token_sync(initial_token) is not None
+        assert decode_token_sync(new_token) is not None
 
         # Tokens should be different (different iat timestamps)
         assert initial_token != new_token
@@ -578,7 +579,7 @@ class TestSecurity:
             audience=settings.JWT_AUDIENCE,
         )
 
-        # Should only contain sub (email), not password or other sensitive data
+        # Should only contain sub (user_id), not password or other sensitive data
         assert "password" not in payload
         assert "password_hash" not in payload
         assert "sub" in payload

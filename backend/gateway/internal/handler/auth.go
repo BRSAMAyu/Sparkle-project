@@ -107,10 +107,21 @@ func (h *AuthHandler) AppleLogin(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "签发令牌失败"})
 		return
 	}
+	refreshToken, err := h.createRefreshToken(user.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "签发刷新令牌失败"})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"access_token": accessToken,
+		"refresh_token": refreshToken,
 		"token_type":   "bearer",
+		"token": gin.H{
+			"access_token":  accessToken,
+			"refresh_token": refreshToken,
+			"token_type":    "bearer",
+		},
 		"user": gin.H{
 			"id":       h.uuidToString(user.ID),
 			"username": user.Username,
@@ -127,11 +138,39 @@ func (h *AuthHandler) randomString(n int) string {
 }
 
 func (h *AuthHandler) createAccessToken(userID pgtype.UUID) (string, error) {
+	now := time.Now()
 	claims := jwt.MapClaims{
-		"sub": h.uuidToString(userID),
-		"exp": time.Now().Add(time.Hour * 24).Unix(),
-		"iat": time.Now().Unix(),
+		"sub":  h.uuidToString(userID),
+		"exp":  now.Add(time.Hour * 24).Unix(),
+		"iat":  now.Unix(),
+		"jti":  uuid.New().String(),
 		"type": "access",
+	}
+	if h.cfg.JWTIssuer != "" {
+		claims["iss"] = h.cfg.JWTIssuer
+	}
+	if h.cfg.JWTAudience != "" {
+		claims["aud"] = h.cfg.JWTAudience
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(h.cfg.JWTSecret))
+}
+
+func (h *AuthHandler) createRefreshToken(userID pgtype.UUID) (string, error) {
+	now := time.Now()
+	claims := jwt.MapClaims{
+		"sub":  h.uuidToString(userID),
+		"exp":  now.Add(7 * 24 * time.Hour).Unix(),
+		"iat":  now.Unix(),
+		"jti":  uuid.New().String(),
+		"type": "refresh",
+	}
+	if h.cfg.JWTIssuer != "" {
+		claims["iss"] = h.cfg.JWTIssuer
+	}
+	if h.cfg.JWTAudience != "" {
+		claims["aud"] = h.cfg.JWTAudience
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

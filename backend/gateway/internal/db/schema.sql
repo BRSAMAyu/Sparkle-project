@@ -3724,6 +3724,7 @@ CREATE TABLE users (
     username character varying(100) NOT NULL,
     email character varying(255) NOT NULL,
     hashed_password character varying(255) NOT NULL,
+    email_verified boolean NOT NULL,
     full_name character varying(100),
     nickname character varying(100),
     avatar_url character varying(500),
@@ -3743,6 +3744,7 @@ CREATE TABLE users (
     wechat_unionid character varying(255),
     registration_source character varying(50) NOT NULL,
     last_login_at timestamp without time zone,
+    token_revoked_before timestamp without time zone,
     is_minor boolean,
     age_verified boolean NOT NULL,
     age_verification_source character varying(50),
@@ -10082,5 +10084,4 @@ ALTER TABLE ONLY word_books
 --
 -- PostgreSQL database dump complete
 --
-
 

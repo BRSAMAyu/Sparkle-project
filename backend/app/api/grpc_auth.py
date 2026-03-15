@@ -46,7 +46,7 @@ class AuthInterceptor(grpc.aio.ServerInterceptor):
 
         token = auth_header.split(" ")[1]
         try:
-            decode_token(token, expected_type="access")
+            await decode_token(token, expected_type="access")
             return await continuation(handler_call_details)
         except Exception as e:
             logger.warning(f"INVALID TOKEN in gRPC call to {method}: {e}")

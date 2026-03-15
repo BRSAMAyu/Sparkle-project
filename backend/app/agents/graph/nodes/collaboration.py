@@ -12,10 +12,12 @@ from langchain_core.messages import BaseMessage, HumanMessage
 from loguru import logger
 
 from app.agents.graph.expert_registry import resolve_node_name
+from app.orchestration.agent_activity import AGENT_DISPLAY_CONFIG
 from app.agents.graph.state import SparkleState
+from app.orchestration.agent_activity import emit_agent_activity, get_stream_callback
 
 
-async def collaboration_node(state: SparkleState) -> SparkleState:
+async def collaboration_node(state: SparkleState, config: dict | None = None) -> SparkleState:
     """Multi-Agent Collaboration Node
 
     Collaboration modes:
@@ -27,6 +29,7 @@ async def collaboration_node(state: SparkleState) -> SparkleState:
     1. "Create final exam study plan" -> galaxy_guide (knowledge graph) + exam_oracle (exam focus) + time_tutor (schedule)
     2. "I'm weak in math, how to prepare for calculus exam" -> galaxy_guide (prerequisites) + exam_oracle (exam analysis)
     """
+    stream_cb = get_stream_callback(config)
     messages = state["messages"]
 
     user_message = _get_latest_human_message(messages)
@@ -67,6 +70,11 @@ async def collaboration_node(state: SparkleState) -> SparkleState:
     # 3. Execute agents in sequence (sequential mode)
     # Note: This just sets the routing order, actual execution done by LangGraph edges
     collaboration_index = state.get("collaboration_index", 0)
+    if collaboration_index == 0 and collaboration_plan.get("agents"):
+        agents = collaboration_plan.get("agents") or []
+        for idx, agent_id in enumerate(agents):
+            status = "active" if idx == 0 else "pending"
+            await emit_agent_activity(stream_cb, agent_id=agent_id, status=status)
     if collaboration_index >= len(collaboration_plan["order"]):
         state["next_step"] = "aggregator"
         state["active_agent"] = "collaboration"
@@ -233,11 +241,24 @@ async def collaboration_aggregator_node(state: SparkleState) -> SparkleState:
                 all_tool_calls.append(tool_call)
 
     # Record collaboration metadata
-    state["collaboration_results"] = {
+    collaboration_results = {
         "agents_involved": agents_involved,
         "tool_calls_count": len(all_tool_calls),
         "collaboration_mode": state.get("collaboration_mode", "single")
     }
+    state["collaboration_results"] = collaboration_results
+
+    # Phase 3 Step 3A: Collaboration narrative (template-based)
+    narrative = ""
+    if agents_involved:
+        display_names = []
+        for agent_id in agents_involved:
+            display_name = AGENT_DISPLAY_CONFIG.get(str(agent_id), {}).get("display_name")
+            display_names.append(display_name or str(agent_id))
+        if display_names:
+            narrative = f"本次回答由 {'、'.join(display_names)} 协作完成。"
+            state["collaboration_narrative"] = narrative
+            collaboration_results["narrative"] = narrative
 
     logger.info(
         f"Collaboration aggregated: {len(agents_involved)} agents, "

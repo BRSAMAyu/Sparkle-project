@@ -11,6 +11,7 @@ import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart'
 import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_state.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart';
+import 'package:sparkle/features/chat/presentation/widgets/agent_workflow_panel.dart';
 import 'package:sparkle/features/chat/presentation/widgets/ai_status_indicator.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_bubble.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_input.dart';
@@ -303,8 +304,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                     return Padding(
                                       padding: const EdgeInsets.only(
                                           bottom: DS.spacing12),
-                                      child: _StreamingBubble(
-                                        content: chatState.streamingContent,
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          _StreamingBubble(
+                                            content: chatState.streamingContent,
+                                          ),
+                                          AgentWorkflowPanel(
+                                            liveActivities:
+                                                chatState.agentActivities,
+                                          ),
+                                        ],
                                       ),
                                     );
                                   }

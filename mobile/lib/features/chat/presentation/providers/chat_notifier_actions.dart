@@ -109,7 +109,11 @@ extension ChatNotifierActions on ChatNotifier {
   }
 
   void startNewSession() {
-    state = state.copyWith(clearConversation: true, messages: []);
+    state = state.copyWith(
+      clearConversation: true,
+      messages: [],
+      agentActivities: const [],
+    );
     if (DemoDataService.isDemoMode) {
       // Keep demo history? Or clear?
       // Usually "Start New Session" means clear.
@@ -118,7 +122,11 @@ extension ChatNotifierActions on ChatNotifier {
 
   Future<void> switchPlanSession(String? planId) async {
     if (planId == null) {
-      state = state.copyWith(clearConversation: true, messages: []);
+      state = state.copyWith(
+        clearConversation: true,
+        messages: [],
+        agentActivities: const [],
+      );
       return;
     }
 
@@ -143,6 +151,7 @@ extension ChatNotifierActions on ChatNotifier {
       streamingContent: '',
       clearAiStatus: true,
       clearReasoning: true,
+      agentActivities: const [],
     );
 
     await loadConversationHistory(sessionId);

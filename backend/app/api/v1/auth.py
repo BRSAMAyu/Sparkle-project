@@ -2,7 +2,9 @@
 Authentication API
 Login, Register, Refresh Token, Social Login
 """
-from datetime import timedelta
+import asyncio
+import uuid
+from datetime import datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -14,15 +16,31 @@ from app.config import settings
 from app.core.account_lockout import account_lockout_service
 from app.core.rate_limiting import limiter
 from app.core.security import (
+    blacklist_token,
     create_access_token,
     create_refresh_token,
     decode_token,
     get_password_hash,
+    set_user_revoked_before,
     verify_password,
 )
+from app.core.cache import cache_service
+from app.core.email_service import email_service
 from app.db.session import get_db
 from app.models.user import User
-from app.schemas.user import RefreshTokenRequest, SocialLoginRequest, UserBase, UserLogin, UserRegister, UserProfile
+from app.schemas.user import (
+    ForgotPasswordRequest,
+    LogoutRequest,
+    RefreshTokenRequest,
+    ResetPasswordRequest,
+    SocialLoginRequest,
+    UserBase,
+    UserLogin,
+    UserRegister,
+    UserProfile,
+    VerifyEmailRequest,
+)
+from app.api.deps import get_current_user
 
 router = APIRouter()
 
@@ -30,6 +48,12 @@ router = APIRouter()
 AUTH_RATE_LIMIT = "50/15minutes" if settings.DEBUG else "5/15minutes"
 SOCIAL_RATE_LIMIT = "50/15minutes" if settings.DEBUG else "5/15minutes"
 REFRESH_RATE_LIMIT = "100/15minutes" if settings.DEBUG else "10/15minutes"
+FORGOT_RATE_LIMIT = "30/15minutes" if settings.DEBUG else "3/15minutes"
+VERIFY_RATE_LIMIT = "30/15minutes" if settings.DEBUG else "5/15minutes"
+RESET_RATE_LIMIT = "30/15minutes" if settings.DEBUG else "5/15minutes"
+
+PASSWORD_RESET_TTL_SECONDS = 15 * 60
+EMAIL_VERIFY_TTL_SECONDS = 24 * 60 * 60
 
 @router.post("/register", response_model=Any)
 @limiter.limit(AUTH_RATE_LIMIT)
@@ -67,6 +91,24 @@ async def register(
     await db.refresh(user)
 
     logger.info(f"User registered successfully: {user.username} (ID: {user.id})")
+
+    # Send verification email (async, non-blocking)
+    try:
+        verify_token = uuid.uuid4().hex
+        await cache_service.set(
+            f"email_verify:{verify_token}",
+            str(user.id),
+            ttl=EMAIL_VERIFY_TTL_SECONDS,
+        )
+        asyncio.create_task(
+            email_service.send_verification_email(
+                to_email=user.email,
+                verify_token=verify_token,
+                username=user.nickname or user.username,
+            )
+        )
+    except Exception as e:
+        logger.warning(f"Failed to schedule verification email: {e}")
 
     # Create tokens
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -315,7 +357,8 @@ async def social_login(
             nickname=user_info.get('name') or (data.nickname or f"{data.provider.capitalize()} User"),
             avatar_url=user_info.get('picture') or data.avatar_url,
             registration_source=data.provider,
-            is_active=True
+            is_active=True,
+            email_verified=(data.provider == "google" or data.provider == "apple")
         )
 
         if data.provider == 'google':
@@ -326,6 +369,13 @@ async def social_login(
         db.add(user)
         await db.commit()
         await db.refresh(user)
+    else:
+        # Ensure verified flag for trusted providers
+        if data.provider in ("google", "apple") and not user.email_verified:
+            user.email_verified = True
+            db.add(user)
+            await db.commit()
+            await db.refresh(user)
 
     # Generate tokens
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -357,7 +407,7 @@ async def refresh_token(
     Refresh access token
     """
     try:
-        payload = decode_token(data.refresh_token, expected_type="refresh")
+        payload = await decode_token(data.refresh_token, expected_type="refresh")
         user_id = payload.get("sub")
         if not user_id:
             raise HTTPException(status_code=401, detail="登录令牌无效，请重新登录")
@@ -366,17 +416,183 @@ async def refresh_token(
         if not user or not user.is_active:
             raise HTTPException(status_code=401, detail="登录令牌无效，请重新登录")
 
+        # Rotate refresh token: revoke old refresh token jti
+        await blacklist_token(payload.get("jti"), payload.get("exp"))
+
         access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = create_access_token(
             data={"sub": user_id}, expires_delta=access_token_expires
         )
+        new_refresh_token = create_refresh_token(data={"sub": user_id})
 
         return {
             "access_token": access_token,
-            "token_type": "bearer"
+            "refresh_token": new_refresh_token,
+            "token_type": "bearer",
+            "token": {
+                "access_token": access_token,
+                "refresh_token": new_refresh_token,
+                "token_type": "bearer"
+            }
         }
     except Exception:
         raise HTTPException(status_code=401, detail="刷新令牌无效，请重新登录")
+
+
+@router.post("/logout", response_model=Any)
+@limiter.limit(REFRESH_RATE_LIMIT)
+async def logout(
+    request: Request,
+    data: LogoutRequest | None = None,
+):
+    """
+    Logout by revoking refresh/access tokens via Redis blacklist.
+    """
+    # Revoke refresh token if provided
+    refresh_token = data.refresh_token if data else None
+    if refresh_token:
+        try:
+            payload = await decode_token(refresh_token, expected_type="refresh")
+            await blacklist_token(payload.get("jti"), payload.get("exp"))
+        except Exception:
+            # Ignore invalid/revoked refresh tokens
+            pass
+
+    # Revoke access token from Authorization header if present
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        access_token = auth_header.removeprefix("Bearer ").strip()
+        if access_token:
+            try:
+                payload = await decode_token(access_token, expected_type="access")
+                await blacklist_token(payload.get("jti"), payload.get("exp"))
+            except Exception:
+                pass
+
+    return {"detail": "Logged out"}
+
+
+@router.post("/forgot-password", response_model=Any)
+@limiter.limit(FORGOT_RATE_LIMIT)
+async def forgot_password(
+    request: Request,
+    data: ForgotPasswordRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Request password reset email (always returns success message).
+    """
+    response = {"detail": "如果该邮箱已注册，重置邮件已发送"}
+    try:
+        result = await db.execute(select(User).where(User.email == data.email))
+        user = result.scalars().first()
+        if not user:
+            return response
+
+        reset_token = uuid.uuid4().hex
+        await cache_service.set(
+            f"pwd_reset:{reset_token}",
+            str(user.id),
+            ttl=PASSWORD_RESET_TTL_SECONDS,
+        )
+        asyncio.create_task(
+            email_service.send_password_reset_email(
+                to_email=user.email,
+                reset_token=reset_token,
+                username=user.nickname or user.username,
+            )
+        )
+    except Exception as e:
+        logger.warning(f"Failed to handle forgot-password: {e}")
+    return response
+
+
+@router.post("/reset-password", response_model=Any)
+@limiter.limit(RESET_RATE_LIMIT)
+async def reset_password(
+    request: Request,
+    data: ResetPasswordRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Reset password with reset token.
+    """
+    key = f"pwd_reset:{data.token}"
+    user_id = await cache_service.get(key)
+    if not user_id:
+        raise HTTPException(status_code=400, detail="重置码无效或已过期")
+
+    user = await db.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=400, detail="用户不存在")
+
+    user.hashed_password = get_password_hash(data.new_password)
+    user.token_revoked_before = datetime.utcnow()
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
+
+    await cache_service.delete(key)
+    await set_user_revoked_before(str(user.id), user.token_revoked_before)
+
+    return {"detail": "密码已重置，请重新登录"}
+
+
+@router.post("/send-verification", response_model=Any)
+@limiter.limit(VERIFY_RATE_LIMIT)
+async def send_verification_email(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Send email verification code to current user.
+    """
+    if current_user.email_verified:
+        return {"detail": "邮箱已验证"}
+
+    verify_token = uuid.uuid4().hex
+    await cache_service.set(
+        f"email_verify:{verify_token}",
+        str(current_user.id),
+        ttl=EMAIL_VERIFY_TTL_SECONDS,
+    )
+    asyncio.create_task(
+        email_service.send_verification_email(
+            to_email=current_user.email,
+            verify_token=verify_token,
+            username=current_user.nickname or current_user.username,
+        )
+    )
+    return {"detail": "验证邮件已发送"}
+
+
+@router.post("/verify-email", response_model=Any)
+@limiter.limit(VERIFY_RATE_LIMIT)
+async def verify_email(
+    request: Request,
+    data: VerifyEmailRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Verify email with token.
+    """
+    key = f"email_verify:{data.token}"
+    user_id = await cache_service.get(key)
+    if not user_id:
+        raise HTTPException(status_code=400, detail="验证码无效或已过期")
+
+    user = await db.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=400, detail="用户不存在")
+
+    if not user.email_verified:
+        user.email_verified = True
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+
+    await cache_service.delete(key)
+    return {"detail": "邮箱验证成功"}
 
 
 @router.post("/guest", response_model=Any)

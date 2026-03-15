@@ -175,6 +175,15 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str = ""
     WS_ALLOW_QUERY_TOKEN: bool | None = None
 
+    # Email (SMTP)
+    EMAIL_ENABLED: bool = False
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    EMAIL_FROM: str = ""
+    EMAIL_FROM_NAME: str = "Sparkle"
+
     # WeChat Configuration
     WECHAT_APP_ID: str = ""
     WECHAT_APP_SECRET: str = ""

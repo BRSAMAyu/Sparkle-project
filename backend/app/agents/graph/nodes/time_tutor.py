@@ -1,3 +1,5 @@
+import time
+
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from app.agents.graph.llm_factory import LLMFactory
@@ -9,14 +11,19 @@ from app.agents.graph.nodes.registry_tools import (
     suggest_focus_session,
 )
 from app.agents.graph.state import SparkleState
+from app.orchestration.agent_activity import emit_agent_activity, get_stream_callback
 
 # --- 2. 节点逻辑 ---
 
-async def time_tutor_node(state: SparkleState):
+async def time_tutor_node(state: SparkleState, config: dict | None = None):
     """
     Time Tutor 专家节点
     负责任务管理、日程规划
     """
+    stream_cb = get_stream_callback(config)
+    agent_id = "time_tutor"
+    await emit_agent_activity(stream_cb, agent_id=agent_id, status="active")
+    started_at = time.time()
     messages = state["messages"]
 
     # 1. Handle Collaboration Context
@@ -65,7 +72,30 @@ async def time_tutor_node(state: SparkleState):
     ]
     llm_with_tools = llm.bind_tools(tools)
 
-    response = await llm_with_tools.ainvoke(messages)
+    try:
+        response = await llm_with_tools.ainvoke(messages)
+        duration_ms = (time.time() - started_at) * 1000
+        result_summary = None
+        content = getattr(response, "content", None)
+        if content:
+            result_summary = str(content)[:80]
+        await emit_agent_activity(
+            stream_cb,
+            agent_id=agent_id,
+            status="completed",
+            duration_ms=duration_ms,
+            result_summary=result_summary,
+        )
+    except Exception as exc:
+        duration_ms = (time.time() - started_at) * 1000
+        await emit_agent_activity(
+            stream_cb,
+            agent_id=agent_id,
+            status="error",
+            duration_ms=duration_ms,
+            result_summary=str(exc)[:80],
+        )
+        raise
 
     return {
         "messages": [response],

@@ -41,6 +41,7 @@ class ChatState {
     this.currentAgentName,
     this.activeAgentType,
     this.activeTools = const [],
+    this.agentActivities = const [],
     this.dailyTokens,
     this.dailyTokenLimit,
     this.dailyCostMicroUsd,
@@ -81,6 +82,7 @@ class ChatState {
   final String? currentAgentName;
   final String? activeAgentType;
   final List<String> activeTools;
+  final List<AgentActivityEvent> agentActivities;
   final int? dailyTokens;
   final int? dailyTokenLimit;
   final int? dailyCostMicroUsd;
@@ -136,6 +138,7 @@ class ChatState {
     String? currentAgentName,
     String? activeAgentType,
     List<String>? activeTools,
+    List<AgentActivityEvent>? agentActivities,
     int? dailyTokens,
     int? dailyTokenLimit,
     int? dailyCostMicroUsd,
@@ -199,6 +202,7 @@ class ChatState {
         currentAgentName: currentAgentName ?? this.currentAgentName,
         activeAgentType: activeAgentType ?? this.activeAgentType,
         activeTools: activeTools ?? this.activeTools,
+        agentActivities: agentActivities ?? this.agentActivities,
         dailyTokens: dailyTokens ?? this.dailyTokens,
         dailyTokenLimit: dailyTokenLimit ?? this.dailyTokenLimit,
         dailyCostMicroUsd: dailyCostMicroUsd ?? this.dailyCostMicroUsd,

@@ -53,7 +53,7 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
         self._max_cache_bytes = 2 * 1024 * 1024
         self._max_sse_cache_bytes = 1024 * 1024
 
-    def _extract_user_id(self, request: Request) -> str | None:
+    async def _extract_user_id(self, request: Request) -> str | None:
         auth_header = request.headers.get("Authorization", "")
         if not auth_header.startswith("Bearer "):
             return None
@@ -62,7 +62,7 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
             return None
         try:
             from app.core.security import decode_token
-            payload = decode_token(token, expected_type="access")
+            payload = await decode_token(token, expected_type="access")
             return payload.get("sub")
         except Exception:
             return None
@@ -117,7 +117,7 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
         request._body = body_bytes
         request_hash = hashlib.sha256(body_bytes).hexdigest() if body_bytes else None
 
-        user_id = self._extract_user_id(request)
+        user_id = await self._extract_user_id(request)
         cache_key = f"{user_id}:{idempotency_key}" if user_id else idempotency_key
 
         # 检查是否已处理

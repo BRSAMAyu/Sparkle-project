@@ -41,6 +41,7 @@ class ChatMessageModel {
     this.uxEnvelope,
     this.orchestrationTrace,
     this.modeSuggestion,
+    this.agentActivities = const [],
   })  : id = id ?? const Uuid().v4(),
         createdAt = createdAt ?? DateTime.now();
 
@@ -112,6 +113,9 @@ class ChatMessageModel {
   @JsonKey(includeFromJson: false, includeToJson: false)
   final Map<String, dynamic>? modeSuggestion;
 
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  final List<Map<String, dynamic>> agentActivities;
+
   Map<String, dynamic> toJson() => _$ChatMessageModelToJson(this);
 
   ChatMessageModel copyWith({
@@ -141,6 +145,7 @@ class ChatMessageModel {
     Map<String, dynamic>? uxEnvelope,
     Map<String, dynamic>? orchestrationTrace,
     Map<String, dynamic>? modeSuggestion,
+    List<Map<String, dynamic>>? agentActivities,
   }) =>
       ChatMessageModel(
         id: id ?? this.id,
@@ -169,6 +174,7 @@ class ChatMessageModel {
         uxEnvelope: uxEnvelope ?? this.uxEnvelope,
         orchestrationTrace: orchestrationTrace ?? this.orchestrationTrace,
         modeSuggestion: modeSuggestion ?? this.modeSuggestion,
+        agentActivities: agentActivities ?? this.agentActivities,
       );
 }
 

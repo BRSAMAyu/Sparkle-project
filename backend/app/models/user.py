@@ -31,6 +31,7 @@ class User(BaseModel):
     username = Column(String(100), unique=True, nullable=False)
     email = Column(String(255), unique=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
+    email_verified = Column(Boolean, default=False, nullable=False)
     full_name = Column(String(100), nullable=True)
     nickname = Column(String(100), nullable=True)
     avatar_url = Column(String(500), nullable=True)
@@ -66,6 +67,7 @@ class User(BaseModel):
     # 🆕 注册来源 (analytics)
     registration_source = Column(String(50), default="email", nullable=False) # email, google, apple, wechat
     last_login_at = Column(DateTime, nullable=True)
+    token_revoked_before = Column(DateTime, nullable=True)
 
     # 🆕 年龄校验 (V3.1)
     is_minor = Column(Boolean, nullable=True)  # None = unknown, True/False = verified

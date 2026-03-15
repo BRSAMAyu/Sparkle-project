@@ -38,7 +38,7 @@ def _infer_plan_type(state: SparkleState) -> str:
     return "routine"
 
 # 2. 路由节点函数
-async def router_node(state: SparkleState):
+async def router_node(state: SparkleState, config: dict | None = None):
     """
     语义路由节点
     分析用户意图，分发给专业 Agent

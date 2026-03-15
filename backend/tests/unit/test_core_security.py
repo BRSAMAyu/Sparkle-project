@@ -13,7 +13,7 @@ from app.core.security import (
     get_password_hash,
     create_access_token,
     create_refresh_token,
-    decode_token,
+    decode_token_sync as decode_token,
     pwd_context
 )
 
@@ -80,7 +80,7 @@ class TestAccessTokenCreation:
 
     def test_create_access_token_default_expiry(self):
         """Test creating token with default expiry"""
-        data = {"sub": "user123"}
+        data = {"sub": "00000000-0000-0000-0000-000000000123"}
         token = create_access_token(data)
 
         assert token is not None
@@ -89,7 +89,7 @@ class TestAccessTokenCreation:
 
     def test_create_access_token_custom_expiry(self):
         """Test creating token with custom expiry"""
-        data = {"sub": "user123"}
+        data = {"sub": "00000000-0000-0000-0000-000000000123"}
         expiry = timedelta(minutes=30)
         token = create_access_token(data, expires_delta=expiry)
 
@@ -97,7 +97,7 @@ class TestAccessTokenCreation:
 
     def test_create_access_token_includes_required_claims(self):
         """Test that token includes required claims"""
-        data = {"sub": "user123", "role": "user"}
+        data = {"sub": "00000000-0000-0000-0000-000000000123", "role": "user"}
         token = create_access_token(data)
 
         payload = decode_token(token)
@@ -107,12 +107,12 @@ class TestAccessTokenCreation:
         assert "jti" in payload
         assert "type" in payload
         assert payload["type"] == "access"
-        assert payload["sub"] == "user123"
+        assert payload["sub"] == "00000000-0000-0000-0000-000000000123"
         assert payload["role"] == "user"
 
     def test_create_access_token_expiration_time(self):
         """Test that token expiration is set correctly"""
-        data = {"sub": "user123"}
+        data = {"sub": "00000000-0000-0000-0000-000000000123"}
         expiry = timedelta(minutes=15)
         before_creation = datetime.now(UTC)
 
@@ -134,7 +134,7 @@ class TestRefreshTokenCreation:
 
     def test_create_refresh_token(self):
         """Test creating refresh token"""
-        data = {"sub": "user123"}
+        data = {"sub": "00000000-0000-0000-0000-000000000123"}
         token = create_refresh_token(data)
 
         assert token is not None
@@ -142,7 +142,7 @@ class TestRefreshTokenCreation:
 
     def test_create_refresh_token_includes_correct_type(self):
         """Test that refresh token has correct type"""
-        data = {"sub": "user123"}
+        data = {"sub": "00000000-0000-0000-0000-000000000123"}
         token = create_refresh_token(data)
 
         payload = decode_token(token)
@@ -150,7 +150,7 @@ class TestRefreshTokenCreation:
 
     def test_create_refresh_token_longer_expiry(self):
         """Test that refresh token has longer expiry than access token"""
-        data = {"sub": "user123"}
+        data = {"sub": "00000000-0000-0000-0000-000000000123"}
 
         access_token = create_access_token(data)
         refresh_token = create_refresh_token(data)
@@ -167,17 +167,17 @@ class TestTokenDecoding:
 
     def test_decode_valid_token(self):
         """Test decoding a valid token"""
-        data = {"sub": "user123", "role": "admin"}
+        data = {"sub": "00000000-0000-0000-0000-000000000123", "role": "admin"}
         token = create_access_token(data)
 
         payload = decode_token(token)
 
-        assert payload["sub"] == "user123"
+        assert payload["sub"] == "00000000-0000-0000-0000-000000000123"
         assert payload["role"] == "admin"
 
     def test_decode_token_with_expected_type(self):
         """Test decoding token with type validation"""
-        data = {"sub": "user123"}
+        data = {"sub": "00000000-0000-0000-0000-000000000123"}
         token = create_access_token(data)
 
         payload = decode_token(token, expected_type="access")
@@ -186,7 +186,7 @@ class TestTokenDecoding:
 
     def test_decode_token_with_wrong_type_fails(self):
         """Test that wrong token type raises error"""
-        data = {"sub": "user123"}
+        data = {"sub": "00000000-0000-0000-0000-000000000123"}
         token = create_access_token(data)
 
         with pytest.raises(JWTError, match="Invalid token type"):
@@ -221,7 +221,7 @@ class TestTokenDecoding:
 
     def test_decode_expired_token_raises(self):
         """Test that expired token raises error"""
-        data = {"sub": "user123"}
+        data = {"sub": "00000000-0000-0000-0000-000000000123"}
         # Create token that expired 1 hour ago
         expiry = timedelta(hours=-1)
         token = create_access_token(data, expires_delta=expiry)
@@ -235,7 +235,7 @@ class TestTokenSecurity:
 
     def test_token_contains_unique_jti(self):
         """Test that each token has unique JTI (JWT ID)"""
-        data = {"sub": "user123"}
+        data = {"sub": "00000000-0000-0000-0000-000000000123"}
 
         token1 = create_access_token(data)
         token2 = create_access_token(data)
@@ -247,7 +247,7 @@ class TestTokenSecurity:
 
     def test_token_iat_is_set(self):
         """Test that token has issued-at time"""
-        data = {"sub": "user123"}
+        data = {"sub": "00000000-0000-0000-0000-000000000123"}
         before_creation = datetime.now(UTC)
 
         token = create_access_token(data)
@@ -262,8 +262,8 @@ class TestTokenSecurity:
 
     def test_different_users_different_tokens(self):
         """Test that different users get different tokens"""
-        token1 = create_access_token({"sub": "user1"})
-        token2 = create_access_token({"sub": "user2"})
+        token1 = create_access_token({"sub": "00000000-0000-0000-0000-000000000001"})
+        token2 = create_access_token({"sub": "00000000-0000-0000-0000-000000000002"})
 
         assert token1 != token2
 
@@ -294,7 +294,7 @@ class TestEdgeCases:
     def test_token_with_additional_data(self):
         """Test token can carry additional data"""
         data = {
-            "sub": "user123",
+            "sub": "00000000-0000-0000-0000-000000000123",
             "email": "user@example.com",
             "permissions": ["read", "write"],
             "metadata": {"key": "value"}
@@ -303,7 +303,7 @@ class TestEdgeCases:
         token = create_access_token(data)
         payload = decode_token(token)
 
-        assert payload["sub"] == "user123"
+        assert payload["sub"] == "00000000-0000-0000-0000-000000000123"
         assert payload["email"] == "user@example.com"
         assert payload["permissions"] == ["read", "write"]
         assert payload["metadata"] == {"key": "value"}
