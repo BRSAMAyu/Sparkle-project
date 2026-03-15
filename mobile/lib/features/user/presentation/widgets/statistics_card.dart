@@ -148,7 +148,7 @@ class _WeeklyTrendChart extends StatelessWidget {
                     fontWeight: DS.fontWeightMedium,
                     height: 1.35,
                   ),
-                )).toList(),
+                ),).toList(),
             ),
           ),
           lineBarsData: [

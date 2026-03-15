@@ -26,6 +26,8 @@ class PlanModel {
     this.subject,
     this.totalEstimatedHours,
     this.tasks,
+    this.source,
+    this.sourceMetadata,
   });
 
   factory PlanModel.fromJson(Map<String, dynamic> json) =>
@@ -53,6 +55,9 @@ class PlanModel {
   @JsonKey(name: 'updated_at')
   final DateTime updatedAt;
   final List<TaskModel>? tasks;
+  final String? source;
+  @JsonKey(name: 'source_metadata')
+  final Map<String, dynamic>? sourceMetadata;
   Map<String, dynamic> toJson() => _$PlanModelToJson(this);
 }
 

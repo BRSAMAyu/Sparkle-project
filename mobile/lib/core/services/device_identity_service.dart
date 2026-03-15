@@ -3,9 +3,8 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:uuid/uuid.dart';
-
 import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
+import 'package:uuid/uuid.dart';
 
 const _deviceIdentityKey = 'auth_device_identity_v1';
 

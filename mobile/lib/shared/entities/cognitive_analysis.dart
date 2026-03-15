@@ -1,4 +1,5 @@
 /// 认知维度枚举 (Bloom's Taxonomy Revised)
+library;
 import 'package:sparkle/core/services/i18n_service.dart';
 
 enum CognitiveDimension {

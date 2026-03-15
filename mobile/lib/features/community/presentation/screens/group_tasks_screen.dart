@@ -27,7 +27,6 @@ class GroupTasksScreen extends ConsumerWidget {
         title: const Text('Group Tasks'),
       ),
       floatingActionButton: SparkleIconButton(
-        size: DS.touchTargetMinSize,
         icon: const Icon(Icons.add),
         onPressed: () {
           // Feature: Show task creation dialog

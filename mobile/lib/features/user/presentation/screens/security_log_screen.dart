@@ -42,9 +42,7 @@ class _SecurityLogScreenState extends ConsumerState<SecurityLogScreen> {
     }
   }
 
-  String _formatTime(DateTime value) {
-    return Formatters.formatDateTime(value.toLocal());
-  }
+  String _formatTime(DateTime value) => Formatters.formatDateTime(value.toLocal());
 
   String _actionLabel(String action) {
     final l10n = context.l10n;

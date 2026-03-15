@@ -55,7 +55,6 @@ class _GroupFilesScreenState extends ConsumerState<GroupFilesScreen> {
       appBar: AppBar(
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
-          size: DS.touchTargetMinSize,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
@@ -63,7 +62,6 @@ class _GroupFilesScreenState extends ConsumerState<GroupFilesScreen> {
         actions: [
           SparkleIconButton(
             variant: ButtonVariant.ghost,
-            size: DS.touchTargetMinSize,
             icon: Icon(
               _gridView ? Icons.view_list_rounded : Icons.grid_view_rounded,
             ),
@@ -72,7 +70,6 @@ class _GroupFilesScreenState extends ConsumerState<GroupFilesScreen> {
         ],
       ),
       floatingActionButton: SparkleIconButton(
-        variant: ButtonVariant.primary,
         size: DS.touchTargetMinSize,
         icon: const Icon(Icons.upload_file_rounded),
         onPressed: () {
@@ -101,7 +98,7 @@ class _GroupFilesScreenState extends ConsumerState<GroupFilesScreen> {
           children: [
             Padding(
               padding: const EdgeInsets.symmetric(
-                  horizontal: DS.lg, vertical: DS.sm),
+                  horizontal: DS.lg, vertical: DS.sm,),
               child: TextField(
                 decoration: InputDecoration(
                   hintText: '搜索文件',
@@ -129,7 +126,7 @@ class _GroupFilesScreenState extends ConsumerState<GroupFilesScreen> {
                       _buildCategoryChip('全部', null),
                       for (final item in categories)
                         _buildCategoryChip(
-                            item.category ?? '未分类', item.category),
+                            item.category ?? '未分类', item.category,),
                     ],
                   );
                 },

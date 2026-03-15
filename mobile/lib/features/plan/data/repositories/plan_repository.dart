@@ -4,6 +4,7 @@ import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
+import 'package:sparkle/features/plan/data/models/learning_path_progress_model.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
@@ -14,8 +15,7 @@ class PlanRepository {
   T _handleDioError<T>(DioException e, String functionName) {
     final detail =
         (e.response?.data as Map<String, dynamic>?)?['detail'] as String?;
-    final errorMessage =
-        detail ?? 'An unknown error occurred in $functionName';
+    final errorMessage = detail ?? 'An unknown error occurred in $functionName';
     throw Exception(errorMessage);
   }
 
@@ -37,7 +37,8 @@ class PlanRepository {
         ApiEndpoints.plans,
         queryParameters: query,
       );
-      final data = ApiResponseParser.unwrapList(response.data, action: 'getPlans');
+      final data =
+          ApiResponseParser.unwrapList(response.data, action: 'getPlans');
       return data
           .map((json) => PlanModel.fromJson(json as Map<String, dynamic>))
           .toList();
@@ -48,12 +49,15 @@ class PlanRepository {
 
   Future<PlanModel> getPlan(String id) async {
     if (DemoDataService.isDemoMode) {
-      return DemoDataService().demoPlans.firstWhere((p) => p.id == id,
-          orElse: () => DemoDataService().demoPlans.first,);
+      return DemoDataService().demoPlans.firstWhere(
+            (p) => p.id == id,
+            orElse: () => DemoDataService().demoPlans.first,
+          );
     }
     try {
       final response = await _apiClient.get<dynamic>(ApiEndpoints.plan(id));
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'getPlan');
+      final payload =
+          ApiResponseParser.unwrapMap(response.data, action: 'getPlan');
       return PlanModel.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'getPlan');
@@ -86,7 +90,8 @@ class PlanRepository {
         ApiEndpoints.plans,
         data: plan.toJson(),
       );
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'createPlan');
+      final payload =
+          ApiResponseParser.unwrapMap(response.data, action: 'createPlan');
       return PlanModel.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'createPlan');
@@ -108,7 +113,8 @@ class PlanRepository {
         ApiEndpoints.plan(id),
         data: plan.toJson(),
       );
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'updatePlan');
+      final payload =
+          ApiResponseParser.unwrapMap(response.data, action: 'updatePlan');
       return PlanModel.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'updatePlan');
@@ -142,7 +148,8 @@ class PlanRepository {
         ApiEndpoints.plan(id),
         data: planUpdate.toJson(),
       );
-      final payload = ApiResponseParser.unwrapMap(response.data, action: activate ? 'activatePlan' : 'deactivatePlan');
+      final payload = ApiResponseParser.unwrapMap(response.data,
+          action: activate ? 'activatePlan' : 'deactivatePlan',);
       return PlanModel.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, activate ? 'activatePlan' : 'deactivatePlan');
@@ -180,7 +187,8 @@ class PlanRepository {
         ApiEndpoints.generateTasks(planId),
         data: {'count': count},
       );
-      final data = ApiResponseParser.unwrapList(response.data, action: 'generateTasks');
+      final data =
+          ApiResponseParser.unwrapList(response.data, action: 'generateTasks');
       return data
           .map((json) => TaskModel.fromJson(json as Map<String, dynamic>))
           .toList();
@@ -252,7 +260,57 @@ class PlanRepository {
       return _handleDioError(e, 'restorePlan');
     }
   }
+
+  Future<LearningPathProgressModel> getLearningPathProgress(
+      String planId,) async {
+    if (DemoDataService.isDemoMode) {
+      return LearningPathProgressModel(
+        targetNode: LearningPathNodeProgress(
+          id: 'demo_target',
+          name: '目标节点',
+          status: 'unlocked',
+          mastery: 45,
+          isTarget: true,
+        ),
+        nodes: [
+          LearningPathNodeProgress(
+            id: 'demo_1',
+            name: '已掌握节点',
+            status: 'mastered',
+            mastery: 92,
+          ),
+          LearningPathNodeProgress(
+            id: 'demo_2',
+            name: '学习中节点',
+            status: 'unlocked',
+            mastery: 45,
+          ),
+          LearningPathNodeProgress(
+            id: 'demo_target',
+            name: '目标节点',
+            status: 'locked',
+            mastery: 0,
+            isTarget: true,
+          ),
+        ],
+        overallProgress: 0.33,
+      );
+    }
+    try {
+      final response = await _apiClient.get<dynamic>(
+        ApiEndpoints.learningPathProgress(planId),
+      );
+      final payload = ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'getLearningPathProgress',
+      );
+      return LearningPathProgressModel.fromJson(payload);
+    } on DioException catch (e) {
+      return _handleDioError(e, 'getLearningPathProgress');
+    }
+  }
 }
 
 final planRepositoryProvider = Provider<PlanRepository>(
-    (ref) => PlanRepository(ref.watch(apiClientProvider)),);
+  (ref) => PlanRepository(ref.watch(apiClientProvider)),
+);

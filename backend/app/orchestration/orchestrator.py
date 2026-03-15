@@ -942,11 +942,20 @@ class ChatOrchestrator:
                 for p in patterns:
                     by_type.setdefault(p.pattern_type, []).append(p.pattern_name)
 
+                # Map ORM BehaviorPattern → policy_signals via the canonical map
+                from app.services.profile_context_service import ProfileContextService
+                policy_map = ProfileContextService.PATTERN_POLICY_MAP
+                policy_signals = []
+                for p in patterns:
+                    normalized = str(p.pattern_name or "").strip().lower()
+                    policy_signals.extend(policy_map.get(normalized, []))
+
                 return {
                     "has_cognitive_patterns": True,
                     "pattern_count": len(patterns),
                     "recent_patterns": [p.pattern_name for p in patterns[:3]],
-                    "patterns_by_type": {k: len(v) for k, v in by_type.items()}
+                    "patterns_by_type": {k: len(v) for k, v in by_type.items()},
+                    "policy_signals": list(set(policy_signals))
                 }
         except Exception as e:
             logger.warning(f"Failed to get cognitive insights for {user_id}: {e}")
@@ -2937,6 +2946,23 @@ class ChatOrchestrator:
             "tool_results": [],
             "metadata": response_metadata,
         }
+        
+        # Phase 1-D: Cognitive Feedback Loop — when user views behavior patterns,
+        # boost confidence of viewed patterns (positive reinforcement signal).
+        if executable_plan and executable_plan.tool_calls:
+            prism_viewed = any(tc.name == "get_user_behavior_patterns" for tc in executable_plan.tool_calls)
+            if prism_viewed and active_db and user_id:
+                try:
+                    from app.services.cognitive_service import CognitiveService
+                    cognitive_svc = CognitiveService(active_db)
+                    patterns = await cognitive_svc.get_user_patterns(uuid.UUID(user_id), min_confidence=0.5)
+                    for p in patterns[:5]:
+                        new_conf = min(1.0, float(p.confidence_score or 0.5) + 0.03)
+                        p.confidence_score = new_conf
+                    await active_db.flush()
+                except Exception as e:
+                    logger.debug(f"Cognitive feedback loop flush skipped: {e}")
+        
         final_response = agent_service_pb2.ChatResponse(
             response_id=response_id,
             created_at=int(datetime.now().timestamp()),
@@ -3687,6 +3713,14 @@ class ChatOrchestrator:
                 planning_constraints["excluded_agents"] = list(mode_strategy.excluded_agents)
             if mode_strategy and mode_strategy.output_structure:
                 planning_constraints["required_output_structure"] = list(mode_strategy.output_structure)
+
+            # Phase 1-B: Inject Cognitive Policy Signals
+            if isinstance(user_context_payload, dict):
+                insights = user_context_payload.get("cognitive_insights", {})
+                if isinstance(insights, dict) and insights.get("policy_signals"):
+                    signals = insights.get("policy_signals")
+                    if isinstance(signals, list) and signals:
+                        planning_constraints["cognitive_policy_signals"] = signals
 
             persona_constraints = None
             if active_db is not None:

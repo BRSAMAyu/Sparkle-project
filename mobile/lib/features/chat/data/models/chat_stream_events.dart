@@ -1,7 +1,7 @@
 import 'dart:convert';
 
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/models/intervention.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';

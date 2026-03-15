@@ -9,10 +9,10 @@ import 'package:sparkle/core/utils/chaos/chaos_control_dialog.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/capsule_provider.dart';
 import 'package:sparkle/features/cognitive/presentation/widgets/capsule/capsule_generation_preview.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
-import 'package:sparkle/features/user/user_routes.dart';
 import 'package:sparkle/features/user/presentation/widgets/learning_mode_control.dart';
 import 'package:sparkle/features/user/presentation/widgets/preference_controller_2d.dart';
 import 'package:sparkle/features/user/presentation/widgets/weekly_agenda_grid.dart';
+import 'package:sparkle/features/user/user_routes.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
 class UnifiedSettingsScreen extends ConsumerStatefulWidget {

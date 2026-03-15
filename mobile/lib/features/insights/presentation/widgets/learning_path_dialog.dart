@@ -269,7 +269,7 @@ class LearningPathDialog extends ConsumerWidget {
           .generateLearningPlan(node.id);
       if (!parentContext.mounted) return;
       final message = response.message ?? '学习计划已生成';
-      if (response.retry == true) {
+      if (response.retry ?? false) {
         AppFeedback.warning(parentContext, message);
       } else {
         AppFeedback.success(parentContext, message);

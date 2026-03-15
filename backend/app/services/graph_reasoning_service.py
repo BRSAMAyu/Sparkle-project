@@ -33,16 +33,10 @@ class GraphReasoningService:
         nodes_result = await self.db.execute(select(KnowledgeNode))
         nodes = nodes_result.scalars().all()
         for node in nodes:
-            self.G.add_node(
-                node.id,
-                name=node.name,
-                description=node.description
-            )
+            self.G.add_node(node.id, name=node.name, description=node.description)
 
         # 2. 加载 'PREREQUISITE' 类型的边
-        edges_result = await self.db.execute(
-            select(NodeRelation).where(NodeRelation.relation_type == "PREREQUISITE")
-        )
+        edges_result = await self.db.execute(select(NodeRelation).where(NodeRelation.relation_type == "PREREQUISITE"))
         edges = edges_result.scalars().all()
 
         edge_list = []
@@ -53,11 +47,7 @@ class GraphReasoningService:
         self.G.add_edges_from(edge_list)
         logger.info(f"Graph loaded: {self.G.number_of_nodes()} nodes, {self.G.number_of_edges()} edges")
 
-    async def generate_learning_path(
-        self,
-        user_id: UUID,
-        target_node_id: UUID
-    ) -> list[dict[str, Any]]:
+    async def generate_learning_path(self, user_id: UUID, target_node_id: UUID) -> list[dict[str, Any]]:
         """
         生成个性化学习路径
 
@@ -118,31 +108,47 @@ class GraphReasoningService:
             status = "mastered" if is_mastered else "locked"
             # 解锁逻辑：如果该节点的所有前置都已掌握，则为 "unlocked" / "next_to_learn"
             if not is_mastered:
-                 predecessors = list(self.G.predecessors(node_id))
-                 if all(p in mastered_ids for p in predecessors):
-                     status = "unlocked"
+                predecessors = list(self.G.predecessors(node_id))
+                if all(p in mastered_ids for p in predecessors):
+                    status = "unlocked"
 
             # 剪枝策略：如果完全遵循 Prompt 剔除，用户可能看不到上下文。
             # 我将返回所有节点，但带上状态，让前端决定是否折叠。
             # 但为了满足 "最短的通关路径" 这一描述，我们主要关注未掌握的。
 
             # 这里我做一个折衷：返回路径对象，包含 prune 建议
-            final_path.append({
-                "id": str(node_id),
-                "name": node_data.get("name", "Unknown"),
-                "status": status, # mastered, unlocked, locked
-                "is_target": node_id == target_node_id
-            })
+            final_path.append(
+                {
+                    "id": str(node_id),
+                    "name": node_data.get("name", "Unknown"),
+                    "status": status,  # mastered, unlocked, locked
+                    "is_target": node_id == target_node_id,
+                }
+            )
 
         return final_path
 
     async def _get_user_mastered_ids(self, user_id: UUID) -> set[UUID]:
         """获取用户掌握度 > 80 的节点 ID"""
         result = await self.db.execute(
-            select(UserNodeStatus.node_id)
-            .where(
+            select(UserNodeStatus.node_id).where(
                 UserNodeStatus.user_id == user_id,
-                UserNodeStatus.mastery_score >= 80  # Threshold for mastery
+                UserNodeStatus.mastery_score >= 80,  # Threshold for mastery
             )
         )
         return set(result.scalars().all())
+
+    def get_node_edge_count(self, node_id: UUID) -> int:
+        """获取节点的边数（入度+出度）"""
+        if not self.G or not self.G.has_node(node_id):
+            return 0
+        in_degree = self.G.in_degree(node_id)
+        out_degree = self.G.out_degree(node_id)
+        return in_degree + out_degree
+
+    def get_node_description(self, node_id: UUID) -> str:
+        """获取节点描述"""
+        if not self.G or not self.G.has_node(node_id):
+            return ""
+        node_data = self.G.nodes[node_id]
+        return node_data.get("description", "")

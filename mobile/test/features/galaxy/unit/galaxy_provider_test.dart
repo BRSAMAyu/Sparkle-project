@@ -5,13 +5,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // ignore_for_file: cascade_invocations
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/retry_strategy.dart';
 import 'package:sparkle/core/services/smart_cache.dart';
 import 'package:sparkle/core/services/view_storage_service.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
 import 'package:sparkle/features/knowledge/data/models/knowledge_detail_model.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class FakeEnhancedGalaxyRepository implements EnhancedGalaxyRepository {
   FakeEnhancedGalaxyRepository({

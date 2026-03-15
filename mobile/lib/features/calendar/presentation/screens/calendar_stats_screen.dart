@@ -6,8 +6,8 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/lunar_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
-import 'package:sparkle/features/calendar/data/models/calendar_event_model.dart';
 import 'package:sparkle/features/calendar/calendar_routes.dart';
+import 'package:sparkle/features/calendar/data/models/calendar_event_model.dart';
 import 'package:sparkle/features/calendar/presentation/providers/calendar_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/weather_header.dart';
 // Import task provider for updating tasks

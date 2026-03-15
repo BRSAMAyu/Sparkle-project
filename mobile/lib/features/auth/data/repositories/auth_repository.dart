@@ -424,7 +424,7 @@ class AuthRepository {
       return _extractErrorMessage(response.data) ?? '绑定成功';
     } on DioException catch (e) {
       throw Exception(_extractErrorMessage(e.response?.data) ??
-          'Could not link social account.');
+          'Could not link social account.',);
     }
   }
 
@@ -437,7 +437,7 @@ class AuthRepository {
       return _extractErrorMessage(response.data) ?? '解绑成功';
     } on DioException catch (e) {
       throw Exception(_extractErrorMessage(e.response?.data) ??
-          'Could not unlink social account.');
+          'Could not unlink social account.',);
     }
   }
 
@@ -459,7 +459,7 @@ class AuthRepository {
       return _extractErrorMessage(response.data) ?? '设备已下线';
     } on DioException catch (e) {
       throw Exception(_extractErrorMessage(e.response?.data) ??
-          'Could not revoke session.');
+          'Could not revoke session.',);
     }
   }
 
@@ -471,7 +471,7 @@ class AuthRepository {
       return _extractErrorMessage(response.data) ?? '其他设备已下线';
     } on DioException catch (e) {
       throw Exception(_extractErrorMessage(e.response?.data) ??
-          'Could not revoke other sessions.');
+          'Could not revoke other sessions.',);
     }
   }
 
@@ -505,7 +505,7 @@ class AuthRepository {
       return _extractErrorMessage(response.data) ?? '账号已注销';
     } on DioException catch (e) {
       throw Exception(_extractErrorMessage(e.response?.data) ??
-          'Could not delete account.');
+          'Could not delete account.',);
     }
   }
 
@@ -539,7 +539,7 @@ class AuthRepository {
       return UserModel.fromJson(data['user'] as Map<String, dynamic>);
     } on DioException catch (e) {
       throw Exception(_extractErrorMessage(e.response?.data) ??
-          'Could not upgrade guest account.');
+          'Could not upgrade guest account.',);
     }
   }
 
@@ -573,7 +573,7 @@ class AuthRepository {
       return UserModel.fromJson(data['user'] as Map<String, dynamic>);
     } on DioException catch (e) {
       throw Exception(_extractErrorMessage(e.response?.data) ??
-          'Could not upgrade guest account.');
+          'Could not upgrade guest account.',);
     }
   }
 

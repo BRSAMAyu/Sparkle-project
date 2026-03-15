@@ -7,9 +7,11 @@ import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/utils/formatters.dart';
-import 'package:sparkle/features/community/presentation/widgets/share_resource_sheet.dart';
+import 'package:sparkle/features/insights/data/models/learning_path_plan_response.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
+import 'package:sparkle/features/plan/presentation/providers/learning_path_progress_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
+import 'package:sparkle/features/plan/presentation/widgets/learning_path_progress_bar.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
@@ -93,6 +95,26 @@ class _PlanOverviewTab extends ConsumerWidget {
       child: ListView(
         padding: const EdgeInsets.all(DS.lg),
         children: [
+          if (plan.source == 'learning_path') ...[
+            Consumer(
+              builder: (context, ref, child) {
+                final progressAsync = ref.watch(
+                  learningPathProgressProvider(plan.id),
+                );
+                return progressAsync.when(
+                  data: (progress) => Padding(
+                    padding: const EdgeInsets.only(bottom: DS.lg),
+                    child: LearningPathProgressBar(progress: progress),
+                  ),
+                  loading: () => const Padding(
+                    padding: EdgeInsets.only(bottom: DS.lg),
+                    child: Center(child: LoadingIndicator()),
+                  ),
+                  error: (err, _) => const SizedBox.shrink(),
+                );
+              },
+            ),
+          ],
           GraphiteCardSurface(
             surfaceRole: SparkleSurfaceRole.card,
             child: Column(
@@ -136,7 +158,8 @@ class _PlanOverviewTab extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: DS.lg),
-          Text(l10n.planRelatedTasks, style: Theme.of(context).textTheme.titleLarge),
+          Text(l10n.planRelatedTasks,
+              style: Theme.of(context).textTheme.titleLarge,),
           const SizedBox(height: DS.sm),
           if (plan.tasks == null || plan.tasks!.isEmpty)
             Text(l10n.planNoTasks, style: TextStyle(color: DS.textSecondary))

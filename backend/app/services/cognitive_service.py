@@ -104,6 +104,18 @@ class CognitiveService:
         self.db.add(fragment)
         await self.db.commit()
         await self.db.refresh(fragment)
+        
+        # Publish cognitive fragment created event
+        await event_bus.publish(
+            "cognitive.fragment.created",
+            {
+                "event_type": "cognitive.fragment.created",
+                "user_id": str(user_id),
+                "fragment_id": str(fragment.id),
+                "source_type": source_type,
+            }
+        )
+
         await SystemUpdateService().enqueue(
             user_id,
             build_system_update(

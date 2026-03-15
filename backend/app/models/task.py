@@ -2,6 +2,7 @@
 任务模型
 Task Model - 学习任务卡片系统
 """
+
 import enum
 
 from sqlalchemy import (
@@ -26,6 +27,7 @@ from app.models.base import GUID, BaseModel
 
 JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 
+
 class TaskType(str, enum.Enum):
     LEARNING = "LEARNING"
     TRAINING = "TRAINING"
@@ -34,6 +36,7 @@ class TaskType(str, enum.Enum):
     SOCIAL = "SOCIAL"
     PLANNING = "PLANNING"
     OCR = "OCR"
+
 
 class TaskStatus(str, enum.Enum):
     PENDING = "PENDING"
@@ -46,6 +49,7 @@ class SubTaskStatus(str, enum.Enum):
     PENDING = "PENDING"
     IN_PROGRESS = "IN_PROGRESS"
     COMPLETED = "COMPLETED"
+
 
 class Task(BaseModel):
     __tablename__ = "tasks"
@@ -95,36 +99,19 @@ class Task(BaseModel):
     user = relationship("User", back_populates="tasks")
     plan = relationship("Plan", back_populates="tasks")
     knowledge_node = relationship("KnowledgeNode")
-    chat_messages = relationship(
-        "ChatMessage",
-        back_populates="task",
-        cascade="all, delete-orphan",
-        lazy="dynamic"
-    )
+    chat_messages = relationship("ChatMessage", back_populates="task", cascade="all, delete-orphan", lazy="dynamic")
 
     curiosity_capsules = relationship(
-        "CuriosityCapsule",
-        back_populates="task",
-        cascade="all, delete-orphan",
-        lazy="dynamic"
+        "CuriosityCapsule", back_populates="task", cascade="all, delete-orphan", lazy="dynamic"
     )
 
     # Subtasks relationship
     subtasks = relationship(
-        "SubTask",
-        back_populates="parent_task",
-        cascade="all, delete-orphan",
-        lazy="dynamic",
-        order_by="SubTask.order"
+        "SubTask", back_populates="parent_task", cascade="all, delete-orphan", lazy="dynamic", order_by="SubTask.order"
     )
 
     # Task feedbacks relationship
-    feedbacks = relationship(
-        "TaskFeedback",
-        back_populates="task",
-        cascade="all, delete-orphan",
-        lazy="dynamic"
-    )
+    feedbacks = relationship("TaskFeedback", back_populates="task", cascade="all, delete-orphan", lazy="dynamic")
 
     resource_links = relationship(
         "TaskResourceLink",
@@ -154,6 +141,7 @@ Index("idx_tasks_due_date", Task.due_date)
 
 class SubTask(BaseModel):
     """子任务模型 - 用于任务的细分"""
+
     __tablename__ = "subtasks"
 
     parent_task_id = Column(GUID(), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False, index=True)
@@ -162,6 +150,10 @@ class SubTask(BaseModel):
     # 基本信息
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
+
+    # 学习指导
+    estimated_minutes = Column(Integer, default=25, nullable=False)
+    guide_content = Column(Text, nullable=True)
 
     # 排序和状态
     order = Column(Integer, default=0, nullable=False)
@@ -182,17 +174,15 @@ Index("idx_subtasks_order", SubTask.order)
 
 
 # SQLAlchemy 事件监听器 - 自动更新父任务的子任务计数
-@event.listens_for(SubTask, 'after_insert')
+@event.listens_for(SubTask, "after_insert")
 def update_total_on_subtask_insert(mapper, connection, target):
     """创建子任务时自动增加父任务的 subtasks_total"""
     connection.execute(
-        update(Task)
-        .where(Task.id == target.parent_task_id)
-        .values(subtasks_total=Task.subtasks_total + 1)
+        update(Task).where(Task.id == target.parent_task_id).values(subtasks_total=Task.subtasks_total + 1)
     )
 
 
-@event.listens_for(SubTask, 'after_delete')
+@event.listens_for(SubTask, "after_delete")
 def update_total_on_subtask_delete(mapper, connection, target):
     """删除子任务时自动减少父任务的 subtasks_total"""
     connection.execute(
@@ -200,19 +190,19 @@ def update_total_on_subtask_delete(mapper, connection, target):
         .where(Task.id == target.parent_task_id)
         .values(
             subtasks_total=Task.subtasks_total - 1,
-            subtasks_completed=Task.subtasks_completed - (1 if target.status == SubTaskStatus.COMPLETED else 0)
+            subtasks_completed=Task.subtasks_completed - (1 if target.status == SubTaskStatus.COMPLETED else 0),
         )
     )
 
 
-@event.listens_for(SubTask, 'after_update')
+@event.listens_for(SubTask, "after_update")
 def update_completed_on_subtask_status_change(mapper, connection, target):
     """子任务状态变更时自动更新父任务的 subtasks_completed"""
     # 检查 status 字段是否发生变化
     state = target._sa_instance_state
-    if 'status' in state.committed_attributes:
+    if "status" in state.committed_attributes:
         # 获取变更前的状态
-        old_status = state.committed_attributes.get('status')
+        old_status = state.committed_attributes.get("status")
         if old_status != target.status:
             delta = 0
             if target.status == SubTaskStatus.COMPLETED:

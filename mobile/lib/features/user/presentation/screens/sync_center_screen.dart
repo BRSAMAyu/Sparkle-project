@@ -97,7 +97,6 @@ class _SyncCenterScreenState extends ConsumerState<SyncCenterScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Flexible(
-                  fit: FlexFit.loose,
                   child: SingleChildScrollView(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,

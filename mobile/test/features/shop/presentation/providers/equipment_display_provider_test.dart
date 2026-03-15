@@ -136,8 +136,8 @@ UserModel _achievementTitleUser() => UserModel(
       curiosityPreference: 0.5,
       isActive: true,
       status: UserStatus.online,
-      createdAt: DateTime(2026, 1),
-      updatedAt: DateTime(2026, 1),
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
       equippedTitle: 'night_owl',
       equippedTitleSource: 'achievement',
     );

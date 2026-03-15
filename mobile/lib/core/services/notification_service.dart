@@ -31,7 +31,7 @@ class NotificationService {
         '@mipmap/ic_launcher',); // Verify icon name
 
     const initializationSettingsDarwin = DarwinInitializationSettings(
-      requestBadgePermission: true,
+      
     );
 
     const initializationSettings = InitializationSettings(

@@ -138,7 +138,7 @@ class GalaxyAccessibilityService {
         ..write(l10n.galaxyA11yNodeUnlocked)
         ..write(l10n.galaxyA11yNodeMastery(
           node.masteryScore.toStringAsFixed(0),
-        ))
+        ),)
         ..write(l10n.galaxyA11yNodeStudyCount(node.studyCount));
     } else {
       buffer.write(l10n.galaxyA11yNodeLocked);

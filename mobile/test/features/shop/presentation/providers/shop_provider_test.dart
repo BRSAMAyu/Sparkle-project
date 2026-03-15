@@ -941,8 +941,8 @@ class _FakeAuthNotifier extends AuthNotifier {
         curiosityPreference: 0.5,
         isActive: true,
         status: UserStatus.online,
-        createdAt: DateTime(2026, 1),
-        updatedAt: DateTime(2026, 1),
+        createdAt: DateTime(2026),
+        updatedAt: DateTime(2026),
       ),
     );
   }
@@ -981,8 +981,8 @@ class _UnusedAuthRepository extends AuthRepository {
         curiosityPreference: 0.5,
         isActive: true,
         status: UserStatus.online,
-        createdAt: DateTime(2026, 1),
-        updatedAt: DateTime(2026, 1),
+        createdAt: DateTime(2026),
+        updatedAt: DateTime(2026),
       );
 
   @override

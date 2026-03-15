@@ -593,7 +593,7 @@ class _PlanReviewCardState extends State<PlanReviewCard>
                 ],
               ],
             ),
-          )).toList(),
+          ),).toList(),
       );
 
   Widget _buildAlignmentSummary() => Container(

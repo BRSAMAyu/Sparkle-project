@@ -5,9 +5,9 @@ import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/services/memory_api_service.dart';
+import 'package:sparkle/features/memory/memory_routes.dart';
 import 'package:sparkle/features/memory/presentation/screens/memory_detail_screen.dart';
 import 'package:sparkle/features/memory/presentation/widgets/memory_evidence_badge.dart';
-import 'package:sparkle/features/memory/memory_routes.dart';
 import 'package:sparkle/features/user/user_routes.dart';
 
 enum MemoryEntryType { preference, goal, episodic }

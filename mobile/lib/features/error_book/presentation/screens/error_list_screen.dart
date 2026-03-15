@@ -137,7 +137,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
                 child: Row(
                   children: [
                     Icon(Icons.psychology,
-                        size: 16, color: theme.colorScheme.primary),
+                        size: 16, color: theme.colorScheme.primary,),
                     const SizedBox(width: DS.spacing8),
                     Text(
                       '正针对 "${filterState.cognitiveDimension!.label}" 维度进行针对性复习',

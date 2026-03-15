@@ -65,7 +65,7 @@ class ProfileScreen extends ConsumerWidget {
               child: CustomPaint(
                 painter: _WaveHeaderPainter(
                   startColor: Color.lerp(
-                      DS.surfacePrimaryElevated, DS.brandPrimary, 0.04)!,
+                      DS.surfacePrimaryElevated, DS.brandPrimary, 0.04,)!,
                   middleColor:
                       Color.lerp(DS.surfaceCanvas, DS.surfaceSecondary, 0.54)!,
                   endColor:

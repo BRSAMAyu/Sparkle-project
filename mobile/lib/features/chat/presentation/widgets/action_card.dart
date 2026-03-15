@@ -1495,7 +1495,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                 'what_changed': detail['label'],
                 'why': detail['evidence'],
                 'expected_effect': detail['impact'],
-              })).toList(),
+              }),).toList(),
           ),
         ],
         if (recommendedAction != null) ...[
@@ -1692,7 +1692,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
           maxLines: 3,
           decoration: InputDecoration(
             hintText: context.l10n.chatOptionalNotesHint,
-            border: OutlineInputBorder(),
+            border: const OutlineInputBorder(),
             isDense: true,
           ),
         ),

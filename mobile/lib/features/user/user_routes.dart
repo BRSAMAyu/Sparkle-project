@@ -11,8 +11,8 @@ import 'package:sparkle/features/user/presentation/screens/persona_onboarding_sc
 import 'package:sparkle/features/user/presentation/screens/security_log_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/session_management_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/social_accounts_screen.dart';
-import 'package:sparkle/features/user/presentation/screens/system_updates_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/sync_center_screen.dart';
+import 'package:sparkle/features/user/presentation/screens/system_updates_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/unified_settings_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/user_persona_screen.dart';
 

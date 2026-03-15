@@ -48,6 +48,8 @@ class AchievementEventConsumer:
             await self._handle_group_task_completed(event)
         elif event_type == "galaxy.node.updated":
             await self._handle_node_updated(event)
+        elif event_type == "achievement.unlocked":
+            await self._handle_achievement_unlocked(event)
 
     async def _handle_task_completed(self, event: dict):
         if str(event.get("source") or "personal") == "group":
@@ -94,6 +96,31 @@ class AchievementEventConsumer:
                     event_type=AchievementEvent.NODE_MASTERED,
                     node_id=str(event.get("node_id") or ""),
                 )
+
+    async def _handle_achievement_unlocked(self, event: dict):
+        """处理成就解锁事件，触发认知系统碎片记录及可能的广播"""
+        user_id = event.get("user_id")
+        achievement_id = event.get("achievement_id")
+        if not user_id or not achievement_id:
+            return
+
+        try:
+            from app.services.cognitive_service import CognitiveService
+            from app.db.session import AsyncSessionLocal
+            from uuid import UUID
+            
+            async with AsyncSessionLocal() as db:
+                cognitive_service = CognitiveService(db)
+                await cognitive_service.create_fragment(
+                    user_id=UUID(str(user_id)),
+                    content=f"用户解锁了新成就: {event.get('title', achievement_id)}。这表明用户的持续参与和进步。",
+                    source_type="achievement",
+                    severity=1,
+                    context_tags={"achievement_id": str(achievement_id), "type": "positive_milestone"}
+                )
+                logger.info(f"Recorded cognitive fragment for achievement {achievement_id} unlock by user {user_id}")
+        except Exception as e:
+            logger.warning(f"Failed to record cognitive fragment for achievement: {e}")
 
     def stop(self):
         self._running = False

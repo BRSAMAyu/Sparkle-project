@@ -257,7 +257,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                       children: [
                         Text(
                           l10n.taskSuggestedKnowledge,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 12,
                           ),
@@ -302,9 +302,9 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                           value: type,
                           child: Row(
                             children: [
-                              Icon(_getTypeIcon(type), size: 18),
+                              Icon(getTypeIcon(type), size: 18),
                               const SizedBox(width: DS.sm),
-                              Text(_getTypeLabel(l10n, type)),
+                              Text(getTypeLabel(l10n, type)),
                             ],
                           ),
                         ),
@@ -634,7 +634,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
         ),
       );
 
-  IconData _getTypeIcon(TaskType type) {
+  IconData getTypeIcon(TaskType type) {
     switch (type) {
       case TaskType.learning:
         return Icons.school;
@@ -653,7 +653,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
     }
   }
 
-  String _getTypeLabel(AppLocalizations l10n, TaskType type) {
+  String getTypeLabel(AppLocalizations l10n, TaskType type) {
     switch (type) {
       case TaskType.learning:
         return l10n.taskTypeLearning;

@@ -197,29 +197,40 @@ class SubtaskItemWidget extends StatelessWidget {
             activeColor: DS.semanticSuccess,
             checkColor: DS.brandPrimary,
           ),
-          title: Text(
-            subtask.title,
-            style: TextStyle(
-              color: subtask.isCompleted ? DS.brandPrimary38 : DS.brandPrimary,
-              fontSize: 14,
-              decoration:
-                  subtask.isCompleted ? TextDecoration.lineThrough : null,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          subtitle:
-              subtask.description != null && subtask.description!.isNotEmpty
-                  ? Text(
-                      subtask.description!,
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                subtask.title,
+                style: TextStyle(
+                  color:
+                      subtask.isCompleted ? DS.brandPrimary38 : DS.brandPrimary,
+                  fontSize: 14,
+                  decoration:
+                      subtask.isCompleted ? TextDecoration.lineThrough : null,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              if (subtask.estimatedMinutes != 25) ...[
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Icon(Icons.schedule, size: 12, color: DS.brandPrimary54),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${subtask.estimatedMinutes} 分钟',
                       style: TextStyle(
                         color: DS.brandPrimary54,
-                        fontSize: 12,
+                        fontSize: 11,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    )
-                  : null,
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+          subtitle: _buildSubtitle(),
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -241,6 +252,43 @@ class SubtaskItemWidget extends StatelessWidget {
           ),
         ),
       );
+
+  Widget _buildSubtitle() {
+    final hasDescription =
+        subtask.description != null && subtask.description!.isNotEmpty;
+    final hasGuide =
+        subtask.guideContent != null && subtask.guideContent!.isNotEmpty;
+
+    if (!hasDescription && !hasGuide) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (hasDescription)
+          Text(
+            subtask.description!,
+            style: TextStyle(
+              color: DS.brandPrimary54,
+              fontSize: 12,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        if (hasGuide) ...[
+          const SizedBox(height: 4),
+          Text(
+            subtask.guideContent!,
+            style: TextStyle(
+              color: DS.brandPrimary38,
+              fontSize: 11,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ],
+    );
+  }
 }
 
 /// Subtask progress indicator widget

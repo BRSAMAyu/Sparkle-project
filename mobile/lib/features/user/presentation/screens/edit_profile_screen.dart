@@ -1,6 +1,5 @@
-import 'dart:io';
-
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,8 +11,8 @@ import 'package:sparkle/core/design/widgets/app_permission_dialog.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/auth/auth.dart';
-import 'package:sparkle/features/user/user_routes.dart';
 import 'package:sparkle/features/user/presentation/widgets/avatar_selection_dialog.dart';
+import 'package:sparkle/features/user/user_routes.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {

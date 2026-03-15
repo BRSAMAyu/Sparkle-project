@@ -22,19 +22,24 @@ class LearningPathRepository {
       return [
         LearningPathNode(id: '1', name: 'Base Concept', status: 'mastered'),
         LearningPathNode(
-            id: '2', name: 'Intermediate Step', status: 'unlocked',),
+          id: '2',
+          name: 'Intermediate Step',
+          status: 'unlocked',
+        ),
         LearningPathNode(
-            id: targetNodeId,
-            name: 'Target Concept',
-            status: 'locked',
-            isTarget: true,),
+          id: targetNodeId,
+          name: 'Target Concept',
+          status: 'locked',
+          isTarget: true,
+        ),
       ];
     }
     try {
       final response = await _apiClient.get<dynamic>(
         ApiEndpoints.learningPath(targetNodeId),
       );
-      final data = ApiResponseParser.unwrapList(response.data, action: 'getLearningPath');
+      final data = ApiResponseParser.unwrapList(response.data,
+          action: 'getLearningPath',);
       return data
           .map((e) => LearningPathNode.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -49,7 +54,8 @@ class LearningPathRepository {
   }
 
   Future<LearningPathPlanResponse> generateLearningPlan(
-      String targetNodeId,) async {
+    String targetNodeId,
+  ) async {
     if (DemoDataService.isDemoMode) {
       return LearningPathPlanResponse(
         planId: 'mock_plan_${DateTime.now().millisecondsSinceEpoch}',
@@ -69,8 +75,8 @@ class LearningPathRepository {
       final response = await _apiClient.post<dynamic>(
         ApiEndpoints.learningPathPlan(targetNodeId),
       );
-      final data =
-          ApiResponseParser.unwrapMap(response.data, action: 'generateLearningPlan');
+      final data = ApiResponseParser.unwrapMap(response.data,
+          action: 'generateLearningPlan',);
       return LearningPathPlanResponse.fromJson(data);
     } on DioException catch (e) {
       throw Exception(
@@ -82,22 +88,25 @@ class LearningPathRepository {
     }
   }
 
-  Future<LearningPathPlanResponse> generateFullPathPlan(
-      String targetNodeId,) async {
+  Future<FullPlanResponse> generateFullPathPlan(
+    String targetNodeId,
+  ) async {
     if (DemoDataService.isDemoMode) {
-      return LearningPathPlanResponse(
+      return FullPlanResponse(
         planId: 'mock_full_plan_${DateTime.now().millisecondsSinceEpoch}',
         planSummary: '这是一键生成的全路径计划',
-        tasks: [],
+        parentTaskId:
+            'mock_parent_task_${DateTime.now().millisecondsSinceEpoch}',
+        subtaskCount: 3,
       );
     }
     try {
       final response = await _apiClient.post<dynamic>(
         ApiEndpoints.learningPathFullPlan(targetNodeId),
       );
-      final data =
-          ApiResponseParser.unwrapMap(response.data, action: 'generateFullPathPlan');
-      return LearningPathPlanResponse.fromJson(data);
+      final data = ApiResponseParser.unwrapMap(response.data,
+          action: 'generateFullPathPlan',);
+      return FullPlanResponse.fromJson(data);
     } on DioException catch (e) {
       throw Exception(
         (e.response?.data as Map<String, dynamic>?)?['detail'] ??

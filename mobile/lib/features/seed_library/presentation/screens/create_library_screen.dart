@@ -223,7 +223,6 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
                     const SizedBox(width: DS.spacing8),
                     SparkleIconButton(
                       variant: ButtonVariant.secondary,
-                      size: DS.touchTargetMinSize,
                       icon: const Icon(Icons.add),
                       onPressed: _addTag,
                     ),

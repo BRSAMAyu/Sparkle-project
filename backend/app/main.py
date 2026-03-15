@@ -37,6 +37,8 @@ from app.services.galaxy_event_consumer import GalaxyEventConsumer
 from app.services.job_service import JobService
 from app.services.preference_event_consumer import PreferenceEventConsumer
 from app.services.profile_event_consumer import ProfileEventConsumer
+from app.services.cognitive_event_consumer import CognitiveEventConsumer
+from app.services.nudge_event_consumer import NudgeEventConsumer
 from app.services.scheduler_service import scheduler_service
 from app.services.subject_service import SubjectService
 from app.services.task_event_consumer import TaskEventConsumer
@@ -124,6 +126,15 @@ async def lifespan(app: FastAPI):
         profile_consumer = ProfileEventConsumer(event_bus=event_bus, redis_client=cache_service.redis)
         profile_consumer_task = asyncio.create_task(profile_consumer.start())
         app.state.profile_consumer_task = profile_consumer_task
+
+    if cache_service.redis:
+        cognitive_consumer = CognitiveEventConsumer(event_bus=event_bus, redis_client=cache_service.redis)
+        cognitive_consumer_task = asyncio.create_task(cognitive_consumer.start())
+        app.state.cognitive_consumer_task = cognitive_consumer_task
+
+    nudge_consumer = NudgeEventConsumer(event_bus=event_bus)
+    nudge_consumer_task = asyncio.create_task(nudge_consumer.start())
+    app.state.nudge_consumer_task = nudge_consumer_task
 
     summarization_worker_task = None
     summarization_worker = None
@@ -223,6 +234,18 @@ async def lifespan(app: FastAPI):
         profile_consumer_task.cancel()
         with suppress(asyncio.CancelledError):
             await profile_consumer_task
+
+    cognitive_consumer_task = getattr(app.state, "cognitive_consumer_task", None)
+    if cognitive_consumer_task:
+        cognitive_consumer_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await cognitive_consumer_task
+
+    nudge_consumer_task = getattr(app.state, "nudge_consumer_task", None)
+    if nudge_consumer_task:
+        nudge_consumer_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await nudge_consumer_task
 
     # Stop summarization worker
     summarization_worker = getattr(app.state, "summarization_worker", None)

@@ -214,9 +214,25 @@ class LangGraphPlanner:
         for key, value in planning_constraints.items():
             if key == "_meta":
                 continue
-            if key in {"insert_prerequisite_review", "weak_knowledge_node_ids", "weak_knowledge_nodes"}:
+            if key in {"insert_prerequisite_review", "weak_knowledge_node_ids", "weak_knowledge_nodes", "cognitive_policy_signals"}:
                 continue
             lines.append(f"- {key}: {value}")
+            
+        cognitive_signals = planning_constraints.get("cognitive_policy_signals")
+        if isinstance(cognitive_signals, list) and cognitive_signals:
+            lines.append("用户认知和行为约束（重点考虑）：")
+            for sig in cognitive_signals:
+                if sig == "task.time_estimate.add_buffer_30pct":
+                    lines.append("- 时间预估缓冲: 将所有任务的预估时间增加约30%，避免用户挫败感。")
+                elif sig == "task.difficulty.start_easy":
+                    lines.append("- 难度排序偏好: 优先安排简单、低阻力的任务，帮助用户启动。")
+                elif sig == "plan.milestone.add_checkpoint":
+                    lines.append("- 里程碑检查点: 在计划执行中自动插入检查点（Checkpoint）进行复盘。")
+                elif sig == "llm.feedback.emphasize_progress":
+                    lines.append("- 互动反馈偏好: 强调用户的进步和正向反馈，增强对话语气中的鼓励性。")
+                else:
+                    lines.append(f"- {sig}")
+
         return "\n".join(lines)
 
     @staticmethod

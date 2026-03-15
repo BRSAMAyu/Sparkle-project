@@ -82,9 +82,7 @@ class _SessionManagementScreenState
     }
   }
 
-  String _formatTime(DateTime value) {
-    return Formatters.formatDateTime(value.toLocal());
-  }
+  String _formatTime(DateTime value) => Formatters.formatDateTime(value.toLocal());
 
   String _deviceTitle(UserSessionModel session) {
     final l10n = context.l10n;

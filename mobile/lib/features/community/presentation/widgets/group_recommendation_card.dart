@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
-import 'package:sparkle/core/design/widgets/graphite_surfaces.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 
 class GroupRecommendationCard extends StatelessWidget {

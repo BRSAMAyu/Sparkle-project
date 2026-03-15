@@ -2,6 +2,7 @@
 Learning Paths API
 基于拓扑排序的动态学习路径接口
 """
+
 from typing import Any
 from uuid import UUID
 
@@ -26,14 +27,16 @@ from app.tools.schemas import GenerateTasksForPlanParams
 
 router = APIRouter(prefix="/learning-paths", tags=["Learning Paths"])
 
+
 async def get_graph_reasoning_service(db: AsyncSession = Depends(get_db)) -> GraphReasoningService:
     return GraphReasoningService(db)
+
 
 @router.get("/{target_node_id}", response_model=list[dict[str, Any]])
 async def get_dynamic_learning_path(
     target_node_id: UUID,
     user_id: str = Depends(get_current_user_id),
-    service: GraphReasoningService = Depends(get_graph_reasoning_service)
+    service: GraphReasoningService = Depends(get_graph_reasoning_service),
 ):
     """
     获取到达目标节点的动态学习路径 (DAG Topological Sort)
@@ -55,14 +58,14 @@ async def generate_learning_path_plan(
     target_node_id: UUID,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-    service: GraphReasoningService = Depends(get_graph_reasoning_service)
+    service: GraphReasoningService = Depends(get_graph_reasoning_service),
 ):
     """
     基于学习路径生成学习计划与任务
 
     返回 plan_id、plan_summary、tasks 等信息。
     """
-    path = await service.generate_learning_path(current_user.id, target_node_id) # type: ignore
+    path = await service.generate_learning_path(current_user.id, target_node_id)  # type: ignore
     if not path:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -73,10 +76,7 @@ async def generate_learning_path_plan(
     target_name = str(target_node.get("name", "目标节点")) if target_node else "目标节点"
     path_summary = _format_path_summary(path)
 
-    user_query = (
-        f"为目标「{target_name}」生成可执行学习计划并拆解任务。\n"
-        f"学习路径如下：\n{path_summary}"
-    )
+    user_query = f"为目标「{target_name}」生成可执行学习计划并拆解任务。\n学习路径如下：\n{path_summary}"
     enhanced_context = EnhancedAgentContext(
         user_id=str(current_user.id),
         session_id=f"learning-path-{target_node_id}",
@@ -183,7 +183,7 @@ async def generate_full_path_plan(
     # 2. 生成计划摘要（复用 TaskDecompositionWorkflow）
     path_summary = _format_path_summary(active_nodes)
     user_query = f"为目标「{target_name}」生成学习计划。\n路径：\n{path_summary}"
-    
+
     context = EnhancedAgentContext(
         user_id=str(current_user.id),
         session_id=f"full-plan-{target_node_id}",
@@ -207,53 +207,110 @@ async def generate_full_path_plan(
             subject=target_name,
             daily_available_minutes=60,
         ),
-        user_id=current_user.id, # type: ignore
+        user_id=current_user.id,  # type: ignore
         redis_client=cache_service.redis,
     )
 
+    # Phase 4: 设置学习路径来源信息
+    plan.source = "learning_path"
+    plan.source_metadata = {
+        "target_node_id": str(target_node_id),
+        "path_node_ids": [n["id"] for n in active_nodes],
+        "total_nodes": len(active_nodes),
+    }
+    db.add(plan)
+
     # 4. 创建父任务
-    from app.models.task import TaskType
+    from app.models.task import TaskType, SubTask
+
+    # 第一次遍历：计算总预估时间
+    total_estimated = 0
+    for node in active_nodes:
+        node_id = UUID(node["id"]) if isinstance(node["id"], str) else node["id"]
+        edge_count = service.get_node_edge_count(node_id)
+        if edge_count <= 2:
+            base_minutes = 15
+        elif edge_count <= 5:
+            base_minutes = 25
+        else:
+            base_minutes = 40
+
+        is_target = node.get("is_target", False)
+        if is_target:
+            total_estimated += base_minutes * 2 + 30  # 理解 + 练习 + 综合
+        else:
+            total_estimated += base_minutes
+
     parent_task = await TaskService.create(
         db=db,
         obj_in=TaskCreate(
             title=f"学习路径：{target_name}",
             type=TaskType.LEARNING,
-            plan_id=plan.id, # type: ignore
-            estimated_minutes=sum(25 for _ in active_nodes),
+            plan_id=plan.id,  # type: ignore
+            estimated_minutes=total_estimated,
             difficulty=2,
             knowledge_node_id=target_node_id,
         ),
-        user_id=current_user.id, # type: ignore
+        user_id=current_user.id,  # type: ignore
     )
 
-    # 5. 按拓扑顺序创建 SubTask 链
-    from app.models.task import SubTask
-    
+    # 5. 按拓扑顺序创建 SubTask 链（第二次遍历）
     order = 1
     for node in active_nodes:
         is_target = node.get("is_target", False)
-        # Parse ID if it's string
         node_id = UUID(node["id"]) if isinstance(node["id"], str) else node["id"]
 
+        edge_count = service.get_node_edge_count(node_id)
+        if edge_count <= 2:
+            base_minutes = 15
+        elif edge_count <= 5:
+            base_minutes = 25
+        else:
+            base_minutes = 40
+
+        node_description = service.get_node_description(node_id)
+        node_name = node.get("name", "Unknown")
+
         if is_target:
-            # 目标节点拆 2-3 条
-            for label in ["理解核心概念", "练习巩固", "综合应用"]:
-                subtask = SubTask()
-                setattr(subtask, "parent_task_id", parent_task.id)
-                setattr(subtask, "title", f"{label}：{node['name']}")
-                setattr(subtask, "order", order)
-                setattr(subtask, "knowledge_node_id", node_id)
-                setattr(subtask, "status", SubTaskStatus.PENDING)
+            # 目标节点拆 3 条
+            subtask_configs = [
+                ("理解核心概念", base_minutes),
+                ("练习巩固", base_minutes),
+                ("综合应用", 30),
+            ]
+            for label, est_min in subtask_configs:
+                guide = (
+                    f"核心概念：{node_description}\n建议资源：{node_name} 相关知识点\n练习方向：实际应用和综合练习"
+                    if node_description
+                    else f"学习 {node_name} 的核心内容并进行练习"
+                )
+                subtask = SubTask(
+                    parent_task_id=parent_task.id,
+                    title=f"{label}：{node_name}",
+                    order=order,
+                    knowledge_node_id=node_id,
+                    status=SubTaskStatus.PENDING,
+                    estimated_minutes=est_min,
+                    guide_content=guide,
+                )
                 db.add(subtask)
                 order += 1
         else:
             # 前置节点 1 条
-            subtask = SubTask()
-            setattr(subtask, "parent_task_id", parent_task.id)
-            setattr(subtask, "title", f"学习：{node['name']}")
-            setattr(subtask, "order", order)
-            setattr(subtask, "knowledge_node_id", node_id)
-            setattr(subtask, "status", SubTaskStatus.PENDING)
+            guide = (
+                f"核心概念：{node_description}\n建议资源：{node_name} 相关知识点\n练习方向：基础理解和应用"
+                if node_description
+                else f"学习 {node_name} 的基础内容"
+            )
+            subtask = SubTask(
+                parent_task_id=parent_task.id,
+                title=f"学习：{node_name}",
+                order=order,
+                knowledge_node_id=node_id,
+                status=SubTaskStatus.PENDING,
+                estimated_minutes=base_minutes,
+                guide_content=guide,
+            )
             db.add(subtask)
             order += 1
 

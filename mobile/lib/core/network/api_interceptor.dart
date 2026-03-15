@@ -5,8 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logger/logger.dart';
 import 'package:sparkle/core/constants/api_constants.dart';
-import 'package:sparkle/core/services/device_identity_service.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
+import 'package:sparkle/core/services/device_identity_service.dart';
 import 'package:sparkle/features/auth/auth.dart';
 
 final authInterceptorProvider = Provider(AuthInterceptor.new);

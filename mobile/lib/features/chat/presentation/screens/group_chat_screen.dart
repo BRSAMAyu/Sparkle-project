@@ -548,7 +548,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                       controller: controller,
                       decoration: InputDecoration(
                         hintText: context.l10n.communitySearchGroupMessages,
-                        prefixIcon: Icon(Icons.search),
+                        prefixIcon: const Icon(Icons.search),
                       ),
                       onSubmitted: (value) async {
                         if (value.trim().isEmpty) return;

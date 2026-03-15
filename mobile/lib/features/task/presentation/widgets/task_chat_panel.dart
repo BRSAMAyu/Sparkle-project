@@ -85,7 +85,7 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Text(
-                "${lastMessage.role == MessageRole.user ? context.l10n.chatLabelMe : context.l10n.chatLabelAssistant}: ${lastMessage.content}",
+                '${lastMessage.role == MessageRole.user ? context.l10n.chatLabelMe : context.l10n.chatLabelAssistant}: ${lastMessage.content}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(color: DS.neutral600, fontSize: 12),
@@ -122,7 +122,7 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
                       decoration: InputDecoration(
                         hintText: context.l10n.taskChatInputHint,
                         border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 16),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                       ),
                       onSubmitted: (_) => _sendMessage(),
                     ),

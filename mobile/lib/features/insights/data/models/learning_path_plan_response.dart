@@ -42,8 +42,7 @@ class LearningPathTaskSummary {
     this.status,
   });
 
-  factory LearningPathTaskSummary.fromJson(Map<String, dynamic> json) {
-    return LearningPathTaskSummary(
+  factory LearningPathTaskSummary.fromJson(Map<String, dynamic> json) => LearningPathTaskSummary(
       id: json['id'] as String,
       title: json['title'] as String? ?? 'Untitled Task',
       type: json['type'] as String? ?? 'learning',
@@ -51,7 +50,6 @@ class LearningPathTaskSummary {
       priority: (json['priority'] as num?)?.toInt(),
       status: json['status'] as String?,
     );
-  }
 
   final String id;
   final String title;
@@ -59,4 +57,25 @@ class LearningPathTaskSummary {
   final int estimatedMinutes;
   final int? priority;
   final String? status;
+}
+
+class FullPlanResponse {
+  FullPlanResponse({
+    required this.planId,
+    required this.planSummary,
+    required this.parentTaskId,
+    required this.subtaskCount,
+  });
+
+  factory FullPlanResponse.fromJson(Map<String, dynamic> json) => FullPlanResponse(
+      planId: json['plan_id'] as String,
+      planSummary: json['plan_summary'] as String? ?? '',
+      parentTaskId: json['parent_task_id'] as String,
+      subtaskCount: (json['subtask_count'] as num?)?.toInt() ?? 0,
+    );
+
+  final String planId;
+  final String planSummary;
+  final String parentTaskId;
+  final int subtaskCount;
 }

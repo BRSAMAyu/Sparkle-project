@@ -116,7 +116,7 @@ void main() {
     testWidgets('redirects unauthenticated users to login', (tester) async {
       final harness = await _pumpRouter(
         tester,
-        authState: AuthState(isAuthenticated: false),
+        authState: AuthState(),
         onboardingCompleted: true,
       );
 
@@ -393,8 +393,8 @@ UserModel _buildUser() => UserModel(
       curiosityPreference: 0.5,
       isActive: true,
       status: UserStatus.online,
-      createdAt: DateTime(2026, 1),
-      updatedAt: DateTime(2026, 1),
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
     );
 
 class _FakeAuthNotifier extends AuthNotifier {
