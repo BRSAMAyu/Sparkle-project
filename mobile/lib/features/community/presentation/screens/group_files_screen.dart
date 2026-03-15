@@ -50,8 +50,7 @@ class _GroupFilesScreenState extends ConsumerState<GroupFilesScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return SparklePageScaffold(
+  Widget build(BuildContext context) => SparklePageScaffold(
       role: SparklePageRole.content,
       appBar: AppBar(
         leading: SparkleIconButton(
@@ -191,7 +190,6 @@ class _GroupFilesScreenState extends ConsumerState<GroupFilesScreen> {
         ),
       ),
     );
-  }
 
   Widget _buildCategoryChip(String label, String? category) {
     final isSelected = category == _category;

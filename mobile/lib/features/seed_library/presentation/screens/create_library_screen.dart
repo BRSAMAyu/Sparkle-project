@@ -94,6 +94,17 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
         appBar: AppBar(
           title: const Text('创建种子库'),
         ),
+        bottomNavigationBar: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(DS.spacing16),
+            child: SparkleButton(
+              label: '创建种子库',
+              onPressed: _createLibrary,
+              loading: _isCreating,
+              expand: true,
+            ),
+          ),
+        ),
         child: ContentConstraint(
           child: Form(
             key: _formKey,
@@ -237,17 +248,6 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
                   ),
                 ],
               ],
-            ),
-          ),
-        ),
-        bottomNavigationBar: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(DS.spacing16),
-            child: SparkleButton(
-              label: '创建种子库',
-              onPressed: _createLibrary,
-              loading: _isCreating,
-              expand: true,
             ),
           ),
         ),

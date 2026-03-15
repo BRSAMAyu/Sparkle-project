@@ -681,7 +681,7 @@ class _CircularProgressPainter extends CustomPainter {
   }
 
   void _drawDashedCircle(
-      Canvas canvas, Offset center, double radius, Paint paint) {
+      Canvas canvas, Offset center, double radius, Paint paint,) {
     const dashWidth = 5.0;
     const dashSpace = 5.0;
     final circumference = 2 * math.pi * radius;

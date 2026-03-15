@@ -77,7 +77,7 @@ class _TaskDetailView extends ConsumerWidget {
                           const SizedBox(height: DS.spacing12),
                           _buildGuideSection(context),
                           const SizedBox(
-                              height: DS.spacing64), // Space for bottom bar
+                              height: DS.spacing64,), // Space for bottom bar
                         ],
                       ),
                     ),
@@ -140,7 +140,6 @@ class _TaskDetailView extends ConsumerWidget {
   Widget _buildSliverAppBar(BuildContext context) => SliverAppBar(
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
-          size: DS.touchTargetMinSize,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
@@ -404,7 +403,7 @@ class _InfoTileCardState extends State<_InfoTileCard>
                     ],
                   ),
                   child: Icon(widget.icon,
-                      color: DS.brandPrimaryConst, size: DS.iconSizeSm),
+                      color: DS.brandPrimaryConst, size: DS.iconSizeSm,),
                 ),
                 const SizedBox(width: DS.spacing16),
                 Expanded(

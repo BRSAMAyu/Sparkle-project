@@ -338,8 +338,7 @@ class _MetadataPanel extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
+  Widget build(BuildContext context) => Padding(
       padding: const EdgeInsets.only(top: DS.spacing6),
       child: DecoratedBox(
         decoration: BoxDecoration(
@@ -353,7 +352,6 @@ class _MetadataPanel extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 class _SourceSummaryContent extends StatelessWidget {
@@ -366,7 +364,7 @@ class _SourceSummaryContent extends StatelessWidget {
     final headline = data['headline']?.toString().trim() ?? '';
     final citations = (data['citations'] as List<dynamic>? ?? const [])
         .whereType<Map<Object?, Object?>>()
-        .map((item) => Map<String, dynamic>.from(item))
+        .map(Map<String, dynamic>.from)
         .toList();
 
     return Column(
@@ -396,8 +394,7 @@ class _SourceSummaryContent extends StatelessWidget {
                       const SizedBox(width: DS.spacing4),
                       Expanded(
                         child: Text(
-                          citation['title']?.toString().trim().isNotEmpty ==
-                                  true
+                          citation['title']?.toString().trim().isNotEmpty ?? false
                               ? citation['title'].toString()
                               : (citation['content']?.toString() ?? ''),
                           maxLines: 2,
@@ -432,7 +429,7 @@ class _NextActionsContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final actions = (data['actions'] as List<dynamic>? ?? const [])
         .whereType<Map<Object?, Object?>>()
-        .map((item) => Map<String, dynamic>.from(item))
+        .map(Map<String, dynamic>.from)
         .toList();
 
     return Wrap(

@@ -30,7 +30,7 @@ class FocusRepository {
       return FocusSessionResponse(
         id: 'mock-session-${DateTime.now().millisecondsSinceEpoch}',
         success: true,
-        rewards: FocusSessionRewards(
+        rewards: const FocusSessionRewards(
           flameEarned: 10,
           leveledUp: false,
           newLevel: 5,
@@ -193,7 +193,7 @@ class FocusRepository {
     if (DemoDataService.isDemoMode) {
       final now = DateTime.now();
       return FocusMonthlyStatsResponse(
-        periodStart: DateTime(now.year, now.month, 1).toIso8601String().split('T')[0],
+        periodStart: DateTime(now.year, now.month).toIso8601String().split('T')[0],
         periodEnd: now.toIso8601String().split('T')[0],
         totalMinutes: 3240,
         sessionCount: 27,
@@ -235,7 +235,7 @@ class FocusRepository {
           status: 'completed',
           taskId: 'mock-task-$i',
           taskTitle: 'Mock Focus Task $i',
-        )),
+        ),),
         totalCount: 5,
         limit: 20,
         offset: 0,
@@ -263,7 +263,7 @@ class FocusRepository {
   Future<Map<String, double>> getHeatmapData({int days = 90}) async {
     if (DemoDataService.isDemoMode) {
       final heatmap = <String, double>{};
-      for (int i = 0; i < 30; i++) {
+      for (var i = 0; i < 30; i++) {
         final date = DateTime.now().subtract(Duration(days: i));
         final key = date.toIso8601String().split('T')[0];
         heatmap[key] = 30.0 + (i % 10) * 15.0;

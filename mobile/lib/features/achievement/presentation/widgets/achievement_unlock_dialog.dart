@@ -705,7 +705,7 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
               vertical: DS.spacing10,
             ),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
+              gradient: const LinearGradient(
                 colors: [
                   DS.rarityLegendary,
                   DS.rarityRare,

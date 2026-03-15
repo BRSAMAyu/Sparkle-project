@@ -20,7 +20,6 @@ class GrowthScreen extends ConsumerWidget {
       appBar: AppBar(
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
-          size: DS.touchTargetMinSize,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
@@ -30,7 +29,6 @@ class GrowthScreen extends ConsumerWidget {
             message: '历史计划',
             child: SparkleIconButton(
               variant: ButtonVariant.ghost,
-              size: DS.touchTargetMinSize,
               icon: const Icon(Icons.archive_outlined),
               onPressed: () => context.push('/plans/history'),
             ),

@@ -29,6 +29,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   bool _isLoading = false;
   final _picker = ImagePicker();
 
+  bool get _isSocialAccount {
+    final source = ref.read(currentUserProvider)?.registrationSource;
+    return source == 'google' || source == 'apple' || source == 'wechat';
+  }
+
   Future<bool> _ensureMediaPermission(String source) async {
     if (source == 'camera') {
       final status = await Permission.camera.request();
@@ -127,7 +132,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       } catch (e) {
         if (parentContext.mounted) {
           AppFeedback.error(
-              parentContext, l10n.editProfileUpdateFailed(e.toString()));
+              parentContext, l10n.editProfileUpdateFailed(e.toString()),);
         }
       } finally {
         if (mounted) setState(() => _isLoading = false);
@@ -202,6 +207,60 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     }
   }
 
+  Future<void> _sendVerificationEmail() async {
+    try {
+      final message =
+          await ref.read(authProvider.notifier).sendVerificationEmail();
+      if (!mounted) return;
+      AppFeedback.success(context, message);
+    } catch (e) {
+      if (!mounted) return;
+      AppFeedback.error(context, e.toString());
+    }
+  }
+
+  Future<void> _verifyEmailWithCode() async {
+    final controller = TextEditingController();
+    final token = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('输入邮箱验证码'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            hintText: '请输入邮件中的验证码',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () =>
+                Navigator.of(dialogContext).pop(controller.text.trim()),
+            child: const Text('验证'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+
+    if (token == null || token.isEmpty) {
+      return;
+    }
+
+    try {
+      final message = await ref.read(authProvider.notifier).verifyEmail(token);
+      if (!mounted) return;
+      AppFeedback.success(context, message);
+    } catch (e) {
+      if (!mounted) return;
+      AppFeedback.error(context, e.toString());
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -214,7 +273,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       appBar: AppBar(
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
-          size: DS.touchTargetMinSize,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
@@ -359,18 +417,76 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 GraphiteCardSurface(
                   surfaceRole: SparkleSurfaceRole.panel,
                   padding: EdgeInsets.zero,
-                  child: ListTile(
-                    leading:
-                        Icon(Icons.lock_reset_rounded, color: DS.primaryBase),
-                    title: Text(
-                      l10n.editProfileResetPassword,
-                      style: const TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.w500),
-                    ),
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: () {
-                      context.push(UserRoutes.passwordReset);
-                    },
+                  child: Column(
+                    children: [
+                      ListTile(
+                        leading: Icon(Icons.lock_reset_rounded,
+                            color: DS.primaryBase,),
+                        title: Text(
+                          _isSocialAccount
+                              ? '设置密码'
+                              : l10n.editProfileResetPassword,
+                          style: const TextStyle(
+                              fontSize: 15, fontWeight: FontWeight.w500,),
+                        ),
+                        subtitle: _isSocialAccount
+                            ? const Text('社交账号首次设置密码后，可使用邮箱密码登录')
+                            : null,
+                        trailing: const Icon(Icons.chevron_right_rounded),
+                        onTap: () {
+                          unawaited(context.push(UserRoutes.passwordReset));
+                        },
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        isThreeLine: !(user?.emailVerified ?? false),
+                        leading: Icon(
+                          user?.emailVerified ?? false
+                              ? Icons.verified_rounded
+                              : Icons.mark_email_unread_outlined,
+                          color: (user?.emailVerified ?? false)
+                              ? DS.success
+                              : DS.warning,
+                        ),
+                        title: Text(
+                          (user?.emailVerified ?? false) ? '邮箱已验证' : '邮箱未验证',
+                          style: const TextStyle(
+                              fontSize: 15, fontWeight: FontWeight.w500,),
+                        ),
+                        subtitle: Text(
+                          (user?.emailVerified ?? false)
+                              ? '你的邮箱已完成验证'
+                              : '验证后可修改密码并增强账号安全',
+                        ),
+                        trailing: (user?.emailVerified ?? false)
+                            ? null
+                            : const Icon(Icons.mark_email_read_outlined),
+                      ),
+                      if (!(user?.emailVerified ?? false))
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                            DS.spacing16,
+                            0,
+                            DS.spacing16,
+                            DS.spacing12,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              TextButton(
+                                onPressed:
+                                    _isLoading ? null : _verifyEmailWithCode,
+                                child: const Text('输入验证码'),
+                              ),
+                              TextButton(
+                                onPressed:
+                                    _isLoading ? null : _sendVerificationEmail,
+                                child: const Text('发送邮件'),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
                   ),
                 ),
 
@@ -386,7 +502,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildInfoRow(l10n.editProfileFlameLevel,
-                          'Lv.${user?.flameLevel ?? 1}'),
+                          'Lv.${user?.flameLevel ?? 1}',),
                       _buildInfoRow(
                         l10n.editProfileFlameBrightness,
                         '${((user?.flameBrightness ?? 0.5) * 100).toInt()}%',
@@ -396,6 +512,16 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                         user?.id.startsWith('guest') ?? false
                             ? l10n.editProfileGuestAccount
                             : l10n.editProfileFullAccount,
+                      ),
+                      _buildInfoRow(
+                        '注册方式',
+                        switch (user?.registrationSource) {
+                          'google' => 'Google',
+                          'apple' => 'Apple',
+                          'wechat' => '微信',
+                          'guest' => '游客',
+                          _ => '邮箱',
+                        },
                       ),
                     ],
                   ),

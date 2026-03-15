@@ -215,7 +215,7 @@ void main() {
       expect(result[0].amount, 100);
       expect(result[0].isIncome, isTrue);
       expect(result[0].metadata, {
-        'achievement_name': 'Test Achievement'
+        'achievement_name': 'Test Achievement',
       }); // Verify extra_data → metadata mapping
       expect(result[1].transactionType, PhotonTransactionType.purchase);
       expect(result[1].amount, -50);

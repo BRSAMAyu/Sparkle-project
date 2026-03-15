@@ -89,8 +89,7 @@ extension AppPermissionKindX on AppPermissionKind {
 Future<void> showAppPermissionDialog(
   BuildContext context, {
   required AppPermissionKind permission,
-}) {
-  return showDialog<void>(
+}) => showDialog<void>(
     context: context,
     builder: (dialogContext) => Dialog(
       backgroundColor: Colors.transparent,
@@ -154,4 +153,3 @@ Future<void> showAppPermissionDialog(
       ),
     ),
   );
-}

@@ -52,7 +52,6 @@ class GroupDetailScreen extends ConsumerWidget {
         slivers: [
           SliverAppBar(
             leading: SparkleIconButton(
-              size: DS.touchTargetMinSize,
               icon: const Icon(Icons.arrow_back),
               onPressed: () => context.pop(),
             ),
@@ -108,7 +107,6 @@ class GroupDetailScreen extends ConsumerWidget {
             actions: [
               if (isMember)
                 SparkleIconButton(
-                  size: DS.touchTargetMinSize,
                   icon: Icon(Icons.more_vert, color: DS.brandPrimary),
                   onPressed: () => _showGroupOptions(context, ref, group),
                 ),
@@ -277,7 +275,7 @@ class GroupDetailScreen extends ConsumerWidget {
                               .joinGroup();
                           if (context.mounted) {
                             AppFeedback.success(
-                                context, 'Welcome to the group!');
+                                context, 'Welcome to the group!',);
                           }
                         } catch (e) {
                           if (context.mounted) {
@@ -336,7 +334,6 @@ class GroupDetailScreen extends ConsumerWidget {
       context: context,
       backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
       builder: (context) => GraphiteModalSurface(
-        surfaceRole: SparkleSurfaceRole.modal,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

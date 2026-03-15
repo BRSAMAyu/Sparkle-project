@@ -98,7 +98,6 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
       appBar: AppBar(
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
-          size: DS.touchTargetMinSize,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
@@ -117,7 +116,6 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
         actions: [
           SparkleIconButton(
             variant: ButtonVariant.ghost,
-            size: DS.touchTargetMinSize,
             icon: const Icon(Icons.search),
             onPressed: _handleSearch,
           ),
@@ -162,7 +160,7 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
                             child: user.avatarUrl == null
                                 ? Text(user.displayName
                                     .substring(0, 1)
-                                    .toUpperCase())
+                                    .toUpperCase(),)
                                 : null,
                           ),
                           if (user.status == UserStatus.online)

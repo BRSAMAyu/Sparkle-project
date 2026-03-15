@@ -17,7 +17,6 @@ class PlanEditScreen extends StatelessWidget {
         title: Text(l10n.editPlan),
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
-          size: DS.touchTargetMinSize,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),

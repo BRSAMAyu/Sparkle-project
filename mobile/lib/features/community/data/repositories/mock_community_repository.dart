@@ -359,9 +359,6 @@ class MockCommunityRepository implements CommunityRepository {
         id: id ?? const Uuid().v4(),
         username: name.toLowerCase(),
         nickname: name,
-        // Keep local/demo rendering deterministic. External avatar CDNs should
-        // not be a hard dependency for community screens or tests.
-        avatarUrl: null,
         flameLevel: level,
         flameBrightness:
             (0.5 + (level / 40.0)).clamp(0.0, 1.0), // 🔧 修复：确保不超过1.0

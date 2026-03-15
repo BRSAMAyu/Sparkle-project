@@ -88,7 +88,6 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
               icon: const Icon(Icons.close),
               onPressed: () => Navigator.of(context).pop(false),
               variant: ButtonVariant.ghost,
-              size: DS.touchTargetMinSize,
             ),
           ],
         ),
@@ -102,8 +101,8 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
               Text(context.l10n.intentPreviewAnalyzing),
             ],
           ),

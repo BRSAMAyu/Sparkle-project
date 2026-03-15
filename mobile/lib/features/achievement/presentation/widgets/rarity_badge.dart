@@ -120,7 +120,7 @@ class RarityBadge extends StatelessWidget {
               DS.success,
               DS.info,
             ],
-            stops: [0.0, 0.33, 0.66, 1.0],
+            stops: const [0.0, 0.33, 0.66, 1.0],
           ),
         );
     }
@@ -205,7 +205,7 @@ class RarityColorProvider {
             DS.success,
             DS.info,
           ],
-          stops: [0.0, 0.33, 0.66, 1.0],
+          stops: const [0.0, 0.33, 0.66, 1.0],
         );
     }
   }

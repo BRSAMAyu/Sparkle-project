@@ -30,7 +30,6 @@ void main() {
 
   test('ChatState listItemCount reflects status flags', () {
     final state = ChatState(
-      messages: const [],
       isSending: true,
       aiStatus: 'status',
       isReasoningActive: true,

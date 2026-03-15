@@ -111,7 +111,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final activePlanId = ref.read(activePlanProvider);
       unawaited(
-          ref.read(chatProvider.notifier).switchPlanSession(activePlanId));
+          ref.read(chatProvider.notifier).switchPlanSession(activePlanId),);
     });
   }
 
@@ -155,7 +155,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           onPressed: () => _handleExitChat(context),
           semanticLabel: '返回',
           variant: ButtonVariant.ghost,
-          size: DS.touchTargetMinSize,
         ),
         title: Row(
           children: [
@@ -202,14 +201,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             onPressed: () => _showHistoryBottomSheet(context),
             semanticLabel: '历史对话',
             variant: ButtonVariant.ghost,
-            size: DS.touchTargetMinSize,
           ),
           SparkleIconButton(
             icon: Icon(Icons.add_comment_outlined, color: DS.textSecondary),
             onPressed: () => ref.read(chatProvider.notifier).startNewSession(),
             semanticLabel: '新建对话',
             variant: ButtonVariant.ghost,
-            size: DS.touchTargetMinSize,
           ),
         ],
       ),
@@ -266,7 +263,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                 if (isStatusShowing && index == 0) {
                                   return Padding(
                                     padding: const EdgeInsets.only(
-                                        bottom: DS.spacing12),
+                                        bottom: DS.spacing12,),
                                     child: AiStatusIndicator(
                                       status: chatState.aiStatus,
                                       details: chatState.aiStatusDetails,
@@ -286,7 +283,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
                                   return Padding(
                                     padding: const EdgeInsets.only(
-                                        bottom: DS.spacing12),
+                                        bottom: DS.spacing12,),
                                     child: AgentReasoningBubble(
                                       steps: chatState.reasoningSteps,
                                       isThinking: true,
@@ -303,7 +300,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                   if (chatState.streamingContent.isNotEmpty) {
                                     return Padding(
                                       padding: const EdgeInsets.only(
-                                          bottom: DS.spacing12),
+                                          bottom: DS.spacing12,),
                                       child: Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
@@ -419,7 +416,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                       notifier.state.copyWith(clearError: true);
                                 },
                                 child: Padding(
-                                  padding: EdgeInsets.all(DS.spacing4),
+                                  padding: const EdgeInsets.all(DS.spacing4),
                                   child: Icon(
                                     Icons.close,
                                     size: DS.iconSizeXs,
@@ -479,7 +476,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     // Bottom input area - wrapped to prevent overflow
                     LayoutBuilder(
                       builder: (context, constraints) => _buildBottomInputArea(
-                          context, chatState, constraints),
+                          context, chatState, constraints,),
                     ),
                   ],
                 ),
@@ -669,7 +666,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                         : null,
                                     onTap: () => unawaited(
                                       _handleHistorySessionTap(
-                                          context, session),
+                                          context, session,),
                                     ),
                                   ),
                                 ),

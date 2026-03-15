@@ -23,7 +23,6 @@ class SprintScreen extends ConsumerWidget {
       appBar: AppBar(
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
-          size: DS.touchTargetMinSize,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
@@ -33,7 +32,6 @@ class SprintScreen extends ConsumerWidget {
             message: '历史计划',
             child: SparkleIconButton(
               variant: ButtonVariant.ghost,
-              size: DS.touchTargetMinSize,
               icon: const Icon(Icons.archive_outlined),
               onPressed: () => context.push('/plans/history'),
             ),
@@ -41,7 +39,6 @@ class SprintScreen extends ConsumerWidget {
           if (activeSprint != null)
             SparkleIconButton(
               variant: ButtonVariant.ghost,
-              size: DS.touchTargetMinSize,
               icon: const Icon(Icons.open_in_new),
               onPressed: () {
                 context.push('/plans/${activeSprint.id}');
@@ -50,7 +47,6 @@ class SprintScreen extends ConsumerWidget {
           if (activeSprint != null)
             SparkleIconButton(
               variant: ButtonVariant.ghost,
-              size: DS.touchTargetMinSize,
               icon: const Icon(Icons.edit_outlined),
               onPressed: () {
                 context.push('/plans/${activeSprint.id}/edit');

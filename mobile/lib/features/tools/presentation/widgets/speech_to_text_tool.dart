@@ -51,7 +51,6 @@ class _SpeechToTextToolState extends State<SpeechToTextTool> {
       subtitle: '面向真实记录场景的轻量转写台。单次录音最长 30 秒，直接调用当前已接通的 GLM ASR 链路。',
       accentColor: accent,
       compactHeader: true,
-      fillHeight: false,
       heroChips: [
         ToolHeroChip(
           label: hasText ? '已捕获 $_charCount 字' : '30 秒单次录音',

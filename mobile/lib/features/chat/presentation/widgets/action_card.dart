@@ -1466,13 +1466,11 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                     fontWeight: DS.fontWeightSemibold,
                   ),
             ),
-            children: reasoningDetails.map((detail) {
-              return buildDetailBlock({
+            children: reasoningDetails.map((detail) => buildDetailBlock({
                 'what_changed': detail['label'],
                 'why': detail['evidence'],
                 'expected_effect': detail['impact'],
-              });
-            }).toList(),
+              })).toList(),
           ),
         ],
         if (recommendedAction != null) ...[

@@ -38,7 +38,7 @@ class MessageDetailView extends StatelessWidget {
       body: GestureDetector(
         // 点击背景关闭
         onTap: () => Navigator.of(context).pop(),
-        child: Container(
+        child: ColoredBox(
           color: DS.textPrimary.withValues(alpha: 0.5),
           child: GestureDetector(
             // 阻止点击内容区域时关闭
@@ -167,7 +167,6 @@ class MessageDetailView extends StatelessWidget {
             onPressed: () => Navigator.of(context).pop(),
             semanticLabel: '关闭',
             variant: ButtonVariant.ghost,
-            size: DS.touchTargetMinSize,
           ),
         ],
       ),
@@ -300,7 +299,7 @@ class MessageDetailView extends StatelessWidget {
     final trimmed = content.trim();
     final strongPatterns = <RegExp>[
       RegExp(r'(^|\n)#{1,6}\s', multiLine: true),
-      RegExp(r'```'),
+      RegExp('```'),
       RegExp(r'`[^`\n]+`'),
       RegExp(r'\[[^\]]+\]\([^)]+\)'),
       RegExp(r'(^|\n)>\s', multiLine: true),
@@ -311,8 +310,7 @@ class MessageDetailView extends StatelessWidget {
     return strongPatterns.any((pattern) => pattern.hasMatch(trimmed));
   }
 
-  Widget _buildActions(BuildContext context) {
-    return Container(
+  Widget _buildActions(BuildContext context) => Container(
       padding: const EdgeInsets.all(DS.md),
       decoration: BoxDecoration(
         color: DS.surfaceTertiary.withValues(alpha: 0.35),
@@ -344,7 +342,6 @@ class MessageDetailView extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 class _ActionButton extends StatelessWidget {
@@ -359,8 +356,7 @@ class _ActionButton extends StatelessWidget {
   final VoidCallback onPressed;
 
   @override
-  Widget build(BuildContext context) {
-    return InkWell(
+  Widget build(BuildContext context) => InkWell(
       onTap: onPressed,
       borderRadius: BorderRadius.circular(12),
       child: Padding(
@@ -388,5 +384,4 @@ class _ActionButton extends StatelessWidget {
         ),
       ),
     );
-  }
 }

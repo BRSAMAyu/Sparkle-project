@@ -78,7 +78,7 @@ void main() {
           stopwatch.stop();
 
           print(
-              '1000 nodes initial layout: ${stopwatch.elapsedMilliseconds}ms');
+              '1000 nodes initial layout: ${stopwatch.elapsedMilliseconds}ms',);
           expect(
             stopwatch.elapsedMilliseconds,
             lessThan(_layout1000NodeThresholdMs),

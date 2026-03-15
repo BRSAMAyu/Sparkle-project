@@ -134,7 +134,6 @@ Future<void> _pumpPage(WidgetTester tester, Widget page) async {
 class _FakeAuthNotifier extends AuthNotifier {
   _FakeAuthNotifier() : super(_UnusedAuthRepository()) {
     state = AuthState(
-      isLoading: false,
       isAuthenticated: true,
       user: _buildUser(),
     );
@@ -155,8 +154,8 @@ UserModel _buildUser() => UserModel(
       curiosityPreference: 0.5,
       isActive: true,
       status: UserStatus.online,
-      createdAt: DateTime(2026, 1, 1),
-      updatedAt: DateTime(2026, 1, 1),
+      createdAt: DateTime(2026, 1),
+      updatedAt: DateTime(2026, 1),
     );
 
 class _UnusedAuthRepository extends AuthRepository {

@@ -161,7 +161,7 @@ class ErrorMessages {
 
   /// 获取错误对应的建议操作
   static String getActionSuggestion(String errorCode,
-      {AppLocalizations? l10n}) {
+      {AppLocalizations? l10n,}) {
     // 建议操作也可以根据 l10n 进一步细化，目前保持简单
     switch (errorCode.toUpperCase()) {
       case 'CONNECTION_ERROR':

@@ -55,8 +55,7 @@ class ProfileScreen extends ConsumerWidget {
     BuildContext context,
     UserModel user, {
     required double headerHeight,
-  }) {
-    return SizedBox(
+  }) => SizedBox(
       height: headerHeight,
       child: Stack(
         children: [
@@ -167,7 +166,6 @@ class ProfileScreen extends ConsumerWidget {
         ],
       ),
     );
-  }
 
   Widget _buildSettingsSection(
     BuildContext context,

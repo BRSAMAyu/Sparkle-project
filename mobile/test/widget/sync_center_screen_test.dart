@@ -103,14 +103,14 @@ class _FakeApiClient implements ApiClient {
 
   @override
   Future<Response<T>> get<T>(String path,
-      {Map<String, dynamic>? queryParameters}) {
+      {Map<String, dynamic>? queryParameters,}) {
     throw UnimplementedError();
   }
 
   @override
   Stream<SSEEvent> getStream(String path,
           {Map<String, dynamic>? headers,
-          Map<String, dynamic>? queryParameters}) =>
+          Map<String, dynamic>? queryParameters,}) =>
       const Stream<SSEEvent>.empty();
 
   @override
@@ -119,7 +119,7 @@ class _FakeApiClient implements ApiClient {
 
   @override
   Future<Response<T>> post<T>(String path,
-      {Object? data, Map<String, dynamic>? queryParameters}) {
+      {Object? data, Map<String, dynamic>? queryParameters,}) {
     throw UnimplementedError();
   }
 

@@ -18,7 +18,6 @@ class PlanHistoryScreen extends ConsumerWidget {
       appBar: AppBar(
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
-          size: DS.touchTargetMinSize,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
@@ -101,7 +100,6 @@ class _PlanHistorySection extends ConsumerWidget {
                     message: '恢复计划',
                     child: SparkleIconButton(
                       variant: ButtonVariant.ghost,
-                      size: DS.touchTargetMinSize,
                       icon: const Icon(Icons.restore_rounded),
                       onPressed: () async {
                         await ref

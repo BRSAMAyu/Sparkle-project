@@ -2968,6 +2968,7 @@ type User struct {
 	Username              string           `json:"username"`
 	Email                 string           `json:"email"`
 	HashedPassword        string           `json:"hashed_password"`
+	EmailVerified         bool             `json:"email_verified"`
 	FullName              pgtype.Text      `json:"full_name"`
 	Nickname              pgtype.Text      `json:"nickname"`
 	AvatarUrl             pgtype.Text      `json:"avatar_url"`
@@ -2987,6 +2988,7 @@ type User struct {
 	WechatUnionid         pgtype.Text      `json:"wechat_unionid"`
 	RegistrationSource    string           `json:"registration_source"`
 	LastLoginAt           pgtype.Timestamp `json:"last_login_at"`
+	TokenRevokedBefore    pgtype.Timestamp `json:"token_revoked_before"`
 	IsMinor               pgtype.Bool      `json:"is_minor"`
 	AgeVerified           bool             `json:"age_verified"`
 	AgeVerificationSource pgtype.Text      `json:"age_verification_source"`

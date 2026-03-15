@@ -40,7 +40,6 @@ class LearningPathDialog extends ConsumerWidget {
                 icon: const Icon(Icons.close),
                 onPressed: () => Navigator.of(context).pop(),
                 variant: ButtonVariant.ghost,
-                size: DS.touchTargetMinSize,
               ),
             ],
           ),

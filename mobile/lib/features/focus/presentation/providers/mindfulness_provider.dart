@@ -7,9 +7,8 @@ import 'package:sparkle/features/focus/data/models/candidate_action_model.dart';
 import 'package:sparkle/features/focus/data/repositories/focus_repository.dart';
 import 'package:sparkle/features/focus/data/services/context_service.dart';
 import 'package:sparkle/features/focus/data/services/prediction_service.dart';
-import 'package:sparkle/shared/entities/task_model.dart';
-
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
+import 'package:sparkle/shared/entities/task_model.dart';
 
 /// 分心事件类型
 enum InterruptionType {

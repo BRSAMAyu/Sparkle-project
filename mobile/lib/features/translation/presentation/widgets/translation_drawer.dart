@@ -114,7 +114,6 @@ class TranslationDrawer extends ConsumerWidget {
                   },
                   semanticLabel: '清空历史',
                   variant: ButtonVariant.ghost,
-                  size: DS.touchTargetMinSize,
                 ),
             ],
           ),
@@ -254,7 +253,6 @@ class TranslationDrawer extends ConsumerWidget {
                       },
                       semanticLabel: '保存到生词卡',
                       variant: ButtonVariant.ghost,
-                      size: DS.touchTargetMinSize,
                     )
                   : null),
           onTap: () {

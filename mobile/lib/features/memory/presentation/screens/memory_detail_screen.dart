@@ -190,7 +190,6 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
             icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
             variant: ButtonVariant.ghost,
-            size: DS.touchTargetMinSize,
           ),
           title: Text(
             widget.args.title,
@@ -208,21 +207,18 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
                 icon: const Icon(Icons.copy),
                 onPressed: _copyDetail,
                 variant: ButtonVariant.ghost,
-                size: DS.touchTargetMinSize,
               ),
             if (AppFeatureFlags.enableMemoryPanelV2)
               SparkleIconButton(
                 icon: const Icon(Icons.file_download),
                 onPressed: _showExportDialog,
                 variant: ButtonVariant.ghost,
-                size: DS.touchTargetMinSize,
               ),
             if (AppFeatureFlags.enableEvidenceViewer)
               SparkleIconButton(
                 icon: const Icon(Icons.link),
                 onPressed: () => _showEvidence(context),
                 variant: ButtonVariant.ghost,
-                size: DS.touchTargetMinSize,
               ),
           ],
         ),
@@ -294,15 +290,11 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
               const Center(child: CircularProgressIndicator())
             else if (_historyError != null)
               Text(_historyError!,
-                  style: Theme.of(context).textTheme.bodyMedium)
+                  style: Theme.of(context).textTheme.bodyMedium,)
             else if (AppFeatureFlags.enableMemoryPanelV2)
-              ...List.generate(_history.length, (index) {
-                return _buildTimelineCard(context, index);
-              })
+              ...List.generate(_history.length, (index) => _buildTimelineCard(context, index))
             else
-              ...List.generate(_history.length, (index) {
-                return _buildHistoryTile(context, _history[index]);
-              }),
+              ...List.generate(_history.length, (index) => _buildHistoryTile(context, _history[index])),
           ],
         ),
       );
@@ -344,7 +336,7 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
         _buildKeyValue('来源', episodic?.sourceType ?? '-'),
         _buildKeyValue('发生时间', _formatDate(episodic?.occurredAt)),
         _buildKeyValue(
-            '重要度', episodic?.importanceScore?.toStringAsFixed(2) ?? '-'),
+            '重要度', episodic?.importanceScore?.toStringAsFixed(2) ?? '-',),
         _buildKeyValue('Evidence', _evidenceScore?.toStringAsFixed(2) ?? '-'),
         _buildKeyValue('Corrections', _correctionCount.toString()),
         _buildKeyValue('最后更新', _formatDate(episodic?.updatedAt)),
@@ -482,7 +474,6 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
                           )
                       : null,
                   variant: ButtonVariant.ghost,
-                  size: DS.touchTargetMinSize,
                 ),
               ],
             ),
@@ -721,7 +712,7 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
             children: [
               _buildCorrectionButton('Not true', 'reject'),
               _buildCorrectionButton(
-                  'No longer applies', 'no_longer_applicable'),
+                  'No longer applies', 'no_longer_applicable',),
               _buildCorrectionButton('Lower confidence', 'lower_confidence'),
               _buildCorrectionButton('Merge', 'merge'),
             ],

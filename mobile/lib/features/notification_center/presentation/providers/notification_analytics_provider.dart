@@ -1,8 +1,8 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/features/notification_center/data/models/notification_analytics_model.dart'
     as model;
 import 'package:sparkle/features/notification_center/data/repositories/notification_center_repository.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 part 'notification_analytics_provider.g.dart';
 

@@ -156,7 +156,7 @@ class StatisticsHeatmap extends StatelessWidget {
               return Padding(
                 padding: EdgeInsets.only(right: cellSpacing),
                 child: _buildCell(
-                    item ?? HeatmapData(x: x, y: y, value: 0), cellSize),
+                    item ?? HeatmapData(x: x, y: y, value: 0), cellSize,),
               );
             }),
           ),
@@ -199,11 +199,13 @@ class StatisticsHeatmap extends StatelessWidget {
   }
 
   Color _getColorForValue(double value) {
-    if (value <= 0)
+    if (value <= 0) {
       return emptyColor ?? StatisticsChartConfig.heatmapEmptyColor;
+    }
     if (value < 0.33) return lowColor ?? StatisticsChartConfig.heatmapLowColor;
-    if (value < 0.66)
+    if (value < 0.66) {
       return mediumColor ?? StatisticsChartConfig.heatmapMediumColor;
+    }
     return highColor ?? StatisticsChartConfig.heatmapHighColor;
   }
 

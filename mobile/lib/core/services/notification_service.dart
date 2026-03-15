@@ -31,9 +31,7 @@ class NotificationService {
         '@mipmap/ic_launcher',); // Verify icon name
 
     const initializationSettingsDarwin = DarwinInitializationSettings(
-      requestAlertPermission: true,
       requestBadgePermission: true,
-      requestSoundPermission: true,
     );
 
     const initializationSettings = InitializationSettings(
@@ -279,4 +277,4 @@ class NotificationService {
 }
 
 final notificationServiceProvider =
-    Provider<NotificationService>((ref) => NotificationService(ref));
+    Provider<NotificationService>(NotificationService.new);

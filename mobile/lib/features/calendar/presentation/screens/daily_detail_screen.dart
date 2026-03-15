@@ -40,7 +40,6 @@ class DailyDetailScreen extends ConsumerWidget {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
           variant: ButtonVariant.ghost,
-          size: DS.touchTargetMinSize,
         ),
         title: Text(DateFormat.MMMd(context.l10n.localeName).format(date)),
         centerTitle: true,
@@ -95,7 +94,6 @@ class DailyDetailScreen extends ConsumerWidget {
   ) =>
       GraphiteCardSurface(
         surfaceRole: SparkleSurfaceRole.accent,
-        padding: const EdgeInsets.all(DS.spacing20),
         child: Row(
           children: [
             Text(
@@ -277,7 +275,7 @@ class DailyDetailScreen extends ConsumerWidget {
             borderRadius: BorderRadius.circular(12),
             border: Border(
               left: BorderSide(
-                  color: _resolveEventColor(event.colorValue), width: 3),
+                  color: _resolveEventColor(event.colorValue), width: 3,),
             ),
           ),
           child: Row(

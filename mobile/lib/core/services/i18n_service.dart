@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../l10n/app_localizations.dart';
-import '../../l10n/app_localizations_zh.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
+import 'package:sparkle/l10n/app_localizations_zh.dart';
 
 /// Global i18n service for context-free localization access.
 ///

@@ -157,7 +157,6 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
             icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
             variant: ButtonVariant.ghost,
-            size: DS.touchTargetMinSize,
           ),
           title: Text(
             '记忆控制',
@@ -374,8 +373,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
     required ValueChanged<bool> onChanged,
     bool enabled = true,
     bool isLast = false,
-  }) {
-    return Container(
+  }) => Container(
       padding: const EdgeInsets.symmetric(vertical: DS.spacing8),
       decoration: BoxDecoration(
         border:
@@ -415,7 +413,6 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
         ],
       ),
     );
-  }
 
   void _togglePrefKey(String key, bool selected) {
     setState(() {
@@ -454,8 +451,7 @@ class _MemoryChoiceChip extends StatelessWidget {
   final VoidCallback onSelected;
 
   @override
-  Widget build(BuildContext context) {
-    return ChoiceChip(
+  Widget build(BuildContext context) => ChoiceChip(
       label: Text(label),
       selected: selected,
       onSelected: enabled ? (_) => onSelected() : null,
@@ -470,7 +466,6 @@ class _MemoryChoiceChip extends StatelessWidget {
         fontWeight: FontWeight.w600,
       ),
     );
-  }
 }
 
 class _MemoryFilterChip extends StatelessWidget {
@@ -487,8 +482,7 @@ class _MemoryFilterChip extends StatelessWidget {
   final ValueChanged<bool> onSelected;
 
   @override
-  Widget build(BuildContext context) {
-    return FilterChip(
+  Widget build(BuildContext context) => FilterChip(
       label: Text(label),
       selected: selected,
       onSelected: enabled ? onSelected : null,
@@ -507,5 +501,4 @@ class _MemoryFilterChip extends StatelessWidget {
       ),
       checkmarkColor: DS.primaryBase,
     );
-  }
 }

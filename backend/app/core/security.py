@@ -156,18 +156,33 @@ async def is_token_revoked(jti: str) -> bool:
 
 async def get_user_revoked_before(user_id: str) -> int | None:
     """
-    Fetch per-user revocation timestamp from Redis.
+    Fetch per-user revocation timestamp from Redis, with DB fallback.
     """
     if not user_id:
         return None
     key = f"{USER_REVOKED_BEFORE_PREFIX}{user_id}"
     try:
         value = await cache_service.get(key)
-        if value is None:
-            return None
-        return int(value)
+        if value is not None:
+            return int(value)
+    except Exception:
+        pass
+
+    try:
+        from app.db.session import AsyncSessionLocal
+        from app.models.user import User
+
+        async with AsyncSessionLocal() as session:
+            user = await session.get(User, user_id)
+            if not user or user.token_revoked_before is None:
+                return None
+            revoked_before_ts = int(user.token_revoked_before.timestamp())
+            await set_user_revoked_before(user_id, user.token_revoked_before)
+            return revoked_before_ts
     except Exception:
         return None
+
+    return None
 
 
 async def set_user_revoked_before(user_id: str, revoked_before: datetime) -> None:

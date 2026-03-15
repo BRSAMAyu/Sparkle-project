@@ -105,7 +105,6 @@ class _SchedulePreferencesScreenState
         appBar: AppBar(
           leading: SparkleIconButton(
             variant: ButtonVariant.ghost,
-            size: DS.touchTargetMinSize,
             icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
           ),
@@ -113,7 +112,6 @@ class _SchedulePreferencesScreenState
           actions: [
             SparkleIconButton(
               variant: ButtonVariant.ghost,
-              size: DS.touchTargetMinSize,
               onPressed: _save,
               icon: const Icon(Icons.save),
             ),

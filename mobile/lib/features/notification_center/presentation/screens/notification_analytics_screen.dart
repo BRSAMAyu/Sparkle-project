@@ -65,7 +65,7 @@ class _NotificationAnalyticsScreenState
               ? _buildError(state.error!)
               : state.analytics == null
                   ? Center(
-                      child: Text(context.l10n.notificationAnalyticsNoData))
+                      child: Text(context.l10n.notificationAnalyticsNoData),)
                   : _buildContent(state.analytics!),
     );
   }
@@ -132,14 +132,14 @@ class _NotificationAnalyticsScreenState
                 context.l10n.notificationAnalyticsTotalSent,
                 '${summary.totalSent}',
                 Icons.send,
-              )),
+              ),),
               const SizedBox(width: DS.spacing12),
               Expanded(
                   child: _buildStatCard(
                 context.l10n.notificationAnalyticsTotalViewed,
                 '${summary.totalViewed}',
                 Icons.visibility,
-              )),
+              ),),
             ],
           ),
           const SizedBox(height: DS.spacing12),
@@ -150,14 +150,14 @@ class _NotificationAnalyticsScreenState
                 context.l10n.notificationAnalyticsTotalClicked,
                 '${summary.totalClicked}',
                 Icons.touch_app,
-              )),
+              ),),
               const SizedBox(width: DS.spacing12),
               Expanded(
                   child: _buildStatCard(
                 context.l10n.notificationAnalyticsViewRate,
                 '${summary.viewRate.toStringAsFixed(1)}%',
                 Icons.pie_chart,
-              )),
+              ),),
             ],
           ),
         ],
@@ -173,7 +173,7 @@ class _NotificationAnalyticsScreenState
             Row(
               children: [
                 Icon(icon,
-                    size: 20, color: Theme.of(context).colorScheme.primary),
+                    size: 20, color: Theme.of(context).colorScheme.primary,),
                 const SizedBox(width: 8),
                 Text(
                   title,
@@ -221,7 +221,7 @@ class _NotificationAnalyticsScreenState
       );
 
   Widget _buildTypeStatCard(
-          String title, int sent, int viewed, double viewRate) =>
+          String title, int sent, int viewed, double viewRate,) =>
       GraphiteCardSurface(
         surfaceRole: SparkleSurfaceRole.card,
         margin: const EdgeInsets.only(bottom: DS.spacing12),

@@ -110,7 +110,7 @@ class ToolPreferencesNotifier extends StateNotifier<ToolPreferences> {
   }
 
   List<String> _sanitizePinnedIds(List<String> ids) =>
-      _dedupePreservingOrder(ids.where((id) => ToolRegistry.isPinnable(id)));
+      _dedupePreservingOrder(ids.where(ToolRegistry.isPinnable));
 
   List<String> _sanitizeIds(List<String> ids) => _dedupePreservingOrder(
         ids.where(ToolRegistry.contains),

@@ -369,7 +369,7 @@ class _PlanReviewCardState extends State<PlanReviewCard>
                                     colors: [
                                       DS.surfacePrimary.withValues(alpha: 0),
                                       color.withValues(
-                                          alpha: 0.03 + (progress * 0.05)),
+                                          alpha: 0.03 + (progress * 0.05),),
                                       DS.surfacePrimary.withValues(alpha: 0),
                                     ],
                                     stops: const [0.2, 0.5, 0.8],
@@ -548,12 +548,11 @@ class _PlanReviewCardState extends State<PlanReviewCard>
   Widget _buildReasoningDetails() => ExpansionTile(
         tilePadding: EdgeInsets.zero,
         childrenPadding: EdgeInsets.zero,
-        title: Text(
+        title: const Text(
           '查看规划依据',
-          style: const TextStyle(fontWeight: DS.fontWeightSemibold),
+          style: TextStyle(fontWeight: DS.fontWeightSemibold),
         ),
-        children: widget.review.reasoningDetails.map((detail) {
-          return Container(
+        children: widget.review.reasoningDetails.map((detail) => Container(
             margin: const EdgeInsets.only(top: DS.spacing8),
             padding: const EdgeInsets.all(DS.spacing12),
             decoration: BoxDecoration(
@@ -582,8 +581,7 @@ class _PlanReviewCardState extends State<PlanReviewCard>
                 ],
               ],
             ),
-          );
-        }).toList(),
+          )).toList(),
       );
 
   Widget _buildAlignmentSummary() => Container(
@@ -701,7 +699,7 @@ class _PlanReviewCardState extends State<PlanReviewCard>
   }
 
   Widget _buildCommentGroup(
-          String title, List<ReviewComment> comments, Color color) =>
+          String title, List<ReviewComment> comments, Color color,) =>
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1013,7 +1011,7 @@ extension on _PlanReviewCardState {
               }
               Navigator.of(context).pop(
                 _RejectionFeedback(
-                    category: selected!, note: note.isEmpty ? null : note),
+                    category: selected!, note: note.isEmpty ? null : note,),
               );
             }
 
@@ -1044,11 +1042,11 @@ extension on _PlanReviewCardState {
                       ),
                       Padding(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: DS.spacing20),
+                            horizontal: DS.spacing20,),
                         child: Row(
                           children: [
                             Icon(Icons.feedback_outlined,
-                                color: DS.primaryBase),
+                                color: DS.primaryBase,),
                             const SizedBox(width: DS.spacing12),
                             Text(
                               '告诉我们拒绝原因',
@@ -1153,7 +1151,7 @@ extension on _PlanReviewCardState {
                       const SizedBox(height: DS.spacing16),
                       Padding(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: DS.spacing20),
+                            horizontal: DS.spacing20,),
                         child: Row(
                           children: [
                             Expanded(

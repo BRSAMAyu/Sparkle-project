@@ -435,7 +435,8 @@ async def refresh_token(
                 "token_type": "bearer"
             }
         }
-    except Exception:
+    except Exception as e:
+        logger.warning(f"Refresh token request failed: {e}")
         raise HTTPException(status_code=401, detail="刷新令牌无效，请重新登录")
 
 

@@ -372,7 +372,7 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
     buffer.writeln('Type,${statistics.type.code}');
     buffer.writeln('Period,${statistics.period.name}');
     buffer.writeln(
-        'Last Refreshed,${statistics.lastRefreshedAt.toIso8601String()}');
+        'Last Refreshed,${statistics.lastRefreshedAt.toIso8601String()}',);
     buffer.writeln('From Cache,${statistics.isFromCache}');
   }
 

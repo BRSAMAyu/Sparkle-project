@@ -35,7 +35,6 @@ class _SeedLibraryDetailScreenState
               state.library!.ownerId == null) // Editable check
             SparkleIconButton(
               variant: ButtonVariant.ghost,
-              size: DS.touchTargetMinSize,
               icon: const Icon(Icons.edit),
               onPressed: () {
                 // TODO: Implement edit
@@ -44,7 +43,6 @@ class _SeedLibraryDetailScreenState
           if (state.library != null && state.library!.ownerId == null)
             SparkleIconButton(
               variant: ButtonVariant.ghost,
-              size: DS.touchTargetMinSize,
               icon: const Icon(Icons.delete),
               onPressed: () => _showDeleteDialog(context),
             ),
@@ -204,7 +202,7 @@ class _SeedLibraryDetailScreenState
                         children: library.tags!
                             .map((tag) => Chip(
                                 label: Text(tag),
-                                labelPadding: EdgeInsets.zero))
+                                labelPadding: EdgeInsets.zero,),)
                             .toList(),
                       ),
                     ],
@@ -254,7 +252,7 @@ class _SeedLibraryDetailScreenState
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(Icons.inbox_outlined,
-                              size: DS.spacing64, color: DS.textTertiary),
+                              size: DS.spacing64, color: DS.textTertiary,),
                           const SizedBox(height: DS.spacing16),
                           Text(
                             '暂无内容',
@@ -277,7 +275,7 @@ class _SeedLibraryDetailScreenState
                       // Load more indicator
                       ref
                           .read(seedLibraryDetailProvider(widget.libraryId)
-                              .notifier)
+                              .notifier,)
                           .loadItems();
                       return const SizedBox(
                         height: 100,

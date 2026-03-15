@@ -127,7 +127,15 @@ class AuthRepository {
 
       final tokenResponse = TokenResponse.fromJson(tokenData);
       await saveTokens(tokenResponse);
-      return UserModel.fromJson(data['user'] as Map<String, dynamic>);
+      final userData = data['user'] as Map<String, dynamic>?;
+      final hasFullProfile = userData != null &&
+          userData.containsKey('flame_level') &&
+          userData.containsKey('created_at') &&
+          userData.containsKey('updated_at');
+      if (!hasFullProfile) {
+        return await getCurrentUser();
+      }
+      return UserModel.fromJson(userData);
     } on DioException catch (e) {
       final message = _extractErrorMessage(e.response?.data);
       throw Exception(message ?? 'Social login failed');
@@ -159,7 +167,7 @@ class AuthRepository {
     try {
       final refreshToken = await getRefreshToken();
       await _apiClient.post<dynamic>(
-        '/auth/logout',
+        ApiEndpoints.logout,
         data: {
           if (refreshToken != null && refreshToken.isNotEmpty)
             'refresh_token': refreshToken,
@@ -289,6 +297,88 @@ class AuthRepository {
       final detail =
           (e.response?.data as Map<String, dynamic>?)?['detail'] as String?;
       throw Exception(detail ?? 'Could not change password.');
+    } catch (e) {
+      throw Exception('An unexpected error occurred');
+    }
+  }
+
+  Future<String> setPassword(String newPassword) async {
+    try {
+      if (DemoDataService.isDemoMode) {
+        return '密码设置成功';
+      }
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        ApiEndpoints.setPassword,
+        data: {'new_password': newPassword},
+      );
+      return _extractErrorMessage(response.data) ?? '密码设置成功';
+    } on DioException catch (e) {
+      final detail =
+          (e.response?.data as Map<String, dynamic>?)?['detail'] as String?;
+      throw Exception(detail ?? 'Could not set password.');
+    } catch (e) {
+      throw Exception('An unexpected error occurred');
+    }
+  }
+
+  Future<String> forgotPassword(String email) async {
+    try {
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        ApiEndpoints.forgotPassword,
+        data: {'email': email},
+      );
+      return _extractErrorMessage(response.data) ?? '如果该邮箱已注册，重置邮件已发送';
+    } on DioException catch (e) {
+      final message = _extractErrorMessage(e.response?.data);
+      throw Exception(message ?? 'Could not request password reset.');
+    } catch (e) {
+      throw Exception('An unexpected error occurred');
+    }
+  }
+
+  Future<String> resetPasswordWithToken(
+      String token, String newPassword,) async {
+    try {
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        ApiEndpoints.resetPassword,
+        data: {
+          'token': token,
+          'new_password': newPassword,
+        },
+      );
+      return _extractErrorMessage(response.data) ?? '密码已重置，请重新登录';
+    } on DioException catch (e) {
+      final message = _extractErrorMessage(e.response?.data);
+      throw Exception(message ?? 'Could not reset password.');
+    } catch (e) {
+      throw Exception('An unexpected error occurred');
+    }
+  }
+
+  Future<String> sendVerificationEmail() async {
+    try {
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        ApiEndpoints.sendVerification,
+      );
+      return _extractErrorMessage(response.data) ?? '验证邮件已发送';
+    } on DioException catch (e) {
+      final message = _extractErrorMessage(e.response?.data);
+      throw Exception(message ?? 'Could not send verification email.');
+    } catch (e) {
+      throw Exception('An unexpected error occurred');
+    }
+  }
+
+  Future<String> verifyEmail(String token) async {
+    try {
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        ApiEndpoints.verifyEmail,
+        data: {'token': token},
+      );
+      return _extractErrorMessage(response.data) ?? '邮箱验证成功';
+    } on DioException catch (e) {
+      final message = _extractErrorMessage(e.response?.data);
+      throw Exception(message ?? 'Could not verify email.');
     } catch (e) {
       throw Exception('An unexpected error occurred');
     }

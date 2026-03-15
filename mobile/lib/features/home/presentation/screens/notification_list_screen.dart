@@ -20,7 +20,6 @@ class NotificationListScreen extends ConsumerWidget {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
           variant: ButtonVariant.ghost,
-          size: DS.touchTargetMinSize,
         ),
         title: const Text('Notifications'),
       ),

@@ -540,7 +540,6 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
                 ),
                 semanticLabel: '添加不准确项',
                 variant: ButtonVariant.ghost,
-                size: DS.touchTargetMinSize,
               ),
             ],
           ),
@@ -638,7 +637,6 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
     return SparkleButton(
       label: '提交反馈',
       onPressed: hasValidFeedback && !_isSubmitting ? _handleSubmit : null,
-      variant: ButtonVariant.primary,
       loading: _isSubmitting,
       disabled: !hasValidFeedback || _isSubmitting,
       expand: true,

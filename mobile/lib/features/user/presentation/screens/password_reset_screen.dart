@@ -24,6 +24,11 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
   bool _obscureNew = true;
   bool _obscureConfirm = true;
 
+  bool get _isSocialAccount {
+    final source = ref.read(currentUserProvider)?.registrationSource;
+    return source == 'google' || source == 'apple' || source == 'wechat';
+  }
+
   @override
   void dispose() {
     _oldPasswordController.dispose();
@@ -38,13 +43,28 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
     final l10n = context.l10n;
     setState(() => _isLoading = true);
     try {
-      await ref.read(authProvider.notifier).changePassword(
-            _oldPasswordController.text,
-            _newPasswordController.text,
-          );
+      if (_isSocialAccount) {
+        await ref
+            .read(authProvider.notifier)
+            .setPassword(_newPasswordController.text);
+      } else {
+        await ref.read(authProvider.notifier).changePassword(
+              _oldPasswordController.text,
+              _newPasswordController.text,
+            );
+      }
       if (mounted) {
-        AppFeedback.success(context, l10n.passwordResetSuccess);
-        UserRoutes.popOrGoProfile(context);
+        AppFeedback.success(
+          context,
+          _isSocialAccount ? '密码设置成功，请重新登录' : l10n.passwordResetSuccess,
+        );
+        if (_isSocialAccount) {
+          await ref.read(authProvider.notifier).logout();
+          if (!mounted) return;
+          context.go('/login');
+        } else {
+          UserRoutes.popOrGoProfile(context);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -66,11 +86,10 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
       appBar: AppBar(
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
-          size: DS.touchTargetMinSize,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        title: Text(l10n.passwordReset),
+        title: Text(_isSocialAccount ? '设置密码' : l10n.passwordReset),
         centerTitle: true,
       ),
       child: ContentConstraint(
@@ -84,7 +103,9 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    l10n.passwordResetHint,
+                    _isSocialAccount
+                        ? '为当前社交账号设置一个密码，之后你就可以直接用邮箱和密码登录。'
+                        : l10n.passwordResetHint,
                     style: TextStyle(
                       color:
                           isDark ? DS.brandPrimary70 : DS.brandPrimary.shade600,
@@ -92,21 +113,25 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
                     ),
                   ),
                   const SizedBox(height: DS.spacing24),
+                  if (!_isSocialAccount) ...[
+                    _buildPasswordField(
+                      label: l10n.passwordResetCurrentLabel,
+                      controller: _oldPasswordController,
+                      obscureText: _obscureOld,
+                      onToggle: () =>
+                          setState(() => _obscureOld = !_obscureOld),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return l10n.passwordResetCurrentRequired;
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: DS.spacing16),
+                  ],
                   _buildPasswordField(
-                    label: l10n.passwordResetCurrentLabel,
-                    controller: _oldPasswordController,
-                    obscureText: _obscureOld,
-                    onToggle: () => setState(() => _obscureOld = !_obscureOld),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return l10n.passwordResetCurrentRequired;
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: DS.spacing16),
-                  _buildPasswordField(
-                    label: l10n.passwordResetNewLabel,
+                    label:
+                        _isSocialAccount ? '设置密码' : l10n.passwordResetNewLabel,
                     controller: _newPasswordController,
                     obscureText: _obscureNew,
                     onToggle: () => setState(() => _obscureNew = !_obscureNew),
@@ -137,7 +162,7 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
                   const SizedBox(height: DS.spacing32),
                   SparkleButton(
                     onPressed: _isLoading ? null : _handleReset,
-                    label: l10n.passwordResetButton,
+                    label: _isSocialAccount ? '确认设置' : l10n.passwordResetButton,
                     loading: _isLoading,
                     expand: true,
                   ),

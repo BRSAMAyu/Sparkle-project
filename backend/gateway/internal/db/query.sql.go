@@ -123,11 +123,11 @@ func (q *Queries) CreatePostLike(ctx context.Context, arg CreatePostLikeParams) 
 
 const createSocialUser = `-- name: CreateSocialUser :one
 INSERT INTO users (
-    id, username, email, hashed_password, nickname, 
-    registration_source, is_active, apple_id, updated_at, created_at
+    id, username, email, hashed_password, nickname,
+    email_verified, registration_source, is_active, apple_id, updated_at, created_at
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
-RETURNING username, email, hashed_password, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, is_minor, age_verified, age_verification_source, age_verified_at, photon_balance, photon_updated_at, equipped_skin, equipped_title, id, created_at, updated_at, deleted_at
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
+RETURNING username, email, hashed_password, email_verified, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, token_revoked_before, is_minor, age_verified, age_verification_source, age_verified_at, photon_balance, photon_updated_at, equipped_skin, equipped_title, id, created_at, updated_at, deleted_at
 `
 
 type CreateSocialUserParams struct {
@@ -136,6 +136,7 @@ type CreateSocialUserParams struct {
 	Email              string      `json:"email"`
 	HashedPassword     string      `json:"hashed_password"`
 	Nickname           pgtype.Text `json:"nickname"`
+	EmailVerified      bool        `json:"email_verified"`
 	RegistrationSource string      `json:"registration_source"`
 	IsActive           bool        `json:"is_active"`
 	AppleID            pgtype.Text `json:"apple_id"`
@@ -148,6 +149,7 @@ func (q *Queries) CreateSocialUser(ctx context.Context, arg CreateSocialUserPara
 		arg.Email,
 		arg.HashedPassword,
 		arg.Nickname,
+		arg.EmailVerified,
 		arg.RegistrationSource,
 		arg.IsActive,
 		arg.AppleID,
@@ -157,6 +159,7 @@ func (q *Queries) CreateSocialUser(ctx context.Context, arg CreateSocialUserPara
 		&i.Username,
 		&i.Email,
 		&i.HashedPassword,
+		&i.EmailVerified,
 		&i.FullName,
 		&i.Nickname,
 		&i.AvatarUrl,
@@ -176,6 +179,7 @@ func (q *Queries) CreateSocialUser(ctx context.Context, arg CreateSocialUserPara
 		&i.WechatUnionid,
 		&i.RegistrationSource,
 		&i.LastLoginAt,
+		&i.TokenRevokedBefore,
 		&i.IsMinor,
 		&i.AgeVerified,
 		&i.AgeVerificationSource,
@@ -195,7 +199,7 @@ func (q *Queries) CreateSocialUser(ctx context.Context, arg CreateSocialUserPara
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (id, email, hashed_password, full_name, is_active, is_superuser, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
-RETURNING username, email, hashed_password, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, is_minor, age_verified, age_verification_source, age_verified_at, photon_balance, photon_updated_at, equipped_skin, equipped_title, id, created_at, updated_at, deleted_at
+RETURNING username, email, hashed_password, email_verified, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, token_revoked_before, is_minor, age_verified, age_verification_source, age_verified_at, photon_balance, photon_updated_at, equipped_skin, equipped_title, id, created_at, updated_at, deleted_at
 `
 
 type CreateUserParams struct {
@@ -221,6 +225,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.Username,
 		&i.Email,
 		&i.HashedPassword,
+		&i.EmailVerified,
 		&i.FullName,
 		&i.Nickname,
 		&i.AvatarUrl,
@@ -240,6 +245,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.WechatUnionid,
 		&i.RegistrationSource,
 		&i.LastLoginAt,
+		&i.TokenRevokedBefore,
 		&i.IsMinor,
 		&i.AgeVerified,
 		&i.AgeVerificationSource,
@@ -844,7 +850,7 @@ func (q *Queries) GetUnpublishedOutboxEntries(ctx context.Context, limit int32) 
 }
 
 const getUser = `-- name: GetUser :one
-SELECT username, email, hashed_password, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, is_minor, age_verified, age_verification_source, age_verified_at, photon_balance, photon_updated_at, equipped_skin, equipped_title, id, created_at, updated_at, deleted_at FROM users WHERE id = $1
+SELECT username, email, hashed_password, email_verified, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, token_revoked_before, is_minor, age_verified, age_verification_source, age_verified_at, photon_balance, photon_updated_at, equipped_skin, equipped_title, id, created_at, updated_at, deleted_at FROM users WHERE id = $1
 `
 
 func (q *Queries) GetUser(ctx context.Context, id pgtype.UUID) (User, error) {
@@ -854,6 +860,7 @@ func (q *Queries) GetUser(ctx context.Context, id pgtype.UUID) (User, error) {
 		&i.Username,
 		&i.Email,
 		&i.HashedPassword,
+		&i.EmailVerified,
 		&i.FullName,
 		&i.Nickname,
 		&i.AvatarUrl,
@@ -873,6 +880,7 @@ func (q *Queries) GetUser(ctx context.Context, id pgtype.UUID) (User, error) {
 		&i.WechatUnionid,
 		&i.RegistrationSource,
 		&i.LastLoginAt,
+		&i.TokenRevokedBefore,
 		&i.IsMinor,
 		&i.AgeVerified,
 		&i.AgeVerificationSource,
@@ -890,7 +898,7 @@ func (q *Queries) GetUser(ctx context.Context, id pgtype.UUID) (User, error) {
 }
 
 const getUserByAppleID = `-- name: GetUserByAppleID :one
-SELECT username, email, hashed_password, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, is_minor, age_verified, age_verification_source, age_verified_at, photon_balance, photon_updated_at, equipped_skin, equipped_title, id, created_at, updated_at, deleted_at FROM users WHERE apple_id = $1 LIMIT 1
+SELECT username, email, hashed_password, email_verified, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, token_revoked_before, is_minor, age_verified, age_verification_source, age_verified_at, photon_balance, photon_updated_at, equipped_skin, equipped_title, id, created_at, updated_at, deleted_at FROM users WHERE apple_id = $1 LIMIT 1
 `
 
 func (q *Queries) GetUserByAppleID(ctx context.Context, appleID pgtype.Text) (User, error) {
@@ -900,6 +908,7 @@ func (q *Queries) GetUserByAppleID(ctx context.Context, appleID pgtype.Text) (Us
 		&i.Username,
 		&i.Email,
 		&i.HashedPassword,
+		&i.EmailVerified,
 		&i.FullName,
 		&i.Nickname,
 		&i.AvatarUrl,
@@ -919,6 +928,7 @@ func (q *Queries) GetUserByAppleID(ctx context.Context, appleID pgtype.Text) (Us
 		&i.WechatUnionid,
 		&i.RegistrationSource,
 		&i.LastLoginAt,
+		&i.TokenRevokedBefore,
 		&i.IsMinor,
 		&i.AgeVerified,
 		&i.AgeVerificationSource,
@@ -936,7 +946,7 @@ func (q *Queries) GetUserByAppleID(ctx context.Context, appleID pgtype.Text) (Us
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT username, email, hashed_password, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, is_minor, age_verified, age_verification_source, age_verified_at, photon_balance, photon_updated_at, equipped_skin, equipped_title, id, created_at, updated_at, deleted_at FROM users WHERE email = $1 LIMIT 1
+SELECT username, email, hashed_password, email_verified, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, token_revoked_before, is_minor, age_verified, age_verification_source, age_verified_at, photon_balance, photon_updated_at, equipped_skin, equipped_title, id, created_at, updated_at, deleted_at FROM users WHERE email = $1 LIMIT 1
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
@@ -946,6 +956,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.Username,
 		&i.Email,
 		&i.HashedPassword,
+		&i.EmailVerified,
 		&i.FullName,
 		&i.Nickname,
 		&i.AvatarUrl,
@@ -965,6 +976,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.WechatUnionid,
 		&i.RegistrationSource,
 		&i.LastLoginAt,
+		&i.TokenRevokedBefore,
 		&i.IsMinor,
 		&i.AgeVerified,
 		&i.AgeVerificationSource,
@@ -1128,6 +1140,64 @@ func (q *Queries) IsGroupMember(ctx context.Context, arg IsGroupMemberParams) (b
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
+}
+
+const linkAppleUser = `-- name: LinkAppleUser :one
+UPDATE users
+SET apple_id = COALESCE(apple_id, $2),
+    email_verified = TRUE,
+    updated_at = NOW()
+WHERE id = $1
+RETURNING username, email, hashed_password, email_verified, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, token_revoked_before, is_minor, age_verified, age_verification_source, age_verified_at, photon_balance, photon_updated_at, equipped_skin, equipped_title, id, created_at, updated_at, deleted_at
+`
+
+type LinkAppleUserParams struct {
+	ID      pgtype.UUID `json:"id"`
+	AppleID pgtype.Text `json:"apple_id"`
+}
+
+func (q *Queries) LinkAppleUser(ctx context.Context, arg LinkAppleUserParams) (User, error) {
+	row := q.db.QueryRow(ctx, linkAppleUser, arg.ID, arg.AppleID)
+	var i User
+	err := row.Scan(
+		&i.Username,
+		&i.Email,
+		&i.HashedPassword,
+		&i.EmailVerified,
+		&i.FullName,
+		&i.Nickname,
+		&i.AvatarUrl,
+		&i.AvatarStatus,
+		&i.PendingAvatarUrl,
+		&i.FlameLevel,
+		&i.FlameBrightness,
+		&i.DepthPreference,
+		&i.CuriosityPreference,
+		&i.SchedulePreferences,
+		&i.WeatherPreferences,
+		&i.IsActive,
+		&i.IsSuperuser,
+		&i.Status,
+		&i.GoogleID,
+		&i.AppleID,
+		&i.WechatUnionid,
+		&i.RegistrationSource,
+		&i.LastLoginAt,
+		&i.TokenRevokedBefore,
+		&i.IsMinor,
+		&i.AgeVerified,
+		&i.AgeVerificationSource,
+		&i.AgeVerifiedAt,
+		&i.PhotonBalance,
+		&i.PhotonUpdatedAt,
+		&i.EquippedSkin,
+		&i.EquippedTitle,
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
 }
 
 const markEventProcessed = `-- name: MarkEventProcessed :exec

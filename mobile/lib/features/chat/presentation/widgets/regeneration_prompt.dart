@@ -554,8 +554,6 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
               icon: _isSubmitting
                   ? null
                   : const Icon(Icons.refresh, size: DS.iconSizeXs),
-              variant: ButtonVariant.primary,
-              size: ButtonSize.medium,
               loading: _isSubmitting,
               disabled: _selectedType == null || _isSubmitting,
               expand: true,

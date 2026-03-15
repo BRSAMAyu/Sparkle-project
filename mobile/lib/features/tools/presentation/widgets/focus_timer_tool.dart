@@ -75,7 +75,6 @@ class _FocusTimerToolState extends State<FocusTimerTool> {
       subtitle: subtitle,
       accentColor: accent,
       compactHeader: true,
-      fillHeight: false,
       heroChips: [
         ToolHeroChip(
           label: _mode == TimerMode.countDown ? '倒计时模式' : '正计时模式',

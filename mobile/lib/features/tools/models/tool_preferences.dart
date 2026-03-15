@@ -1,4 +1,10 @@
 class ToolPreferences {
+
+  const ToolPreferences({
+    required this.pinnedToolIds,
+    required this.recentToolIds,
+    this.isLoaded = false,
+  });
   factory ToolPreferences.fromJson(Map<String, dynamic> json) =>
       ToolPreferences(
         pinnedToolIds: (json['pinned_tool_ids'] as List<dynamic>? ?? const [])
@@ -9,12 +15,6 @@ class ToolPreferences {
             .toList(),
         isLoaded: true,
       );
-
-  const ToolPreferences({
-    required this.pinnedToolIds,
-    required this.recentToolIds,
-    this.isLoaded = false,
-  });
 
   final List<String> pinnedToolIds;
   final List<String> recentToolIds;

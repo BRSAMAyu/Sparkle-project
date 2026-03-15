@@ -74,7 +74,6 @@ class _NotificationCenterScreenState
               semanticLabel:
                   context.l10n.notificationMarkAllRead(state.unreadCount),
               variant: ButtonVariant.ghost,
-              size: DS.touchTargetMinSize,
             ),
 
           // Menu
@@ -227,7 +226,7 @@ class _NotificationCenterScreenState
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.notifications_none,
-                size: DS.spacing64, color: DS.textTertiary),
+                size: DS.spacing64, color: DS.textTertiary,),
             const SizedBox(height: DS.spacing16),
             Text(
               context.l10n.notificationEmptyTitle,
@@ -245,7 +244,7 @@ class _NotificationCenterScreenState
       );
 
   List<UnifiedNotification> _filterNotifications(
-      List<UnifiedNotification> notifications) {
+      List<UnifiedNotification> notifications,) {
     var filtered = notifications;
 
     // Apply status filter

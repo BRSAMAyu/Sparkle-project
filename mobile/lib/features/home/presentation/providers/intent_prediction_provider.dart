@@ -219,7 +219,7 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
         if (response.confidence + 0.05 < localConfidence) return;
 
         final backendPredictions = _predictionsForIntent(
-            backendIntent, response.confidence, normalized)
+            backendIntent, response.confidence, normalized,)
           ..sort((a, b) => b.confidence.compareTo(a.confidence));
         if (backendPredictions.isEmpty) return;
 

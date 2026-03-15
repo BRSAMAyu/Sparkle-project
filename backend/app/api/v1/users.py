@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from typing import Any
 from uuid import uuid4
 
@@ -9,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user
 from app.config import settings
 from app.core.cache import cache_service
-from app.core.security import get_password_hash, verify_password
+from app.core.security import get_password_hash, set_user_revoked_before, verify_password
 from app.db.session import get_db
 from app.models.user import PushPreference, User
 from app.schemas.user import (
@@ -98,6 +99,7 @@ async def update_me(
         if result.scalars().first():
             raise HTTPException(status_code=400, detail="Email already registered")
         current_user.email = obj_in.email
+        current_user.email_verified = False
 
     pref_updates = {}
     if obj_in.depth_preference is not None:
@@ -261,6 +263,9 @@ async def change_password(
     """
     Change current user's password
     """
+    if not current_user.email_verified:
+        raise HTTPException(status_code=403, detail="请先验证邮箱后再修改密码")
+
     if not verify_password(obj_in.old_password, current_user.hashed_password):
         raise HTTPException(status_code=400, detail="Incorrect old password")
 
@@ -269,6 +274,30 @@ async def change_password(
     db.add(current_user)
     await db.commit()
     return {"detail": "Password updated successfully"}
+
+
+@router.post("/me/set-password")
+async def set_password(
+    obj_in: SetPasswordRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Set password for social-login users or verified accounts without requiring the old password.
+    """
+    trusted_social_sources = {"google", "apple", "wechat"}
+    if not current_user.email_verified and current_user.registration_source not in trusted_social_sources:
+        raise HTTPException(status_code=403, detail="请先验证邮箱后再设置密码")
+
+    current_user.hashed_password = get_password_hash(obj_in.new_password)
+    current_user.token_revoked_before = datetime.utcnow()
+
+    db.add(current_user)
+    await db.commit()
+    await db.refresh(current_user)
+    await set_user_revoked_before(str(current_user.id), current_user.token_revoked_before)
+
+    return {"detail": "Password set successfully. Please log in again."}
 
 @router.put("/me/preferences", response_model=UserProfile)
 async def update_my_preferences(

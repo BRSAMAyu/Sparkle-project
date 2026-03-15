@@ -17,7 +17,6 @@ class CommunityScreen extends ConsumerWidget {
       role: SparklePageRole.content,
       safeArea: false,
       floatingActionButton: SparkleIconButton(
-        variant: ButtonVariant.primary,
         size: DS.touchTargetMinSize,
         icon: const Icon(Icons.edit),
         onPressed: () {

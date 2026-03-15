@@ -7,8 +7,7 @@ void main() {
   Widget buildTestWidget({
     required List<WidgetPayload> actions,
     required bool isLatestMessage,
-  }) {
-    return MaterialApp(
+  }) => MaterialApp(
       home: Scaffold(
         body: AssistantMessageMetadataTray(
           actions: actions,
@@ -17,7 +16,6 @@ void main() {
         ),
       ),
     );
-  }
 
   testWidgets('next actions only renders for latest assistant message',
       (tester) async {

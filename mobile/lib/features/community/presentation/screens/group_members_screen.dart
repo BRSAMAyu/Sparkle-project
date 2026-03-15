@@ -43,7 +43,6 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
       appBar: AppBar(
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
-          size: DS.touchTargetMinSize,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
@@ -52,7 +51,6 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
           if (_canManage)
             SparkleIconButton(
               variant: ButtonVariant.ghost,
-              size: DS.touchTargetMinSize,
               icon: const Icon(Icons.person_add),
               onPressed: () {
                 // TODO: Navigate to invite members screen
@@ -147,7 +145,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
                       ],
                       if (regularMembers.isNotEmpty) ...[
                         _buildSectionHeader(
-                            'Members (${regularMembers.length})'),
+                            'Members (${regularMembers.length})',),
                         ...regularMembers.map(_buildMemberTile),
                       ],
                     ],
@@ -270,7 +268,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
                   style: TextStyle(
                       fontSize: 10,
                       color: DS.neutral900,
-                      fontWeight: FontWeight.bold),
+                      fontWeight: FontWeight.bold,),
                 ),
               ),
             ] else if (isAdmin) ...[
@@ -286,7 +284,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
                   style: TextStyle(
                       fontSize: 10,
                       color: DS.brandPrimaryConst,
-                      fontWeight: FontWeight.bold),
+                      fontWeight: FontWeight.bold,),
                 ),
               ),
             ],
@@ -353,10 +351,10 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
                         child: Row(
                           children: [
                             Icon(Icons.supervisor_account,
-                                size: 18, color: DS.warning),
+                                size: 18, color: DS.warning,),
                             const SizedBox(width: DS.sm),
                             Text('Transfer Ownership',
-                                style: TextStyle(color: DS.warning)),
+                                style: TextStyle(color: DS.warning),),
                           ],
                         ),
                       ),
@@ -373,7 +371,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
                           Icon(Icons.person_remove, size: 18, color: DS.error),
                           const SizedBox(width: DS.sm),
                           Text('Remove from Group',
-                              style: TextStyle(color: DS.error)),
+                              style: TextStyle(color: DS.error),),
                         ],
                       ),
                     ),
@@ -414,7 +412,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
   }
 
   Future<void> _handleMemberAction(
-      GroupMemberInfo member, String action) async {
+      GroupMemberInfo member, String action,) async {
     switch (action) {
       case 'promote':
         final confirmed = await _showConfirmDialog(
@@ -514,7 +512,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
   }
 
   Future<bool?> _showConfirmDialog(String title, String message,
-          {bool isDestructive = false}) =>
+          {bool isDestructive = false,}) =>
       showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(

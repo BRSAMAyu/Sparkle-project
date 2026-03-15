@@ -124,7 +124,7 @@ class UnifiedNotificationCard extends StatelessWidget {
                           const SizedBox(width: DS.xs),
                           Text(
                             Formatters.formatRelativeTime(
-                                notification.createdAt),
+                                notification.createdAt,),
                             style: TextStyle(
                               fontSize: 12,
                               color: DS.textSecondary,

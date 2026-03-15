@@ -26,6 +26,7 @@ class UserModel {
     required this.isActive,
     required this.createdAt,
     required this.updatedAt,
+    this.emailVerified = false,
     this.nickname,
     this.avatarUrl,
     this.avatarStatus = AvatarStatus.approved,
@@ -38,6 +39,7 @@ class UserModel {
     this.equippedSkinSource,
     this.equippedTitle,
     this.equippedTitleSource,
+    this.registrationSource,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) =>
@@ -45,7 +47,10 @@ class UserModel {
   final String id;
   final String username;
   final String email;
+  @JsonKey(name: 'email_verified')
+  final bool emailVerified;
   final String? nickname;
+  @JsonKey(name: 'avatar_url')
   final String? avatarUrl;
 
   @JsonKey(name: 'avatar_status')
@@ -84,6 +89,8 @@ class UserModel {
   final String? equippedTitle;
   @JsonKey(name: 'equipped_title_source')
   final String? equippedTitleSource;
+  @JsonKey(name: 'registration_source')
+  final String? registrationSource;
   Map<String, dynamic> toJson() => _$UserModelToJson(this);
 }
 

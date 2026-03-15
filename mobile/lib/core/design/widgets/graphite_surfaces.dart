@@ -263,8 +263,7 @@ class GraphiteSectionTitle extends StatelessWidget {
   final Widget? trailing;
 
   @override
-  Widget build(BuildContext context) {
-    return Row(
+  Widget build(BuildContext context) => Row(
       children: [
         Text(
           title,
@@ -277,7 +276,6 @@ class GraphiteSectionTitle extends StatelessWidget {
         if (trailing != null) trailing!,
       ],
     );
-  }
 }
 
 class SparklePageScaffold extends StatelessWidget {

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../services/i18n_service.dart';
-import '../../l10n/app_localizations.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 /// Key for storing language preference in SharedPreferences
 const String kLocaleKey = 'app_locale';

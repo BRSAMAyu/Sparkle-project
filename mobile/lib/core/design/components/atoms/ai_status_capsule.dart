@@ -50,7 +50,7 @@ class AiStatusCapsule extends StatelessWidget {
         children: [
           if (icon != null) ...[
             Icon(icon, size: dense ? 14 : 16, color: baseColor),
-            SizedBox(width: 8),
+            const SizedBox(width: 8),
           ],
           Container(
             width: dense ? 6 : 8,
@@ -60,7 +60,7 @@ class AiStatusCapsule extends StatelessWidget {
               shape: BoxShape.circle,
             ),
           ),
-          SizedBox(width: 8),
+          const SizedBox(width: 8),
           Text(
             label,
             style: TextStyle(fontSize: dense ? 12 : 14, color: baseColor),

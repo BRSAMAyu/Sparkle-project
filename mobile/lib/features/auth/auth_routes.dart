@@ -22,22 +22,40 @@ Page<dynamic> _buildTransitionPage({
 
 class AuthRoutes {
   static List<RouteBase> get routes => [
-    GoRoute(
-        path: '/login',
-        name: 'login',
-        pageBuilder: (context, state) => _buildTransitionPage(
-          state: state,
-          child: const LoginScreen(),
-          type: SharedAxisTransitionType.scaled,
+        GoRoute(
+          path: '/login',
+          name: 'login',
+          pageBuilder: (context, state) => _buildTransitionPage(
+            state: state,
+            child: const LoginScreen(),
+            type: SharedAxisTransitionType.scaled,
+          ),
         ),
-      ),
-      GoRoute(
-        path: '/register',
-        name: 'register',
-        pageBuilder: (context, state) => _buildTransitionPage(
-          state: state,
-          child: const RegisterScreen(),
+        GoRoute(
+          path: '/register',
+          name: 'register',
+          pageBuilder: (context, state) => _buildTransitionPage(
+            state: state,
+            child: const RegisterScreen(),
+          ),
         ),
-      ),
-  ];
+        GoRoute(
+          path: '/forgot-password',
+          name: 'forgotPassword',
+          pageBuilder: (context, state) => _buildTransitionPage(
+            state: state,
+            child: const ForgotPasswordScreen(),
+          ),
+        ),
+        GoRoute(
+          path: '/reset-password',
+          name: 'resetPassword',
+          pageBuilder: (context, state) => _buildTransitionPage(
+            state: state,
+            child: ResetPasswordScreen(
+              initialToken: state.uri.queryParameters['token'],
+            ),
+          ),
+        ),
+      ];
 }

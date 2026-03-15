@@ -258,6 +258,69 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  Future<String> setPassword(String newPassword) async {
+    state = state.copyWith(isLoading: true);
+    try {
+      return await _authRepository.setPassword(newPassword);
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      rethrow;
+    } finally {
+      state = state.copyWith(isLoading: false);
+    }
+  }
+
+  Future<String> forgotPassword(String email) async {
+    state = state.copyWith(isLoading: true);
+    try {
+      return await _authRepository.forgotPassword(email);
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      rethrow;
+    } finally {
+      state = state.copyWith(isLoading: false);
+    }
+  }
+
+  Future<String> resetPasswordWithToken(
+      String token, String newPassword,) async {
+    state = state.copyWith(isLoading: true);
+    try {
+      return await _authRepository.resetPasswordWithToken(token, newPassword);
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      rethrow;
+    } finally {
+      state = state.copyWith(isLoading: false);
+    }
+  }
+
+  Future<String> sendVerificationEmail() async {
+    state = state.copyWith(isLoading: true);
+    try {
+      return await _authRepository.sendVerificationEmail();
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      rethrow;
+    } finally {
+      state = state.copyWith(isLoading: false);
+    }
+  }
+
+  Future<String> verifyEmail(String token) async {
+    state = state.copyWith(isLoading: true);
+    try {
+      final message = await _authRepository.verifyEmail(token);
+      await refreshUser();
+      return message;
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      rethrow;
+    } finally {
+      state = state.copyWith(isLoading: false);
+    }
+  }
+
   Future<void> logout() async {
     await _authRepository.logout();
     await _ref

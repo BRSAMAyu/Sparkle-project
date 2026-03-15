@@ -56,6 +56,7 @@ func (h *AuthHandler) AppleLogin(c *gin.Context) {
 
 	// 2. Find or Create User
 	ctx := c.Request.Context()
+	userNeedsLink := false
 	// Priority 1: Check by apple_id (sub)
 	user, err := h.queries.GetUserByAppleID(ctx, pgtype.Text{String: claims.Subject, Valid: true})
 	if err != nil {
@@ -63,8 +64,7 @@ func (h *AuthHandler) AppleLogin(c *gin.Context) {
 		if claims.Email != "" {
 			user, err = h.queries.GetUserByEmail(ctx, claims.Email)
 			if err == nil {
-				// User exists by email
-				// Link apple_id? (Would need an update query, but for now we just use this user)
+				userNeedsLink = true
 			}
 		}
 
@@ -87,6 +87,7 @@ func (h *AuthHandler) AppleLogin(c *gin.Context) {
 				Email:              email,
 				HashedPassword:     h.randomString(32),
 				Nickname:           pgtype.Text{String: claims.Name, Valid: claims.Name != ""},
+				EmailVerified:      true,
 				RegistrationSource: "apple",
 				IsActive:           true,
 				AppleID:            pgtype.Text{String: claims.Subject, Valid: true},
@@ -95,6 +96,17 @@ func (h *AuthHandler) AppleLogin(c *gin.Context) {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "创建用户失败"})
 				return
 			}
+		}
+	}
+
+	if err == nil && (userNeedsLink || !user.EmailVerified || !user.AppleID.Valid) {
+		user, err = h.queries.LinkAppleUser(ctx, db.LinkAppleUserParams{
+			ID:      user.ID,
+			AppleID: pgtype.Text{String: claims.Subject, Valid: true},
+		})
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "更新苹果登录信息失败"})
+			return
 		}
 	}
 
@@ -114,9 +126,9 @@ func (h *AuthHandler) AppleLogin(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"access_token": accessToken,
+		"access_token":  accessToken,
 		"refresh_token": refreshToken,
-		"token_type":   "bearer",
+		"token_type":    "bearer",
 		"token": gin.H{
 			"access_token":  accessToken,
 			"refresh_token": refreshToken,

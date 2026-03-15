@@ -141,7 +141,7 @@ class SkinNotifier extends StateNotifier<Map<String, dynamic>?> {
           state = {
             'skin_id': skinId,
             'skin_source': 'shop',
-            'skin_config': skinConfig
+            'skin_config': skinConfig,
           };
           return true;
         }

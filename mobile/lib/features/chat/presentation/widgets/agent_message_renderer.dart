@@ -242,7 +242,7 @@ class AgentMessageRenderer extends StatelessWidget {
           (collaborationData['timeline'] as List<dynamic>?);
       final steps = stepsList
               ?.map(
-                  (e) => AgentTimelineStep.fromJson(e as Map<String, dynamic>))
+                  (e) => AgentTimelineStep.fromJson(e as Map<String, dynamic>),)
               .toList() ??
           [];
 

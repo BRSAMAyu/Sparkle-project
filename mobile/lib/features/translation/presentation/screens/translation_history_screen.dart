@@ -203,7 +203,6 @@ class _TranslationHistoryScreenState
                                   .clearSearch();
                             },
                             variant: ButtonVariant.ghost,
-                            size: DS.touchTargetMinSize,
                           )
                         : null,
                     border: OutlineInputBorder(

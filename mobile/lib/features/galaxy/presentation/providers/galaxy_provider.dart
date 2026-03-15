@@ -263,7 +263,7 @@ class GalaxyViewState {
 /// Persists the user's view state (scale, selected node, aggregation level).
 final galaxyViewStateProvider =
     StateNotifierProvider<GalaxyViewStateNotifier, GalaxyViewState>(
-        GalaxyViewStateNotifier.new);
+        GalaxyViewStateNotifier.new,);
 
 /// Notifier for the galaxy view state
 class GalaxyViewStateNotifier extends PersistentStateNotifier<GalaxyViewState> {
@@ -704,12 +704,10 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
       predictedNodeId: state.predictedNodeId,
       lastError: state.lastError,
       isUsingCache: state.isUsingCache,
-      selectedNodeId: null,
       highlightRevision: state.highlightRevision + 1,
       expandedEdgeNodeIds: {}, // CLEAR
       nodeAnimationProgress: state.nodeAnimationProgress,
       optimizationConfig: state.optimizationConfig,
-      draggingNodeId: null,
       focusNodeId: state.focusNodeId,
       focusBounds: state.focusBounds,
       highlightedNodeIds: state.highlightedNodeIds,
@@ -1077,7 +1075,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
                   : 96,
     };
     final maxNodes =
-        dynamicMaxNodes.clamp(80, state.optimizationConfig.maxNodes) as int;
+        dynamicMaxNodes.clamp(80, state.optimizationConfig.maxNodes);
     if (nodes.length <= maxNodes) {
       return nodes;
     }

@@ -77,8 +77,7 @@ class _UnselectedPill extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
+  Widget build(BuildContext context) => Padding(
       padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
       child: GestureDetector(
         onTap: onTap,
@@ -120,7 +119,6 @@ class _UnselectedPill extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 class _SelectedPill extends StatelessWidget {

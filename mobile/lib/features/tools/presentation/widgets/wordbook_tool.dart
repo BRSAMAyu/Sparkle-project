@@ -69,7 +69,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
     setState(() {
       _sessionWords = dueWords
           .whereType<Map<String, dynamic>>()
-          .map((item) => Map<String, dynamic>.from(item))
+          .map(Map<String, dynamic>.from)
           .toList();
       _isReviewMode = true;
       _currentReviewIndex = 0;
@@ -172,11 +172,11 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
     final stats = state.stats;
     final allWords = state.wordbook
         .whereType<Map<String, dynamic>>()
-        .map((item) => Map<String, dynamic>.from(item))
+        .map(Map<String, dynamic>.from)
         .toList();
     final dueWords = state.reviewList
         .whereType<Map<String, dynamic>>()
-        .map((item) => Map<String, dynamic>.from(item))
+        .map(Map<String, dynamic>.from)
         .toList();
     final filteredAllWords = _filterWords(allWords);
     final filteredDueWords = _filterWords(dueWords);
@@ -195,7 +195,6 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
             subtitle: '把查词结果变成可复习资产。支持搜索、重要度筛选和快闪式复习。',
             accentColor: DS.success,
             compactHeader: true,
-            fillHeight: false,
             heroChips: [
               ToolHeroChip(
                 label: '$totalCount 个词条',
@@ -400,7 +399,6 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
       subtitle: '以快闪卡片方式确认是否记住当前词条。',
       accentColor: DS.warning,
       compactHeader: true,
-      fillHeight: false,
       heroChips: [
         ToolHeroChip(
           label: '${_currentReviewIndex + 1} / ${_sessionWords.length}',

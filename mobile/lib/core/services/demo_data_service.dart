@@ -499,7 +499,6 @@ class DemoDataService {
         sector: SectorEnum.cosmos,
         isUnlocked: false,
         masteryScore: 0,
-        studyCount: 0,
         tags: ['化学', '有机'],
         baseColor: '#009688',
         parentId: 'node_${startId + 7}',
@@ -685,7 +684,6 @@ class DemoDataService {
         sector: SectorEnum.tech,
         isUnlocked: false,
         masteryScore: 0,
-        studyCount: 0,
         tags: ['机器学习', 'ML'],
         baseColor: '#9C27B0',
         parentId: 'node_${startId + 12}',
@@ -792,7 +790,6 @@ class DemoDataService {
         sector: SectorEnum.art,
         isUnlocked: false,
         masteryScore: 0,
-        studyCount: 0,
         tags: ['影视', '制作'],
         baseColor: '#F48FB1',
         parentId: 'node_${startId + 6}',
@@ -1162,7 +1159,7 @@ class DemoDataService {
       targetId: 'node_13', // 算法设计
       relationType: EdgeRelationType.prerequisite,
       strength: 0.9,
-    ));
+    ),);
 
     // 概率论 -> 机器学习（前置知识）
     edges.add(GalaxyEdgeModel(
@@ -1171,7 +1168,7 @@ class DemoDataService {
       targetId: 'node_21', // 机器学习
       relationType: EdgeRelationType.prerequisite,
       strength: 0.9,
-    ));
+    ),);
 
     // 线性代数 -> 机器学习（前置知识）
     edges.add(GalaxyEdgeModel(
@@ -1180,16 +1177,15 @@ class DemoDataService {
       targetId: 'node_21', // 机器学习
       relationType: EdgeRelationType.prerequisite,
       strength: 0.8,
-    ));
+    ),);
 
     // 心理学 -> 设计思维（相关知识）
     edges.add(GalaxyEdgeModel(
       id: 'edge_${edgeId++}',
       sourceId: 'node_${23 + 5}', // 心理学导论
       targetId: 'node_27', // 设计思维
-      relationType: EdgeRelationType.related,
       strength: 0.7,
-    ));
+    ),);
 
     // 批判性思维 -> 编程（应用）
     edges.add(GalaxyEdgeModel(
@@ -1198,7 +1194,7 @@ class DemoDataService {
       targetId: 'node_9', // 程序设计
       relationType: EdgeRelationType.application,
       strength: 0.6,
-    ));
+    ),);
 
     // 经济学 -> 管理学（衍生知识）
     edges.add(GalaxyEdgeModel(
@@ -1207,7 +1203,7 @@ class DemoDataService {
       targetId: 'node_${23 + 4}', // 管理学
       relationType: EdgeRelationType.derived,
       strength: 0.8,
-    ));
+    ),);
 
     return edges;
   }
@@ -1404,7 +1400,8 @@ struct ListNode {
           id: 'msg_7',
           conversationId: 'demo_conv_2',
           role: MessageRole.assistant,
-          content: '''动态规划的核心思路是：
+          content: '''
+动态规划的核心思路是：
 
 1. **定义状态**：dp[i]表示什么
 2. **找递推关系**：当前状态如何从之前的状态得来
@@ -1429,7 +1426,8 @@ struct ListNode {
           id: 'msg_9',
           conversationId: 'demo_conv_3',
           role: MessageRole.assistant,
-          content: '''推荐以下资源组合：
+          content: '''
+推荐以下资源组合：
 
 📚 **书籍**：
 - 《计算机网络：自顶向下方法》- 经典入门
@@ -1457,7 +1455,8 @@ struct ListNode {
           id: 'msg_11',
           conversationId: 'demo_conv_4',
           role: MessageRole.assistant,
-          content: '''建立知识体系的三个层次：
+          content: '''
+建立知识体系的三个层次：
 
 🌳 **1. 知识树（结构化）**
 - 用思维导图画出知识点层级
@@ -1535,7 +1534,8 @@ Sparkle的知识星图功能就是帮你可视化这个体系！看过星图视�
       CuriosityCapsuleModel(
         id: 'capsule_1',
         title: '为什么二叉树的遍历有三种方式？',
-        content: '''二叉树的三种遍历方式（前序、中序、后序）源于访问节点的不同时机。
+        content: '''
+二叉树的三种遍历方式（前序、中序、后序）源于访问节点的不同时机。
 
 **前序遍历**（根→左→右）：适合复制树结构
 **中序遍历**（左→根→右）：对BST可得到有序序列
@@ -1548,14 +1548,12 @@ Sparkle的知识星图功能就是帮你可视化这个体系！看过星图视�
         depthLevel: 'deep',
         generationMethod: 'knowledge_gap_analysis',
         qualityScore: 0.92,
-        feedbackCount: 0,
-        shareCount: 0,
-        isFavorite: false,
       ),
       CuriosityCapsuleModel(
         id: 'capsule_2',
         title: '进程和线程的本质区别是什么？',
-        content: '''很多人觉得进程和线程只是"资源分配"vs"调度单位"的区别，但本质上：
+        content: '''
+很多人觉得进程和线程只是"资源分配"vs"调度单位"的区别，但本质上：
 
 **进程** = 资源容器 + 执行轨迹
 **线程** = 共享资源 + 独立执行轨迹
@@ -1576,7 +1574,8 @@ Sparkle的知识星图功能就是帮你可视化这个体系！看过星图视�
       CuriosityCapsuleModel(
         id: 'capsule_3',
         title: 'TCP为什么需要三次握手？',
-        content: '''三次握手不仅仅是"建立连接"，更重要的是**同步序列号**和**确认双方的收发能力**。
+        content: '''
+三次握手不仅仅是"建立连接"，更重要的是**同步序列号**和**确认双方的收发能力**。
 
 1️⃣ 客户端 → 服务器：证明客户端能发送
 2️⃣ 服务器 → 客户端：证明服务器能接收+能发送
@@ -1589,14 +1588,13 @@ Sparkle的知识星图功能就是帮你可视化这个体系！看过星图视�
         depthLevel: 'medium',
         generationMethod: 'why_question',
         qualityScore: 0.85,
-        feedbackCount: 0,
         shareCount: 1,
-        isFavorite: false,
       ),
       CuriosityCapsuleModel(
         id: 'capsule_4',
         title: '动态规划的"状态转移"到底在转移什么？',
-        content: '''动态规划的精髓在于**把大问题拆成小问题，并记住小问题的答案**。
+        content: '''
+动态规划的精髓在于**把大问题拆成小问题，并记住小问题的答案**。
 
 "状态转移"实际上是在表达：
 - **当前状态** = f(**之前的某些状态**)
@@ -1612,14 +1610,13 @@ Sparkle的知识星图功能就是帮你可视化这个体系！看过星图视�
         depthLevel: 'deep',
         generationMethod: 'learning_barrier_breakthrough',
         qualityScore: 0.90,
-        feedbackCount: 0,
-        shareCount: 0,
         isFavorite: true,
       ),
       CuriosityCapsuleModel(
         id: 'capsule_5',
         title: '为什么Python的字符串是不可变的？',
-        content: '''Python字符串不可变(immutable)的设计有三个重要原因：
+        content: '''
+Python字符串不可变(immutable)的设计有三个重要原因：
 
 1. **性能优化**: 不可变对象可以被缓存和重用（字符串驻留）
 2. **线程安全**: 多线程共享时无需加锁
@@ -1633,13 +1630,12 @@ Sparkle的知识星图功能就是帮你可视化这个体系！看过星图视�
         generationMethod: 'design_rationale',
         qualityScore: 0.82,
         feedbackCount: 1,
-        shareCount: 0,
-        isFavorite: false,
       ),
       CuriosityCapsuleModel(
         id: 'capsule_6',
         title: '数据库的ACID到底保证了什么？',
-        content: '''ACID不是四个独立的特性，而是事务可靠性的四个维度：
+        content: '''
+ACID不是四个独立的特性，而是事务可靠性的四个维度：
 
 **A**tomicity(原子性): 要么全做，要么全不做
 **C**onsistency(一致性): 从一个合法状态到另一个合法状态
@@ -1653,14 +1649,14 @@ Sparkle的知识星图功能就是帮你可视化这个体系！看过星图视�
         depthLevel: 'deep',
         generationMethod: 'concept_clarification',
         qualityScore: 0.87,
-        feedbackCount: 0,
         shareCount: 1,
         isFavorite: true,
       ),
       CuriosityCapsuleModel(
         id: 'capsule_7',
         title: '递归为什么让人感觉"绕"？',
-        content: '''递归让人困惑的根本原因是：**人类习惯顺序思维，而递归是逆向构造**。
+        content: '''
+递归让人困惑的根本原因是：**人类习惯顺序思维，而递归是逆向构造**。
 
 写递归的思路：
 1. 先写最简单的情况（base case）
@@ -1687,7 +1683,8 @@ factorial(1) = 1  // base case
       CuriosityCapsuleModel(
         id: 'capsule_8',
         title: '机器学习中的"过拟合"是怎么发生的？',
-        content: '''过拟合的本质是**模型记住了数据的噪声，而不是学会了数据的规律**。
+        content: '''
+过拟合的本质是**模型记住了数据的噪声，而不是学会了数据的规律**。
 
 想象你为考试背答案：
 - 欠拟合 = 只背了大纲，题目变化就不会了
@@ -1707,14 +1704,12 @@ factorial(1) = 1  // base case
         depthLevel: 'deep',
         generationMethod: 'analogy_explanation',
         qualityScore: 0.91,
-        feedbackCount: 0,
-        shareCount: 0,
-        isFavorite: false,
       ),
       CuriosityCapsuleModel(
         id: 'capsule_9',
         title: 'Git的分支到底是什么？',
-        content: '''很多人把Git分支想象成"复制了一份代码"，其实不是！
+        content: '''
+很多人把Git分支想象成"复制了一份代码"，其实不是！
 
 **分支只是一个指向commit的指针**。
 
@@ -1743,7 +1738,8 @@ main  →  [A] → [B] → [C]
       CuriosityCapsuleModel(
         id: 'capsule_10',
         title: '为什么说"程序 = 数据结构 + 算法"？',
-        content: '''这句话揭示了编程的本质：
+        content: '''
+这句话揭示了编程的本质：
 
 **数据结构** = 如何组织信息
 **算法** = 如何处理信息
@@ -1765,9 +1761,7 @@ main  →  [A] → [B] → [C]
         depthLevel: 'shallow',
         generationMethod: 'big_picture_connection',
         qualityScore: 0.80,
-        feedbackCount: 0,
         shareCount: 1,
-        isFavorite: false,
       ),
     ];
   }
@@ -1784,7 +1778,6 @@ main  →  [A] → [B] → [C]
         rarity: AchievementRarity.common,
         iconUrl: '🎯',
         category: 'onboarding',
-        isHidden: false,
         createdAt: now.subtract(const Duration(days: 45)),
         updatedAt: now.subtract(const Duration(days: 45)),
         totalUnlocked: 1250,

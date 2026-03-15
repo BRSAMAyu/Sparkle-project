@@ -139,7 +139,7 @@ class ShopRepository {
         if (categoryList != null) {
           inventory[category] = categoryList
               .map((json) =>
-                  InventoryItem.fromJson(json as Map<String, dynamic>))
+                  InventoryItem.fromJson(json as Map<String, dynamic>),)
               .toList();
         } else {
           inventory[category] = [];
@@ -149,7 +149,7 @@ class ShopRepository {
       return inventory;
     } on DioException catch (e) {
       return _handleDioError<Map<String, List<InventoryItem>>>(
-          e, 'getInventory');
+          e, 'getInventory',);
     }
   }
 
@@ -205,7 +205,7 @@ class ShopRepository {
   /// Use consumable
   /// 使用消耗品
   Future<Map<String, dynamic>> useConsumable(String consumableId,
-      {int quantity = 1}) async {
+      {int quantity = 1,}) async {
     try {
       final requestData = <String, dynamic>{
         'quantity': quantity,

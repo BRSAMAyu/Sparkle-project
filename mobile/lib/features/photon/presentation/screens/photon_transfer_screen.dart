@@ -51,7 +51,6 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
               // Current Balance Card
               GraphiteCardSurface(
                 surfaceRole: SparkleSurfaceRole.accent,
-                padding: const EdgeInsets.all(20),
                 child: Row(
                   children: [
                     Icon(

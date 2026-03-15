@@ -49,7 +49,7 @@ class UserRoutes {
   }
 
   static void popOrGoProfile(BuildContext context,
-      {String fallback = profile}) {
+      {String fallback = profile,}) {
     popOrGo(context, fallback: fallback);
   }
 

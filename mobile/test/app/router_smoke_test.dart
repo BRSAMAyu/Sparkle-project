@@ -116,7 +116,7 @@ void main() {
     testWidgets('redirects unauthenticated users to login', (tester) async {
       final harness = await _pumpRouter(
         tester,
-        authState: AuthState(isLoading: false, isAuthenticated: false),
+        authState: AuthState(isAuthenticated: false),
         onboardingCompleted: true,
       );
 
@@ -132,7 +132,6 @@ void main() {
       final harness = await _pumpRouter(
         tester,
         authState: AuthState(
-          isLoading: false,
           isAuthenticated: true,
           user: _buildUser(),
         ),
@@ -142,7 +141,7 @@ void main() {
       await _pumpFrames(tester);
 
       expect(harness.router.routeInformationProvider.value.uri.path,
-          '/onboarding/persona');
+          '/onboarding/persona',);
       expect(find.byType(PersonaOnboardingScreen), findsOneWidget);
     });
 
@@ -152,7 +151,6 @@ void main() {
       final harness = await _pumpRouter(
         tester,
         authState: AuthState(
-          isLoading: false,
           isAuthenticated: true,
           user: _buildUser(),
         ),
@@ -170,7 +168,6 @@ void main() {
       final harness = await _pumpRouter(
         tester,
         authState: AuthState(
-          isLoading: false,
           isAuthenticated: true,
           user: _buildUser(),
         ),
@@ -204,7 +201,6 @@ void main() {
       final harness = await _pumpRouter(
         tester,
         authState: AuthState(
-          isLoading: false,
           isAuthenticated: true,
           user: _buildUser(),
         ),
@@ -225,9 +221,9 @@ void main() {
       await expectRoute('/tasks', TaskListScreen);
       await expectRoute('/notifications', NotificationListScreen);
       await expectRoute(
-          '/calendar?date=2026-03-06T00:00:00.000', CalendarStatsScreen);
+          '/calendar?date=2026-03-06T00:00:00.000', CalendarStatsScreen,);
       await expectRoute(
-          '/calendar-stats?date=2026-03-07T00:00:00.000', CalendarStatsScreen);
+          '/calendar-stats?date=2026-03-07T00:00:00.000', CalendarStatsScreen,);
       await expectRoute(
         '/calendar/day?date=2026-03-08T00:00:00.000',
         DailyDetailScreen,
@@ -283,7 +279,6 @@ void main() {
       final harness = await _pumpRouter(
         tester,
         authState: AuthState(
-          isLoading: false,
           isAuthenticated: true,
           user: _buildUser(),
         ),
@@ -392,8 +387,8 @@ UserModel _buildUser() => UserModel(
       curiosityPreference: 0.5,
       isActive: true,
       status: UserStatus.online,
-      createdAt: DateTime(2026, 1, 1),
-      updatedAt: DateTime(2026, 1, 1),
+      createdAt: DateTime(2026, 1),
+      updatedAt: DateTime(2026, 1),
     );
 
 class _FakeAuthNotifier extends AuthNotifier {

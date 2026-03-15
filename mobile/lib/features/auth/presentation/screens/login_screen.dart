@@ -157,11 +157,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               onPressed: () => setState(
                                 () => _isPasswordVisible = !_isPasswordVisible,
                               ),
-                              size: DS.touchTargetMinSize,
                             ),
                           ),
                           validator: (value) =>
                               value!.isEmpty ? l10n.pleaseEnterPassword : null,
+                        ),
+                        const SizedBox(height: DS.sm),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: authState.isLoading
+                                ? null
+                                : () => context.go('/forgot-password'),
+                            child: const Text('忘记密码？'),
+                          ),
                         ),
                         const SizedBox(height: DS.xl),
                         SparkleButton(

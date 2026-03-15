@@ -79,7 +79,7 @@ class ChatRepository {
     );
 
     final data = ApiResponseParser.unwrapList(response.data,
-        action: 'getConversationHistory');
+        action: 'getConversationHistory',);
     return data
         .map((item) => ChatMessageModel.fromJson(item as Map<String, dynamic>))
         .toList();
@@ -98,7 +98,7 @@ class ChatRepository {
     }
     final response = await _dio.get<dynamic>('/chat/sessions');
     final data = ApiResponseParser.unwrapList(response.data,
-        action: 'getRecentConversations');
+        action: 'getRecentConversations',);
     return List<Map<String, dynamic>>.from(
       data.map((item) => item as Map<String, dynamic>),
     );

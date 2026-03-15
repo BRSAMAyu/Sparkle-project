@@ -153,7 +153,7 @@ class SeedLibraryCard extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(Icons.star,
-                              size: DS.iconSizeXs, color: DS.warning),
+                              size: DS.iconSizeXs, color: DS.warning,),
                           const SizedBox(width: DS.spacing4),
                           Text(
                             library.qualityScore!.toStringAsFixed(1),
@@ -203,7 +203,7 @@ class SeedLibraryCard extends StatelessWidget {
       );
 
   Widget _buildStat(
-          BuildContext context, IconData icon, String value, String label) =>
+          BuildContext context, IconData icon, String value, String label,) =>
       Row(
         mainAxisSize: MainAxisSize.min,
         children: [

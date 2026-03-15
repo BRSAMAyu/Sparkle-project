@@ -102,7 +102,6 @@ class _CalculatorToolState extends State<CalculatorTool> {
       subtitle: '适合任务执行中的快算、表达式验算和连贯多步推导，结果会保留最近记录。',
       accentColor: accent,
       compactHeader: true,
-      fillHeight: false,
       heroChips: [
         ToolHeroChip(
           label: _history.isEmpty ? '无历史' : '${_history.length} 条历史',
