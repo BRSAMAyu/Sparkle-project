@@ -47,6 +47,16 @@ post_install do |installer|
 
     target.build_configurations.each do |config|
       config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.0'
+      header_paths = [
+        '$(PODS_ROOT)/WechatOpenSDK-XCFramework/WechatOpenSDK.xcframework/ios-arm64/WechatOpenSDK.framework/Headers',
+        '$(PODS_ROOT)/WechatOpenSDK-XCFramework/WechatOpenSDK.xcframework/ios-arm64_x86_64-simulator/WechatOpenSDK.framework/Headers',
+      ]
+      header_search_paths = config.build_settings['HEADER_SEARCH_PATHS'] || ['$(inherited)']
+      header_search_paths = [header_search_paths] unless header_search_paths.is_a?(Array)
+      header_paths.each do |path|
+        header_search_paths << path unless header_search_paths.include?(path)
+      end
+      config.build_settings['HEADER_SEARCH_PATHS'] = header_search_paths
       config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= [
         '$(inherited)',
         'PERMISSION_CAMERA=1',

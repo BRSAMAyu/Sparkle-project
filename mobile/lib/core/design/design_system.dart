@@ -617,6 +617,7 @@ class DS {
       (_isDark ? Colors.white : Colors.black).withValues(alpha: 0.5);
 
   static Color get brandPrimary10 => brandPrimary.withValues(alpha: 0.1);
+  static Color get brandPrimary20 => brandPrimary.withValues(alpha: 0.2);
   static Color get brandPrimary12 => brandPrimary.withValues(alpha: 0.12);
   static Color get brandPrimary24 => brandPrimary.withValues(alpha: 0.24);
   static Color get brandPrimary26 => brandPrimary.withValues(alpha: 0.26);

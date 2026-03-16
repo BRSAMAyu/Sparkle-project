@@ -972,13 +972,17 @@ class NotificationEvent extends ChatStreamEvent {
 
   /// 工厂方法：从 JSON 创建
   factory NotificationEvent.fromJson(Map<String, dynamic> json) {
+    final rawNotification = json['notification'] ?? json['data'] ?? {};
+    final notificationData = rawNotification is Map
+        ? Map<String, dynamic>.from(rawNotification)
+        : <String, dynamic>{};
     return NotificationEvent(
-      notificationData: json['notification'] ?? json['data'] ?? {},
-      notificationType: json['notification_type'] ?? 'system',
-      responseId: json['response_id'],
-      traceId: json['trace_id'],
-      workflowId: json['workflow_id'],
-      promptVersion: json['prompt_version'],
+      notificationData: notificationData,
+      notificationType: json['notification_type'] as String? ?? 'system',
+      responseId: json['response_id'] as String?,
+      traceId: json['trace_id'] as String?,
+      workflowId: json['workflow_id'] as String?,
+      promptVersion: json['prompt_version'] as String?,
     );
   }
 }

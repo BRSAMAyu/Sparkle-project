@@ -141,7 +141,7 @@ class _AssistantMessageMetadataTrayState
         return _MetadataPanel(
           key: const ValueKey('status'),
           child: Text(
-            _statusLabel(status),
+            _statusLabel(context, status),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: DS.textPrimary,
                   height: 1.4,

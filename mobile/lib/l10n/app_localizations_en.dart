@@ -6783,10 +6783,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskDueDateUnset => 'No due date';
 
   @override
-  String get chatAchievementUnlocked => 'Chat Achievement Unlocked';
+  String chatAchievementUnlocked(Object arg0) {
+    return '$arg0';
+  }
 
   @override
-  String get chatActionErrorSuggestion => 'Chat Action Error Suggestion';
+  String chatActionErrorSuggestion(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get chatActionErrorTitle => 'Chat Action Error Title';
@@ -6816,10 +6820,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatActionStatusProcessing => 'Chat Action Status Processing';
 
   @override
-  String get chatActionStatusUpdate => 'Chat Action Status Update';
+  String chatActionStatusUpdate(Object arg0) {
+    return '$arg0';
+  }
 
   @override
-  String get chatActionSuggestedActions => 'Chat Action Suggested Actions';
+  String chatActionSuggestedActions(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get chatActionTitleAddError => 'Chat Action Title Add Error';
@@ -6888,25 +6896,39 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatAgentRouting => 'Chat Agent Routing';
 
   @override
-  String get chatAgentRoutingFallback => 'Chat Agent Routing Fallback';
+  String chatAgentRoutingFallback(Object arg0) {
+    return '$arg0';
+  }
 
   @override
-  String get chatAgentRoutingStrategy => 'Chat Agent Routing Strategy';
+  String chatAgentRoutingStrategy(Object arg0) {
+    return '$arg0';
+  }
 
   @override
-  String get chatAlignmentScoreLabel => 'Chat Alignment Score Label';
+  String chatAlignmentScoreLabel(Object arg0) {
+    return '$arg0';
+  }
 
   @override
-  String get chatAudioParseFailed => 'Chat Audio Parse Failed';
+  String chatAudioParseFailed(Object arg0) {
+    return '$arg0';
+  }
 
   @override
-  String get chatAudioRecordFailed => 'Chat Audio Record Failed';
+  String chatAudioRecordFailed(Object arg0) {
+    return '$arg0';
+  }
 
   @override
-  String get chatAudioStartFailed => 'Chat Audio Start Failed';
+  String chatAudioStartFailed(Object arg0) {
+    return '$arg0';
+  }
 
   @override
-  String get chatAudioWsConnectFailed => 'Chat Audio Ws Connect Failed';
+  String chatAudioWsConnectFailed(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get chatAuthExpired => 'Chat Auth Expired';
@@ -6918,13 +6940,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatBlockedInputTitle => 'Chat Blocked Input Title';
 
   @override
-  String get chatCitationLabel => 'Chat Citation Label';
+  String chatCitationLabel(Object arg0) {
+    return '$arg0';
+  }
 
   @override
-  String get chatCitationRelevance => 'Chat Citation Relevance';
+  String chatCitationRelevance(Object arg0) {
+    return '$arg0';
+  }
 
   @override
-  String get chatCitationSourcesCount => 'Chat Citation Sources Count';
+  String chatCitationSourcesCount(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get chatCollabTimelineTitle => 'Chat Collab Timeline Title';
@@ -6936,8 +6964,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatComparisonBefore => 'Chat Comparison Before';
 
   @override
-  String get chatComparisonCurrentPrevious =>
-      'Chat Comparison Current Previous';
+  String chatComparisonCurrentPrevious(Object arg0, Object arg1) {
+    return '$arg0 $arg1';
+  }
 
   @override
   String get chatCompletionBlocked => 'Chat Completion Blocked';
@@ -6961,7 +6990,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatConfidenceHigh => 'Chat Confidence High';
 
   @override
-  String get chatConfidenceLabel => 'Chat Confidence Label';
+  String chatConfidenceLabel(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get chatConfidenceMedium => 'Chat Confidence Medium';
@@ -6986,12 +7017,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'Chat Confirmation Update Preference Generic';
 
   @override
-  String get chatConfirmationUpdatePreferenceKeyOnly =>
-      'Chat Confirmation Update Preference Key Only';
+  String chatConfirmationUpdatePreferenceKeyOnly(Object arg0) {
+    return '$arg0';
+  }
 
   @override
-  String get chatConfirmationUpdatePreferenceWithValue =>
-      'Chat Confirmation Update Preference With Value';
+  String chatConfirmationUpdatePreferenceWithValue(Object arg0, Object arg1) {
+    return '$arg0 $arg1';
+  }
 
   @override
   String get chatCopiedToClipboard => 'Chat Copied To Clipboard';
@@ -7008,44 +7041,65 @@ class AppLocalizationsEn extends AppLocalizations {
       'Chat Dag Execution End Aborted Default';
 
   @override
-  String get chatDagLayerAborted => 'Chat Dag Layer Aborted';
+  String chatDagLayerAborted(Object arg0) {
+    return '$arg0';
+  }
 
   @override
-  String get chatDagLayerCompleted => 'Chat Dag Layer Completed';
+  String chatDagLayerCompleted(Object arg0) {
+    return '$arg0';
+  }
 
   @override
-  String get chatDagLayerStart => 'Chat Dag Layer Start';
+  String chatDagLayerStart(Object arg0, Object arg1, Object arg2) {
+    return '$arg0 $arg1 $arg2';
+  }
 
   @override
-  String get chatDagStepCompleted => 'Chat Dag Step Completed';
+  String chatDagStepCompleted(Object arg0) {
+    return '$arg0';
+  }
 
   @override
-  String get chatDagStepCompletedWithDuration =>
-      'Chat Dag Step Completed With Duration';
+  String chatDagStepCompletedWithDuration(Object arg0, Object arg1) {
+    return '$arg0 $arg1';
+  }
 
   @override
-  String get chatDagStepFailed => 'Chat Dag Step Failed';
+  String chatDagStepFailed(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get chatDagStepFallback => 'Chat Dag Step Fallback';
 
   @override
-  String get chatDurationLabel => 'Chat Duration Label';
+  String chatDurationLabel(Object arg0) {
+    return '$arg0';
+  }
 
   @override
-  String get chatErrorWithSuggestion => 'Chat Error With Suggestion';
+  String chatErrorWithSuggestion(Object arg0, Object arg1) {
+    return '$arg0 $arg1';
+  }
 
   @override
-  String get chatEvolutionExpectedEffect => 'Chat Evolution Expected Effect';
+  String chatEvolutionExpectedEffect(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get chatEvolutionHeadlineDefault => 'Chat Evolution Headline Default';
 
   @override
-  String get chatEvolutionNextWeekPlan => 'Chat Evolution Next Week Plan';
+  String chatEvolutionNextWeekPlan(Object arg0) {
+    return '$arg0';
+  }
 
   @override
-  String get chatEvolutionWhy => 'Chat Evolution Why';
+  String chatEvolutionWhy(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get chatExecutionCompleted => 'Chat Execution Completed';
@@ -7078,7 +7132,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatKnowledgeCitationBody => 'Chat Knowledge Citation Body';
 
   @override
-  String get chatKnowledgeCitationTitle => 'Chat Knowledge Citation Title';
+  String chatKnowledgeCitationTitle(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get chatModeCustomTeam => 'Chat Mode Custom Team';
@@ -7099,7 +7155,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatMultiAgentCollab => 'Chat Multi Agent Collab';
 
   @override
-  String get chatNextActionLabel => 'Chat Next Action Label';
+  String chatNextActionLabel(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get chatNextActionsRetryHint => 'Chat Next Actions Retry Hint';
@@ -7126,7 +7184,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatOrchestrationTraceTitle => 'Chat Orchestration Trace Title';
 
   @override
-  String get chatPendingMessagesFailed => 'Chat Pending Messages Failed';
+  String chatPendingMessagesFailed(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get chatPlanContextClear => 'Chat Plan Context Clear';
@@ -7154,13 +7214,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatPlanReviewRejected => 'Chat Plan Review Rejected';
 
   @override
-  String get chatPlanReviewStatusUpdate => 'Chat Plan Review Status Update';
+  String chatPlanReviewStatusUpdate(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get chatPlanSelect => 'Chat Plan Select';
 
   @override
-  String get chatQuotePrefix => 'Chat Quote Prefix';
+  String chatQuotePrefix(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get chatReasoningProcess => 'Chat Reasoning Process';
@@ -7214,10 +7278,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatReasoningStatusWriting => 'Chat Reasoning Status Writing';
 
   @override
-  String get chatReasoningStepsCount => 'Chat Reasoning Steps Count';
+  String chatReasoningStepsCount(Object arg0) {
+    return '$arg0';
+  }
 
   @override
-  String get chatReasoningSummary => 'Chat Reasoning Summary';
+  String chatReasoningSummary(Object arg0, Object arg1) {
+    return '$arg0 $arg1';
+  }
 
   @override
   String get chatReflectionDegraded => 'Chat Reflection Degraded';
@@ -7226,19 +7294,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatReflectionFailed => 'Chat Reflection Failed';
 
   @override
-  String get chatReflectionFixed => 'Chat Reflection Fixed';
+  String chatReflectionFixed(Object arg0, Object arg1) {
+    return '$arg0 $arg1';
+  }
 
   @override
-  String get chatReflectionImproved => 'Chat Reflection Improved';
+  String chatReflectionImproved(Object arg0, Object arg1) {
+    return '$arg0 $arg1';
+  }
 
   @override
   String get chatReflectionNoChange => 'Chat Reflection No Change';
 
   @override
-  String get chatReflectionStatusUpdate => 'Chat Reflection Status Update';
+  String chatReflectionStatusUpdate(Object arg0) {
+    return '$arg0';
+  }
 
   @override
-  String get chatRoundsInfo => 'Chat Rounds Info';
+  String chatRoundsInfo(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get chatSourceUnknown => 'Chat Source Unknown';
@@ -7253,7 +7329,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatSourcesUnavailable => 'Chat Sources Unavailable';
 
   @override
-  String get chatStreakSummary => 'Chat Streak Summary';
+  String chatStreakSummary(Object arg0, Object arg1) {
+    return '$arg0 $arg1';
+  }
 
   @override
   String get chatSubmitFeedback => 'Chat Submit Feedback';
@@ -7262,19 +7340,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatSynthesisSuggestions => 'Chat Synthesis Suggestions';
 
   @override
-  String get chatTaskDataInvalid => 'Chat Task Data Invalid';
+  String chatTaskDataInvalid(Object arg0) {
+    return '$arg0';
+  }
 
   @override
-  String get chatTaskListMoreCount => 'Chat Task List More Count';
+  String chatTaskListMoreCount(Object arg0) {
+    return '$arg0';
+  }
 
   @override
-  String get chatTeamExpertsCount => 'Chat Team Experts Count';
+  String chatTeamExpertsCount(Object arg0) {
+    return '$arg0';
+  }
 
   @override
-  String get chatUnknownWidgetType => 'Chat Unknown Widget Type';
+  String chatUnknownWidgetType(Object arg0) {
+    return '$arg0';
+  }
 
   @override
-  String get chatUsingTool => 'Chat Using Tool';
+  String chatUsingTool(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get chatViewComparisonData => 'Chat View Comparison Data';
@@ -7286,7 +7374,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatVoiceNoMicPermission => 'Chat Voice No Mic Permission';
 
   @override
-  String get chatVoiceStartFailed => 'Chat Voice Start Failed';
+  String chatVoiceStartFailed(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get chatWhyThisAnswer => 'Chat Why This Answer';
@@ -7317,16 +7407,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatWorkflowExpertRouting => 'Chat Workflow Expert Routing';
 
   @override
-  String get chatWorkflowExpertsCount => 'Chat Workflow Experts Count';
+  String chatWorkflowExpertsCount(Object arg0) {
+    return '$arg0';
+  }
 
   @override
-  String get chatWorkflowParallelCount => 'Chat Workflow Parallel Count';
+  String chatWorkflowParallelCount(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get chatWorkflowParallelSubtitle => 'Chat Workflow Parallel Subtitle';
 
   @override
-  String get chatWorkflowPhaseLabel => 'Chat Workflow Phase Label';
+  String chatWorkflowPhaseLabel(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get chatWorkflowProgressiveExploration =>
@@ -7407,7 +7503,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Community Check In Duration Label';
 
   @override
-  String get communityCheckInFailed => 'Community Check In Failed';
+  String communityCheckInFailed(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get communityCheckInMessageHint => 'Community Check In Message Hint';
@@ -7422,7 +7520,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityCheckInTitle => 'Community Check In Title';
 
   @override
-  String get communityFileSharedFailed => 'Community File Shared Failed';
+  String communityFileSharedFailed(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get communityFileSharedSuccess => 'Community File Shared Success';
@@ -7431,7 +7531,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityGroupFiles => 'Community Group Files';
 
   @override
-  String get communityGroupMembersCount => 'Community Group Members Count';
+  String communityGroupMembersCount(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get communityMessageFallback => 'Community Message Fallback';
@@ -7498,8 +7600,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deleteAccountSocialProvider => 'Delete Account Social Provider';
 
   @override
-  String get deleteAccountSocialReauthNotice =>
-      'Delete Account Social Reauth Notice';
+  String deleteAccountSocialReauthNotice(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get deleteAccountSuccess => 'Delete Account Success';
@@ -7570,7 +7673,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get galaxyA11yActionUnlockNode => 'Galaxy A11y Action Unlock Node';
 
   @override
-  String get galaxyA11yClusterLabel => 'Galaxy A11y Cluster Label';
+  String galaxyA11yClusterLabel(Object arg0, Object arg1, Object arg2) {
+    return '$arg0 $arg1 $arg2';
+  }
 
   @override
   String get galaxyA11yHintStartLearning => 'Galaxy A11y Hint Start Learning';
@@ -7579,34 +7684,48 @@ class AppLocalizationsEn extends AppLocalizations {
   String get galaxyA11yHintUnlockNode => 'Galaxy A11y Hint Unlock Node';
 
   @override
-  String get galaxyA11yNavigateTo => 'Galaxy A11y Navigate To';
+  String galaxyA11yNavigateTo(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get galaxyA11yNavigationHint => 'Galaxy A11y Navigation Hint';
 
   @override
-  String get galaxyA11yNodeImportance => 'Galaxy A11y Node Importance';
+  String galaxyA11yNodeImportance(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get galaxyA11yNodeLocked => 'Galaxy A11y Node Locked';
 
   @override
-  String get galaxyA11yNodeMastery => 'Galaxy A11y Node Mastery';
+  String galaxyA11yNodeMastery(Object arg0) {
+    return '$arg0';
+  }
 
   @override
-  String get galaxyA11yNodePrefix => 'Galaxy A11y Node Prefix';
+  String galaxyA11yNodePrefix(Object arg0, Object arg1) {
+    return '$arg0 $arg1';
+  }
 
   @override
-  String get galaxyA11yNodeStudyCount => 'Galaxy A11y Node Study Count';
+  String galaxyA11yNodeStudyCount(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get galaxyA11yNodeUnlocked => 'Galaxy A11y Node Unlocked';
 
   @override
-  String get galaxyA11ySectorLabel => 'Galaxy A11y Sector Label';
+  String galaxyA11ySectorLabel(Object arg0, Object arg1) {
+    return '$arg0 $arg1';
+  }
 
   @override
-  String get galaxyA11yZoomLevel => 'Galaxy A11y Zoom Level';
+  String galaxyA11yZoomLevel(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get galaxyControlOverview => 'Galaxy Control Overview';
@@ -7704,7 +7823,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get galaxyImportanceNormal => 'Galaxy Importance Normal';
 
   @override
-  String get galaxyLLMActionFailed => 'Galaxy LLMAction Failed';
+  String galaxyLLMActionFailed(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get galaxyLoadFailed => 'Galaxy Load Failed';
@@ -7728,7 +7849,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get galaxyNodeLocked => 'Galaxy Node Locked';
 
   @override
-  String get galaxyNodePreviewSubtitle => 'Galaxy Node Preview Subtitle';
+  String galaxyNodePreviewSubtitle(Object arg0, Object arg1) {
+    return '$arg0 $arg1';
+  }
 
   @override
   String get galaxyNodeUnlocked => 'Galaxy Node Unlocked';
@@ -7746,13 +7869,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get galaxyOverviewUnlocked => 'Galaxy Overview Unlocked';
 
   @override
-  String get galaxyPerfHighJank => 'Galaxy Perf High Jank';
+  String galaxyPerfHighJank(Object arg0) {
+    return '$arg0';
+  }
 
   @override
-  String get galaxyPerfLowFpsCritical => 'Galaxy Perf Low Fps Critical';
+  String galaxyPerfLowFpsCritical(Object arg0) {
+    return '$arg0';
+  }
 
   @override
-  String get galaxyPerfLowFpsWarning => 'Galaxy Perf Low Fps Warning';
+  String galaxyPerfLowFpsWarning(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get galaxyPerfRecommendationDisableParticles =>
@@ -7771,7 +7900,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Galaxy Perf Recommendation Reduce Nodes';
 
   @override
-  String get galaxyPerfSlowRender => 'Galaxy Perf Slow Render';
+  String galaxyPerfSlowRender(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get galaxyPerfStatusCritical => 'Galaxy Perf Status Critical';
@@ -7795,7 +7926,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get galaxySearchNoResults => 'Galaxy Search No Results';
 
   @override
-  String get galaxySearchResultSubtitle => 'Galaxy Search Result Subtitle';
+  String galaxySearchResultSubtitle(Object arg0, Object arg1, Object arg2) {
+    return '$arg0 $arg1 $arg2';
+  }
 
   @override
   String get galaxySearchTitle => 'Galaxy Search Title';
@@ -7932,7 +8065,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get planContextTitle => 'Plan Context Title';
 
   @override
-  String get planDaysRemaining => 'Plan Days Remaining';
+  String planDaysRemaining(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get planDetailTitle => 'Plan Detail Title';
@@ -7941,13 +8076,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get planDueToday => 'Plan Due Today';
 
   @override
-  String get planFactsFeedbackSummary => 'Plan Facts Feedback Summary';
+  String planFactsFeedbackSummary(Object arg0, Object arg1) {
+    return '$arg0 $arg1';
+  }
 
   @override
   String get planKeyFacts => 'Plan Key Facts';
 
   @override
-  String get planLoadFailed => 'Plan Load Failed';
+  String planLoadFailed(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get planNoContent => 'Plan No Content';
@@ -7959,7 +8098,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get planNoVisualizationData => 'Plan No Visualization Data';
 
   @override
-  String get planOverdueDays => 'Plan Overdue Days';
+  String planOverdueDays(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get planProgressLabel => 'Plan Progress Label';
@@ -7988,8 +8129,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get planReviewApproveExecute => 'Plan Review Approve Execute';
 
   @override
-  String get planReviewConfidenceTierLabel =>
-      'Plan Review Confidence Tier Label';
+  String planReviewConfidenceTierLabel(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get planReviewConfidenceTitle => 'Plan Review Confidence Title';
@@ -8009,10 +8151,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'Plan Review Decision Requires Confirmation';
 
   @override
-  String get planReviewEvidenceLabel => 'Plan Review Evidence Label';
+  String planReviewEvidenceLabel(Object arg0) {
+    return '$arg0';
+  }
 
   @override
-  String get planReviewImpactLabel => 'Plan Review Impact Label';
+  String planReviewImpactLabel(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get planReviewModifyPlan => 'Plan Review Modify Plan';
@@ -8105,10 +8251,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get planTabProgress => 'Plan Tab Progress';
 
   @override
-  String get planTargetDate => 'Plan Target Date';
+  String planTargetDate(Object arg0) {
+    return '$arg0';
+  }
 
   @override
-  String get planTargetMastery => 'Plan Target Mastery';
+  String planTargetMastery(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get planTaskProgress => 'Plan Task Progress';
@@ -8183,7 +8333,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get regenProgressTitle => 'Regen Progress Title';
 
   @override
-  String get regenQualityImprovement => 'Regen Quality Improvement';
+  String regenQualityImprovement(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get regenResultFailed => 'Regen Result Failed';
@@ -8364,7 +8516,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Security Log Action Token Refresh';
 
   @override
-  String get securityLogAdditionalInfo => 'Security Log Additional Info';
+  String securityLogAdditionalInfo(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get securityLogEmpty => 'Security Log Empty';
@@ -8373,7 +8527,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get securityLogIntro => 'Security Log Intro';
 
   @override
-  String get securityLogOccurredAt => 'Security Log Occurred At';
+  String securityLogOccurredAt(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get securityLogTitle => 'Security Log Title';
@@ -8385,13 +8541,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sessionManagementEmpty => 'Session Management Empty';
 
   @override
-  String get sessionManagementFirstLogin => 'Session Management First Login';
+  String sessionManagementFirstLogin(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get sessionManagementIntro => 'Session Management Intro';
 
   @override
-  String get sessionManagementLastActive => 'Session Management Last Active';
+  String sessionManagementLastActive(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get sessionManagementRevokeOthers =>
@@ -8429,7 +8589,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get socialAccountsUnlinkMessage => 'Social Accounts Unlink Message';
 
   @override
-  String get socialAccountsUnlinkTitle => 'Social Accounts Unlink Title';
+  String socialAccountsUnlinkTitle(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get socialAccountsUnlinkedHint => 'Social Accounts Unlinked Hint';
@@ -8478,7 +8640,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sprintConfirmAbandonDesc => 'Sprint Confirm Abandon Desc';
 
   @override
-  String get sprintConfirmAbandonMessage => 'Sprint Confirm Abandon Message';
+  String sprintConfirmAbandonMessage(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get sprintConfirmAbandonTitle => 'Sprint Confirm Abandon Title';
@@ -8487,7 +8651,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sprintConfirmCompleteDesc => 'Sprint Confirm Complete Desc';
 
   @override
-  String get sprintConfirmCompleteMessage => 'Sprint Confirm Complete Message';
+  String sprintConfirmCompleteMessage(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get sprintConfirmCompleteTitle => 'Sprint Confirm Complete Title';
@@ -8499,7 +8665,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sprintDurationDaysLabel => 'Sprint Duration Days Label';
 
   @override
-  String get sprintDurationDaysValue => 'Sprint Duration Days Value';
+  String sprintDurationDaysValue(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get sprintDurationLabel => 'Sprint Duration Label';
@@ -8508,13 +8676,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sprintEndDateLabel => 'Sprint End Date Label';
 
   @override
-  String get sprintExtendConfirm => 'Sprint Extend Confirm';
+  String sprintExtendConfirm(Object arg0) {
+    return '$arg0';
+  }
 
   @override
-  String get sprintExtendMessage => 'Sprint Extend Message';
+  String sprintExtendMessage(Object arg0) {
+    return '$arg0';
+  }
 
   @override
-  String get sprintExtendOptionDays => 'Sprint Extend Option Days';
+  String sprintExtendOptionDays(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get sprintExtendSelectDays => 'Sprint Extend Select Days';
@@ -8559,7 +8733,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sprintStatusTodo => 'Sprint Status Todo';
 
   @override
-  String get sprintTaskCount => 'Sprint Task Count';
+  String sprintTaskCount(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get sprintTaskSummaryTitle => 'Sprint Task Summary Title';
@@ -8580,7 +8756,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statusPending => 'Status Pending';
 
   @override
-  String get taskBatchCreateTitle => 'Task Batch Create Title';
+  String taskBatchCreateTitle(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get taskChatAssistantTitle => 'Task Chat Assistant Title';
@@ -8595,7 +8773,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskCreateAction => 'Task Create Action';
 
   @override
-  String get taskCreateFailed => 'Task Create Failed';
+  String taskCreateFailed(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get taskCreateSuccess => 'Task Create Success';
@@ -8622,7 +8802,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskDeleteTitle => 'Task Delete Title';
 
   @override
-  String get taskDetailLoadFailed => 'Task Detail Load Failed';
+  String taskDetailLoadFailed(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get taskDetailLoading => 'Task Detail Loading';
@@ -8634,7 +8816,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskDifficultyLabel => 'Task Difficulty Label';
 
   @override
-  String get taskDifficultyLevel => 'Task Difficulty Level';
+  String taskDifficultyLevel(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get taskEnergyCost => 'Task Energy Cost';
@@ -8643,7 +8827,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskEnergyCostLabel => 'Task Energy Cost Label';
 
   @override
-  String get taskEnergyCostValue => 'Task Energy Cost Value';
+  String taskEnergyCostValue(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get taskEstimatedDuration => 'Task Estimated Duration';
@@ -8664,13 +8850,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskExecutionConfirmComplete => 'Task Execution Confirm Complete';
 
   @override
-  String get taskExecutionElapsedMinutes => 'Task Execution Elapsed Minutes';
+  String taskExecutionElapsedMinutes(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get taskExecutionEnterFocus => 'Task Execution Enter Focus';
 
   @override
-  String get taskExecutionExpGained => 'Task Execution Exp Gained';
+  String taskExecutionExpGained(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get taskExecutionFeatureCoach => 'Task Execution Feature Coach';
@@ -8713,7 +8903,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskExecutionSkipAnimation => 'Task Execution Skip Animation';
 
   @override
-  String get taskExecutionStartFailed => 'Task Execution Start Failed';
+  String taskExecutionStartFailed(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get taskExecutionStartNow => 'Task Execution Start Now';
@@ -8749,7 +8941,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskExitMessageStep1 => 'Task Exit Message Step1';
 
   @override
-  String get taskExitMessageStep2 => 'Task Exit Message Step2';
+  String taskExitMessageStep2(Object arg0, Object arg1) {
+    return '$arg0 $arg1';
+  }
 
   @override
   String get taskExitMessageStep3 => 'Task Exit Message Step3';
@@ -8782,16 +8976,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskListTitle => 'Task List Title';
 
   @override
-  String get taskMinutesOption => 'Task Minutes Option';
+  String taskMinutesOption(Object arg0) {
+    return '$arg0';
+  }
 
   @override
-  String get taskNudgeApplied => 'Task Nudge Applied';
+  String taskNudgeApplied(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get taskNudgeApply => 'Task Nudge Apply';
 
   @override
-  String get taskNudgeConfidence => 'Task Nudge Confidence';
+  String taskNudgeConfidence(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get taskNudgeDismiss => 'Task Nudge Dismiss';
@@ -8842,7 +9042,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskTagsLabel => 'Task Tags Label';
 
   @override
-  String get taskTimerMinutes => 'Task Timer Minutes';
+  String taskTimerMinutes(Object arg0) {
+    return '$arg0';
+  }
 
   @override
   String get taskTimerPomodoro => 'Task Timer Pomodoro';
@@ -8875,5 +9077,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get weeklyAgendaEmptyHint => 'Weekly Agenda Empty Hint';
 
   @override
-  String get weeklyAgendaSummary => 'Weekly Agenda Summary';
+  String weeklyAgendaSummary(Object arg0, Object arg1, Object arg2) {
+    return '$arg0 $arg1 $arg2';
+  }
+
+  @override
+  String securityLogDevice(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get sessionManagementCurrentHint => 'Session Management Current Hint';
 }

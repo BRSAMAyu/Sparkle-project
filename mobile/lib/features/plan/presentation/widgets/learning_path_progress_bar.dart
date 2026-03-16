@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design_system/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/plan/data/models/learning_path_progress_model.dart';
 
 class LearningPathProgressBar extends StatelessWidget {

@@ -50,6 +50,7 @@ class JPushService extends AsyncNotifier<void> {
 
   String? _registrationId;
   bool _isInitialized = false;
+  bool _isStopped = false;
 
   // Callbacks
   void Function(JPushMessage message)? onMessageReceived;
@@ -298,6 +299,7 @@ class JPushService extends AsyncNotifier<void> {
 
     try {
       _jpush.stopPush();
+      _isStopped = true;
       _logger.i('JPush stopped');
     } catch (e) {
       _logger.e('Failed to stop JPush: $e');
@@ -310,6 +312,7 @@ class JPushService extends AsyncNotifier<void> {
 
     try {
       _jpush.resumePush();
+      _isStopped = false;
       _logger.i('JPush resumed');
     } catch (e) {
       _logger.e('Failed to resume JPush: $e');
@@ -321,8 +324,7 @@ class JPushService extends AsyncNotifier<void> {
     if (!_isInitialized) return false;
 
     try {
-      final stopped = await _jpush.isPushStopped();
-      return stopped ?? false;
+      return _isStopped;
     } catch (e) {
       _logger.e('Failed to check JPush status: $e');
       return false;

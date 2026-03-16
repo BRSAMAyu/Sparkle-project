@@ -271,7 +271,7 @@ class _CategoryHeader extends StatelessWidget {
         children: [
           Text(
             _getCategoryDisplayName(category, l10n),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: DS.fontSizeLg,
               fontWeight: DS.fontWeightBold,
               color: DS.textPrimary,
@@ -289,7 +289,7 @@ class _CategoryHeader extends StatelessWidget {
             ),
             child: Text(
               '$count',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: DS.fontSizeXs,
                 fontWeight: DS.fontWeightMedium,
                 color: DS.brandPrimary,
@@ -348,7 +348,7 @@ class _TypeHeader extends StatelessWidget {
           const SizedBox(width: DS.spacing12),
           Text(
             _getTypeDisplayName(type, l10n),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: DS.fontSizeLg,
               fontWeight: DS.fontWeightBold,
               color: DS.textPrimary,
@@ -366,7 +366,7 @@ class _TypeHeader extends StatelessWidget {
             ),
             child: Text(
               '$count',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: DS.fontSizeXs,
                 fontWeight: DS.fontWeightMedium,
                 color: DS.textSecondary,

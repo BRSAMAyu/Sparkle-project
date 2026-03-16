@@ -1546,6 +1546,9 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     final comparisons =
         (action.data['comparisons'] as Map<dynamic, dynamic>? ?? const <dynamic, dynamic>{})
             .map<String, dynamic>((key, value) => MapEntry('$key', value));
+    final currentStreak =
+        (streakInfo['current_streak'] as num?)?.toInt() ?? 0;
+    final maxStreak = (streakInfo['max_streak'] as num?)?.toInt() ?? 0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1563,12 +1566,12 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                   ),
                 ),
               ),
-        if ((streakInfo['current_streak'] ?? 0) != 0) ...[
+        if (currentStreak != 0) ...[
           const SizedBox(height: DS.spacing8),
           _buildMetaPill(
             l10n.chatStreakSummary(
-              streakInfo['current_streak'] ?? 0,
-              streakInfo['max_streak'] ?? 0,
+              currentStreak,
+              maxStreak,
             ),
           ),
         ],
@@ -1588,6 +1591,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
               final value = entry.value is Map<dynamic, dynamic>
                   ? Map<String, dynamic>.from(entry.value as Map<dynamic, dynamic>)
                   : const <String, dynamic>{};
+              final currentValue = value['current']?.toString() ?? '-';
+              final previousValue = value['previous']?.toString() ?? '-';
               return Container(
                 margin: const EdgeInsets.only(top: DS.spacing8),
                 padding: const EdgeInsets.all(DS.spacing12),
@@ -1602,8 +1607,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                     Text(_formatParamKey(entry.key)),
                     Text(
                       l10n.chatComparisonCurrentPrevious(
-                        value['current'] ?? '-',
-                        value['previous'] ?? '-',
+                        currentValue,
+                        previousValue,
                       ),
                     ),
                   ],

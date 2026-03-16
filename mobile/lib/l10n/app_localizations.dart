@@ -12251,14 +12251,14 @@ abstract class AppLocalizations {
   /// No description provided for @chatAchievementUnlocked.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Achievement Unlocked'**
-  String get chatAchievementUnlocked;
+  /// **'{arg0}'**
+  String chatAchievementUnlocked(Object arg0);
 
   /// No description provided for @chatActionErrorSuggestion.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Action Error Suggestion'**
-  String get chatActionErrorSuggestion;
+  /// **'{arg0}'**
+  String chatActionErrorSuggestion(Object arg0);
 
   /// No description provided for @chatActionErrorTitle.
   ///
@@ -12317,14 +12317,14 @@ abstract class AppLocalizations {
   /// No description provided for @chatActionStatusUpdate.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Action Status Update'**
-  String get chatActionStatusUpdate;
+  /// **'{arg0}'**
+  String chatActionStatusUpdate(Object arg0);
 
   /// No description provided for @chatActionSuggestedActions.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Action Suggested Actions'**
-  String get chatActionSuggestedActions;
+  /// **'{arg0}'**
+  String chatActionSuggestedActions(Object arg0);
 
   /// No description provided for @chatActionTitleAddError.
   ///
@@ -12455,44 +12455,44 @@ abstract class AppLocalizations {
   /// No description provided for @chatAgentRoutingFallback.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Agent Routing Fallback'**
-  String get chatAgentRoutingFallback;
+  /// **'{arg0}'**
+  String chatAgentRoutingFallback(Object arg0);
 
   /// No description provided for @chatAgentRoutingStrategy.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Agent Routing Strategy'**
-  String get chatAgentRoutingStrategy;
+  /// **'{arg0}'**
+  String chatAgentRoutingStrategy(Object arg0);
 
   /// No description provided for @chatAlignmentScoreLabel.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Alignment Score Label'**
-  String get chatAlignmentScoreLabel;
+  /// **'{arg0}'**
+  String chatAlignmentScoreLabel(Object arg0);
 
   /// No description provided for @chatAudioParseFailed.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Audio Parse Failed'**
-  String get chatAudioParseFailed;
+  /// **'{arg0}'**
+  String chatAudioParseFailed(Object arg0);
 
   /// No description provided for @chatAudioRecordFailed.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Audio Record Failed'**
-  String get chatAudioRecordFailed;
+  /// **'{arg0}'**
+  String chatAudioRecordFailed(Object arg0);
 
   /// No description provided for @chatAudioStartFailed.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Audio Start Failed'**
-  String get chatAudioStartFailed;
+  /// **'{arg0}'**
+  String chatAudioStartFailed(Object arg0);
 
   /// No description provided for @chatAudioWsConnectFailed.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Audio Ws Connect Failed'**
-  String get chatAudioWsConnectFailed;
+  /// **'{arg0}'**
+  String chatAudioWsConnectFailed(Object arg0);
 
   /// No description provided for @chatAuthExpired.
   ///
@@ -12515,20 +12515,20 @@ abstract class AppLocalizations {
   /// No description provided for @chatCitationLabel.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Citation Label'**
-  String get chatCitationLabel;
+  /// **'{arg0}'**
+  String chatCitationLabel(Object arg0);
 
   /// No description provided for @chatCitationRelevance.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Citation Relevance'**
-  String get chatCitationRelevance;
+  /// **'{arg0}'**
+  String chatCitationRelevance(Object arg0);
 
   /// No description provided for @chatCitationSourcesCount.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Citation Sources Count'**
-  String get chatCitationSourcesCount;
+  /// **'{arg0}'**
+  String chatCitationSourcesCount(Object arg0);
 
   /// No description provided for @chatCollabTimelineTitle.
   ///
@@ -12551,8 +12551,8 @@ abstract class AppLocalizations {
   /// No description provided for @chatComparisonCurrentPrevious.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Comparison Current Previous'**
-  String get chatComparisonCurrentPrevious;
+  /// **'{arg0} {arg1}'**
+  String chatComparisonCurrentPrevious(Object arg0, Object arg1);
 
   /// No description provided for @chatCompletionBlocked.
   ///
@@ -12599,8 +12599,8 @@ abstract class AppLocalizations {
   /// No description provided for @chatConfidenceLabel.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Confidence Label'**
-  String get chatConfidenceLabel;
+  /// **'{arg0}'**
+  String chatConfidenceLabel(Object arg0);
 
   /// No description provided for @chatConfidenceMedium.
   ///
@@ -12641,14 +12641,14 @@ abstract class AppLocalizations {
   /// No description provided for @chatConfirmationUpdatePreferenceKeyOnly.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Confirmation Update Preference Key Only'**
-  String get chatConfirmationUpdatePreferenceKeyOnly;
+  /// **'{arg0}'**
+  String chatConfirmationUpdatePreferenceKeyOnly(Object arg0);
 
   /// No description provided for @chatConfirmationUpdatePreferenceWithValue.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Confirmation Update Preference With Value'**
-  String get chatConfirmationUpdatePreferenceWithValue;
+  /// **'{arg0} {arg1}'**
+  String chatConfirmationUpdatePreferenceWithValue(Object arg0, Object arg1);
 
   /// No description provided for @chatCopiedToClipboard.
   ///
@@ -12677,38 +12677,38 @@ abstract class AppLocalizations {
   /// No description provided for @chatDagLayerAborted.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Dag Layer Aborted'**
-  String get chatDagLayerAborted;
+  /// **'{arg0}'**
+  String chatDagLayerAborted(Object arg0);
 
   /// No description provided for @chatDagLayerCompleted.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Dag Layer Completed'**
-  String get chatDagLayerCompleted;
+  /// **'{arg0}'**
+  String chatDagLayerCompleted(Object arg0);
 
   /// No description provided for @chatDagLayerStart.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Dag Layer Start'**
-  String get chatDagLayerStart;
+  /// **'{arg0} {arg1} {arg2}'**
+  String chatDagLayerStart(Object arg0, Object arg1, Object arg2);
 
   /// No description provided for @chatDagStepCompleted.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Dag Step Completed'**
-  String get chatDagStepCompleted;
+  /// **'{arg0}'**
+  String chatDagStepCompleted(Object arg0);
 
   /// No description provided for @chatDagStepCompletedWithDuration.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Dag Step Completed With Duration'**
-  String get chatDagStepCompletedWithDuration;
+  /// **'{arg0} {arg1}'**
+  String chatDagStepCompletedWithDuration(Object arg0, Object arg1);
 
   /// No description provided for @chatDagStepFailed.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Dag Step Failed'**
-  String get chatDagStepFailed;
+  /// **'{arg0}'**
+  String chatDagStepFailed(Object arg0);
 
   /// No description provided for @chatDagStepFallback.
   ///
@@ -12719,20 +12719,20 @@ abstract class AppLocalizations {
   /// No description provided for @chatDurationLabel.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Duration Label'**
-  String get chatDurationLabel;
+  /// **'{arg0}'**
+  String chatDurationLabel(Object arg0);
 
   /// No description provided for @chatErrorWithSuggestion.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Error With Suggestion'**
-  String get chatErrorWithSuggestion;
+  /// **'{arg0} {arg1}'**
+  String chatErrorWithSuggestion(Object arg0, Object arg1);
 
   /// No description provided for @chatEvolutionExpectedEffect.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Evolution Expected Effect'**
-  String get chatEvolutionExpectedEffect;
+  /// **'{arg0}'**
+  String chatEvolutionExpectedEffect(Object arg0);
 
   /// No description provided for @chatEvolutionHeadlineDefault.
   ///
@@ -12743,14 +12743,14 @@ abstract class AppLocalizations {
   /// No description provided for @chatEvolutionNextWeekPlan.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Evolution Next Week Plan'**
-  String get chatEvolutionNextWeekPlan;
+  /// **'{arg0}'**
+  String chatEvolutionNextWeekPlan(Object arg0);
 
   /// No description provided for @chatEvolutionWhy.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Evolution Why'**
-  String get chatEvolutionWhy;
+  /// **'{arg0}'**
+  String chatEvolutionWhy(Object arg0);
 
   /// No description provided for @chatExecutionCompleted.
   ///
@@ -12815,8 +12815,8 @@ abstract class AppLocalizations {
   /// No description provided for @chatKnowledgeCitationTitle.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Knowledge Citation Title'**
-  String get chatKnowledgeCitationTitle;
+  /// **'{arg0}'**
+  String chatKnowledgeCitationTitle(Object arg0);
 
   /// No description provided for @chatModeCustomTeam.
   ///
@@ -12857,8 +12857,8 @@ abstract class AppLocalizations {
   /// No description provided for @chatNextActionLabel.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Next Action Label'**
-  String get chatNextActionLabel;
+  /// **'{arg0}'**
+  String chatNextActionLabel(Object arg0);
 
   /// No description provided for @chatNextActionsRetryHint.
   ///
@@ -12911,8 +12911,8 @@ abstract class AppLocalizations {
   /// No description provided for @chatPendingMessagesFailed.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Pending Messages Failed'**
-  String get chatPendingMessagesFailed;
+  /// **'{arg0}'**
+  String chatPendingMessagesFailed(Object arg0);
 
   /// No description provided for @chatPlanContextClear.
   ///
@@ -12965,8 +12965,8 @@ abstract class AppLocalizations {
   /// No description provided for @chatPlanReviewStatusUpdate.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Plan Review Status Update'**
-  String get chatPlanReviewStatusUpdate;
+  /// **'{arg0}'**
+  String chatPlanReviewStatusUpdate(Object arg0);
 
   /// No description provided for @chatPlanSelect.
   ///
@@ -12977,8 +12977,8 @@ abstract class AppLocalizations {
   /// No description provided for @chatQuotePrefix.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Quote Prefix'**
-  String get chatQuotePrefix;
+  /// **'{arg0}'**
+  String chatQuotePrefix(Object arg0);
 
   /// No description provided for @chatReasoningProcess.
   ///
@@ -13073,14 +13073,14 @@ abstract class AppLocalizations {
   /// No description provided for @chatReasoningStepsCount.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Reasoning Steps Count'**
-  String get chatReasoningStepsCount;
+  /// **'{arg0}'**
+  String chatReasoningStepsCount(Object arg0);
 
   /// No description provided for @chatReasoningSummary.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Reasoning Summary'**
-  String get chatReasoningSummary;
+  /// **'{arg0} {arg1}'**
+  String chatReasoningSummary(Object arg0, Object arg1);
 
   /// No description provided for @chatReflectionDegraded.
   ///
@@ -13097,14 +13097,14 @@ abstract class AppLocalizations {
   /// No description provided for @chatReflectionFixed.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Reflection Fixed'**
-  String get chatReflectionFixed;
+  /// **'{arg0} {arg1}'**
+  String chatReflectionFixed(Object arg0, Object arg1);
 
   /// No description provided for @chatReflectionImproved.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Reflection Improved'**
-  String get chatReflectionImproved;
+  /// **'{arg0} {arg1}'**
+  String chatReflectionImproved(Object arg0, Object arg1);
 
   /// No description provided for @chatReflectionNoChange.
   ///
@@ -13115,14 +13115,14 @@ abstract class AppLocalizations {
   /// No description provided for @chatReflectionStatusUpdate.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Reflection Status Update'**
-  String get chatReflectionStatusUpdate;
+  /// **'{arg0}'**
+  String chatReflectionStatusUpdate(Object arg0);
 
   /// No description provided for @chatRoundsInfo.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Rounds Info'**
-  String get chatRoundsInfo;
+  /// **'{arg0}'**
+  String chatRoundsInfo(Object arg0);
 
   /// No description provided for @chatSourceUnknown.
   ///
@@ -13151,8 +13151,8 @@ abstract class AppLocalizations {
   /// No description provided for @chatStreakSummary.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Streak Summary'**
-  String get chatStreakSummary;
+  /// **'{arg0} {arg1}'**
+  String chatStreakSummary(Object arg0, Object arg1);
 
   /// No description provided for @chatSubmitFeedback.
   ///
@@ -13169,32 +13169,32 @@ abstract class AppLocalizations {
   /// No description provided for @chatTaskDataInvalid.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Task Data Invalid'**
-  String get chatTaskDataInvalid;
+  /// **'{arg0}'**
+  String chatTaskDataInvalid(Object arg0);
 
   /// No description provided for @chatTaskListMoreCount.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Task List More Count'**
-  String get chatTaskListMoreCount;
+  /// **'{arg0}'**
+  String chatTaskListMoreCount(Object arg0);
 
   /// No description provided for @chatTeamExpertsCount.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Team Experts Count'**
-  String get chatTeamExpertsCount;
+  /// **'{arg0}'**
+  String chatTeamExpertsCount(Object arg0);
 
   /// No description provided for @chatUnknownWidgetType.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Unknown Widget Type'**
-  String get chatUnknownWidgetType;
+  /// **'{arg0}'**
+  String chatUnknownWidgetType(Object arg0);
 
   /// No description provided for @chatUsingTool.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Using Tool'**
-  String get chatUsingTool;
+  /// **'{arg0}'**
+  String chatUsingTool(Object arg0);
 
   /// No description provided for @chatViewComparisonData.
   ///
@@ -13217,8 +13217,8 @@ abstract class AppLocalizations {
   /// No description provided for @chatVoiceStartFailed.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Voice Start Failed'**
-  String get chatVoiceStartFailed;
+  /// **'{arg0}'**
+  String chatVoiceStartFailed(Object arg0);
 
   /// No description provided for @chatWhyThisAnswer.
   ///
@@ -13277,14 +13277,14 @@ abstract class AppLocalizations {
   /// No description provided for @chatWorkflowExpertsCount.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Workflow Experts Count'**
-  String get chatWorkflowExpertsCount;
+  /// **'{arg0}'**
+  String chatWorkflowExpertsCount(Object arg0);
 
   /// No description provided for @chatWorkflowParallelCount.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Workflow Parallel Count'**
-  String get chatWorkflowParallelCount;
+  /// **'{arg0}'**
+  String chatWorkflowParallelCount(Object arg0);
 
   /// No description provided for @chatWorkflowParallelSubtitle.
   ///
@@ -13295,8 +13295,8 @@ abstract class AppLocalizations {
   /// No description provided for @chatWorkflowPhaseLabel.
   ///
   /// In zh, this message translates to:
-  /// **'Chat Workflow Phase Label'**
-  String get chatWorkflowPhaseLabel;
+  /// **'{arg0}'**
+  String chatWorkflowPhaseLabel(Object arg0);
 
   /// No description provided for @chatWorkflowProgressiveExploration.
   ///
@@ -13445,8 +13445,8 @@ abstract class AppLocalizations {
   /// No description provided for @communityCheckInFailed.
   ///
   /// In zh, this message translates to:
-  /// **'Community Check In Failed'**
-  String get communityCheckInFailed;
+  /// **'{arg0}'**
+  String communityCheckInFailed(Object arg0);
 
   /// No description provided for @communityCheckInMessageHint.
   ///
@@ -13475,8 +13475,8 @@ abstract class AppLocalizations {
   /// No description provided for @communityFileSharedFailed.
   ///
   /// In zh, this message translates to:
-  /// **'Community File Shared Failed'**
-  String get communityFileSharedFailed;
+  /// **'{arg0}'**
+  String communityFileSharedFailed(Object arg0);
 
   /// No description provided for @communityFileSharedSuccess.
   ///
@@ -13493,8 +13493,8 @@ abstract class AppLocalizations {
   /// No description provided for @communityGroupMembersCount.
   ///
   /// In zh, this message translates to:
-  /// **'Community Group Members Count'**
-  String get communityGroupMembersCount;
+  /// **'{arg0}'**
+  String communityGroupMembersCount(Object arg0);
 
   /// No description provided for @communityMessageFallback.
   ///
@@ -13619,8 +13619,8 @@ abstract class AppLocalizations {
   /// No description provided for @deleteAccountSocialReauthNotice.
   ///
   /// In zh, this message translates to:
-  /// **'Delete Account Social Reauth Notice'**
-  String get deleteAccountSocialReauthNotice;
+  /// **'{arg0}'**
+  String deleteAccountSocialReauthNotice(Object arg0);
 
   /// No description provided for @deleteAccountSuccess.
   ///
@@ -13751,8 +13751,8 @@ abstract class AppLocalizations {
   /// No description provided for @galaxyA11yClusterLabel.
   ///
   /// In zh, this message translates to:
-  /// **'Galaxy A11y Cluster Label'**
-  String get galaxyA11yClusterLabel;
+  /// **'{arg0} {arg1} {arg2}'**
+  String galaxyA11yClusterLabel(Object arg0, Object arg1, Object arg2);
 
   /// No description provided for @galaxyA11yHintStartLearning.
   ///
@@ -13769,8 +13769,8 @@ abstract class AppLocalizations {
   /// No description provided for @galaxyA11yNavigateTo.
   ///
   /// In zh, this message translates to:
-  /// **'Galaxy A11y Navigate To'**
-  String get galaxyA11yNavigateTo;
+  /// **'{arg0}'**
+  String galaxyA11yNavigateTo(Object arg0);
 
   /// No description provided for @galaxyA11yNavigationHint.
   ///
@@ -13781,8 +13781,8 @@ abstract class AppLocalizations {
   /// No description provided for @galaxyA11yNodeImportance.
   ///
   /// In zh, this message translates to:
-  /// **'Galaxy A11y Node Importance'**
-  String get galaxyA11yNodeImportance;
+  /// **'{arg0}'**
+  String galaxyA11yNodeImportance(Object arg0);
 
   /// No description provided for @galaxyA11yNodeLocked.
   ///
@@ -13793,20 +13793,20 @@ abstract class AppLocalizations {
   /// No description provided for @galaxyA11yNodeMastery.
   ///
   /// In zh, this message translates to:
-  /// **'Galaxy A11y Node Mastery'**
-  String get galaxyA11yNodeMastery;
+  /// **'{arg0}'**
+  String galaxyA11yNodeMastery(Object arg0);
 
   /// No description provided for @galaxyA11yNodePrefix.
   ///
   /// In zh, this message translates to:
-  /// **'Galaxy A11y Node Prefix'**
-  String get galaxyA11yNodePrefix;
+  /// **'{arg0} {arg1}'**
+  String galaxyA11yNodePrefix(Object arg0, Object arg1);
 
   /// No description provided for @galaxyA11yNodeStudyCount.
   ///
   /// In zh, this message translates to:
-  /// **'Galaxy A11y Node Study Count'**
-  String get galaxyA11yNodeStudyCount;
+  /// **'{arg0}'**
+  String galaxyA11yNodeStudyCount(Object arg0);
 
   /// No description provided for @galaxyA11yNodeUnlocked.
   ///
@@ -13817,14 +13817,14 @@ abstract class AppLocalizations {
   /// No description provided for @galaxyA11ySectorLabel.
   ///
   /// In zh, this message translates to:
-  /// **'Galaxy A11y Sector Label'**
-  String get galaxyA11ySectorLabel;
+  /// **'{arg0} {arg1}'**
+  String galaxyA11ySectorLabel(Object arg0, Object arg1);
 
   /// No description provided for @galaxyA11yZoomLevel.
   ///
   /// In zh, this message translates to:
-  /// **'Galaxy A11y Zoom Level'**
-  String get galaxyA11yZoomLevel;
+  /// **'{arg0}'**
+  String galaxyA11yZoomLevel(Object arg0);
 
   /// No description provided for @galaxyControlOverview.
   ///
@@ -14015,8 +14015,8 @@ abstract class AppLocalizations {
   /// No description provided for @galaxyLLMActionFailed.
   ///
   /// In zh, this message translates to:
-  /// **'Galaxy LLMAction Failed'**
-  String get galaxyLLMActionFailed;
+  /// **'{arg0}'**
+  String galaxyLLMActionFailed(Object arg0);
 
   /// No description provided for @galaxyLoadFailed.
   ///
@@ -14063,8 +14063,8 @@ abstract class AppLocalizations {
   /// No description provided for @galaxyNodePreviewSubtitle.
   ///
   /// In zh, this message translates to:
-  /// **'Galaxy Node Preview Subtitle'**
-  String get galaxyNodePreviewSubtitle;
+  /// **'{arg0} {arg1}'**
+  String galaxyNodePreviewSubtitle(Object arg0, Object arg1);
 
   /// No description provided for @galaxyNodeUnlocked.
   ///
@@ -14099,20 +14099,20 @@ abstract class AppLocalizations {
   /// No description provided for @galaxyPerfHighJank.
   ///
   /// In zh, this message translates to:
-  /// **'Galaxy Perf High Jank'**
-  String get galaxyPerfHighJank;
+  /// **'{arg0}'**
+  String galaxyPerfHighJank(Object arg0);
 
   /// No description provided for @galaxyPerfLowFpsCritical.
   ///
   /// In zh, this message translates to:
-  /// **'Galaxy Perf Low Fps Critical'**
-  String get galaxyPerfLowFpsCritical;
+  /// **'{arg0}'**
+  String galaxyPerfLowFpsCritical(Object arg0);
 
   /// No description provided for @galaxyPerfLowFpsWarning.
   ///
   /// In zh, this message translates to:
-  /// **'Galaxy Perf Low Fps Warning'**
-  String get galaxyPerfLowFpsWarning;
+  /// **'{arg0}'**
+  String galaxyPerfLowFpsWarning(Object arg0);
 
   /// No description provided for @galaxyPerfRecommendationDisableParticles.
   ///
@@ -14141,8 +14141,8 @@ abstract class AppLocalizations {
   /// No description provided for @galaxyPerfSlowRender.
   ///
   /// In zh, this message translates to:
-  /// **'Galaxy Perf Slow Render'**
-  String get galaxyPerfSlowRender;
+  /// **'{arg0}'**
+  String galaxyPerfSlowRender(Object arg0);
 
   /// No description provided for @galaxyPerfStatusCritical.
   ///
@@ -14189,8 +14189,8 @@ abstract class AppLocalizations {
   /// No description provided for @galaxySearchResultSubtitle.
   ///
   /// In zh, this message translates to:
-  /// **'Galaxy Search Result Subtitle'**
-  String get galaxySearchResultSubtitle;
+  /// **'{arg0} {arg1} {arg2}'**
+  String galaxySearchResultSubtitle(Object arg0, Object arg1, Object arg2);
 
   /// No description provided for @galaxySearchTitle.
   ///
@@ -14453,8 +14453,8 @@ abstract class AppLocalizations {
   /// No description provided for @planDaysRemaining.
   ///
   /// In zh, this message translates to:
-  /// **'Plan Days Remaining'**
-  String get planDaysRemaining;
+  /// **'{arg0}'**
+  String planDaysRemaining(Object arg0);
 
   /// No description provided for @planDetailTitle.
   ///
@@ -14471,8 +14471,8 @@ abstract class AppLocalizations {
   /// No description provided for @planFactsFeedbackSummary.
   ///
   /// In zh, this message translates to:
-  /// **'Plan Facts Feedback Summary'**
-  String get planFactsFeedbackSummary;
+  /// **'{arg0} {arg1}'**
+  String planFactsFeedbackSummary(Object arg0, Object arg1);
 
   /// No description provided for @planKeyFacts.
   ///
@@ -14483,8 +14483,8 @@ abstract class AppLocalizations {
   /// No description provided for @planLoadFailed.
   ///
   /// In zh, this message translates to:
-  /// **'Plan Load Failed'**
-  String get planLoadFailed;
+  /// **'{arg0}'**
+  String planLoadFailed(Object arg0);
 
   /// No description provided for @planNoContent.
   ///
@@ -14507,8 +14507,8 @@ abstract class AppLocalizations {
   /// No description provided for @planOverdueDays.
   ///
   /// In zh, this message translates to:
-  /// **'Plan Overdue Days'**
-  String get planOverdueDays;
+  /// **'{arg0}'**
+  String planOverdueDays(Object arg0);
 
   /// No description provided for @planProgressLabel.
   ///
@@ -14561,8 +14561,8 @@ abstract class AppLocalizations {
   /// No description provided for @planReviewConfidenceTierLabel.
   ///
   /// In zh, this message translates to:
-  /// **'Plan Review Confidence Tier Label'**
-  String get planReviewConfidenceTierLabel;
+  /// **'{arg0}'**
+  String planReviewConfidenceTierLabel(Object arg0);
 
   /// No description provided for @planReviewConfidenceTitle.
   ///
@@ -14597,14 +14597,14 @@ abstract class AppLocalizations {
   /// No description provided for @planReviewEvidenceLabel.
   ///
   /// In zh, this message translates to:
-  /// **'Plan Review Evidence Label'**
-  String get planReviewEvidenceLabel;
+  /// **'{arg0}'**
+  String planReviewEvidenceLabel(Object arg0);
 
   /// No description provided for @planReviewImpactLabel.
   ///
   /// In zh, this message translates to:
-  /// **'Plan Review Impact Label'**
-  String get planReviewImpactLabel;
+  /// **'{arg0}'**
+  String planReviewImpactLabel(Object arg0);
 
   /// No description provided for @planReviewModifyPlan.
   ///
@@ -14771,14 +14771,14 @@ abstract class AppLocalizations {
   /// No description provided for @planTargetDate.
   ///
   /// In zh, this message translates to:
-  /// **'Plan Target Date'**
-  String get planTargetDate;
+  /// **'{arg0}'**
+  String planTargetDate(Object arg0);
 
   /// No description provided for @planTargetMastery.
   ///
   /// In zh, this message translates to:
-  /// **'Plan Target Mastery'**
-  String get planTargetMastery;
+  /// **'{arg0}'**
+  String planTargetMastery(Object arg0);
 
   /// No description provided for @planTaskProgress.
   ///
@@ -14927,8 +14927,8 @@ abstract class AppLocalizations {
   /// No description provided for @regenQualityImprovement.
   ///
   /// In zh, this message translates to:
-  /// **'Regen Quality Improvement'**
-  String get regenQualityImprovement;
+  /// **'{arg0}'**
+  String regenQualityImprovement(Object arg0);
 
   /// No description provided for @regenResultFailed.
   ///
@@ -15269,8 +15269,8 @@ abstract class AppLocalizations {
   /// No description provided for @securityLogAdditionalInfo.
   ///
   /// In zh, this message translates to:
-  /// **'Security Log Additional Info'**
-  String get securityLogAdditionalInfo;
+  /// **'{arg0}'**
+  String securityLogAdditionalInfo(Object arg0);
 
   /// No description provided for @securityLogEmpty.
   ///
@@ -15287,8 +15287,8 @@ abstract class AppLocalizations {
   /// No description provided for @securityLogOccurredAt.
   ///
   /// In zh, this message translates to:
-  /// **'Security Log Occurred At'**
-  String get securityLogOccurredAt;
+  /// **'{arg0}'**
+  String securityLogOccurredAt(Object arg0);
 
   /// No description provided for @securityLogTitle.
   ///
@@ -15311,8 +15311,8 @@ abstract class AppLocalizations {
   /// No description provided for @sessionManagementFirstLogin.
   ///
   /// In zh, this message translates to:
-  /// **'Session Management First Login'**
-  String get sessionManagementFirstLogin;
+  /// **'{arg0}'**
+  String sessionManagementFirstLogin(Object arg0);
 
   /// No description provided for @sessionManagementIntro.
   ///
@@ -15323,8 +15323,8 @@ abstract class AppLocalizations {
   /// No description provided for @sessionManagementLastActive.
   ///
   /// In zh, this message translates to:
-  /// **'Session Management Last Active'**
-  String get sessionManagementLastActive;
+  /// **'{arg0}'**
+  String sessionManagementLastActive(Object arg0);
 
   /// No description provided for @sessionManagementRevokeOthers.
   ///
@@ -15395,8 +15395,8 @@ abstract class AppLocalizations {
   /// No description provided for @socialAccountsUnlinkTitle.
   ///
   /// In zh, this message translates to:
-  /// **'Social Accounts Unlink Title'**
-  String get socialAccountsUnlinkTitle;
+  /// **'{arg0}'**
+  String socialAccountsUnlinkTitle(Object arg0);
 
   /// No description provided for @socialAccountsUnlinkedHint.
   ///
@@ -15491,8 +15491,8 @@ abstract class AppLocalizations {
   /// No description provided for @sprintConfirmAbandonMessage.
   ///
   /// In zh, this message translates to:
-  /// **'Sprint Confirm Abandon Message'**
-  String get sprintConfirmAbandonMessage;
+  /// **'{arg0}'**
+  String sprintConfirmAbandonMessage(Object arg0);
 
   /// No description provided for @sprintConfirmAbandonTitle.
   ///
@@ -15509,8 +15509,8 @@ abstract class AppLocalizations {
   /// No description provided for @sprintConfirmCompleteMessage.
   ///
   /// In zh, this message translates to:
-  /// **'Sprint Confirm Complete Message'**
-  String get sprintConfirmCompleteMessage;
+  /// **'{arg0}'**
+  String sprintConfirmCompleteMessage(Object arg0);
 
   /// No description provided for @sprintConfirmCompleteTitle.
   ///
@@ -15533,8 +15533,8 @@ abstract class AppLocalizations {
   /// No description provided for @sprintDurationDaysValue.
   ///
   /// In zh, this message translates to:
-  /// **'Sprint Duration Days Value'**
-  String get sprintDurationDaysValue;
+  /// **'{arg0}'**
+  String sprintDurationDaysValue(Object arg0);
 
   /// No description provided for @sprintDurationLabel.
   ///
@@ -15551,20 +15551,20 @@ abstract class AppLocalizations {
   /// No description provided for @sprintExtendConfirm.
   ///
   /// In zh, this message translates to:
-  /// **'Sprint Extend Confirm'**
-  String get sprintExtendConfirm;
+  /// **'{arg0}'**
+  String sprintExtendConfirm(Object arg0);
 
   /// No description provided for @sprintExtendMessage.
   ///
   /// In zh, this message translates to:
-  /// **'Sprint Extend Message'**
-  String get sprintExtendMessage;
+  /// **'{arg0}'**
+  String sprintExtendMessage(Object arg0);
 
   /// No description provided for @sprintExtendOptionDays.
   ///
   /// In zh, this message translates to:
-  /// **'Sprint Extend Option Days'**
-  String get sprintExtendOptionDays;
+  /// **'{arg0}'**
+  String sprintExtendOptionDays(Object arg0);
 
   /// No description provided for @sprintExtendSelectDays.
   ///
@@ -15653,8 +15653,8 @@ abstract class AppLocalizations {
   /// No description provided for @sprintTaskCount.
   ///
   /// In zh, this message translates to:
-  /// **'Sprint Task Count'**
-  String get sprintTaskCount;
+  /// **'{arg0}'**
+  String sprintTaskCount(Object arg0);
 
   /// No description provided for @sprintTaskSummaryTitle.
   ///
@@ -15695,8 +15695,8 @@ abstract class AppLocalizations {
   /// No description provided for @taskBatchCreateTitle.
   ///
   /// In zh, this message translates to:
-  /// **'Task Batch Create Title'**
-  String get taskBatchCreateTitle;
+  /// **'{arg0}'**
+  String taskBatchCreateTitle(Object arg0);
 
   /// No description provided for @taskChatAssistantTitle.
   ///
@@ -15725,8 +15725,8 @@ abstract class AppLocalizations {
   /// No description provided for @taskCreateFailed.
   ///
   /// In zh, this message translates to:
-  /// **'Task Create Failed'**
-  String get taskCreateFailed;
+  /// **'{arg0}'**
+  String taskCreateFailed(Object arg0);
 
   /// No description provided for @taskCreateSuccess.
   ///
@@ -15779,8 +15779,8 @@ abstract class AppLocalizations {
   /// No description provided for @taskDetailLoadFailed.
   ///
   /// In zh, this message translates to:
-  /// **'Task Detail Load Failed'**
-  String get taskDetailLoadFailed;
+  /// **'{arg0}'**
+  String taskDetailLoadFailed(Object arg0);
 
   /// No description provided for @taskDetailLoading.
   ///
@@ -15803,8 +15803,8 @@ abstract class AppLocalizations {
   /// No description provided for @taskDifficultyLevel.
   ///
   /// In zh, this message translates to:
-  /// **'Task Difficulty Level'**
-  String get taskDifficultyLevel;
+  /// **'{arg0}'**
+  String taskDifficultyLevel(Object arg0);
 
   /// No description provided for @taskEnergyCost.
   ///
@@ -15821,8 +15821,8 @@ abstract class AppLocalizations {
   /// No description provided for @taskEnergyCostValue.
   ///
   /// In zh, this message translates to:
-  /// **'Task Energy Cost Value'**
-  String get taskEnergyCostValue;
+  /// **'{arg0}'**
+  String taskEnergyCostValue(Object arg0);
 
   /// No description provided for @taskEstimatedDuration.
   ///
@@ -15863,8 +15863,8 @@ abstract class AppLocalizations {
   /// No description provided for @taskExecutionElapsedMinutes.
   ///
   /// In zh, this message translates to:
-  /// **'Task Execution Elapsed Minutes'**
-  String get taskExecutionElapsedMinutes;
+  /// **'{arg0}'**
+  String taskExecutionElapsedMinutes(Object arg0);
 
   /// No description provided for @taskExecutionEnterFocus.
   ///
@@ -15875,8 +15875,8 @@ abstract class AppLocalizations {
   /// No description provided for @taskExecutionExpGained.
   ///
   /// In zh, this message translates to:
-  /// **'Task Execution Exp Gained'**
-  String get taskExecutionExpGained;
+  /// **'{arg0}'**
+  String taskExecutionExpGained(Object arg0);
 
   /// No description provided for @taskExecutionFeatureCoach.
   ///
@@ -15953,8 +15953,8 @@ abstract class AppLocalizations {
   /// No description provided for @taskExecutionStartFailed.
   ///
   /// In zh, this message translates to:
-  /// **'Task Execution Start Failed'**
-  String get taskExecutionStartFailed;
+  /// **'{arg0}'**
+  String taskExecutionStartFailed(Object arg0);
 
   /// No description provided for @taskExecutionStartNow.
   ///
@@ -16025,8 +16025,8 @@ abstract class AppLocalizations {
   /// No description provided for @taskExitMessageStep2.
   ///
   /// In zh, this message translates to:
-  /// **'Task Exit Message Step2'**
-  String get taskExitMessageStep2;
+  /// **'{arg0} {arg1}'**
+  String taskExitMessageStep2(Object arg0, Object arg1);
 
   /// No description provided for @taskExitMessageStep3.
   ///
@@ -16091,14 +16091,14 @@ abstract class AppLocalizations {
   /// No description provided for @taskMinutesOption.
   ///
   /// In zh, this message translates to:
-  /// **'Task Minutes Option'**
-  String get taskMinutesOption;
+  /// **'{arg0}'**
+  String taskMinutesOption(Object arg0);
 
   /// No description provided for @taskNudgeApplied.
   ///
   /// In zh, this message translates to:
-  /// **'Task Nudge Applied'**
-  String get taskNudgeApplied;
+  /// **'{arg0}'**
+  String taskNudgeApplied(Object arg0);
 
   /// No description provided for @taskNudgeApply.
   ///
@@ -16109,8 +16109,8 @@ abstract class AppLocalizations {
   /// No description provided for @taskNudgeConfidence.
   ///
   /// In zh, this message translates to:
-  /// **'Task Nudge Confidence'**
-  String get taskNudgeConfidence;
+  /// **'{arg0}'**
+  String taskNudgeConfidence(Object arg0);
 
   /// No description provided for @taskNudgeDismiss.
   ///
@@ -16211,8 +16211,8 @@ abstract class AppLocalizations {
   /// No description provided for @taskTimerMinutes.
   ///
   /// In zh, this message translates to:
-  /// **'Task Timer Minutes'**
-  String get taskTimerMinutes;
+  /// **'{arg0}'**
+  String taskTimerMinutes(Object arg0);
 
   /// No description provided for @taskTimerPomodoro.
   ///
@@ -16277,8 +16277,20 @@ abstract class AppLocalizations {
   /// No description provided for @weeklyAgendaSummary.
   ///
   /// In zh, this message translates to:
-  /// **'Weekly Agenda Summary'**
-  String get weeklyAgendaSummary;
+  /// **'{arg0} {arg1} {arg2}'**
+  String weeklyAgendaSummary(Object arg0, Object arg1, Object arg2);
+
+  /// No description provided for @securityLogDevice.
+  ///
+  /// In zh, this message translates to:
+  /// **'{arg0}'**
+  String securityLogDevice(Object arg0);
+
+  /// No description provided for @sessionManagementCurrentHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'Session Management Current Hint'**
+  String get sessionManagementCurrentHint;
 }
 
 class _AppLocalizationsDelegate

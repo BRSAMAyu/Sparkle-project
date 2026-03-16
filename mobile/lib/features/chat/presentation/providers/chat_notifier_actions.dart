@@ -195,7 +195,7 @@ extension ChatNotifierActions on ChatNotifier {
         (p) => p.id == planId,
         orElse: () => throw StateError('Plan not found'),
       );
-      return plan.title;
+      return plan.name;
     } catch (_) {
       return I18nService.instance.l10n.chatNewChat;
     }

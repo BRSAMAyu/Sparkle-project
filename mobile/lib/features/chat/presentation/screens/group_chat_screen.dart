@@ -194,7 +194,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                         mergedMessages.length + (showAgentStatus ? 1 : 0),
                     itemBuilder: (context, index) {
                       if (showAgentStatus && index == 0) {
-                        return const Padding(
+                        return Padding(
                           padding: EdgeInsets.only(bottom: DS.spacing16),
                           child: AiStatusIndicator(
                             status: 'THINKING',

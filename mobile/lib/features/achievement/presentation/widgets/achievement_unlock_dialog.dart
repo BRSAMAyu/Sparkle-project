@@ -870,7 +870,7 @@ class _VisualElementPreviewSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
+    final l10n = AppLocalizations.of(context)!;
     final visualRewards =
         rewards.where((reward) => reward['type'] == 'visual_element').toList();
     if (visualRewards.isEmpty) {

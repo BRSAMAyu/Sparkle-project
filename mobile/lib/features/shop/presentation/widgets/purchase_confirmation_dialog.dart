@@ -287,6 +287,8 @@ class _PurchaseConfirmationDialogState
         return Icons.inventory_2_outlined;
       case ShopItemType.boost:
         return Icons.trending_up_outlined;
+      case ShopItemType.visualElement:
+        return Icons.auto_awesome_outlined;
     }
   }
 }

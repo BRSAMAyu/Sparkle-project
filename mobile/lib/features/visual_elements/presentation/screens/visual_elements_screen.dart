@@ -152,7 +152,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                   Expanded(
                     child: Text(
                       l10n.visualElementsTitle,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: DS.fontSizeXl,
                         fontWeight: DS.fontWeightBold,
                         color: DS.textPrimary,
@@ -250,7 +250,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                 const SizedBox(height: DS.spacing4),
                 Text(
                   '${stats.equippedCount}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: DS.fontSizeLg,
                     fontWeight: DS.fontWeightBold,
                     color: DS.brandPrimary,
@@ -494,7 +494,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
             const SizedBox(height: DS.spacing16),
             Text(
               l10n.loadingFailed,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: DS.fontSizeBase,
                 color: DS.textSecondary,
               ),
@@ -700,7 +700,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
               Expanded(
                 child: Text(
                   l10n.visualElementEventTitle,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: DS.fontSizeBase,
                     fontWeight: DS.fontWeightBold,
                     color: DS.textPrimary,
@@ -905,7 +905,7 @@ class _FilterSheetState extends State<_FilterSheet> {
               children: [
                 Text(
                   l10n.visualElementFilter,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: DS.fontSizeLg,
                     fontWeight: DS.fontWeightBold,
                   ),
@@ -1195,7 +1195,7 @@ class _VisualElementCard extends StatelessWidget {
                   // 名称
                   Text(
                     element.name,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: DS.fontSizeSm,
                       fontWeight: DS.fontWeightSemibold,
                       color: DS.textPrimary,
@@ -1395,7 +1395,7 @@ class _RecommendationCard extends StatelessWidget {
                       alignment: Alignment.centerLeft,
                       child: Text(
                         element.name,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: DS.fontSizeSm,
                           fontWeight: DS.fontWeightSemibold,
                           color: DS.textPrimary,
