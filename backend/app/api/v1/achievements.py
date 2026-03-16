@@ -26,6 +26,7 @@ from app.schemas.achievement import (
     ShareCardPrivacySettings,
     ShareTemplateInfo,
     ShareTemplateListResponse,
+    StreakHistoryResponse,
 )
 from app.services.achievement_engine import AchievementEngine, ContractService
 from app.services.equipment_service import EquipmentService, EquipmentSource
@@ -58,7 +59,9 @@ def _resolve_locale(locale: str | None, accept_language: str | None) -> str | No
 
 async def verify_internal_token(x_internal_token: str | None = Header(None)) -> None:
     """Protect internal-only achievement endpoints with a shared key."""
-    if settings.INTERNAL_API_KEY and x_internal_token != settings.INTERNAL_API_KEY:
+    if not settings.INTERNAL_API_KEY:
+        raise HTTPException(status_code=503, detail="Internal API key not configured")
+    if not x_internal_token or x_internal_token != settings.INTERNAL_API_KEY:
         raise HTTPException(status_code=401, detail="Invalid internal token")
 
 
@@ -154,6 +157,7 @@ async def list_achievements(
     category: str | None = Query(None, description="Filter by category"),
     rarity: AchievementRarity | None = Query(None, description="Filter by rarity"),
     include_hidden: bool = Query(False, description="Include hidden achievements"),
+    include_inactive: bool = Query(False, description="Include inactive achievements"),
     locale: str | None = Query(None, description="Locale for localized fields"),
     accept_language: str | None = Header(None),
     current_user: User = Depends(get_current_user),
@@ -171,6 +175,7 @@ async def list_achievements(
         category=category,
         rarity=rarity,
         include_hidden=include_hidden,
+        include_inactive=include_inactive,
         locale=resolved_locale,
     )
     return result
@@ -220,6 +225,21 @@ async def get_streak_stats(
     """
     engine = AchievementEngine(db)
     return await engine.get_streak_stats(current_user.id)
+
+
+@router.get("/streak/history", response_model=StreakHistoryResponse)
+async def get_streak_history(
+    days: int = Query(90, ge=1, le=365, description="Number of days to return"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    获取连胜日历历史
+
+    Returns daily streak status for calendar rendering.
+    """
+    engine = AchievementEngine(db)
+    return await engine.get_streak_history(current_user.id, days=days)
 
 
 @router.get(
@@ -586,11 +606,19 @@ async def get_close_to_unlock_achievements(
 @router.get("/{achievement_id}", response_model=AchievementDetailResponse)
 async def get_achievement_detail_canonical(
     achievement_id: str = Path(..., description="Achievement ID"),
+    locale: str | None = Query(None, description="Locale for localized fields"),
+    accept_language: str | None = Header(None),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Canonical achievement detail endpoint."""
-    return await _build_achievement_detail_response(achievement_id, current_user, db)
+    resolved_locale = _resolve_locale(locale, accept_language)
+    return await _build_achievement_detail_response(
+        achievement_id,
+        current_user,
+        db,
+        locale=resolved_locale,
+    )
 
 
 @router.get("/share-templates", response_model=ShareTemplateListResponse)

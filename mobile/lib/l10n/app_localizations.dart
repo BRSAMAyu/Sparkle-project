@@ -2186,6 +2186,354 @@ abstract class AppLocalizations {
   /// **'进度{count}%'**
   String achievementProgressGeneric(Object count);
 
+  /// No description provided for @achievementLimitedTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'限时活动'**
+  String get achievementLimitedTitle;
+
+  /// No description provided for @achievementLimitedSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'活动期间可获得'**
+  String get achievementLimitedSubtitle;
+
+  /// No description provided for @achievementLimitedTime.
+  ///
+  /// In zh, this message translates to:
+  /// **'限时'**
+  String get achievementLimitedTime;
+
+  /// No description provided for @achievementEventWindow.
+  ///
+  /// In zh, this message translates to:
+  /// **'活动时间'**
+  String get achievementEventWindow;
+
+  /// No description provided for @achievementEventStatusUpcoming.
+  ///
+  /// In zh, this message translates to:
+  /// **'即将开始'**
+  String get achievementEventStatusUpcoming;
+
+  /// No description provided for @achievementEventStatusLive.
+  ///
+  /// In zh, this message translates to:
+  /// **'进行中'**
+  String get achievementEventStatusLive;
+
+  /// No description provided for @achievementEventStatusEnded.
+  ///
+  /// In zh, this message translates to:
+  /// **'已结束'**
+  String get achievementEventStatusEnded;
+
+  /// No description provided for @achievementEventStartsAt.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始于{time}'**
+  String achievementEventStartsAt(String time);
+
+  /// No description provided for @achievementEventEndsAt.
+  ///
+  /// In zh, this message translates to:
+  /// **'结束于{time}'**
+  String achievementEventEndsAt(String time);
+
+  /// No description provided for @achievementEventEndsIn.
+  ///
+  /// In zh, this message translates to:
+  /// **'将于{time}结束'**
+  String achievementEventEndsIn(String time);
+
+  /// No description provided for @achievementEventEnded.
+  ///
+  /// In zh, this message translates to:
+  /// **'活动已结束'**
+  String get achievementEventEnded;
+
+  /// No description provided for @achievementRewardVisualElement.
+  ///
+  /// In zh, this message translates to:
+  /// **'视觉元素'**
+  String get achievementRewardVisualElement;
+
+  /// No description provided for @achievementUnlockToEquip.
+  ///
+  /// In zh, this message translates to:
+  /// **'解锁后可装备'**
+  String get achievementUnlockToEquip;
+
+  /// No description provided for @achievementEquipAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'装备'**
+  String get achievementEquipAction;
+
+  /// No description provided for @achievementEquipped.
+  ///
+  /// In zh, this message translates to:
+  /// **'已装备'**
+  String get achievementEquipped;
+
+  /// No description provided for @achievementMapTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'成就地图'**
+  String get achievementMapTitle;
+
+  /// No description provided for @achievementMapSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'探索成就路径'**
+  String get achievementMapSubtitle;
+
+  /// No description provided for @achievementMapEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无成就节点'**
+  String get achievementMapEmpty;
+
+  /// No description provided for @contractEntryTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习契约'**
+  String get contractEntryTitle;
+
+  /// No description provided for @contractEntrySubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建学习挑战'**
+  String get contractEntrySubtitle;
+
+  /// No description provided for @contractTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习契约'**
+  String get contractTitle;
+
+  /// No description provided for @contractCreateTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建契约'**
+  String get contractCreateTitle;
+
+  /// No description provided for @contractCreateSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'设定连续目标并投入光子'**
+  String get contractCreateSubtitle;
+
+  /// No description provided for @contractTargetMinutes.
+  ///
+  /// In zh, this message translates to:
+  /// **'每日分钟'**
+  String get contractTargetMinutes;
+
+  /// No description provided for @contractTargetDays.
+  ///
+  /// In zh, this message translates to:
+  /// **'目标天数'**
+  String get contractTargetDays;
+
+  /// No description provided for @contractPhotonStake.
+  ///
+  /// In zh, this message translates to:
+  /// **'投入光子'**
+  String get contractPhotonStake;
+
+  /// No description provided for @contractCreateAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建契约'**
+  String get contractCreateAction;
+
+  /// No description provided for @contractActiveTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前契约'**
+  String get contractActiveTitle;
+
+  /// No description provided for @contractProgressLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'已完成{current}/{target}天'**
+  String contractProgressLabel(int current, int target);
+
+  /// No description provided for @contractDailyTarget.
+  ///
+  /// In zh, this message translates to:
+  /// **'每日目标'**
+  String get contractDailyTarget;
+
+  /// No description provided for @contractMinutesTarget.
+  ///
+  /// In zh, this message translates to:
+  /// **'{current}/{target}分钟'**
+  String contractMinutesTarget(int current, int target);
+
+  /// No description provided for @contractEndsAt.
+  ///
+  /// In zh, this message translates to:
+  /// **'结束时间'**
+  String get contractEndsAt;
+
+  /// No description provided for @contractCancelAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'取消契约'**
+  String get contractCancelAction;
+
+  /// No description provided for @contractInputInvalid.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入有效的契约数值'**
+  String get contractInputInvalid;
+
+  /// No description provided for @contractCreateFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建契约失败'**
+  String get contractCreateFailed;
+
+  /// No description provided for @contractCreateSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'契约创建成功'**
+  String get contractCreateSuccess;
+
+  /// No description provided for @contractCancelSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'契约已取消'**
+  String get contractCancelSuccess;
+
+  /// No description provided for @contractCancelFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'取消契约失败'**
+  String get contractCancelFailed;
+
+  /// No description provided for @contractCountdown.
+  ///
+  /// In zh, this message translates to:
+  /// **'倒计时'**
+  String get contractCountdown;
+
+  /// No description provided for @contractDaysRemaining.
+  ///
+  /// In zh, this message translates to:
+  /// **'还剩{days}天'**
+  String contractDaysRemaining(int days);
+
+  /// No description provided for @contractDeadlineReached.
+  ///
+  /// In zh, this message translates to:
+  /// **'已到截止日期'**
+  String get contractDeadlineReached;
+
+  /// No description provided for @contractRewardMultiplier.
+  ///
+  /// In zh, this message translates to:
+  /// **'奖励倍率'**
+  String get contractRewardMultiplier;
+
+  /// No description provided for @contractCreatedCelebration.
+  ///
+  /// In zh, this message translates to:
+  /// **'契约创建成功！'**
+  String get contractCreatedCelebration;
+
+  /// No description provided for @streakCurrentLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前连胜'**
+  String get streakCurrentLabel;
+
+  /// No description provided for @streakBestRecord.
+  ///
+  /// In zh, this message translates to:
+  /// **'最高记录'**
+  String get streakBestRecord;
+
+  /// No description provided for @streakTotalCheckin.
+  ///
+  /// In zh, this message translates to:
+  /// **'总签到'**
+  String get streakTotalCheckin;
+
+  /// No description provided for @streakFreezeUsed.
+  ///
+  /// In zh, this message translates to:
+  /// **'冻结使用'**
+  String get streakFreezeUsed;
+
+  /// No description provided for @streakCalendarTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'连胜日历'**
+  String get streakCalendarTitle;
+
+  /// No description provided for @streakCalendarRange.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近{days}天'**
+  String streakCalendarRange(int days);
+
+  /// No description provided for @streakHistoryEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无连胜记录'**
+  String get streakHistoryEmpty;
+
+  /// No description provided for @streakStatusActive.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习日'**
+  String get streakStatusActive;
+
+  /// No description provided for @streakStatusFrozen.
+  ///
+  /// In zh, this message translates to:
+  /// **'冻结'**
+  String get streakStatusFrozen;
+
+  /// No description provided for @streakStatusMissed.
+  ///
+  /// In zh, this message translates to:
+  /// **'中断'**
+  String get streakStatusMissed;
+
+  /// No description provided for @streakRiskNoFreeze.
+  ///
+  /// In zh, this message translates to:
+  /// **'冻结卡已用完，断签将中断连胜。'**
+  String get streakRiskNoFreeze;
+
+  /// No description provided for @streakRiskLowFreeze.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅剩1次冻结卡，建议及时补充。'**
+  String get streakRiskLowFreeze;
+
+  /// No description provided for @streakShopTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'需要冻结卡保护？'**
+  String get streakShopTitle;
+
+  /// No description provided for @streakShopSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'前往光子商城获取补给'**
+  String get streakShopSubtitle;
+
+  /// No description provided for @streakShopAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'打开商城'**
+  String get streakShopAction;
+
   /// No description provided for @streakDetails.
   ///
   /// In zh, this message translates to:

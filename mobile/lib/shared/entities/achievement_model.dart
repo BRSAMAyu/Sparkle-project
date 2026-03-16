@@ -68,6 +68,16 @@ enum ContractStatus {
   expired,
 }
 
+/// 连胜日历状态
+enum StreakDayStatus {
+  @JsonValue('active')
+  active,
+  @JsonValue('frozen')
+  frozen,
+  @JsonValue('missed')
+  missed,
+}
+
 // ========== 成就实体 ==========
 
 @JsonSerializable()
@@ -92,6 +102,10 @@ class AchievementModel {
     this.visualEffectType = VisualEffectType.none,
     this.visualConfig,
     this.rewardConfig,
+    this.activeFrom,
+    this.activeTo,
+    this.isLimited = false,
+    this.eventTag,
     this.totalUnlocked = 0,
   });
 
@@ -124,6 +138,14 @@ class AchievementModel {
   final Map<String, dynamic>? visualConfig;
   @JsonKey(name: 'reward_config')
   final List<Map<String, dynamic>>? rewardConfig;
+  @JsonKey(name: 'active_from')
+  final DateTime? activeFrom;
+  @JsonKey(name: 'active_to')
+  final DateTime? activeTo;
+  @JsonKey(name: 'is_limited')
+  final bool isLimited;
+  @JsonKey(name: 'event_tag')
+  final String? eventTag;
   @JsonKey(name: 'total_unlocked')
   final int totalUnlocked;
   @JsonKey(name: 'created_at')
@@ -151,6 +173,10 @@ class AchievementModel {
     VisualEffectType? visualEffectType,
     Map<String, dynamic>? visualConfig,
     List<Map<String, dynamic>>? rewardConfig,
+    DateTime? activeFrom,
+    DateTime? activeTo,
+    bool? isLimited,
+    String? eventTag,
     int? totalUnlocked,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -173,6 +199,10 @@ class AchievementModel {
         visualEffectType: visualEffectType ?? this.visualEffectType,
         visualConfig: visualConfig ?? this.visualConfig,
         rewardConfig: rewardConfig ?? this.rewardConfig,
+        activeFrom: activeFrom ?? this.activeFrom,
+        activeTo: activeTo ?? this.activeTo,
+        isLimited: isLimited ?? this.isLimited,
+        eventTag: eventTag ?? this.eventTag,
         totalUnlocked: totalUnlocked ?? this.totalUnlocked,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
@@ -317,6 +347,42 @@ class StreakStats {
     );
     return activityDay.isAtSameMomentAs(today);
   }
+}
+
+// ========== 连胜日历历史 ==========
+
+@JsonSerializable()
+class StreakDayRecord {
+  StreakDayRecord({
+    required this.day,
+    required this.status,
+    this.usedFreeze = false,
+    this.sourceEvent,
+  });
+
+  factory StreakDayRecord.fromJson(Map<String, dynamic> json) =>
+      _$StreakDayRecordFromJson(json);
+
+  final DateTime day;
+  final StreakDayStatus status;
+  @JsonKey(name: 'used_freeze')
+  final bool usedFreeze;
+  @JsonKey(name: 'source_event')
+  final String? sourceEvent;
+
+  Map<String, dynamic> toJson() => _$StreakDayRecordToJson(this);
+}
+
+@JsonSerializable()
+class StreakHistoryResponse {
+  StreakHistoryResponse({required this.days});
+
+  factory StreakHistoryResponse.fromJson(Map<String, dynamic> json) =>
+      _$StreakHistoryResponseFromJson(json);
+
+  final List<StreakDayRecord> days;
+
+  Map<String, dynamic> toJson() => _$StreakHistoryResponseToJson(this);
 }
 
 // ========== 契约 ==========

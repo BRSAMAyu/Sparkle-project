@@ -4,7 +4,7 @@ Achievement System Models
 """
 import enum
 
-from sqlalchemy import JSON, Boolean, Column, DateTime, Enum, Float, ForeignKey, Index, Integer, String
+from sqlalchemy import JSON, Boolean, Column, Date, DateTime, Enum, Float, ForeignKey, Index, Integer, String
 from sqlalchemy.orm import relationship
 
 from app.models.base import GUID, BaseModel
@@ -41,6 +41,13 @@ class VisualEffectType(enum.StrEnum):
     NEBULA_TRANSFORM = "nebula_transform"  # 星云变色
     GALAXY_SKIN = "galaxy_skin"         # 星系皮肤
     DUAL_STAR_CONNECTION = "dual_star"  # 双星连接
+
+
+class StreakDayStatus(enum.StrEnum):
+    """连胜日历状态"""
+    ACTIVE = "active"
+    FROZEN = "frozen"
+    MISSED = "missed"
 
 
 class ContractStatus(enum.StrEnum):
@@ -92,6 +99,12 @@ class Achievement(BaseModel):
     # 排序权重（用于成就地图排序）
     sort_order = Column(Integer, default=0)
     category = Column(String(50))  # 用于成就地图分组
+
+    # 活动窗口（限时成就）
+    active_from = Column(DateTime, nullable=True)
+    active_to = Column(DateTime, nullable=True)
+    is_limited = Column(Boolean, default=False)
+    event_tag = Column(String(50), nullable=True)
 
     # 父成就（用于成就树/成就链）
     parent_id = Column(String(50), ForeignKey("achievements.id"), nullable=True)
@@ -191,6 +204,27 @@ class UserStreakStats(BaseModel):
 
     def __repr__(self):
         return f"<UserStreakStats(user_id={self.user_id}, current_streak={self.current_streak})>"
+
+
+class UserStreakDay(BaseModel):
+    """用户连胜日历记录"""
+    __tablename__ = "user_streak_days"
+
+    user_id = Column(GUID(), ForeignKey("users.id"), primary_key=True)
+    day = Column(Date, primary_key=True)
+
+    status = Column(Enum(StreakDayStatus), nullable=False)
+    used_freeze = Column(Boolean, default=False)
+    source_event = Column(String(50), nullable=True)
+
+    __table_args__ = (
+        Index("ix_user_streak_days_user_day", "user_id", "day", unique=True),
+    )
+
+    user = relationship("User")
+
+    def __repr__(self):
+        return f"<UserStreakDay(user_id={self.user_id}, day={self.day}, status={self.status})>"
 
 
 class SparkContract(BaseModel):

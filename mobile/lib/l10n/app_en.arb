@@ -363,6 +363,119 @@
   "achievementCheckinDays": "Check in {count} days",
   "achievementCreatePlans": "Create {count} plans",
   "achievementProgressGeneric": "{count}% progress",
+  "achievementLimitedTitle": "Limited-time",
+  "achievementLimitedSubtitle": "Available during the event",
+  "achievementLimitedTime": "Limited",
+  "achievementEventWindow": "Event Window",
+  "achievementEventStatusUpcoming": "Upcoming",
+  "achievementEventStatusLive": "Live",
+  "achievementEventStatusEnded": "Ended",
+  "achievementEventStartsAt": "Starts {time}",
+  "@achievementEventStartsAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "achievementEventEndsAt": "Ends {time}",
+  "@achievementEventEndsAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "achievementEventEndsIn": "Ends {time}",
+  "@achievementEventEndsIn": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "achievementEventEnded": "Event ended",
+  "achievementRewardVisualElement": "Visual Effect",
+  "achievementUnlockToEquip": "Unlock to equip",
+  "achievementEquipAction": "Equip",
+  "achievementEquipped": "Equipped",
+  "achievementMapTitle": "Achievement Map",
+  "achievementMapSubtitle": "Explore achievement paths",
+  "achievementMapEmpty": "No map nodes yet",
+  "contractEntryTitle": "Contracts",
+  "contractEntrySubtitle": "Create a study challenge",
+  "contractTitle": "Study Contract",
+  "contractCreateTitle": "Create Contract",
+  "contractCreateSubtitle": "Set a streak goal and stake photons",
+  "contractTargetMinutes": "Daily minutes",
+  "contractTargetDays": "Target days",
+  "contractPhotonStake": "Photon stake",
+  "contractCreateAction": "Create Contract",
+  "contractActiveTitle": "Active Contract",
+  "contractProgressLabel": "{current}/{target} days completed",
+  "@contractProgressLabel": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "target": {
+        "type": "int"
+      }
+    }
+  },
+  "contractDailyTarget": "Daily target",
+  "contractMinutesTarget": "{current}/{target} min",
+  "@contractMinutesTarget": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "target": {
+        "type": "int"
+      }
+    }
+  },
+  "contractEndsAt": "Ends on",
+  "contractCancelAction": "Cancel Contract",
+  "contractInputInvalid": "Please enter valid contract values",
+  "contractCreateFailed": "Failed to create contract",
+  "contractCreateSuccess": "Contract created",
+  "contractCancelSuccess": "Contract canceled",
+  "contractCancelFailed": "Failed to cancel contract",
+  "contractCountdown": "Countdown",
+  "contractDaysRemaining": "{days} days remaining",
+  "@contractDaysRemaining": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "contractDeadlineReached": "Deadline reached",
+  "contractRewardMultiplier": "Reward Multiplier",
+  "contractCreatedCelebration": "Contract Created!",
+  "streakCurrentLabel": "Current Streak",
+  "streakBestRecord": "Best Record",
+  "streakTotalCheckin": "Total Check-ins",
+  "streakFreezeUsed": "Freeze Used",
+  "streakCalendarTitle": "Streak Calendar",
+  "streakCalendarRange": "Last {days} days",
+  "@streakCalendarRange": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "streakHistoryEmpty": "No streak history yet",
+  "streakStatusActive": "Active",
+  "streakStatusFrozen": "Frozen",
+  "streakStatusMissed": "Missed",
+  "streakRiskNoFreeze": "No freeze charges left. A missed day will break your streak.",
+  "streakRiskLowFreeze": "Only 1 freeze charge left. Consider refilling.",
+  "streakShopTitle": "Need more freeze charges?",
+  "streakShopSubtitle": "Visit the Photon Shop to stock up.",
+  "streakShopAction": "Open Shop",
   "streakDetails": "Streak Details",
   "dashboardCustomizeCards": "Customizable Cards",
   "dashboardEmptyHint": "Keep at least one card. Changes are saved to local config immediately.",

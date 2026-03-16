@@ -33,6 +33,14 @@ AchievementModel _$AchievementModelFromJson(Map<String, dynamic> json) =>
       rewardConfig: (json['reward_config'] as List<dynamic>?)
           ?.map((e) => e as Map<String, dynamic>)
           .toList(),
+      activeFrom: json['active_from'] == null
+          ? null
+          : DateTime.parse(json['active_from'] as String),
+      activeTo: json['active_to'] == null
+          ? null
+          : DateTime.parse(json['active_to'] as String),
+      isLimited: json['is_limited'] as bool? ?? false,
+      eventTag: json['event_tag'] as String?,
       totalUnlocked: (json['total_unlocked'] as num?)?.toInt() ?? 0,
     );
 
@@ -56,6 +64,10 @@ Map<String, dynamic> _$AchievementModelToJson(AchievementModel instance) =>
           _$VisualEffectTypeEnumMap[instance.visualEffectType]!,
       'visual_config': instance.visualConfig,
       'reward_config': instance.rewardConfig,
+      'active_from': instance.activeFrom?.toIso8601String(),
+      'active_to': instance.activeTo?.toIso8601String(),
+      'is_limited': instance.isLimited,
+      'event_tag': instance.eventTag,
       'total_unlocked': instance.totalUnlocked,
       'created_at': instance.createdAt.toIso8601String(),
       'updated_at': instance.updatedAt.toIso8601String(),
@@ -174,6 +186,42 @@ Map<String, dynamic> _$StreakStatsToJson(StreakStats instance) =>
       'total_checkin_days': instance.totalCheckinDays,
       'longest_streak_start': instance.longestStreakStart?.toIso8601String(),
       'longest_streak_end': instance.longestStreakEnd?.toIso8601String(),
+    };
+
+StreakDayRecord _$StreakDayRecordFromJson(Map<String, dynamic> json) =>
+    StreakDayRecord(
+      day: DateTime.parse(json['day'] as String),
+      status: $enumDecode(_$StreakDayStatusEnumMap, json['status']),
+      usedFreeze: json['used_freeze'] as bool? ?? false,
+      sourceEvent: json['source_event'] as String?,
+    );
+
+Map<String, dynamic> _$StreakDayRecordToJson(StreakDayRecord instance) =>
+    <String, dynamic>{
+      'day': instance.day.toIso8601String(),
+      'status': _$StreakDayStatusEnumMap[instance.status]!,
+      'used_freeze': instance.usedFreeze,
+      'source_event': instance.sourceEvent,
+    };
+
+const _$StreakDayStatusEnumMap = {
+  StreakDayStatus.active: 'active',
+  StreakDayStatus.frozen: 'frozen',
+  StreakDayStatus.missed: 'missed',
+};
+
+StreakHistoryResponse _$StreakHistoryResponseFromJson(
+        Map<String, dynamic> json) =>
+    StreakHistoryResponse(
+      days: (json['days'] as List<dynamic>)
+          .map((e) => StreakDayRecord.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+
+Map<String, dynamic> _$StreakHistoryResponseToJson(
+        StreakHistoryResponse instance) =>
+    <String, dynamic>{
+      'days': instance.days,
     };
 
 SparkContract _$SparkContractFromJson(Map<String, dynamic> json) =>

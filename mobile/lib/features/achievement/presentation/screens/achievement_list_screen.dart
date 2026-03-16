@@ -1,11 +1,17 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/utils/formatters.dart';
+import 'package:sparkle/features/achievement/achievement_routes.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/achievement_card.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/achievement_stats_panel.dart';
+import 'package:sparkle/features/achievement/presentation/widgets/rarity_badge.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/streak_indicator.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
@@ -62,15 +68,42 @@ class AchievementListScreen extends ConsumerStatefulWidget {
       _AchievementListScreenState();
 }
 
-class _AchievementListScreenState extends ConsumerState<AchievementListScreen> {
+class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
+    with SingleTickerProviderStateMixin {
   AchievementViewMode _viewMode = AchievementViewMode.grid;
   AchievementFilterOptions _filterOptions = const AchievementFilterOptions();
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
+  late final AnimationController _headerController;
+  late final Animation<double> _headerFade;
+  late final Animation<Offset> _headerSlide;
+
+  @override
+  void initState() {
+    super.initState();
+    _headerController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+    _headerFade = CurvedAnimation(
+      parent: _headerController,
+      curve: Curves.easeOut,
+    );
+    _headerSlide = Tween<Offset>(
+      begin: const Offset(0, -0.05),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _headerController,
+      curve: Curves.easeOutCubic,
+    ));
+    unawaited(_headerController.forward());
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
+    _headerController.dispose();
     super.dispose();
   }
 
@@ -87,18 +120,34 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen> {
           slivers: [
             // 顶部统计面板
             SliverToBoxAdapter(
-              child: _buildHeader(context, state, l10n),
+              child: SlideTransition(
+                position: _headerSlide,
+                child: FadeTransition(
+                  opacity: _headerFade,
+                  child: _buildHeader(context, state, l10n),
+                ),
+              ),
             ),
 
             // 筛选栏
             SliverToBoxAdapter(
-              child: _buildFilterBar(context, l10n),
+              child: _AnimatedSection(
+                index: 1,
+                child: _buildFilterBar(context, l10n),
+              ),
             ),
 
             // 分类标签
             SliverToBoxAdapter(
-              child: _buildCategoryTabs(context, l10n),
+              child: _AnimatedSection(
+                index: 2,
+                child: _buildCategoryTabs(context, l10n),
+              ),
             ),
+
+            // 限时活动区块
+            if (!state.isLoading && state.error == null)
+              _buildLimitedTimeSection(state.achievements, l10n),
 
             // 内容区域
             if (state.isLoading)
@@ -171,6 +220,8 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen> {
                     stats: state.stats,
                     isCompact: compact,
                   ),
+                  const SizedBox(height: DS.spacing16),
+                  _buildQuickActions(context, l10n),
                 ],
               );
             },
@@ -190,16 +241,60 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen> {
             _buildViewModeButton(
               icon: Icons.grid_view,
               isActive: _viewMode == AchievementViewMode.grid,
-              onTap: () => setState(() => _viewMode = AchievementViewMode.grid),
+              onTap: () {
+                HapticFeedback.selectionClick();
+                setState(() => _viewMode = AchievementViewMode.grid);
+              },
             ),
             _buildViewModeButton(
               icon: Icons.view_list,
               isActive: _viewMode == AchievementViewMode.list,
-              onTap: () => setState(() => _viewMode = AchievementViewMode.list),
+              onTap: () {
+                HapticFeedback.selectionClick();
+                setState(() => _viewMode = AchievementViewMode.list);
+              },
             ),
           ],
         ),
       );
+
+  Widget _buildQuickActions(BuildContext context, AppLocalizations l10n) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 420;
+        final cardWidth = compact
+            ? (constraints.maxWidth - DS.spacing12) / 2
+            : (constraints.maxWidth - DS.spacing16) / 2;
+
+        return Wrap(
+          spacing: DS.spacing12,
+          runSpacing: DS.spacing12,
+          children: [
+            SizedBox(
+              width: cardWidth,
+              child: _QuickActionCard(
+                icon: Icons.hub_outlined,
+                title: l10n.achievementMapTitle,
+                subtitle: l10n.achievementMapSubtitle,
+                onTap: () => context.push(AchievementRoutes.map),
+                index: 0,
+              ),
+            ),
+            SizedBox(
+              width: cardWidth,
+              child: _QuickActionCard(
+                icon: Icons.handshake_outlined,
+                title: l10n.contractEntryTitle,
+                subtitle: l10n.contractEntrySubtitle,
+                onTap: () => context.push(AchievementRoutes.contract),
+                index: 1,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   Widget _buildViewModeButton({
     required IconData icon,
@@ -208,7 +303,9 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen> {
   }) =>
       GestureDetector(
         onTap: onTap,
-        child: Container(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
           padding: const EdgeInsets.all(DS.spacing8),
           decoration: BoxDecoration(
             color: isActive
@@ -314,7 +411,8 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen> {
 
     return GestureDetector(
       onTap: () => _showFilterSheet(context),
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(
           horizontal: DS.spacing16,
           vertical: DS.spacing12,
@@ -385,49 +483,115 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen> {
             padding: EdgeInsets.only(
               right: index == categories.length - 1 ? 0 : DS.spacing12,
             ),
-            child: _buildCategoryChip(category, isSelected, l10n),
+            child: _AnimatedCategoryChip(
+              category: category,
+              isSelected: isSelected,
+              onTap: () => _selectCategory(category, l10n),
+            ),
           );
         },
       ),
     );
   }
 
-  Widget _buildCategoryChip(
-    String category,
-    bool isSelected,
+  Widget _buildLimitedTimeSection(
+    List<AchievementWithProgress> achievements,
     AppLocalizations l10n,
-  ) =>
-      GestureDetector(
-        onTap: () => _selectCategory(category, l10n),
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: DS.spacing16,
-            vertical: DS.spacing8,
+  ) {
+    final limited = _getLimitedAchievements(achievements);
+    if (limited.isEmpty) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
+
+    return SliverToBoxAdapter(
+      child: _AnimatedSection(
+        index: 3,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            DS.spacing16,
+            DS.spacing16,
+            DS.spacing16,
+            0,
           ),
-          decoration: BoxDecoration(
-            color: isSelected ? DS.brandPrimary : DS.surfaceSecondary,
-            borderRadius: DS.borderRadiusFull,
-            border: Border.all(
-              color: isSelected ? DS.brandPrimary : DS.border,
-            ),
-          ),
-          child: Text(
-            category,
-            style: TextStyle(
-              fontSize: DS.fontSizeSm,
-              fontWeight:
-                  isSelected ? DS.fontWeightSemibold : DS.fontWeightRegular,
-              color: isSelected ? DS.textOnPrimary : DS.textSecondary,
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.timer_outlined,
+                        size: DS.iconSizeSm,
+                        color: DS.semanticWarning,
+                      ),
+                      const SizedBox(width: DS.spacing8),
+                      Text(
+                        l10n.achievementLimitedTitle,
+                        style: TextStyle(
+                          fontSize: DS.fontSizeBase,
+                          fontWeight: DS.fontWeightSemibold,
+                          color: DS.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Text(
+                    l10n.achievementLimitedSubtitle,
+                    style: TextStyle(
+                      fontSize: DS.fontSizeSm,
+                      color: DS.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: DS.spacing12),
+              SizedBox(
+                height: 170,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: limited.length,
+                  separatorBuilder: (_, __) =>
+                      const SizedBox(width: DS.spacing12),
+                  itemBuilder: (context, index) =>
+                      _AnimatedLimitedCard(
+                    index: index,
+                    child: _LimitedAchievementCard(
+                      achievement: limited[index],
+                      l10n: l10n,
+                      onTap: () => _openAchievementDetail(limited[index]),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
-      );
+      ),
+    );
+  }
+
+  List<AchievementWithProgress> _getLimitedAchievements(
+    List<AchievementWithProgress> achievements,
+  ) {
+    final now = DateTime.now();
+    return achievements.where((achievement) {
+      final data = achievement.achievement;
+      if (!data.isLimited) return false;
+      final activeFrom = data.activeFrom;
+      final activeTo = data.activeTo;
+      if (activeFrom != null && now.isBefore(activeFrom)) return false;
+      if (activeTo != null && now.isAfter(activeTo)) return false;
+      return true;
+    }).toList();
+  }
 
   Widget _buildAchievementContent(AchievementState state) {
     final filteredAchievements = _filterAchievements(state.achievements);
 
     if (filteredAchievements.isEmpty) {
-    return SliverFillRemaining(
+      return SliverFillRemaining(
         child: _buildEmptyView(context, context.l10n),
       );
     }
@@ -459,9 +623,12 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen> {
               delegate: SliverChildBuilderDelegate(
                 (context, index) {
                   final achievement = filteredAchievements[index];
-                  return AchievementGridCard(
-                    achievement: achievement,
-                    onTap: () => _openAchievementDetail(achievement),
+                  return AnimatedAchievementCard(
+                    index: index,
+                    child: AchievementGridCard(
+                      achievement: achievement,
+                      onTap: () => _openAchievementDetail(achievement),
+                    ),
                   );
                 },
                 childCount: filteredAchievements.length,
@@ -484,9 +651,12 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen> {
                     ? DS.spacing12
                     : 0,
               ),
-              child: AchievementListCard(
-                achievement: achievement,
-                onTap: () => _openAchievementDetail(achievement),
+              child: AnimatedAchievementCard(
+                index: index,
+                child: AchievementListCard(
+                  achievement: achievement,
+                  onTap: () => _openAchievementDetail(achievement),
+                ),
               ),
             );
           },
@@ -622,6 +792,7 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen> {
   }
 
   void _selectCategory(String category, AppLocalizations l10n) {
+    HapticFeedback.selectionClick();
     AchievementStatus? status;
 
     if (category == l10n.achievementAll) {
@@ -721,46 +892,495 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen> {
   }
 
   void _showStreakDetails(BuildContext context) {
-    final l10n = context.l10n;
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(DS.spacing24),
-        decoration: BoxDecoration(
-          color: DS.surfacePrimary,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+    context.push(AchievementRoutes.streakDetails);
+  }
+}
+
+// ─── Animated section entrance ──────────────────────────────────────────────
+
+class _AnimatedSection extends StatelessWidget {
+  const _AnimatedSection({
+    required this.index,
+    required this.child,
+  });
+
+  final int index;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) {
+        // Apply the delay by clamping based on elapsed time
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, 12 * (1 - value)),
+            child: child,
+          ),
+        );
+      },
+      child: child,
+    );
+  }
+}
+
+// ─── Animated category chip with selection feedback ─────────────────────────
+
+class _AnimatedCategoryChip extends StatelessWidget {
+  const _AnimatedCategoryChip({
+    required this.category,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final String category;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing16,
+          vertical: DS.spacing8,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: DS.spacing20),
-              decoration: BoxDecoration(
-                color: DS.neutral300,
-                borderRadius: DS.borderRadiusFull,
-              ),
-            ),
-            Text(
-              l10n.streakDetails,
-              style: const TextStyle(
-                fontSize: DS.fontSizeXl,
-                fontWeight: DS.fontWeightBold,
-              ),
-            ),
-            const SizedBox(height: DS.spacing16),
-            const StreakIndicator(style: StreakIndicatorStyle.full),
-          ],
+        decoration: BoxDecoration(
+          color: isSelected ? DS.brandPrimary : DS.surfaceSecondary,
+          borderRadius: DS.borderRadiusFull,
+          border: Border.all(
+            color: isSelected ? DS.brandPrimary : DS.border,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: DS.brandPrimary.withValues(alpha: 0.2),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Text(
+          category,
+          style: TextStyle(
+            fontSize: DS.fontSizeSm,
+            fontWeight:
+                isSelected ? DS.fontWeightSemibold : DS.fontWeightRegular,
+            color: isSelected ? DS.textOnPrimary : DS.textSecondary,
+          ),
         ),
       ),
     );
   }
 }
 
-/// 筛选面板
+// ─── Animated limited card entrance ─────────────────────────────────────────
+
+class _AnimatedLimitedCard extends StatefulWidget {
+  const _AnimatedLimitedCard({
+    required this.index,
+    required this.child,
+  });
+
+  final int index;
+  final Widget child;
+
+  @override
+  State<_AnimatedLimitedCard> createState() => _AnimatedLimitedCardState();
+}
+
+class _AnimatedLimitedCardState extends State<_AnimatedLimitedCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+    Future.delayed(Duration(milliseconds: widget.index * 80), () {
+      if (mounted) _controller.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final curve = Curves.easeOutCubic.transform(_controller.value);
+        return Opacity(
+          opacity: curve,
+          child: Transform.translate(
+            offset: Offset(20 * (1 - curve), 0),
+            child: Transform.scale(
+              scale: 0.92 + 0.08 * curve,
+              child: child,
+            ),
+          ),
+        );
+      },
+      child: widget.child,
+    );
+  }
+}
+
+// ─── Quick action card with tap scale ───────────────────────────────────────
+
+class _QuickActionCard extends StatefulWidget {
+  const _QuickActionCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+    required this.index,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+  final int index;
+
+  @override
+  State<_QuickActionCard> createState() => _QuickActionCardState();
+}
+
+class _QuickActionCardState extends State<_QuickActionCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _tapController;
+  late final Animation<double> _tapScale;
+
+  @override
+  void initState() {
+    super.initState();
+    _tapController = AnimationController(
+      duration: const Duration(milliseconds: 120),
+      vsync: this,
+    );
+    _tapScale = Tween<double>(begin: 1.0, end: 0.96).animate(
+      CurvedAnimation(parent: _tapController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _tapController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => _tapController.forward(),
+      onTapUp: (_) {
+        _tapController.reverse();
+        widget.onTap();
+      },
+      onTapCancel: () => _tapController.reverse(),
+      child: ScaleTransition(
+        scale: _tapScale,
+        child: Container(
+          padding: const EdgeInsets.all(DS.spacing12),
+          decoration: BoxDecoration(
+            color: DS.surfacePrimary,
+            borderRadius: DS.borderRadius12,
+            border: Border.all(color: DS.border),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: DS.brandPrimary.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  widget.icon,
+                  color: DS.brandPrimary,
+                  size: DS.iconSizeSm,
+                ),
+              ),
+              const SizedBox(width: DS.spacing12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.title,
+                      style: TextStyle(
+                        fontSize: DS.fontSizeSm,
+                        fontWeight: DS.fontWeightSemibold,
+                        color: DS.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: DS.spacing4),
+                    Text(
+                      widget.subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: DS.fontSizeXs,
+                        color: DS.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: DS.spacing8),
+              Icon(Icons.chevron_right, color: DS.textTertiary),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Limited achievement card with countdown and glow ───────────────────────
+
+class _LimitedAchievementCard extends StatelessWidget {
+  const _LimitedAchievementCard({
+    required this.achievement,
+    required this.l10n,
+    required this.onTap,
+  });
+
+  final AchievementWithProgress achievement;
+  final AppLocalizations l10n;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final data = achievement.achievement;
+    final rarityColor = RarityColorProvider.getColor(data.rarity);
+    final countdown = _buildCountdownLabel(data, l10n);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 240,
+        padding: const EdgeInsets.all(DS.spacing12),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              DS.surfaceSecondary,
+              rarityColor.withValues(alpha: 0.06),
+            ],
+          ),
+          borderRadius: DS.borderRadius16,
+          border: Border.all(color: rarityColor.withValues(alpha: 0.4)),
+          boxShadow: [
+            BoxShadow(
+              color: rarityColor.withValues(alpha: 0.12),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                _PulsingBadge(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: DS.spacing8,
+                      vertical: DS.spacing4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: DS.semanticWarning.withValues(alpha: 0.2),
+                      borderRadius: DS.borderRadiusFull,
+                    ),
+                    child: Text(
+                      l10n.achievementLimitedTime,
+                      style: TextStyle(
+                        fontSize: DS.fontSizeXs,
+                        color: DS.semanticWarning,
+                        fontWeight: DS.fontWeightSemibold,
+                      ),
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                if (data.eventTag != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: DS.spacing8,
+                      vertical: DS.spacing4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: DS.brandPrimary.withValues(alpha: 0.12),
+                      borderRadius: DS.borderRadiusFull,
+                    ),
+                    child: Text(
+                      data.eventTag!,
+                      style: TextStyle(
+                        fontSize: DS.fontSizeXs,
+                        color: DS.brandPrimary,
+                        fontWeight: DS.fontWeightSemibold,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: DS.spacing12),
+            Text(
+              data.name,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: DS.fontSizeSm,
+                fontWeight: DS.fontWeightBold,
+                color: DS.textPrimary,
+              ),
+            ),
+            const SizedBox(height: DS.spacing6),
+            Text(
+              countdown,
+              style: TextStyle(
+                fontSize: DS.fontSizeXs,
+                color: DS.textSecondary,
+              ),
+            ),
+            const Spacer(),
+            if (achievement.isUnlocked)
+              Row(
+                children: [
+                  Icon(
+                    Icons.check_circle,
+                    size: 14,
+                    color: DS.semanticSuccess,
+                  ),
+                  const SizedBox(width: DS.spacing4),
+                  Text(
+                    l10n.achievementStatusUnlocked,
+                    style: TextStyle(
+                      fontSize: DS.fontSizeXs,
+                      fontWeight: DS.fontWeightSemibold,
+                      color: DS.semanticSuccess,
+                    ),
+                  ),
+                ],
+              )
+            else ...[
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: achievement.progressPercentage / 100),
+                duration: const Duration(milliseconds: 800),
+                curve: Curves.easeOutCubic,
+                builder: (context, value, _) {
+                  return Column(
+                    children: [
+                      ClipRRect(
+                        borderRadius:
+                            const BorderRadius.all(Radius.circular(3)),
+                        child: LinearProgressIndicator(
+                          value: value,
+                          minHeight: 6,
+                          backgroundColor: DS.neutral200,
+                          color: rarityColor,
+                        ),
+                      ),
+                      const SizedBox(height: DS.spacing4),
+                      Text(
+                        '${(value * 100).toInt()}%',
+                        style: TextStyle(
+                          fontSize: DS.fontSizeXs,
+                          color: DS.textSecondary,
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _buildCountdownLabel(AchievementModel data, AppLocalizations l10n) {
+    final now = DateTime.now();
+    final end = data.activeTo;
+    if (end == null) {
+      return l10n.achievementLimitedSubtitle;
+    }
+    if (end.isBefore(now)) {
+      return l10n.achievementEventStatusEnded;
+    }
+    final relative = Formatters.formatRelativeTime(end);
+    return l10n.achievementEventEndsIn(relative);
+  }
+}
+
+// ─── Subtle pulsing badge for limited-time indicators ───────────────────────
+
+class _PulsingBadge extends StatefulWidget {
+  const _PulsingBadge({required this.child});
+  final Widget child;
+
+  @override
+  State<_PulsingBadge> createState() => _PulsingBadgeState();
+}
+
+class _PulsingBadgeState extends State<_PulsingBadge>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1800),
+      vsync: this,
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final opacity = 0.7 + 0.3 * _controller.value;
+        return Opacity(
+          opacity: opacity,
+          child: child,
+        );
+      },
+      child: widget.child,
+    );
+  }
+}
+
+// ─── Filter sheet ───────────────────────────────────────────────────────────
+
 class _AchievementFilterSheet extends StatefulWidget {
   const _AchievementFilterSheet({
     required this.currentOptions,
@@ -869,7 +1489,9 @@ class _AchievementFilterSheetState extends State<_AchievementFilterSheet> {
               return _buildFilterChip(
                 _getRarityName(rarity, l10n),
                 isSelected,
+                accentColor: RarityColorProvider.getColor(rarity),
                 onTap: () {
+                  HapticFeedback.selectionClick();
                   setState(() {
                     _options = _options.copyWith(
                       rarity: _options.rarity == rarity ? null : rarity,
@@ -906,6 +1528,7 @@ class _AchievementFilterSheetState extends State<_AchievementFilterSheet> {
                 _getStatusDisplayName(status, l10n),
                 isSelected,
                 onTap: () {
+                  HapticFeedback.selectionClick();
                   setState(() {
                     if (status == AchievementStatus.all) {
                       _options = _options.copyWith(status: null);
@@ -925,33 +1548,34 @@ class _AchievementFilterSheetState extends State<_AchievementFilterSheet> {
   Widget _buildFilterChip(
     String label,
     bool isSelected, {
+    Color? accentColor,
     VoidCallback? onTap,
-  }) =>
-      GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: DS.spacing16,
-            vertical: DS.spacing8,
-          ),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? DS.brandPrimary.withValues(alpha: 0.1)
-                : DS.surfaceSecondary,
-            borderRadius: DS.borderRadiusFull,
-            border: Border.all(
-              color: isSelected ? DS.brandPrimary : DS.border,
-            ),
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: DS.fontSizeSm,
-              color: isSelected ? DS.brandPrimary : DS.textSecondary,
-            ),
+  }) {
+    final color = isSelected ? (accentColor ?? DS.brandPrimary) : DS.border;
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing16,
+          vertical: DS.spacing8,
+        ),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withValues(alpha: 0.12) : DS.surfaceSecondary,
+          borderRadius: DS.borderRadiusFull,
+          border: Border.all(color: isSelected ? color : DS.border),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: DS.fontSizeSm,
+            color: isSelected ? color : DS.textSecondary,
+            fontWeight: isSelected ? DS.fontWeightSemibold : DS.fontWeightRegular,
           ),
         ),
-      );
+      ),
+    );
+  }
 
   String _getRarityName(AchievementRarity rarity, AppLocalizations l10n) {
     switch (rarity) {

@@ -9,9 +9,11 @@ from app.models.achievement import (
     ContractStatus,
     GalaxySkin,
     SparkContract,
+    StreakDayStatus,
     StudyBuddy,
     UserAchievement,
     UserGalaxySkin,
+    UserStreakDay,
     UserStreakStats,
     UserTitle,
     VisualEffectType,
@@ -133,6 +135,7 @@ from app.models.seed_content import (
 from app.models.semantic_memory import SemanticLink, StrategyNode
 from app.models.shop import PhotonTransactionHistory, ShopItem, ShopPurchase, UserConsumable
 from app.models.subject import Subject
+from app.models.calendar_event import CalendarEvent, EventSource
 from app.models.task import Task, TaskStatus, TaskType
 from app.models.task_feedback import TaskFeedback, TaskFeedbackCategory
 from app.models.task_resources import TaskKnowledgeLink, TaskResourceLink, TaskResourceType
@@ -285,6 +288,8 @@ __all__ = [
     "AchievementRarity",
     "AchievementType",
     "VisualEffectType",
+    "StreakDayStatus",
+    "UserStreakDay",
     "UserStreakStats",
     "SparkContract",
     "ContractStatus",
@@ -326,4 +331,7 @@ __all__ = [
     "VisualElementUnlockSource",
     "UserVisualElement",
     "UserVisualConfig",
+    # Calendar Events
+    "CalendarEvent",
+    "EventSource",
 ]

@@ -1091,6 +1091,192 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get achievementLimitedTitle => '限时活动';
+
+  @override
+  String get achievementLimitedSubtitle => '活动期间可获得';
+
+  @override
+  String get achievementLimitedTime => '限时';
+
+  @override
+  String get achievementEventWindow => '活动时间';
+
+  @override
+  String get achievementEventStatusUpcoming => '即将开始';
+
+  @override
+  String get achievementEventStatusLive => '进行中';
+
+  @override
+  String get achievementEventStatusEnded => '已结束';
+
+  @override
+  String achievementEventStartsAt(String time) {
+    return '开始于$time';
+  }
+
+  @override
+  String achievementEventEndsAt(String time) {
+    return '结束于$time';
+  }
+
+  @override
+  String achievementEventEndsIn(String time) {
+    return '将于$time结束';
+  }
+
+  @override
+  String get achievementEventEnded => '活动已结束';
+
+  @override
+  String get achievementRewardVisualElement => '视觉元素';
+
+  @override
+  String get achievementUnlockToEquip => '解锁后可装备';
+
+  @override
+  String get achievementEquipAction => '装备';
+
+  @override
+  String get achievementEquipped => '已装备';
+
+  @override
+  String get achievementMapTitle => '成就地图';
+
+  @override
+  String get achievementMapSubtitle => '探索成就路径';
+
+  @override
+  String get achievementMapEmpty => '暂无成就节点';
+
+  @override
+  String get contractEntryTitle => '学习契约';
+
+  @override
+  String get contractEntrySubtitle => '创建学习挑战';
+
+  @override
+  String get contractTitle => '学习契约';
+
+  @override
+  String get contractCreateTitle => '创建契约';
+
+  @override
+  String get contractCreateSubtitle => '设定连续目标并投入光子';
+
+  @override
+  String get contractTargetMinutes => '每日分钟';
+
+  @override
+  String get contractTargetDays => '目标天数';
+
+  @override
+  String get contractPhotonStake => '投入光子';
+
+  @override
+  String get contractCreateAction => '创建契约';
+
+  @override
+  String get contractActiveTitle => '当前契约';
+
+  @override
+  String contractProgressLabel(int current, int target) {
+    return '已完成$current/$target天';
+  }
+
+  @override
+  String get contractDailyTarget => '每日目标';
+
+  @override
+  String contractMinutesTarget(int current, int target) {
+    return '$current/$target分钟';
+  }
+
+  @override
+  String get contractEndsAt => '结束时间';
+
+  @override
+  String get contractCancelAction => '取消契约';
+
+  @override
+  String get contractInputInvalid => '请输入有效的契约数值';
+
+  @override
+  String get contractCreateFailed => '创建契约失败';
+
+  @override
+  String get contractCreateSuccess => '契约创建成功';
+
+  @override
+  String get contractCancelSuccess => '契约已取消';
+
+  @override
+  String get contractCancelFailed => '取消契约失败';
+
+  @override
+  String get contractCountdown => '倒计时';
+
+  @override
+  String contractDaysRemaining(int days) => '还剩$days天';
+
+  @override
+  String get contractDeadlineReached => '已到截止日期';
+
+  @override
+  String get contractRewardMultiplier => '奖励倍率';
+
+  @override
+  String get contractCreatedCelebration => '契约创建成功！';
+
+  @override
+  String get streakCurrentLabel => '当前连胜';
+
+  @override
+  String get streakBestRecord => '最高记录';
+
+  @override
+  String get streakTotalCheckin => '总签到';
+
+  @override
+  String get streakFreezeUsed => '冻结使用';
+
+  @override
+  String get streakCalendarTitle => '连胜日历';
+
+  @override
+  String streakCalendarRange(int days) {
+    return '最近$days天';
+  }
+
+  @override
+  String get streakHistoryEmpty => '暂无连胜记录';
+
+  @override
+  String get streakStatusActive => '学习日';
+
+  @override
+  String get streakStatusFrozen => '冻结';
+
+  @override
+  String get streakStatusMissed => '中断';
+
+  @override
+  String get streakRiskNoFreeze => '冻结卡已用完，断签将中断连胜。';
+
+  @override
+  String get streakRiskLowFreeze => '仅剩1次冻结卡，建议及时补充。';
+
+  @override
+  String get streakShopTitle => '需要冻结卡保护？';
+
+  @override
+  String get streakShopSubtitle => '前往光子商城获取补给';
+
+  @override
+  String get streakShopAction => '打开商城';
+
+  @override
   String get streakDetails => '连胜详情';
 
   @override

@@ -63,9 +63,17 @@ class PushTokenManager extends AsyncNotifier<void> {
   /// Register push token with backend
   ///
   /// This should be called:
-  /// - On app startup (after getting FCM token)
+  /// - On app startup (after getting FCM/JPush token)
   /// - When token is refreshed
-  Future<bool> registerToken(String token) async {
+  ///
+  /// [token] - The push notification token
+  /// [tokenType] - Type of token: 'fcm', 'jpush', 'apns', 'huawei'
+  /// [metadata] - Optional metadata (e.g., region, channel info)
+  Future<bool> registerToken(
+    String token, {
+    String? tokenType,
+    Map<String, dynamic>? metadata,
+  }) async {
     if (token.isEmpty) {
       _logger.w('Attempted to register empty token');
       return false;
@@ -80,7 +88,9 @@ class PushTokenManager extends AsyncNotifier<void> {
     try {
       final deviceId = await _getOrCreateDeviceId();
       final platform = Platform.isIOS ? 'ios' : Platform.isAndroid ? 'android' : 'web';
-      final tokenType = Platform.isIOS ? 'apns' : 'fcm';
+
+      // Determine token type if not provided
+      final resolvedTokenType = tokenType ?? _inferTokenType();
 
       // Get app version
       final packageInfo = await PackageInfo.fromPlatform();
@@ -109,17 +119,24 @@ class PushTokenManager extends AsyncNotifier<void> {
 
       final apiClient = ref.read(apiClientProvider);
 
+      final requestData = <String, dynamic>{
+        'device_id': deviceId,
+        'push_token': token,
+        'platform': platform,
+        'token_type': resolvedTokenType,
+        'device_name': deviceName,
+        'app_version': appVersion,
+        'os_version': osVersion,
+      };
+
+      // Add metadata if provided
+      if (metadata != null) {
+        requestData['metadata'] = metadata;
+      }
+
       final response = await apiClient.post<Map<String, dynamic>>(
         ApiEndpoints.registerDevice,
-        data: <String, dynamic>{
-          'device_id': deviceId,
-          'push_token': token,
-          'platform': platform,
-          'token_type': tokenType,
-          'device_name': deviceName,
-          'app_version': appVersion,
-          'os_version': osVersion,
-        },
+        data: requestData,
       );
 
       if (response.data != null) {
@@ -129,7 +146,7 @@ class PushTokenManager extends AsyncNotifier<void> {
         final prefs = ref.read(sharedPreferencesProvider);
         await prefs.setString(_lastTokenKey, token);
 
-        _logger.i('Successfully registered push token for device $deviceId');
+        _logger.i('Successfully registered $resolvedTokenType push token for device $deviceId');
         return true;
       }
 
@@ -139,6 +156,17 @@ class PushTokenManager extends AsyncNotifier<void> {
       _logger.d(stack.toString());
       return false;
     }
+  }
+
+  /// Infer token type based on platform
+  String _inferTokenType() {
+    if (Platform.isIOS) {
+      return 'apns';
+    } else if (Platform.isAndroid) {
+      // Default to fcm, but could be jpush depending on region
+      return 'fcm';
+    }
+    return 'fcm';
   }
 
   /// Unregister current device from push notifications

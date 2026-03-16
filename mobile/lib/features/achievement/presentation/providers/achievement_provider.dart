@@ -156,6 +156,41 @@ class AchievementMapState {
       );
 }
 
+// ========== Streak History State ==========
+
+class StreakHistoryState {
+  StreakHistoryState({
+    this.days = const [],
+    this.isLoading = false,
+    this.error,
+  });
+
+  StreakHistoryState.loading()
+      : days = const [],
+        isLoading = true,
+        error = null;
+
+  StreakHistoryState.error(String errorMessage)
+      : days = const [],
+        isLoading = false,
+        error = errorMessage;
+
+  final List<StreakDayRecord> days;
+  final bool isLoading;
+  final String? error;
+
+  StreakHistoryState copyWith({
+    List<StreakDayRecord>? days,
+    bool? isLoading,
+    String? error,
+  }) =>
+      StreakHistoryState(
+        days: days ?? this.days,
+        isLoading: isLoading ?? this.isLoading,
+        error: error ?? this.error,
+      );
+}
+
 // ========== Providers ==========
 
 /// Achievement Repository Provider
@@ -174,6 +209,12 @@ final achievementProvider =
 final achievementMapProvider =
     StateNotifierProvider<AchievementMapNotifier, AchievementMapState>(
   (ref) => AchievementMapNotifier(ref.watch(achievementRepositoryProvider)),
+);
+
+/// Streak History Provider
+final streakHistoryProvider =
+    StateNotifierProvider<StreakHistoryNotifier, StreakHistoryState>(
+  (ref) => StreakHistoryNotifier(ref.watch(achievementRepositoryProvider)),
 );
 
 /// Streak Stats Provider (for quick access)
@@ -417,7 +458,7 @@ class AchievementNotifier extends StateNotifier<AchievementState> {
     try {
       final success = await _repository.cancelContract();
       if (success) {
-        state = state.copyWith();
+        state = state.copyWith(activeContract: null);
       }
       return success;
     } catch (e) {
@@ -584,5 +625,23 @@ class AchievementMapNotifier extends StateNotifier<AchievementMapState> {
 
   Future<void> refresh() async {
     await loadMap();
+  }
+}
+
+class StreakHistoryNotifier extends StateNotifier<StreakHistoryState> {
+  StreakHistoryNotifier(this._repository) : super(StreakHistoryState.loading()) {
+    unawaited(loadHistory());
+  }
+
+  final AchievementRepository _repository;
+
+  Future<void> loadHistory({int days = 90}) async {
+    try {
+      state = StreakHistoryState.loading();
+      final history = await _repository.getStreakHistory(days: days);
+      state = StreakHistoryState(days: history);
+    } catch (e) {
+      state = StreakHistoryState.error(e.toString());
+    }
   }
 }

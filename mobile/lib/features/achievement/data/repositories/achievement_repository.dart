@@ -29,6 +29,7 @@ class AchievementRepository {
     String? category,
     AchievementRarity? rarity,
     bool includeHidden = false,
+    bool includeInactive = false,
   }) async {
     if (DemoDataService.isDemoMode) {
       // Return demo achievements
@@ -42,6 +43,7 @@ class AchievementRepository {
         if (category != null) 'category': category,
         if (rarity != null) 'rarity': rarity.name,
         'include_hidden': includeHidden,
+        'include_inactive': includeInactive,
       };
 
       final response = await _apiClient.get<Map<String, dynamic>>(
@@ -169,6 +171,30 @@ class AchievementRepository {
       return StreakStats.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'getStreakStats');
+    }
+  }
+
+  /// Get streak history for calendar (default 90 days)
+  Future<List<StreakDayRecord>> getStreakHistory({int days = 90}) async {
+    if (DemoDataService.isDemoMode) {
+      return _getDemoStreakHistory(days);
+    }
+
+    try {
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        ApiEndpoints.achievementsStreakHistory,
+        queryParameters: {'days': days},
+      );
+
+      final payload = response.data;
+      if (payload == null) {
+        throw Exception('getStreakHistory response is empty');
+      }
+
+      final history = StreakHistoryResponse.fromJson(payload);
+      return history.days;
+    } on DioException catch (e) {
+      return _handleDioError(e, 'getStreakHistory');
     }
   }
 
@@ -671,6 +697,30 @@ class AchievementRepository {
           unlockedAt: DateTime.now().subtract(const Duration(days: 1)),
         ),
       ];
+
+  List<StreakDayRecord> _getDemoStreakHistory(int days) {
+    final today = DateTime.now();
+    final start = today.subtract(Duration(days: days - 1));
+    final history = <StreakDayRecord>[];
+
+    for (var i = 0; i < days; i++) {
+      final day = DateTime(start.year, start.month, start.day)
+          .add(Duration(days: i));
+      final status = i % 10 == 0
+          ? StreakDayStatus.frozen
+          : i % 7 == 0
+              ? StreakDayStatus.missed
+              : StreakDayStatus.active;
+      history.add(
+        StreakDayRecord(
+          day: day,
+          status: status,
+          usedFreeze: status == StreakDayStatus.frozen,
+        ),
+      );
+    }
+    return history;
+  }
 
   List<AchievementWithProgress> _getDemoCloseToUnlockAchievements() => [
         AchievementWithProgress(

@@ -1,8 +1,28 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/rarity_badge.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+/// Rarity threshold: shimmer only applies to rare+ unlocked cards.
+const _shimmerRarities = {
+  AchievementRarity.rare,
+  AchievementRarity.epic,
+  AchievementRarity.legendary,
+};
+
+/// Duration window for the "newly unlocked" glow pulse.
+const _newlyUnlockedWindow = Duration(minutes: 5);
+
+// ---------------------------------------------------------------------------
+// AchievementCardStyle
+// ---------------------------------------------------------------------------
 
 /// 成就卡片样式
 enum AchievementCardStyle {
@@ -16,9 +36,350 @@ enum AchievementCardStyle {
   full,
 }
 
+// ---------------------------------------------------------------------------
+// AnimatedAchievementCard  (entrance animation wrapper)
+// ---------------------------------------------------------------------------
+
+/// Wraps any child with a staggered entrance animation:
+/// fade + scale (0.95 -> 1.0) + slide up (8px).
+///
+/// [index] controls stagger delay (index * 50 ms).
+class AnimatedAchievementCard extends StatefulWidget {
+  const AnimatedAchievementCard({
+    required this.child,
+    super.key,
+    this.index = 0,
+  });
+
+  final Widget child;
+  final int index;
+
+  @override
+  State<AnimatedAchievementCard> createState() =>
+      _AnimatedAchievementCardState();
+}
+
+class _AnimatedAchievementCardState extends State<AnimatedAchievementCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _fadeAnimation;
+  late final Animation<double> _scaleAnimation;
+  late final Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: AnimationSystem.scene, // 400 ms
+    );
+
+    const curve = Curves.easeOutCubic;
+
+    _fadeAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: curve,
+    );
+    _scaleAnimation = Tween<double>(begin: 0.95, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: curve),
+    );
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 8),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _controller, curve: curve));
+
+    // Stagger: each card delays by index * 50 ms.
+    unawaited(
+      Future<void>.delayed(
+        Duration(milliseconds: widget.index * 50),
+        () {
+          if (mounted) _controller.forward();
+        },
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) => Transform.translate(
+          offset: _slideAnimation.value,
+          child: Transform.scale(
+            scale: _scaleAnimation.value,
+            child: Opacity(
+              opacity: _fadeAnimation.value,
+              child: child,
+            ),
+          ),
+        ),
+        child: widget.child,
+      );
+}
+
+// ---------------------------------------------------------------------------
+// _ShimmerOverlay  (rarity-based ambient shimmer for unlocked cards)
+// ---------------------------------------------------------------------------
+
+/// A subtle shimmer sweep that repeats every ~3 s.
+/// Max opacity is 0.1 to stay ambient.
+class _ShimmerOverlay extends StatefulWidget {
+  const _ShimmerOverlay({
+    required this.rarityColor,
+    required this.borderRadius,
+  });
+
+  final Color rarityColor;
+  final BorderRadius borderRadius;
+
+  @override
+  State<_ShimmerOverlay> createState() => _ShimmerOverlayState();
+}
+
+class _ShimmerOverlayState extends State<_ShimmerOverlay>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2400),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+        animation: _controller,
+        builder: (context, _) {
+          // Sweep from -1.0 to 2.0 across the card width.
+          final sweepPosition = -1.0 + _controller.value * 3.0;
+          return ClipRRect(
+            borderRadius: widget.borderRadius,
+            child: Opacity(
+              opacity: 0.1,
+              child: ShaderMask(
+                shaderCallback: (bounds) => LinearGradient(
+                  begin: Alignment(sweepPosition - 0.3, 0),
+                  end: Alignment(sweepPosition + 0.3, 0),
+                  colors: [
+                    Colors.transparent,
+                    widget.rarityColor,
+                    Colors.transparent,
+                  ],
+                  stops: const [0.0, 0.5, 1.0],
+                ).createShader(bounds),
+                blendMode: BlendMode.srcATop,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: widget.borderRadius,
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      );
+}
+
+// ---------------------------------------------------------------------------
+// _NewlyUnlockedGlow  (pulsing glow border for achievements unlocked < 5 min)
+// ---------------------------------------------------------------------------
+
+class _NewlyUnlockedGlow extends StatefulWidget {
+  const _NewlyUnlockedGlow({
+    required this.rarityColor,
+    required this.borderRadius,
+  });
+
+  final Color rarityColor;
+  final BorderRadius borderRadius;
+
+  @override
+  State<_NewlyUnlockedGlow> createState() => _NewlyUnlockedGlowState();
+}
+
+class _NewlyUnlockedGlowState extends State<_NewlyUnlockedGlow>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _glowAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1600),
+    )..repeat(reverse: true);
+
+    _glowAnimation = Tween<double>(begin: 0.15, end: 0.5).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+        animation: _glowAnimation,
+        builder: (context, _) => IgnorePointer(
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: widget.borderRadius,
+              border: Border.all(
+                color: widget.rarityColor.withValues(
+                  alpha: _glowAnimation.value,
+                ),
+                width: 2.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: widget.rarityColor.withValues(
+                    alpha: _glowAnimation.value * 0.6,
+                  ),
+                  blurRadius: 16,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+}
+
+// ---------------------------------------------------------------------------
+// _AnimatedProgressBar  (fills from 0 -> target on first build)
+// ---------------------------------------------------------------------------
+
+class _AnimatedProgressBar extends StatelessWidget {
+  const _AnimatedProgressBar({
+    required this.progress,
+    required this.rarityColor,
+    required this.isUnlocked,
+    this.height = 6,
+  });
+
+  final double progress;
+  final Color rarityColor;
+  final bool isUnlocked;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) => TweenAnimationBuilder<double>(
+        tween: Tween<double>(begin: 0, end: progress.clamp(0.0, 1.0)),
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeOutCubic,
+        builder: (context, value, _) => Container(
+          height: height,
+          decoration: BoxDecoration(
+            color: DS.neutral200,
+            borderRadius: DS.borderRadiusFull,
+          ),
+          child: FractionallySizedBox(
+            alignment: Alignment.centerLeft,
+            widthFactor: value,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: isUnlocked
+                      ? [
+                          DS.semanticSuccess,
+                          DS.semanticSuccess.withValues(alpha: 0.8),
+                        ]
+                      : [
+                          rarityColor,
+                          rarityColor.withValues(alpha: 0.7),
+                        ],
+                ),
+                borderRadius: DS.borderRadiusFull,
+              ),
+            ),
+          ),
+        ),
+      );
+}
+
+// ---------------------------------------------------------------------------
+// _AnimatedCompactProgressBar
+// ---------------------------------------------------------------------------
+
+class _AnimatedCompactProgressBar extends StatelessWidget {
+  const _AnimatedCompactProgressBar({
+    required this.progress,
+    required this.rarityColor,
+    required this.progressPercentage,
+  });
+
+  final double progress;
+  final Color rarityColor;
+  final int progressPercentage;
+
+  @override
+  Widget build(BuildContext context) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Expanded(
+            child: TweenAnimationBuilder<double>(
+              tween: Tween<double>(begin: 0, end: progress.clamp(0.0, 1.0)),
+              duration: const Duration(milliseconds: 600),
+              curve: Curves.easeOutCubic,
+              builder: (context, value, _) => Container(
+                height: 4,
+                decoration: BoxDecoration(
+                  color: DS.neutral200,
+                  borderRadius: DS.borderRadiusFull,
+                ),
+                child: FractionallySizedBox(
+                  alignment: Alignment.centerLeft,
+                  widthFactor: value,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: rarityColor,
+                      borderRadius: DS.borderRadiusFull,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: DS.spacing8),
+          Text(
+            '$progressPercentage%',
+            style: TextStyle(
+              fontSize: DS.fontSizeXs,
+              fontWeight: DS.fontWeightMedium,
+              color: DS.textSecondary,
+            ),
+          ),
+        ],
+      );
+}
+
+// ---------------------------------------------------------------------------
+// AchievementCard  (core stateless card with 3 layout variants)
+// ---------------------------------------------------------------------------
+
 /// 成就卡片组件
 ///
-/// 显示成就图标、名称、进度，支持点击跳转
+/// 显示成就图标、名称、进度，支持点击跳转。
+/// 动画效果通过内部 stateful 子组件实现，卡片本身保持 StatelessWidget。
 class AchievementCard extends StatelessWidget {
   const AchievementCard({
     required this.achievement,
@@ -35,17 +396,72 @@ class AchievementCard extends StatelessWidget {
   final bool isPinned;
   final bool showProgress;
 
-  @override
-  Widget build(BuildContext context) {
+  // -- helpers ---------------------------------------------------------------
+
+  bool get _isNewlyUnlocked {
+    final unlockedAt = achievement.userProgress?.unlockedAt;
+    if (unlockedAt == null) return false;
+    return DateTime.now().difference(unlockedAt) < _newlyUnlockedWindow;
+  }
+
+  bool get _shouldShimmer =>
+      achievement.isUnlocked &&
+      _shimmerRarities.contains(achievement.achievement.rarity);
+
+  BorderRadius get _borderRadiusForStyle {
     switch (style) {
       case AchievementCardStyle.compact:
-        return _buildCompact(context);
+        return const BorderRadius.all(Radius.circular(12));
       case AchievementCardStyle.standard:
-        return _buildStandard(context);
+        return const BorderRadius.all(Radius.circular(16));
       case AchievementCardStyle.full:
-        return _buildFull(context);
+        return const BorderRadius.all(Radius.circular(20));
     }
   }
+
+  // -- build -----------------------------------------------------------------
+
+  @override
+  Widget build(BuildContext context) {
+    Widget card;
+    switch (style) {
+      case AchievementCardStyle.compact:
+        card = _buildCompact(context);
+      case AchievementCardStyle.standard:
+        card = _buildStandard(context);
+      case AchievementCardStyle.full:
+        card = _buildFull(context);
+    }
+
+    // Layer shimmer + glow on top of the card.
+    final rarityColor =
+        RarityColorProvider.getColor(achievement.achievement.rarity);
+    final borderRadius = _borderRadiusForStyle;
+
+    if (!_shouldShimmer && !_isNewlyUnlocked) return card;
+
+    return Stack(
+      children: [
+        card,
+        if (_shouldShimmer)
+          Positioned.fill(
+            child: _ShimmerOverlay(
+              rarityColor: rarityColor,
+              borderRadius: borderRadius,
+            ),
+          ),
+        if (_isNewlyUnlocked)
+          Positioned.fill(
+            child: _NewlyUnlockedGlow(
+              rarityColor: rarityColor,
+              borderRadius: borderRadius,
+            ),
+          ),
+      ],
+    );
+  }
+
+  // -- compact variant -------------------------------------------------------
 
   Widget _buildCompact(BuildContext context) {
     final isUnlocked = achievement.isUnlocked;
@@ -106,6 +522,11 @@ class AchievementCard extends StatelessWidget {
                             color: DS.semanticWarning,
                           ),
                         ),
+                      if (achievement.achievement.isLimited)
+                        Padding(
+                          padding: const EdgeInsets.only(left: DS.spacing6),
+                          child: _buildLimitedChip(context),
+                        ),
                     ],
                   ),
                   if (achievement.achievement.description != null) ...[
@@ -134,6 +555,8 @@ class AchievementCard extends StatelessWidget {
       ),
     );
   }
+
+  // -- standard variant ------------------------------------------------------
 
   Widget _buildStandard(BuildContext context) {
     final isUnlocked = achievement.isUnlocked;
@@ -229,6 +652,10 @@ class AchievementCard extends StatelessWidget {
                                   color: DS.semanticWarning,
                                 ),
                               ],
+                              if (achievement.achievement.isLimited) ...[
+                                const SizedBox(width: DS.spacing6),
+                                _buildLimitedChip(context),
+                              ],
                             ],
                           ),
                         ],
@@ -261,6 +688,8 @@ class AchievementCard extends StatelessWidget {
       ),
     );
   }
+
+  // -- full variant ----------------------------------------------------------
 
   Widget _buildFull(BuildContext context) {
     final isUnlocked = achievement.isUnlocked;
@@ -377,6 +806,8 @@ class AchievementCard extends StatelessWidget {
     );
   }
 
+  // -- shared sub-widgets ----------------------------------------------------
+
   Widget _buildIcon({double size = 48}) {
     final isUnlocked = achievement.isUnlocked;
     final rarityColor =
@@ -433,37 +864,39 @@ class AchievementCard extends StatelessWidget {
     );
   }
 
+  Widget _buildLimitedChip(BuildContext context) {
+    final l10n = context.l10n;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: DS.spacing6,
+        vertical: 2,
+      ),
+      decoration: BoxDecoration(
+        color: DS.semanticWarning.withValues(alpha: 0.15),
+        borderRadius: DS.borderRadiusFull,
+        border: Border.all(color: DS.semanticWarning.withValues(alpha: 0.6)),
+      ),
+      child: Text(
+        l10n.achievementLimitedTime,
+        style: TextStyle(
+          fontSize: DS.fontSizeXs,
+          color: DS.semanticWarning,
+          fontWeight: DS.fontWeightSemibold,
+        ),
+      ),
+    );
+  }
+
   Widget _buildProgressBar({double height = 6}) {
     final progress = achievement.progressPercentage / 100;
     final rarityColor =
         RarityColorProvider.getColor(achievement.achievement.rarity);
 
-    return Container(
+    return _AnimatedProgressBar(
+      progress: progress,
+      rarityColor: rarityColor,
+      isUnlocked: achievement.isUnlocked,
       height: height,
-      decoration: BoxDecoration(
-        color: DS.neutral200,
-        borderRadius: DS.borderRadiusFull,
-      ),
-      child: FractionallySizedBox(
-        alignment: Alignment.centerLeft,
-        widthFactor: progress.clamp(0.0, 1.0),
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: achievement.isUnlocked
-                  ? [
-                      DS.semanticSuccess,
-                      DS.semanticSuccess.withValues(alpha: 0.8),
-                    ]
-                  : [
-                      rarityColor,
-                      rarityColor.withValues(alpha: 0.7),
-                    ],
-            ),
-            borderRadius: DS.borderRadiusFull,
-          ),
-        ),
-      ),
     );
   }
 
@@ -472,38 +905,10 @@ class AchievementCard extends StatelessWidget {
     final rarityColor =
         RarityColorProvider.getColor(achievement.achievement.rarity);
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Expanded(
-          child: Container(
-            height: 4,
-            decoration: BoxDecoration(
-              color: DS.neutral200,
-              borderRadius: DS.borderRadiusFull,
-            ),
-            child: FractionallySizedBox(
-              alignment: Alignment.centerLeft,
-              widthFactor: progress.clamp(0.0, 1.0),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: rarityColor,
-                  borderRadius: DS.borderRadiusFull,
-                ),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: DS.spacing8),
-        Text(
-          '${achievement.progressPercentage}%',
-          style: TextStyle(
-            fontSize: DS.fontSizeXs,
-            fontWeight: DS.fontWeightMedium,
-            color: DS.textSecondary,
-          ),
-        ),
-      ],
+    return _AnimatedCompactProgressBar(
+      progress: progress,
+      rarityColor: rarityColor,
+      progressPercentage: achievement.progressPercentage,
     );
   }
 
@@ -564,6 +969,10 @@ class AchievementCard extends StatelessWidget {
   }
 }
 
+// ---------------------------------------------------------------------------
+// AchievementGridCard  (grid layout convenience wrapper)
+// ---------------------------------------------------------------------------
+
 /// 成就网格卡片（用于网格布局）
 class AchievementGridCard extends StatelessWidget {
   const AchievementGridCard({
@@ -571,19 +980,37 @@ class AchievementGridCard extends StatelessWidget {
     super.key,
     this.onTap,
     this.showProgress = true,
+    this.animationIndex,
   });
 
   final AchievementWithProgress achievement;
   final VoidCallback? onTap;
   final bool showProgress;
 
+  /// When non-null, wraps the card in [AnimatedAchievementCard] with stagger.
+  final int? animationIndex;
+
   @override
-  Widget build(BuildContext context) => AchievementCard(
-        achievement: achievement,
-        onTap: onTap,
-        showProgress: showProgress,
+  Widget build(BuildContext context) {
+    final card = AchievementCard(
+      achievement: achievement,
+      onTap: onTap,
+      showProgress: showProgress,
+    );
+
+    if (animationIndex != null) {
+      return AnimatedAchievementCard(
+        index: animationIndex!,
+        child: card,
       );
+    }
+    return card;
+  }
 }
+
+// ---------------------------------------------------------------------------
+// AchievementListCard  (list layout convenience wrapper)
+// ---------------------------------------------------------------------------
 
 /// 成就列表卡片（用于列表布局）
 class AchievementListCard extends StatelessWidget {
@@ -592,20 +1019,38 @@ class AchievementListCard extends StatelessWidget {
     super.key,
     this.onTap,
     this.showProgress = true,
+    this.animationIndex,
   });
 
   final AchievementWithProgress achievement;
   final VoidCallback? onTap;
   final bool showProgress;
 
+  /// When non-null, wraps the card in [AnimatedAchievementCard] with stagger.
+  final int? animationIndex;
+
   @override
-  Widget build(BuildContext context) => AchievementCard(
-        achievement: achievement,
-        onTap: onTap,
-        style: AchievementCardStyle.compact,
-        showProgress: showProgress,
+  Widget build(BuildContext context) {
+    final card = AchievementCard(
+      achievement: achievement,
+      onTap: onTap,
+      style: AchievementCardStyle.compact,
+      showProgress: showProgress,
+    );
+
+    if (animationIndex != null) {
+      return AnimatedAchievementCard(
+        index: animationIndex!,
+        child: card,
       );
+    }
+    return card;
+  }
 }
+
+// ---------------------------------------------------------------------------
+// AchievementDetailCard  (detail page convenience wrapper)
+// ---------------------------------------------------------------------------
 
 /// 成就详情卡片（用于详情页）
 class AchievementDetailCard extends StatelessWidget {

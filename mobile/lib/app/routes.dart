@@ -19,6 +19,7 @@ import 'package:sparkle/features/notification_center/notification_center.dart';
 import 'package:sparkle/features/photon/photon_routes.dart';
 import 'package:sparkle/features/plan/plan.dart';
 import 'package:sparkle/features/seed_library/seed_library_routes.dart';
+import 'package:sparkle/features/shop/shop_routes.dart';
 import 'package:sparkle/features/splash/splash.dart';
 import 'package:sparkle/features/task/task.dart';
 import 'package:sparkle/features/tools/tools.dart';
@@ -189,6 +190,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ...SeedLibraryRoutes.routes,
       ...ToolsRoutes.routes,
       ...VisualElementsRoutes.routes,
+      ...ShopRoutes.routes,
     ],
   );
 });

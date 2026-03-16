@@ -18,8 +18,10 @@ from app.models.achievement import (
     AchievementRarity,
     ContractStatus,
     SparkContract,
+    StreakDayStatus,
     UserAchievement,
     UserGalaxySkin,
+    UserStreakDay,
     UserStreakStats,
     UserTitle,
 )
@@ -114,6 +116,13 @@ class AchievementEngine:
         """获取所有成就定义（带缓存）"""
         await self._refresh_achievement_cache()
         return list(self._achievement_cache.values())
+
+    def _is_achievement_active(self, achievement: Achievement, now: datetime) -> bool:
+        if achievement.active_from and now < achievement.active_from:
+            return False
+        if achievement.active_to and now > achievement.active_to:
+            return False
+        return True
 
     async def process_event(
         self,
@@ -975,6 +984,40 @@ class AchievementEngine:
             except Exception as e:
                 logger.error(f"Failed to send achievement unlock notification: {e}")
 
+    async def _upsert_streak_day(
+        self,
+        user_id: str,
+        day: date,
+        status: StreakDayStatus,
+        used_freeze: bool = False,
+        source_event: str | None = None,
+    ) -> None:
+        query = select(UserStreakDay).where(
+            and_(
+                UserStreakDay.user_id == user_id,
+                UserStreakDay.day == day,
+                UserStreakDay.deleted_at.is_(None),
+            )
+        )
+        result = await self.db.execute(query)
+        record = result.scalar_one_or_none()
+
+        if record:
+            record.status = status
+            record.used_freeze = used_freeze
+            record.source_event = source_event
+        else:
+            record = UserStreakDay(
+                user_id=user_id,
+                day=day,
+                status=status,
+                used_freeze=used_freeze,
+                source_event=source_event,
+            )
+            self.db.add(record)
+
+        await self.db.flush()
+
     async def _update_streak_stats(self, user_id: str, event_type: str, **kwargs):
         """更新连胜统计"""
         stats = await self._get_or_create_streak_stats(user_id)
@@ -990,6 +1033,12 @@ class AchievementEngine:
             stats.current_streak = 1
             stats.last_activity_date = today
             stats.longest_streak_start = today
+            await self._upsert_streak_day(
+                user_id,
+                today,
+                StreakDayStatus.ACTIVE,
+                source_event=event_type,
+            )
             await self.db.flush()
             return
 
@@ -997,6 +1046,12 @@ class AchievementEngine:
 
         if delta == 0:
             # 今天已活动，无需更新
+            await self._upsert_streak_day(
+                user_id,
+                today,
+                StreakDayStatus.ACTIVE,
+                source_event=event_type,
+            )
             return
         elif delta == 1:
             # 连续活动
@@ -1009,6 +1064,13 @@ class AchievementEngine:
                 stats.longest_streak = stats.current_streak
                 stats.longest_streak_start = stats.longest_streak_start or today
                 stats.longest_streak_end = today
+
+            await self._upsert_streak_day(
+                user_id,
+                today,
+                StreakDayStatus.ACTIVE,
+                source_event=event_type,
+            )
         else:
             # 演了活动，检查保护卡
             days_missed = delta - 1
@@ -1019,10 +1081,37 @@ class AchievementEngine:
                 stats.last_freeze_used_at = _utcnow()
                 stats.current_streak += 1  # 今天也算
                 logger.info(f"User {user_id} used {days_missed} freeze charges")
+
+                for offset in range(1, days_missed + 1):
+                    day = stats.last_activity_date + timedelta(days=offset)
+                    await self._upsert_streak_day(
+                        user_id,
+                        day,
+                        StreakDayStatus.FROZEN,
+                        used_freeze=True,
+                        source_event="freeze",
+                    )
             else:
                 # 保护不足，连胜断裂
                 stats.current_streak = 1
                 logger.info(f"User {user_id} streak broken at {stats.max_streak} days")
+
+                for offset in range(1, days_missed + 1):
+                    day = stats.last_activity_date + timedelta(days=offset)
+                    await self._upsert_streak_day(
+                        user_id,
+                        day,
+                        StreakDayStatus.MISSED,
+                        used_freeze=False,
+                        source_event="missed",
+                    )
+
+            await self._upsert_streak_day(
+                user_id,
+                today,
+                StreakDayStatus.ACTIVE,
+                source_event=event_type,
+            )
 
         stats.last_activity_date = today
         await self.db.flush()
@@ -1076,14 +1165,18 @@ class AchievementEngine:
         category: str | None = None,
         rarity: AchievementRarity | None = None,
         include_hidden: bool = False,
+        include_inactive: bool = False,
         locale: str | None = None,
     ) -> dict[str, Any]:
         """获取用户成就列表"""
         all_achievements = await self._get_all_achievements()
+        now = _utcnow()
 
         # 过滤
         filtered = []
         for achievement in all_achievements:
+            if not include_inactive and not self._is_achievement_active(achievement, now):
+                continue
             if category and achievement.category != category:
                 continue
             if rarity and achievement.rarity != rarity:
@@ -1244,6 +1337,50 @@ class AchievementEngine:
 
         from app.schemas.achievement import StreakStatsResponse
         return StreakStatsResponse.model_validate(stats, from_attributes=True).model_dump()
+
+    async def get_streak_history(self, user_id: str, days: int = 90) -> dict[str, Any]:
+        """获取连胜日历历史（默认最近90天）"""
+        from app.schemas.achievement import StreakDayRecord, StreakHistoryResponse
+
+        today = _utcnow().date()
+        start_day = today - timedelta(days=days - 1)
+
+        query = select(UserStreakDay).where(
+            and_(
+                UserStreakDay.user_id == user_id,
+                UserStreakDay.day >= start_day,
+                UserStreakDay.day <= today,
+            )
+        )
+        result = await self.db.execute(query)
+        records = result.scalars().all()
+        record_map = {record.day: record for record in records}
+
+        days_data: list[StreakDayRecord] = []
+        for offset in range(days):
+            day = start_day + timedelta(days=offset)
+            record = record_map.get(day)
+            if record:
+                status = record.status.value if hasattr(record.status, "value") else str(record.status)
+                days_data.append(
+                    StreakDayRecord(
+                        day=day,
+                        status=status,
+                        used_freeze=record.used_freeze,
+                        source_event=record.source_event,
+                    )
+                )
+            else:
+                days_data.append(
+                    StreakDayRecord(
+                        day=day,
+                        status=StreakDayStatus.MISSED.value,
+                        used_freeze=False,
+                        source_event=None,
+                    )
+                )
+
+        return StreakHistoryResponse(days=days_data).model_dump()
 
     async def get_achievement_stats(self, user_id: str) -> dict[str, Any]:
         """获取用户成就统计"""

@@ -7,6 +7,7 @@ from fastapi import APIRouter
 
 from app.api.v1 import (
     achievements,
+    calendar,
     analytics,
     audit,
     auth,
@@ -137,6 +138,8 @@ if settings.ENABLE_GRAPHRAG_MONITOR_API:
     api_router.include_router(graphrag_trace.router, tags=["GraphRAG Trace"])
 api_router.include_router(decay_timemachine.router, tags=["Decay TimeMachine"])
 api_router.include_router(multi_agent.router, tags=["Multi-Agent"])
+# Calendar Events
+api_router.include_router(calendar.router, prefix="/calendar", tags=["calendar"])
 
 
 @api_router.get("/")
@@ -151,6 +154,7 @@ async def api_root():
             "/tasks",
             "/chat",
             "/plans",
+            "/calendar",
             "/statistics",
             "/subjects",
             "/errors",

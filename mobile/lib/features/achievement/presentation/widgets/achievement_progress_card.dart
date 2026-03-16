@@ -164,7 +164,7 @@ class _AchievementRow extends StatelessWidget {
                       Expanded(
                         child: Text(
                           achievement.name,
-                          style: context.sparkleTypography.labelMedium.copyWith(
+                          style: context.sparkleTypography.labelSmall.copyWith(
                             color: DS.textPrimary,
                           ),
                           maxLines: 1,

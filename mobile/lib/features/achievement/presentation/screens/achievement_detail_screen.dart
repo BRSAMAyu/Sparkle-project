@@ -10,6 +10,7 @@ import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/achievement_share_bottom_sheet.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/rarity_badge.dart';
+import 'package:sparkle/features/visual_elements/presentation/providers/visual_elements_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 
@@ -29,29 +30,60 @@ class AchievementDetailScreen extends ConsumerStatefulWidget {
 
 class _AchievementDetailScreenState
     extends ConsumerState<AchievementDetailScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _glowAnimation;
+
+  late AnimationController _particleController;
+
+  late AnimationController _entranceController;
+  late Animation<double> _iconScaleAnimation;
+
+  bool _requestedVisualElements = false;
 
   @override
   void initState() {
     super.initState();
+
+    // Existing glow controller - made more subtle (0.95 to 1.05)
     _controller = AnimationController(
       duration: const Duration(milliseconds: 1500),
       vsync: this,
     );
-    _glowAnimation = Tween<double>(begin: 0.8, end: 1.2).animate(
+    _glowAnimation = Tween<double>(begin: 0.95, end: 1.05).animate(
       CurvedAnimation(
         parent: _controller,
         curve: Curves.easeInOut,
       ),
     );
     unawaited(_controller.repeat(reverse: true));
+
+    // Particle animation controller - continuous loop
+    _particleController = AnimationController(
+      duration: const Duration(seconds: 6),
+      vsync: this,
+    );
+    unawaited(_particleController.repeat());
+
+    // Entrance animation controller - one-shot
+    _entranceController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    _iconScaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _entranceController,
+        curve: Curves.elasticOut,
+      ),
+    );
+    unawaited(_entranceController.forward());
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    _particleController.dispose();
+    _entranceController.dispose();
     super.dispose();
   }
 
@@ -117,7 +149,20 @@ class _AchievementDetailScreenState
             // 背景渐变
             _buildHeaderBackground(rarityColor),
 
-            // 粒子效果（仅稀有+成就）
+            // Rotating energy field for epic+ rarity
+            if (rarity.index >= AchievementRarity.epic.index)
+              AnimatedBuilder(
+                animation: _particleController,
+                builder: (context, child) => CustomPaint(
+                  painter: _EnergyFieldPainter(
+                    color: rarityColor,
+                    rotation: _particleController.value * 2 * math.pi,
+                  ),
+                  size: Size.infinite,
+                ),
+              ),
+
+            // 粒子效果（仅稀有+成就）— now animated
             if (rarity.index >= AchievementRarity.rare.index)
               _buildHeaderParticles(rarity),
 
@@ -126,10 +171,14 @@ class _AchievementDetailScreenState
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  // Icon with entrance scale + subtle glow
                   AnimatedBuilder(
-                    animation: _glowAnimation,
+                    animation: Listenable.merge([
+                      _glowAnimation,
+                      _iconScaleAnimation,
+                    ]),
                     builder: (context, child) => Transform.scale(
-                      scale: _glowAnimation.value,
+                      scale: _glowAnimation.value * _iconScaleAnimation.value,
                       child: _buildLargeIcon(achievement),
                     ),
                   ),
@@ -184,9 +233,15 @@ class _AchievementDetailScreenState
         ),
       );
 
-  Widget _buildHeaderParticles(AchievementRarity rarity) => CustomPaint(
-        painter: _HeaderParticlePainter(rarity),
-        size: Size.infinite,
+  Widget _buildHeaderParticles(AchievementRarity rarity) => AnimatedBuilder(
+        animation: _particleController,
+        builder: (context, child) => CustomPaint(
+          painter: _HeaderParticlePainter(
+            rarity,
+            animationValue: _particleController.value,
+          ),
+          size: Size.infinite,
+        ),
       );
 
   Widget _buildLargeIcon(AchievementWithProgress achievement) {
@@ -232,55 +287,101 @@ class _AchievementDetailScreenState
   Widget _buildContent(
     AchievementWithProgress achievement,
     AppLocalizations l10n,
-  ) =>
-      Container(
-        padding: const EdgeInsets.all(DS.spacing20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 名称和解锁状态
-            _buildTitleSection(achievement, l10n),
+  ) {
+    var sectionIndex = 0;
+
+    return Container(
+      padding: const EdgeInsets.all(DS.spacing20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 名称和解锁状态
+          _AnimatedSection(
+            index: sectionIndex++,
+            child: _buildTitleSection(achievement, l10n),
+          ),
+          const SizedBox(height: DS.spacing24),
+
+          // 描述
+          if (achievement.achievement.description != null) ...[
+            _AnimatedSection(
+              index: sectionIndex++,
+              child: _buildSectionTitle(l10n.achievementDescription),
+            ),
+            const SizedBox(height: DS.spacing8),
+            _AnimatedSection(
+              index: sectionIndex++,
+              child: _buildDescription(achievement, l10n),
+            ),
             const SizedBox(height: DS.spacing24),
-
-            // 描述
-            if (achievement.achievement.description != null) ...[
-              _buildSectionTitle(l10n.achievementDescription),
-              const SizedBox(height: DS.spacing8),
-              _buildDescription(achievement, l10n),
-              const SizedBox(height: DS.spacing24),
-            ],
-
-            // 进度（未解锁时）
-            if (!achievement.isUnlocked) ...[
-              _buildSectionTitle(l10n.achievementProgress),
-              const SizedBox(height: DS.spacing12),
-              _buildProgressCard(achievement, l10n),
-              const SizedBox(height: DS.spacing24),
-            ],
-
-            // 前置成就
-            if (achievement.achievement.prerequisites?.isNotEmpty ?? false) ...[
-              _buildSectionTitle(l10n.achievementPrerequisites),
-              const SizedBox(height: DS.spacing12),
-              _buildPrerequisites(achievement, l10n),
-              const SizedBox(height: DS.spacing24),
-            ],
-
-            // 奖励
-            if (achievement.achievement.rewardConfig?.isNotEmpty ?? false) ...[
-              _buildSectionTitle(l10n.achievementRewards),
-              const SizedBox(height: DS.spacing12),
-              _buildRewards(achievement, l10n),
-              const SizedBox(height: DS.spacing24),
-            ],
-
-            // 统计信息
-            _buildStats(achievement, l10n),
-
-            const SizedBox(height: DS.spacing40),
           ],
-        ),
-      );
+
+          if (_hasEventWindow(achievement.achievement)) ...[
+            _AnimatedSection(
+              index: sectionIndex++,
+              child: _buildSectionTitle(l10n.achievementEventWindow),
+            ),
+            const SizedBox(height: DS.spacing12),
+            _AnimatedSection(
+              index: sectionIndex++,
+              child: _buildEventWindow(achievement.achievement, l10n),
+            ),
+            const SizedBox(height: DS.spacing24),
+          ],
+
+          // 进度（未解锁时）
+          if (!achievement.isUnlocked) ...[
+            _AnimatedSection(
+              index: sectionIndex++,
+              child: _buildSectionTitle(l10n.achievementProgress),
+            ),
+            const SizedBox(height: DS.spacing12),
+            _AnimatedSection(
+              index: sectionIndex++,
+              child: _buildProgressCard(achievement, l10n),
+            ),
+            const SizedBox(height: DS.spacing24),
+          ],
+
+          // 前置成就
+          if (achievement.achievement.prerequisites?.isNotEmpty ?? false) ...[
+            _AnimatedSection(
+              index: sectionIndex++,
+              child: _buildSectionTitle(l10n.achievementPrerequisites),
+            ),
+            const SizedBox(height: DS.spacing12),
+            _AnimatedSection(
+              index: sectionIndex++,
+              child: _buildPrerequisites(achievement, l10n),
+            ),
+            const SizedBox(height: DS.spacing24),
+          ],
+
+          // 奖励
+          if (achievement.achievement.rewardConfig?.isNotEmpty ?? false) ...[
+            _AnimatedSection(
+              index: sectionIndex++,
+              child: _buildSectionTitle(l10n.achievementRewards),
+            ),
+            const SizedBox(height: DS.spacing12),
+            _AnimatedSection(
+              index: sectionIndex++,
+              child: _buildRewards(achievement, l10n),
+            ),
+            const SizedBox(height: DS.spacing24),
+          ],
+
+          // 统计信息
+          _AnimatedSection(
+            index: sectionIndex++,
+            child: _buildStats(achievement, l10n),
+          ),
+
+          const SizedBox(height: DS.spacing40),
+        ],
+      ),
+    );
+  }
 
   Widget _buildTitleSection(
     AchievementWithProgress achievement,
@@ -400,6 +501,117 @@ class _AchievementDetailScreenState
         ),
       );
 
+  bool _hasEventWindow(AchievementModel achievement) {
+    return achievement.isLimited ||
+        achievement.activeFrom != null ||
+        achievement.activeTo != null ||
+        achievement.eventTag != null;
+  }
+
+  Widget _buildEventWindow(
+    AchievementModel achievement,
+    AppLocalizations l10n,
+  ) {
+    final now = DateTime.now();
+    final start = achievement.activeFrom?.toLocal();
+    final end = achievement.activeTo?.toLocal();
+
+    String statusLabel;
+    Color statusColor;
+    String windowText;
+
+    if (start != null && now.isBefore(start)) {
+      statusLabel = l10n.achievementEventStatusUpcoming;
+      statusColor = DS.semanticWarning;
+      windowText = l10n.achievementEventStartsAt(
+        Formatters.formatDateTime(start),
+      );
+    } else if (end != null && now.isAfter(end)) {
+      statusLabel = l10n.achievementEventStatusEnded;
+      statusColor = DS.textTertiary;
+      windowText = l10n.achievementEventEnded;
+    } else {
+      statusLabel = l10n.achievementEventStatusLive;
+      statusColor = DS.semanticSuccess;
+      if (end != null) {
+        windowText = l10n.achievementEventEndsAt(
+          Formatters.formatDateTime(end),
+        );
+      } else if (start != null) {
+        windowText = l10n.achievementEventStartsAt(
+          Formatters.formatDateTime(start),
+        );
+      } else {
+        windowText = l10n.achievementLimitedSubtitle;
+      }
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(DS.spacing16),
+      decoration: BoxDecoration(
+        color: DS.surfaceSecondary,
+        borderRadius: DS.borderRadius16,
+        border: Border.all(color: DS.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: DS.spacing8,
+                  vertical: DS.spacing4,
+                ),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.15),
+                  borderRadius: DS.borderRadiusFull,
+                ),
+                child: Text(
+                  statusLabel,
+                  style: TextStyle(
+                    fontSize: DS.fontSizeXs,
+                    color: statusColor,
+                    fontWeight: DS.fontWeightSemibold,
+                  ),
+                ),
+              ),
+              if (achievement.eventTag != null) ...[
+                const SizedBox(width: DS.spacing8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: DS.spacing8,
+                    vertical: DS.spacing4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: DS.brandPrimary.withValues(alpha: 0.12),
+                    borderRadius: DS.borderRadiusFull,
+                  ),
+                  child: Text(
+                    achievement.eventTag!,
+                    style: TextStyle(
+                      fontSize: DS.fontSizeXs,
+                      color: DS.brandPrimary,
+                      fontWeight: DS.fontWeightSemibold,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: DS.spacing12),
+          Text(
+            windowText,
+            style: TextStyle(
+              fontSize: DS.fontSizeSm,
+              color: DS.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildProgressCard(
     AchievementWithProgress achievement,
     AppLocalizations l10n,
@@ -419,53 +631,69 @@ class _AchievementDetailScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Wrap(
-            alignment: WrapAlignment.spaceBetween,
-            runSpacing: DS.spacing8,
-            children: [
-              Text(
-                l10n.completionProgress,
-                style: TextStyle(
-                  fontSize: DS.fontSizeBase,
-                  fontWeight: DS.fontWeightSemibold,
-                  color: DS.textPrimary,
-                ),
-              ),
-              Text(
-                '${achievement.progressPercentage}%',
-                style: TextStyle(
-                  fontSize: DS.fontSizeLg,
-                  fontWeight: DS.fontWeightBold,
-                  color: rarityColor,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: DS.spacing12),
-          Container(
-            height: 12,
-            decoration: BoxDecoration(
-              color: DS.neutral200,
-              borderRadius: DS.borderRadiusFull,
-            ),
-            child: Stack(
-              children: [
-                FractionallySizedBox(
-                  alignment: Alignment.centerLeft,
-                  widthFactor: progress.clamp(0.0, 1.0),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          rarityColor,
-                          rarityColor.withValues(alpha: 0.7),
-                        ],
-                      ),
-                      borderRadius: DS.borderRadiusFull,
+          // Animated percentage text that counts up
+          TweenAnimationBuilder<double>(
+            tween: Tween<double>(begin: 0.0, end: progress),
+            duration: const Duration(milliseconds: 800),
+            curve: Curves.easeOutCubic,
+            builder: (context, animatedProgress, child) {
+              final displayPercent =
+                  (animatedProgress * 100).round().clamp(0, 100);
+              return Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                runSpacing: DS.spacing8,
+                children: [
+                  Text(
+                    l10n.completionProgress,
+                    style: TextStyle(
+                      fontSize: DS.fontSizeBase,
+                      fontWeight: DS.fontWeightSemibold,
+                      color: DS.textPrimary,
                     ),
                   ),
-                ),
-              ],
+                  Text(
+                    '$displayPercent%',
+                    style: TextStyle(
+                      fontSize: DS.fontSizeLg,
+                      fontWeight: DS.fontWeightBold,
+                      color: rarityColor,
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: DS.spacing12),
+          // Animated progress bar
+          TweenAnimationBuilder<double>(
+            tween: Tween<double>(begin: 0.0, end: progress.clamp(0.0, 1.0)),
+            duration: const Duration(milliseconds: 800),
+            curve: Curves.easeOutCubic,
+            builder: (context, animatedProgress, child) => Container(
+              height: 12,
+              decoration: BoxDecoration(
+                color: DS.neutral200,
+                borderRadius: DS.borderRadiusFull,
+              ),
+              child: Stack(
+                children: [
+                  FractionallySizedBox(
+                    alignment: Alignment.centerLeft,
+                    widthFactor: animatedProgress,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            rarityColor,
+                            rarityColor.withValues(alpha: 0.7),
+                          ],
+                        ),
+                        borderRadius: DS.borderRadiusFull,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: DS.spacing12),
@@ -568,6 +796,9 @@ class _AchievementDetailScreenState
     AppLocalizations l10n,
   ) {
     final rewards = achievement.achievement.rewardConfig ?? [];
+    _ensureVisualElementsLoaded(rewards);
+    final titles = ref.watch(titlesProvider);
+    final skins = ref.watch(galaxySkinsProvider);
 
     return Container(
       padding: const EdgeInsets.all(DS.spacing16),
@@ -608,7 +839,13 @@ class _AchievementDetailScreenState
           ...rewards.map(
             (reward) => Padding(
               padding: const EdgeInsets.only(bottom: DS.spacing8),
-              child: _buildRewardItem(reward, l10n),
+              child: _buildRewardItem(
+                reward,
+                l10n,
+                achievement,
+                titles,
+                skins,
+              ),
             ),
           ),
         ],
@@ -619,6 +856,9 @@ class _AchievementDetailScreenState
   Widget _buildRewardItem(
     Map<String, dynamic> reward,
     AppLocalizations l10n,
+    AchievementWithProgress achievement,
+    List<UserTitle> titles,
+    List<GalaxySkin> skins,
   ) {
     final type = reward['type'] as String? ?? 'unknown';
     final rawAmount = reward['amount'] ?? reward['quantity'] ?? 0;
@@ -649,10 +889,22 @@ class _AchievementDetailScreenState
         label = amount > 0
             ? '${l10n.streakFreezeCharges} x$amount'
             : l10n.streakFreezeCharges;
+      case 'visual_element':
+        icon = '✨';
+        label = displayName ?? l10n.achievementRewardVisualElement;
       default:
         icon = '🎁';
         label = l10n.achievementRewardMystery;
     }
+
+    final action = _buildRewardAction(
+      type,
+      reward,
+      achievement,
+      l10n,
+      titles,
+      skins,
+    );
 
     return Row(
       children: [
@@ -667,8 +919,128 @@ class _AchievementDetailScreenState
             ),
           ),
         ),
+        if (action != null) ...[
+          const SizedBox(width: DS.spacing8),
+          action,
+        ],
       ],
     );
+  }
+
+  void _ensureVisualElementsLoaded(List<Map<String, dynamic>> rewards) {
+    if (_requestedVisualElements) return;
+    final hasVisualElement = rewards.any(
+      (reward) => reward['type'] == 'visual_element',
+    );
+    if (hasVisualElement) {
+      _requestedVisualElements = true;
+      unawaited(ref.read(visualElementsNotifierProvider.notifier).loadAll());
+    }
+  }
+
+  Widget? _buildRewardAction(
+    String type,
+    Map<String, dynamic> reward,
+    AchievementWithProgress achievement,
+    AppLocalizations l10n,
+    List<UserTitle> titles,
+    List<GalaxySkin> skins,
+  ) {
+    final isUnlocked = achievement.isUnlocked;
+
+    if (!isUnlocked) {
+      return Text(
+        l10n.achievementUnlockToEquip,
+        style: TextStyle(
+          fontSize: DS.fontSizeXs,
+          color: DS.textTertiary,
+        ),
+      );
+    }
+
+    switch (type) {
+      case 'title':
+        final titleId =
+            reward['value']?.toString() ?? reward['title_id']?.toString();
+        if (titleId == null) return null;
+        final isEquipped =
+            titles.any((title) => title.titleId == titleId && title.isEquipped);
+        return _buildEquipAction(
+          l10n,
+          isEquipped: isEquipped,
+          onEquip: () => _equipTitle(titleId),
+        );
+      case 'galaxy_skin':
+      case 'skin':
+        final skinId =
+            reward['skin_id']?.toString() ?? reward['id']?.toString();
+        if (skinId == null) return null;
+        final isEquipped =
+            skins.any((skin) => skin.id == skinId && skin.isEquipped);
+        return _buildEquipAction(
+          l10n,
+          isEquipped: isEquipped,
+          onEquip: () => _equipSkin(skinId),
+        );
+      case 'visual_element':
+        final elementId =
+            reward['element_id']?.toString() ?? reward['id']?.toString();
+        if (elementId == null) return null;
+        final isEquipped = ref.watch(isElementEquippedProvider(elementId));
+        return _buildEquipAction(
+          l10n,
+          isEquipped: isEquipped,
+          onEquip: () => _equipVisualElement(elementId),
+        );
+      default:
+        return null;
+    }
+  }
+
+  Widget _buildEquipAction(
+    AppLocalizations l10n, {
+    required bool isEquipped,
+    required VoidCallback onEquip,
+  }) {
+    if (isEquipped) {
+      return Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing8,
+          vertical: DS.spacing4,
+        ),
+        decoration: BoxDecoration(
+          color: DS.semanticSuccess.withValues(alpha: 0.15),
+          borderRadius: DS.borderRadiusFull,
+        ),
+        child: Text(
+          l10n.achievementEquipped,
+          style: TextStyle(
+            fontSize: DS.fontSizeXs,
+            color: DS.semanticSuccess,
+            fontWeight: DS.fontWeightSemibold,
+          ),
+        ),
+      );
+    }
+
+    return SparkleButton(
+      label: l10n.achievementEquipAction,
+      onPressed: onEquip,
+      variant: ButtonVariant.outline,
+      size: ButtonSize.small,
+    );
+  }
+
+  Future<void> _equipTitle(String titleId) async {
+    await ref.read(achievementProvider.notifier).equipTitle(titleId);
+  }
+
+  Future<void> _equipSkin(String skinId) async {
+    await ref.read(achievementProvider.notifier).equipSkin(skinId);
+  }
+
+  Future<void> _equipVisualElement(String elementId) async {
+    await ref.read(visualElementsNotifierProvider.notifier).equipElement(elementId);
   }
 
   Widget _buildStats(
@@ -889,31 +1261,170 @@ class _AchievementDetailScreenState
   }
 }
 
-/// 头部粒子效果绘制器
+/// Staggered entrance animation wrapper for content sections.
+/// Each section fades + slides in with a stagger delay based on its index.
+class _AnimatedSection extends StatelessWidget {
+  const _AnimatedSection({
+    required this.index,
+    required this.child,
+  });
+
+  final int index;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final delayMs = index * 80;
+    final totalDurationMs = delayMs + 400;
+
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0.0, end: 1.0),
+      duration: Duration(milliseconds: totalDurationMs),
+      curve: Curves.linear, // We handle the curve manually with delay
+      builder: (context, rawValue, _) {
+        // Map the raw linear 0..1 to account for the stagger delay.
+        // During the delay portion, progress stays at 0.
+        // After the delay, progress eases from 0 to 1 over 400ms.
+        final delayFraction =
+            totalDurationMs > 0 ? delayMs / totalDurationMs : 0.0;
+        double progress;
+        if (rawValue <= delayFraction) {
+          progress = 0.0;
+        } else {
+          final localT =
+              (rawValue - delayFraction) / (1.0 - delayFraction);
+          // Apply easeOutCubic curve
+          progress = 1.0 - math.pow(1.0 - localT, 3).toDouble();
+        }
+
+        return Opacity(
+          opacity: progress.clamp(0.0, 1.0),
+          child: Transform.translate(
+            offset: Offset(0, 20 * (1.0 - progress)),
+            child: child,
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Animated header particle painter.
+/// Particles orbit gently and twinkle based on the animation value.
+/// Particle count scales by rarity: rare=15, epic=25, legendary=40.
 class _HeaderParticlePainter extends CustomPainter {
-  _HeaderParticlePainter(this.rarity);
+  _HeaderParticlePainter(
+    this.rarity, {
+    required this.animationValue,
+  });
 
   final AchievementRarity rarity;
+  final double animationValue;
+
+  int get _particleCount {
+    switch (rarity) {
+      case AchievementRarity.common:
+        return 10;
+      case AchievementRarity.rare:
+        return 15;
+      case AchievementRarity.epic:
+        return 25;
+      case AchievementRarity.legendary:
+        return 40;
+    }
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
     final color = RarityColorProvider.getColor(rarity);
     final random = math.Random(42);
 
-    for (var i = 0; i < 20; i++) {
-      final x = random.nextDouble() * size.width;
-      final y = random.nextDouble() * size.height;
-      final radius = 1 + random.nextDouble() * 3;
+    for (var i = 0; i < _particleCount; i++) {
+      // Base position from deterministic random
+      final baseX = random.nextDouble() * size.width;
+      final baseY = random.nextDouble() * size.height;
+      final baseRadius = 1.0 + random.nextDouble() * 3.0;
 
+      // Each particle gets a unique phase offset
+      final phase = random.nextDouble() * 2 * math.pi;
+      final orbitRadius = 3.0 + random.nextDouble() * 8.0;
+      final speed = 0.5 + random.nextDouble() * 1.5;
+
+      // Gentle orbit using sin/cos
+      final angle = animationValue * 2 * math.pi * speed + phase;
+      final x = baseX + math.cos(angle) * orbitRadius;
+      final y = baseY + math.sin(angle) * orbitRadius;
+
+      // Twinkle effect: vary opacity with sin
+      final twinklePhase = random.nextDouble() * 2 * math.pi;
+      final twinkle =
+          0.2 + 0.6 * ((math.sin(animationValue * 2 * math.pi * 2 + twinklePhase) + 1) / 2);
+
+      // Outer glow
+      final glowPaint = Paint()
+        ..color = color.withValues(alpha: twinkle * 0.15)
+        ..style = PaintingStyle.fill
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+      canvas.drawCircle(Offset(x, y), baseRadius * 2.5, glowPaint);
+
+      // Core particle
       final paint = Paint()
-        ..color = color.withValues(alpha: 0.3)
+        ..color = color.withValues(alpha: twinkle)
         ..style = PaintingStyle.fill;
-
-      canvas.drawCircle(Offset(x, y), radius, paint);
+      canvas.drawCircle(Offset(x, y), baseRadius, paint);
     }
   }
 
   @override
   bool shouldRepaint(_HeaderParticlePainter oldDelegate) =>
-      oldDelegate.rarity != rarity;
+      oldDelegate.rarity != rarity ||
+      oldDelegate.animationValue != animationValue;
+}
+
+/// Slow-rotating radial gradient overlay for epic+ rarity.
+/// Creates a subtle "energy field" effect behind the header icon.
+class _EnergyFieldPainter extends CustomPainter {
+  _EnergyFieldPainter({
+    required this.color,
+    required this.rotation,
+  });
+
+  final Color color;
+  final double rotation;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.shortestSide * 0.45;
+
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.rotate(rotation);
+    canvas.translate(-center.dx, -center.dy);
+
+    // Draw a swept gradient that rotates slowly
+    final sweepGradient = SweepGradient(
+      center: Alignment.center,
+      colors: [
+        color.withValues(alpha: 0.0),
+        color.withValues(alpha: 0.08),
+        color.withValues(alpha: 0.0),
+        color.withValues(alpha: 0.06),
+        color.withValues(alpha: 0.0),
+      ],
+      stops: const [0.0, 0.25, 0.5, 0.75, 1.0],
+    );
+
+    final rect = Rect.fromCircle(center: center, radius: radius);
+    final paint = Paint()
+      ..shader = sweepGradient.createShader(rect)
+      ..style = PaintingStyle.fill;
+
+    canvas.drawCircle(center, radius, paint);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(_EnergyFieldPainter oldDelegate) =>
+      oldDelegate.color != color || oldDelegate.rotation != rotation;
 }

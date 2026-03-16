@@ -363,6 +363,119 @@
   "achievementCheckinDays": "连续签到{count}天",
   "achievementCreatePlans": "创建{count}个计划",
   "achievementProgressGeneric": "进度{count}%",
+  "achievementLimitedTitle": "限时活动",
+  "achievementLimitedSubtitle": "活动期间可获得",
+  "achievementLimitedTime": "限时",
+  "achievementEventWindow": "活动时间",
+  "achievementEventStatusUpcoming": "即将开始",
+  "achievementEventStatusLive": "进行中",
+  "achievementEventStatusEnded": "已结束",
+  "achievementEventStartsAt": "开始于{time}",
+  "@achievementEventStartsAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "achievementEventEndsAt": "结束于{time}",
+  "@achievementEventEndsAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "achievementEventEndsIn": "将于{time}结束",
+  "@achievementEventEndsIn": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "achievementEventEnded": "活动已结束",
+  "achievementRewardVisualElement": "视觉元素",
+  "achievementUnlockToEquip": "解锁后可装备",
+  "achievementEquipAction": "装备",
+  "achievementEquipped": "已装备",
+  "achievementMapTitle": "成就地图",
+  "achievementMapSubtitle": "探索成就路径",
+  "achievementMapEmpty": "暂无成就节点",
+  "contractEntryTitle": "学习契约",
+  "contractEntrySubtitle": "创建学习挑战",
+  "contractTitle": "学习契约",
+  "contractCreateTitle": "创建契约",
+  "contractCreateSubtitle": "设定连续目标并投入光子",
+  "contractTargetMinutes": "每日分钟",
+  "contractTargetDays": "目标天数",
+  "contractPhotonStake": "投入光子",
+  "contractCreateAction": "创建契约",
+  "contractActiveTitle": "当前契约",
+  "contractProgressLabel": "已完成{current}/{target}天",
+  "@contractProgressLabel": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "target": {
+        "type": "int"
+      }
+    }
+  },
+  "contractDailyTarget": "每日目标",
+  "contractMinutesTarget": "{current}/{target}分钟",
+  "@contractMinutesTarget": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "target": {
+        "type": "int"
+      }
+    }
+  },
+  "contractEndsAt": "结束时间",
+  "contractCancelAction": "取消契约",
+  "contractInputInvalid": "请输入有效的契约数值",
+  "contractCreateFailed": "创建契约失败",
+  "contractCreateSuccess": "契约创建成功",
+  "contractCancelSuccess": "契约已取消",
+  "contractCancelFailed": "取消契约失败",
+  "contractCountdown": "倒计时",
+  "contractDaysRemaining": "还剩{days}天",
+  "@contractDaysRemaining": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "contractDeadlineReached": "已到截止日期",
+  "contractRewardMultiplier": "奖励倍率",
+  "contractCreatedCelebration": "契约创建成功！",
+  "streakCurrentLabel": "当前连胜",
+  "streakBestRecord": "最高记录",
+  "streakTotalCheckin": "总签到",
+  "streakFreezeUsed": "冻结使用",
+  "streakCalendarTitle": "连胜日历",
+  "streakCalendarRange": "最近{days}天",
+  "@streakCalendarRange": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "streakHistoryEmpty": "暂无连胜记录",
+  "streakStatusActive": "学习日",
+  "streakStatusFrozen": "冻结",
+  "streakStatusMissed": "中断",
+  "streakRiskNoFreeze": "冻结卡已用完，断签将中断连胜。",
+  "streakRiskLowFreeze": "仅剩1次冻结卡，建议及时补充。",
+  "streakShopTitle": "需要冻结卡保护？",
+  "streakShopSubtitle": "前往光子商城获取补给",
+  "streakShopAction": "打开商城",
   "streakDetails": "连胜详情",
   "dashboardCustomizeCards": "可定制卡片区",
   "dashboardEmptyHint": "至少保留一张卡片，编辑后会立即保存到本地配置。",

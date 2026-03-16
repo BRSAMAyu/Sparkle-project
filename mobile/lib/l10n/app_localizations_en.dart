@@ -1107,6 +1107,194 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get achievementLimitedTitle => 'Limited-time';
+
+  @override
+  String get achievementLimitedSubtitle => 'Available during the event';
+
+  @override
+  String get achievementLimitedTime => 'Limited';
+
+  @override
+  String get achievementEventWindow => 'Event Window';
+
+  @override
+  String get achievementEventStatusUpcoming => 'Upcoming';
+
+  @override
+  String get achievementEventStatusLive => 'Live';
+
+  @override
+  String get achievementEventStatusEnded => 'Ended';
+
+  @override
+  String achievementEventStartsAt(String time) {
+    return 'Starts $time';
+  }
+
+  @override
+  String achievementEventEndsAt(String time) {
+    return 'Ends $time';
+  }
+
+  @override
+  String achievementEventEndsIn(String time) {
+    return 'Ends $time';
+  }
+
+  @override
+  String get achievementEventEnded => 'Event ended';
+
+  @override
+  String get achievementRewardVisualElement => 'Visual Effect';
+
+  @override
+  String get achievementUnlockToEquip => 'Unlock to equip';
+
+  @override
+  String get achievementEquipAction => 'Equip';
+
+  @override
+  String get achievementEquipped => 'Equipped';
+
+  @override
+  String get achievementMapTitle => 'Achievement Map';
+
+  @override
+  String get achievementMapSubtitle => 'Explore achievement paths';
+
+  @override
+  String get achievementMapEmpty => 'No map nodes yet';
+
+  @override
+  String get contractEntryTitle => 'Contracts';
+
+  @override
+  String get contractEntrySubtitle => 'Create a study challenge';
+
+  @override
+  String get contractTitle => 'Study Contract';
+
+  @override
+  String get contractCreateTitle => 'Create Contract';
+
+  @override
+  String get contractCreateSubtitle => 'Set a streak goal and stake photons';
+
+  @override
+  String get contractTargetMinutes => 'Daily minutes';
+
+  @override
+  String get contractTargetDays => 'Target days';
+
+  @override
+  String get contractPhotonStake => 'Photon stake';
+
+  @override
+  String get contractCreateAction => 'Create Contract';
+
+  @override
+  String get contractActiveTitle => 'Active Contract';
+
+  @override
+  String contractProgressLabel(int current, int target) {
+    return '$current/$target days completed';
+  }
+
+  @override
+  String get contractDailyTarget => 'Daily target';
+
+  @override
+  String contractMinutesTarget(int current, int target) {
+    return '$current/$target min';
+  }
+
+  @override
+  String get contractEndsAt => 'Ends on';
+
+  @override
+  String get contractCancelAction => 'Cancel Contract';
+
+  @override
+  String get contractInputInvalid => 'Please enter valid contract values';
+
+  @override
+  String get contractCreateFailed => 'Failed to create contract';
+
+  @override
+  String get contractCreateSuccess => 'Contract created';
+
+  @override
+  String get contractCancelSuccess => 'Contract canceled';
+
+  @override
+  String get contractCancelFailed => 'Failed to cancel contract';
+
+  @override
+  String get contractCountdown => 'Countdown';
+
+  @override
+  String contractDaysRemaining(int days) => '$days days remaining';
+
+  @override
+  String get contractDeadlineReached => 'Deadline reached';
+
+  @override
+  String get contractRewardMultiplier => 'Reward Multiplier';
+
+  @override
+  String get contractCreatedCelebration => 'Contract Created!';
+
+  @override
+  String get streakCurrentLabel => 'Current Streak';
+
+  @override
+  String get streakBestRecord => 'Best Record';
+
+  @override
+  String get streakTotalCheckin => 'Total Check-ins';
+
+  @override
+  String get streakFreezeUsed => 'Freeze Used';
+
+  @override
+  String get streakCalendarTitle => 'Streak Calendar';
+
+  @override
+  String streakCalendarRange(int days) {
+    return 'Last $days days';
+  }
+
+  @override
+  String get streakHistoryEmpty => 'No streak history yet';
+
+  @override
+  String get streakStatusActive => 'Active';
+
+  @override
+  String get streakStatusFrozen => 'Frozen';
+
+  @override
+  String get streakStatusMissed => 'Missed';
+
+  @override
+  String get streakRiskNoFreeze =>
+      'No freeze charges left. A missed day will break your streak.';
+
+  @override
+  String get streakRiskLowFreeze =>
+      'Only 1 freeze charge left. Consider refilling.';
+
+  @override
+  String get streakShopTitle => 'Need more freeze charges?';
+
+  @override
+  String get streakShopSubtitle => 'Visit the Photon Shop to stock up.';
+
+  @override
+  String get streakShopAction => 'Open Shop';
+
+  @override
   String get streakDetails => 'Streak Details';
 
   @override

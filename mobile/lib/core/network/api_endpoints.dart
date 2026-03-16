@@ -264,6 +264,7 @@ class ApiEndpoints {
   static const String achievementsStats = '/achievements/stats';
   static const String achievementsMap = '/achievements/map';
   static const String achievementsStreak = '/achievements/streak';
+  static const String achievementsStreakHistory = '/achievements/streak/history';
   static String achievementDetail(String id) => '/achievements/$id';
   static String achievementShare(String id) => '/achievements/$id/share';
   static String achievementPin(String id) => '/achievements/$id/pin';
@@ -286,10 +287,6 @@ class ApiEndpoints {
   static const String achievementEventsProcess = '/achievements/events/process';
   static const String achievementsCloseToUnlock =
       '/achievements/close-to-unlock';
-
-  // Share Card Templates
-  static const String achievementShareTemplates =
-      '/achievements/share-templates';
 
   // Multi-Intent
   static const String multiIntentParse = '/multi-intent/parse';
@@ -367,4 +364,11 @@ class ApiEndpoints {
   // Device Registration (Push Notifications)
   static const String registerDevice = '/devices/register';
   static const String unregisterDevice = '/devices/unregister';
+
+  // Calendar Events
+  static const String calendarEvents = '/calendar';
+  static String calendarEvent(String id) => '/calendar/$id';
+  static const String calendarEventsSummary = '/calendar/summary';
+  static const String calendarEventsBatch = '/calendar/batch';
+  static String calendarEventRestore(String id) => '/calendar/$id/restore';
 }

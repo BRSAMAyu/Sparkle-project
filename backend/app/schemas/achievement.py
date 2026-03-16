@@ -1,5 +1,5 @@
 """Achievement Schemas - Achievement system request/response models"""
-from datetime import datetime
+from datetime import date, datetime
 from enum import StrEnum
 from typing import Any
 from uuid import UUID
@@ -24,6 +24,10 @@ class AchievementBase(BaseSchema):
     hint: str | None = Field(default=None, description="Hint for hidden achievement")
     sort_order: int = Field(default=0, description="Display order")
     parent_id: str | None = Field(default=None, description="Parent achievement ID")
+    active_from: datetime | None = Field(default=None, description="Active start time (UTC)")
+    active_to: datetime | None = Field(default=None, description="Active end time (UTC)")
+    is_limited: bool = Field(default=False, description="Is limited-time achievement")
+    event_tag: str | None = Field(default=None, description="Event tag for limited-time achievements")
 
 
 class AchievementDetail(AchievementBase):
@@ -122,6 +126,19 @@ class StreakStatsResponse(BaseModel):
     total_checkin_days: int = Field(default=0, description="Total check-in days")
     longest_streak_start: datetime | None = Field(default=None, description="Longest streak start")
     longest_streak_end: datetime | None = Field(default=None, description="Longest streak end")
+
+
+class StreakDayRecord(BaseModel):
+    """Single streak day record"""
+    day: date = Field(description="Calendar day")
+    status: str = Field(description="active | frozen | missed")
+    used_freeze: bool = Field(default=False, description="Whether freeze was used")
+    source_event: str | None = Field(default=None, description="Source event type")
+
+
+class StreakHistoryResponse(BaseModel):
+    """Streak history response for calendar view"""
+    days: list[StreakDayRecord] = Field(default_factory=list, description="Streak day records")
 
 
 # ========== Contract Schemas ==========
