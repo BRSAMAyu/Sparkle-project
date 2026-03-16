@@ -2,8 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
@@ -25,9 +27,12 @@ import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.
 import 'package:sparkle/features/chat/presentation/providers/chat_state.dart';
 import 'package:sparkle/features/chat/presentation/widgets/content_review_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_review_card.dart';
+import 'package:sparkle/features/chat/presentation/widgets/plan_switch_confirmation_dialog.dart';
 import 'package:sparkle/features/file/file.dart';
 import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
+import 'package:sparkle/features/notification_center/notification_center.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
+import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 import 'package:sparkle/features/reviews/presentation/providers/nightly_review_provider.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
@@ -838,6 +843,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
         } else if (event is SprintModeSwitchEvent) {
           // Sprint Mode Switch Event
           _handleSprintModeSwitch(event);
+          flushPending();
+        } else if (event is NotificationEvent) {
+          // Notification Event - 实时通知推送
+          _handleNotificationEvent(event);
           flushPending();
         } else if (event is CollaborationTimelineEvent) {
           accumulatedCollaboration = event.collaborationData;

@@ -686,6 +686,35 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatModeSelectorTitle => 'Choose AI Collaboration Mode';
 
   @override
+  String chatModeActivated(Object mode) {
+    return '$mode mode activated';
+  }
+
+  @override
+  String get chatPlanContextSwitched => 'Plan context switched';
+
+  @override
+  String get chatPlanSwitchTitle => 'Switch Plan Context';
+
+  @override
+  String get chatPlanSwitchMessage =>
+      'Switching plans will clear current conversation. Continue?';
+
+  @override
+  String chatPlanSwitchUnsavedCount(Object count) {
+    return '$count unsaved messages';
+  }
+
+  @override
+  String get chatReconnecting => 'Reconnecting...';
+
+  @override
+  String get chatReconnected => 'Reconnected';
+
+  @override
+  String get chatConnectionFailed => 'Connection failed';
+
+  @override
   String get aiCollabModeTitle => 'AI Collaboration';
 
   @override
@@ -6142,4 +6171,299 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get wechatNotInstalled => 'Please install WeChat first';
+
+  @override
+  String get shareTemplateTitle => 'Choose Template';
+
+  @override
+  String get shareTemplateCosmic => 'Cosmic';
+
+  @override
+  String get shareTemplateMinimal => 'Minimal';
+
+  @override
+  String get shareTemplateNeon => 'Neon';
+
+  @override
+  String get shareTemplateElegant => 'Elegant';
+
+  @override
+  String get shareTemplateCosmicDesc =>
+      'Deep blue gradient, golden particles, soft glow';
+
+  @override
+  String get shareTemplateMinimalDesc =>
+      'Solid color, minimal lines, black text';
+
+  @override
+  String get shareTemplateNeonDesc => 'Pure black, neon glow, cyberpunk colors';
+
+  @override
+  String get shareTemplateElegantDesc =>
+      'Beige and gold, elegant serif, gold accents';
+
+  @override
+  String get sharePrivacyTitle => 'Privacy Settings';
+
+  @override
+  String get sharePrivacyDisplayName => 'Display Name';
+
+  @override
+  String get sharePrivacyDisplayNameHint => 'Use default nickname';
+
+  @override
+  String get sharePrivacyDisplayNameNote =>
+      'Leave empty to use your default nickname';
+
+  @override
+  String get sharePrivacyShowAvatar => 'Show Avatar';
+
+  @override
+  String get sharePrivacyShowAvatarDesc =>
+      'Display your avatar on the share card';
+
+  @override
+  String get sharePrivacyShowDate => 'Show Unlock Date';
+
+  @override
+  String get sharePrivacyShowDateDesc => 'Display the achievement unlock date';
+
+  @override
+  String get sharePrivacyShowStats => 'Show Progress Stats';
+
+  @override
+  String get sharePrivacyShowStatsDesc => 'Display progress bar and statistics';
+
+  @override
+  String get sharePrivacyShowFirstBadge => 'First Unlocker Badge';
+
+  @override
+  String get sharePrivacyShowFirstBadgeDesc =>
+      'Show exclusive badge if you\'re the first unlocker';
+
+  @override
+  String get sharePreviewLoading => 'Generating preview...';
+
+  @override
+  String get sharePreviewError => 'Preview generation failed';
+
+  @override
+  String get shareRegenerateCard => 'Regenerate';
+
+  @override
+  String get notificationPermissionStatus => 'Notification Permission';
+
+  @override
+  String get notificationPermissionGranted => 'Granted';
+
+  @override
+  String get notificationPermissionDenied => 'Denied';
+
+  @override
+  String get notificationPermissionPartial => 'Partial';
+
+  @override
+  String get notificationPermissionRequest => 'Request Permission';
+
+  @override
+  String get notificationPermissionOpenSettings => 'Open Settings';
+
+  @override
+  String get notificationPermissionDeniedHint =>
+      'Notification permission denied. Please enable in system settings.';
+
+  @override
+  String get notificationPermissionPartialHint =>
+      'Some notification features are limited. Consider enabling full permissions.';
+
+  @override
+  String get visualElementsTitle => 'Visual Elements';
+
+  @override
+  String get visualElementsUnlockProgress => 'Unlock Progress';
+
+  @override
+  String get visualElementsEquipped => 'Equipped';
+
+  @override
+  String get visualElementTabAll => 'All';
+
+  @override
+  String get visualElementTabBackground => 'Background';
+
+  @override
+  String get visualElementTabParticle => 'Particles';
+
+  @override
+  String get visualElementTabEffect => 'Effects';
+
+  @override
+  String get visualElementTabUnlocked => 'Unlocked';
+
+  @override
+  String get visualElementEmpty => 'No visual elements';
+
+  @override
+  String get visualElementFilter => 'Filter';
+
+  @override
+  String get visualElementApplyFilter => 'Apply Filter';
+
+  @override
+  String get visualElementType => 'Type';
+
+  @override
+  String get visualElementCategory => 'Category';
+
+  @override
+  String get visualElementSource => 'Source';
+
+  @override
+  String get visualElementRarity => 'Rarity';
+
+  @override
+  String get visualElementEquipped => 'Equipped';
+
+  @override
+  String get visualElementUnlocked => 'Unlocked';
+
+  @override
+  String get visualElementLocked => 'Locked';
+
+  @override
+  String get visualElementEquip => 'Equip';
+
+  @override
+  String get visualElementUnequip => 'Unequip';
+
+  @override
+  String get visualElementEquipSuccess => 'Equipped successfully';
+
+  @override
+  String get visualElementEquipFailed => 'Failed to equip';
+
+  @override
+  String get visualElementUnequipSuccess => 'Unequipped';
+
+  @override
+  String get visualElementUnequipFailed => 'Failed to unequip';
+
+  @override
+  String get visualElementUnlockSystem => 'System Gift';
+
+  @override
+  String get visualElementUnlockAchievement => 'Achievement Reward';
+
+  @override
+  String get visualElementUnlockShop => 'Shop Purchase';
+
+  @override
+  String get visualElementUnlockEvent => 'Event Reward';
+
+  @override
+  String get visualElementUnlockSeason => 'Season Reward';
+
+  @override
+  String get visualElementUnlockHintSystem => 'Gifted by system';
+
+  @override
+  String visualElementUnlockHintAchievement(Object achievement) {
+    return 'Unlock by completing achievement \'$achievement\'';
+  }
+
+  @override
+  String get visualElementUnlockHintAchievementDefault =>
+      'Unlock by completing achievement';
+
+  @override
+  String visualElementUnlockHintShop(Object price) {
+    return 'Purchase for $price photons in shop';
+  }
+
+  @override
+  String get visualElementUnlockHintShopDefault => 'Purchase in shop';
+
+  @override
+  String get visualElementUnlockHintEvent =>
+      'Participate in limited-time event';
+
+  @override
+  String get visualElementUnlockHintSeason => 'Season reward';
+
+  @override
+  String get visualElementBackground => 'Background';
+
+  @override
+  String get visualElementParticle => 'Particle';
+
+  @override
+  String get visualElementEffect => 'Effect';
+
+  @override
+  String get visualElementBundle => 'Bundle';
+
+  @override
+  String get visualElementsEntrySubtitle => 'Customize your scene';
+
+  @override
+  String get visualElementShare => 'Share';
+
+  @override
+  String visualElementShareMessage(Object name) {
+    return 'Check out my \"$name\" visual element in Sparkle!';
+  }
+
+  @override
+  String visualElementShareFailed(Object error) {
+    return 'Share failed: $error';
+  }
+
+  @override
+  String get visualElementShareUnavailable => 'Preview not ready yet';
+
+  @override
+  String get visualElementEventTitle => 'Limited-Time Event';
+
+  @override
+  String visualElementEventEndsIn(Object time) {
+    return 'Ends in $time';
+  }
+
+  @override
+  String get visualElementEventEnded => 'Event ended';
+
+  @override
+  String visualElementEventCountdownDays(Object days, Object hours) {
+    return '${days}d ${hours}h';
+  }
+
+  @override
+  String visualElementEventCountdownHours(Object hours, Object minutes) {
+    return '${hours}h ${minutes}m';
+  }
+
+  @override
+  String visualElementEventCountdownMinutes(Object minutes) {
+    return '${minutes}m';
+  }
+
+  @override
+  String get visualElementCategorySpace => 'Space';
+
+  @override
+  String get visualElementCategoryNature => 'Nature';
+
+  @override
+  String get visualElementCategoryCyberpunk => 'Cyberpunk';
+
+  @override
+  String get visualElementCategoryAbstract => 'Abstract';
+
+  @override
+  String get visualElementCategoryAmbient => 'Ambient';
+
+  @override
+  String visualElementEmptyType(Object type) {
+    return 'No $type elements';
+  }
 }

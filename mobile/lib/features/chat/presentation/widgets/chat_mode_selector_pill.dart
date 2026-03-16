@@ -72,7 +72,8 @@ class ChatModeSelectorPill extends ConsumerWidget {
           return;
         }
         if (result is ChatMode) {
-          ref.read(chatModeNotifierProvider.notifier).setMode(result);
+          // Use setModeWithFeedback for visual feedback
+          ref.read(chatModeNotifierProvider.notifier).setModeWithFeedback(result, context);
           if (result.apiValue != 'standard') {
             ref.read(lastMultiAgentModeProvider.notifier).state = result;
           }

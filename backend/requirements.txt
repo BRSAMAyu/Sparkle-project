@@ -101,3 +101,6 @@ y-py>=0.6.0
 # Dictionary/HTML parsing (MDX feature is disabled by default)
 beautifulsoup4>=4.12.0
 lxml>=5.0.0
+
+# Firebase Admin SDK for Push Notifications
+firebase-admin>=6.4.0

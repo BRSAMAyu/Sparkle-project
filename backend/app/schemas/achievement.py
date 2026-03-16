@@ -246,14 +246,79 @@ class AchievementEventProcessResponse(BaseModel):
 
 # ========== Share Schemas ==========
 
+
+class ShareCardPrivacySettings(BaseModel):
+    """Privacy settings for achievement share cards"""
+
+    display_name: str | None = Field(
+        default=None,
+        description="Custom display name. None means use default nickname.",
+    )
+    show_avatar: bool = Field(default=False, description="Show user avatar on card")
+    show_unlock_date: bool = Field(default=True, description="Show unlock date on card")
+    show_progress_stats: bool = Field(
+        default=True,
+        description="Show progress statistics on card",
+    )
+    show_first_unlocker_badge: bool = Field(
+        default=True,
+        description="Show first unlocker badge if applicable",
+    )
+
+    def get_effective_display_name(self, default_name: str) -> str:
+        """Get effective display name, using default if custom name not set."""
+        return self.display_name if self.display_name else default_name
+
+    def settings_hash(self) -> str:
+        """Generate a hash of settings for cache key."""
+        import hashlib
+
+        data = f"{self.display_name}|{self.show_avatar}|{self.show_unlock_date}|{self.show_progress_stats}|{self.show_first_unlocker_badge}"
+        return hashlib.md5(data.encode()).hexdigest()[:8]
+
+
+class ShareTemplateInfo(BaseModel):
+    """Share card template information"""
+
+    id: str = Field(description="Template ID")
+    name: str = Field(description="Template display name")
+    description: str | None = Field(default=None, description="Template description")
+    preview_url: str | None = Field(default=None, description="Template preview image URL")
+
+
+class AchievementShareRequest(BaseModel):
+    """Request body for generating achievement share card"""
+
+    template_id: str = Field(default="cosmic", description="Template ID (cosmic, minimal, neon, elegant)")
+    privacy: ShareCardPrivacySettings = Field(
+        default_factory=ShareCardPrivacySettings,
+        description="Privacy settings for the share card",
+    )
+
+
 class AchievementShareResponse(BaseModel):
     """Achievement share response"""
+
     card_url: str = Field(description="Share card image URL")
     mime_type: str = Field(default="image/png", description="Share card MIME type")
     width: int = Field(description="Share card width in pixels")
     height: int = Field(description="Share card height in pixels")
     generated_at: datetime = Field(description="Share card generation time")
+    template_id: str = Field(default="cosmic", description="Template used for generation")
+    privacy_settings: ShareCardPrivacySettings = Field(
+        default_factory=ShareCardPrivacySettings,
+        description="Privacy settings applied to card",
+    )
     achievement: AchievementDetail = Field(description="Achievement info")
+
+
+class ShareTemplateListResponse(BaseModel):
+    """Response for listing available share card templates"""
+
+    templates: list[ShareTemplateInfo] = Field(
+        default_factory=list,
+        description="Available templates",
+    )
 
 
 class AchievementPinResponse(BaseModel):

@@ -158,6 +158,64 @@ class NotificationCenter extends _$NotificationCenter {
 
     await loadNotifications(sourceType: currentFilter);
   }
+
+  /// 处理 WebSocket 推送的新通知（实时更新）
+  void handleNewNotification({
+    required Map<String, dynamic> notificationData,
+    required String notificationType,
+  }) {
+    final notification = UnifiedNotification.fromJson({
+      ...notificationData,
+      'source_type': notificationType,
+    });
+
+    // 检查是否已存在相同 ID 的通知，避免重复
+    final existingIds = state.notifications.map((n) => n.id).toSet();
+    if (existingIds.contains(notification.id)) {
+      // 更新现有通知
+      updateNotification(notification);
+      return;
+    }
+
+    // 添加到列表开头
+    final updatedNotifications = [notification, ...state.notifications];
+
+    // 更新未读计数
+    final unreadCount = updatedNotifications.where((n) => !n.isRead).length;
+
+    state = state.copyWith(
+      notifications: updatedNotifications,
+      unreadCount: unreadCount,
+    );
+  }
+
+  /// 从列表中移除通知
+  void removeNotification(String notificationId) {
+    final updatedNotifications = state.notifications
+        .where((n) => n.id != notificationId)
+        .toList();
+
+    final unreadCount = updatedNotifications.where((n) => !n.isRead).length;
+
+    state = state.copyWith(
+      notifications: updatedNotifications,
+      unreadCount: unreadCount,
+    );
+  }
+
+  /// 更新单个通知（用于实时更新已读状态等）
+  void updateNotification(UnifiedNotification updated) {
+    final updatedNotifications = state.notifications.map((n) {
+      return n.id == updated.id ? updated : n;
+    }).toList();
+
+    final unreadCount = updatedNotifications.where((n) => !n.isRead).length;
+
+    state = state.copyWith(
+      notifications: updatedNotifications,
+      unreadCount: unreadCount,
+    );
+  }
 }
 
 /// Filter options for notifications

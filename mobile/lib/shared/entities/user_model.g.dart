@@ -10,9 +10,6 @@ UserModel _$UserModelFromJson(Map<String, dynamic> json) => UserModel(
       id: json['id'] as String,
       username: json['username'] as String,
       email: json['email'] as String,
-      emailVerified: json['email_verified'] as bool? ?? false,
-      passwordLoginEnabled:
-          json['password_login_enabled'] as bool? ?? true,
       flameLevel: (json['flame_level'] as num).toInt(),
       flameBrightness: (json['flame_brightness'] as num).toDouble(),
       depthPreference: (json['depth_preference'] as num).toDouble(),
@@ -20,6 +17,8 @@ UserModel _$UserModelFromJson(Map<String, dynamic> json) => UserModel(
       isActive: json['is_active'] as bool,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
+      emailVerified: json['email_verified'] as bool? ?? false,
+      passwordLoginEnabled: json['password_login_enabled'] as bool? ?? true,
       nickname: json['nickname'] as String?,
       avatarUrl: json['avatar_url'] as String?,
       avatarStatus:

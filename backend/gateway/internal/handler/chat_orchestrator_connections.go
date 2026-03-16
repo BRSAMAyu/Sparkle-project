@@ -20,3 +20,8 @@ func (h *ChatOrchestrator) getConnection(userID string) (*websocket.Conn, bool) 
 	}
 	return h.wsRegistry.Get(userID)
 }
+
+// Registry returns the underlying connection registry for shutdown draining.
+func (h *ChatOrchestrator) Registry() *ConnectionRegistry {
+	return h.wsRegistry
+}

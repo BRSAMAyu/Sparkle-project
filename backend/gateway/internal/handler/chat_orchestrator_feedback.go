@@ -45,6 +45,7 @@ func (h *ChatOrchestrator) saveMessage(userID, sessionID, role, content string) 
 	defer span.End()
 
 	payload := map[string]string{
+		"id":         uuid.New().String(), // Generate stable UUID for message ID
 		"session_id": sessionID,
 		"user_id":    userID,
 		"role":       role,

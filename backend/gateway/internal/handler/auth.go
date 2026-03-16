@@ -87,7 +87,6 @@ func (h *AuthHandler) AppleLogin(c *gin.Context) {
 				Email:              email,
 				HashedPassword:     h.randomString(32),
 				Nickname:           pgtype.Text{String: claims.Name, Valid: claims.Name != ""},
-				EmailVerified:      true,
 				RegistrationSource: "apple",
 				IsActive:           true,
 				AppleID:            pgtype.Text{String: claims.Subject, Valid: true},
@@ -99,7 +98,7 @@ func (h *AuthHandler) AppleLogin(c *gin.Context) {
 		}
 	}
 
-	if err == nil && (userNeedsLink || !user.EmailVerified || !user.AppleID.Valid) {
+	if err == nil && (userNeedsLink || !user.AppleID.Valid) {
 		user, err = h.queries.LinkAppleUser(ctx, db.LinkAppleUserParams{
 			ID:      user.ID,
 			AppleID: pgtype.Text{String: claims.Subject, Valid: true},

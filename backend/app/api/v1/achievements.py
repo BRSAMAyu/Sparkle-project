@@ -18,14 +18,19 @@ from app.schemas.achievement import (
     AchievementDetailResponse,
     AchievementEventProcessResponse,
     AchievementPinResponse,
+    AchievementShareRequest,
     AchievementShareResponse,
     CloseToUnlockAchievementListResponse,
     ContractCreateRequest,
     ContractResponse,
+    ShareCardPrivacySettings,
+    ShareTemplateInfo,
+    ShareTemplateListResponse,
 )
 from app.services.achievement_engine import AchievementEngine, ContractService
 from app.services.equipment_service import EquipmentService, EquipmentSource
 from app.services.share_card_service import ShareCardService
+from app.services.share_card_templates import get_all_templates
 
 router = APIRouter()
 
@@ -81,13 +86,20 @@ async def _share_achievement_card(
     current_user: User,
     db: AsyncSession,
     locale: str | None = None,
+    template_id: str = "cosmic",
+    privacy: ShareCardPrivacySettings | None = None,
 ) -> AchievementShareResponse:
+    if privacy is None:
+        privacy = ShareCardPrivacySettings()
+
     service = ShareCardService(db)
 
     try:
         result, achievement, _ = await service.generate_achievement_share_card(
             current_user.id,
             achievement_id,
+            template_id=template_id,
+            privacy=privacy,
         )
     except ValueError as exc:
         message = str(exc)
@@ -104,6 +116,8 @@ async def _share_achievement_card(
         width=result.width,
         height=result.height,
         generated_at=result.generated_at,
+        template_id=result.template_id,
+        privacy_settings=result.privacy_settings,
         achievement=engine._build_achievement_detail(achievement, locale),
     )
 
@@ -579,14 +593,84 @@ async def get_achievement_detail_canonical(
     return await _build_achievement_detail_response(achievement_id, current_user, db)
 
 
+@router.get("/share-templates", response_model=ShareTemplateListResponse)
+async def get_share_templates(
+    locale: str | None = Query(None, description="Locale for template names"),
+    accept_language: str | None = Header(None),
+):
+    """
+    获取分享卡片模板列表
+
+    Returns available share card templates.
+    """
+    from app.services.share_card_templates import get_all_templates
+
+    resolved_locale = _resolve_locale(locale, accept_language)
+    templates = get_all_templates()
+
+    template_infos = []
+    for template in templates:
+        # Localize template name
+        name = template.name
+        if resolved_locale == "zh":
+            name_map = {
+                "cosmic": "星空",
+                "minimal": "简约",
+                "neon": "霓虹",
+                "elegant": "典雅",
+            }
+            name = name_map.get(template.id, template.name)
+
+            description_map = {
+                "cosmic": "渐变背景 + 粒子 + 光晕效果",
+                "minimal": "纯色背景 + 极简装饰",
+                "neon": "深色背景 + 霓虹发光效果",
+                "elegant": "金色边框 + 优雅字体",
+            }
+            description = description_map.get(template.id, template.description or "")
+        else:
+            description = template.description or ""
+
+        template_infos.append(
+            ShareTemplateInfo(
+                id=template.id,
+                name=name,
+                description=description,
+                preview_url=template.preview_url,
+            )
+        )
+
+    return ShareTemplateListResponse(templates=template_infos)
+
+
 @router.post("/{achievement_id}/share", response_model=AchievementShareResponse)
 async def share_achievement_canonical(
     achievement_id: str = Path(..., description="Achievement ID"),
+    request: AchievementShareRequest | None = None,
+    locale: str | None = Query(None, description="Locale for localized fields"),
+    accept_language: str | None = Header(None),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Canonical share card endpoint."""
-    return await _share_achievement_card(achievement_id, current_user, db)
+    """
+    生成成就分享卡片
+
+    Returns a shareable image URL for the achievement.
+    Supports template selection and privacy settings.
+    """
+    resolved_locale = _resolve_locale(locale, accept_language)
+
+    if request is None:
+        request = AchievementShareRequest()
+
+    return await _share_achievement_card(
+        achievement_id,
+        current_user,
+        db,
+        locale=resolved_locale,
+        template_id=request.template_id,
+        privacy=request.privacy,
+    )
 
 
 @router.post("/{achievement_id}/pin", response_model=AchievementPinResponse)

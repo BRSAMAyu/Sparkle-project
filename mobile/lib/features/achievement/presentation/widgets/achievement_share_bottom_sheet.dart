@@ -15,12 +15,16 @@ import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/share_service.dart';
 import 'package:sparkle/core/services/wechat_share_service.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
+import 'package:sparkle/features/achievement/presentation/widgets/share_privacy_settings.dart';
+import 'package:sparkle/features/achievement/presentation/widgets/share_template_selector.dart';
 import 'package:sparkle/features/community/presentation/widgets/share_resource_sheet.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 
 /// Achievement share bottom sheet with multi-channel options
 ///
 /// Provides sharing options:
+/// - Template selection (cosmic, minimal, neon, elegant)
+/// - Privacy controls (display name, avatar, date, stats, badge)
 /// - WeChat friends (if available)
 /// - WeChat moments (if available)
 /// - System share
@@ -32,6 +36,7 @@ class AchievementShareBottomSheet extends ConsumerStatefulWidget {
     required this.achievementId,
     required this.achievementName,
     this.shareCardUrl,
+    this.defaultDisplayName,
     this.onCommunityShare,
     super.key,
   });
@@ -39,6 +44,7 @@ class AchievementShareBottomSheet extends ConsumerStatefulWidget {
   final String achievementId;
   final String achievementName;
   final String? shareCardUrl;
+  final String? defaultDisplayName;
   final VoidCallback? onCommunityShare;
 
   @override
@@ -57,6 +63,13 @@ class _AchievementShareBottomSheetState
   bool _wechatAvailable = false;
   bool _wechatInstalled = false;
 
+  // Template and privacy state
+  List<ShareTemplateInfo> _templates = [];
+  String _selectedTemplateId = 'cosmic';
+  ShareCardPrivacySettings _privacySettings = ShareCardPrivacySettings();
+
+  bool _showPrivacySettings = false;
+
   @override
   void initState() {
     super.initState();
@@ -64,14 +77,14 @@ class _AchievementShareBottomSheetState
   }
 
   Future<void> _initializeAndPrepare() async {
-    // Check WeChat availability in parallel
-    final wechatFuture = _checkWeChatAvailability();
+    // Check WeChat availability and load templates in parallel
+    await Future.wait([
+      _checkWeChatAvailability(),
+      _loadTemplates(),
+    ]);
 
-    // Prepare share card
+    // Prepare share card with initial settings
     await _prepareShareCard();
-
-    // Wait for WeChat check
-    await wechatFuture;
   }
 
   Future<void> _checkWeChatAvailability() async {
@@ -89,12 +102,55 @@ class _AchievementShareBottomSheetState
     }
   }
 
+  Future<void> _loadTemplates() async {
+    final templates =
+        await ref.read(achievementProvider.notifier).getShareTemplates();
+    if (mounted && templates.isNotEmpty) {
+      setState(() {
+        _templates = templates;
+      });
+    } else {
+      // Fallback to default templates
+      _templates = _getDefaultTemplates();
+    }
+  }
+
+  List<ShareTemplateInfo> _getDefaultTemplates() {
+    final l10n = context.l10n;
+    return [
+      ShareTemplateInfo(
+        id: 'cosmic',
+        name: l10n.shareTemplateCosmic,
+        description: l10n.shareTemplateCosmicDesc,
+      ),
+      ShareTemplateInfo(
+        id: 'minimal',
+        name: l10n.shareTemplateMinimal,
+        description: l10n.shareTemplateMinimalDesc,
+      ),
+      ShareTemplateInfo(
+        id: 'neon',
+        name: l10n.shareTemplateNeon,
+        description: l10n.shareTemplateNeonDesc,
+      ),
+      ShareTemplateInfo(
+        id: 'elegant',
+        name: l10n.shareTemplateElegant,
+        description: l10n.shareTemplateElegantDesc,
+      ),
+    ];
+  }
+
   Future<void> _prepareShareCard() async {
     try {
-      // Try to get share card from provider first
+      // Get share card with current template and privacy settings
       final shareCard = await ref
           .read(achievementProvider.notifier)
-          .shareAchievement(widget.achievementId);
+          .shareAchievement(
+            widget.achievementId,
+            templateId: _selectedTemplateId,
+            privacySettings: _privacySettings,
+          );
 
       String? cardUrl = shareCard?.cardUrl ?? widget.shareCardUrl;
 
@@ -141,8 +197,9 @@ class _AchievementShareBottomSheetState
     final tempDir = await getTemporaryDirectory();
     final timestamp = shareCard?.generatedAt.millisecondsSinceEpoch ??
         DateTime.now().millisecondsSinceEpoch;
+    final privacyHash = _privacySettings.settingsHash();
     final file = File(
-      '${tempDir.path}/achievement_${widget.achievementId}_$timestamp.png',
+      '${tempDir.path}/achievement_${widget.achievementId}_${_selectedTemplateId}_$privacyHash\_$timestamp.png',
     );
     await file.writeAsBytes(response.bodyBytes);
     return file;
@@ -153,6 +210,26 @@ class _AchievementShareBottomSheetState
     final uri = Uri.parse(rawUrl);
     if (uri.hasScheme) return rawUrl;
     return Uri.parse(ApiConstants.baseUrl).resolve(rawUrl).toString();
+  }
+
+  void _onTemplateSelected(String templateId) {
+    if (_selectedTemplateId == templateId) return;
+
+    setState(() {
+      _selectedTemplateId = templateId;
+      _isLoading = true;
+    });
+    _prepareShareCard();
+  }
+
+  void _onPrivacySettingsChanged(ShareCardPrivacySettings settings) {
+    if (_privacySettings.settingsHash() == settings.settingsHash()) return;
+
+    setState(() {
+      _privacySettings = settings;
+      _isLoading = true;
+    });
+    _prepareShareCard();
   }
 
   @override
@@ -166,66 +243,157 @@ class _AchievementShareBottomSheetState
       ),
       child: SafeArea(
         top: false,
-        child: Padding(
-          padding: EdgeInsets.only(
-            left: DS.lg,
-            right: DS.lg,
-            top: DS.lg,
-            bottom: MediaQuery.of(context).viewInsets.bottom + DS.lg,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Handle bar
-              Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: DS.neutral300,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-              const SizedBox(height: DS.md),
-
-              // Title
-              Text(
-                l10n.shareOptionsTitle,
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: DS.md),
-
-              // Preview
-              _buildPreview(),
-              const SizedBox(height: DS.lg),
-
-              // Share options
-              if (_isLoading)
-                const Padding(
-                  padding: EdgeInsets.all(DS.xl),
-                  child: CircularProgressIndicator(),
-                )
-              else if (_errorMessage != null)
-                Padding(
-                  padding: const EdgeInsets.all(DS.md),
-                  child: Text(
-                    _errorMessage!,
-                    style: TextStyle(color: DS.error),
-                    textAlign: TextAlign.center,
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: DS.lg,
+              right: DS.lg,
+              top: DS.lg,
+              bottom: MediaQuery.of(context).viewInsets.bottom + DS.lg,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Handle bar
+                Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: DS.neutral300,
+                    borderRadius: BorderRadius.circular(4),
                   ),
-                )
-              else
-                _buildShareOptions(),
+                ),
+                const SizedBox(height: DS.md),
 
-              const SizedBox(height: DS.md),
+                // Title
+                Text(
+                  l10n.shareOptionsTitle,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: DS.md),
 
-              // Cancel button
-              SparkleButton(
-                label: l10n.cancel,
-                variant: ButtonVariant.ghost,
-                onPressed: () => Navigator.of(context).pop(),
-                expand: true,
-              ),
-            ],
+                // Template Selector
+                if (_templates.isNotEmpty) ...[
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      l10n.shareTemplateTitle,
+                      style: TextStyle(
+                        fontSize: DS.fontSizeSm,
+                        fontWeight: DS.fontWeightMedium,
+                        color: DS.textSecondary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: DS.sm),
+                  ShareTemplateSelector(
+                    templates: _templates,
+                    selectedId: _selectedTemplateId,
+                    onSelected: _onTemplateSelected,
+                  ),
+                  const SizedBox(height: DS.md),
+                ],
+
+                // Privacy Settings Toggle
+                InkWell(
+                  onTap: () {
+                    setState(() {
+                      _showPrivacySettings = !_showPrivacySettings;
+                    });
+                  },
+                  borderRadius: DS.borderRadius8,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: DS.sm),
+                    child: Row(
+                      children: [
+                        Icon(
+                          _showPrivacySettings
+                              ? Icons.expand_less
+                              : Icons.expand_more,
+                          color: DS.textSecondary,
+                          size: 20,
+                        ),
+                        const SizedBox(width: DS.xs),
+                        Text(
+                          l10n.sharePrivacyTitle,
+                          style: TextStyle(
+                            fontSize: DS.fontSizeSm,
+                            fontWeight: DS.fontWeightMedium,
+                            color: DS.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                if (_showPrivacySettings) ...[
+                  const SizedBox(height: DS.sm),
+                  SharePrivacySettings(
+                    settings: _privacySettings,
+                    onSettingsChanged: _onPrivacySettingsChanged,
+                    defaultDisplayName: widget.defaultDisplayName,
+                  ),
+                ],
+                const SizedBox(height: DS.md),
+
+                // Preview
+                _buildPreview(),
+                const SizedBox(height: DS.lg),
+
+                // Share options
+                if (_isLoading)
+                  Padding(
+                    padding: const EdgeInsets.all(DS.xl),
+                    child: Column(
+                      children: [
+                        const CircularProgressIndicator(),
+                        const SizedBox(height: DS.sm),
+                        Text(
+                          l10n.sharePreviewLoading,
+                          style: TextStyle(color: DS.textSecondary),
+                        ),
+                      ],
+                    ),
+                  )
+                else if (_errorMessage != null)
+                  Padding(
+                    padding: const EdgeInsets.all(DS.md),
+                    child: Column(
+                      children: [
+                        Text(
+                          _errorMessage!,
+                          style: TextStyle(color: DS.error),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: DS.sm),
+                        TextButton.icon(
+                          onPressed: () {
+                            setState(() {
+                              _isLoading = true;
+                              _errorMessage = null;
+                            });
+                            _prepareShareCard();
+                          },
+                          icon: const Icon(Icons.refresh),
+                          label: Text(l10n.shareRegenerateCard),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  _buildShareOptions(),
+
+                const SizedBox(height: DS.md),
+
+                // Cancel button
+                SparkleButton(
+                  label: l10n.cancel,
+                  variant: ButtonVariant.ghost,
+                  onPressed: () => Navigator.of(context).pop(),
+                  expand: true,
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -235,17 +403,30 @@ class _AchievementShareBottomSheetState
   Widget _buildPreview() {
     if (_isLoading) {
       return Container(
-        height: 120,
-        width: 90,
+        height: 160,
+        width: 120,
         decoration: BoxDecoration(
           color: DS.surfaceSecondary,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
         ),
-        child: const Center(
-          child: SizedBox(
-            width: 24,
-            height: 24,
-            child: CircularProgressIndicator(strokeWidth: 2),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              const SizedBox(height: DS.sm),
+              Text(
+                'Loading...',
+                style: TextStyle(
+                  color: DS.textTertiary,
+                  fontSize: 12,
+                ),
+              ),
+            ],
           ),
         ),
       );
@@ -253,21 +434,21 @@ class _AchievementShareBottomSheetState
 
     if (_shareCardFile != null) {
       return ClipRRect(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
         child: Image.file(
           _shareCardFile!,
-          height: 120,
+          height: 160,
           fit: BoxFit.cover,
         ),
       );
     }
 
     return Container(
-      height: 120,
-      width: 90,
+      height: 160,
+      width: 120,
       decoration: BoxDecoration(
         color: DS.surfaceSecondary,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Icon(
         Icons.image_not_supported_outlined,
@@ -517,6 +698,7 @@ Future<void> showAchievementShareSheet(
   required String achievementId,
   required String achievementName,
   String? shareCardUrl,
+  String? defaultDisplayName,
   VoidCallback? onCommunityShare,
 }) async {
   await showModalBottomSheet<void>(
@@ -527,6 +709,7 @@ Future<void> showAchievementShareSheet(
       achievementId: achievementId,
       achievementName: achievementName,
       shareCardUrl: shareCardUrl,
+      defaultDisplayName: defaultDisplayName,
       onCommunityShare: onCommunityShare,
     ),
   );

@@ -55,7 +55,7 @@ func (r *PostgresRepository) InsertWithTx(ctx context.Context, tx pgx.Tx, entry 
 	params := db.InsertOutboxEntryParams{
 		ID:            toPgUUID(entry.ID),
 		AggregateType: string(entry.AggregateType),
-		AggregateID:   toPgUUID(entry.AggregateID),
+		AggregateID:   entry.AggregateID.String(),
 		EventType:     string(entry.EventType),
 		EventVersion:  int32(entry.EventVersion),
 		Payload:       entry.Payload,
@@ -90,10 +90,11 @@ func (r *PostgresRepository) GetUnpublished(ctx context.Context, limit int) ([]*
 
 	entries := make([]*event.OutboxEntry, len(rows))
 	for i, row := range rows {
+		aggID, _ := uuid.Parse(row.AggregateID)
 		entries[i] = &event.OutboxEntry{
 			ID:             fromPgUUID(row.ID),
 			AggregateType:  event.AggregateType(row.AggregateType),
-			AggregateID:    fromPgUUID(row.AggregateID),
+			AggregateID:    aggID,
 			EventType:      event.EventType(row.EventType),
 			EventVersion:   int(row.EventVersion),
 			Payload:        row.Payload,
@@ -166,7 +167,7 @@ func NewEventStoreRepository(pool *pgxpool.Pool) *EventStoreRepository {
 func (r *EventStoreRepository) SaveWithTx(ctx context.Context, tx pgx.Tx, entry *event.EventStoreEntry) error {
 	params := db.InsertEventStoreEntryParams{
 		AggregateType:  string(entry.AggregateType),
-		AggregateID:    toPgUUID(entry.AggregateID),
+		AggregateID:    entry.AggregateID.String(),
 		EventType:      string(entry.EventType),
 		EventVersion:   int32(entry.EventVersion),
 		SequenceNumber: entry.SequenceNumber,
@@ -194,7 +195,7 @@ func (r *EventStoreRepository) GetByAggregate(
 ) ([]*event.EventStoreEntry, error) {
 	params := db.GetEventsByAggregateParams{
 		AggregateType: string(aggregateType),
-		AggregateID:   toPgUUID(aggregateID),
+		AggregateID:   aggregateID.String(),
 	}
 
 	rows, err := r.queries.GetEventsByAggregate(ctx, params)
@@ -214,7 +215,7 @@ func (r *EventStoreRepository) GetAfterSequence(
 ) ([]*event.EventStoreEntry, error) {
 	params := db.GetEventsAfterSequenceParams{
 		AggregateType:  string(aggregateType),
-		AggregateID:    toPgUUID(aggregateID),
+		AggregateID:    aggregateID.String(),
 		SequenceNumber: afterSequence,
 	}
 
@@ -234,7 +235,7 @@ func (r *EventStoreRepository) GetNextSequenceNumber(
 ) (int64, error) {
 	params := db.GetNextSequenceNumberParams{
 		AggregateType: string(aggregateType),
-		AggregateID:   toPgUUID(aggregateID),
+		AggregateID:   aggregateID.String(),
 	}
 
 	nextSeq, err := r.queries.GetNextSequenceNumber(ctx, params)
@@ -248,10 +249,11 @@ func (r *EventStoreRepository) GetNextSequenceNumber(
 func (r *EventStoreRepository) mapEventStoreEntries(rows []db.EventStore) []*event.EventStoreEntry {
 	entries := make([]*event.EventStoreEntry, len(rows))
 	for i, row := range rows {
+		aggID, _ := uuid.Parse(row.AggregateID)
 		entries[i] = &event.EventStoreEntry{
-			ID:             fromPgUUID(row.ID),
+			ID:             uuid.Nil, // DB uses int64 auto-increment; no UUID equivalent
 			AggregateType:  event.AggregateType(row.AggregateType),
-			AggregateID:    fromPgUUID(row.AggregateID),
+			AggregateID:    aggID,
 			EventType:      event.EventType(row.EventType),
 			EventVersion:   int(row.EventVersion),
 			SequenceNumber: row.SequenceNumber,
@@ -279,8 +281,12 @@ func NewProcessedEventsRepository(pool *pgxpool.Pool) *ProcessedEventsRepository
 
 // IsProcessed checks if an event has already been processed by a consumer group.
 func (r *ProcessedEventsRepository) IsProcessed(ctx context.Context, eventID, consumerGroup string) (bool, error) {
+	eid, err := uuid.Parse(eventID)
+	if err != nil {
+		return false, fmt.Errorf("parse event ID: %w", err)
+	}
 	params := db.IsEventProcessedParams{
-		EventID:       eventID,
+		EventID:       toPgUUID(eid),
 		ConsumerGroup: consumerGroup,
 	}
 	exists, err := r.queries.IsEventProcessed(ctx, params)
@@ -293,8 +299,12 @@ func (r *ProcessedEventsRepository) IsProcessed(ctx context.Context, eventID, co
 
 // MarkProcessed marks an event as processed by a consumer group.
 func (r *ProcessedEventsRepository) MarkProcessed(ctx context.Context, eventID, consumerGroup string) error {
+	eid, err := uuid.Parse(eventID)
+	if err != nil {
+		return fmt.Errorf("parse event ID: %w", err)
+	}
 	params := db.MarkEventProcessedParams{
-		EventID:       eventID,
+		EventID:       toPgUUID(eid),
 		ConsumerGroup: consumerGroup,
 	}
 	if err := r.queries.MarkEventProcessed(ctx, params); err != nil {

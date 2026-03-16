@@ -297,6 +297,48 @@ class ErrorEvent extends ChatStreamEvent {
   final bool retryable;
 }
 
+/// ACK确认事件 - 服务端确认收到消息
+class AckEvent extends ChatStreamEvent {
+  AckEvent({
+    required this.messageId,
+    required this.status,
+    required this.timestamp,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+  });
+
+  final String messageId;
+  final String status; // received, processing, failed
+  final int timestamp;
+
+  bool get isReceived => status == 'received';
+  bool get isProcessing => status == 'processing';
+  bool get isFailed => status == 'failed';
+}
+
+/// NACK否定确认事件 - 服务端拒绝消息
+class NackEvent extends ChatStreamEvent {
+  NackEvent({
+    required this.messageId,
+    required this.errorCode,
+    required this.errorMessage,
+    this.retryAfterMs,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+  });
+
+  final String messageId;
+  final String errorCode;
+  final String errorMessage;
+  final int? retryAfterMs;
+
+  bool get canRetry => retryAfterMs != null;
+}
+
 /// Token 使用统计事件
 class UsageEvent extends ChatStreamEvent {
   UsageEvent({
@@ -859,6 +901,86 @@ class AchievementMilestoneEvent extends ChatStreamEvent {
 
   /// 事件类型
   String get type => milestoneData['type'] as String? ?? 'progress_milestone';
+}
+
+/// ============================================
+/// Notification Event (Real-time Push)
+/// ============================================
+
+/// Notification Event - 用于实时推送新通知
+/// 支持系统通知和干预通知的实时推送
+class NotificationEvent extends ChatStreamEvent {
+  NotificationEvent({
+    required this.notificationData,
+    required this.notificationType,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+  });
+
+  /// 通知数据
+  final Map<String, dynamic> notificationData;
+
+  /// 通知类型: 'system' | 'intervention'
+  final String notificationType;
+
+  /// 通知 ID
+  String get notificationId =>
+      notificationData['id'] as String? ??
+      notificationData['notification_id'] as String? ??
+      '';
+
+  /// 通知标题
+  String get title => notificationData['title'] as String? ?? '';
+
+  /// 通知内容
+  String get content => notificationData['content'] as String? ?? '';
+
+  /// 通知类型字段（task_reminder, achievement, system 等）
+  String get type =>
+      notificationData['type'] as String? ??
+      notificationData['notification_type'] as String? ??
+      'system';
+
+  /// 是否已读
+  bool get isRead => notificationData['is_read'] as bool? ?? false;
+
+  /// 创建时间
+  String get createdAt => notificationData['created_at'] as String? ?? '';
+
+  /// 优先级
+  String get priority =>
+      notificationData['priority'] as String? ?? 'normal';
+
+  /// 附加数据
+  Map<String, dynamic> get data =>
+      notificationData['data'] as Map<String, dynamic>? ?? const {};
+
+  /// 获取完整的通知数据（用于传递给通知中心）
+  Map<String, dynamic> get fullNotificationData => {
+        'id': notificationId,
+        'title': title,
+        'content': content,
+        'type': type,
+        'is_read': isRead,
+        'created_at': createdAt,
+        'priority': priority,
+        'data': data,
+        ...notificationData,
+      };
+
+  /// 工厂方法：从 JSON 创建
+  factory NotificationEvent.fromJson(Map<String, dynamic> json) {
+    return NotificationEvent(
+      notificationData: json['notification'] ?? json['data'] ?? {},
+      notificationType: json['notification_type'] ?? 'system',
+      responseId: json['response_id'],
+      traceId: json['trace_id'],
+      workflowId: json['workflow_id'],
+      promptVersion: json['prompt_version'],
+    );
+  }
 }
 
 // ============================================

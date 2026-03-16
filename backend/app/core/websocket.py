@@ -512,7 +512,7 @@ class ConnectionManager:
         """
         Trigger offline push notification for user.
 
-        Integrates with FCM/APNs or other push services.
+        Integrates with FCM/APNs via PushSenderService for actual delivery.
         """
         msg_type = message.get("type")
 
@@ -530,6 +530,7 @@ class ConnectionManager:
             if not locked:
                 return
 
+        # 1. Persist notification to database
         try:
             async with AsyncSessionLocal() as db:
                 await NotificationService.create(
@@ -545,6 +546,7 @@ class ConnectionManager:
         except Exception as exc:
             logger.warning(f"Failed to persist offline notification for user {user_id}: {exc}")
 
+        # 2. Enqueue to system update queue (for notification center sync)
         try:
             await SystemUpdateService(self.redis).enqueue(
                 user_id,
@@ -564,36 +566,48 @@ class ConnectionManager:
         except Exception as exc:
             logger.warning(f"Failed to enqueue offline system update for user {user_id}: {exc}")
 
-        # Get user device tokens
-        device_tokens = await self._get_user_device_tokens(user_id)
-        if not device_tokens:
-            logger.debug(f"No device tokens for user {user_id}")
-            return
+        # 3. Send via FCM/APNs using PushSenderService
+        try:
+            from app.services.push_sender_service import PushSenderService, PushPayload
 
-        # Construct push payload
-        push_data = {
-            "title": title,
-            "body": body,
-            "data": {
-                "type": msg_type,
-                "message_id": message.get("id") or message.get("msg_id"),
-                "group_id": message.get("group_id"),
-                "sender_id": message.get("sender", {}).get("id") if isinstance(message.get("sender"), dict) else None,
-            }
-        }
+            async with AsyncSessionLocal() as db:
+                push_service = PushSenderService(db)
 
-        # Store to push queue (to be processed by push service)
-        for token in device_tokens:
-            await self.redis.rpush(
-                "push:queue",
-                json.dumps({
-                    "token": token,
-                    "payload": push_data,
-                    "user_id": user_id
-                })
-            )
+                # Build deep link based on message type
+                deep_link = self._build_deep_link(message)
 
-        logger.info(f"Queued push notification for user {user_id}, type={msg_type}")
+                payload = PushPayload(
+                    title=title,
+                    body=body,
+                    notification_type=notification_type,
+                    deep_link=deep_link,
+                    data={
+                        "type": msg_type or "message",
+                        "message_id": message.get("id") or message.get("msg_id"),
+                        "group_id": message.get("group_id"),
+                        "sender_id": (
+                            message.get("sender", {}).get("id")
+                            if isinstance(message.get("sender"), dict)
+                            else None
+                        ),
+                        "deep_link": deep_link,
+                    },
+                )
+
+                result = await push_service.send_to_user(user_id, payload)
+
+                if result.success:
+                    logger.info(
+                        f"FCM push sent to user {user_id}: "
+                        f"{result.success_count} devices, type={msg_type}"
+                    )
+                else:
+                    logger.warning(
+                        f"FCM push failed for user {user_id}: {result.error}"
+                    )
+
+        except Exception as exc:
+            logger.warning(f"Failed to send FCM push for user {user_id}: {exc}")
 
     async def _get_user_device_tokens(self, user_id: str) -> list[str]:
         """
@@ -678,6 +692,47 @@ class ConnectionManager:
             duration = message.get("duration", 0)
             return f"{nickname} 打卡了 {duration} 分钟"
         return "您有一条新消息"
+
+    @staticmethod
+    def _build_deep_link(message: dict) -> str | None:
+        """
+        Build deep link URL based on message type for notification tap navigation.
+
+        Returns:
+            Deep link URL like sparkle://task/uuid or None
+        """
+        msg_type = message.get("type")
+
+        # Map message types to deep link patterns
+        if msg_type == "task_reminder":
+            task_id = message.get("data", {}).get("task_id") or message.get("task_id")
+            if task_id:
+                return f"sparkle://task/{task_id}"
+
+        elif msg_type == "achievement":
+            achievement_id = message.get("data", {}).get("achievement_id") or message.get("achievement_id")
+            if achievement_id:
+                return f"sparkle://achievement/{achievement_id}"
+
+        elif msg_type in ["chat_message", "message"]:
+            session_id = message.get("session_id") or message.get("chat_id")
+            if session_id:
+                return f"sparkle://chat/{session_id}"
+
+        elif msg_type == "plan_review":
+            plan_id = message.get("data", {}).get("plan_id") or message.get("plan_id")
+            if plan_id:
+                return f"sparkle://plan/{plan_id}/review"
+
+        elif msg_type == "notification":
+            # Generic notification with entity reference
+            data = message.get("data", {})
+            entity_type = data.get("entity_type")
+            entity_id = data.get("entity_id")
+            if entity_type and entity_id:
+                return f"sparkle://{entity_type}/{entity_id}"
+
+        return None
 
 manager = ConnectionManager()
 

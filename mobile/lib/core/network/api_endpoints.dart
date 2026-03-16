@@ -267,6 +267,8 @@ class ApiEndpoints {
   static String achievementDetail(String id) => '/achievements/$id';
   static String achievementShare(String id) => '/achievements/$id/share';
   static String achievementPin(String id) => '/achievements/$id/pin';
+  static const String achievementShareTemplates =
+      '/achievements/share-templates';
 
   // Contracts
   static const String contracts = '/achievements/contracts';
@@ -284,6 +286,10 @@ class ApiEndpoints {
   static const String achievementEventsProcess = '/achievements/events/process';
   static const String achievementsCloseToUnlock =
       '/achievements/close-to-unlock';
+
+  // Share Card Templates
+  static const String achievementShareTemplates =
+      '/achievements/share-templates';
 
   // Multi-Intent
   static const String multiIntentParse = '/multi-intent/parse';
@@ -346,4 +352,19 @@ class ApiEndpoints {
   static const String inventoryEquip = '/inventory/equip';
   static String inventoryConsumablesUse(String consumableId) =>
       '/inventory/consumables/$consumableId/use';
+
+  // Visual Elements
+  static const String visualElements = '/visual-elements';
+  static const String visualElementsUnlocked = '/visual-elements/unlocked';
+  static const String visualElementsConfig = '/visual-elements/config';
+  static const String visualElementsDefaults = '/visual-elements/defaults';
+  static String visualElementEquip(String id) => '/visual-elements/$id/equip';
+  static String visualElementUnequip(String type) =>
+      '/visual-elements/$type/unequip';
+  static const String visualElementsUnlockByAchievement =
+      '/visual-elements/unlock-by-achievement';
+
+  // Device Registration (Push Notifications)
+  static const String registerDevice = '/devices/register';
+  static const String unregisterDevice = '/devices/unregister';
 }

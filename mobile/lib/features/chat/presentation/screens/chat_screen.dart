@@ -5,9 +5,12 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
+import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_state.dart';
@@ -105,6 +108,30 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               AppFeedback.success(context, message);
             }
           }
+        }
+      },
+    );
+
+    // 🔧 Phase 2.3: 监听 WebSocket 连接状态变化并显示反馈
+    ref.listenManual(
+      chatProvider.select((state) => state.wsConnectionState),
+      (previous, next) {
+        if (!mounted) return;
+
+        final l10n = I18nService.instance.l10n;
+
+        if (next == WsConnectionState.reconnecting &&
+            previous != WsConnectionState.reconnecting) {
+          // 进入重连状态
+          AppFeedback.loading(context, l10n.chatReconnecting);
+        } else if (next == WsConnectionState.connected &&
+            previous == WsConnectionState.reconnecting) {
+          // 重连成功
+          AppFeedback.success(context, l10n.chatReconnected);
+        } else if (next == WsConnectionState.failed &&
+            previous != WsConnectionState.failed) {
+          // 连接失败
+          AppFeedback.error(context, l10n.chatConnectionFailed);
         }
       },
     );
@@ -491,14 +518,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   void _showHistoryBottomSheet(BuildContext context) {
+    final l10n = I18nService.instance.l10n;
     unawaited(
       showModalBottomSheet<void>(
         context: context,
         backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
         useRootNavigator: true,
         isScrollControlled: true,
-        builder: (context) {
-          final mediaQuery = MediaQuery.of(context);
+        builder: (sheetContext) {
+          final mediaQuery = MediaQuery.of(sheetContext);
           final maxHeight = mediaQuery.size.height -
               mediaQuery.viewPadding.top -
               kToolbarHeight;
@@ -671,7 +699,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                         : null,
                                     onTap: () => unawaited(
                                       _handleHistorySessionTap(
-                                          context, session,),
+                                          sheetContext, session,),
                                     ),
                                   ),
                                 ),

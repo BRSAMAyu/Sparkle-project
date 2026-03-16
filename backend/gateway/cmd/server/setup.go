@@ -383,12 +383,12 @@ func startCQRSWorkers(cqrs *cqrsBundle, log *zap.Logger) {
 	}()
 }
 
-func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, services *serviceBundle, handlers *handlerBundle, cqrs *cqrsBundle, proxy *proxyBundle) *gin.Engine {
+func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, services *serviceBundle, handlers *handlerBundle, cqrs *cqrsBundle, proxy *proxyBundle, agentClient *agent.Client) *gin.Engine {
 	r := gin.Default()
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 	r.Use(otelgin.Middleware("sparkle-gateway"))
 	r.Use(middleware.RequestContextMiddleware())
-	r.Use(middleware.SecurityHeadersMiddleware())
+	r.Use(middleware.SecurityHeadersMiddleware(cfg))
 	if cfg.CORSEnabled {
 		r.Use(middleware.CORSMiddleware(cfg))
 	}
@@ -396,7 +396,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 	if strings.TrimSpace(healthVersion) == "" {
 		healthVersion = "dev"
 	}
-	handler.NewHealthHandler(dbh.pool, rdb, healthVersion).RegisterRoutes(r)
+	handler.NewHealthHandler(dbh.pool, rdb, agentClient, healthVersion).RegisterRoutes(r)
 
 	r.GET("/ws/chat", middleware.WsAuthMiddleware(cfg, rdb), handlers.chatOrchestrator.HandleWebSocket)
 	r.GET("/ws/files", middleware.WsAuthMiddleware(cfg, rdb), handlers.fileEventHandler.HandleWebSocket)
@@ -410,9 +410,15 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 		handlers.wsProxy.HandlePersonalWS)
 
 	authMiddleware := middleware.AuthMiddleware(cfg)
-	authRateLimit := middleware.AuthRateLimitMiddleware()
+	authRateLimit := middleware.HybridRateLimitMiddlewareSimple(rdb, 5.0, 15)
+
+	requestTimeout := 30
+	if cfg.RequestTimeoutSeconds > 0 {
+		requestTimeout = cfg.RequestTimeoutSeconds
+	}
 
 	api := r.Group("/api/v1")
+	api.Use(middleware.TimeoutMiddleware(time.Duration(requestTimeout) * time.Second))
 	{
 		api.GET("/health", func(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{
@@ -454,7 +460,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 		api.POST(
 			"/ws/ticket",
 			authMiddleware,
-			middleware.UserBasedRateLimit(cfg.WSTicketRateRPS, cfg.WSTicketRateBurst),
+			middleware.HybridRateLimitMiddlewareSimple(rdb, cfg.WSTicketRateRPS, cfg.WSTicketRateBurst),
 			handlers.wsTicketHandler.Issue,
 		)
 		api.GET("/chat/sessions", authMiddleware, handlers.chatHistoryHandler.GetRecentSessions)
@@ -472,7 +478,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 		handlers.dataConsistencyHandler.RegisterRoutes(api)
 
 		// Galaxy routes - authentication passthrough with rate limiting
-		galaxyRateLimit := middleware.UserBasedRateLimit(10, 20) // 10 RPS, 20 burst
+		galaxyRateLimit := middleware.HybridRateLimitMiddlewareSimple(rdb, 10, 20)
 		handlers.galaxyHandler.RegisterRoutes(api, authMiddleware, galaxyRateLimit)
 
 		api.Any("/interventions/*path", authMiddleware, handlers.interventionProxyHandler.Proxy)

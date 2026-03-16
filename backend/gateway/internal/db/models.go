@@ -824,6 +824,17 @@ type ChatMessage struct {
 	DeletedAt     pgtype.Timestamp `json:"deleted_at"`
 }
 
+type ChatSession struct {
+	ID            pgtype.UUID      `json:"id"`
+	UserID        pgtype.UUID      `json:"user_id"`
+	Title         pgtype.Text      `json:"title"`
+	LastMessageAt pgtype.Timestamp `json:"last_message_at"`
+	LastPreview   pgtype.Text      `json:"last_preview"`
+	IsActive      bool             `json:"is_active"`
+	CreatedAt     pgtype.Timestamp `json:"created_at"`
+	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
+}
+
 type CognitiveFragment struct {
 	UserID                 pgtype.UUID      `json:"user_id"`
 	TaskID                 pgtype.UUID      `json:"task_id"`

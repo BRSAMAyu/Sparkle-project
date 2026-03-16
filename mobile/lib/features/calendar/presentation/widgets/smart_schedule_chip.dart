@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/calendar/data/services/smart_schedule_service.dart';
-import 'package:sparkle/features/calendar/presentation/providers/unified_calendar_provider.dart';
 
 /// Smart Schedule Chip
 /// 智能排程 Chip 组件
@@ -349,7 +348,7 @@ class _SuggestionTile extends StatelessWidget {
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.only(bottom: DS.spacing10),
-        padding: const EdgeInsets.all(DS.spacing14),
+        padding: const EdgeInsets.all(DS.spacing12),
         decoration: BoxDecoration(
           color: qualityColor.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(16),
@@ -371,7 +370,7 @@ class _SuggestionTile extends StatelessWidget {
                 color: qualityColor,
               ),
             ),
-            const SizedBox(width: DS.spacing14),
+            const SizedBox(width: DS.spacing16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

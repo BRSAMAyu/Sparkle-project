@@ -31,6 +31,9 @@ class SchedulerService:
         # 智能推送循环 (每15分钟运行一次，PushService 内部会做更细致的频控)
         self.scheduler.add_job(self.run_smart_push_cycle, 'interval', minutes=15)
 
+        # 任务提醒检查 (每15分钟运行一次)
+        self.scheduler.add_job(self.run_task_reminders, 'interval', minutes=15)
+
         # 每日衰减任务 (每天凌晨3点执行)
         self.scheduler.add_job(self.apply_daily_decay, 'cron', hour=3, minute=0)
 
@@ -74,6 +77,18 @@ class SchedulerService:
         async with AsyncSessionLocal() as db:
             push_service = PushService(db)
             await push_service.process_all_users()
+
+    async def run_task_reminders(self):
+        """
+        执行任务提醒检查
+        通过 Celery 异步发送任务到期提醒
+        """
+        logger.info("Starting task reminders check...")
+        try:
+            from app.core.celery_app import celery_app
+            celery_app.send_task("send_task_reminders")
+        except Exception as e:
+            logger.error(f"Failed to trigger task reminders: {e}")
 
     # async def check_fragmented_time(self):
     #     """

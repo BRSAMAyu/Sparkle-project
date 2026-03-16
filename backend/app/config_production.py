@@ -102,6 +102,14 @@ class ProductionSettings(BaseSettings):
     PUSH_CYCLE_MINUTES: int = Field(default=15, env="PUSH_CYCLE_MINUTES")
     PUSH_DAILY_CAP: int = Field(default=5, env="PUSH_DAILY_CAP")
 
+    # ==================== Firebase 配置 ====================
+    # Firebase Admin SDK (用于 FCM/APNs 推送)
+    FIREBASE_PROJECT_ID: str | None = Field(default=None, env="FIREBASE_PROJECT_ID")
+    FIREBASE_PRIVATE_KEY: str | None = Field(default=None, env="FIREBASE_PRIVATE_KEY")
+    FIREBASE_CLIENT_EMAIL: str | None = Field(default=None, env="FIREBASE_CLIENT_EMAIL")
+    FIREBASE_STORAGE_BUCKET: str | None = Field(default=None, env="FIREBASE_STORAGE_BUCKET")
+    FIREBASE_CREDENTIALS_PATH: str | None = Field(default=None, env="FIREBASE_CREDENTIALS_PATH")
+
     # 知识拓展
     EXPANSION_WORKER_INTERVAL: int = Field(default=60, env="EXPANSION_WORKER_INTERVAL")
     EXPANSION_MAX_NODES: int = Field(default=5, env="EXPANSION_MAX_NODES")
@@ -195,6 +203,20 @@ class ProductionSettings(BaseSettings):
         # 检查 Redis 配置
         if self.REDIS_POOL_SIZE < 10:
             warnings.append("Low Redis pool size may limit concurrency")
+
+        # 检查 Firebase 配置
+        has_firebase_config = (
+            self.FIREBASE_CREDENTIALS_PATH is not None
+            or (
+                self.FIREBASE_PROJECT_ID is not None
+                and self.FIREBASE_PRIVATE_KEY is not None
+                and self.FIREBASE_CLIENT_EMAIL is not None
+            )
+        )
+        if not has_firebase_config:
+            warnings.append("Firebase not configured - push notifications will be disabled")
+        else:
+            features["push_notifications"] = True
 
         result = {
             "valid": len(errors) == 0,

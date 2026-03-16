@@ -289,6 +289,24 @@ CREATE TABLE public.broadcast_messages (
 
 ALTER TABLE public.broadcast_messages OWNER TO postgres;
 
+-- Name: chat_sessions; Type: TABLE; Schema: public; Owner: postgres
+
+CREATE TABLE public.chat_sessions (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    title text,
+    last_message_at timestamp without time zone,
+    last_preview text,
+    is_active boolean DEFAULT true NOT NULL,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE public.chat_sessions OWNER TO postgres;
+
+ALTER TABLE ONLY public.chat_sessions
+    ADD CONSTRAINT chat_sessions_pkey PRIMARY KEY (id);
+
 -- Name: chat_messages; Type: TABLE; Schema: public; Owner: postgres
 
 CREATE TABLE public.chat_messages (

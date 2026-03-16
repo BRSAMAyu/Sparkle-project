@@ -25,6 +25,7 @@ import 'package:sparkle/features/tools/tools.dart';
 import 'package:sparkle/features/translation/translation.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 import 'package:sparkle/features/user/user.dart';
+import 'package:sparkle/features/visual_elements/visual_elements_routes.dart';
 
 /// Router configuration provider
 final routerProvider = Provider<GoRouter>((ref) {
@@ -187,6 +188,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ...TranslationRoutes.routes,
       ...SeedLibraryRoutes.routes,
       ...ToolsRoutes.routes,
+      ...VisualElementsRoutes.routes,
     ],
   );
 });

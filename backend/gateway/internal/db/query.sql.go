@@ -123,7 +123,7 @@ func (q *Queries) CreatePostLike(ctx context.Context, arg CreatePostLikeParams) 
 
 const createSocialUser = `-- name: CreateSocialUser :one
 INSERT INTO users (
-    id, username, email, hashed_password, nickname, 
+    id, username, email, hashed_password, nickname,
     registration_source, is_active, apple_id, updated_at, created_at
 )
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
@@ -382,6 +382,34 @@ func (q *Queries) GetChatHistory(ctx context.Context, arg GetChatHistoryParams) 
 		return nil, err
 	}
 	return items, nil
+}
+
+const getChatSessionMeta = `-- name: GetChatSessionMeta :one
+SELECT id, user_id, title, last_message_at, last_preview, is_active, created_at, updated_at
+FROM chat_sessions
+WHERE id = $1 AND user_id = $2
+LIMIT 1
+`
+
+type GetChatSessionMetaParams struct {
+	ID     pgtype.UUID `json:"id"`
+	UserID pgtype.UUID `json:"user_id"`
+}
+
+func (q *Queries) GetChatSessionMeta(ctx context.Context, arg GetChatSessionMetaParams) (ChatSession, error) {
+	row := q.db.QueryRow(ctx, getChatSessionMeta, arg.ID, arg.UserID)
+	var i ChatSession
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Title,
+		&i.LastMessageAt,
+		&i.LastPreview,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const getEventStoreCount = `-- name: GetEventStoreCount :one
@@ -759,6 +787,115 @@ func (q *Queries) GetProjectionMetadata(ctx context.Context, projectionName stri
 	return i, err
 }
 
+const getRecentSessionsFromDB = `-- name: GetRecentSessionsFromDB :many
+
+SELECT cs.id, cs.title, cs.last_message_at, cm.content as preview
+FROM chat_sessions cs
+LEFT JOIN LATERAL (
+  SELECT content FROM chat_messages
+  WHERE session_id = cs.id
+  ORDER BY created_at DESC
+  LIMIT 1
+) cm ON true
+WHERE cs.user_id = $1 AND cs.is_active = true
+ORDER BY cs.last_message_at DESC
+LIMIT $2
+`
+
+type GetRecentSessionsFromDBParams struct {
+	UserID pgtype.UUID `json:"user_id"`
+	Limit  int32       `json:"limit"`
+}
+
+type GetRecentSessionsFromDBRow struct {
+	ID            pgtype.UUID      `json:"id"`
+	Title         pgtype.Text      `json:"title"`
+	LastMessageAt pgtype.Timestamp `json:"last_message_at"`
+	Preview       string           `json:"preview"`
+}
+
+// =====================
+// Chat History Persistence Queries (Phase 1.3)
+// =====================
+func (q *Queries) GetRecentSessionsFromDB(ctx context.Context, arg GetRecentSessionsFromDBParams) ([]GetRecentSessionsFromDBRow, error) {
+	rows, err := q.db.Query(ctx, getRecentSessionsFromDB, arg.UserID, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetRecentSessionsFromDBRow
+	for rows.Next() {
+		var i GetRecentSessionsFromDBRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.LastMessageAt,
+			&i.Preview,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getSessionMessagesFromDB = `-- name: GetSessionMessagesFromDB :many
+SELECT id, created_at, user_id, task_id, session_id, message_id, role, content, actions, parse_degraded, tokens_used, model_name, updated_at, deleted_at FROM chat_messages
+WHERE session_id = $1 AND user_id = $2
+ORDER BY created_at ASC
+LIMIT $3 OFFSET $4
+`
+
+type GetSessionMessagesFromDBParams struct {
+	SessionID pgtype.UUID `json:"session_id"`
+	UserID    pgtype.UUID `json:"user_id"`
+	Limit     int32       `json:"limit"`
+	Offset    int32       `json:"offset"`
+}
+
+func (q *Queries) GetSessionMessagesFromDB(ctx context.Context, arg GetSessionMessagesFromDBParams) ([]ChatMessage, error) {
+	rows, err := q.db.Query(ctx, getSessionMessagesFromDB,
+		arg.SessionID,
+		arg.UserID,
+		arg.Limit,
+		arg.Offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ChatMessage
+	for rows.Next() {
+		var i ChatMessage
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UserID,
+			&i.TaskID,
+			&i.SessionID,
+			&i.MessageID,
+			&i.Role,
+			&i.Content,
+			&i.Actions,
+			&i.ParseDegraded,
+			&i.TokensUsed,
+			&i.ModelName,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getSnapshotCount = `-- name: GetSnapshotCount :one
 SELECT COUNT(*) FROM projection_snapshots WHERE projection_name = $1
 `
@@ -1054,19 +1191,20 @@ const insertOutboxEntry = `-- name: InsertOutboxEntry :exec
 
 INSERT INTO event_outbox (
     id, aggregate_type, aggregate_id, event_type,
-    event_version, payload, metadata, created_at
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    event_version, sequence_number, payload, metadata, created_at
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 `
 
 type InsertOutboxEntryParams struct {
-	ID            pgtype.UUID      `json:"id"`
-	AggregateType string           `json:"aggregate_type"`
-	AggregateID   string           `json:"aggregate_id"`
-	EventType     string           `json:"event_type"`
-	EventVersion  int32            `json:"event_version"`
-	Payload       []byte           `json:"payload"`
-	Metadata      []byte           `json:"metadata"`
-	CreatedAt     pgtype.Timestamp `json:"created_at"`
+	ID             pgtype.UUID      `json:"id"`
+	AggregateType  string           `json:"aggregate_type"`
+	AggregateID    string           `json:"aggregate_id"`
+	EventType      string           `json:"event_type"`
+	EventVersion   int32            `json:"event_version"`
+	SequenceNumber int64            `json:"sequence_number"`
+	Payload        []byte           `json:"payload"`
+	Metadata       []byte           `json:"metadata"`
+	CreatedAt      pgtype.Timestamp `json:"created_at"`
 }
 
 // =====================
@@ -1079,6 +1217,7 @@ func (q *Queries) InsertOutboxEntry(ctx context.Context, arg InsertOutboxEntryPa
 		arg.AggregateID,
 		arg.EventType,
 		arg.EventVersion,
+		arg.SequenceNumber,
 		arg.Payload,
 		arg.Metadata,
 		arg.CreatedAt,
@@ -1123,6 +1262,57 @@ func (q *Queries) IsGroupMember(ctx context.Context, arg IsGroupMemberParams) (b
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
+}
+
+const linkAppleUser = `-- name: LinkAppleUser :one
+UPDATE users
+SET apple_id = COALESCE(apple_id, $2),
+    updated_at = NOW()
+WHERE id = $1
+RETURNING username, email, hashed_password, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, is_minor, age_verified, age_verification_source, age_verified_at, id, created_at, updated_at, deleted_at
+`
+
+type LinkAppleUserParams struct {
+	ID      pgtype.UUID `json:"id"`
+	AppleID pgtype.Text `json:"apple_id"`
+}
+
+func (q *Queries) LinkAppleUser(ctx context.Context, arg LinkAppleUserParams) (User, error) {
+	row := q.db.QueryRow(ctx, linkAppleUser, arg.ID, arg.AppleID)
+	var i User
+	err := row.Scan(
+		&i.Username,
+		&i.Email,
+		&i.HashedPassword,
+		&i.FullName,
+		&i.Nickname,
+		&i.AvatarUrl,
+		&i.AvatarStatus,
+		&i.PendingAvatarUrl,
+		&i.FlameLevel,
+		&i.FlameBrightness,
+		&i.DepthPreference,
+		&i.CuriosityPreference,
+		&i.SchedulePreferences,
+		&i.WeatherPreferences,
+		&i.IsActive,
+		&i.IsSuperuser,
+		&i.Status,
+		&i.GoogleID,
+		&i.AppleID,
+		&i.WechatUnionid,
+		&i.RegistrationSource,
+		&i.LastLoginAt,
+		&i.IsMinor,
+		&i.AgeVerified,
+		&i.AgeVerificationSource,
+		&i.AgeVerifiedAt,
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
 }
 
 const markEventProcessed = `-- name: MarkEventProcessed :exec
@@ -1226,6 +1416,44 @@ UPDATE users SET last_login_at = NOW(), updated_at = NOW() WHERE id = $1
 func (q *Queries) UpdateUserLastLogin(ctx context.Context, id pgtype.UUID) error {
 	_, err := q.db.Exec(ctx, updateUserLastLogin, id)
 	return err
+}
+
+const upsertChatSession = `-- name: UpsertChatSession :one
+INSERT INTO chat_sessions (id, user_id, title, last_message_at, is_active, created_at, updated_at)
+VALUES ($1, $2, $3, $4, true, NOW(), NOW())
+ON CONFLICT (id) DO UPDATE SET
+  last_message_at = EXCLUDED.last_message_at,
+  title = COALESCE(EXCLUDED.title, chat_sessions.title),
+  updated_at = NOW()
+RETURNING id, user_id, title, last_message_at, last_preview, is_active, created_at, updated_at
+`
+
+type UpsertChatSessionParams struct {
+	ID            pgtype.UUID      `json:"id"`
+	UserID        pgtype.UUID      `json:"user_id"`
+	Title         pgtype.Text      `json:"title"`
+	LastMessageAt pgtype.Timestamp `json:"last_message_at"`
+}
+
+func (q *Queries) UpsertChatSession(ctx context.Context, arg UpsertChatSessionParams) (ChatSession, error) {
+	row := q.db.QueryRow(ctx, upsertChatSession,
+		arg.ID,
+		arg.UserID,
+		arg.Title,
+		arg.LastMessageAt,
+	)
+	var i ChatSession
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Title,
+		&i.LastMessageAt,
+		&i.LastPreview,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const upsertProjectionMetadata = `-- name: UpsertProjectionMetadata :exec

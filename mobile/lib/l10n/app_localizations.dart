@@ -1412,6 +1412,54 @@ abstract class AppLocalizations {
   /// **'选择 AI 协作模式'**
   String get chatModeSelectorTitle;
 
+  /// No description provided for @chatModeActivated.
+  ///
+  /// In zh, this message translates to:
+  /// **'{mode} 模式已激活'**
+  String chatModeActivated(Object mode);
+
+  /// No description provided for @chatPlanContextSwitched.
+  ///
+  /// In zh, this message translates to:
+  /// **'已切换到计划上下文'**
+  String get chatPlanContextSwitched;
+
+  /// No description provided for @chatPlanSwitchTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'切换计划上下文'**
+  String get chatPlanSwitchTitle;
+
+  /// No description provided for @chatPlanSwitchMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'切换计划将清空当前对话记录，是否继续？'**
+  String get chatPlanSwitchMessage;
+
+  /// No description provided for @chatPlanSwitchUnsavedCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 条未保存的消息'**
+  String chatPlanSwitchUnsavedCount(Object count);
+
+  /// No description provided for @chatReconnecting.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在重新连接...'**
+  String get chatReconnecting;
+
+  /// No description provided for @chatReconnected.
+  ///
+  /// In zh, this message translates to:
+  /// **'已重新连接'**
+  String get chatReconnected;
+
+  /// No description provided for @chatConnectionFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'连接失败'**
+  String get chatConnectionFailed;
+
   /// No description provided for @aiCollabModeTitle.
   ///
   /// In zh, this message translates to:
@@ -11071,6 +11119,540 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'请先安装微信'**
   String get wechatNotInstalled;
+
+  /// No description provided for @shareTemplateTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择模板'**
+  String get shareTemplateTitle;
+
+  /// No description provided for @shareTemplateCosmic.
+  ///
+  /// In zh, this message translates to:
+  /// **'星空'**
+  String get shareTemplateCosmic;
+
+  /// No description provided for @shareTemplateMinimal.
+  ///
+  /// In zh, this message translates to:
+  /// **'简约'**
+  String get shareTemplateMinimal;
+
+  /// No description provided for @shareTemplateNeon.
+  ///
+  /// In zh, this message translates to:
+  /// **'霓虹'**
+  String get shareTemplateNeon;
+
+  /// No description provided for @shareTemplateElegant.
+  ///
+  /// In zh, this message translates to:
+  /// **'典雅'**
+  String get shareTemplateElegant;
+
+  /// No description provided for @shareTemplateCosmicDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'深蓝渐变，金色粒子漂浮，柔和光晕'**
+  String get shareTemplateCosmicDesc;
+
+  /// No description provided for @shareTemplateMinimalDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'纯色背景，极简线条，黑色主文字'**
+  String get shareTemplateMinimalDesc;
+
+  /// No description provided for @shareTemplateNeonDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'纯黑背景，霓虹发光，赛博朋克配色'**
+  String get shareTemplateNeonDesc;
+
+  /// No description provided for @shareTemplateElegantDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'米色金色背景，优雅衬线字体，金色装饰'**
+  String get shareTemplateElegantDesc;
+
+  /// No description provided for @sharePrivacyTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'隐私设置'**
+  String get sharePrivacyTitle;
+
+  /// No description provided for @sharePrivacyDisplayName.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示名称'**
+  String get sharePrivacyDisplayName;
+
+  /// No description provided for @sharePrivacyDisplayNameHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'使用默认昵称'**
+  String get sharePrivacyDisplayNameHint;
+
+  /// No description provided for @sharePrivacyDisplayNameNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'留空则使用您的默认昵称'**
+  String get sharePrivacyDisplayNameNote;
+
+  /// No description provided for @sharePrivacyShowAvatar.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示头像'**
+  String get sharePrivacyShowAvatar;
+
+  /// No description provided for @sharePrivacyShowAvatarDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'在分享卡上显示您的头像'**
+  String get sharePrivacyShowAvatarDesc;
+
+  /// No description provided for @sharePrivacyShowDate.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示解锁日期'**
+  String get sharePrivacyShowDate;
+
+  /// No description provided for @sharePrivacyShowDateDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示成就解锁的具体日期'**
+  String get sharePrivacyShowDateDesc;
+
+  /// No description provided for @sharePrivacyShowStats.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示进度统计'**
+  String get sharePrivacyShowStats;
+
+  /// No description provided for @sharePrivacyShowStatsDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示进度条和统计数据'**
+  String get sharePrivacyShowStatsDesc;
+
+  /// No description provided for @sharePrivacyShowFirstBadge.
+  ///
+  /// In zh, this message translates to:
+  /// **'首位解锁者徽章'**
+  String get sharePrivacyShowFirstBadge;
+
+  /// No description provided for @sharePrivacyShowFirstBadgeDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'如您是首位解锁者，显示专属徽章'**
+  String get sharePrivacyShowFirstBadgeDesc;
+
+  /// No description provided for @sharePreviewLoading.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在生成预览...'**
+  String get sharePreviewLoading;
+
+  /// No description provided for @sharePreviewError.
+  ///
+  /// In zh, this message translates to:
+  /// **'预览生成失败'**
+  String get sharePreviewError;
+
+  /// No description provided for @shareRegenerateCard.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新生成'**
+  String get shareRegenerateCard;
+
+  /// No description provided for @notificationPermissionStatus.
+  ///
+  /// In zh, this message translates to:
+  /// **'通知权限状态'**
+  String get notificationPermissionStatus;
+
+  /// No description provided for @notificationPermissionGranted.
+  ///
+  /// In zh, this message translates to:
+  /// **'已授权'**
+  String get notificationPermissionGranted;
+
+  /// No description provided for @notificationPermissionDenied.
+  ///
+  /// In zh, this message translates to:
+  /// **'未授权'**
+  String get notificationPermissionDenied;
+
+  /// No description provided for @notificationPermissionPartial.
+  ///
+  /// In zh, this message translates to:
+  /// **'部分授权'**
+  String get notificationPermissionPartial;
+
+  /// No description provided for @notificationPermissionRequest.
+  ///
+  /// In zh, this message translates to:
+  /// **'请求权限'**
+  String get notificationPermissionRequest;
+
+  /// No description provided for @notificationPermissionOpenSettings.
+  ///
+  /// In zh, this message translates to:
+  /// **'打开设置'**
+  String get notificationPermissionOpenSettings;
+
+  /// No description provided for @notificationPermissionDeniedHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'通知权限被拒绝，请在系统设置中开启'**
+  String get notificationPermissionDeniedHint;
+
+  /// No description provided for @notificationPermissionPartialHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'部分通知功能受限，建议开启完整权限'**
+  String get notificationPermissionPartialHint;
+
+  /// No description provided for @visualElementsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'视觉元素'**
+  String get visualElementsTitle;
+
+  /// No description provided for @visualElementsUnlockProgress.
+  ///
+  /// In zh, this message translates to:
+  /// **'解锁进度'**
+  String get visualElementsUnlockProgress;
+
+  /// No description provided for @visualElementsEquipped.
+  ///
+  /// In zh, this message translates to:
+  /// **'已装备'**
+  String get visualElementsEquipped;
+
+  /// No description provided for @visualElementTabAll.
+  ///
+  /// In zh, this message translates to:
+  /// **'全部'**
+  String get visualElementTabAll;
+
+  /// No description provided for @visualElementTabBackground.
+  ///
+  /// In zh, this message translates to:
+  /// **'背景'**
+  String get visualElementTabBackground;
+
+  /// No description provided for @visualElementTabParticle.
+  ///
+  /// In zh, this message translates to:
+  /// **'粒子'**
+  String get visualElementTabParticle;
+
+  /// No description provided for @visualElementTabEffect.
+  ///
+  /// In zh, this message translates to:
+  /// **'特效'**
+  String get visualElementTabEffect;
+
+  /// No description provided for @visualElementTabUnlocked.
+  ///
+  /// In zh, this message translates to:
+  /// **'已解锁'**
+  String get visualElementTabUnlocked;
+
+  /// No description provided for @visualElementEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无视觉元素'**
+  String get visualElementEmpty;
+
+  /// No description provided for @visualElementFilter.
+  ///
+  /// In zh, this message translates to:
+  /// **'筛选'**
+  String get visualElementFilter;
+
+  /// No description provided for @visualElementApplyFilter.
+  ///
+  /// In zh, this message translates to:
+  /// **'应用筛选'**
+  String get visualElementApplyFilter;
+
+  /// No description provided for @visualElementType.
+  ///
+  /// In zh, this message translates to:
+  /// **'类型'**
+  String get visualElementType;
+
+  /// No description provided for @visualElementCategory.
+  ///
+  /// In zh, this message translates to:
+  /// **'分类'**
+  String get visualElementCategory;
+
+  /// No description provided for @visualElementSource.
+  ///
+  /// In zh, this message translates to:
+  /// **'来源'**
+  String get visualElementSource;
+
+  /// No description provided for @visualElementRarity.
+  ///
+  /// In zh, this message translates to:
+  /// **'稀有度'**
+  String get visualElementRarity;
+
+  /// No description provided for @visualElementEquipped.
+  ///
+  /// In zh, this message translates to:
+  /// **'已装备'**
+  String get visualElementEquipped;
+
+  /// No description provided for @visualElementUnlocked.
+  ///
+  /// In zh, this message translates to:
+  /// **'已解锁'**
+  String get visualElementUnlocked;
+
+  /// No description provided for @visualElementLocked.
+  ///
+  /// In zh, this message translates to:
+  /// **'未解锁'**
+  String get visualElementLocked;
+
+  /// No description provided for @visualElementEquip.
+  ///
+  /// In zh, this message translates to:
+  /// **'装备'**
+  String get visualElementEquip;
+
+  /// No description provided for @visualElementUnequip.
+  ///
+  /// In zh, this message translates to:
+  /// **'卸下'**
+  String get visualElementUnequip;
+
+  /// No description provided for @visualElementEquipSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'装备成功'**
+  String get visualElementEquipSuccess;
+
+  /// No description provided for @visualElementEquipFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'装备失败'**
+  String get visualElementEquipFailed;
+
+  /// No description provided for @visualElementUnequipSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'已卸下'**
+  String get visualElementUnequipSuccess;
+
+  /// No description provided for @visualElementUnequipFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'卸下失败'**
+  String get visualElementUnequipFailed;
+
+  /// No description provided for @visualElementUnlockSystem.
+  ///
+  /// In zh, this message translates to:
+  /// **'系统赠送'**
+  String get visualElementUnlockSystem;
+
+  /// No description provided for @visualElementUnlockAchievement.
+  ///
+  /// In zh, this message translates to:
+  /// **'成就解锁'**
+  String get visualElementUnlockAchievement;
+
+  /// No description provided for @visualElementUnlockShop.
+  ///
+  /// In zh, this message translates to:
+  /// **'商城购买'**
+  String get visualElementUnlockShop;
+
+  /// No description provided for @visualElementUnlockEvent.
+  ///
+  /// In zh, this message translates to:
+  /// **'活动获取'**
+  String get visualElementUnlockEvent;
+
+  /// No description provided for @visualElementUnlockSeason.
+  ///
+  /// In zh, this message translates to:
+  /// **'赛季奖励'**
+  String get visualElementUnlockSeason;
+
+  /// No description provided for @visualElementUnlockHintSystem.
+  ///
+  /// In zh, this message translates to:
+  /// **'系统自动赠送'**
+  String get visualElementUnlockHintSystem;
+
+  /// No description provided for @visualElementUnlockHintAchievement.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成成就「{achievement}」解锁'**
+  String visualElementUnlockHintAchievement(Object achievement);
+
+  /// No description provided for @visualElementUnlockHintAchievementDefault.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成指定成就解锁'**
+  String get visualElementUnlockHintAchievementDefault;
+
+  /// No description provided for @visualElementUnlockHintShop.
+  ///
+  /// In zh, this message translates to:
+  /// **'在商城花费 {price} 光子购买'**
+  String visualElementUnlockHintShop(Object price);
+
+  /// No description provided for @visualElementUnlockHintShopDefault.
+  ///
+  /// In zh, this message translates to:
+  /// **'在商城购买'**
+  String get visualElementUnlockHintShopDefault;
+
+  /// No description provided for @visualElementUnlockHintEvent.
+  ///
+  /// In zh, this message translates to:
+  /// **'参与限时活动获取'**
+  String get visualElementUnlockHintEvent;
+
+  /// No description provided for @visualElementUnlockHintSeason.
+  ///
+  /// In zh, this message translates to:
+  /// **'赛季奖励解锁'**
+  String get visualElementUnlockHintSeason;
+
+  /// No description provided for @visualElementBackground.
+  ///
+  /// In zh, this message translates to:
+  /// **'背景'**
+  String get visualElementBackground;
+
+  /// No description provided for @visualElementParticle.
+  ///
+  /// In zh, this message translates to:
+  /// **'粒子'**
+  String get visualElementParticle;
+
+  /// No description provided for @visualElementEffect.
+  ///
+  /// In zh, this message translates to:
+  /// **'特效'**
+  String get visualElementEffect;
+
+  /// No description provided for @visualElementBundle.
+  ///
+  /// In zh, this message translates to:
+  /// **'套装'**
+  String get visualElementBundle;
+
+  /// No description provided for @visualElementsEntrySubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'自定义你的场景'**
+  String get visualElementsEntrySubtitle;
+
+  /// No description provided for @visualElementShare.
+  ///
+  /// In zh, this message translates to:
+  /// **'分享'**
+  String get visualElementShare;
+
+  /// No description provided for @visualElementShareMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'我在 Sparkle 使用了「{name}」的视觉元素！'**
+  String visualElementShareMessage(Object name);
+
+  /// No description provided for @visualElementShareFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'分享失败：{error}'**
+  String visualElementShareFailed(Object error);
+
+  /// No description provided for @visualElementShareUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'预览尚未就绪'**
+  String get visualElementShareUnavailable;
+
+  /// No description provided for @visualElementEventTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'限时活动'**
+  String get visualElementEventTitle;
+
+  /// No description provided for @visualElementEventEndsIn.
+  ///
+  /// In zh, this message translates to:
+  /// **'距离结束 {time}'**
+  String visualElementEventEndsIn(Object time);
+
+  /// No description provided for @visualElementEventEnded.
+  ///
+  /// In zh, this message translates to:
+  /// **'活动已结束'**
+  String get visualElementEventEnded;
+
+  /// No description provided for @visualElementEventCountdownDays.
+  ///
+  /// In zh, this message translates to:
+  /// **'{days}天 {hours}小时'**
+  String visualElementEventCountdownDays(Object days, Object hours);
+
+  /// No description provided for @visualElementEventCountdownHours.
+  ///
+  /// In zh, this message translates to:
+  /// **'{hours}小时 {minutes}分钟'**
+  String visualElementEventCountdownHours(Object hours, Object minutes);
+
+  /// No description provided for @visualElementEventCountdownMinutes.
+  ///
+  /// In zh, this message translates to:
+  /// **'{minutes}分钟'**
+  String visualElementEventCountdownMinutes(Object minutes);
+
+  /// No description provided for @visualElementCategorySpace.
+  ///
+  /// In zh, this message translates to:
+  /// **'太空'**
+  String get visualElementCategorySpace;
+
+  /// No description provided for @visualElementCategoryNature.
+  ///
+  /// In zh, this message translates to:
+  /// **'自然'**
+  String get visualElementCategoryNature;
+
+  /// No description provided for @visualElementCategoryCyberpunk.
+  ///
+  /// In zh, this message translates to:
+  /// **'赛博朋克'**
+  String get visualElementCategoryCyberpunk;
+
+  /// No description provided for @visualElementCategoryAbstract.
+  ///
+  /// In zh, this message translates to:
+  /// **'抽象'**
+  String get visualElementCategoryAbstract;
+
+  /// No description provided for @visualElementCategoryAmbient.
+  ///
+  /// In zh, this message translates to:
+  /// **'氛围'**
+  String get visualElementCategoryAmbient;
+
+  /// No description provided for @visualElementEmptyType.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无{type}'**
+  String visualElementEmptyType(Object type);
 }
 
 class _AppLocalizationsDelegate

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/constants/api_constants.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
@@ -498,6 +499,56 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
           promptVersion: promptVersion,
         );
 
+      case 'message_ack':
+      case 'ack':
+        final messageId = data['message_id'] as String?;
+        final status = data['status'] as String? ?? 'received';
+        final timestamp = data['timestamp'] as int? ?? DateTime.now().millisecondsSinceEpoch;
+        if (messageId != null) {
+          return AckEvent(
+            messageId: messageId,
+            status: status,
+            timestamp: timestamp,
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
+          );
+        }
+        return UnknownEvent(
+          data: data,
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+        );
+
+      case 'message_nack':
+      case 'nack':
+        final messageId = data['message_id'] as String?;
+        final errorCode = data['error_code'] as String? ?? 'unknown';
+        final errorMessage = data['error_message'] as String? ?? 'Unknown error';
+        final retryAfterMs = data['retry_after_ms'] as int?;
+        if (messageId != null) {
+          return NackEvent(
+            messageId: messageId,
+            errorCode: errorCode,
+            errorMessage: errorMessage,
+            retryAfterMs: retryAfterMs,
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
+          );
+        }
+        return UnknownEvent(
+          data: data,
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+        );
+
       case 'meta':
       case 'metadata':
         // Gateway telemetry (latency_ms, is_cache_hit, etc.) — no UI action needed
@@ -741,6 +792,10 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
           promptVersion: promptVersion,
         );
 
+      case 'notification':
+        // 实时通知推送事件
+        return NotificationEvent.fromJson(data);
+
       default:
         final finishReason = data['finish_reason'] as String?;
         if (finishReason != null && finishReason != 'NULL') {
@@ -778,6 +833,26 @@ enum WsConnectionState {
   failed,
 }
 
+/// 心跳指标
+class HeartbeatMetrics {
+  const HeartbeatMetrics({
+    required this.rtt,
+    required this.sentAt,
+    this.receivedAt,
+    this.consecutiveFailures = 0,
+  });
+
+  final Duration rtt;
+  final DateTime sentAt;
+  final DateTime? receivedAt;
+  final int consecutiveFailures;
+
+  bool get isTimeout => receivedAt == null;
+
+  @override
+  String toString() => 'HeartbeatMetrics(rtt: ${rtt.inMilliseconds}ms, failures: $consecutiveFailures)';
+}
+
 /// Factory for creating WebSocket channels (facilitates testing)
 typedef WebSocketChannelFactory = WebSocketChannel Function(
   Uri uri, {
@@ -785,7 +860,7 @@ typedef WebSocketChannelFactory = WebSocketChannel Function(
 });
 
 /// WebSocket 聊天服务 V2（完整的连接复用和状态管理）
-class WebSocketChatServiceV2 {
+class WebSocketChatServiceV2 with WidgetsBindingObserver {
   WebSocketChatServiceV2({
     required ProviderContainer container,
     String? baseUrl,
@@ -796,7 +871,9 @@ class WebSocketChatServiceV2 {
         baseUrl = baseUrl ?? ApiConstants.wsBaseUrl,
         _channelFactory = channelFactory,
         _enableReconnect = enableReconnect,
-        _autoConnect = autoConnect;
+        _autoConnect = autoConnect {
+    WidgetsBinding.instance.addObserver(this);
+  }
 
   // Factory for creating channels
   final WebSocketChannelFactory? _channelFactory;
@@ -834,7 +911,17 @@ class WebSocketChatServiceV2 {
 
   // 心跳保活
   Timer? _heartbeatTimer;
+  Timer? _heartbeatTimeoutTimer;
   static const Duration _heartbeatInterval = Duration(seconds: 30);
+  static const Duration _heartbeatTimeout = Duration(seconds: 90);
+  int _consecutiveHeartbeatFailures = 0;
+  static const int _maxConsecutiveHeartbeatFailures = 3;
+  DateTime? _lastPongReceivedTime;
+  DateTime? _lastPingSentTime;
+
+  // 心跳指标
+  final _heartbeatMetricsController = StreamController<HeartbeatMetrics>.broadcast();
+  Stream<HeartbeatMetrics> get heartbeatMetrics => _heartbeatMetricsController.stream;
 
   // 消息队列（连接断开时暂存）
   final List<Map<String, dynamic>> _pendingMessages = [];
@@ -1157,6 +1244,19 @@ class WebSocketChatServiceV2 {
         return;
       }
 
+      // 快速检查是否是pong消息（心跳响应）
+      try {
+        final jsonData = json.decode(data) as Map<String, dynamic>;
+        final type = jsonData['type'] as String?;
+        if (type == 'pong') {
+          _onPongReceived();
+          _log('💓 Pong received');
+          return; // 心跳响应，静默处理
+        }
+      } catch (_) {
+        // 解析失败，继续正常处理
+      }
+
       // Parse event in isolate to avoid blocking main thread
       final event = await compute(_parseChatEvent, data);
 
@@ -1450,27 +1550,91 @@ class WebSocketChatServiceV2 {
 
   /// 启动心跳
   void _startHeartbeat() {
-    _heartbeatTimer?.cancel();
+    _stopHeartbeat();
+    _consecutiveHeartbeatFailures = 0;
+    _lastPongReceivedTime = DateTime.now();
+
     _heartbeatTimer = Timer.periodic(_heartbeatInterval, (timer) {
       if (isConnected) {
-        try {
-          _channel?.sink.add(json.encode({'type': 'ping'}));
-          _log('💓 Heartbeat sent');
-        } catch (e) {
-          _log('❌ Heartbeat failed: $e');
-          timer.cancel();
-          _handleConnectionClosed();
-        }
+        _sendPing();
       } else {
         timer.cancel();
       }
     });
   }
 
+  /// 发送Ping并启动超时计时器
+  void _sendPing() {
+    try {
+      _lastPingSentTime = DateTime.now();
+      _channel?.sink.add(json.encode({'type': 'ping'}));
+      _log('💓 Heartbeat sent');
+      _startHeartbeatTimeout();
+    } catch (e) {
+      _log('❌ Heartbeat failed: $e');
+      _handleHeartbeatFailure();
+    }
+  }
+
+  /// 启动心跳超时计时器
+  void _startHeartbeatTimeout() {
+    _heartbeatTimeoutTimer?.cancel();
+    _heartbeatTimeoutTimer = Timer(_heartbeatTimeout, () {
+      _log('⏰ Heartbeat timeout - no pong received in ${_heartbeatTimeout.inSeconds}s');
+      _handleHeartbeatFailure();
+    });
+  }
+
+  /// 处理收到Pong
+  void _onPongReceived() {
+    _heartbeatTimeoutTimer?.cancel();
+    _consecutiveHeartbeatFailures = 0;
+    _lastPongReceivedTime = DateTime.now();
+
+    // 计算RTT
+    if (_lastPingSentTime != null) {
+      final rtt = _lastPongReceivedTime!.difference(_lastPingSentTime!);
+      final metrics = HeartbeatMetrics(
+        rtt: rtt,
+        sentAt: _lastPingSentTime!,
+        receivedAt: _lastPongReceivedTime,
+        consecutiveFailures: 0,
+      );
+      _heartbeatMetricsController.add(metrics);
+      _log('💓 Heartbeat OK (RTT: ${rtt.inMilliseconds}ms)');
+    }
+  }
+
+  /// 处理心跳失败
+  void _handleHeartbeatFailure() {
+    _heartbeatTimeoutTimer?.cancel();
+    _consecutiveHeartbeatFailures++;
+
+    // 发送失败指标
+    if (_lastPingSentTime != null) {
+      final metrics = HeartbeatMetrics(
+        rtt: Duration.zero,
+        sentAt: _lastPingSentTime!,
+        receivedAt: null,
+        consecutiveFailures: _consecutiveHeartbeatFailures,
+      );
+      _heartbeatMetricsController.add(metrics);
+    }
+
+    _log('❌ Heartbeat failure #$_consecutiveHeartbeatFailures/$_maxConsecutiveHeartbeatFailures');
+
+    if (_consecutiveHeartbeatFailures >= _maxConsecutiveHeartbeatFailures) {
+      _log('🔌 Too many heartbeat failures, triggering reconnect');
+      _handleConnectionClosed();
+    }
+  }
+
   /// 停止心跳
   void _stopHeartbeat() {
     _heartbeatTimer?.cancel();
     _heartbeatTimer = null;
+    _heartbeatTimeoutTimer?.cancel();
+    _heartbeatTimeoutTimer = null;
   }
 
   /// 发送消息 (TODO-A7)
@@ -1621,11 +1785,34 @@ class WebSocketChatServiceV2 {
     _updateConnectionState(WsConnectionState.disconnected);
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (_disposed) return;
+    switch (state) {
+      case AppLifecycleState.paused:
+      case AppLifecycleState.inactive:
+        _log('📱 App backgrounded — disconnecting WebSocket');
+        _stopHeartbeat();
+        _closeConnection();
+        _updateConnectionState(WsConnectionState.disconnected);
+      case AppLifecycleState.resumed:
+        _log('📱 App resumed — checking WebSocket');
+        if (_connectionState == WsConnectionState.disconnected &&
+            _currentUserId != null) {
+          _reconnectAttempts = 0;
+          _establishConnection(_currentUserId!, _currentToken);
+        }
+      default:
+        break;
+    }
+  }
+
   /// 释放资源
   void dispose() {
     if (_disposed) return;
     _log('🗑️  Disposing WebSocketChatServiceV2');
     _disposed = true;
+    WidgetsBinding.instance.removeObserver(this);
     _connGen++; // Invalidate any pending connection attempts
 
     unawaited(_socketSubscription?.cancel());

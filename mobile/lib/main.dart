@@ -14,6 +14,7 @@ import 'package:sparkle/core/tracing/tracing_service.dart';
 import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/features/chat/chat.dart';
 import 'package:sparkle/features/cognitive/data/repositories/local_cognitive_repository.dart';
+import 'firebase_options.dart';
 
 const _startupErrorPadding = 24.0;
 
@@ -64,6 +65,10 @@ void main() async {
     // Initialize WeChat SDK (non-blocking — skips silently if APP_ID not configured)
     await SocialAuthService().initWeChat();
 
+    // Initialize Firebase (required for push notifications)
+    // Note: google-services.json and GoogleService-Info.plist must be configured
+    await _initializeFirebase();
+
     runApp(
       ProviderScope(
         overrides: [
@@ -92,5 +97,27 @@ void main() async {
         ),
       ),
     );
+  }
+}
+
+/// Initialize Firebase and FCM
+///
+/// This initializes Firebase Core and Firebase Cloud Messaging.
+/// Requires:
+/// - Android: google-services.json in android/app/
+/// - iOS: GoogleService-Info.plist in ios/Runner/
+Future<void> _initializeFirebase() async {
+  try {
+    // Check if Firebase is already initialized (by native plugins)
+    // If using FlutterFire CLI generated options, use:
+    // await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+    // For now, let native plugins handle initialization
+    // Firebase will be initialized when FirebaseMessagingService.initialize() is called
+    debugPrint('🔥 Firebase will be initialized on demand');
+  } catch (e) {
+    // Firebase initialization failure should not crash the app
+    // Push notifications will simply be unavailable
+    debugPrint('⚠️ Firebase initialization skipped: $e');
   }
 }

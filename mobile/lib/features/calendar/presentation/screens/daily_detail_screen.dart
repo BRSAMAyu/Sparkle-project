@@ -6,10 +6,15 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/lunar_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
+import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/calendar/data/models/calendar_event_model.dart';
 import 'package:sparkle/features/calendar/presentation/providers/calendar_provider.dart';
+import 'package:sparkle/features/calendar/presentation/providers/unified_calendar_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
+import 'package:sparkle/features/plan/data/models/plan_model.dart';
+import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
+import 'package:sparkle/shared/entities/achievement_model.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 class DailyDetailScreen extends ConsumerWidget {
@@ -32,6 +37,24 @@ class DailyDetailScreen extends ConsumerWidget {
     // Get Dashboard state for Prism/Flame (Mocking "historic" data with current data for demo)
     final dashboardState = ref.watch(dashboardProvider);
     final lunarData = LunarService().getLunarData(date);
+
+    // Get active plans for this date
+    final planListState = ref.watch(planListProvider);
+    final activePlans = planListState.activePlans.where((plan) {
+      // Plan is active if date falls between createdAt and targetDate
+      if (plan.targetDate != null) {
+        return date.isAfter(plan.createdAt.subtract(const Duration(days: 1))) &&
+            date.isBefore(plan.targetDate!.add(const Duration(days: 1)));
+      }
+      return plan.isActive;
+    }).toList();
+
+    // Get achievements close to unlock for motivation
+    final achievementState = ref.watch(achievementProvider);
+    final closeToUnlock = achievementState.achievements
+        .where((a) => !a.isUnlocked && a.progressPercentage >= 80)
+        .take(3)
+        .toList();
 
     return SparklePageScaffold(
       role: SparklePageRole.content,
@@ -58,11 +81,35 @@ class DailyDetailScreen extends ConsumerWidget {
               _buildMetricsGrid(context, dashboardState),
               const SizedBox(height: DS.spacing20),
 
-              // 3. Cognitive Prism Snapshot
+              // 3. Active Plans Section (NEW)
+              if (activePlans.isNotEmpty) ...[
+                _buildSectionTitle(
+                  context,
+                  '活跃计划',
+                  Icons.flag_rounded,
+                ),
+                const SizedBox(height: DS.spacing10),
+                ...activePlans.map((plan) => _buildActivePlanCard(context, ref, plan)),
+                const SizedBox(height: DS.spacing20),
+              ],
+
+              // 4. Achievements in Progress (NEW)
+              if (closeToUnlock.isNotEmpty) ...[
+                _buildSectionTitle(
+                  context,
+                  '即将解锁',
+                  Icons.emoji_events_rounded,
+                ),
+                const SizedBox(height: DS.spacing10),
+                _buildAchievementsInProgress(context, closeToUnlock),
+                const SizedBox(height: DS.spacing20),
+              ],
+
+              // 5. Cognitive Prism Snapshot
               _buildPrismSnapshot(context, dashboardState),
               const SizedBox(height: DS.spacing20),
 
-              // 4. Events Section
+              // 6. Events Section
               _buildSectionTitle(
                 context,
                 context.l10n.dailyDetailEventsSection,
@@ -72,7 +119,7 @@ class DailyDetailScreen extends ConsumerWidget {
               _buildEventList(context, events),
               const SizedBox(height: DS.spacing20),
 
-              // 5. Tasks Section
+              // 7. Tasks Section
               _buildSectionTitle(
                 context,
                 context.l10n.dailyDetailTasksSection,
@@ -85,6 +132,191 @@ class DailyDetailScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  /// Build active plan card with calendar integration
+  Widget _buildActivePlanCard(
+    BuildContext context,
+    WidgetRef ref,
+    PlanModel plan,
+  ) =>
+      GestureDetector(
+        onTap: () => context.push('/plan/${plan.id}'),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: DS.spacing8),
+          padding: const EdgeInsets.all(DS.md),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                DS.warningAccent.withValues(alpha: 0.1),
+                DS.warningAccent.withValues(alpha: 0.05),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: DS.warningAccent.withValues(alpha: 0.3),
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(DS.spacing8),
+                decoration: BoxDecoration(
+                  color: DS.warningAccent.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  plan.type == PlanType.sprint
+                      ? Icons.flash_on_rounded
+                      : Icons.trending_up_rounded,
+                  color: DS.warningAccent,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: DS.spacing12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      plan.name,
+                      style: TextStyle(
+                        color: DS.brandPrimaryConst,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: DS.spacing4),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: LinearProgressIndicator(
+                              value: plan.progress / 100,
+                              backgroundColor: DS.warningAccent.withValues(alpha: 0.2),
+                              valueColor: AlwaysStoppedAnimation<Color>(DS.warningAccent),
+                              minHeight: 4,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: DS.spacing8),
+                        Text(
+                          '${plan.progress.toInt()}%',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: DS.warningAccent,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: DS.textSecondary,
+                size: 20,
+              ),
+            ],
+          ),
+        ),
+      );
+
+  /// Build achievements in progress section
+  Widget _buildAchievementsInProgress(
+    BuildContext context,
+    List<AchievementWithProgress> achievements,
+  ) =>
+      Container(
+        padding: const EdgeInsets.all(DS.md),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              DS.brandSecondary.withValues(alpha: 0.1),
+              DS.brandSecondary.withValues(alpha: 0.05),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: DS.brandSecondary.withValues(alpha: 0.3),
+          ),
+        ),
+        child: Column(
+          children: achievements.map((achievement) {
+            final progressPercent = achievement.progressPercentage.toDouble();
+            final remaining = 100 - progressPercent;
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: DS.spacing8),
+              child: Row(
+                children: [
+                  Icon(
+                    _getAchievementIcon(achievement.achievement.category),
+                    color: DS.brandSecondary,
+                    size: 18,
+                  ),
+                  const SizedBox(width: DS.spacing10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          achievement.achievement.name,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: DS.brandPrimaryConst,
+                          ),
+                        ),
+                        const SizedBox(height: DS.spacing4),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(3),
+                                child: LinearProgressIndicator(
+                                  value: progressPercent / 100,
+                                  backgroundColor: DS.brandSecondary.withValues(alpha: 0.2),
+                                  valueColor: AlwaysStoppedAnimation<Color>(DS.brandSecondary),
+                                  minHeight: 3,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: DS.spacing8),
+                            Text(
+                              '还差 ${remaining.toInt()}%',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: DS.brandSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+        ),
+      );
+
+  IconData _getAchievementIcon(String? category) {
+    switch (category?.toLowerCase()) {
+      case 'learning':
+        return Icons.school_rounded;
+      case 'consistency':
+        return Icons.calendar_today_rounded;
+      case 'social':
+        return Icons.people_rounded;
+      case 'exploration':
+        return Icons.explore_rounded;
+      default:
+        return Icons.emoji_events_rounded;
+    }
   }
 
   Widget _buildDateHeader(

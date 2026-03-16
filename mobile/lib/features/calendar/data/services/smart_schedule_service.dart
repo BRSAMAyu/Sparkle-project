@@ -259,7 +259,7 @@ class SmartScheduleService {
     required DateTime date,
     bool excludeBlocked = true,
   }) {
-    final slots = <TimeSlot>[];
+    var slots = <TimeSlot>[];
 
     // Define base time periods
     // Morning: 6:00 - 12:00

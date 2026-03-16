@@ -72,6 +72,23 @@ type Config struct {
 
 	// Cache Strategy Configuration
 	CacheStrategy CacheStrategy `mapstructure:"CACHE_STRATEGY"`
+
+	// Health check and circuit breaker configuration
+	AgentHealthCheckInterval int `mapstructure:"AGENT_HEALTH_CHECK_INTERVAL"` // seconds, default 10
+	AgentHealthCheckTimeout  int    `mapstructure:"AGENT_HEALTH_CHECK_TIMEOUT"`  // seconds, default 5
+	CircuitBreakerThreshold  int    `mapstructure:"CIRCUIT_BREAKER_THRESHOLD"`  // default 5
+
+	// Graceful shutdown
+	ShutdownTimeoutSeconds int `mapstructure:"SHUTDOWN_TIMEOUT_SECONDS"` // default 15
+
+	// WebSocket lifecycle
+	WSPongWaitSeconds    int `mapstructure:"WS_PONG_WAIT_SECONDS"`    // default 90
+	WSPingIntervalSeconds int `mapstructure:"WS_PING_INTERVAL_SECONDS"` // default 30
+	WSWriteWaitSeconds   int `mapstructure:"WS_WRITE_WAIT_SECONDS"`   // default 10
+	WSIdleTimeoutSeconds int `mapstructure:"WS_IDLE_TIMEOUT_SECONDS"` // default 300
+
+	// Request timeout
+	RequestTimeoutSeconds int `mapstructure:"REQUEST_TIMEOUT_SECONDS"` // default 30
 }
 
 // IsDevelopment returns true if running in development mode
@@ -321,6 +338,12 @@ func Load() *Config {
 		"CHAOS_ENABLED",
 		"CHAOS_ALLOW_PROD",
 		"TOXIPROXY_URL",
+		"SHUTDOWN_TIMEOUT_SECONDS",
+		"WS_PONG_WAIT_SECONDS",
+		"WS_PING_INTERVAL_SECONDS",
+		"WS_WRITE_WAIT_SECONDS",
+		"WS_IDLE_TIMEOUT_SECONDS",
+		"REQUEST_TIMEOUT_SECONDS",
 		"MINIO_ENDPOINT",
 		"MINIO_ACCESS_KEY",
 		"MINIO_SECRET_KEY",
@@ -398,6 +421,28 @@ func Load() *Config {
 	viper.SetDefault("ENVIRONMENT", "dev")
 	viper.SetDefault("ALLOWED_ORIGINS", "https://sparkle.app,https://api.sparkle.app")
 	viper.SetDefault("CORS_ENABLED", true)
+
+	// Health check and circuit breaker defaults
+	viper.SetDefault("AGENT_HEALTH_CHECK_INTERVAL", 10)    // 10 seconds
+	viper.SetDefault("AGENT_HEALTH_CHECK_TIMEOUT", 5)     // 5 seconds
+	viper.SetDefault("CIRCUIT_BREAKER_THRESHOLD", 5)      // 5 failures to trip
+
+	// Graceful shutdown
+	viper.SetDefault("SHUTDOWN_TIMEOUT_SECONDS", 15)
+
+	// WebSocket lifecycle
+	viper.SetDefault("WS_PONG_WAIT_SECONDS", 90)
+	viper.SetDefault("WS_PING_INTERVAL_SECONDS", 30)
+	viper.SetDefault("WS_WRITE_WAIT_SECONDS", 10)
+	viper.SetDefault("WS_IDLE_TIMEOUT_SECONDS", 300)
+
+	// Request timeout
+	viper.SetDefault("REQUEST_TIMEOUT_SECONDS", 30)
+
+ viper.SetDefault("CIRCUIT_BREAKER_SUCCESS_THRESHOLD", 2) // 2 successes to close
+ viper.SetDefault("CIRCUIT_BREAKER_TIMEOUT", 30)             // 30 seconds open timeout
+
+ viper.SetDefault("CIRCUIT_BREAKER_HALF_OPEN_REQUESTS", 3) // 3 requests in half-open
 
 	// Read from .env files if they exist (root .env has priority)
 	cwd, err := os.Getwd()

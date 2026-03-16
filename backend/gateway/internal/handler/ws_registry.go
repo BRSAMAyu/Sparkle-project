@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/sparkle/gateway/internal/service"
@@ -71,4 +72,40 @@ func (r *ConnectionRegistry) Get(userID string) (*websocket.Conn, bool) {
 	defer r.mu.RUnlock()
 	conn, ok := r.connections[userID]
 	return conn, ok
+}
+
+// Count returns the number of active connections.
+func (r *ConnectionRegistry) Count() int {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return len(r.connections)
+}
+
+// DrainAll sends a CloseGoingAway frame to every connection and closes it.
+// It blocks until all connections are closed or the timeout expires.
+func (r *ConnectionRegistry) DrainAll(timeout time.Duration) {
+	r.mu.Lock()
+	snapshot := make(map[string]*websocket.Conn, len(r.connections))
+	for k, v := range r.connections {
+		snapshot[k] = v
+	}
+	r.mu.Unlock()
+
+	deadline := time.Now().Add(timeout)
+	for userID, conn := range snapshot {
+		remaining := time.Until(deadline)
+		if remaining <= 0 {
+			_ = conn.Close()
+			continue
+		}
+		_ = conn.WriteControl(
+			websocket.CloseMessage,
+			websocket.FormatCloseMessage(websocket.CloseGoingAway, "server shutting down"),
+			deadline,
+		)
+		_ = conn.Close()
+		r.mu.Lock()
+		delete(r.connections, userID)
+		r.mu.Unlock()
+	}
 }

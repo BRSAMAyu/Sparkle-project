@@ -599,13 +599,120 @@ class AchievementUnlockEvent {
 
 // ========== 成就分享卡 ==========
 
+/// Privacy settings for share card generation
+class ShareCardPrivacySettings {
+  ShareCardPrivacySettings({
+    this.displayName,
+    this.showAvatar = false,
+    this.showUnlockDate = true,
+    this.showProgressStats = true,
+    this.showFirstUnlockerBadge = true,
+  });
+
+  factory ShareCardPrivacySettings.fromJson(Map<String, dynamic> json) =>
+      ShareCardPrivacySettings(
+        displayName: json['display_name'] as String?,
+        showAvatar: json['show_avatar'] as bool? ?? false,
+        showUnlockDate: json['show_unlock_date'] as bool? ?? true,
+        showProgressStats: json['show_progress_stats'] as bool? ?? true,
+        showFirstUnlockerBadge:
+            json['show_first_unlocker_badge'] as bool? ?? true,
+      );
+
+  /// Custom display name, null means use default nickname
+  final String? displayName;
+
+  /// Whether to show user avatar on card
+  final bool showAvatar;
+
+  /// Whether to show unlock date on card
+  final bool showUnlockDate;
+
+  /// Whether to show progress statistics on card
+  final bool showProgressStats;
+
+  /// Whether to show first unlocker badge if applicable
+  final bool showFirstUnlockerBadge;
+
+  String getEffectiveDisplayName(String defaultName) =>
+      displayName ?? defaultName;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'display_name': displayName,
+        'show_avatar': showAvatar,
+        'show_unlock_date': showUnlockDate,
+        'show_progress_stats': showProgressStats,
+        'show_first_unlocker_badge': showFirstUnlockerBadge,
+      };
+
+  ShareCardPrivacySettings copyWith({
+    String? displayName,
+    bool? showAvatar,
+    bool? showUnlockDate,
+    bool? showProgressStats,
+    bool? showFirstUnlockerBadge,
+  }) =>
+      ShareCardPrivacySettings(
+        displayName: displayName ?? this.displayName,
+        showAvatar: showAvatar ?? this.showAvatar,
+        showUnlockDate: showUnlockDate ?? this.showUnlockDate,
+        showProgressStats: showProgressStats ?? this.showProgressStats,
+        showFirstUnlockerBadge:
+            showFirstUnlockerBadge ?? this.showFirstUnlockerBadge,
+      );
+
+  /// Generate a hash for cache key purposes
+  String settingsHash() {
+    final parts = [
+      displayName ?? '',
+      showAvatar.toString(),
+      showUnlockDate.toString(),
+      showProgressStats.toString(),
+      showFirstUnlockerBadge.toString(),
+    ];
+    return parts.join('_').hashCode.toRadixString(16);
+  }
+}
+
+/// Share card template information
+class ShareTemplateInfo {
+  ShareTemplateInfo({
+    required this.id,
+    required this.name,
+    this.description,
+    this.previewUrl,
+  });
+
+  factory ShareTemplateInfo.fromJson(Map<String, dynamic> json) =>
+      ShareTemplateInfo(
+        id: json['id'] as String,
+        name: json['name'] as String,
+        description: json['description'] as String?,
+        previewUrl: json['preview_url'] as String?,
+      );
+
+  final String id;
+  final String name;
+  final String? description;
+  final String? previewUrl;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'id': id,
+        'name': name,
+        'description': description,
+        'preview_url': previewUrl,
+      };
+}
+
 class AchievementShareCard {
   AchievementShareCard({
     required this.cardUrl,
-    required this.mimeType,
-    required this.width,
-    required this.height,
+    this.mimeType = 'image/png',
+    this.width = 0,
+    this.height = 0,
     required this.generatedAt,
+    this.templateId = 'cosmic',
+    this.privacySettings,
     required this.achievement,
   });
 
@@ -618,6 +725,12 @@ class AchievementShareCard {
         generatedAt: DateTime.parse(
           json['generated_at'] as String? ?? DateTime.now().toIso8601String(),
         ),
+        templateId: json['template_id'] as String? ?? 'cosmic',
+        privacySettings: json['privacy_settings'] != null
+            ? ShareCardPrivacySettings.fromJson(
+                json['privacy_settings'] as Map<String, dynamic>,
+              )
+            : null,
         achievement: AchievementModel.fromJson(
           json['achievement'] as Map<String, dynamic>? ?? <String, dynamic>{},
         ),
@@ -628,6 +741,8 @@ class AchievementShareCard {
   final int width;
   final int height;
   final DateTime generatedAt;
+  final String templateId;
+  final ShareCardPrivacySettings? privacySettings;
   final AchievementModel achievement;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
@@ -636,6 +751,8 @@ class AchievementShareCard {
         'width': width,
         'height': height,
         'generated_at': generatedAt.toIso8601String(),
+        'template_id': templateId,
+        'privacy_settings': privacySettings?.toJson(),
         'achievement': achievement.toJson(),
       };
 }

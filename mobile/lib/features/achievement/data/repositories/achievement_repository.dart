@@ -342,7 +342,11 @@ class AchievementRepository {
   }
 
   /// Generate achievement share card
-  Future<AchievementShareCard> shareAchievement(String achievementId) async {
+  Future<AchievementShareCard> shareAchievement(
+    String achievementId, {
+    String templateId = 'cosmic',
+    ShareCardPrivacySettings? privacySettings,
+  }) async {
     if (DemoDataService.isDemoMode) {
       final achievement = _getDemoAchievements()
           .achievements
@@ -354,6 +358,8 @@ class AchievementRepository {
         width: 1080,
         height: 1440,
         generatedAt: DateTime.now(),
+        templateId: templateId,
+        privacySettings: privacySettings,
         achievement: achievement,
       );
     }
@@ -363,6 +369,10 @@ class AchievementRepository {
       final response = await _apiClient.post<Map<String, dynamic>>(
         ApiEndpoints.achievementShare(achievementId),
         queryParameters: {'locale': locale},
+        data: {
+          'template_id': templateId,
+          'privacy': privacySettings?.toJson(),
+        },
       );
 
       final payload = ApiResponseParser.unwrapMap(
@@ -372,6 +382,42 @@ class AchievementRepository {
       return AchievementShareCard.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'shareAchievement');
+    }
+  }
+
+  /// Get available share card templates
+  Future<List<ShareTemplateInfo>> getShareTemplates() async {
+    if (DemoDataService.isDemoMode) {
+      return [
+        ShareTemplateInfo(id: 'cosmic', name: '星空'),
+        ShareTemplateInfo(id: 'minimal', name: '简约'),
+        ShareTemplateInfo(id: 'neon', name: '霓虹'),
+        ShareTemplateInfo(id: 'elegant', name: '典雅'),
+      ];
+    }
+
+    try {
+      final locale = I18nService.instance.currentLocale.languageCode;
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        ApiEndpoints.achievementShareTemplates,
+        queryParameters: {'locale': locale},
+      );
+
+      final payload = ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'getShareTemplates',
+      );
+      final templates = payload['templates'] as List<dynamic>?;
+      return templates
+              ?.map(
+                (json) => ShareTemplateInfo.fromJson(
+                  json as Map<String, dynamic>,
+                ),
+              )
+              .toList() ??
+          [];
+    } on DioException catch (e) {
+      return _handleDioError(e, 'getShareTemplates');
     }
   }
 

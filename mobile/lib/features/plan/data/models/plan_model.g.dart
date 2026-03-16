@@ -26,6 +26,8 @@ PlanModel _$PlanModelFromJson(Map<String, dynamic> json) => PlanModel(
       tasks: (json['tasks'] as List<dynamic>?)
           ?.map((e) => TaskModel.fromJson(e as Map<String, dynamic>))
           .toList(),
+      source: json['source'] as String?,
+      sourceMetadata: json['source_metadata'] as Map<String, dynamic>?,
     );
 
 Map<String, dynamic> _$PlanModelToJson(PlanModel instance) => <String, dynamic>{
@@ -44,6 +46,8 @@ Map<String, dynamic> _$PlanModelToJson(PlanModel instance) => <String, dynamic>{
       'created_at': instance.createdAt.toIso8601String(),
       'updated_at': instance.updatedAt.toIso8601String(),
       'tasks': instance.tasks,
+      'source': instance.source,
+      'source_metadata': instance.sourceMetadata,
     };
 
 const _$PlanTypeEnumMap = {

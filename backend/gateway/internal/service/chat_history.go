@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -21,11 +22,23 @@ const (
 
 type ChatHistoryService struct {
 	rdb              *redis.Client
+	pool             *pgxpool.Pool
 	breakerThreshold atomic.Int64
 	chatHistoryTTL   time.Duration
 }
 
+ func NewChatHistoryServiceWithPool(rdb *redis.Client, pool *pgxpool.Pool, ttl time.Duration) *ChatHistoryService {
+	s := &ChatHistoryService{
+		rdb:            rdb,
+		pool:           pool,
+		chatHistoryTTL: ttl,
+	}
+	s.breakerThreshold.Store(DefaultMaxQueueSize)
+	return s
+}
+
 type ChatHistoryMessage struct {
+	ID        string `json:"id"`         // Unique message ID (UUID)
 	SessionID string `json:"session_id"`
 	UserID    string `json:"user_id"`
 	Role      string `json:"role"`
@@ -198,6 +211,37 @@ func (s *ChatHistoryService) GetRecentSessions(ctx context.Context, userID strin
 		limit = 20
 	}
 
+	// 1. Try Redis first
+	sessions, err := s.getRecentSessionsFromRedis(ctx, userID, limit)
+	if err == nil {
+		log.Printf("[ChatHistoryService] Redis query failed: %v, trying DB fallback", err)
+	} else if len(sessions) > 0 {
+		// Cache hit - return immediately
+		return sessions, nil
+	}
+
+	// 2. Fallback to PostgreSQL if Redis is empty or failed
+	if s.pool != nil {
+		sessions, err = s.getRecentSessionsFromDB(ctx, userID, limit)
+		if err != nil {
+			log.Printf("[ChatHistoryService] DB fallback failed: %v", err)
+			return nil, err
+		}
+
+		// 3. Backfill Redis cache (async) - only if we got data from DB
+		if len(sessions) > 0 {
+			go s.backfillRedisCache(userID, sessions)
+		}
+
+		return sessions, nil
+	}
+
+	// 3. Return empty if no DB pool available
+	return []ChatSessionSummary{}, nil
+}
+
+// getRecentSessionsFromRedis fetches sessions from Redis cache
+func (s *ChatHistoryService) getRecentSessionsFromRedis(ctx context.Context, userID string, limit int) ([]ChatSessionSummary, error) {
 	sessionsKey := fmt.Sprintf("chat:sessions:user:%s", userID)
 	ids, err := s.rdb.ZRevRange(ctx, sessionsKey, 0, int64(limit-1)).Result()
 	if err != nil {
@@ -233,6 +277,95 @@ func (s *ChatHistoryService) GetRecentSessions(ctx context.Context, userID strin
 		return summaries[i].UpdatedAt > summaries[j].UpdatedAt
 	})
 	return summaries, nil
+}
+
+// getRecentSessionsFromDB fetches sessions from PostgreSQL as fallback
+func (s *ChatHistoryService) getRecentSessionsFromDB(ctx context.Context, userID string, limit int) ([]ChatSessionSummary, error) {
+	if s.pool == nil {
+		return nil, fmt.Errorf("database pool not initialized")
+	}
+
+	query := `
+		SELECT cs.id, cs.title, cs.last_message_at, cm.content as preview
+		FROM chat_sessions cs
+		LEFT JOIN LATERAL (
+			SELECT content FROM chat_messages
+			WHERE session_id = cs.id AND user_id = $1
+			ORDER BY created_at DESC LIMIT 1
+		) cm ON true
+		WHERE cs.user_id = $1 AND cs.is_active = true
+		ORDER BY cs.last_message_at DESC
+		LIMIT $2
+	`
+
+	rows, err := s.pool.Query(ctx, query, userID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	summaries := make([]ChatSessionSummary, 0, limit)
+	for rows.Next() {
+		var id, title, lastMessageAt string
+		var preview *string
+		if err := rows.Scan(&id, &title, &lastMessageAt, &preview); err != nil {
+			continue
+		}
+
+		// Format title
+		formattedTitle := strings.TrimSpace(title)
+		if formattedTitle == "" {
+			if preview != nil && len(*preview) > 24 {
+				formattedTitle = string((*preview)[:24]) + "..."
+			} else if preview != nil && *preview != "" {
+				formattedTitle = *preview
+			} else {
+				formattedTitle = "新对话"
+			}
+		}
+
+		summaries = append(summaries, ChatSessionSummary{
+			ID:        id,
+			Title:     formattedTitle,
+			UpdatedAt: lastMessageAt,
+		})
+	}
+
+	return summaries, nil
+}
+
+// backfillRedisCache populates Redis cache with data from DB
+func (s *ChatHistoryService) backfillRedisCache(userID string, sessions []ChatSessionSummary) {
+	ctx := context.Background()
+	sessionsKey := fmt.Sprintf("chat:sessions:user:%s", userID)
+
+	for _, session := range sessions {
+		// Add session ID to sorted set
+		score := float64(time.Now().Unix())
+		if t, err := time.Parse(session.UpdatedAt, time.RFC3339); err == nil {
+			score = float64(t.Unix())
+		}
+
+		s.rdb.ZAdd(ctx, sessionsKey, redis.Z{
+			Score:  score,
+			Member: session.ID,
+		})
+
+		// Set session metadata
+		metaKey := fmt.Sprintf("chat:session_meta:%s", session.ID)
+		fields := map[string]interface{}{
+			"user_id":         userID,
+			"title":           session.Title,
+			"last_message_at": session.UpdatedAt,
+		}
+		s.rdb.HSet(ctx, metaKey, fields)
+		s.rdb.Expire(ctx, metaKey, s.chatHistoryTTL)
+	}
+
+	// Set expiry on sessions list
+	s.rdb.Expire(ctx, sessionsKey, s.chatHistoryTTL)
+
+	log.Printf("[ChatHistoryService] Backfilled Redis cache for user %s with %d sessions", userID, len(sessions))
 }
 
 func parseUnixString(raw string) time.Time {

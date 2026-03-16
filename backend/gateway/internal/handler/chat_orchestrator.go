@@ -170,6 +170,64 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 		_ = conn.Close()
 	}()
 
+	// --- WebSocket lifecycle: deadlines, ping/pong, idle timeout ---
+	pongWait := 90 * time.Second
+	pingInterval := 30 * time.Second
+	writeWait := 10 * time.Second
+	idleTimeout := 5 * time.Minute
+	if h.cfg != nil {
+		if h.cfg.WSPongWaitSeconds > 0 {
+			pongWait = time.Duration(h.cfg.WSPongWaitSeconds) * time.Second
+		}
+		if h.cfg.WSPingIntervalSeconds > 0 {
+			pingInterval = time.Duration(h.cfg.WSPingIntervalSeconds) * time.Second
+		}
+		if h.cfg.WSWriteWaitSeconds > 0 {
+			writeWait = time.Duration(h.cfg.WSWriteWaitSeconds) * time.Second
+		}
+		if h.cfg.WSIdleTimeoutSeconds > 0 {
+			idleTimeout = time.Duration(h.cfg.WSIdleTimeoutSeconds) * time.Second
+		}
+	}
+
+	_ = conn.SetReadDeadline(time.Now().Add(pongWait))
+	conn.SetPongHandler(func(string) error {
+		return conn.SetReadDeadline(time.Now().Add(pongWait))
+	})
+
+	// Ping ticker goroutine
+	pingTicker := time.NewTicker(pingInterval)
+	pingDone := make(chan struct{})
+	go func() {
+		defer pingTicker.Stop()
+		for {
+			select {
+			case <-pingTicker.C:
+				_ = conn.SetWriteDeadline(time.Now().Add(writeWait))
+				if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+					return
+				}
+			case <-pingDone:
+				return
+			}
+		}
+	}()
+	defer close(pingDone)
+
+	// Idle timer — close connection if no messages for idleTimeout
+	idleTimer := time.NewTimer(idleTimeout)
+	defer idleTimer.Stop()
+	go func() {
+		<-idleTimer.C
+		log.Printf("WebSocket idle timeout for connection, closing")
+		_ = conn.WriteControl(
+			websocket.CloseMessage,
+			websocket.FormatCloseMessage(websocket.CloseGoingAway, "idle timeout"),
+			time.Now().Add(writeWait),
+		)
+		_ = conn.Close()
+	}()
+
 	// Require authenticated user_id from context (must be set by AuthMiddleware)
 	userID := c.GetString("user_id")
 	if userID == "" {
@@ -231,6 +289,15 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 			}
 			break
 		}
+
+		// Reset idle timer on each received message
+		if !idleTimer.Stop() {
+			select {
+			case <-idleTimer.C:
+			default:
+			}
+		}
+		idleTimer.Reset(idleTimeout)
 
 		if !msgLimiter.Allow() {
 			_ = conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "Message rate limit exceeded"))
@@ -471,6 +538,7 @@ func (h *ChatOrchestrator) PushIntervention(userID string, intervention *pbws.In
 		"expires_at": intervention.ExpiresAt,
 	}
 
+	_ = conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
 	if err := conn.WriteJSON(message); err != nil {
 		h.unregisterConnection(userID, conn)
 		return fmt.Errorf("failed to send intervention: %w", err)

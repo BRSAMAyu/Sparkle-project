@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/providers/theme_provider.dart';
+import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/utils/chaos/chaos_control_dialog.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/capsule_provider.dart';
 import 'package:sparkle/features/cognitive/presentation/widgets/capsule/capsule_generation_preview.dart';
@@ -13,6 +14,7 @@ import 'package:sparkle/features/user/presentation/widgets/learning_mode_control
 import 'package:sparkle/features/user/presentation/widgets/preference_controller_2d.dart';
 import 'package:sparkle/features/user/presentation/widgets/weekly_agenda_grid.dart';
 import 'package:sparkle/features/user/user_routes.dart';
+import 'package:sparkle/features/visual_elements/visual_elements_routes.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
 class UnifiedSettingsScreen extends ConsumerStatefulWidget {
@@ -149,6 +151,17 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
               ),
               const SizedBox(height: DS.spacing20),
               GraphiteCardSurface(
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.palette_outlined),
+                  title: Text(l10n.visualElementsTitle),
+                  subtitle: Text(l10n.visualElementsEntrySubtitle),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push(VisualElementsRoutes.basePath),
+                ),
+              ),
+              const SizedBox(height: DS.spacing20),
+              GraphiteCardSurface(
                 child: Column(
                   children: [
                     ListTile(
@@ -195,6 +208,9 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                   ],
                 ),
               ),
+              const SizedBox(height: DS.spacing20),
+              // Notification permission status card
+              _buildNotificationPermissionCard(context, l10n),
               const SizedBox(height: DS.spacing20),
               GraphiteCardSurface(
                 child: Column(
@@ -509,5 +525,186 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
       return l10n.weeklyAgendaEmptyHint;
     }
     return l10n.weeklyAgendaSummary(activeCount, busyCount, fragmentedCount);
+  }
+
+  Widget _buildNotificationPermissionCard(
+    BuildContext context,
+    AppLocalizations l10n,
+  ) {
+    final permissionStatus = ref.watch(notificationPermissionStatusProvider);
+
+    return permissionStatus.when(
+      loading: () => GraphiteCardSurface(
+        child: ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const SizedBox(
+            width: 24,
+            height: 24,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          title: const Text('通知权限状态'),
+          subtitle: const Text('...'),
+        ),
+      ),
+      error: (error, stack) => GraphiteCardSurface(
+        child: ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(Icons.error_outline, color: DS.error),
+          title: const Text('通知权限状态'),
+          subtitle: Text('未授权: $error'),
+        ),
+      ),
+      data: (status) {
+        final hasPermission = status.hasPermission;
+        final isPartial = status.hasPermission &&
+            (status.alertEnabled == false ||
+                status.badgeEnabled == false ||
+                status.soundEnabled == false);
+
+        Color statusColor;
+        IconData statusIcon;
+        String? hintText;
+
+        if (!hasPermission) {
+          statusColor = DS.error;
+          statusIcon = Icons.notifications_off_outlined;
+          hintText = '通知权限被拒绝，请在系统设置中开启';
+        } else if (isPartial) {
+          statusColor = DS.warning;
+          statusIcon = Icons.notifications_active_outlined;
+          hintText = '部分通知功能受限，建议开启完整权限';
+        } else {
+          statusColor = DS.success;
+          statusIcon = Icons.notifications_active;
+        }
+
+        return GraphiteCardSurface(
+          child: Column(
+            children: [
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(statusIcon, color: statusColor),
+                title: const Text('通知权限状态'),
+                subtitle: hintText != null
+                    ? Text(hintText, style: TextStyle(color: statusColor))
+                    : null,
+                trailing: hasPermission && !isPartial
+                    ? Icon(Icons.check_circle, color: statusColor)
+                    : TextButton(
+                        onPressed: () async {
+                          if (!hasPermission) {
+                            // Try to request permission first
+                            final granted = await ref
+                                .read(notificationPermissionStatusProvider
+                                    .notifier)
+                                .requestPermission();
+                            if (!granted && context.mounted) {
+                              // Permission denied, show dialog to open settings
+                              _showOpenSettingsDialog(context);
+                            }
+                          } else {
+                            // Partial permission, open settings
+                            _showOpenSettingsDialog(context);
+                          }
+                        },
+                        child: Text(!hasPermission ? '请求权限' : '打开设置'),
+                      ),
+              ),
+              if (isPartial) ...[
+                const Divider(height: DS.spacing8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: DS.spacing16,
+                    vertical: DS.spacing8,
+                  ),
+                  child: Row(
+                    children: [
+                      _buildPermissionChip(
+                        'Alert',
+                        status.alertEnabled ?? false,
+                      ),
+                      const SizedBox(width: DS.spacing8),
+                      _buildPermissionChip(
+                        'Badge',
+                        status.badgeEnabled ?? false,
+                      ),
+                      const SizedBox(width: DS.spacing8),
+                      _buildPermissionChip(
+                        'Sound',
+                        status.soundEnabled ?? false,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPermissionChip(String label, bool enabled) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: DS.spacing8,
+        vertical: DS.spacing4,
+      ),
+      decoration: BoxDecoration(
+        color: enabled
+            ? DS.success.withValues(alpha: 0.1)
+            : DS.surfaceTertiary.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(DS.radius8),
+        border: Border.all(
+          color: enabled ? DS.success : DS.borderSubtle,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            enabled ? Icons.check : Icons.close,
+            size: 14,
+            color: enabled ? DS.success : DS.textSecondary,
+          ),
+          const SizedBox(width: DS.spacing4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: DS.fontSizeXs,
+              color: enabled ? DS.success : DS.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showOpenSettingsDialog(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('通知权限状态'),
+        content: const Text('通知权限被拒绝，请在系统设置中开启'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // Open app settings
+              unawaited(
+                ref
+                    .read(notificationPermissionStatusProvider.notifier)
+                    .requestPermission(),
+              );
+            },
+            child: const Text('打开设置'),
+          ),
+        ],
+      ),
+    );
   }
 }

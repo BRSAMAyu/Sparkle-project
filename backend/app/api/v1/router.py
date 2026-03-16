@@ -18,6 +18,7 @@ from app.api.v1 import (
     # graph_monitor,
     # graphrag_trace,
     decay_timemachine,
+    devices,
     dlq_admin,
     error_book,
     event_bus_health,
@@ -65,6 +66,7 @@ from app.api.v1 import (
     user_persona_batch,
     user_settings,
     users,
+    visual_elements,  # Visual Element System
     vocabulary,
 )
 from app.config import settings
@@ -124,6 +126,10 @@ api_router.include_router(notification_center.router)
 api_router.include_router(shop.router, prefix="/shop", tags=["shop"])
 api_router.include_router(photons.router, prefix="/photons", tags=["photons"])
 api_router.include_router(inventory.router, prefix="/inventory", tags=["inventory"])
+# Visual Element System
+api_router.include_router(visual_elements.router, prefix="/visual-elements", tags=["visual-elements"])
+# Device Registration (Push Notifications)
+api_router.include_router(devices.router, tags=["devices"])
 # WebSocket monitoring endpoints
 api_router.include_router(monitoring.router, prefix="/ws", tags=["WebSocket Monitoring"])
 if settings.ENABLE_GRAPHRAG_MONITOR_API:

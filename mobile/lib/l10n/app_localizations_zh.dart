@@ -672,6 +672,34 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatModeSelectorTitle => '选择 AI 协作模式';
 
   @override
+  String chatModeActivated(Object mode) {
+    return '$mode 模式已激活';
+  }
+
+  @override
+  String get chatPlanContextSwitched => '已切换到计划上下文';
+
+  @override
+  String get chatPlanSwitchTitle => '切换计划上下文';
+
+  @override
+  String get chatPlanSwitchMessage => '切换计划将清空当前对话记录，是否继续？';
+
+  @override
+  String chatPlanSwitchUnsavedCount(Object count) {
+    return '$count 条未保存的消息';
+  }
+
+  @override
+  String get chatReconnecting => '正在重新连接...';
+
+  @override
+  String get chatReconnected => '已重新连接';
+
+  @override
+  String get chatConnectionFailed => '连接失败';
+
+  @override
   String get aiCollabModeTitle => 'AI 协作';
 
   @override
@@ -5907,4 +5935,289 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get wechatNotInstalled => '请先安装微信';
+
+  @override
+  String get shareTemplateTitle => '选择模板';
+
+  @override
+  String get shareTemplateCosmic => '星空';
+
+  @override
+  String get shareTemplateMinimal => '简约';
+
+  @override
+  String get shareTemplateNeon => '霓虹';
+
+  @override
+  String get shareTemplateElegant => '典雅';
+
+  @override
+  String get shareTemplateCosmicDesc => '深蓝渐变，金色粒子漂浮，柔和光晕';
+
+  @override
+  String get shareTemplateMinimalDesc => '纯色背景，极简线条，黑色主文字';
+
+  @override
+  String get shareTemplateNeonDesc => '纯黑背景，霓虹发光，赛博朋克配色';
+
+  @override
+  String get shareTemplateElegantDesc => '米色金色背景，优雅衬线字体，金色装饰';
+
+  @override
+  String get sharePrivacyTitle => '隐私设置';
+
+  @override
+  String get sharePrivacyDisplayName => '显示名称';
+
+  @override
+  String get sharePrivacyDisplayNameHint => '使用默认昵称';
+
+  @override
+  String get sharePrivacyDisplayNameNote => '留空则使用您的默认昵称';
+
+  @override
+  String get sharePrivacyShowAvatar => '显示头像';
+
+  @override
+  String get sharePrivacyShowAvatarDesc => '在分享卡上显示您的头像';
+
+  @override
+  String get sharePrivacyShowDate => '显示解锁日期';
+
+  @override
+  String get sharePrivacyShowDateDesc => '显示成就解锁的具体日期';
+
+  @override
+  String get sharePrivacyShowStats => '显示进度统计';
+
+  @override
+  String get sharePrivacyShowStatsDesc => '显示进度条和统计数据';
+
+  @override
+  String get sharePrivacyShowFirstBadge => '首位解锁者徽章';
+
+  @override
+  String get sharePrivacyShowFirstBadgeDesc => '如您是首位解锁者，显示专属徽章';
+
+  @override
+  String get sharePreviewLoading => '正在生成预览...';
+
+  @override
+  String get sharePreviewError => '预览生成失败';
+
+  @override
+  String get shareRegenerateCard => '重新生成';
+
+  @override
+  String get notificationPermissionStatus => '通知权限状态';
+
+  @override
+  String get notificationPermissionGranted => '已授权';
+
+  @override
+  String get notificationPermissionDenied => '未授权';
+
+  @override
+  String get notificationPermissionPartial => '部分授权';
+
+  @override
+  String get notificationPermissionRequest => '请求权限';
+
+  @override
+  String get notificationPermissionOpenSettings => '打开设置';
+
+  @override
+  String get notificationPermissionDeniedHint => '通知权限被拒绝，请在系统设置中开启';
+
+  @override
+  String get notificationPermissionPartialHint => '部分通知功能受限，建议开启完整权限';
+
+  @override
+  String get visualElementsTitle => '视觉元素';
+
+  @override
+  String get visualElementsUnlockProgress => '解锁进度';
+
+  @override
+  String get visualElementsEquipped => '已装备';
+
+  @override
+  String get visualElementTabAll => '全部';
+
+  @override
+  String get visualElementTabBackground => '背景';
+
+  @override
+  String get visualElementTabParticle => '粒子';
+
+  @override
+  String get visualElementTabEffect => '特效';
+
+  @override
+  String get visualElementTabUnlocked => '已解锁';
+
+  @override
+  String get visualElementEmpty => '暂无视觉元素';
+
+  @override
+  String get visualElementFilter => '筛选';
+
+  @override
+  String get visualElementApplyFilter => '应用筛选';
+
+  @override
+  String get visualElementType => '类型';
+
+  @override
+  String get visualElementCategory => '分类';
+
+  @override
+  String get visualElementSource => '来源';
+
+  @override
+  String get visualElementRarity => '稀有度';
+
+  @override
+  String get visualElementEquipped => '已装备';
+
+  @override
+  String get visualElementUnlocked => '已解锁';
+
+  @override
+  String get visualElementLocked => '未解锁';
+
+  @override
+  String get visualElementEquip => '装备';
+
+  @override
+  String get visualElementUnequip => '卸下';
+
+  @override
+  String get visualElementEquipSuccess => '装备成功';
+
+  @override
+  String get visualElementEquipFailed => '装备失败';
+
+  @override
+  String get visualElementUnequipSuccess => '已卸下';
+
+  @override
+  String get visualElementUnequipFailed => '卸下失败';
+
+  @override
+  String get visualElementUnlockSystem => '系统赠送';
+
+  @override
+  String get visualElementUnlockAchievement => '成就解锁';
+
+  @override
+  String get visualElementUnlockShop => '商城购买';
+
+  @override
+  String get visualElementUnlockEvent => '活动获取';
+
+  @override
+  String get visualElementUnlockSeason => '赛季奖励';
+
+  @override
+  String get visualElementUnlockHintSystem => '系统自动赠送';
+
+  @override
+  String visualElementUnlockHintAchievement(Object achievement) {
+    return '完成成就「$achievement」解锁';
+  }
+
+  @override
+  String get visualElementUnlockHintAchievementDefault => '完成指定成就解锁';
+
+  @override
+  String visualElementUnlockHintShop(Object price) {
+    return '在商城花费 $price 光子购买';
+  }
+
+  @override
+  String get visualElementUnlockHintShopDefault => '在商城购买';
+
+  @override
+  String get visualElementUnlockHintEvent => '参与限时活动获取';
+
+  @override
+  String get visualElementUnlockHintSeason => '赛季奖励解锁';
+
+  @override
+  String get visualElementBackground => '背景';
+
+  @override
+  String get visualElementParticle => '粒子';
+
+  @override
+  String get visualElementEffect => '特效';
+
+  @override
+  String get visualElementBundle => '套装';
+
+  @override
+  String get visualElementsEntrySubtitle => '自定义你的场景';
+
+  @override
+  String get visualElementShare => '分享';
+
+  @override
+  String visualElementShareMessage(Object name) {
+    return '我在 Sparkle 使用了「$name」的视觉元素！';
+  }
+
+  @override
+  String visualElementShareFailed(Object error) {
+    return '分享失败：$error';
+  }
+
+  @override
+  String get visualElementShareUnavailable => '预览尚未就绪';
+
+  @override
+  String get visualElementEventTitle => '限时活动';
+
+  @override
+  String visualElementEventEndsIn(Object time) {
+    return '距离结束 $time';
+  }
+
+  @override
+  String get visualElementEventEnded => '活动已结束';
+
+  @override
+  String visualElementEventCountdownDays(Object days, Object hours) {
+    return '$days天 $hours小时';
+  }
+
+  @override
+  String visualElementEventCountdownHours(Object hours, Object minutes) {
+    return '$hours小时 $minutes分钟';
+  }
+
+  @override
+  String visualElementEventCountdownMinutes(Object minutes) {
+    return '$minutes分钟';
+  }
+
+  @override
+  String get visualElementCategorySpace => '太空';
+
+  @override
+  String get visualElementCategoryNature => '自然';
+
+  @override
+  String get visualElementCategoryCyberpunk => '赛博朋克';
+
+  @override
+  String get visualElementCategoryAbstract => '抽象';
+
+  @override
+  String get visualElementCategoryAmbient => '氛围';
+
+  @override
+  String visualElementEmptyType(Object type) {
+    return '暂无$type';
+  }
 }

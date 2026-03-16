@@ -36,6 +36,7 @@ class ShopItemType(str, enum.Enum):
     TITLE = "title"         # 称号
     CONSUMABLE = "consumable" # 消耗品
     BOOST = "boost"         # 加成道具
+    VISUAL_ELEMENT = "visual_element"  # 视觉元素（背景、粒子、特效）
 
 
 class ItemRarity(str, enum.Enum):

@@ -142,6 +142,14 @@ from app.models.user_preferences import UserPreferencesCenter
 from app.models.user_settings import UserSettings
 from app.models.user_state import UserStateSnapshot
 from app.models.vocabulary import DictionaryEntry, WordBook
+from app.models.visual_element import (
+    UserVisualConfig,
+    UserVisualElement,
+    VisualElement,
+    VisualElementRarity,
+    VisualElementType,
+    VisualElementUnlockSource,
+)
 
 __all__ = [
     "BaseModel",
@@ -311,4 +319,11 @@ __all__ = [
     "ShopPurchase",
     "UserConsumable",
     "PhotonTransactionHistory",
+    # Visual Element System
+    "VisualElement",
+    "VisualElementType",
+    "VisualElementRarity",
+    "VisualElementUnlockSource",
+    "UserVisualElement",
+    "UserVisualConfig",
 ]

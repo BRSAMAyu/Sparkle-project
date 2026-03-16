@@ -121,7 +121,7 @@ extension ChatNotifierActions on ChatNotifier {
     }
   }
 
-  Future<void> switchPlanSession(String? planId) async {
+  Future<void> switchPlanSession(String? planId, {BuildContext? context}) async {
     if (planId == null) {
       state = state.copyWith(
         clearConversation: true,
@@ -145,6 +145,29 @@ extension ChatNotifierActions on ChatNotifier {
       return;
     }
 
+    // Check if there are unsaved/temporary messages in current conversation
+    final hasUnsavedMessages = state.messages.isNotEmpty &&
+        state.messages.any((m) => m.id.startsWith('temp_') || m.id.isEmpty);
+
+    if (hasUnsavedMessages && context != null) {
+      // Show confirmation dialog
+      final targetPlanName = await _getPlanName(planId);
+      if (!context.mounted) return;
+
+      final confirmed = await showDialog<bool>(
+        context: context,
+        barrierColor: Colors.black54,
+        builder: (ctx) => PlanSwitchConfirmationDialog(
+          targetPlanName: targetPlanName,
+          unsavedMessageCount: state.messages.length,
+          onConfirm: () => Navigator.pop(ctx, true),
+          onCancel: () => Navigator.pop(ctx, false),
+        ),
+      );
+
+      if (confirmed != true) return;
+    }
+
     state = state.copyWith(
       conversationId: sessionId,
       messages: [],
@@ -156,6 +179,26 @@ extension ChatNotifierActions on ChatNotifier {
     );
 
     await loadConversationHistory(sessionId);
+
+    // Show feedback after successful switch
+    if (context != null) {
+      AppFeedback.success(context, I18nService.instance.l10n.chatPlanContextSwitched);
+    }
+  }
+
+  /// Helper to get plan name from provider
+  Future<String> _getPlanName(String planId) async {
+    try {
+      final planListState = _ref.read(planListProvider);
+      final plans = planListState.plans;
+      final plan = plans.firstWhere(
+        (p) => p.id == planId,
+        orElse: () => throw StateError('Plan not found'),
+      );
+      return plan.title;
+    } catch (_) {
+      return I18nService.instance.l10n.chatNewChat;
+    }
   }
 
   /// 确认 ActionCard
@@ -367,6 +410,41 @@ extension ChatNotifierActions on ChatNotifier {
     _ref.read(taskBoardProvider.notifier).switchView(TaskViewMode.sprint);
   }
 
+  /// 处理 Notification Event (实时通知推送)
+  void _handleNotificationEvent(NotificationEvent event) {
+    debugPrint(
+      '🔔 Notification event received: ${event.title} (type: ${event.notificationType})',
+    );
+
+    // 直接将通知添加到通知中心
+    try {
+      final notificationCenter = _ref.read(notificationCenterProvider.notifier);
+      notificationCenter.handleNewNotification(
+        notificationData: event.fullNotificationData,
+        notificationType: event.notificationType,
+      );
+      debugPrint('✅ Notification added to notification center: ${event.notificationId}');
+    } catch (e) {
+      debugPrint('⚠️ Failed to add notification to center: $e');
+    }
+
+    // 显示 toast 提示
+    final title = event.title.isNotEmpty ? event.title : event.content;
+    if (title.isNotEmpty) {
+      state = state.copyWith(
+        lastActionStatus: 'notification_received',
+        lastActionMessage: title,
+      );
+
+      // 延迟清除反馈状态
+      Future.delayed(const Duration(seconds: 3), () {
+        if (mounted) {
+          state = state.copyWith(clearActionFeedback: true);
+        }
+      });
+    }
+  }
+
   /// 处理 ActionCard 状态更新
   void _handleActionStatus(ActionStatusEvent event) {
     debugPrint(
@@ -448,6 +526,21 @@ extension ChatNotifierActions on ChatNotifier {
     debugPrint(
       '📢 State change notification added: ${event.changeType} (${event.interventionLevel})',
     );
+
+    // Refresh notification center when receiving state change events
+    _refreshNotificationCenter();
+  }
+
+  /// 刷新通知中心
+  void _refreshNotificationCenter() {
+    try {
+      // Import and refresh notification center
+      final notificationCenter = _ref.read(notificationCenterProvider.notifier);
+      notificationCenter.refresh();
+      debugPrint('🔔 Notification center refreshed due to state change');
+    } catch (e) {
+      debugPrint('⚠️ Failed to refresh notification center: $e');
+    }
   }
 
   /// 处理 Plan Review Status Event

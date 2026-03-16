@@ -365,12 +365,30 @@ class AchievementNotifier extends StateNotifier<AchievementState> {
   }
 
   /// Generate achievement share card metadata
-  Future<AchievementShareCard?> shareAchievement(String achievementId) async {
+  Future<AchievementShareCard?> shareAchievement(
+    String achievementId, {
+    String templateId = 'cosmic',
+    ShareCardPrivacySettings? privacySettings,
+  }) async {
     try {
-      return await _repository.shareAchievement(achievementId);
+      return await _repository.shareAchievement(
+        achievementId,
+        templateId: templateId,
+        privacySettings: privacySettings,
+      );
     } catch (e) {
       debugPrint('Error sharing achievement: $e');
       return null;
+    }
+  }
+
+  /// Get available share card templates
+  Future<List<ShareTemplateInfo>> getShareTemplates() async {
+    try {
+      return await _repository.getShareTemplates();
+    } catch (e) {
+      debugPrint('Error getting share templates: $e');
+      return [];
     }
   }
 

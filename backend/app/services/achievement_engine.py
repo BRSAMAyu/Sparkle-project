@@ -82,7 +82,7 @@ class AchievementEngine:
         "TASKS_TOTAL",
         "WEEKEND_WARRIOR",
     }
-    SUPPORTED_REWARD_TYPES = {"freeze_charge", "galaxy_skin", "photon", "title"}
+    SUPPORTED_REWARD_TYPES = {"freeze_charge", "galaxy_skin", "photon", "title", "visual_element"}
 
     # 成就定义缓存（内存缓存）
     _achievement_cache: dict[str, Achievement] = {}
@@ -854,6 +854,12 @@ class AchievementEngine:
                     except Exception as e:
                         logger.error(f"Failed to grant photons for achievement {achievement.id}: {e}")
 
+                case "visual_element":
+                    # 解锁视觉元素
+                    element_id = reward.get("element_id")
+                    if element_id:
+                        await self._unlock_visual_element(user_id, element_id, achievement.id)
+
     async def _unlock_title(self, user_id: str, title_id: str, display: str, achievement_id: str):
         """解锁称号"""
         query = select(UserTitle).where(
@@ -897,6 +903,32 @@ class AchievementEngine:
             )
             self.db.add(user_skin)
             await self.db.flush()
+
+    async def _unlock_visual_element(self, user_id: str, element_id: str, achievement_id: str):
+        """解锁视觉元素"""
+        from app.models.visual_element import UserVisualElement
+
+        # 检查是否已解锁
+        query = select(UserVisualElement).where(
+            and_(
+                UserVisualElement.user_id == user_id,
+                UserVisualElement.element_id == element_id
+            )
+        )
+        result = await self.db.execute(query)
+        user_element = result.scalar_one_or_none()
+
+        if not user_element:
+            user_element = UserVisualElement(
+                user_id=user_id,
+                element_id=element_id,
+                unlocked_at=_utcnow(),
+                unlock_source="achievement",
+                source_id=achievement_id
+            )
+            self.db.add(user_element)
+            await self.db.flush()
+            logger.info(f"Unlocked visual element {element_id} for user {user_id} via achievement {achievement_id}")
 
     async def _notify_unlocks(self, user_id: str, unlocked: list[dict]):
         """发送成就解锁通知"""
