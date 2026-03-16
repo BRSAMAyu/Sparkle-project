@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/visual_elements/data/repositories/visual_element_repository.dart';
+import 'package:sparkle/features/visual_elements/domain/services/visual_recommendation_service.dart';
 import 'package:sparkle/features/visual_elements/presentation/providers/visual_elements_provider.dart';
+import 'package:sparkle/features/visual_elements/presentation/providers/visual_recommendation_provider.dart';
 import 'package:sparkle/features/visual_elements/presentation/widgets/visual_element_preview_dialog.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/visual_element_model.dart';
@@ -31,7 +33,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: 6, vsync: this);
     _tabController.addListener(_onTabChanged);
 
     // 初始加载数据
@@ -54,7 +56,21 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
   }
 
   void _updateFilterFromTab() {
-    final type = switch (_tabController.index) {
+    if (_tabController.index == 0) {
+      setState(() {
+        _filterOptions = _filterOptions.copyWith(
+          type: null,
+          showUnlockedOnly: false,
+        );
+      });
+      ref.read(visualElementsNotifierProvider.notifier).setFilterOptions(
+            _filterOptions,
+          );
+      return;
+    }
+
+    final adjustedIndex = _tabController.index - 1;
+    final type = switch (adjustedIndex) {
       0 => null, // 全部
       1 => VisualElementType.background,
       2 => VisualElementType.particle,
@@ -63,7 +79,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
       _ => null,
     };
 
-    final showUnlockedOnly = _tabController.index == 4;
+    final showUnlockedOnly = adjustedIndex == 4;
 
     setState(() {
       _filterOptions = _filterOptions.copyWith(
@@ -275,6 +291,10 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
             fontWeight: DS.fontWeightMedium,
           ),
           tabs: [
+            Tab(
+              icon: const Icon(Icons.auto_awesome),
+              text: l10n.visualElementsRecommended,
+            ),
             Tab(text: l10n.visualElementTabAll),
             Tab(text: l10n.visualElementTabBackground),
             Tab(text: l10n.visualElementTabParticle),
@@ -297,6 +317,11 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
 
     if (state.error != null) {
       return _buildErrorView(state.error!, l10n);
+    }
+
+    if (_tabController.index == 0) {
+      final recommendations = ref.watch(visualRecommendationProvider);
+      return _buildRecommendationBody(context, l10n, state, recommendations);
     }
 
     final filteredElements = state.filteredElements;
@@ -520,6 +545,93 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
         ),
       ),
     );
+  }
+
+  Widget _buildRecommendationBody(
+    BuildContext context,
+    AppLocalizations l10n,
+    VisualElementsState state,
+    AsyncValue<List<VisualRecommendation>> recommendationsValue,
+  ) {
+    return recommendationsValue.when(
+      data: (recommendations) {
+        if (recommendations.isEmpty) {
+          return _buildEmptyView(l10n);
+        }
+
+        return RefreshIndicator(
+          onRefresh: () =>
+              ref.read(visualElementsNotifierProvider.notifier).refresh(),
+          child: CustomScrollView(
+            slivers: [
+              SliverPadding(
+                padding: const EdgeInsets.all(DS.spacing16),
+                sliver: SliverGrid(
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: _calculateCrossAxisCount(
+                      MediaQuery.of(context).size.width,
+                    ),
+                    mainAxisSpacing: DS.spacing12,
+                    crossAxisSpacing: DS.spacing12,
+                    mainAxisExtent: 200,
+                  ),
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final recommendation = recommendations[index];
+                      final element = recommendation.element;
+                      final isUnlocked = state.unlockedIds.contains(element.id);
+                      final isEquipped = state.equippedIds.contains(element.id);
+                      final resolvedElement = element.copyWith(
+                        isUnlocked: isUnlocked,
+                        isEquipped: isEquipped,
+                      );
+
+                      return _RecommendationCard(
+                        element: resolvedElement,
+                        reason: recommendation.reason,
+                        reasonText: _recommendationReasonText(
+                          l10n,
+                          recommendation.reason,
+                        ),
+                        onTap: () => _showElementPreview(
+                          element,
+                          isUnlocked,
+                          isEquipped,
+                        ),
+                        onEquip: isUnlocked && !isEquipped
+                            ? () => _equipElement(element.id)
+                            : null,
+                      );
+                    },
+                    childCount: recommendations.length,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, _) => _buildErrorView(err.toString(), l10n),
+    );
+  }
+
+  String _recommendationReasonText(
+    AppLocalizations l10n,
+    VisualRecommendationReason reason,
+  ) {
+    switch (reason) {
+      case VisualRecommendationReason.focus:
+        return l10n.visualRecommendationFocus;
+      case VisualRecommendationReason.relax:
+        return l10n.visualRecommendationRelax;
+      case VisualRecommendationReason.sprint:
+        return l10n.visualRecommendationSprint;
+      case VisualRecommendationReason.night:
+        return l10n.visualRecommendationNight;
+      case VisualRecommendationReason.streak:
+        return l10n.visualRecommendationStreak;
+    }
   }
 
   void _showFilterSheet(BuildContext context, AppLocalizations l10n) {
@@ -1208,6 +1320,213 @@ class _VisualElementCard extends StatelessWidget {
         return Icons.auto_awesome;
       case VisualElementRarity.legendary:
         return Icons.diamond_outlined;
+    }
+  }
+}
+
+class _RecommendationCard extends StatelessWidget {
+  const _RecommendationCard({
+    required this.element,
+    required this.reason,
+    required this.reasonText,
+    this.onTap,
+    this.onEquip,
+  });
+
+  final VisualElementModel element;
+  final VisualRecommendationReason reason;
+  final String reasonText;
+  final VoidCallback? onTap;
+  final VoidCallback? onEquip;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = _getRarityColors(element.rarity);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: DS.surfaceSecondary,
+          borderRadius: DS.borderRadius16,
+          border: Border.all(
+            color: DS.brandPrimary.withValues(alpha: 0.3),
+          ),
+        ),
+        child: Stack(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(DS.spacing12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: DS.spacing8,
+                      vertical: DS.spacing4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: DS.brandPrimary.withValues(alpha: 0.12),
+                      borderRadius: DS.borderRadius8,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _reasonIcon(reason),
+                          size: DS.iconSizeXs,
+                          color: DS.brandPrimary,
+                        ),
+                        const SizedBox(width: DS.spacing4),
+                        Text(
+                          reasonText,
+                          style: TextStyle(
+                            fontSize: DS.fontSizeXs,
+                            color: DS.brandPrimary,
+                            fontWeight: DS.fontWeightMedium,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: DS.spacing12),
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        element.name,
+                        style: const TextStyle(
+                          fontSize: DS.fontSizeSm,
+                          fontWeight: DS.fontWeightSemibold,
+                          color: DS.textPrimary,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: DS.spacing8),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: DS.spacing6,
+                          vertical: DS.spacing2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: colors.background,
+                          borderRadius: DS.borderRadius6,
+                        ),
+                        child: Icon(
+                          _getRarityIcon(element.rarity),
+                          size: 10,
+                          color: colors.text,
+                        ),
+                      ),
+                      const Spacer(),
+                      if (onEquip != null)
+                        GestureDetector(
+                          onTap: onEquip,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: DS.spacing8,
+                              vertical: DS.spacing4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: DS.brandPrimary,
+                              borderRadius: DS.borderRadius8,
+                            ),
+                            child: Text(
+                              context.l10n.visualElementEquip,
+                              style: TextStyle(
+                                fontSize: DS.fontSizeXs,
+                                color: DS.textOnPrimary,
+                                fontWeight: DS.fontWeightMedium,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            if (!element.isUnlocked)
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: DS.surfacePrimary.withValues(alpha: 0.75),
+                    borderRadius: DS.borderRadius16,
+                  ),
+                  child: Center(
+                    child: Icon(
+                      Icons.lock,
+                      size: DS.iconSizeMd,
+                      color: DS.textTertiary,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  _RarityColors _getRarityColors(VisualElementRarity rarity) {
+    switch (rarity) {
+      case VisualElementRarity.common:
+        return _RarityColors(
+          background: DS.rarityCommonBg,
+          border: DS.rarityCommon,
+          text: DS.rarityCommonText,
+        );
+      case VisualElementRarity.rare:
+        return _RarityColors(
+          background: DS.rarityRareBg,
+          border: DS.rarityRare,
+          text: DS.rarityRareText,
+        );
+      case VisualElementRarity.epic:
+        return _RarityColors(
+          background: DS.rarityEpicBg,
+          border: DS.rarityEpic,
+          text: DS.rarityEpicText,
+        );
+      case VisualElementRarity.legendary:
+        return _RarityColors(
+          background: DS.rarityLegendaryBg,
+          border: DS.rarityLegendary,
+          text: DS.rarityLegendaryText,
+        );
+    }
+  }
+
+  IconData _getRarityIcon(VisualElementRarity rarity) {
+    switch (rarity) {
+      case VisualElementRarity.common:
+        return Icons.circle_outlined;
+      case VisualElementRarity.rare:
+        return Icons.star_border;
+      case VisualElementRarity.epic:
+        return Icons.auto_awesome;
+      case VisualElementRarity.legendary:
+        return Icons.diamond_outlined;
+    }
+  }
+
+  IconData _reasonIcon(VisualRecommendationReason reason) {
+    switch (reason) {
+      case VisualRecommendationReason.focus:
+        return Icons.center_focus_strong;
+      case VisualRecommendationReason.relax:
+        return Icons.spa;
+      case VisualRecommendationReason.sprint:
+        return Icons.bolt;
+      case VisualRecommendationReason.night:
+        return Icons.nights_stay;
+      case VisualRecommendationReason.streak:
+        return Icons.local_fire_department;
     }
   }
 }

@@ -851,6 +851,94 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
     if (count >= 3) return '继续！';
     return '不错！';
   }
+
+  bool _hasVisualElementRewards() {
+    final rewards = widget.event.rewards;
+    if (rewards == null || rewards.isEmpty) return false;
+    return rewards.any((reward) => reward['type'] == 'visual_element');
+  }
+}
+
+class _VisualElementPreviewSection extends StatelessWidget {
+  const _VisualElementPreviewSection({
+    required this.rewards,
+    required this.glowAnimation,
+  });
+
+  final List<Map<String, dynamic>> rewards;
+  final Animation<double> glowAnimation;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final visualRewards =
+        rewards.where((reward) => reward['type'] == 'visual_element').toList();
+    if (visualRewards.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l10n.achievementRewardVisualElement,
+          style: TextStyle(
+            color: DS.textPrimary,
+            fontSize: DS.fontSizeSm,
+            fontWeight: DS.fontWeightBold,
+          ),
+        ),
+        const SizedBox(height: DS.spacing8),
+        Wrap(
+          spacing: DS.spacing8,
+          runSpacing: DS.spacing8,
+          children: visualRewards.take(3).map((reward) {
+            final name = reward['name'] ??
+                reward['display'] ??
+                reward['title'] ??
+                l10n.achievementRewardVisualElement;
+            return AnimatedBuilder(
+              animation: glowAnimation,
+              builder: (context, child) => Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: DS.spacing10,
+                  vertical: DS.spacing6,
+                ),
+                decoration: BoxDecoration(
+                  color: DS.surfaceHigh.withValues(alpha: 0.9),
+                  borderRadius: DS.borderRadius12,
+                  border: Border.all(
+                    color: DS.warning.withValues(alpha: 0.4 * glowAnimation.value),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.auto_awesome,
+                      size: 14,
+                      color: DS.warning,
+                    ),
+                    const SizedBox(width: DS.spacing4),
+                    Flexible(
+                      child: Text(
+                        name.toString(),
+                        style: TextStyle(
+                          fontSize: DS.fontSizeXs,
+                          color: DS.textPrimary,
+                          fontWeight: DS.fontWeightMedium,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
 }
 
 /// 成就解锁转场动画

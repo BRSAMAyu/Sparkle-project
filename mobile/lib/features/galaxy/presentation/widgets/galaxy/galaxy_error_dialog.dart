@@ -106,8 +106,7 @@ class GalaxyErrorDialog extends StatelessWidget {
               },
             ),
         ],
-      ),
-    );
+      );
   }
 
   IconData _getErrorIcon() {
@@ -358,7 +357,6 @@ class GalaxyErrorPlaceholder extends StatelessWidget {
             ],
           ),
         ),
-      ),
     );
   }
 

@@ -30,7 +30,10 @@ class CalendarEventModel {
         endTime: DateTime.parse(json['endTime'] as String),
         isAllDay: json['isAllDay'] as bool? ?? false,
         location: json['location'] as String?,
-        colorValue: json['colorValue'] as int? ?? json['color'] != null ? _parseColor(json['color']) : 0xFF2196F3,
+        colorValue: (json['colorValue'] as int?) ??
+            (json['color'] != null
+                ? _parseColor(json['color'])
+                : 0xFF2196F3),
         reminderMinutes: (json['reminderMinutes'] as List<dynamic>?)
                 ?.map((e) => e as int)
                 .toList() ??

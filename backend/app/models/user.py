@@ -103,7 +103,15 @@ class User(BaseModel):
     equipped_title_source = Column(String(20), nullable=True, index=True)  # achievement | shop
 
     # 🆕 社群隐私设置 (V3.3)
-    searchable_by = Column(Enum(SearchVisibility), default=SearchVisibility.EVERYONE, nullable=False)
+    searchable_by = Column(
+        Enum(
+            SearchVisibility,
+            name="searchvisibility",
+            values_callable=lambda enum_cls: [member.value for member in enum_cls],
+        ),
+        default=SearchVisibility.EVERYONE,
+        nullable=False,
+    )
 
     # 关系定义
     push_preference = relationship(

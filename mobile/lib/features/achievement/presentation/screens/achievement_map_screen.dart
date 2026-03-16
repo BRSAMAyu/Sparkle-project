@@ -5,9 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/animation_lifecycle_mixin.dart';
+import 'package:sparkle/core/design/widgets/global_particle_counter.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/achievement/achievement_routes.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
+import 'package:sparkle/features/achievement/presentation/widgets/achievement_milestone_badge.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/rarity_badge.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 
@@ -24,6 +27,12 @@ class _AchievementMapScreenState extends ConsumerState<AchievementMapScreen> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final state = ref.watch(achievementMapProvider);
+    final achievementState = ref.watch(achievementProvider);
+    final progressById = <String, double>{
+      for (final entry in achievementState.achievements)
+        entry.achievement.id:
+            (entry.progressPercentage / 100).clamp(0.0, 1.0).toDouble(),
+    };
 
     return SparklePageScaffold(
       role: SparklePageRole.immersive,
@@ -80,6 +89,7 @@ class _AchievementMapScreenState extends ConsumerState<AchievementMapScreen> {
               : _CosmicConstellationCanvas(
                   nodes: state.nodes,
                   connections: state.connections,
+                  progressById: progressById,
                 ),
     );
   }
@@ -133,10 +143,12 @@ class _CosmicConstellationCanvas extends StatefulWidget {
   const _CosmicConstellationCanvas({
     required this.nodes,
     required this.connections,
+    required this.progressById,
   });
 
   final List<AchievementMapNode> nodes;
   final List<Map<String, dynamic>> connections;
+  final Map<String, double> progressById;
 
   @override
   State<_CosmicConstellationCanvas> createState() =>
@@ -145,13 +157,17 @@ class _CosmicConstellationCanvas extends StatefulWidget {
 
 class _CosmicConstellationCanvasState
     extends State<_CosmicConstellationCanvas>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, AnimationLifecycleMixin {
   late final AnimationController _twinkleController;
   late final AnimationController _pulseController;
   late final AnimationController _nodeEntranceController;
 
   /// Cached star positions generated once with a seeded random.
-  late final List<_Star> _stars;
+  late List<_Star> _stars;
+  int _starCount = 0;
+  bool _reduceMotion = false;
+  bool _orbitalParticlesEnabled = false;
+  int _registeredParticleCount = 0;
 
   @override
   void initState() {
@@ -177,9 +193,65 @@ class _CosmicConstellationCanvasState
       duration: totalDuration,
     )..forward();
 
-    // Generate star field with seeded random for deterministic layout.
+    registerController(
+      _twinkleController,
+      onResume: () => _twinkleController.repeat(),
+    );
+    registerController(
+      _pulseController,
+      onResume: () => _pulseController.repeat(),
+    );
+
+    _stars = [];
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _updateMotionPreference(context.reduceMotion);
+    _updateOrbitalParticleRegistration(force: true);
+    _updateStarField();
+  }
+
+  @override
+  void didUpdateWidget(covariant _CosmicConstellationCanvas oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.nodes.length != widget.nodes.length) {
+      _nodeEntranceController.duration =
+          Duration(milliseconds: 600 + widget.nodes.length * 40);
+    }
+    _updateOrbitalParticleRegistration(force: true);
+  }
+
+  void _updateMotionPreference(bool reduceMotion) {
+    if (_reduceMotion == reduceMotion) return;
+    _reduceMotion = reduceMotion;
+    if (_reduceMotion) {
+      _twinkleController.stop();
+      _pulseController.stop();
+      _nodeEntranceController.stop();
+      _releaseOrbitalParticles();
+    } else {
+      if (!_twinkleController.isAnimating) {
+        _twinkleController.repeat();
+      }
+      if (!_pulseController.isAnimating) {
+        _pulseController.repeat();
+      }
+      if (_nodeEntranceController.value == 0.0) {
+        _nodeEntranceController.forward();
+      }
+      _updateOrbitalParticleRegistration(force: true);
+    }
+  }
+
+  void _updateStarField() {
+    final count = _getAdaptiveStarCount();
+    if (count == _starCount) return;
+    _starCount = count;
+
     final rng = math.Random(42);
-    _stars = List.generate(60, (_) {
+    _stars = List.generate(count, (_) {
       return _Star(
         x: rng.nextDouble(),
         y: rng.nextDouble(),
@@ -190,8 +262,47 @@ class _CosmicConstellationCanvasState
     });
   }
 
+  int _getAdaptiveStarCount() {
+    final dpr = MediaQuery.of(context).devicePixelRatio;
+    if (dpr < 2.0) return 30;
+    if (dpr < 3.0) return 45;
+    return 60;
+  }
+
+  int _calculateOrbitalParticleCount() {
+    var total = 0;
+    for (final node in widget.nodes) {
+      if (!node.isUnlocked) continue;
+      total += _orbitalParticlesForRarity(node.rarity);
+    }
+    return total;
+  }
+
+  void _updateOrbitalParticleRegistration({bool force = false}) {
+    final desiredCount =
+        _reduceMotion ? 0 : _calculateOrbitalParticleCount();
+
+    if (!force && desiredCount == _registeredParticleCount) return;
+    _releaseOrbitalParticles();
+
+    if (desiredCount > 0 &&
+        GlobalParticleCounter.tryAddParticles(desiredCount)) {
+      _registeredParticleCount = desiredCount;
+      _orbitalParticlesEnabled = true;
+    }
+  }
+
+  void _releaseOrbitalParticles() {
+    if (_registeredParticleCount > 0) {
+      GlobalParticleCounter.releaseParticles(_registeredParticleCount);
+      _registeredParticleCount = 0;
+    }
+    _orbitalParticlesEnabled = false;
+  }
+
   @override
   void dispose() {
+    _releaseOrbitalParticles();
     _twinkleController.dispose();
     _pulseController.dispose();
     _nodeEntranceController.dispose();
@@ -208,6 +319,12 @@ class _CosmicConstellationCanvasState
         ),
       );
     }
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final reduceMotion = _reduceMotion;
+    final starStartColor = isDark ? DS.deepSpaceStart : DS.surfacePrimary;
+    final starEndColor = isDark ? DS.deepSpaceEnd : DS.surfaceSecondary;
+    final starColor = isDark ? Colors.white : DS.neutral600;
 
     // Compute positions & canvas size.
     final positions = <String, Offset>{};
@@ -242,52 +359,82 @@ class _CosmicConstellationCanvasState
           children: [
             // Layer 0 - Deep space background + star field.
             Positioned.fill(
-              child: AnimatedBuilder(
-                animation: _twinkleController,
-                builder: (context, _) => CustomPaint(
-                  painter: _StarFieldPainter(
-                    stars: _stars,
-                    animValue: _twinkleController.value,
-                    startColor: DS.deepSpaceStart,
-                    endColor: DS.deepSpaceEnd,
-                  ),
-                ),
-              ),
+              child: reduceMotion
+                  ? CustomPaint(
+                      painter: _StarFieldPainter(
+                        stars: _stars,
+                        animValue: 0.0,
+                        startColor: starStartColor,
+                        endColor: starEndColor,
+                        starColor: starColor,
+                        reduceMotion: true,
+                      ),
+                    )
+                  : AnimatedBuilder(
+                      animation: _twinkleController,
+                      builder: (context, _) => CustomPaint(
+                        painter: _StarFieldPainter(
+                          stars: _stars,
+                          animValue: _twinkleController.value,
+                          startColor: starStartColor,
+                          endColor: starEndColor,
+                          starColor: starColor,
+                          reduceMotion: false,
+                        ),
+                      ),
+                    ),
             ),
 
             // Layer 1 - Connection lines (gradient + glow + pulse dots).
             Positioned.fill(
-              child: AnimatedBuilder(
-                animation: _pulseController,
-                builder: (context, _) => CustomPaint(
-                  painter: _ConstellationLinesPainter(
-                    connections: widget.connections,
-                    positions: positions,
-                    nodeMap: nodeMap,
-                    pulseValue: _pulseController.value,
-                  ),
-                ),
-              ),
+              child: reduceMotion
+                  ? CustomPaint(
+                      painter: _ConstellationLinesPainter(
+                        connections: widget.connections,
+                        positions: positions,
+                        nodeMap: nodeMap,
+                        progressById: widget.progressById,
+                        pulseValue: 0.0,
+                        showPulseDots: false,
+                      ),
+                    )
+                  : AnimatedBuilder(
+                      animation: _pulseController,
+                      builder: (context, _) => CustomPaint(
+                        painter: _ConstellationLinesPainter(
+                          connections: widget.connections,
+                          positions: positions,
+                          nodeMap: nodeMap,
+                          progressById: widget.progressById,
+                          pulseValue: _pulseController.value,
+                          showPulseDots: true,
+                        ),
+                      ),
+                    ),
             ),
 
             // Layer 2 - Floating orbital particles around unlocked nodes.
-            Positioned.fill(
-              child: AnimatedBuilder(
-                animation: _pulseController,
-                builder: (context, _) => CustomPaint(
-                  painter: _OrbitalParticlesPainter(
-                    nodes: widget.nodes,
-                    positions: positions,
-                    animValue: _pulseController.value,
+            if (_orbitalParticlesEnabled)
+              Positioned.fill(
+                child: AnimatedBuilder(
+                  animation: _pulseController,
+                  builder: (context, _) => CustomPaint(
+                    painter: _OrbitalParticlesPainter(
+                      nodes: widget.nodes,
+                      positions: positions,
+                      animValue: _pulseController.value,
+                      isDark: isDark,
+                    ),
                   ),
                 ),
               ),
-            ),
 
             // Layer 3 - Node widgets.
             ...List.generate(widget.nodes.length, (index) {
               final node = widget.nodes[index];
               final offset = positions[node.id] ?? Offset.zero;
+              final progress =
+                  widget.progressById[node.id] ?? (node.isUnlocked ? 1.0 : 0.0);
 
               // Staggered entrance timing.
               final delayMs = index * 40;
@@ -301,16 +448,22 @@ class _CosmicConstellationCanvasState
                 curve: Interval(start, end, curve: Curves.elasticOut),
               );
 
+              final nodeWidget = _CosmicNodeWidget(
+                node: node,
+                progress: progress,
+                reduceMotion: reduceMotion,
+                pulseController: _pulseController,
+              );
+
               return Positioned(
                 left: offset.dx - 44,
                 top: offset.dy - 44,
-                child: ScaleTransition(
-                  scale: entranceAnim,
-                  child: _CosmicNodeWidget(
-                    node: node,
-                    pulseController: _pulseController,
-                  ),
-                ),
+                child: reduceMotion
+                    ? nodeWidget
+                    : ScaleTransition(
+                        scale: entranceAnim,
+                        child: nodeWidget,
+                      ),
               );
             }),
           ],
@@ -350,12 +503,16 @@ class _StarFieldPainter extends CustomPainter {
     required this.animValue,
     required this.startColor,
     required this.endColor,
+    required this.starColor,
+    required this.reduceMotion,
   });
 
   final List<_Star> stars;
   final double animValue;
   final Color startColor;
   final Color endColor;
+  final Color starColor;
+  final bool reduceMotion;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -372,10 +529,11 @@ class _StarFieldPainter extends CustomPainter {
     // Twinkling stars.
     final starPaint = Paint()..style = PaintingStyle.fill;
     for (final star in stars) {
-      final twinkle =
-          math.sin(animValue * math.pi * 2 + star.phase) * 0.3 + 0.7;
+      final twinkle = reduceMotion
+          ? 1.0
+          : math.sin(animValue * math.pi * 2 + star.phase) * 0.3 + 0.7;
       final opacity = (star.baseOpacity * twinkle).clamp(0.0, 1.0);
-      starPaint.color = Colors.white.withValues(alpha: opacity);
+      starPaint.color = starColor.withValues(alpha: opacity);
       canvas.drawCircle(
         Offset(star.x * size.width, star.y * size.height),
         star.radius,
@@ -386,7 +544,11 @@ class _StarFieldPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _StarFieldPainter old) =>
-      old.animValue != animValue;
+      old.animValue != animValue ||
+      old.startColor != startColor ||
+      old.endColor != endColor ||
+      old.starColor != starColor ||
+      old.reduceMotion != reduceMotion;
 }
 
 // ---------------------------------------------------------------------------
@@ -398,13 +560,17 @@ class _ConstellationLinesPainter extends CustomPainter {
     required this.connections,
     required this.positions,
     required this.nodeMap,
+    required this.progressById,
     required this.pulseValue,
+    required this.showPulseDots,
   });
 
   final List<Map<String, dynamic>> connections;
   final Map<String, Offset> positions;
   final Map<String, AchievementMapNode> nodeMap;
+  final Map<String, double> progressById;
   final double pulseValue;
+  final bool showPulseDots;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -422,12 +588,19 @@ class _ConstellationLinesPainter extends CustomPainter {
       if (fromNode == null || toNode == null) continue;
 
       final bothUnlocked = fromNode.isUnlocked && toNode.isUnlocked;
+      final fromProgress =
+          progressById[fromId] ?? (fromNode.isUnlocked ? 1.0 : 0.0);
+      final toProgress =
+          progressById[toId] ?? (toNode.isUnlocked ? 1.0 : 0.0);
+      final isCompleted = fromProgress >= 1.0 && toProgress >= 1.0;
       final fromColor = RarityColorProvider.getColor(fromNode.rarity);
       final toColor = RarityColorProvider.getColor(toNode.rarity);
 
       if (bothUnlocked) {
-        _drawUnlockedLine(canvas, from, to, fromColor, toColor);
-        _drawPulseDot(canvas, from, to, fromColor, toColor);
+        _drawUnlockedLine(canvas, from, to, fromColor, toColor, isCompleted);
+        if (showPulseDots) {
+          _drawPulseDot(canvas, from, to, fromColor, toColor);
+        }
       } else {
         _drawLockedDashedLine(canvas, from, to);
       }
@@ -440,27 +613,37 @@ class _ConstellationLinesPainter extends CustomPainter {
     Offset to,
     Color fromColor,
     Color toColor,
+    bool isCompleted,
   ) {
     // Glow layer.
     final glowPaint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 4.0
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3)
+      ..strokeWidth = isCompleted ? 5.0 : 4.0
+      ..maskFilter = MaskFilter.blur(
+        BlurStyle.normal,
+        isCompleted ? 4 : 3,
+      )
       ..shader = ui.Gradient.linear(
         from,
         to,
-        [fromColor.withValues(alpha: 0.3), toColor.withValues(alpha: 0.3)],
+        [
+          fromColor.withValues(alpha: isCompleted ? 0.45 : 0.3),
+          toColor.withValues(alpha: isCompleted ? 0.45 : 0.3),
+        ],
       );
     canvas.drawLine(from, to, glowPaint);
 
     // Sharp line.
     final linePaint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5
+      ..strokeWidth = isCompleted ? 2.2 : 1.5
       ..shader = ui.Gradient.linear(
         from,
         to,
-        [fromColor.withValues(alpha: 0.8), toColor.withValues(alpha: 0.8)],
+        [
+          fromColor.withValues(alpha: isCompleted ? 0.95 : 0.8),
+          toColor.withValues(alpha: isCompleted ? 0.95 : 0.8),
+        ],
       );
     canvas.drawLine(from, to, linePaint);
   }
@@ -519,23 +702,39 @@ class _ConstellationLinesPainter extends CustomPainter {
   bool shouldRepaint(covariant _ConstellationLinesPainter old) =>
       old.pulseValue != pulseValue ||
       old.connections != connections ||
-      old.positions != positions;
+      old.positions != positions ||
+      old.progressById != progressById ||
+      old.showPulseDots != showPulseDots;
 }
 
 // ---------------------------------------------------------------------------
 // Orbital particles painter - tiny dots orbiting unlocked nodes
 // ---------------------------------------------------------------------------
 
+int _orbitalParticlesForRarity(AchievementRarity rarity) {
+  switch (rarity) {
+    case AchievementRarity.legendary:
+      return 4;
+    case AchievementRarity.epic:
+      return 2;
+    case AchievementRarity.rare:
+    case AchievementRarity.common:
+      return 2;
+  }
+}
+
 class _OrbitalParticlesPainter extends CustomPainter {
   _OrbitalParticlesPainter({
     required this.nodes,
     required this.positions,
     required this.animValue,
+    required this.isDark,
   });
 
   final List<AchievementMapNode> nodes;
   final Map<String, Offset> positions;
   final double animValue;
+  final bool isDark;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -547,13 +746,12 @@ class _OrbitalParticlesPainter extends CustomPainter {
       final center = positions[node.id];
       if (center == null) continue;
 
-      final color = RarityColorProvider.getColor(node.rarity);
+      final color = _getAdaptiveColor(
+        RarityColorProvider.getColor(node.rarity),
+        isDark,
+      );
       // 2-4 particles per unlocked node based on rarity.
-      final particleCount = node.rarity == AchievementRarity.legendary
-          ? 4
-          : node.rarity == AchievementRarity.epic
-              ? 3
-              : 2;
+      final particleCount = _orbitalParticlesForRarity(node.rarity);
 
       for (var i = 0; i < particleCount; i++) {
         final orbitRadius = 30.0 + i * 6.0;
@@ -579,7 +777,12 @@ class _OrbitalParticlesPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _OrbitalParticlesPainter old) =>
-      old.animValue != animValue;
+      old.animValue != animValue || old.isDark != isDark;
+
+  Color _getAdaptiveColor(Color baseColor, bool isDark) {
+    if (isDark) return baseColor;
+    return HSLColor.fromColor(baseColor).withLightness(0.3).toColor();
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -590,10 +793,14 @@ class _CosmicNodeWidget extends StatelessWidget {
   const _CosmicNodeWidget({
     required this.node,
     required this.pulseController,
+    required this.progress,
+    required this.reduceMotion,
   });
 
   final AchievementMapNode node;
   final AnimationController pulseController;
+  final double progress;
+  final bool reduceMotion;
 
   IconData _iconForCategory(String category) {
     switch (category.toLowerCase()) {
@@ -626,6 +833,7 @@ class _CosmicNodeWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = RarityColorProvider.getColor(node.rarity);
     const nodeSize = 52.0;
+    final isNearCompletion = progress >= 0.75;
 
     return GestureDetector(
       onTap: () => context.push('${AchievementRoutes.basePath}/${node.id}'),
@@ -643,34 +851,60 @@ class _CosmicNodeWidget extends StatelessWidget {
                 children: [
                   // Animated outer glow ring (unlocked only).
                   if (node.isUnlocked)
-                    AnimatedBuilder(
-                      animation: pulseController,
-                      builder: (context, _) {
-                        final pulseOpacity = 0.3 +
-                            0.3 *
-                                math.sin(
-                                  pulseController.value * math.pi * 2,
-                                );
-                        return Container(
-                          width: 66,
-                          height: 66,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: color.withValues(alpha: pulseOpacity),
-                              width: 2.0,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: color.withValues(alpha: pulseOpacity * 0.5),
-                                blurRadius: 12,
-                                spreadRadius: 2,
+                    reduceMotion
+                        ? Container(
+                            width: 66,
+                            height: 66,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: color.withValues(
+                                  alpha: isNearCompletion ? 0.5 : 0.3,
+                                ),
+                                width: isNearCompletion ? 2.6 : 2.0,
                               ),
-                            ],
+                              boxShadow: [
+                                BoxShadow(
+                                  color: color.withValues(
+                                    alpha: isNearCompletion ? 0.3 : 0.18,
+                                  ),
+                                  blurRadius: isNearCompletion ? 16 : 12,
+                                  spreadRadius: isNearCompletion ? 3 : 2,
+                                ),
+                              ],
+                            ),
+                          )
+                        : AnimatedBuilder(
+                            animation: pulseController,
+                            builder: (context, _) {
+                              final pulseOpacity =
+                                  (isNearCompletion ? 0.4 : 0.3) +
+                                      (isNearCompletion ? 0.25 : 0.2) *
+                                          math.sin(
+                                            pulseController.value * math.pi * 2,
+                                          );
+                              return Container(
+                                width: 66,
+                                height: 66,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: color.withValues(alpha: pulseOpacity),
+                                    width: isNearCompletion ? 2.6 : 2.0,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: color.withValues(
+                                        alpha: pulseOpacity * 0.5,
+                                      ),
+                                      blurRadius: isNearCompletion ? 16 : 12,
+                                      spreadRadius: isNearCompletion ? 3 : 2,
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
                           ),
-                        );
-                      },
-                    ),
 
                   // Core circle.
                   Container(
@@ -719,6 +953,16 @@ class _CosmicNodeWidget extends StatelessWidget {
                               ),
                             ],
                           ),
+                  ),
+
+                  // Milestone overlay badge.
+                  Positioned(
+                    top: -4,
+                    right: -4,
+                    child: AchievementMilestoneBadge(
+                      progress: progress,
+                      rarity: node.rarity,
+                    ),
                   ),
                 ],
               ),

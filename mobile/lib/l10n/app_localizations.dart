@@ -11684,6 +11684,42 @@ abstract class AppLocalizations {
   /// **'已装备'**
   String get visualElementsEquipped;
 
+  /// No description provided for @visualElementsRecommended.
+  ///
+  /// In zh, this message translates to:
+  /// **'为你推荐'**
+  String get visualElementsRecommended;
+
+  /// No description provided for @visualRecommendationFocus.
+  ///
+  /// In zh, this message translates to:
+  /// **'适合专注学习'**
+  String get visualRecommendationFocus;
+
+  /// No description provided for @visualRecommendationRelax.
+  ///
+  /// In zh, this message translates to:
+  /// **'适合休息放松'**
+  String get visualRecommendationRelax;
+
+  /// No description provided for @visualRecommendationSprint.
+  ///
+  /// In zh, this message translates to:
+  /// **'适合冲刺模式'**
+  String get visualRecommendationSprint;
+
+  /// No description provided for @visualRecommendationNight.
+  ///
+  /// In zh, this message translates to:
+  /// **'夜间护眼'**
+  String get visualRecommendationNight;
+
+  /// No description provided for @visualRecommendationStreak.
+  ///
+  /// In zh, this message translates to:
+  /// **'连胜加成'**
+  String get visualRecommendationStreak;
+
   /// No description provided for @visualElementTabAll.
   ///
   /// In zh, this message translates to:
@@ -12073,6 +12109,4176 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'尝试解锁：{name}'**
   String achievementMapFocusHint(Object name);
+
+  /// No description provided for @cognitiveDimensionMemory.
+  ///
+  /// In zh, this message translates to:
+  /// **'记忆'**
+  String get cognitiveDimensionMemory;
+
+  /// No description provided for @cognitiveDimensionUnderstanding.
+  ///
+  /// In zh, this message translates to:
+  /// **'理解'**
+  String get cognitiveDimensionUnderstanding;
+
+  /// No description provided for @cognitiveDimensionApplication.
+  ///
+  /// In zh, this message translates to:
+  /// **'应用'**
+  String get cognitiveDimensionApplication;
+
+  /// No description provided for @cognitiveDimensionAnalysis.
+  ///
+  /// In zh, this message translates to:
+  /// **'分析'**
+  String get cognitiveDimensionAnalysis;
+
+  /// No description provided for @cognitiveDimensionEvaluation.
+  ///
+  /// In zh, this message translates to:
+  /// **'评价'**
+  String get cognitiveDimensionEvaluation;
+
+  /// No description provided for @cognitiveDimensionCreation.
+  ///
+  /// In zh, this message translates to:
+  /// **'创造'**
+  String get cognitiveDimensionCreation;
+
+  /// No description provided for @photonTransactionGrantAchievement.
+  ///
+  /// In zh, this message translates to:
+  /// **'成就奖励'**
+  String get photonTransactionGrantAchievement;
+
+  /// No description provided for @photonTransactionGrantDailyFirst.
+  ///
+  /// In zh, this message translates to:
+  /// **'每日首成奖励'**
+  String get photonTransactionGrantDailyFirst;
+
+  /// No description provided for @photonTransactionGrantContract.
+  ///
+  /// In zh, this message translates to:
+  /// **'契约奖励'**
+  String get photonTransactionGrantContract;
+
+  /// No description provided for @photonTransactionGrantContractBonus.
+  ///
+  /// In zh, this message translates to:
+  /// **'契约加成'**
+  String get photonTransactionGrantContractBonus;
+
+  /// No description provided for @photonTransactionDeductContractStake.
+  ///
+  /// In zh, this message translates to:
+  /// **'契约押注'**
+  String get photonTransactionDeductContractStake;
+
+  /// No description provided for @photonTransactionPurchase.
+  ///
+  /// In zh, this message translates to:
+  /// **'购买'**
+  String get photonTransactionPurchase;
+
+  /// No description provided for @photonTransactionTransferOut.
+  ///
+  /// In zh, this message translates to:
+  /// **'转出'**
+  String get photonTransactionTransferOut;
+
+  /// No description provided for @photonTransactionTransferIn.
+  ///
+  /// In zh, this message translates to:
+  /// **'转入'**
+  String get photonTransactionTransferIn;
+
+  /// No description provided for @photonTransactionRefund.
+  ///
+  /// In zh, this message translates to:
+  /// **'退款'**
+  String get photonTransactionRefund;
+
+  /// No description provided for @photonTransactionPenalty.
+  ///
+  /// In zh, this message translates to:
+  /// **'惩罚'**
+  String get photonTransactionPenalty;
+
+  /// No description provided for @photonTransactionAdminAdjustment.
+  ///
+  /// In zh, this message translates to:
+  /// **'管理员调整'**
+  String get photonTransactionAdminAdjustment;
+
+  /// No description provided for @shopItemTypeSkin.
+  ///
+  /// In zh, this message translates to:
+  /// **'皮肤'**
+  String get shopItemTypeSkin;
+
+  /// No description provided for @shopItemTypeTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'称号'**
+  String get shopItemTypeTitle;
+
+  /// No description provided for @shopItemTypeConsumable.
+  ///
+  /// In zh, this message translates to:
+  /// **'消耗品'**
+  String get shopItemTypeConsumable;
+
+  /// No description provided for @shopItemTypeBoost.
+  ///
+  /// In zh, this message translates to:
+  /// **'增益'**
+  String get shopItemTypeBoost;
+
+  /// No description provided for @shopItemTypeVisualElement.
+  ///
+  /// In zh, this message translates to:
+  /// **'视觉元素'**
+  String get shopItemTypeVisualElement;
+
+  /// No description provided for @taskDueDateUnset.
+  ///
+  /// In zh, this message translates to:
+  /// **'无截止日期'**
+  String get taskDueDateUnset;
+
+  /// No description provided for @chatAchievementUnlocked.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Achievement Unlocked'**
+  String get chatAchievementUnlocked;
+
+  /// No description provided for @chatActionErrorSuggestion.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Action Error Suggestion'**
+  String get chatActionErrorSuggestion;
+
+  /// No description provided for @chatActionErrorTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Action Error Title'**
+  String get chatActionErrorTitle;
+
+  /// No description provided for @chatActionIgnore.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Action Ignore'**
+  String get chatActionIgnore;
+
+  /// No description provided for @chatActionLater.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Action Later'**
+  String get chatActionLater;
+
+  /// No description provided for @chatActionReviewed.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Action Reviewed'**
+  String get chatActionReviewed;
+
+  /// No description provided for @chatActionStatusCompleted.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Action Status Completed'**
+  String get chatActionStatusCompleted;
+
+  /// No description provided for @chatActionStatusConfirmed.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Action Status Confirmed'**
+  String get chatActionStatusConfirmed;
+
+  /// No description provided for @chatActionStatusDismissed.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Action Status Dismissed'**
+  String get chatActionStatusDismissed;
+
+  /// No description provided for @chatActionStatusFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Action Status Failed'**
+  String get chatActionStatusFailed;
+
+  /// No description provided for @chatActionStatusProcessing.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Action Status Processing'**
+  String get chatActionStatusProcessing;
+
+  /// No description provided for @chatActionStatusUpdate.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Action Status Update'**
+  String get chatActionStatusUpdate;
+
+  /// No description provided for @chatActionSuggestedActions.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Action Suggested Actions'**
+  String get chatActionSuggestedActions;
+
+  /// No description provided for @chatActionTitleAddError.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Action Title Add Error'**
+  String get chatActionTitleAddError;
+
+  /// No description provided for @chatActionTitleBlockedInput.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Action Title Blocked Input'**
+  String get chatActionTitleBlockedInput;
+
+  /// No description provided for @chatActionTitleContinuity.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Action Title Continuity'**
+  String get chatActionTitleContinuity;
+
+  /// No description provided for @chatActionTitleCreatePlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Action Title Create Plan'**
+  String get chatActionTitleCreatePlan;
+
+  /// No description provided for @chatActionTitleCreateTask.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Action Title Create Task'**
+  String get chatActionTitleCreateTask;
+
+  /// No description provided for @chatActionTitleDefault.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Action Title Default'**
+  String get chatActionTitleDefault;
+
+  /// No description provided for @chatActionTitleEvolution.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Action Title Evolution'**
+  String get chatActionTitleEvolution;
+
+  /// No description provided for @chatActionTitleExecutionSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Action Title Execution Summary'**
+  String get chatActionTitleExecutionSummary;
+
+  /// No description provided for @chatActionTitleFocusSprint.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Action Title Focus Sprint'**
+  String get chatActionTitleFocusSprint;
+
+  /// No description provided for @chatActionTitleModeExplanation.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Action Title Mode Explanation'**
+  String get chatActionTitleModeExplanation;
+
+  /// No description provided for @chatActionTitleNextActions.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Action Title Next Actions'**
+  String get chatActionTitleNextActions;
+
+  /// No description provided for @chatActionTitleNightlyReview.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Action Title Nightly Review'**
+  String get chatActionTitleNightlyReview;
+
+  /// No description provided for @chatActionTitleProgress.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Action Title Progress'**
+  String get chatActionTitleProgress;
+
+  /// No description provided for @chatActionTitleReflection.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Action Title Reflection'**
+  String get chatActionTitleReflection;
+
+  /// No description provided for @chatActionTitleSourceSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Action Title Source Summary'**
+  String get chatActionTitleSourceSummary;
+
+  /// No description provided for @chatActionTitleSystemUpdate.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Action Title System Update'**
+  String get chatActionTitleSystemUpdate;
+
+  /// No description provided for @chatActionTitleTaskList.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Action Title Task List'**
+  String get chatActionTitleTaskList;
+
+  /// No description provided for @chatActionTitleUpdatePreference.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Action Title Update Preference'**
+  String get chatActionTitleUpdatePreference;
+
+  /// No description provided for @chatActionViewNextSteps.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Action View Next Steps'**
+  String get chatActionViewNextSteps;
+
+  /// No description provided for @chatActionViewSources.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Action View Sources'**
+  String get chatActionViewSources;
+
+  /// No description provided for @chatAgentRouting.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Agent Routing'**
+  String get chatAgentRouting;
+
+  /// No description provided for @chatAgentRoutingFallback.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Agent Routing Fallback'**
+  String get chatAgentRoutingFallback;
+
+  /// No description provided for @chatAgentRoutingStrategy.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Agent Routing Strategy'**
+  String get chatAgentRoutingStrategy;
+
+  /// No description provided for @chatAlignmentScoreLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Alignment Score Label'**
+  String get chatAlignmentScoreLabel;
+
+  /// No description provided for @chatAudioParseFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Audio Parse Failed'**
+  String get chatAudioParseFailed;
+
+  /// No description provided for @chatAudioRecordFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Audio Record Failed'**
+  String get chatAudioRecordFailed;
+
+  /// No description provided for @chatAudioStartFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Audio Start Failed'**
+  String get chatAudioStartFailed;
+
+  /// No description provided for @chatAudioWsConnectFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Audio Ws Connect Failed'**
+  String get chatAudioWsConnectFailed;
+
+  /// No description provided for @chatAuthExpired.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Auth Expired'**
+  String get chatAuthExpired;
+
+  /// No description provided for @chatAuthRefreshing.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Auth Refreshing'**
+  String get chatAuthRefreshing;
+
+  /// No description provided for @chatBlockedInputTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Blocked Input Title'**
+  String get chatBlockedInputTitle;
+
+  /// No description provided for @chatCitationLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Citation Label'**
+  String get chatCitationLabel;
+
+  /// No description provided for @chatCitationRelevance.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Citation Relevance'**
+  String get chatCitationRelevance;
+
+  /// No description provided for @chatCitationSourcesCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Citation Sources Count'**
+  String get chatCitationSourcesCount;
+
+  /// No description provided for @chatCollabTimelineTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Collab Timeline Title'**
+  String get chatCollabTimelineTitle;
+
+  /// No description provided for @chatComparisonAfter.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Comparison After'**
+  String get chatComparisonAfter;
+
+  /// No description provided for @chatComparisonBefore.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Comparison Before'**
+  String get chatComparisonBefore;
+
+  /// No description provided for @chatComparisonCurrentPrevious.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Comparison Current Previous'**
+  String get chatComparisonCurrentPrevious;
+
+  /// No description provided for @chatCompletionBlocked.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Completion Blocked'**
+  String get chatCompletionBlocked;
+
+  /// No description provided for @chatCompletionDone.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Completion Done'**
+  String get chatCompletionDone;
+
+  /// No description provided for @chatCompletionNeedsInput.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Completion Needs Input'**
+  String get chatCompletionNeedsInput;
+
+  /// No description provided for @chatCompletionPartial.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Completion Partial'**
+  String get chatCompletionPartial;
+
+  /// No description provided for @chatCompletionProcessing.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Completion Processing'**
+  String get chatCompletionProcessing;
+
+  /// No description provided for @chatConfidenceCautious.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Confidence Cautious'**
+  String get chatConfidenceCautious;
+
+  /// No description provided for @chatConfidenceHigh.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Confidence High'**
+  String get chatConfidenceHigh;
+
+  /// No description provided for @chatConfidenceLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Confidence Label'**
+  String get chatConfidenceLabel;
+
+  /// No description provided for @chatConfidenceMedium.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Confidence Medium'**
+  String get chatConfidenceMedium;
+
+  /// No description provided for @chatConfirmationActionDefault.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Confirmation Action Default'**
+  String get chatConfirmationActionDefault;
+
+  /// No description provided for @chatConfirmationConfirmUpdate.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Confirmation Confirm Update'**
+  String get chatConfirmationConfirmUpdate;
+
+  /// No description provided for @chatConfirmationTitleDefault.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Confirmation Title Default'**
+  String get chatConfirmationTitleDefault;
+
+  /// No description provided for @chatConfirmationTitleUpdatePreference.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Confirmation Title Update Preference'**
+  String get chatConfirmationTitleUpdatePreference;
+
+  /// No description provided for @chatConfirmationUpdatePreferenceGeneric.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Confirmation Update Preference Generic'**
+  String get chatConfirmationUpdatePreferenceGeneric;
+
+  /// No description provided for @chatConfirmationUpdatePreferenceKeyOnly.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Confirmation Update Preference Key Only'**
+  String get chatConfirmationUpdatePreferenceKeyOnly;
+
+  /// No description provided for @chatConfirmationUpdatePreferenceWithValue.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Confirmation Update Preference With Value'**
+  String get chatConfirmationUpdatePreferenceWithValue;
+
+  /// No description provided for @chatCopiedToClipboard.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Copied To Clipboard'**
+  String get chatCopiedToClipboard;
+
+  /// No description provided for @chatDagExecutionAbortedDefault.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Dag Execution Aborted Default'**
+  String get chatDagExecutionAbortedDefault;
+
+  /// No description provided for @chatDagExecutionCompleted.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Dag Execution Completed'**
+  String get chatDagExecutionCompleted;
+
+  /// No description provided for @chatDagExecutionEndAbortedDefault.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Dag Execution End Aborted Default'**
+  String get chatDagExecutionEndAbortedDefault;
+
+  /// No description provided for @chatDagLayerAborted.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Dag Layer Aborted'**
+  String get chatDagLayerAborted;
+
+  /// No description provided for @chatDagLayerCompleted.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Dag Layer Completed'**
+  String get chatDagLayerCompleted;
+
+  /// No description provided for @chatDagLayerStart.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Dag Layer Start'**
+  String get chatDagLayerStart;
+
+  /// No description provided for @chatDagStepCompleted.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Dag Step Completed'**
+  String get chatDagStepCompleted;
+
+  /// No description provided for @chatDagStepCompletedWithDuration.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Dag Step Completed With Duration'**
+  String get chatDagStepCompletedWithDuration;
+
+  /// No description provided for @chatDagStepFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Dag Step Failed'**
+  String get chatDagStepFailed;
+
+  /// No description provided for @chatDagStepFallback.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Dag Step Fallback'**
+  String get chatDagStepFallback;
+
+  /// No description provided for @chatDurationLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Duration Label'**
+  String get chatDurationLabel;
+
+  /// No description provided for @chatErrorWithSuggestion.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Error With Suggestion'**
+  String get chatErrorWithSuggestion;
+
+  /// No description provided for @chatEvolutionExpectedEffect.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Evolution Expected Effect'**
+  String get chatEvolutionExpectedEffect;
+
+  /// No description provided for @chatEvolutionHeadlineDefault.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Evolution Headline Default'**
+  String get chatEvolutionHeadlineDefault;
+
+  /// No description provided for @chatEvolutionNextWeekPlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Evolution Next Week Plan'**
+  String get chatEvolutionNextWeekPlan;
+
+  /// No description provided for @chatEvolutionWhy.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Evolution Why'**
+  String get chatEvolutionWhy;
+
+  /// No description provided for @chatExecutionCompleted.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Execution Completed'**
+  String get chatExecutionCompleted;
+
+  /// No description provided for @chatExecutionFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Execution Failed'**
+  String get chatExecutionFailed;
+
+  /// No description provided for @chatExecutionPartial.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Execution Partial'**
+  String get chatExecutionPartial;
+
+  /// No description provided for @chatFeedbackThanks.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Feedback Thanks'**
+  String get chatFeedbackThanks;
+
+  /// No description provided for @chatFocusSprintDefaultTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Focus Sprint Default Title'**
+  String get chatFocusSprintDefaultTitle;
+
+  /// No description provided for @chatFocusStart.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Focus Start'**
+  String get chatFocusStart;
+
+  /// No description provided for @chatInputDocumentClean.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Input Document Clean'**
+  String get chatInputDocumentClean;
+
+  /// No description provided for @chatInterventionViewPlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Intervention View Plan'**
+  String get chatInterventionViewPlan;
+
+  /// No description provided for @chatInterventionViewSettings.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Intervention View Settings'**
+  String get chatInterventionViewSettings;
+
+  /// No description provided for @chatKnowledgeCitationBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Knowledge Citation Body'**
+  String get chatKnowledgeCitationBody;
+
+  /// No description provided for @chatKnowledgeCitationTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Knowledge Citation Title'**
+  String get chatKnowledgeCitationTitle;
+
+  /// No description provided for @chatModeCustomTeam.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Mode Custom Team'**
+  String get chatModeCustomTeam;
+
+  /// No description provided for @chatModeCustomTeamDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Mode Custom Team Desc'**
+  String get chatModeCustomTeamDesc;
+
+  /// No description provided for @chatModeKeepCurrent.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Mode Keep Current'**
+  String get chatModeKeepCurrent;
+
+  /// No description provided for @chatModeSuggestionTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Mode Suggestion Title'**
+  String get chatModeSuggestionTitle;
+
+  /// No description provided for @chatModeSwitch.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Mode Switch'**
+  String get chatModeSwitch;
+
+  /// No description provided for @chatMultiAgentCollab.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Multi Agent Collab'**
+  String get chatMultiAgentCollab;
+
+  /// No description provided for @chatNextActionLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Next Action Label'**
+  String get chatNextActionLabel;
+
+  /// No description provided for @chatNextActionsRetryHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Next Actions Retry Hint'**
+  String get chatNextActionsRetryHint;
+
+  /// No description provided for @chatNextActionsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Next Actions Title'**
+  String get chatNextActionsTitle;
+
+  /// No description provided for @chatNightlyReviewTodos.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Nightly Review Todos'**
+  String get chatNightlyReviewTodos;
+
+  /// No description provided for @chatNotificationGroupMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Notification Group Message'**
+  String get chatNotificationGroupMessage;
+
+  /// No description provided for @chatNotificationMention.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Notification Mention'**
+  String get chatNotificationMention;
+
+  /// No description provided for @chatOptionalNotesHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Optional Notes Hint'**
+  String get chatOptionalNotesHint;
+
+  /// No description provided for @chatOrchestrationTraceStep.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Orchestration Trace Step'**
+  String get chatOrchestrationTraceStep;
+
+  /// No description provided for @chatOrchestrationTraceTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Orchestration Trace Title'**
+  String get chatOrchestrationTraceTitle;
+
+  /// No description provided for @chatPendingMessagesFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Pending Messages Failed'**
+  String get chatPendingMessagesFailed;
+
+  /// No description provided for @chatPlanContextClear.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Plan Context Clear'**
+  String get chatPlanContextClear;
+
+  /// No description provided for @chatPlanContextSelect.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Plan Context Select'**
+  String get chatPlanContextSelect;
+
+  /// No description provided for @chatPlanEmptySubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Plan Empty Subtitle'**
+  String get chatPlanEmptySubtitle;
+
+  /// No description provided for @chatPlanEmptyTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Plan Empty Title'**
+  String get chatPlanEmptyTitle;
+
+  /// No description provided for @chatPlanReviewAcknowledged.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Plan Review Acknowledged'**
+  String get chatPlanReviewAcknowledged;
+
+  /// No description provided for @chatPlanReviewApproved.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Plan Review Approved'**
+  String get chatPlanReviewApproved;
+
+  /// No description provided for @chatPlanReviewModifyRequested.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Plan Review Modify Requested'**
+  String get chatPlanReviewModifyRequested;
+
+  /// No description provided for @chatPlanReviewRejected.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Plan Review Rejected'**
+  String get chatPlanReviewRejected;
+
+  /// No description provided for @chatPlanReviewStatusUpdate.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Plan Review Status Update'**
+  String get chatPlanReviewStatusUpdate;
+
+  /// No description provided for @chatPlanSelect.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Plan Select'**
+  String get chatPlanSelect;
+
+  /// No description provided for @chatQuotePrefix.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Quote Prefix'**
+  String get chatQuotePrefix;
+
+  /// No description provided for @chatReasoningProcess.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Reasoning Process'**
+  String get chatReasoningProcess;
+
+  /// No description provided for @chatReasoningStatusAnalyzing.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Reasoning Status Analyzing'**
+  String get chatReasoningStatusAnalyzing;
+
+  /// No description provided for @chatReasoningStatusAudioProcessing.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Reasoning Status Audio Processing'**
+  String get chatReasoningStatusAudioProcessing;
+
+  /// No description provided for @chatReasoningStatusCalculating.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Reasoning Status Calculating'**
+  String get chatReasoningStatusCalculating;
+
+  /// No description provided for @chatReasoningStatusCoding.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Reasoning Status Coding'**
+  String get chatReasoningStatusCoding;
+
+  /// No description provided for @chatReasoningStatusDataAnalyzing.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Reasoning Status Data Analyzing'**
+  String get chatReasoningStatusDataAnalyzing;
+
+  /// No description provided for @chatReasoningStatusDone.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Reasoning Status Done'**
+  String get chatReasoningStatusDone;
+
+  /// No description provided for @chatReasoningStatusImageProcessing.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Reasoning Status Image Processing'**
+  String get chatReasoningStatusImageProcessing;
+
+  /// No description provided for @chatReasoningStatusPlanning.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Reasoning Status Planning'**
+  String get chatReasoningStatusPlanning;
+
+  /// No description provided for @chatReasoningStatusPreparing.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Reasoning Status Preparing'**
+  String get chatReasoningStatusPreparing;
+
+  /// No description provided for @chatReasoningStatusReasoning.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Reasoning Status Reasoning'**
+  String get chatReasoningStatusReasoning;
+
+  /// No description provided for @chatReasoningStatusRetrieving.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Reasoning Status Retrieving'**
+  String get chatReasoningStatusRetrieving;
+
+  /// No description provided for @chatReasoningStatusSearching.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Reasoning Status Searching'**
+  String get chatReasoningStatusSearching;
+
+  /// No description provided for @chatReasoningStatusTranslating.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Reasoning Status Translating'**
+  String get chatReasoningStatusTranslating;
+
+  /// No description provided for @chatReasoningStatusWriting.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Reasoning Status Writing'**
+  String get chatReasoningStatusWriting;
+
+  /// No description provided for @chatReasoningStepsCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Reasoning Steps Count'**
+  String get chatReasoningStepsCount;
+
+  /// No description provided for @chatReasoningSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Reasoning Summary'**
+  String get chatReasoningSummary;
+
+  /// No description provided for @chatReflectionDegraded.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Reflection Degraded'**
+  String get chatReflectionDegraded;
+
+  /// No description provided for @chatReflectionFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Reflection Failed'**
+  String get chatReflectionFailed;
+
+  /// No description provided for @chatReflectionFixed.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Reflection Fixed'**
+  String get chatReflectionFixed;
+
+  /// No description provided for @chatReflectionImproved.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Reflection Improved'**
+  String get chatReflectionImproved;
+
+  /// No description provided for @chatReflectionNoChange.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Reflection No Change'**
+  String get chatReflectionNoChange;
+
+  /// No description provided for @chatReflectionStatusUpdate.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Reflection Status Update'**
+  String get chatReflectionStatusUpdate;
+
+  /// No description provided for @chatRoundsInfo.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Rounds Info'**
+  String get chatRoundsInfo;
+
+  /// No description provided for @chatSourceUnknown.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Source Unknown'**
+  String get chatSourceUnknown;
+
+  /// No description provided for @chatSourceUntitled.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Source Untitled'**
+  String get chatSourceUntitled;
+
+  /// No description provided for @chatSourcesAvailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Sources Available'**
+  String get chatSourcesAvailable;
+
+  /// No description provided for @chatSourcesUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Sources Unavailable'**
+  String get chatSourcesUnavailable;
+
+  /// No description provided for @chatStreakSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Streak Summary'**
+  String get chatStreakSummary;
+
+  /// No description provided for @chatSubmitFeedback.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Submit Feedback'**
+  String get chatSubmitFeedback;
+
+  /// No description provided for @chatSynthesisSuggestions.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Synthesis Suggestions'**
+  String get chatSynthesisSuggestions;
+
+  /// No description provided for @chatTaskDataInvalid.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Task Data Invalid'**
+  String get chatTaskDataInvalid;
+
+  /// No description provided for @chatTaskListMoreCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Task List More Count'**
+  String get chatTaskListMoreCount;
+
+  /// No description provided for @chatTeamExpertsCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Team Experts Count'**
+  String get chatTeamExpertsCount;
+
+  /// No description provided for @chatUnknownWidgetType.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Unknown Widget Type'**
+  String get chatUnknownWidgetType;
+
+  /// No description provided for @chatUsingTool.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Using Tool'**
+  String get chatUsingTool;
+
+  /// No description provided for @chatViewComparisonData.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat View Comparison Data'**
+  String get chatViewComparisonData;
+
+  /// No description provided for @chatViewPlanRationale.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat View Plan Rationale'**
+  String get chatViewPlanRationale;
+
+  /// No description provided for @chatVoiceNoMicPermission.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Voice No Mic Permission'**
+  String get chatVoiceNoMicPermission;
+
+  /// No description provided for @chatVoiceStartFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Voice Start Failed'**
+  String get chatVoiceStartFailed;
+
+  /// No description provided for @chatWhyThisAnswer.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Why This Answer'**
+  String get chatWhyThisAnswer;
+
+  /// No description provided for @chatWorkflowDebateProcessing.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Workflow Debate Processing'**
+  String get chatWorkflowDebateProcessing;
+
+  /// No description provided for @chatWorkflowDebateSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Workflow Debate Subtitle'**
+  String get chatWorkflowDebateSubtitle;
+
+  /// No description provided for @chatWorkflowDebateTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Workflow Debate Title'**
+  String get chatWorkflowDebateTitle;
+
+  /// No description provided for @chatWorkflowDefault.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Workflow Default'**
+  String get chatWorkflowDefault;
+
+  /// No description provided for @chatWorkflowDelegationSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Workflow Delegation Subtitle'**
+  String get chatWorkflowDelegationSubtitle;
+
+  /// No description provided for @chatWorkflowDelegationTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Workflow Delegation Title'**
+  String get chatWorkflowDelegationTitle;
+
+  /// No description provided for @chatWorkflowErrorDiagnosis.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Workflow Error Diagnosis'**
+  String get chatWorkflowErrorDiagnosis;
+
+  /// No description provided for @chatWorkflowExpertRouting.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Workflow Expert Routing'**
+  String get chatWorkflowExpertRouting;
+
+  /// No description provided for @chatWorkflowExpertsCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Workflow Experts Count'**
+  String get chatWorkflowExpertsCount;
+
+  /// No description provided for @chatWorkflowParallelCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Workflow Parallel Count'**
+  String get chatWorkflowParallelCount;
+
+  /// No description provided for @chatWorkflowParallelSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Workflow Parallel Subtitle'**
+  String get chatWorkflowParallelSubtitle;
+
+  /// No description provided for @chatWorkflowPhaseLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Workflow Phase Label'**
+  String get chatWorkflowPhaseLabel;
+
+  /// No description provided for @chatWorkflowProgressiveExploration.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Workflow Progressive Exploration'**
+  String get chatWorkflowProgressiveExploration;
+
+  /// No description provided for @chatWorkflowStatusActive.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Workflow Status Active'**
+  String get chatWorkflowStatusActive;
+
+  /// No description provided for @chatWorkflowStatusDone.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Workflow Status Done'**
+  String get chatWorkflowStatusDone;
+
+  /// No description provided for @chatWorkflowStatusError.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Workflow Status Error'**
+  String get chatWorkflowStatusError;
+
+  /// No description provided for @chatWorkflowStatusWaiting.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Workflow Status Waiting'**
+  String get chatWorkflowStatusWaiting;
+
+  /// No description provided for @chatWorkflowTaskDecomposition.
+  ///
+  /// In zh, this message translates to:
+  /// **'Chat Workflow Task Decomposition'**
+  String get chatWorkflowTaskDecomposition;
+
+  /// No description provided for @commonMinutesShort.
+  ///
+  /// In zh, this message translates to:
+  /// **'Common Minutes Short'**
+  String get commonMinutesShort;
+
+  /// No description provided for @commonUnknown.
+  ///
+  /// In zh, this message translates to:
+  /// **'Common Unknown'**
+  String get commonUnknown;
+
+  /// No description provided for @communityAgentCollabOff.
+  ///
+  /// In zh, this message translates to:
+  /// **'Community Agent Collab Off'**
+  String get communityAgentCollabOff;
+
+  /// No description provided for @communityAgentCollabOn.
+  ///
+  /// In zh, this message translates to:
+  /// **'Community Agent Collab On'**
+  String get communityAgentCollabOn;
+
+  /// No description provided for @communityAgentOnlyYou.
+  ///
+  /// In zh, this message translates to:
+  /// **'Community Agent Only You'**
+  String get communityAgentOnlyYou;
+
+  /// No description provided for @communityAgentProcessing.
+  ///
+  /// In zh, this message translates to:
+  /// **'Community Agent Processing'**
+  String get communityAgentProcessing;
+
+  /// No description provided for @communityAgentPromptHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'Community Agent Prompt Hint'**
+  String get communityAgentPromptHint;
+
+  /// No description provided for @communityAgentQuickConsensus.
+  ///
+  /// In zh, this message translates to:
+  /// **'Community Agent Quick Consensus'**
+  String get communityAgentQuickConsensus;
+
+  /// No description provided for @communityAgentQuickConsensusPrompt.
+  ///
+  /// In zh, this message translates to:
+  /// **'Community Agent Quick Consensus Prompt'**
+  String get communityAgentQuickConsensusPrompt;
+
+  /// No description provided for @communityAgentQuickReminder.
+  ///
+  /// In zh, this message translates to:
+  /// **'Community Agent Quick Reminder'**
+  String get communityAgentQuickReminder;
+
+  /// No description provided for @communityAgentQuickReminderPrompt.
+  ///
+  /// In zh, this message translates to:
+  /// **'Community Agent Quick Reminder Prompt'**
+  String get communityAgentQuickReminderPrompt;
+
+  /// No description provided for @communityAgentQuickSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'Community Agent Quick Summary'**
+  String get communityAgentQuickSummary;
+
+  /// No description provided for @communityAgentQuickSummaryPrompt.
+  ///
+  /// In zh, this message translates to:
+  /// **'Community Agent Quick Summary Prompt'**
+  String get communityAgentQuickSummaryPrompt;
+
+  /// No description provided for @communityAgentThinking.
+  ///
+  /// In zh, this message translates to:
+  /// **'Community Agent Thinking'**
+  String get communityAgentThinking;
+
+  /// No description provided for @communityChatEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'Community Chat Empty'**
+  String get communityChatEmpty;
+
+  /// No description provided for @communityChatTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Community Chat Title'**
+  String get communityChatTitle;
+
+  /// No description provided for @communityCheckInAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'Community Check In Action'**
+  String get communityCheckInAction;
+
+  /// No description provided for @communityCheckInDurationLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'Community Check In Duration Label'**
+  String get communityCheckInDurationLabel;
+
+  /// No description provided for @communityCheckInFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'Community Check In Failed'**
+  String get communityCheckInFailed;
+
+  /// No description provided for @communityCheckInMessageHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'Community Check In Message Hint'**
+  String get communityCheckInMessageHint;
+
+  /// No description provided for @communityCheckInMessageLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'Community Check In Message Label'**
+  String get communityCheckInMessageLabel;
+
+  /// No description provided for @communityCheckInSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'Community Check In Success'**
+  String get communityCheckInSuccess;
+
+  /// No description provided for @communityCheckInTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Community Check In Title'**
+  String get communityCheckInTitle;
+
+  /// No description provided for @communityFileSharedFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'Community File Shared Failed'**
+  String get communityFileSharedFailed;
+
+  /// No description provided for @communityFileSharedSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'Community File Shared Success'**
+  String get communityFileSharedSuccess;
+
+  /// No description provided for @communityGroupFiles.
+  ///
+  /// In zh, this message translates to:
+  /// **'Community Group Files'**
+  String get communityGroupFiles;
+
+  /// No description provided for @communityGroupMembersCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'Community Group Members Count'**
+  String get communityGroupMembersCount;
+
+  /// No description provided for @communityMessageFallback.
+  ///
+  /// In zh, this message translates to:
+  /// **'Community Message Fallback'**
+  String get communityMessageFallback;
+
+  /// No description provided for @communityMessageInputHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'Community Message Input Hint'**
+  String get communityMessageInputHint;
+
+  /// No description provided for @communitySearchGroupMessages.
+  ///
+  /// In zh, this message translates to:
+  /// **'Community Search Group Messages'**
+  String get communitySearchGroupMessages;
+
+  /// No description provided for @deleteAccountChecklistItem1.
+  ///
+  /// In zh, this message translates to:
+  /// **'Delete Account Checklist Item1'**
+  String get deleteAccountChecklistItem1;
+
+  /// No description provided for @deleteAccountChecklistItem2.
+  ///
+  /// In zh, this message translates to:
+  /// **'Delete Account Checklist Item2'**
+  String get deleteAccountChecklistItem2;
+
+  /// No description provided for @deleteAccountChecklistItem3.
+  ///
+  /// In zh, this message translates to:
+  /// **'Delete Account Checklist Item3'**
+  String get deleteAccountChecklistItem3;
+
+  /// No description provided for @deleteAccountChecklistTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Delete Account Checklist Title'**
+  String get deleteAccountChecklistTitle;
+
+  /// No description provided for @deleteAccountConfirmButton.
+  ///
+  /// In zh, this message translates to:
+  /// **'Delete Account Confirm Button'**
+  String get deleteAccountConfirmButton;
+
+  /// No description provided for @deleteAccountConfirmInputHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'Delete Account Confirm Input Hint'**
+  String get deleteAccountConfirmInputHint;
+
+  /// No description provided for @deleteAccountConfirmInputTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Delete Account Confirm Input Title'**
+  String get deleteAccountConfirmInputTitle;
+
+  /// No description provided for @deleteAccountNoSocialProvider.
+  ///
+  /// In zh, this message translates to:
+  /// **'Delete Account No Social Provider'**
+  String get deleteAccountNoSocialProvider;
+
+  /// No description provided for @deleteAccountPasswordHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'Delete Account Password Hint'**
+  String get deleteAccountPasswordHint;
+
+  /// No description provided for @deleteAccountPasswordLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'Delete Account Password Label'**
+  String get deleteAccountPasswordLabel;
+
+  /// No description provided for @deleteAccountReauthButton.
+  ///
+  /// In zh, this message translates to:
+  /// **'Delete Account Reauth Button'**
+  String get deleteAccountReauthButton;
+
+  /// No description provided for @deleteAccountReauthDone.
+  ///
+  /// In zh, this message translates to:
+  /// **'Delete Account Reauth Done'**
+  String get deleteAccountReauthDone;
+
+  /// No description provided for @deleteAccountReauthSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'Delete Account Reauth Success'**
+  String get deleteAccountReauthSuccess;
+
+  /// No description provided for @deleteAccountRequireDeleteInput.
+  ///
+  /// In zh, this message translates to:
+  /// **'Delete Account Require Delete Input'**
+  String get deleteAccountRequireDeleteInput;
+
+  /// No description provided for @deleteAccountRequirePassword.
+  ///
+  /// In zh, this message translates to:
+  /// **'Delete Account Require Password'**
+  String get deleteAccountRequirePassword;
+
+  /// No description provided for @deleteAccountRequireReauth.
+  ///
+  /// In zh, this message translates to:
+  /// **'Delete Account Require Reauth'**
+  String get deleteAccountRequireReauth;
+
+  /// No description provided for @deleteAccountSocialProvider.
+  ///
+  /// In zh, this message translates to:
+  /// **'Delete Account Social Provider'**
+  String get deleteAccountSocialProvider;
+
+  /// No description provided for @deleteAccountSocialReauthNotice.
+  ///
+  /// In zh, this message translates to:
+  /// **'Delete Account Social Reauth Notice'**
+  String get deleteAccountSocialReauthNotice;
+
+  /// No description provided for @deleteAccountSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'Delete Account Success'**
+  String get deleteAccountSuccess;
+
+  /// No description provided for @deleteAccountTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Delete Account Title'**
+  String get deleteAccountTitle;
+
+  /// No description provided for @deleteAccountWeChatUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'Delete Account We Chat Unavailable'**
+  String get deleteAccountWeChatUnavailable;
+
+  /// No description provided for @editProfileEmailUnverified.
+  ///
+  /// In zh, this message translates to:
+  /// **'Edit Profile Email Unverified'**
+  String get editProfileEmailUnverified;
+
+  /// No description provided for @editProfileEmailUnverifiedDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'Edit Profile Email Unverified Desc'**
+  String get editProfileEmailUnverifiedDesc;
+
+  /// No description provided for @editProfileEmailVerified.
+  ///
+  /// In zh, this message translates to:
+  /// **'Edit Profile Email Verified'**
+  String get editProfileEmailVerified;
+
+  /// No description provided for @editProfileEmailVerifiedDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'Edit Profile Email Verified Desc'**
+  String get editProfileEmailVerifiedDesc;
+
+  /// No description provided for @editProfileEnterCode.
+  ///
+  /// In zh, this message translates to:
+  /// **'Edit Profile Enter Code'**
+  String get editProfileEnterCode;
+
+  /// No description provided for @editProfileRegistrationMethod.
+  ///
+  /// In zh, this message translates to:
+  /// **'Edit Profile Registration Method'**
+  String get editProfileRegistrationMethod;
+
+  /// No description provided for @editProfileSendEmail.
+  ///
+  /// In zh, this message translates to:
+  /// **'Edit Profile Send Email'**
+  String get editProfileSendEmail;
+
+  /// No description provided for @editProfileSetPassword.
+  ///
+  /// In zh, this message translates to:
+  /// **'Edit Profile Set Password'**
+  String get editProfileSetPassword;
+
+  /// No description provided for @editProfileSetPasswordHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'Edit Profile Set Password Hint'**
+  String get editProfileSetPasswordHint;
+
+  /// No description provided for @editProfileVerifyEmailConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'Edit Profile Verify Email Confirm'**
+  String get editProfileVerifyEmailConfirm;
+
+  /// No description provided for @editProfileVerifyEmailHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'Edit Profile Verify Email Hint'**
+  String get editProfileVerifyEmailHint;
+
+  /// No description provided for @editProfileVerifyEmailTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Edit Profile Verify Email Title'**
+  String get editProfileVerifyEmailTitle;
+
+  /// No description provided for @fileStatusFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'File Status Failed'**
+  String get fileStatusFailed;
+
+  /// No description provided for @fileStatusProcessing.
+  ///
+  /// In zh, this message translates to:
+  /// **'File Status Processing'**
+  String get fileStatusProcessing;
+
+  /// No description provided for @fileStatusReady.
+  ///
+  /// In zh, this message translates to:
+  /// **'File Status Ready'**
+  String get fileStatusReady;
+
+  /// No description provided for @fileStatusUploaded.
+  ///
+  /// In zh, this message translates to:
+  /// **'File Status Uploaded'**
+  String get fileStatusUploaded;
+
+  /// No description provided for @galaxyA11yActionStartLearning.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy A11y Action Start Learning'**
+  String get galaxyA11yActionStartLearning;
+
+  /// No description provided for @galaxyA11yActionUnlockNode.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy A11y Action Unlock Node'**
+  String get galaxyA11yActionUnlockNode;
+
+  /// No description provided for @galaxyA11yClusterLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy A11y Cluster Label'**
+  String get galaxyA11yClusterLabel;
+
+  /// No description provided for @galaxyA11yHintStartLearning.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy A11y Hint Start Learning'**
+  String get galaxyA11yHintStartLearning;
+
+  /// No description provided for @galaxyA11yHintUnlockNode.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy A11y Hint Unlock Node'**
+  String get galaxyA11yHintUnlockNode;
+
+  /// No description provided for @galaxyA11yNavigateTo.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy A11y Navigate To'**
+  String get galaxyA11yNavigateTo;
+
+  /// No description provided for @galaxyA11yNavigationHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy A11y Navigation Hint'**
+  String get galaxyA11yNavigationHint;
+
+  /// No description provided for @galaxyA11yNodeImportance.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy A11y Node Importance'**
+  String get galaxyA11yNodeImportance;
+
+  /// No description provided for @galaxyA11yNodeLocked.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy A11y Node Locked'**
+  String get galaxyA11yNodeLocked;
+
+  /// No description provided for @galaxyA11yNodeMastery.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy A11y Node Mastery'**
+  String get galaxyA11yNodeMastery;
+
+  /// No description provided for @galaxyA11yNodePrefix.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy A11y Node Prefix'**
+  String get galaxyA11yNodePrefix;
+
+  /// No description provided for @galaxyA11yNodeStudyCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy A11y Node Study Count'**
+  String get galaxyA11yNodeStudyCount;
+
+  /// No description provided for @galaxyA11yNodeUnlocked.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy A11y Node Unlocked'**
+  String get galaxyA11yNodeUnlocked;
+
+  /// No description provided for @galaxyA11ySectorLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy A11y Sector Label'**
+  String get galaxyA11ySectorLabel;
+
+  /// No description provided for @galaxyA11yZoomLevel.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy A11y Zoom Level'**
+  String get galaxyA11yZoomLevel;
+
+  /// No description provided for @galaxyControlOverview.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Control Overview'**
+  String get galaxyControlOverview;
+
+  /// No description provided for @galaxyControlReplayStart.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Control Replay Start'**
+  String get galaxyControlReplayStart;
+
+  /// No description provided for @galaxyControlReplayStop.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Control Replay Stop'**
+  String get galaxyControlReplayStop;
+
+  /// No description provided for @galaxyControlSearchClose.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Control Search Close'**
+  String get galaxyControlSearchClose;
+
+  /// No description provided for @galaxyControlSearchOpen.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Control Search Open'**
+  String get galaxyControlSearchOpen;
+
+  /// No description provided for @galaxyControlSettings.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Control Settings'**
+  String get galaxyControlSettings;
+
+  /// No description provided for @galaxyControlZoomIn.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Control Zoom In'**
+  String get galaxyControlZoomIn;
+
+  /// No description provided for @galaxyControlZoomOut.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Control Zoom Out'**
+  String get galaxyControlZoomOut;
+
+  /// No description provided for @galaxyEmptyMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Empty Message'**
+  String get galaxyEmptyMessage;
+
+  /// No description provided for @galaxyEmptyTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Empty Title'**
+  String get galaxyEmptyTitle;
+
+  /// No description provided for @galaxyErrorConnectionFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Error Connection Failed'**
+  String get galaxyErrorConnectionFailed;
+
+  /// No description provided for @galaxyErrorConnectionTimeout.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Error Connection Timeout'**
+  String get galaxyErrorConnectionTimeout;
+
+  /// No description provided for @galaxyErrorLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Error Load Failed'**
+  String get galaxyErrorLoadFailed;
+
+  /// No description provided for @galaxyErrorNetwork.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Error Network'**
+  String get galaxyErrorNetwork;
+
+  /// No description provided for @galaxyErrorNetworkFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Error Network Failed'**
+  String get galaxyErrorNetworkFailed;
+
+  /// No description provided for @galaxyErrorRequestFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Error Request Failed'**
+  String get galaxyErrorRequestFailed;
+
+  /// No description provided for @galaxyErrorResponseTimeout.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Error Response Timeout'**
+  String get galaxyErrorResponseTimeout;
+
+  /// No description provided for @galaxyErrorRetryHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Error Retry Hint'**
+  String get galaxyErrorRetryHint;
+
+  /// No description provided for @galaxyErrorServiceTemporarilyUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Error Service Temporarily Unavailable'**
+  String get galaxyErrorServiceTemporarilyUnavailable;
+
+  /// No description provided for @galaxyErrorServiceUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Error Service Unavailable'**
+  String get galaxyErrorServiceUnavailable;
+
+  /// No description provided for @galaxyErrorUnknown.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Error Unknown'**
+  String get galaxyErrorUnknown;
+
+  /// No description provided for @galaxyGraphRagGraph.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Graph Rag Graph'**
+  String get galaxyGraphRagGraph;
+
+  /// No description provided for @galaxyGraphRagSearching.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Graph Rag Searching'**
+  String get galaxyGraphRagSearching;
+
+  /// No description provided for @galaxyGraphRagTime.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Graph Rag Time'**
+  String get galaxyGraphRagTime;
+
+  /// No description provided for @galaxyGraphRagVector.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Graph Rag Vector'**
+  String get galaxyGraphRagVector;
+
+  /// No description provided for @galaxyImportanceAdvanced.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Importance Advanced'**
+  String get galaxyImportanceAdvanced;
+
+  /// No description provided for @galaxyImportanceBasic.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Importance Basic'**
+  String get galaxyImportanceBasic;
+
+  /// No description provided for @galaxyImportanceCore.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Importance Core'**
+  String get galaxyImportanceCore;
+
+  /// No description provided for @galaxyImportanceEntry.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Importance Entry'**
+  String get galaxyImportanceEntry;
+
+  /// No description provided for @galaxyImportanceIntermediate.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Importance Intermediate'**
+  String get galaxyImportanceIntermediate;
+
+  /// No description provided for @galaxyImportanceNormal.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Importance Normal'**
+  String get galaxyImportanceNormal;
+
+  /// No description provided for @galaxyLLMActionFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy LLMAction Failed'**
+  String get galaxyLLMActionFailed;
+
+  /// No description provided for @galaxyLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Load Failed'**
+  String get galaxyLoadFailed;
+
+  /// No description provided for @galaxyLoadFailedTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Load Failed Title'**
+  String get galaxyLoadFailedTitle;
+
+  /// No description provided for @galaxyLoadingMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Loading Message'**
+  String get galaxyLoadingMessage;
+
+  /// No description provided for @galaxyLoadingTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Loading Title'**
+  String get galaxyLoadingTitle;
+
+  /// No description provided for @galaxyNodeFocus.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Node Focus'**
+  String get galaxyNodeFocus;
+
+  /// No description provided for @galaxyNodeInspectConnections.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Node Inspect Connections'**
+  String get galaxyNodeInspectConnections;
+
+  /// No description provided for @galaxyNodeLocked.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Node Locked'**
+  String get galaxyNodeLocked;
+
+  /// No description provided for @galaxyNodePreviewSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Node Preview Subtitle'**
+  String get galaxyNodePreviewSubtitle;
+
+  /// No description provided for @galaxyNodeUnlocked.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Node Unlocked'**
+  String get galaxyNodeUnlocked;
+
+  /// No description provided for @galaxyOfflineMode.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Offline Mode'**
+  String get galaxyOfflineMode;
+
+  /// No description provided for @galaxyOverviewMastery.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Overview Mastery'**
+  String get galaxyOverviewMastery;
+
+  /// No description provided for @galaxyOverviewNodes.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Overview Nodes'**
+  String get galaxyOverviewNodes;
+
+  /// No description provided for @galaxyOverviewUnlocked.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Overview Unlocked'**
+  String get galaxyOverviewUnlocked;
+
+  /// No description provided for @galaxyPerfHighJank.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Perf High Jank'**
+  String get galaxyPerfHighJank;
+
+  /// No description provided for @galaxyPerfLowFpsCritical.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Perf Low Fps Critical'**
+  String get galaxyPerfLowFpsCritical;
+
+  /// No description provided for @galaxyPerfLowFpsWarning.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Perf Low Fps Warning'**
+  String get galaxyPerfLowFpsWarning;
+
+  /// No description provided for @galaxyPerfRecommendationDisableParticles.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Perf Recommendation Disable Particles'**
+  String get galaxyPerfRecommendationDisableParticles;
+
+  /// No description provided for @galaxyPerfRecommendationLowQualityMode.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Perf Recommendation Low Quality Mode'**
+  String get galaxyPerfRecommendationLowQualityMode;
+
+  /// No description provided for @galaxyPerfRecommendationOptimizeLayout.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Perf Recommendation Optimize Layout'**
+  String get galaxyPerfRecommendationOptimizeLayout;
+
+  /// No description provided for @galaxyPerfRecommendationReduceNodes.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Perf Recommendation Reduce Nodes'**
+  String get galaxyPerfRecommendationReduceNodes;
+
+  /// No description provided for @galaxyPerfSlowRender.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Perf Slow Render'**
+  String get galaxyPerfSlowRender;
+
+  /// No description provided for @galaxyPerfStatusCritical.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Perf Status Critical'**
+  String get galaxyPerfStatusCritical;
+
+  /// No description provided for @galaxyPerfStatusDegraded.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Perf Status Degraded'**
+  String get galaxyPerfStatusDegraded;
+
+  /// No description provided for @galaxyPerfStatusOptimal.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Perf Status Optimal'**
+  String get galaxyPerfStatusOptimal;
+
+  /// No description provided for @galaxyReload.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Reload'**
+  String get galaxyReload;
+
+  /// No description provided for @galaxySearchHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Search Hint'**
+  String get galaxySearchHint;
+
+  /// No description provided for @galaxySearchHintDetail.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Search Hint Detail'**
+  String get galaxySearchHintDetail;
+
+  /// No description provided for @galaxySearchNoResults.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Search No Results'**
+  String get galaxySearchNoResults;
+
+  /// No description provided for @galaxySearchResultSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Search Result Subtitle'**
+  String get galaxySearchResultSubtitle;
+
+  /// No description provided for @galaxySearchTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Search Title'**
+  String get galaxySearchTitle;
+
+  /// No description provided for @galaxySectorArt.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Sector Art'**
+  String get galaxySectorArt;
+
+  /// No description provided for @galaxySectorCivilization.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Sector Civilization'**
+  String get galaxySectorCivilization;
+
+  /// No description provided for @galaxySectorCosmos.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Sector Cosmos'**
+  String get galaxySectorCosmos;
+
+  /// No description provided for @galaxySectorLife.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Sector Life'**
+  String get galaxySectorLife;
+
+  /// No description provided for @galaxySectorTech.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Sector Tech'**
+  String get galaxySectorTech;
+
+  /// No description provided for @galaxySectorVoid.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Sector Void'**
+  String get galaxySectorVoid;
+
+  /// No description provided for @galaxySectorWisdom.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Sector Wisdom'**
+  String get galaxySectorWisdom;
+
+  /// No description provided for @galaxySimulationCenterGravity.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Simulation Center Gravity'**
+  String get galaxySimulationCenterGravity;
+
+  /// No description provided for @galaxySimulationGravity.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Simulation Gravity'**
+  String get galaxySimulationGravity;
+
+  /// No description provided for @galaxySimulationReplaySpeed.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Simulation Replay Speed'**
+  String get galaxySimulationReplaySpeed;
+
+  /// No description provided for @galaxySimulationRepulsion.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Simulation Repulsion'**
+  String get galaxySimulationRepulsion;
+
+  /// No description provided for @galaxySimulationReset.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Simulation Reset'**
+  String get galaxySimulationReset;
+
+  /// No description provided for @galaxySimulationSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Simulation Subtitle'**
+  String get galaxySimulationSubtitle;
+
+  /// No description provided for @galaxySimulationTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Simulation Title'**
+  String get galaxySimulationTitle;
+
+  /// No description provided for @galaxyUsingCache.
+  ///
+  /// In zh, this message translates to:
+  /// **'Galaxy Using Cache'**
+  String get galaxyUsingCache;
+
+  /// No description provided for @guestUpgradeAcceptPoliciesRequired.
+  ///
+  /// In zh, this message translates to:
+  /// **'Guest Upgrade Accept Policies Required'**
+  String get guestUpgradeAcceptPoliciesRequired;
+
+  /// No description provided for @guestUpgradeAgreePrivacy.
+  ///
+  /// In zh, this message translates to:
+  /// **'Guest Upgrade Agree Privacy'**
+  String get guestUpgradeAgreePrivacy;
+
+  /// No description provided for @guestUpgradeAgreeTerms.
+  ///
+  /// In zh, this message translates to:
+  /// **'Guest Upgrade Agree Terms'**
+  String get guestUpgradeAgreeTerms;
+
+  /// No description provided for @guestUpgradeIntro.
+  ///
+  /// In zh, this message translates to:
+  /// **'Guest Upgrade Intro'**
+  String get guestUpgradeIntro;
+
+  /// No description provided for @guestUpgradePasswordMinLength.
+  ///
+  /// In zh, this message translates to:
+  /// **'Guest Upgrade Password Min Length'**
+  String get guestUpgradePasswordMinLength;
+
+  /// No description provided for @guestUpgradeSocialSectionTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Guest Upgrade Social Section Title'**
+  String get guestUpgradeSocialSectionTitle;
+
+  /// No description provided for @guestUpgradeSocialSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'Guest Upgrade Social Success'**
+  String get guestUpgradeSocialSuccess;
+
+  /// No description provided for @guestUpgradeSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'Guest Upgrade Success'**
+  String get guestUpgradeSuccess;
+
+  /// No description provided for @guestUpgradeTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Guest Upgrade Title'**
+  String get guestUpgradeTitle;
+
+  /// No description provided for @guestUpgradeUsernameMinLength.
+  ///
+  /// In zh, this message translates to:
+  /// **'Guest Upgrade Username Min Length'**
+  String get guestUpgradeUsernameMinLength;
+
+  /// No description provided for @guestUpgradeViewPrivacy.
+  ///
+  /// In zh, this message translates to:
+  /// **'Guest Upgrade View Privacy'**
+  String get guestUpgradeViewPrivacy;
+
+  /// No description provided for @guestUpgradeViewTerms.
+  ///
+  /// In zh, this message translates to:
+  /// **'Guest Upgrade View Terms'**
+  String get guestUpgradeViewTerms;
+
+  /// No description provided for @guestUpgradeWithApple.
+  ///
+  /// In zh, this message translates to:
+  /// **'Guest Upgrade With Apple'**
+  String get guestUpgradeWithApple;
+
+  /// No description provided for @guestUpgradeWithEmail.
+  ///
+  /// In zh, this message translates to:
+  /// **'Guest Upgrade With Email'**
+  String get guestUpgradeWithEmail;
+
+  /// No description provided for @guestUpgradeWithGoogle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Guest Upgrade With Google'**
+  String get guestUpgradeWithGoogle;
+
+  /// No description provided for @guestUpgradeWithWeChat.
+  ///
+  /// In zh, this message translates to:
+  /// **'Guest Upgrade With We Chat'**
+  String get guestUpgradeWithWeChat;
+
+  /// No description provided for @passwordSetConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'Password Set Confirm'**
+  String get passwordSetConfirm;
+
+  /// No description provided for @passwordSetHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'Password Set Hint'**
+  String get passwordSetHint;
+
+  /// No description provided for @passwordSetLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'Password Set Label'**
+  String get passwordSetLabel;
+
+  /// No description provided for @passwordSetSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'Password Set Success'**
+  String get passwordSetSuccess;
+
+  /// No description provided for @passwordSetTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Password Set Title'**
+  String get passwordSetTitle;
+
+  /// No description provided for @planArchive.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Archive'**
+  String get planArchive;
+
+  /// No description provided for @planArchiveConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Archive Confirm'**
+  String get planArchiveConfirm;
+
+  /// No description provided for @planArchiveMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Archive Message'**
+  String get planArchiveMessage;
+
+  /// No description provided for @planArchiveTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Archive Title'**
+  String get planArchiveTitle;
+
+  /// No description provided for @planArchivedSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Archived Success'**
+  String get planArchivedSuccess;
+
+  /// No description provided for @planContextTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Context Title'**
+  String get planContextTitle;
+
+  /// No description provided for @planDaysRemaining.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Days Remaining'**
+  String get planDaysRemaining;
+
+  /// No description provided for @planDetailTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Detail Title'**
+  String get planDetailTitle;
+
+  /// No description provided for @planDueToday.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Due Today'**
+  String get planDueToday;
+
+  /// No description provided for @planFactsFeedbackSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Facts Feedback Summary'**
+  String get planFactsFeedbackSummary;
+
+  /// No description provided for @planKeyFacts.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Key Facts'**
+  String get planKeyFacts;
+
+  /// No description provided for @planLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Load Failed'**
+  String get planLoadFailed;
+
+  /// No description provided for @planNoContent.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan No Content'**
+  String get planNoContent;
+
+  /// No description provided for @planNoTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan No Tasks'**
+  String get planNoTasks;
+
+  /// No description provided for @planNoVisualizationData.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan No Visualization Data'**
+  String get planNoVisualizationData;
+
+  /// No description provided for @planOverdueDays.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Overdue Days'**
+  String get planOverdueDays;
+
+  /// No description provided for @planProgressLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Progress Label'**
+  String get planProgressLabel;
+
+  /// No description provided for @planRecentFeedback.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Recent Feedback'**
+  String get planRecentFeedback;
+
+  /// No description provided for @planRelatedTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Related Tasks'**
+  String get planRelatedTasks;
+
+  /// No description provided for @planRestore.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Restore'**
+  String get planRestore;
+
+  /// No description provided for @planRestoredSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Restored Success'**
+  String get planRestoredSuccess;
+
+  /// No description provided for @planReviewAdditionalNotesHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Review Additional Notes Hint'**
+  String get planReviewAdditionalNotesHint;
+
+  /// No description provided for @planReviewAdditionalNotesRequired.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Review Additional Notes Required'**
+  String get planReviewAdditionalNotesRequired;
+
+  /// No description provided for @planReviewApproveExecute.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Review Approve Execute'**
+  String get planReviewApproveExecute;
+
+  /// No description provided for @planReviewConfidenceTierLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Review Confidence Tier Label'**
+  String get planReviewConfidenceTierLabel;
+
+  /// No description provided for @planReviewConfidenceTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Review Confidence Title'**
+  String get planReviewConfidenceTitle;
+
+  /// No description provided for @planReviewDecisionApproved.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Review Decision Approved'**
+  String get planReviewDecisionApproved;
+
+  /// No description provided for @planReviewDecisionNeedsModification.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Review Decision Needs Modification'**
+  String get planReviewDecisionNeedsModification;
+
+  /// No description provided for @planReviewDecisionRejected.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Review Decision Rejected'**
+  String get planReviewDecisionRejected;
+
+  /// No description provided for @planReviewDecisionRequiresConfirmation.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Review Decision Requires Confirmation'**
+  String get planReviewDecisionRequiresConfirmation;
+
+  /// No description provided for @planReviewEvidenceLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Review Evidence Label'**
+  String get planReviewEvidenceLabel;
+
+  /// No description provided for @planReviewImpactLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Review Impact Label'**
+  String get planReviewImpactLabel;
+
+  /// No description provided for @planReviewModifyPlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Review Modify Plan'**
+  String get planReviewModifyPlan;
+
+  /// No description provided for @planReviewReasonDifficultyTooHigh.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Review Reason Difficulty Too High'**
+  String get planReviewReasonDifficultyTooHigh;
+
+  /// No description provided for @planReviewReasonDifficultyTooLow.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Review Reason Difficulty Too Low'**
+  String get planReviewReasonDifficultyTooLow;
+
+  /// No description provided for @planReviewReasonMissingKeyTask.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Review Reason Missing Key Task'**
+  String get planReviewReasonMissingKeyTask;
+
+  /// No description provided for @planReviewReasonOther.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Review Reason Other'**
+  String get planReviewReasonOther;
+
+  /// No description provided for @planReviewReasonScheduleUnreasonable.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Review Reason Schedule Unreasonable'**
+  String get planReviewReasonScheduleUnreasonable;
+
+  /// No description provided for @planReviewReasonTasksTooFew.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Review Reason Tasks Too Few'**
+  String get planReviewReasonTasksTooFew;
+
+  /// No description provided for @planReviewReasonTasksTooMany.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Review Reason Tasks Too Many'**
+  String get planReviewReasonTasksTooMany;
+
+  /// No description provided for @planReviewRejectReasonTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Review Reject Reason Title'**
+  String get planReviewRejectReasonTitle;
+
+  /// No description provided for @planReviewRejectWithFeedback.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Review Reject With Feedback'**
+  String get planReviewRejectWithFeedback;
+
+  /// No description provided for @planReviewSelectReasonRequired.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Review Select Reason Required'**
+  String get planReviewSelectReasonRequired;
+
+  /// No description provided for @planReviewSubmitFeedback.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Review Submit Feedback'**
+  String get planReviewSubmitFeedback;
+
+  /// No description provided for @planReviewSummaryApproved.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Review Summary Approved'**
+  String get planReviewSummaryApproved;
+
+  /// No description provided for @planReviewSummaryNeedsModification.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Review Summary Needs Modification'**
+  String get planReviewSummaryNeedsModification;
+
+  /// No description provided for @planReviewSummaryRejected.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Review Summary Rejected'**
+  String get planReviewSummaryRejected;
+
+  /// No description provided for @planReviewSummaryRequiresConfirmation.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Review Summary Requires Confirmation'**
+  String get planReviewSummaryRequiresConfirmation;
+
+  /// No description provided for @planSectionCompletionRate.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Section Completion Rate'**
+  String get planSectionCompletionRate;
+
+  /// No description provided for @planSectionDailyCompletion.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Section Daily Completion'**
+  String get planSectionDailyCompletion;
+
+  /// No description provided for @planSectionTaskTypeDistribution.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Section Task Type Distribution'**
+  String get planSectionTaskTypeDistribution;
+
+  /// No description provided for @planShare.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Share'**
+  String get planShare;
+
+  /// No description provided for @planStatusActive.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Status Active'**
+  String get planStatusActive;
+
+  /// No description provided for @planStatusArchived.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Status Archived'**
+  String get planStatusArchived;
+
+  /// No description provided for @planStatusCompleted.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Status Completed'**
+  String get planStatusCompleted;
+
+  /// No description provided for @planStatusPaused.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Status Paused'**
+  String get planStatusPaused;
+
+  /// No description provided for @planStatusUnknown.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Status Unknown'**
+  String get planStatusUnknown;
+
+  /// No description provided for @planTabOverview.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Tab Overview'**
+  String get planTabOverview;
+
+  /// No description provided for @planTabProgress.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Tab Progress'**
+  String get planTabProgress;
+
+  /// No description provided for @planTargetDate.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Target Date'**
+  String get planTargetDate;
+
+  /// No description provided for @planTargetMastery.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Target Mastery'**
+  String get planTargetMastery;
+
+  /// No description provided for @planTaskProgress.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Task Progress'**
+  String get planTaskProgress;
+
+  /// No description provided for @planUpcomingTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'Plan Upcoming Tasks'**
+  String get planUpcomingTasks;
+
+  /// No description provided for @pomodoroBreakFinished.
+  ///
+  /// In zh, this message translates to:
+  /// **'Pomodoro Break Finished'**
+  String get pomodoroBreakFinished;
+
+  /// No description provided for @pomodoroWorkFinished.
+  ///
+  /// In zh, this message translates to:
+  /// **'Pomodoro Work Finished'**
+  String get pomodoroWorkFinished;
+
+  /// No description provided for @profileDeleteAccount.
+  ///
+  /// In zh, this message translates to:
+  /// **'Profile Delete Account'**
+  String get profileDeleteAccount;
+
+  /// No description provided for @profileLinkedAccounts.
+  ///
+  /// In zh, this message translates to:
+  /// **'Profile Linked Accounts'**
+  String get profileLinkedAccounts;
+
+  /// No description provided for @profilePersonalInfo.
+  ///
+  /// In zh, this message translates to:
+  /// **'Profile Personal Info'**
+  String get profilePersonalInfo;
+
+  /// No description provided for @profileSecurityLog.
+  ///
+  /// In zh, this message translates to:
+  /// **'Profile Security Log'**
+  String get profileSecurityLog;
+
+  /// No description provided for @profileSessionManagement.
+  ///
+  /// In zh, this message translates to:
+  /// **'Profile Session Management'**
+  String get profileSessionManagement;
+
+  /// No description provided for @profileUpgradeGuest.
+  ///
+  /// In zh, this message translates to:
+  /// **'Profile Upgrade Guest'**
+  String get profileUpgradeGuest;
+
+  /// No description provided for @regenCustomHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'Regen Custom Hint'**
+  String get regenCustomHint;
+
+  /// No description provided for @regenDescCompleted.
+  ///
+  /// In zh, this message translates to:
+  /// **'Regen Desc Completed'**
+  String get regenDescCompleted;
+
+  /// No description provided for @regenDescFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'Regen Desc Failed'**
+  String get regenDescFailed;
+
+  /// No description provided for @regenDescInProgress.
+  ///
+  /// In zh, this message translates to:
+  /// **'Regen Desc In Progress'**
+  String get regenDescInProgress;
+
+  /// No description provided for @regenDescPending.
+  ///
+  /// In zh, this message translates to:
+  /// **'Regen Desc Pending'**
+  String get regenDescPending;
+
+  /// No description provided for @regenHintAddExamples.
+  ///
+  /// In zh, this message translates to:
+  /// **'Regen Hint Add Examples'**
+  String get regenHintAddExamples;
+
+  /// No description provided for @regenHintFixErrors.
+  ///
+  /// In zh, this message translates to:
+  /// **'Regen Hint Fix Errors'**
+  String get regenHintFixErrors;
+
+  /// No description provided for @regenHintFriendlierTone.
+  ///
+  /// In zh, this message translates to:
+  /// **'Regen Hint Friendlier Tone'**
+  String get regenHintFriendlierTone;
+
+  /// No description provided for @regenHintMoreAccurate.
+  ///
+  /// In zh, this message translates to:
+  /// **'Regen Hint More Accurate'**
+  String get regenHintMoreAccurate;
+
+  /// No description provided for @regenHintMoreConcise.
+  ///
+  /// In zh, this message translates to:
+  /// **'Regen Hint More Concise'**
+  String get regenHintMoreConcise;
+
+  /// No description provided for @regenHintMoreDetailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'Regen Hint More Detailed'**
+  String get regenHintMoreDetailed;
+
+  /// No description provided for @regenHintsOptional.
+  ///
+  /// In zh, this message translates to:
+  /// **'Regen Hints Optional'**
+  String get regenHintsOptional;
+
+  /// No description provided for @regenImprovementsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Regen Improvements Title'**
+  String get regenImprovementsTitle;
+
+  /// No description provided for @regenProgressTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Regen Progress Title'**
+  String get regenProgressTitle;
+
+  /// No description provided for @regenQualityImprovement.
+  ///
+  /// In zh, this message translates to:
+  /// **'Regen Quality Improvement'**
+  String get regenQualityImprovement;
+
+  /// No description provided for @regenResultFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'Regen Result Failed'**
+  String get regenResultFailed;
+
+  /// No description provided for @regenResultSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'Regen Result Success'**
+  String get regenResultSuccess;
+
+  /// No description provided for @regenRetryMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'Regen Retry Message'**
+  String get regenRetryMessage;
+
+  /// No description provided for @regenSelectType.
+  ///
+  /// In zh, this message translates to:
+  /// **'Regen Select Type'**
+  String get regenSelectType;
+
+  /// No description provided for @regenStart.
+  ///
+  /// In zh, this message translates to:
+  /// **'Regen Start'**
+  String get regenStart;
+
+  /// No description provided for @regenTitleCompleted.
+  ///
+  /// In zh, this message translates to:
+  /// **'Regen Title Completed'**
+  String get regenTitleCompleted;
+
+  /// No description provided for @regenTitleFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'Regen Title Failed'**
+  String get regenTitleFailed;
+
+  /// No description provided for @regenTitleIdle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Regen Title Idle'**
+  String get regenTitleIdle;
+
+  /// No description provided for @regenTitleInProgress.
+  ///
+  /// In zh, this message translates to:
+  /// **'Regen Title In Progress'**
+  String get regenTitleInProgress;
+
+  /// No description provided for @regenTitlePending.
+  ///
+  /// In zh, this message translates to:
+  /// **'Regen Title Pending'**
+  String get regenTitlePending;
+
+  /// No description provided for @regenTypeAddDetails.
+  ///
+  /// In zh, this message translates to:
+  /// **'Regen Type Add Details'**
+  String get regenTypeAddDetails;
+
+  /// No description provided for @regenTypeChangeStyle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Regen Type Change Style'**
+  String get regenTypeChangeStyle;
+
+  /// No description provided for @regenTypeCustom.
+  ///
+  /// In zh, this message translates to:
+  /// **'Regen Type Custom'**
+  String get regenTypeCustom;
+
+  /// No description provided for @regenTypeFixIssues.
+  ///
+  /// In zh, this message translates to:
+  /// **'Regen Type Fix Issues'**
+  String get regenTypeFixIssues;
+
+  /// No description provided for @regenTypeImproveQuality.
+  ///
+  /// In zh, this message translates to:
+  /// **'Regen Type Improve Quality'**
+  String get regenTypeImproveQuality;
+
+  /// No description provided for @regenTypeSimplify.
+  ///
+  /// In zh, this message translates to:
+  /// **'Regen Type Simplify'**
+  String get regenTypeSimplify;
+
+  /// No description provided for @reviewRatingAccuracyTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Review Rating Accuracy Title'**
+  String get reviewRatingAccuracyTitle;
+
+  /// No description provided for @reviewRatingAccurate.
+  ///
+  /// In zh, this message translates to:
+  /// **'Review Rating Accurate'**
+  String get reviewRatingAccurate;
+
+  /// No description provided for @reviewRatingAddInaccuratePoint.
+  ///
+  /// In zh, this message translates to:
+  /// **'Review Rating Add Inaccurate Point'**
+  String get reviewRatingAddInaccuratePoint;
+
+  /// No description provided for @reviewRatingCommentsHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'Review Rating Comments Hint'**
+  String get reviewRatingCommentsHint;
+
+  /// No description provided for @reviewRatingCommentsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Review Rating Comments Title'**
+  String get reviewRatingCommentsTitle;
+
+  /// No description provided for @reviewRatingHelpful.
+  ///
+  /// In zh, this message translates to:
+  /// **'Review Rating Helpful'**
+  String get reviewRatingHelpful;
+
+  /// No description provided for @reviewRatingInaccurate.
+  ///
+  /// In zh, this message translates to:
+  /// **'Review Rating Inaccurate'**
+  String get reviewRatingInaccurate;
+
+  /// No description provided for @reviewRatingInaccuratePointHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'Review Rating Inaccurate Point Hint'**
+  String get reviewRatingInaccuratePointHint;
+
+  /// No description provided for @reviewRatingInaccuratePointsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Review Rating Inaccurate Points Title'**
+  String get reviewRatingInaccuratePointsTitle;
+
+  /// No description provided for @reviewRatingLessOptions.
+  ///
+  /// In zh, this message translates to:
+  /// **'Review Rating Less Options'**
+  String get reviewRatingLessOptions;
+
+  /// No description provided for @reviewRatingMoreOptions.
+  ///
+  /// In zh, this message translates to:
+  /// **'Review Rating More Options'**
+  String get reviewRatingMoreOptions;
+
+  /// No description provided for @reviewRatingNotHelpful.
+  ///
+  /// In zh, this message translates to:
+  /// **'Review Rating Not Helpful'**
+  String get reviewRatingNotHelpful;
+
+  /// No description provided for @reviewRatingSpecificityTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Review Rating Specificity Title'**
+  String get reviewRatingSpecificityTitle;
+
+  /// No description provided for @reviewRatingSubmit.
+  ///
+  /// In zh, this message translates to:
+  /// **'Review Rating Submit'**
+  String get reviewRatingSubmit;
+
+  /// No description provided for @reviewRatingSubmitFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'Review Rating Submit Failed'**
+  String get reviewRatingSubmitFailed;
+
+  /// No description provided for @reviewRatingSubmitSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'Review Rating Submit Success'**
+  String get reviewRatingSubmitSuccess;
+
+  /// No description provided for @reviewRatingSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Review Rating Subtitle'**
+  String get reviewRatingSubtitle;
+
+  /// No description provided for @reviewRatingTagsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Review Rating Tags Title'**
+  String get reviewRatingTagsTitle;
+
+  /// No description provided for @reviewRatingTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Review Rating Title'**
+  String get reviewRatingTitle;
+
+  /// No description provided for @reviewSpecificityAppropriate.
+  ///
+  /// In zh, this message translates to:
+  /// **'Review Specificity Appropriate'**
+  String get reviewSpecificityAppropriate;
+
+  /// No description provided for @reviewSpecificityTooDetailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'Review Specificity Too Detailed'**
+  String get reviewSpecificityTooDetailed;
+
+  /// No description provided for @reviewSpecificityTooVague.
+  ///
+  /// In zh, this message translates to:
+  /// **'Review Specificity Too Vague'**
+  String get reviewSpecificityTooVague;
+
+  /// No description provided for @reviewTagAccurate.
+  ///
+  /// In zh, this message translates to:
+  /// **'Review Tag Accurate'**
+  String get reviewTagAccurate;
+
+  /// No description provided for @reviewTagClear.
+  ///
+  /// In zh, this message translates to:
+  /// **'Review Tag Clear'**
+  String get reviewTagClear;
+
+  /// No description provided for @reviewTagNeedsImprovement.
+  ///
+  /// In zh, this message translates to:
+  /// **'Review Tag Needs Improvement'**
+  String get reviewTagNeedsImprovement;
+
+  /// No description provided for @reviewTagPractical.
+  ///
+  /// In zh, this message translates to:
+  /// **'Review Tag Practical'**
+  String get reviewTagPractical;
+
+  /// No description provided for @reviewTagTooLenient.
+  ///
+  /// In zh, this message translates to:
+  /// **'Review Tag Too Lenient'**
+  String get reviewTagTooLenient;
+
+  /// No description provided for @reviewTagTooStrict.
+  ///
+  /// In zh, this message translates to:
+  /// **'Review Tag Too Strict'**
+  String get reviewTagTooStrict;
+
+  /// No description provided for @securityLogActionAccountDelete.
+  ///
+  /// In zh, this message translates to:
+  /// **'Security Log Action Account Delete'**
+  String get securityLogActionAccountDelete;
+
+  /// No description provided for @securityLogActionEmailVerify.
+  ///
+  /// In zh, this message translates to:
+  /// **'Security Log Action Email Verify'**
+  String get securityLogActionEmailVerify;
+
+  /// No description provided for @securityLogActionGuestUpgrade.
+  ///
+  /// In zh, this message translates to:
+  /// **'Security Log Action Guest Upgrade'**
+  String get securityLogActionGuestUpgrade;
+
+  /// No description provided for @securityLogActionLoginFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'Security Log Action Login Failed'**
+  String get securityLogActionLoginFailed;
+
+  /// No description provided for @securityLogActionLoginSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'Security Log Action Login Success'**
+  String get securityLogActionLoginSuccess;
+
+  /// No description provided for @securityLogActionLogout.
+  ///
+  /// In zh, this message translates to:
+  /// **'Security Log Action Logout'**
+  String get securityLogActionLogout;
+
+  /// No description provided for @securityLogActionPasswordChange.
+  ///
+  /// In zh, this message translates to:
+  /// **'Security Log Action Password Change'**
+  String get securityLogActionPasswordChange;
+
+  /// No description provided for @securityLogActionPasswordReset.
+  ///
+  /// In zh, this message translates to:
+  /// **'Security Log Action Password Reset'**
+  String get securityLogActionPasswordReset;
+
+  /// No description provided for @securityLogActionRegister.
+  ///
+  /// In zh, this message translates to:
+  /// **'Security Log Action Register'**
+  String get securityLogActionRegister;
+
+  /// No description provided for @securityLogActionSocialLink.
+  ///
+  /// In zh, this message translates to:
+  /// **'Security Log Action Social Link'**
+  String get securityLogActionSocialLink;
+
+  /// No description provided for @securityLogActionSocialUnlink.
+  ///
+  /// In zh, this message translates to:
+  /// **'Security Log Action Social Unlink'**
+  String get securityLogActionSocialUnlink;
+
+  /// No description provided for @securityLogActionTokenRefresh.
+  ///
+  /// In zh, this message translates to:
+  /// **'Security Log Action Token Refresh'**
+  String get securityLogActionTokenRefresh;
+
+  /// No description provided for @securityLogAdditionalInfo.
+  ///
+  /// In zh, this message translates to:
+  /// **'Security Log Additional Info'**
+  String get securityLogAdditionalInfo;
+
+  /// No description provided for @securityLogEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'Security Log Empty'**
+  String get securityLogEmpty;
+
+  /// No description provided for @securityLogIntro.
+  ///
+  /// In zh, this message translates to:
+  /// **'Security Log Intro'**
+  String get securityLogIntro;
+
+  /// No description provided for @securityLogOccurredAt.
+  ///
+  /// In zh, this message translates to:
+  /// **'Security Log Occurred At'**
+  String get securityLogOccurredAt;
+
+  /// No description provided for @securityLogTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Security Log Title'**
+  String get securityLogTitle;
+
+  /// No description provided for @sessionManagementCurrent.
+  ///
+  /// In zh, this message translates to:
+  /// **'Session Management Current'**
+  String get sessionManagementCurrent;
+
+  /// No description provided for @sessionManagementEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'Session Management Empty'**
+  String get sessionManagementEmpty;
+
+  /// No description provided for @sessionManagementFirstLogin.
+  ///
+  /// In zh, this message translates to:
+  /// **'Session Management First Login'**
+  String get sessionManagementFirstLogin;
+
+  /// No description provided for @sessionManagementIntro.
+  ///
+  /// In zh, this message translates to:
+  /// **'Session Management Intro'**
+  String get sessionManagementIntro;
+
+  /// No description provided for @sessionManagementLastActive.
+  ///
+  /// In zh, this message translates to:
+  /// **'Session Management Last Active'**
+  String get sessionManagementLastActive;
+
+  /// No description provided for @sessionManagementRevokeOthers.
+  ///
+  /// In zh, this message translates to:
+  /// **'Session Management Revoke Others'**
+  String get sessionManagementRevokeOthers;
+
+  /// No description provided for @sessionManagementRevokeThis.
+  ///
+  /// In zh, this message translates to:
+  /// **'Session Management Revoke This'**
+  String get sessionManagementRevokeThis;
+
+  /// No description provided for @sessionManagementTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Session Management Title'**
+  String get sessionManagementTitle;
+
+  /// No description provided for @sessionManagementUnknownDevice.
+  ///
+  /// In zh, this message translates to:
+  /// **'Session Management Unknown Device'**
+  String get sessionManagementUnknownDevice;
+
+  /// No description provided for @socialAccountsIntro.
+  ///
+  /// In zh, this message translates to:
+  /// **'Social Accounts Intro'**
+  String get socialAccountsIntro;
+
+  /// No description provided for @socialAccountsLink.
+  ///
+  /// In zh, this message translates to:
+  /// **'Social Accounts Link'**
+  String get socialAccountsLink;
+
+  /// No description provided for @socialAccountsLinked.
+  ///
+  /// In zh, this message translates to:
+  /// **'Social Accounts Linked'**
+  String get socialAccountsLinked;
+
+  /// No description provided for @socialAccountsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Social Accounts Title'**
+  String get socialAccountsTitle;
+
+  /// No description provided for @socialAccountsUnlink.
+  ///
+  /// In zh, this message translates to:
+  /// **'Social Accounts Unlink'**
+  String get socialAccountsUnlink;
+
+  /// No description provided for @socialAccountsUnlinkConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'Social Accounts Unlink Confirm'**
+  String get socialAccountsUnlinkConfirm;
+
+  /// No description provided for @socialAccountsUnlinkMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'Social Accounts Unlink Message'**
+  String get socialAccountsUnlinkMessage;
+
+  /// No description provided for @socialAccountsUnlinkTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Social Accounts Unlink Title'**
+  String get socialAccountsUnlinkTitle;
+
+  /// No description provided for @socialAccountsUnlinkedHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'Social Accounts Unlinked Hint'**
+  String get socialAccountsUnlinkedHint;
+
+  /// No description provided for @socialAccountsWeChatPending.
+  ///
+  /// In zh, this message translates to:
+  /// **'Social Accounts We Chat Pending'**
+  String get socialAccountsWeChatPending;
+
+  /// No description provided for @socialAccountsWeChatUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'Social Accounts We Chat Unavailable'**
+  String get socialAccountsWeChatUnavailable;
+
+  /// No description provided for @sprintActionAbandonButton.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sprint Action Abandon Button'**
+  String get sprintActionAbandonButton;
+
+  /// No description provided for @sprintActionAbandonSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sprint Action Abandon Subtitle'**
+  String get sprintActionAbandonSubtitle;
+
+  /// No description provided for @sprintActionAbandonTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sprint Action Abandon Title'**
+  String get sprintActionAbandonTitle;
+
+  /// No description provided for @sprintActionCompleteButton.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sprint Action Complete Button'**
+  String get sprintActionCompleteButton;
+
+  /// No description provided for @sprintActionCompleteSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sprint Action Complete Subtitle'**
+  String get sprintActionCompleteSubtitle;
+
+  /// No description provided for @sprintActionCompleteTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sprint Action Complete Title'**
+  String get sprintActionCompleteTitle;
+
+  /// No description provided for @sprintActionExtendSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sprint Action Extend Subtitle'**
+  String get sprintActionExtendSubtitle;
+
+  /// No description provided for @sprintActionExtendTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sprint Action Extend Title'**
+  String get sprintActionExtendTitle;
+
+  /// No description provided for @sprintActionsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sprint Actions Title'**
+  String get sprintActionsTitle;
+
+  /// No description provided for @sprintCompletedTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sprint Completed Tasks'**
+  String get sprintCompletedTasks;
+
+  /// No description provided for @sprintCompletionRate.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sprint Completion Rate'**
+  String get sprintCompletionRate;
+
+  /// No description provided for @sprintConfirmAbandonDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sprint Confirm Abandon Desc'**
+  String get sprintConfirmAbandonDesc;
+
+  /// No description provided for @sprintConfirmAbandonMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sprint Confirm Abandon Message'**
+  String get sprintConfirmAbandonMessage;
+
+  /// No description provided for @sprintConfirmAbandonTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sprint Confirm Abandon Title'**
+  String get sprintConfirmAbandonTitle;
+
+  /// No description provided for @sprintConfirmCompleteDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sprint Confirm Complete Desc'**
+  String get sprintConfirmCompleteDesc;
+
+  /// No description provided for @sprintConfirmCompleteMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sprint Confirm Complete Message'**
+  String get sprintConfirmCompleteMessage;
+
+  /// No description provided for @sprintConfirmCompleteTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sprint Confirm Complete Title'**
+  String get sprintConfirmCompleteTitle;
+
+  /// No description provided for @sprintDailyCompletion.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sprint Daily Completion'**
+  String get sprintDailyCompletion;
+
+  /// No description provided for @sprintDurationDaysLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sprint Duration Days Label'**
+  String get sprintDurationDaysLabel;
+
+  /// No description provided for @sprintDurationDaysValue.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sprint Duration Days Value'**
+  String get sprintDurationDaysValue;
+
+  /// No description provided for @sprintDurationLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sprint Duration Label'**
+  String get sprintDurationLabel;
+
+  /// No description provided for @sprintEndDateLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sprint End Date Label'**
+  String get sprintEndDateLabel;
+
+  /// No description provided for @sprintExtendConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sprint Extend Confirm'**
+  String get sprintExtendConfirm;
+
+  /// No description provided for @sprintExtendMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sprint Extend Message'**
+  String get sprintExtendMessage;
+
+  /// No description provided for @sprintExtendOptionDays.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sprint Extend Option Days'**
+  String get sprintExtendOptionDays;
+
+  /// No description provided for @sprintExtendSelectDays.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sprint Extend Select Days'**
+  String get sprintExtendSelectDays;
+
+  /// No description provided for @sprintExtendTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sprint Extend Title'**
+  String get sprintExtendTitle;
+
+  /// No description provided for @sprintIncompleteTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sprint Incomplete Tasks'**
+  String get sprintIncompleteTasks;
+
+  /// No description provided for @sprintInfoTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sprint Info Title'**
+  String get sprintInfoTitle;
+
+  /// No description provided for @sprintOngoing.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sprint Ongoing'**
+  String get sprintOngoing;
+
+  /// No description provided for @sprintProgressTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sprint Progress Title'**
+  String get sprintProgressTitle;
+
+  /// No description provided for @sprintRemainingTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sprint Remaining Tasks'**
+  String get sprintRemainingTasks;
+
+  /// No description provided for @sprintStartDateLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sprint Start Date Label'**
+  String get sprintStartDateLabel;
+
+  /// No description provided for @sprintStatsEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sprint Stats Empty'**
+  String get sprintStatsEmpty;
+
+  /// No description provided for @sprintStatsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sprint Stats Title'**
+  String get sprintStatsTitle;
+
+  /// No description provided for @sprintStatusCompleted.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sprint Status Completed'**
+  String get sprintStatusCompleted;
+
+  /// No description provided for @sprintStatusInProgress.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sprint Status In Progress'**
+  String get sprintStatusInProgress;
+
+  /// No description provided for @sprintStatusLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sprint Status Label'**
+  String get sprintStatusLabel;
+
+  /// No description provided for @sprintStatusTodo.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sprint Status Todo'**
+  String get sprintStatusTodo;
+
+  /// No description provided for @sprintTaskCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sprint Task Count'**
+  String get sprintTaskCount;
+
+  /// No description provided for @sprintTaskSummaryTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sprint Task Summary Title'**
+  String get sprintTaskSummaryTitle;
+
+  /// No description provided for @sprintTotalTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sprint Total Tasks'**
+  String get sprintTotalTasks;
+
+  /// No description provided for @statusCompleted.
+  ///
+  /// In zh, this message translates to:
+  /// **'Status Completed'**
+  String get statusCompleted;
+
+  /// No description provided for @statusFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'Status Failed'**
+  String get statusFailed;
+
+  /// No description provided for @statusInProgress.
+  ///
+  /// In zh, this message translates to:
+  /// **'Status In Progress'**
+  String get statusInProgress;
+
+  /// No description provided for @statusPending.
+  ///
+  /// In zh, this message translates to:
+  /// **'Status Pending'**
+  String get statusPending;
+
+  /// No description provided for @taskBatchCreateTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Batch Create Title'**
+  String get taskBatchCreateTitle;
+
+  /// No description provided for @taskChatAssistantTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Chat Assistant Title'**
+  String get taskChatAssistantTitle;
+
+  /// No description provided for @taskChatEmptyPrompt.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Chat Empty Prompt'**
+  String get taskChatEmptyPrompt;
+
+  /// No description provided for @taskChatInputHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Chat Input Hint'**
+  String get taskChatInputHint;
+
+  /// No description provided for @taskCreateAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Create Action'**
+  String get taskCreateAction;
+
+  /// No description provided for @taskCreateFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Create Failed'**
+  String get taskCreateFailed;
+
+  /// No description provided for @taskCreateSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Create Success'**
+  String get taskCreateSuccess;
+
+  /// No description provided for @taskCreateTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Create Title'**
+  String get taskCreateTitle;
+
+  /// No description provided for @taskCreatedWithSuggestions.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Created With Suggestions'**
+  String get taskCreatedWithSuggestions;
+
+  /// No description provided for @taskCreating.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Creating'**
+  String get taskCreating;
+
+  /// No description provided for @taskDeadline.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Deadline'**
+  String get taskDeadline;
+
+  /// No description provided for @taskDeadlineLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Deadline Label'**
+  String get taskDeadlineLabel;
+
+  /// No description provided for @taskDeleteConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Delete Confirm'**
+  String get taskDeleteConfirm;
+
+  /// No description provided for @taskDeleteTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Delete Title'**
+  String get taskDeleteTitle;
+
+  /// No description provided for @taskDetailLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Detail Load Failed'**
+  String get taskDetailLoadFailed;
+
+  /// No description provided for @taskDetailLoading.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Detail Loading'**
+  String get taskDetailLoading;
+
+  /// No description provided for @taskDifficulty.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Difficulty'**
+  String get taskDifficulty;
+
+  /// No description provided for @taskDifficultyLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Difficulty Label'**
+  String get taskDifficultyLabel;
+
+  /// No description provided for @taskDifficultyLevel.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Difficulty Level'**
+  String get taskDifficultyLevel;
+
+  /// No description provided for @taskEnergyCost.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Energy Cost'**
+  String get taskEnergyCost;
+
+  /// No description provided for @taskEnergyCostLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Energy Cost Label'**
+  String get taskEnergyCostLabel;
+
+  /// No description provided for @taskEnergyCostValue.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Energy Cost Value'**
+  String get taskEnergyCostValue;
+
+  /// No description provided for @taskEstimatedDuration.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Estimated Duration'**
+  String get taskEstimatedDuration;
+
+  /// No description provided for @taskEstimatedDurationLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Estimated Duration Label'**
+  String get taskEstimatedDurationLabel;
+
+  /// No description provided for @taskExecutionAbandon.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Execution Abandon'**
+  String get taskExecutionAbandon;
+
+  /// No description provided for @taskExecutionCompleteTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Execution Complete Title'**
+  String get taskExecutionCompleteTitle;
+
+  /// No description provided for @taskExecutionCompletedTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Execution Completed Title'**
+  String get taskExecutionCompletedTitle;
+
+  /// No description provided for @taskExecutionConfirmComplete.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Execution Confirm Complete'**
+  String get taskExecutionConfirmComplete;
+
+  /// No description provided for @taskExecutionElapsedMinutes.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Execution Elapsed Minutes'**
+  String get taskExecutionElapsedMinutes;
+
+  /// No description provided for @taskExecutionEnterFocus.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Execution Enter Focus'**
+  String get taskExecutionEnterFocus;
+
+  /// No description provided for @taskExecutionExpGained.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Execution Exp Gained'**
+  String get taskExecutionExpGained;
+
+  /// No description provided for @taskExecutionFeatureCoach.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Execution Feature Coach'**
+  String get taskExecutionFeatureCoach;
+
+  /// No description provided for @taskExecutionFeatureDistraction.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Execution Feature Distraction'**
+  String get taskExecutionFeatureDistraction;
+
+  /// No description provided for @taskExecutionFeatureFlipClock.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Execution Feature Flip Clock'**
+  String get taskExecutionFeatureFlipClock;
+
+  /// No description provided for @taskExecutionFeatureFullscreen.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Execution Feature Fullscreen'**
+  String get taskExecutionFeatureFullscreen;
+
+  /// No description provided for @taskExecutionFeatureReward.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Execution Feature Reward'**
+  String get taskExecutionFeatureReward;
+
+  /// No description provided for @taskExecutionFeatureStarfield.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Execution Feature Starfield'**
+  String get taskExecutionFeatureStarfield;
+
+  /// No description provided for @taskExecutionGuideEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Execution Guide Empty'**
+  String get taskExecutionGuideEmpty;
+
+  /// No description provided for @taskExecutionGuideTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Execution Guide Title'**
+  String get taskExecutionGuideTitle;
+
+  /// No description provided for @taskExecutionNoTask.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Execution No Task'**
+  String get taskExecutionNoTask;
+
+  /// No description provided for @taskExecutionNoteHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Execution Note Hint'**
+  String get taskExecutionNoteHint;
+
+  /// No description provided for @taskExecutionNoteLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Execution Note Label'**
+  String get taskExecutionNoteLabel;
+
+  /// No description provided for @taskExecutionSkipAnimation.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Execution Skip Animation'**
+  String get taskExecutionSkipAnimation;
+
+  /// No description provided for @taskExecutionStartFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Execution Start Failed'**
+  String get taskExecutionStartFailed;
+
+  /// No description provided for @taskExecutionStartNow.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Execution Start Now'**
+  String get taskExecutionStartNow;
+
+  /// No description provided for @taskExecutionSyncFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Execution Sync Failed'**
+  String get taskExecutionSyncFailed;
+
+  /// No description provided for @taskExecutionTapToContinue.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Execution Tap To Continue'**
+  String get taskExecutionTapToContinue;
+
+  /// No description provided for @taskExecutionTimerLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Execution Timer Label'**
+  String get taskExecutionTimerLabel;
+
+  /// No description provided for @taskExitCancelStep1.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Exit Cancel Step1'**
+  String get taskExitCancelStep1;
+
+  /// No description provided for @taskExitCancelStep2.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Exit Cancel Step2'**
+  String get taskExitCancelStep2;
+
+  /// No description provided for @taskExitCancelStep3.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Exit Cancel Step3'**
+  String get taskExitCancelStep3;
+
+  /// No description provided for @taskExitConfirmStep1.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Exit Confirm Step1'**
+  String get taskExitConfirmStep1;
+
+  /// No description provided for @taskExitConfirmStep2.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Exit Confirm Step2'**
+  String get taskExitConfirmStep2;
+
+  /// No description provided for @taskExitConfirmStep3.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Exit Confirm Step3'**
+  String get taskExitConfirmStep3;
+
+  /// No description provided for @taskExitMessageStep1.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Exit Message Step1'**
+  String get taskExitMessageStep1;
+
+  /// No description provided for @taskExitMessageStep2.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Exit Message Step2'**
+  String get taskExitMessageStep2;
+
+  /// No description provided for @taskExitMessageStep3.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Exit Message Step3'**
+  String get taskExitMessageStep3;
+
+  /// No description provided for @taskExitTitleStep1.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Exit Title Step1'**
+  String get taskExitTitleStep1;
+
+  /// No description provided for @taskExitTitleStep2.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Exit Title Step2'**
+  String get taskExitTitleStep2;
+
+  /// No description provided for @taskExitTitleStep3.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Exit Title Step3'**
+  String get taskExitTitleStep3;
+
+  /// No description provided for @taskGenerateGuideSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Generate Guide Subtitle'**
+  String get taskGenerateGuideSubtitle;
+
+  /// No description provided for @taskGenerateGuideTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Generate Guide Title'**
+  String get taskGenerateGuideTitle;
+
+  /// No description provided for @taskGuideEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Guide Empty'**
+  String get taskGuideEmpty;
+
+  /// No description provided for @taskGuideTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Guide Title'**
+  String get taskGuideTitle;
+
+  /// No description provided for @taskListLoading.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task List Loading'**
+  String get taskListLoading;
+
+  /// No description provided for @taskListTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task List Title'**
+  String get taskListTitle;
+
+  /// No description provided for @taskMinutesOption.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Minutes Option'**
+  String get taskMinutesOption;
+
+  /// No description provided for @taskNudgeApplied.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Nudge Applied'**
+  String get taskNudgeApplied;
+
+  /// No description provided for @taskNudgeApply.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Nudge Apply'**
+  String get taskNudgeApply;
+
+  /// No description provided for @taskNudgeConfidence.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Nudge Confidence'**
+  String get taskNudgeConfidence;
+
+  /// No description provided for @taskNudgeDismiss.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Nudge Dismiss'**
+  String get taskNudgeDismiss;
+
+  /// No description provided for @taskNudgeTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Nudge Title'**
+  String get taskNudgeTitle;
+
+  /// No description provided for @taskReminderEnableSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Reminder Enable Subtitle'**
+  String get taskReminderEnableSubtitle;
+
+  /// No description provided for @taskReminderEnableTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Reminder Enable Title'**
+  String get taskReminderEnableTitle;
+
+  /// No description provided for @taskReminderInfoBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Reminder Info Body'**
+  String get taskReminderInfoBody;
+
+  /// No description provided for @taskReminderInfoTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Reminder Info Title'**
+  String get taskReminderInfoTitle;
+
+  /// No description provided for @taskReminderPermissionDenied.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Reminder Permission Denied'**
+  String get taskReminderPermissionDenied;
+
+  /// No description provided for @taskReminderRefreshAll.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Reminder Refresh All'**
+  String get taskReminderRefreshAll;
+
+  /// No description provided for @taskReminderRefreshSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Reminder Refresh Success'**
+  String get taskReminderRefreshSuccess;
+
+  /// No description provided for @taskReminderSettingsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Reminder Settings Title'**
+  String get taskReminderSettingsTitle;
+
+  /// No description provided for @taskReminderTimesTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Reminder Times Title'**
+  String get taskReminderTimesTitle;
+
+  /// No description provided for @taskSearchHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Search Hint'**
+  String get taskSearchHint;
+
+  /// No description provided for @taskStart.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Start'**
+  String get taskStart;
+
+  /// No description provided for @taskSuggestedKnowledge.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Suggested Knowledge'**
+  String get taskSuggestedKnowledge;
+
+  /// No description provided for @taskTagsHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Tags Hint'**
+  String get taskTagsHint;
+
+  /// No description provided for @taskTagsLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Tags Label'**
+  String get taskTagsLabel;
+
+  /// No description provided for @taskTimerMinutes.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Timer Minutes'**
+  String get taskTimerMinutes;
+
+  /// No description provided for @taskTimerPomodoro.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Timer Pomodoro'**
+  String get taskTimerPomodoro;
+
+  /// No description provided for @taskTitleHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Title Hint'**
+  String get taskTitleHint;
+
+  /// No description provided for @taskTitleLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Title Label'**
+  String get taskTitleLabel;
+
+  /// No description provided for @taskTitleRequired.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Title Required'**
+  String get taskTitleRequired;
+
+  /// No description provided for @taskTypeLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Type Label'**
+  String get taskTypeLabel;
+
+  /// No description provided for @taskTypeOcr.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Type Ocr'**
+  String get taskTypeOcr;
+
+  /// No description provided for @taskUntitled.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task Untitled'**
+  String get taskUntitled;
+
+  /// No description provided for @taskViewAll.
+  ///
+  /// In zh, this message translates to:
+  /// **'Task View All'**
+  String get taskViewAll;
+
+  /// No description provided for @weeklyAgendaCollapsedHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'Weekly Agenda Collapsed Hint'**
+  String get weeklyAgendaCollapsedHint;
+
+  /// No description provided for @weeklyAgendaEmptyHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'Weekly Agenda Empty Hint'**
+  String get weeklyAgendaEmptyHint;
+
+  /// No description provided for @weeklyAgendaSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'Weekly Agenda Summary'**
+  String get weeklyAgendaSummary;
 }
 
 class _AppLocalizationsDelegate

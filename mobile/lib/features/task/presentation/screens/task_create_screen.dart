@@ -633,6 +633,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
           ),
         ),
       );
+  }
 
   IconData getTypeIcon(TaskType type) {
     switch (type) {

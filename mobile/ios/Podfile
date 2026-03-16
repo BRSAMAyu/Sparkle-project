@@ -1,4 +1,4 @@
-platform :ios, '13.0'
+platform :ios, '16.0'
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
@@ -31,9 +31,10 @@ target 'Runner' do
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
 
-  # JPush dependencies for iOS
-  pod 'JCore', '~> 3.6.0'
-  pod 'JPush', '~> 5.0.0'
+  # Pin JCore to an HTTP-based source to avoid GitHub fetch failures during pod install.
+  pod 'JCore', '4.9.0'
+  # Use a local nanopb podspec to avoid GitHub fetch failures during pod install.
+  pod 'nanopb', :path => '/tmp/nanopb/nanopb'
 
   target 'RunnerTests' do
     inherit! :search_paths
@@ -45,7 +46,7 @@ post_install do |installer|
     flutter_additional_ios_build_settings(target)
 
     target.build_configurations.each do |config|
-      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.0'
       config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= [
         '$(inherited)',
         'PERMISSION_CAMERA=1',

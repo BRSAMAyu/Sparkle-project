@@ -3,10 +3,21 @@ import 'dart:async';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:logify/logify.dart';
+import 'package:logger/logger.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/features/calendar/data/datasources/calendar_remote_datasource.dart';
 import 'package:sparkle/features/calendar/data/models/calendar_event_model.dart';
+
+final _calendarLogger = Logger();
+
+class Log {
+  static void i(String tag, String message) =>
+      _calendarLogger.i('[$tag] $message');
+  static void w(String tag, String message) =>
+      _calendarLogger.w('[$tag] $message');
+  static void e(String tag, String message) =>
+      _calendarLogger.e('[$tag] $message');
+}
 
 class CalendarRepository {
   CalendarRepository(
@@ -150,7 +161,9 @@ class CalendarRepository {
       final box = await _getBox();
       final eventData = box.get(id);
       if (eventData != null) {
-        final event = CalendarEventModel.fromJson(Map<String, dynamic>.from(eventData));
+        final event = CalendarEventModel.fromJson(
+          Map<String, dynamic>.from(eventData as Map),
+        );
         await box.put(id, event.copyWith(isDeleted: true, isSynced: false).toJson());
       }
 
@@ -167,7 +180,9 @@ class CalendarRepository {
       final box = await _getBox();
       final eventData = box.get(id);
       if (eventData != null) {
-        final event = CalendarEventModel.fromJson(Map<String, dynamic>.from(eventData));
+        final event = CalendarEventModel.fromJson(
+          Map<String, dynamic>.from(eventData as Map),
+        );
         await box.put(id, event.copyWith(isDeleted: false, isSynced: true).toJson());
       }
     } catch (e) {

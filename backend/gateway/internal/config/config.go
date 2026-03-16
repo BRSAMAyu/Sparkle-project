@@ -1,6 +1,8 @@
 package config
 
 import (
+	"bufio"
+	"bytes"
 	"log"
 	"net"
 	neturl "net/url"
@@ -288,10 +290,11 @@ func normalizeRedisAddr(raw string) string {
 
 func findEnvFileUpwards(startDir string, filename string) string {
 	dir := startDir
+	found := ""
 	for i := 0; i < 8; i++ {
 		candidate := filepath.Join(dir, filename)
 		if _, err := os.Stat(candidate); err == nil {
-			return candidate
+			found = candidate
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
@@ -299,7 +302,40 @@ func findEnvFileUpwards(startDir string, filename string) string {
 		}
 		dir = parent
 	}
-	return ""
+	return found
+}
+
+func loadEnvFileIntoViper(path string) {
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return
+	}
+
+	scanner := bufio.NewScanner(bytes.NewReader(content))
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		if strings.HasPrefix(line, "export ") {
+			line = strings.TrimSpace(strings.TrimPrefix(line, "export "))
+		}
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		key := strings.TrimSpace(parts[0])
+		val := strings.TrimSpace(parts[1])
+		if key == "" {
+			continue
+		}
+		if len(val) >= 2 {
+			if (val[0] == '"' && val[len(val)-1] == '"') || (val[0] == '\'' && val[len(val)-1] == '\'') {
+				val = val[1 : len(val)-1]
+			}
+		}
+		viper.Set(key, val)
+	}
 }
 
 func Load() *Config {
@@ -457,12 +493,15 @@ func Load() *Config {
 		localEnv := filepath.Join(cwd, ".env")
 		if rootEnv != "" && rootEnv != localEnv {
 			if _, err := os.Stat(localEnv); err == nil {
+				loadEnvFileIntoViper(localEnv)
 				viper.SetConfigFile(localEnv)
 				_ = viper.ReadInConfig()
 			}
+			loadEnvFileIntoViper(rootEnv)
 			viper.SetConfigFile(rootEnv)
 			_ = viper.MergeInConfig()
 		} else if _, err := os.Stat(localEnv); err == nil {
+			loadEnvFileIntoViper(localEnv)
 			viper.SetConfigFile(localEnv)
 			_ = viper.ReadInConfig()
 		}

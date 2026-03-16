@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/widgets/animation_lifecycle_mixin.dart';
 import 'package:sparkle/shared/entities/visual_element_model.dart';
 
 /// 粒子层 - 渲染用户选择的粒子效果
@@ -9,30 +10,37 @@ class ParticleLayer extends StatefulWidget {
     this.element,
     required this.particleAnimation,
     required this.mainAnimation,
+    this.density = 1.0,
+    this.speedMultiplier = 1.0,
   });
 
   final VisualElementModel? element;
   final Animation<double> particleAnimation;
   final Animation<double> mainAnimation;
+  final double density;
+  final double speedMultiplier;
 
   @override
   State<ParticleLayer> createState() => _ParticleLayerState();
 }
 
-class _ParticleLayerState extends State<ParticleLayer> {
+class _ParticleLayerState extends State<ParticleLayer>
+    with AnimationLifecycleMixin {
   late List<_Particle> _particles;
   final Random _random = Random(42);
 
   @override
   void initState() {
     super.initState();
+    _registerLifecycleControllers();
     _initParticles();
   }
 
   @override
   void didUpdateWidget(ParticleLayer oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.element?.id != widget.element?.id) {
+    if (oldWidget.element?.id != widget.element?.id ||
+        oldWidget.density != widget.density) {
       _initParticles();
     }
   }
@@ -44,7 +52,11 @@ class _ParticleLayerState extends State<ParticleLayer> {
     }
 
     final config = widget.element!.config;
-    final count = config['count'] as int? ?? 50;
+    final baseCount = config['count'] as int? ?? 50;
+    final count = (baseCount * widget.density)
+        .round()
+        .clamp(0, baseCount * 2)
+        .toInt();
     final minSize = (config['min_size'] as num?)?.toDouble() ?? 1.0;
     final maxSize = (config['max_size'] as num?)?.toDouble() ?? 3.0;
     final fallDirection = config['fall_direction'] as String?;
@@ -63,6 +75,32 @@ class _ParticleLayerState extends State<ParticleLayer> {
         fallDirection: fallDirection,
       );
     });
+  }
+
+  void _registerLifecycleControllers() {
+    final mainController = widget.mainAnimation;
+    if (mainController is AnimationController) {
+      registerController(
+        mainController,
+        onResume: () {
+          if (!mainController.isAnimating) {
+            mainController.repeat(reverse: true);
+          }
+        },
+      );
+    }
+
+    final particleController = widget.particleAnimation;
+    if (particleController is AnimationController) {
+      registerController(
+        particleController,
+        onResume: () {
+          if (!particleController.isAnimating) {
+            particleController.repeat();
+          }
+        },
+      );
+    }
   }
 
   @override
@@ -96,6 +134,7 @@ class _ParticleLayerState extends State<ParticleLayer> {
             twinkle: twinkle,
             drift: drift,
             speed: speed,
+            speedMultiplier: widget.speedMultiplier,
             particleValue: widget.particleAnimation.value,
             mainValue: widget.mainAnimation.value,
           ),
@@ -148,6 +187,7 @@ class _ParticlePainter extends CustomPainter {
     required this.twinkle,
     required this.drift,
     required this.speed,
+    required this.speedMultiplier,
     required this.particleValue,
     required this.mainValue,
   });
@@ -158,6 +198,7 @@ class _ParticlePainter extends CustomPainter {
   final bool twinkle;
   final bool drift;
   final double speed;
+  final double speedMultiplier;
   final double particleValue;
   final double mainValue;
 
@@ -172,24 +213,32 @@ class _ParticlePainter extends CustomPainter {
 
       // 应用漂移
       if (drift) {
-        x += particle.drift * 30 * sin(particleValue * 2 * pi + i);
+        x +=
+            particle.drift * 30 * sin(particleValue * speedMultiplier * 2 * pi + i);
       }
 
       // 应用下落/上升方向
       if (particle.fallDirection != null) {
         final fallSpeed = speed * particle.speed;
         if (particle.fallDirection == 'down') {
-          y = (particle.y + particleValue * fallSpeed) % 1.0 * size.height;
+          y = (particle.y + particleValue * speedMultiplier * fallSpeed) %
+              1.0 *
+              size.height;
         } else if (particle.fallDirection == 'up') {
-          y = (1.0 - (particle.y + particleValue * fallSpeed) % 1.0) * size.height;
+          y = (1.0 -
+                  (particle.y + particleValue * speedMultiplier * fallSpeed) %
+                      1.0) *
+              size.height;
         }
       }
 
       // 计算透明度（闪烁效果）
       double opacity = particle.opacity;
       if (twinkle) {
-        final twinkleValue = sin(mainValue * 2 * pi * particle.twinkleSpeed +
-            particle.twinkleOffset);
+        final twinkleValue = sin(
+          mainValue * speedMultiplier * 2 * pi * particle.twinkleSpeed +
+              particle.twinkleOffset,
+        );
         opacity *= 0.5 + twinkleValue * 0.5;
       }
 
@@ -200,10 +249,13 @@ class _ParticlePainter extends CustomPainter {
       switch (shape) {
         case 'star':
           _drawStar(canvas, Offset(x, y), particle.size, paint);
+          break;
         case 'petal':
           _drawPetal(canvas, Offset(x, y), particle.size, paint, particle.rotation);
+          break;
         case 'snowflake':
           _drawSnowflake(canvas, Offset(x, y), particle.size, paint);
+          break;
         case 'square':
           canvas.drawRect(
             Rect.fromCenter(
@@ -213,6 +265,7 @@ class _ParticlePainter extends CustomPainter {
             ),
             paint,
           );
+          break;
         case 'circle':
         default:
           canvas.drawCircle(Offset(x, y), particle.size, paint);
@@ -276,6 +329,13 @@ class _ParticlePainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _ParticlePainter oldDelegate) {
     return particleValue != oldDelegate.particleValue ||
-        mainValue != oldDelegate.mainValue;
+        mainValue != oldDelegate.mainValue ||
+        speedMultiplier != oldDelegate.speedMultiplier ||
+        twinkle != oldDelegate.twinkle ||
+        drift != oldDelegate.drift ||
+        shape != oldDelegate.shape ||
+        speed != oldDelegate.speed ||
+        particles != oldDelegate.particles ||
+        colors.length != oldDelegate.colors.length;
   }
 }

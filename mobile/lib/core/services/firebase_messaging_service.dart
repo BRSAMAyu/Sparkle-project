@@ -143,7 +143,7 @@ class FirebaseMessagingService {
 
     // Navigate to deep link if present
     final deepLink = message.data['deep_link'];
-    if (deepLink != null) {
+    if (deepLink is String && deepLink.isNotEmpty) {
       _navigateToDeepLink(deepLink);
     }
 
@@ -222,7 +222,9 @@ class FirebaseMessagingService {
             );
           }
         case 'plan':
-          if (uri.pathSegments.length > 1 && uri.pathSegments[1] == 'review') {
+          if (entityId != null &&
+              uri.pathSegments.length > 1 &&
+              uri.pathSegments[1] == 'review') {
             unawaited(
               GoRouter.of(context).pushNamed(
                 'planReview',

@@ -7,20 +7,39 @@ class BackgroundLayer extends StatelessWidget {
     super.key,
     this.element,
     required this.mainAnimation,
+    this.tint,
+    this.tintOpacity = 0.0,
   });
 
   final VisualElementModel? element;
   final Animation<double> mainAnimation;
+  final Color? tint;
+  final double tintOpacity;
 
   @override
   Widget build(BuildContext context) {
     // 如果没有装备背景，使用默认深色渐变
     if (element == null) {
-      return _buildDefaultBackground();
+      return _applyTint(_buildDefaultBackground());
     }
 
     final config = element!.config;
-    return _buildBackgroundFromConfig(config);
+    return _applyTint(_buildBackgroundFromConfig(config));
+  }
+
+  Widget _applyTint(Widget child) {
+    if (tint == null || tintOpacity <= 0) return child;
+    final clampedOpacity = tintOpacity.clamp(0.0, 1.0);
+    return Stack(
+      children: [
+        child,
+        Positioned.fill(
+          child: Container(
+            color: tint!.withValues(alpha: clampedOpacity),
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildDefaultBackground() {

@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/global_particle_counter.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/visual_element_model.dart';
@@ -20,6 +21,7 @@ class VisualElementUnlockDialog extends StatefulWidget {
     super.key,
     this.onClose,
     this.onView,
+    this.reduceMotion = false,
   });
 
   /// The newly unlocked visual elements
@@ -30,6 +32,7 @@ class VisualElementUnlockDialog extends StatefulWidget {
 
   /// Callback when user wants to view the elements
   final VoidCallback? onView;
+  final bool reduceMotion;
 
   /// Show the unlock dialog
   static Future<void> show(
@@ -50,11 +53,13 @@ class VisualElementUnlockDialog extends StatefulWidget {
           elements: elements,
           onClose: onClose,
           onView: onView,
+          reduceMotion: context.reduceMotion,
         ),
         transitionBuilder: (context, animation, secondaryAnimation, child) =>
             _VisualElementUnlockTransition(
           animation: animation,
           highestRarity: _getHighestRarity(elements),
+          reduceMotion: context.reduceMotion,
           child: child,
         ),
       );
@@ -92,6 +97,10 @@ class _VisualElementUnlockDialogState extends State<VisualElementUnlockDialog>
   late AnimationController _glowController;
   late Animation<double> _scaleAnimation;
   late Animation<double> _glowAnimation;
+  int _registeredParticleCount = 0;
+  bool _particlesEnabled = false;
+
+  bool get _reduceMotion => widget.reduceMotion;
 
   @override
   void initState() {
@@ -111,7 +120,11 @@ class _VisualElementUnlockDialogState extends State<VisualElementUnlockDialog>
         curve: Curves.elasticOut,
       ),
     );
-    _scaleController.forward();
+    if (_reduceMotion) {
+      _scaleController.value = 1.0;
+    } else {
+      _scaleController.forward();
+    }
 
     // Particle animation for Epic/Legendary
     _particleController = AnimationController(
@@ -131,7 +144,15 @@ class _VisualElementUnlockDialogState extends State<VisualElementUnlockDialog>
       ),
     );
 
-    _startRarityAnimations();
+    if (_reduceMotion) {
+      _glowController.value = 1.0;
+    }
+
+    _updateParticleRegistration(force: true);
+    if (!_reduceMotion) {
+      _startRarityAnimations();
+    }
+    _triggerHapticFeedback();
   }
 
   void _startRarityAnimations() {
@@ -144,16 +165,58 @@ class _VisualElementUnlockDialogState extends State<VisualElementUnlockDialog>
       case VisualElementRarity.rare:
         // Glow animation
         _glowController.repeat(reverse: true);
+        break;
       case VisualElementRarity.epic:
         // Particles + glow
         _glowController.repeat(reverse: true);
-        _particleController.repeat();
+        if (_particlesEnabled) {
+          _particleController.repeat();
+        }
+        break;
       case VisualElementRarity.legendary:
         // Full effects + screen shake
-        _particleController.repeat();
         _glowController.repeat(reverse: true);
-        _triggerHapticFeedback();
+        if (_particlesEnabled) {
+          _particleController.repeat();
+        }
+        break;
     }
+  }
+
+  int _particleBudgetForRarity(VisualElementRarity rarity) {
+    switch (rarity) {
+      case VisualElementRarity.legendary:
+        return 40;
+      case VisualElementRarity.epic:
+        return 15;
+      case VisualElementRarity.rare:
+      case VisualElementRarity.common:
+        return 0;
+    }
+  }
+
+  void _updateParticleRegistration({bool force = false}) {
+    final highestRarity =
+        VisualElementUnlockDialog._getHighestRarity(widget.elements);
+    final desiredCount =
+        _reduceMotion ? 0 : _particleBudgetForRarity(highestRarity);
+
+    if (!force && desiredCount == _registeredParticleCount) return;
+    _releaseParticles();
+
+    if (desiredCount > 0 &&
+        GlobalParticleCounter.tryAddParticles(desiredCount)) {
+      _registeredParticleCount = desiredCount;
+      _particlesEnabled = true;
+    }
+  }
+
+  void _releaseParticles() {
+    if (_registeredParticleCount > 0) {
+      GlobalParticleCounter.releaseParticles(_registeredParticleCount);
+      _registeredParticleCount = 0;
+    }
+    _particlesEnabled = false;
   }
 
   void _triggerHapticFeedback() {
@@ -162,21 +225,41 @@ class _VisualElementUnlockDialogState extends State<VisualElementUnlockDialog>
     switch (highestRarity) {
       case VisualElementRarity.common:
         HapticFeedback.lightImpact();
+        break;
       case VisualElementRarity.rare:
         HapticFeedback.lightImpact();
+        break;
       case VisualElementRarity.epic:
         HapticFeedback.mediumImpact();
+        break;
       case VisualElementRarity.legendary:
         HapticFeedback.heavyImpact();
         // Double tap for legendary
         Future.delayed(const Duration(milliseconds: 200), () {
           if (mounted) HapticFeedback.heavyImpact();
         });
+        break;
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant VisualElementUnlockDialog oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.elements != widget.elements ||
+        oldWidget.reduceMotion != widget.reduceMotion) {
+      _updateParticleRegistration(force: true);
+      if (_reduceMotion) {
+        _particleController.stop();
+        _glowController.stop();
+      } else {
+        _startRarityAnimations();
+      }
     }
   }
 
   @override
   void dispose() {
+    _releaseParticles();
     _scaleController.dispose();
     _particleController.dispose();
     _glowController.dispose();
@@ -196,12 +279,13 @@ class _VisualElementUnlockDialogState extends State<VisualElementUnlockDialog>
         alignment: Alignment.center,
         children: [
           // Background effects (for Epic/Legendary)
-          if (highestRarity == VisualElementRarity.epic ||
-              highestRarity == VisualElementRarity.legendary)
+          if (!_reduceMotion &&
+              (highestRarity == VisualElementRarity.epic ||
+                  highestRarity == VisualElementRarity.legendary))
             _buildBackgroundEffects(highestRarity),
 
           // Particle overlay
-          if (highestRarity.index >= VisualElementRarity.epic.index)
+          if (_particlesEnabled)
             _buildParticleOverlay(highestRarity),
 
           // Main content
@@ -261,7 +345,7 @@ class _VisualElementUnlockDialogState extends State<VisualElementUnlockDialog>
                     const SizedBox(height: DS.spacing16),
 
                     // Icon
-                    _buildIconContainer(colors, highestRarity),
+                    _buildIconContainer(colors, highestRarity, _reduceMotion),
                     const SizedBox(height: DS.spacing16),
 
                     // Title
@@ -340,7 +424,41 @@ class _VisualElementUnlockDialogState extends State<VisualElementUnlockDialog>
     );
   }
 
-  Widget _buildIconContainer(_RarityColors colors, VisualElementRarity rarity) {
+  Widget _buildIconContainer(
+    _RarityColors colors,
+    VisualElementRarity rarity,
+    bool reduceMotion,
+  ) {
+    if (reduceMotion) {
+      return Container(
+        width: 80,
+        height: 80,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              colors.primary,
+              colors.secondary,
+            ],
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: colors.glow.withValues(alpha: 0.35),
+              blurRadius: 20,
+              spreadRadius: 1,
+            ),
+          ],
+        ),
+        child: Icon(
+          _getUnlockIcon(rarity),
+          size: 40,
+          color: Colors.white,
+        ),
+      );
+    }
+
     return AnimatedBuilder(
       animation: _glowAnimation,
       builder: (context, child) => Container(
@@ -691,15 +809,27 @@ class _VisualElementUnlockTransition extends StatelessWidget {
   const _VisualElementUnlockTransition({
     required this.animation,
     required this.highestRarity,
+    required this.reduceMotion,
     required this.child,
   });
 
   final Animation<double> animation;
   final VisualElementRarity highestRarity;
+  final bool reduceMotion;
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
+    if (reduceMotion) {
+      return FadeTransition(
+        opacity: CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOut,
+        ),
+        child: child,
+      );
+    }
+
     final curve = _getCurveForRarity();
     final curvedAnimation = CurvedAnimation(
       parent: animation,

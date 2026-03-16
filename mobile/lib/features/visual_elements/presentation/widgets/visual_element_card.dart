@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -509,13 +510,15 @@ class _VisualElementCardState extends State<VisualElementCard>
         final achievementId =
             widget.element.unlockRequirement?['achievement_id'];
         if (achievementId != null) {
-          return l10n.visualElementUnlockHintAchievement(achievementId);
+          return l10n.visualElementUnlockHintAchievement(
+            achievementId.toString(),
+          );
         }
         return l10n.visualElementUnlockHintAchievementDefault;
       case VisualElementUnlockSource.shop:
         final price = widget.element.unlockRequirement?['price_photons'];
         if (price != null) {
-          return l10n.visualElementUnlockHintShop(price);
+          return l10n.visualElementUnlockHintShop(price.toString());
         }
         return l10n.visualElementUnlockHintShopDefault;
       case VisualElementUnlockSource.event:

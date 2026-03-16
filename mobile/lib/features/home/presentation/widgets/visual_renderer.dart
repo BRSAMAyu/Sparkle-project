@@ -3,6 +3,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
+import 'package:sparkle/features/home/presentation/providers/cognitive_state_provider.dart';
+import 'package:sparkle/features/home/presentation/providers/emotion_visual_blend_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/layers/background_layer.dart';
 import 'package:sparkle/features/home/presentation/widgets/layers/effect_layer.dart';
 import 'package:sparkle/features/home/presentation/widgets/layers/particle_layer.dart';
@@ -65,6 +67,9 @@ class _VisualRendererState extends ConsumerState<VisualRenderer>
     final visualState = ref.watch(visualElementProvider);
     final config = visualState.config;
 
+    final cognitiveState = ref.watch(cognitiveStateProvider);
+    final blendParams = ref.watch(emotionVisualBlendProvider(cognitiveState));
+
     // 获取天气类型
     final dashboardState = ref.watch(dashboardProvider);
     final weatherType = dashboardState.weather.type;
@@ -79,6 +84,8 @@ class _VisualRendererState extends ConsumerState<VisualRenderer>
           BackgroundLayer(
             element: config?.equippedBackground,
             mainAnimation: _mainAnimationController,
+            tint: blendParams.primaryTint,
+            tintOpacity: blendParams.backgroundOpacity,
           ),
 
           // Layer 2: 粒子层 (用户选择)
@@ -86,6 +93,8 @@ class _VisualRendererState extends ConsumerState<VisualRenderer>
             element: config?.equippedParticle,
             particleAnimation: _particleController,
             mainAnimation: _mainAnimationController,
+            density: blendParams.particleDensity,
+            speedMultiplier: blendParams.animationSpeed,
           ),
 
           // Layer 3: 特效层 (用户选择)
@@ -98,6 +107,7 @@ class _VisualRendererState extends ConsumerState<VisualRenderer>
           WeatherLayer(
             weatherType: weatherType,
             weatherCondition: weatherCondition,
+            blendParams: blendParams,
             mainAnimation: _mainAnimationController,
             particleAnimation: _particleController,
           ),

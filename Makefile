@@ -10,6 +10,7 @@ PROTO_TOOLCHAIN_IMAGE?=sparkle/proto-toolchain:latest
 BACKEND_VENV?=backend/.venv/bin
 BACKEND_PYTHON?=$(BACKEND_VENV)/python
 ALEMBIC?=$(BACKEND_VENV)/alembic
+BACKEND_PYTHON_ABS?=$(abspath $(BACKEND_PYTHON))
 
 # macOS-specific check: Unset CC/CXX if they interfere with Flutter
 _check_macos_env:
@@ -239,12 +240,12 @@ proto-gen-legacy:
 # Python gRPC 服务相关命令
 grpc-server:
 	@echo "🚀 Starting Python gRPC Server..."
-	@BACKEND_PYTHON=$(BACKEND_PYTHON) /bin/bash backend/scripts/run_grpc_with_env.sh
+	@BACKEND_PYTHON=$(BACKEND_PYTHON_ABS) /bin/bash backend/scripts/run_grpc_with_env.sh
 
 # Python FastAPI 服务
 api-server:
 	@echo "🚀 Starting Python FastAPI Server..."
-	cd backend && ../$(BACKEND_PYTHON) -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --env-file .env
+	cd backend && $(BACKEND_PYTHON_ABS) -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --env-file .env
 
 grpc-test:
 	@echo "🧪 Testing gRPC Server..."

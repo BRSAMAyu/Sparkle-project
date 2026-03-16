@@ -6233,6 +6233,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get visualElementsEquipped => '已装备';
 
   @override
+  String get visualElementsRecommended => '为你推荐';
+
+  @override
+  String get visualRecommendationFocus => '适合专注学习';
+
+  @override
+  String get visualRecommendationRelax => '适合休息放松';
+
+  @override
+  String get visualRecommendationSprint => '适合冲刺模式';
+
+  @override
+  String get visualRecommendationNight => '夜间护眼';
+
+  @override
+  String get visualRecommendationStreak => '连胜加成';
+
+  @override
   String get visualElementTabAll => '全部';
 
   @override
@@ -6446,4 +6464,2168 @@ class AppLocalizationsZh extends AppLocalizations {
   String achievementMapFocusHint(Object name) {
     return '尝试解锁：$name';
   }
+
+  @override
+  String get cognitiveDimensionMemory => '记忆';
+
+  @override
+  String get cognitiveDimensionUnderstanding => '理解';
+
+  @override
+  String get cognitiveDimensionApplication => '应用';
+
+  @override
+  String get cognitiveDimensionAnalysis => '分析';
+
+  @override
+  String get cognitiveDimensionEvaluation => '评价';
+
+  @override
+  String get cognitiveDimensionCreation => '创造';
+
+  @override
+  String get photonTransactionGrantAchievement => '成就奖励';
+
+  @override
+  String get photonTransactionGrantDailyFirst => '每日首成奖励';
+
+  @override
+  String get photonTransactionGrantContract => '契约奖励';
+
+  @override
+  String get photonTransactionGrantContractBonus => '契约加成';
+
+  @override
+  String get photonTransactionDeductContractStake => '契约押注';
+
+  @override
+  String get photonTransactionPurchase => '购买';
+
+  @override
+  String get photonTransactionTransferOut => '转出';
+
+  @override
+  String get photonTransactionTransferIn => '转入';
+
+  @override
+  String get photonTransactionRefund => '退款';
+
+  @override
+  String get photonTransactionPenalty => '惩罚';
+
+  @override
+  String get photonTransactionAdminAdjustment => '管理员调整';
+
+  @override
+  String get shopItemTypeSkin => '皮肤';
+
+  @override
+  String get shopItemTypeTitle => '称号';
+
+  @override
+  String get shopItemTypeConsumable => '消耗品';
+
+  @override
+  String get shopItemTypeBoost => '增益';
+
+  @override
+  String get shopItemTypeVisualElement => '视觉元素';
+
+  @override
+  String get taskDueDateUnset => '无截止日期';
+
+  @override
+  String get chatAchievementUnlocked => 'Chat Achievement Unlocked';
+
+  @override
+  String get chatActionErrorSuggestion => 'Chat Action Error Suggestion';
+
+  @override
+  String get chatActionErrorTitle => 'Chat Action Error Title';
+
+  @override
+  String get chatActionIgnore => 'Chat Action Ignore';
+
+  @override
+  String get chatActionLater => 'Chat Action Later';
+
+  @override
+  String get chatActionReviewed => 'Chat Action Reviewed';
+
+  @override
+  String get chatActionStatusCompleted => 'Chat Action Status Completed';
+
+  @override
+  String get chatActionStatusConfirmed => 'Chat Action Status Confirmed';
+
+  @override
+  String get chatActionStatusDismissed => 'Chat Action Status Dismissed';
+
+  @override
+  String get chatActionStatusFailed => 'Chat Action Status Failed';
+
+  @override
+  String get chatActionStatusProcessing => 'Chat Action Status Processing';
+
+  @override
+  String get chatActionStatusUpdate => 'Chat Action Status Update';
+
+  @override
+  String get chatActionSuggestedActions => 'Chat Action Suggested Actions';
+
+  @override
+  String get chatActionTitleAddError => 'Chat Action Title Add Error';
+
+  @override
+  String get chatActionTitleBlockedInput => 'Chat Action Title Blocked Input';
+
+  @override
+  String get chatActionTitleContinuity => 'Chat Action Title Continuity';
+
+  @override
+  String get chatActionTitleCreatePlan => 'Chat Action Title Create Plan';
+
+  @override
+  String get chatActionTitleCreateTask => 'Chat Action Title Create Task';
+
+  @override
+  String get chatActionTitleDefault => 'Chat Action Title Default';
+
+  @override
+  String get chatActionTitleEvolution => 'Chat Action Title Evolution';
+
+  @override
+  String get chatActionTitleExecutionSummary =>
+      'Chat Action Title Execution Summary';
+
+  @override
+  String get chatActionTitleFocusSprint => 'Chat Action Title Focus Sprint';
+
+  @override
+  String get chatActionTitleModeExplanation =>
+      'Chat Action Title Mode Explanation';
+
+  @override
+  String get chatActionTitleNextActions => 'Chat Action Title Next Actions';
+
+  @override
+  String get chatActionTitleNightlyReview => 'Chat Action Title Nightly Review';
+
+  @override
+  String get chatActionTitleProgress => 'Chat Action Title Progress';
+
+  @override
+  String get chatActionTitleReflection => 'Chat Action Title Reflection';
+
+  @override
+  String get chatActionTitleSourceSummary => 'Chat Action Title Source Summary';
+
+  @override
+  String get chatActionTitleSystemUpdate => 'Chat Action Title System Update';
+
+  @override
+  String get chatActionTitleTaskList => 'Chat Action Title Task List';
+
+  @override
+  String get chatActionTitleUpdatePreference =>
+      'Chat Action Title Update Preference';
+
+  @override
+  String get chatActionViewNextSteps => 'Chat Action View Next Steps';
+
+  @override
+  String get chatActionViewSources => 'Chat Action View Sources';
+
+  @override
+  String get chatAgentRouting => 'Chat Agent Routing';
+
+  @override
+  String get chatAgentRoutingFallback => 'Chat Agent Routing Fallback';
+
+  @override
+  String get chatAgentRoutingStrategy => 'Chat Agent Routing Strategy';
+
+  @override
+  String get chatAlignmentScoreLabel => 'Chat Alignment Score Label';
+
+  @override
+  String get chatAudioParseFailed => 'Chat Audio Parse Failed';
+
+  @override
+  String get chatAudioRecordFailed => 'Chat Audio Record Failed';
+
+  @override
+  String get chatAudioStartFailed => 'Chat Audio Start Failed';
+
+  @override
+  String get chatAudioWsConnectFailed => 'Chat Audio Ws Connect Failed';
+
+  @override
+  String get chatAuthExpired => 'Chat Auth Expired';
+
+  @override
+  String get chatAuthRefreshing => 'Chat Auth Refreshing';
+
+  @override
+  String get chatBlockedInputTitle => 'Chat Blocked Input Title';
+
+  @override
+  String get chatCitationLabel => 'Chat Citation Label';
+
+  @override
+  String get chatCitationRelevance => 'Chat Citation Relevance';
+
+  @override
+  String get chatCitationSourcesCount => 'Chat Citation Sources Count';
+
+  @override
+  String get chatCollabTimelineTitle => 'Chat Collab Timeline Title';
+
+  @override
+  String get chatComparisonAfter => 'Chat Comparison After';
+
+  @override
+  String get chatComparisonBefore => 'Chat Comparison Before';
+
+  @override
+  String get chatComparisonCurrentPrevious =>
+      'Chat Comparison Current Previous';
+
+  @override
+  String get chatCompletionBlocked => 'Chat Completion Blocked';
+
+  @override
+  String get chatCompletionDone => 'Chat Completion Done';
+
+  @override
+  String get chatCompletionNeedsInput => 'Chat Completion Needs Input';
+
+  @override
+  String get chatCompletionPartial => 'Chat Completion Partial';
+
+  @override
+  String get chatCompletionProcessing => 'Chat Completion Processing';
+
+  @override
+  String get chatConfidenceCautious => 'Chat Confidence Cautious';
+
+  @override
+  String get chatConfidenceHigh => 'Chat Confidence High';
+
+  @override
+  String get chatConfidenceLabel => 'Chat Confidence Label';
+
+  @override
+  String get chatConfidenceMedium => 'Chat Confidence Medium';
+
+  @override
+  String get chatConfirmationActionDefault =>
+      'Chat Confirmation Action Default';
+
+  @override
+  String get chatConfirmationConfirmUpdate =>
+      'Chat Confirmation Confirm Update';
+
+  @override
+  String get chatConfirmationTitleDefault => 'Chat Confirmation Title Default';
+
+  @override
+  String get chatConfirmationTitleUpdatePreference =>
+      'Chat Confirmation Title Update Preference';
+
+  @override
+  String get chatConfirmationUpdatePreferenceGeneric =>
+      'Chat Confirmation Update Preference Generic';
+
+  @override
+  String get chatConfirmationUpdatePreferenceKeyOnly =>
+      'Chat Confirmation Update Preference Key Only';
+
+  @override
+  String get chatConfirmationUpdatePreferenceWithValue =>
+      'Chat Confirmation Update Preference With Value';
+
+  @override
+  String get chatCopiedToClipboard => 'Chat Copied To Clipboard';
+
+  @override
+  String get chatDagExecutionAbortedDefault =>
+      'Chat Dag Execution Aborted Default';
+
+  @override
+  String get chatDagExecutionCompleted => 'Chat Dag Execution Completed';
+
+  @override
+  String get chatDagExecutionEndAbortedDefault =>
+      'Chat Dag Execution End Aborted Default';
+
+  @override
+  String get chatDagLayerAborted => 'Chat Dag Layer Aborted';
+
+  @override
+  String get chatDagLayerCompleted => 'Chat Dag Layer Completed';
+
+  @override
+  String get chatDagLayerStart => 'Chat Dag Layer Start';
+
+  @override
+  String get chatDagStepCompleted => 'Chat Dag Step Completed';
+
+  @override
+  String get chatDagStepCompletedWithDuration =>
+      'Chat Dag Step Completed With Duration';
+
+  @override
+  String get chatDagStepFailed => 'Chat Dag Step Failed';
+
+  @override
+  String get chatDagStepFallback => 'Chat Dag Step Fallback';
+
+  @override
+  String get chatDurationLabel => 'Chat Duration Label';
+
+  @override
+  String get chatErrorWithSuggestion => 'Chat Error With Suggestion';
+
+  @override
+  String get chatEvolutionExpectedEffect => 'Chat Evolution Expected Effect';
+
+  @override
+  String get chatEvolutionHeadlineDefault => 'Chat Evolution Headline Default';
+
+  @override
+  String get chatEvolutionNextWeekPlan => 'Chat Evolution Next Week Plan';
+
+  @override
+  String get chatEvolutionWhy => 'Chat Evolution Why';
+
+  @override
+  String get chatExecutionCompleted => 'Chat Execution Completed';
+
+  @override
+  String get chatExecutionFailed => 'Chat Execution Failed';
+
+  @override
+  String get chatExecutionPartial => 'Chat Execution Partial';
+
+  @override
+  String get chatFeedbackThanks => 'Chat Feedback Thanks';
+
+  @override
+  String get chatFocusSprintDefaultTitle => 'Chat Focus Sprint Default Title';
+
+  @override
+  String get chatFocusStart => 'Chat Focus Start';
+
+  @override
+  String get chatInputDocumentClean => 'Chat Input Document Clean';
+
+  @override
+  String get chatInterventionViewPlan => 'Chat Intervention View Plan';
+
+  @override
+  String get chatInterventionViewSettings => 'Chat Intervention View Settings';
+
+  @override
+  String get chatKnowledgeCitationBody => 'Chat Knowledge Citation Body';
+
+  @override
+  String get chatKnowledgeCitationTitle => 'Chat Knowledge Citation Title';
+
+  @override
+  String get chatModeCustomTeam => 'Chat Mode Custom Team';
+
+  @override
+  String get chatModeCustomTeamDesc => 'Chat Mode Custom Team Desc';
+
+  @override
+  String get chatModeKeepCurrent => 'Chat Mode Keep Current';
+
+  @override
+  String get chatModeSuggestionTitle => 'Chat Mode Suggestion Title';
+
+  @override
+  String get chatModeSwitch => 'Chat Mode Switch';
+
+  @override
+  String get chatMultiAgentCollab => 'Chat Multi Agent Collab';
+
+  @override
+  String get chatNextActionLabel => 'Chat Next Action Label';
+
+  @override
+  String get chatNextActionsRetryHint => 'Chat Next Actions Retry Hint';
+
+  @override
+  String get chatNextActionsTitle => 'Chat Next Actions Title';
+
+  @override
+  String get chatNightlyReviewTodos => 'Chat Nightly Review Todos';
+
+  @override
+  String get chatNotificationGroupMessage => 'Chat Notification Group Message';
+
+  @override
+  String get chatNotificationMention => 'Chat Notification Mention';
+
+  @override
+  String get chatOptionalNotesHint => 'Chat Optional Notes Hint';
+
+  @override
+  String get chatOrchestrationTraceStep => 'Chat Orchestration Trace Step';
+
+  @override
+  String get chatOrchestrationTraceTitle => 'Chat Orchestration Trace Title';
+
+  @override
+  String get chatPendingMessagesFailed => 'Chat Pending Messages Failed';
+
+  @override
+  String get chatPlanContextClear => 'Chat Plan Context Clear';
+
+  @override
+  String get chatPlanContextSelect => 'Chat Plan Context Select';
+
+  @override
+  String get chatPlanEmptySubtitle => 'Chat Plan Empty Subtitle';
+
+  @override
+  String get chatPlanEmptyTitle => 'Chat Plan Empty Title';
+
+  @override
+  String get chatPlanReviewAcknowledged => 'Chat Plan Review Acknowledged';
+
+  @override
+  String get chatPlanReviewApproved => 'Chat Plan Review Approved';
+
+  @override
+  String get chatPlanReviewModifyRequested =>
+      'Chat Plan Review Modify Requested';
+
+  @override
+  String get chatPlanReviewRejected => 'Chat Plan Review Rejected';
+
+  @override
+  String get chatPlanReviewStatusUpdate => 'Chat Plan Review Status Update';
+
+  @override
+  String get chatPlanSelect => 'Chat Plan Select';
+
+  @override
+  String get chatQuotePrefix => 'Chat Quote Prefix';
+
+  @override
+  String get chatReasoningProcess => 'Chat Reasoning Process';
+
+  @override
+  String get chatReasoningStatusAnalyzing => 'Chat Reasoning Status Analyzing';
+
+  @override
+  String get chatReasoningStatusAudioProcessing =>
+      'Chat Reasoning Status Audio Processing';
+
+  @override
+  String get chatReasoningStatusCalculating =>
+      'Chat Reasoning Status Calculating';
+
+  @override
+  String get chatReasoningStatusCoding => 'Chat Reasoning Status Coding';
+
+  @override
+  String get chatReasoningStatusDataAnalyzing =>
+      'Chat Reasoning Status Data Analyzing';
+
+  @override
+  String get chatReasoningStatusDone => 'Chat Reasoning Status Done';
+
+  @override
+  String get chatReasoningStatusImageProcessing =>
+      'Chat Reasoning Status Image Processing';
+
+  @override
+  String get chatReasoningStatusPlanning => 'Chat Reasoning Status Planning';
+
+  @override
+  String get chatReasoningStatusPreparing => 'Chat Reasoning Status Preparing';
+
+  @override
+  String get chatReasoningStatusReasoning => 'Chat Reasoning Status Reasoning';
+
+  @override
+  String get chatReasoningStatusRetrieving =>
+      'Chat Reasoning Status Retrieving';
+
+  @override
+  String get chatReasoningStatusSearching => 'Chat Reasoning Status Searching';
+
+  @override
+  String get chatReasoningStatusTranslating =>
+      'Chat Reasoning Status Translating';
+
+  @override
+  String get chatReasoningStatusWriting => 'Chat Reasoning Status Writing';
+
+  @override
+  String get chatReasoningStepsCount => 'Chat Reasoning Steps Count';
+
+  @override
+  String get chatReasoningSummary => 'Chat Reasoning Summary';
+
+  @override
+  String get chatReflectionDegraded => 'Chat Reflection Degraded';
+
+  @override
+  String get chatReflectionFailed => 'Chat Reflection Failed';
+
+  @override
+  String get chatReflectionFixed => 'Chat Reflection Fixed';
+
+  @override
+  String get chatReflectionImproved => 'Chat Reflection Improved';
+
+  @override
+  String get chatReflectionNoChange => 'Chat Reflection No Change';
+
+  @override
+  String get chatReflectionStatusUpdate => 'Chat Reflection Status Update';
+
+  @override
+  String get chatRoundsInfo => 'Chat Rounds Info';
+
+  @override
+  String get chatSourceUnknown => 'Chat Source Unknown';
+
+  @override
+  String get chatSourceUntitled => 'Chat Source Untitled';
+
+  @override
+  String get chatSourcesAvailable => 'Chat Sources Available';
+
+  @override
+  String get chatSourcesUnavailable => 'Chat Sources Unavailable';
+
+  @override
+  String get chatStreakSummary => 'Chat Streak Summary';
+
+  @override
+  String get chatSubmitFeedback => 'Chat Submit Feedback';
+
+  @override
+  String get chatSynthesisSuggestions => 'Chat Synthesis Suggestions';
+
+  @override
+  String get chatTaskDataInvalid => 'Chat Task Data Invalid';
+
+  @override
+  String get chatTaskListMoreCount => 'Chat Task List More Count';
+
+  @override
+  String get chatTeamExpertsCount => 'Chat Team Experts Count';
+
+  @override
+  String get chatUnknownWidgetType => 'Chat Unknown Widget Type';
+
+  @override
+  String get chatUsingTool => 'Chat Using Tool';
+
+  @override
+  String get chatViewComparisonData => 'Chat View Comparison Data';
+
+  @override
+  String get chatViewPlanRationale => 'Chat View Plan Rationale';
+
+  @override
+  String get chatVoiceNoMicPermission => 'Chat Voice No Mic Permission';
+
+  @override
+  String get chatVoiceStartFailed => 'Chat Voice Start Failed';
+
+  @override
+  String get chatWhyThisAnswer => 'Chat Why This Answer';
+
+  @override
+  String get chatWorkflowDebateProcessing => 'Chat Workflow Debate Processing';
+
+  @override
+  String get chatWorkflowDebateSubtitle => 'Chat Workflow Debate Subtitle';
+
+  @override
+  String get chatWorkflowDebateTitle => 'Chat Workflow Debate Title';
+
+  @override
+  String get chatWorkflowDefault => 'Chat Workflow Default';
+
+  @override
+  String get chatWorkflowDelegationSubtitle =>
+      'Chat Workflow Delegation Subtitle';
+
+  @override
+  String get chatWorkflowDelegationTitle => 'Chat Workflow Delegation Title';
+
+  @override
+  String get chatWorkflowErrorDiagnosis => 'Chat Workflow Error Diagnosis';
+
+  @override
+  String get chatWorkflowExpertRouting => 'Chat Workflow Expert Routing';
+
+  @override
+  String get chatWorkflowExpertsCount => 'Chat Workflow Experts Count';
+
+  @override
+  String get chatWorkflowParallelCount => 'Chat Workflow Parallel Count';
+
+  @override
+  String get chatWorkflowParallelSubtitle => 'Chat Workflow Parallel Subtitle';
+
+  @override
+  String get chatWorkflowPhaseLabel => 'Chat Workflow Phase Label';
+
+  @override
+  String get chatWorkflowProgressiveExploration =>
+      'Chat Workflow Progressive Exploration';
+
+  @override
+  String get chatWorkflowStatusActive => 'Chat Workflow Status Active';
+
+  @override
+  String get chatWorkflowStatusDone => 'Chat Workflow Status Done';
+
+  @override
+  String get chatWorkflowStatusError => 'Chat Workflow Status Error';
+
+  @override
+  String get chatWorkflowStatusWaiting => 'Chat Workflow Status Waiting';
+
+  @override
+  String get chatWorkflowTaskDecomposition =>
+      'Chat Workflow Task Decomposition';
+
+  @override
+  String get commonMinutesShort => 'Common Minutes Short';
+
+  @override
+  String get commonUnknown => 'Common Unknown';
+
+  @override
+  String get communityAgentCollabOff => 'Community Agent Collab Off';
+
+  @override
+  String get communityAgentCollabOn => 'Community Agent Collab On';
+
+  @override
+  String get communityAgentOnlyYou => 'Community Agent Only You';
+
+  @override
+  String get communityAgentProcessing => 'Community Agent Processing';
+
+  @override
+  String get communityAgentPromptHint => 'Community Agent Prompt Hint';
+
+  @override
+  String get communityAgentQuickConsensus => 'Community Agent Quick Consensus';
+
+  @override
+  String get communityAgentQuickConsensusPrompt =>
+      'Community Agent Quick Consensus Prompt';
+
+  @override
+  String get communityAgentQuickReminder => 'Community Agent Quick Reminder';
+
+  @override
+  String get communityAgentQuickReminderPrompt =>
+      'Community Agent Quick Reminder Prompt';
+
+  @override
+  String get communityAgentQuickSummary => 'Community Agent Quick Summary';
+
+  @override
+  String get communityAgentQuickSummaryPrompt =>
+      'Community Agent Quick Summary Prompt';
+
+  @override
+  String get communityAgentThinking => 'Community Agent Thinking';
+
+  @override
+  String get communityChatEmpty => 'Community Chat Empty';
+
+  @override
+  String get communityChatTitle => 'Community Chat Title';
+
+  @override
+  String get communityCheckInAction => 'Community Check In Action';
+
+  @override
+  String get communityCheckInDurationLabel =>
+      'Community Check In Duration Label';
+
+  @override
+  String get communityCheckInFailed => 'Community Check In Failed';
+
+  @override
+  String get communityCheckInMessageHint => 'Community Check In Message Hint';
+
+  @override
+  String get communityCheckInMessageLabel => 'Community Check In Message Label';
+
+  @override
+  String get communityCheckInSuccess => 'Community Check In Success';
+
+  @override
+  String get communityCheckInTitle => 'Community Check In Title';
+
+  @override
+  String get communityFileSharedFailed => 'Community File Shared Failed';
+
+  @override
+  String get communityFileSharedSuccess => 'Community File Shared Success';
+
+  @override
+  String get communityGroupFiles => 'Community Group Files';
+
+  @override
+  String get communityGroupMembersCount => 'Community Group Members Count';
+
+  @override
+  String get communityMessageFallback => 'Community Message Fallback';
+
+  @override
+  String get communityMessageInputHint => 'Community Message Input Hint';
+
+  @override
+  String get communitySearchGroupMessages => 'Community Search Group Messages';
+
+  @override
+  String get deleteAccountChecklistItem1 => 'Delete Account Checklist Item1';
+
+  @override
+  String get deleteAccountChecklistItem2 => 'Delete Account Checklist Item2';
+
+  @override
+  String get deleteAccountChecklistItem3 => 'Delete Account Checklist Item3';
+
+  @override
+  String get deleteAccountChecklistTitle => 'Delete Account Checklist Title';
+
+  @override
+  String get deleteAccountConfirmButton => 'Delete Account Confirm Button';
+
+  @override
+  String get deleteAccountConfirmInputHint =>
+      'Delete Account Confirm Input Hint';
+
+  @override
+  String get deleteAccountConfirmInputTitle =>
+      'Delete Account Confirm Input Title';
+
+  @override
+  String get deleteAccountNoSocialProvider =>
+      'Delete Account No Social Provider';
+
+  @override
+  String get deleteAccountPasswordHint => 'Delete Account Password Hint';
+
+  @override
+  String get deleteAccountPasswordLabel => 'Delete Account Password Label';
+
+  @override
+  String get deleteAccountReauthButton => 'Delete Account Reauth Button';
+
+  @override
+  String get deleteAccountReauthDone => 'Delete Account Reauth Done';
+
+  @override
+  String get deleteAccountReauthSuccess => 'Delete Account Reauth Success';
+
+  @override
+  String get deleteAccountRequireDeleteInput =>
+      'Delete Account Require Delete Input';
+
+  @override
+  String get deleteAccountRequirePassword => 'Delete Account Require Password';
+
+  @override
+  String get deleteAccountRequireReauth => 'Delete Account Require Reauth';
+
+  @override
+  String get deleteAccountSocialProvider => 'Delete Account Social Provider';
+
+  @override
+  String get deleteAccountSocialReauthNotice =>
+      'Delete Account Social Reauth Notice';
+
+  @override
+  String get deleteAccountSuccess => 'Delete Account Success';
+
+  @override
+  String get deleteAccountTitle => 'Delete Account Title';
+
+  @override
+  String get deleteAccountWeChatUnavailable =>
+      'Delete Account We Chat Unavailable';
+
+  @override
+  String get editProfileEmailUnverified => 'Edit Profile Email Unverified';
+
+  @override
+  String get editProfileEmailUnverifiedDesc =>
+      'Edit Profile Email Unverified Desc';
+
+  @override
+  String get editProfileEmailVerified => 'Edit Profile Email Verified';
+
+  @override
+  String get editProfileEmailVerifiedDesc => 'Edit Profile Email Verified Desc';
+
+  @override
+  String get editProfileEnterCode => 'Edit Profile Enter Code';
+
+  @override
+  String get editProfileRegistrationMethod =>
+      'Edit Profile Registration Method';
+
+  @override
+  String get editProfileSendEmail => 'Edit Profile Send Email';
+
+  @override
+  String get editProfileSetPassword => 'Edit Profile Set Password';
+
+  @override
+  String get editProfileSetPasswordHint => 'Edit Profile Set Password Hint';
+
+  @override
+  String get editProfileVerifyEmailConfirm =>
+      'Edit Profile Verify Email Confirm';
+
+  @override
+  String get editProfileVerifyEmailHint => 'Edit Profile Verify Email Hint';
+
+  @override
+  String get editProfileVerifyEmailTitle => 'Edit Profile Verify Email Title';
+
+  @override
+  String get fileStatusFailed => 'File Status Failed';
+
+  @override
+  String get fileStatusProcessing => 'File Status Processing';
+
+  @override
+  String get fileStatusReady => 'File Status Ready';
+
+  @override
+  String get fileStatusUploaded => 'File Status Uploaded';
+
+  @override
+  String get galaxyA11yActionStartLearning =>
+      'Galaxy A11y Action Start Learning';
+
+  @override
+  String get galaxyA11yActionUnlockNode => 'Galaxy A11y Action Unlock Node';
+
+  @override
+  String get galaxyA11yClusterLabel => 'Galaxy A11y Cluster Label';
+
+  @override
+  String get galaxyA11yHintStartLearning => 'Galaxy A11y Hint Start Learning';
+
+  @override
+  String get galaxyA11yHintUnlockNode => 'Galaxy A11y Hint Unlock Node';
+
+  @override
+  String get galaxyA11yNavigateTo => 'Galaxy A11y Navigate To';
+
+  @override
+  String get galaxyA11yNavigationHint => 'Galaxy A11y Navigation Hint';
+
+  @override
+  String get galaxyA11yNodeImportance => 'Galaxy A11y Node Importance';
+
+  @override
+  String get galaxyA11yNodeLocked => 'Galaxy A11y Node Locked';
+
+  @override
+  String get galaxyA11yNodeMastery => 'Galaxy A11y Node Mastery';
+
+  @override
+  String get galaxyA11yNodePrefix => 'Galaxy A11y Node Prefix';
+
+  @override
+  String get galaxyA11yNodeStudyCount => 'Galaxy A11y Node Study Count';
+
+  @override
+  String get galaxyA11yNodeUnlocked => 'Galaxy A11y Node Unlocked';
+
+  @override
+  String get galaxyA11ySectorLabel => 'Galaxy A11y Sector Label';
+
+  @override
+  String get galaxyA11yZoomLevel => 'Galaxy A11y Zoom Level';
+
+  @override
+  String get galaxyControlOverview => 'Galaxy Control Overview';
+
+  @override
+  String get galaxyControlReplayStart => 'Galaxy Control Replay Start';
+
+  @override
+  String get galaxyControlReplayStop => 'Galaxy Control Replay Stop';
+
+  @override
+  String get galaxyControlSearchClose => 'Galaxy Control Search Close';
+
+  @override
+  String get galaxyControlSearchOpen => 'Galaxy Control Search Open';
+
+  @override
+  String get galaxyControlSettings => 'Galaxy Control Settings';
+
+  @override
+  String get galaxyControlZoomIn => 'Galaxy Control Zoom In';
+
+  @override
+  String get galaxyControlZoomOut => 'Galaxy Control Zoom Out';
+
+  @override
+  String get galaxyEmptyMessage => 'Galaxy Empty Message';
+
+  @override
+  String get galaxyEmptyTitle => 'Galaxy Empty Title';
+
+  @override
+  String get galaxyErrorConnectionFailed => 'Galaxy Error Connection Failed';
+
+  @override
+  String get galaxyErrorConnectionTimeout => 'Galaxy Error Connection Timeout';
+
+  @override
+  String get galaxyErrorLoadFailed => 'Galaxy Error Load Failed';
+
+  @override
+  String get galaxyErrorNetwork => 'Galaxy Error Network';
+
+  @override
+  String get galaxyErrorNetworkFailed => 'Galaxy Error Network Failed';
+
+  @override
+  String get galaxyErrorRequestFailed => 'Galaxy Error Request Failed';
+
+  @override
+  String get galaxyErrorResponseTimeout => 'Galaxy Error Response Timeout';
+
+  @override
+  String get galaxyErrorRetryHint => 'Galaxy Error Retry Hint';
+
+  @override
+  String get galaxyErrorServiceTemporarilyUnavailable =>
+      'Galaxy Error Service Temporarily Unavailable';
+
+  @override
+  String get galaxyErrorServiceUnavailable =>
+      'Galaxy Error Service Unavailable';
+
+  @override
+  String get galaxyErrorUnknown => 'Galaxy Error Unknown';
+
+  @override
+  String get galaxyGraphRagGraph => 'Galaxy Graph Rag Graph';
+
+  @override
+  String get galaxyGraphRagSearching => 'Galaxy Graph Rag Searching';
+
+  @override
+  String get galaxyGraphRagTime => 'Galaxy Graph Rag Time';
+
+  @override
+  String get galaxyGraphRagVector => 'Galaxy Graph Rag Vector';
+
+  @override
+  String get galaxyImportanceAdvanced => 'Galaxy Importance Advanced';
+
+  @override
+  String get galaxyImportanceBasic => 'Galaxy Importance Basic';
+
+  @override
+  String get galaxyImportanceCore => 'Galaxy Importance Core';
+
+  @override
+  String get galaxyImportanceEntry => 'Galaxy Importance Entry';
+
+  @override
+  String get galaxyImportanceIntermediate => 'Galaxy Importance Intermediate';
+
+  @override
+  String get galaxyImportanceNormal => 'Galaxy Importance Normal';
+
+  @override
+  String get galaxyLLMActionFailed => 'Galaxy LLMAction Failed';
+
+  @override
+  String get galaxyLoadFailed => 'Galaxy Load Failed';
+
+  @override
+  String get galaxyLoadFailedTitle => 'Galaxy Load Failed Title';
+
+  @override
+  String get galaxyLoadingMessage => 'Galaxy Loading Message';
+
+  @override
+  String get galaxyLoadingTitle => 'Galaxy Loading Title';
+
+  @override
+  String get galaxyNodeFocus => 'Galaxy Node Focus';
+
+  @override
+  String get galaxyNodeInspectConnections => 'Galaxy Node Inspect Connections';
+
+  @override
+  String get galaxyNodeLocked => 'Galaxy Node Locked';
+
+  @override
+  String get galaxyNodePreviewSubtitle => 'Galaxy Node Preview Subtitle';
+
+  @override
+  String get galaxyNodeUnlocked => 'Galaxy Node Unlocked';
+
+  @override
+  String get galaxyOfflineMode => 'Galaxy Offline Mode';
+
+  @override
+  String get galaxyOverviewMastery => 'Galaxy Overview Mastery';
+
+  @override
+  String get galaxyOverviewNodes => 'Galaxy Overview Nodes';
+
+  @override
+  String get galaxyOverviewUnlocked => 'Galaxy Overview Unlocked';
+
+  @override
+  String get galaxyPerfHighJank => 'Galaxy Perf High Jank';
+
+  @override
+  String get galaxyPerfLowFpsCritical => 'Galaxy Perf Low Fps Critical';
+
+  @override
+  String get galaxyPerfLowFpsWarning => 'Galaxy Perf Low Fps Warning';
+
+  @override
+  String get galaxyPerfRecommendationDisableParticles =>
+      'Galaxy Perf Recommendation Disable Particles';
+
+  @override
+  String get galaxyPerfRecommendationLowQualityMode =>
+      'Galaxy Perf Recommendation Low Quality Mode';
+
+  @override
+  String get galaxyPerfRecommendationOptimizeLayout =>
+      'Galaxy Perf Recommendation Optimize Layout';
+
+  @override
+  String get galaxyPerfRecommendationReduceNodes =>
+      'Galaxy Perf Recommendation Reduce Nodes';
+
+  @override
+  String get galaxyPerfSlowRender => 'Galaxy Perf Slow Render';
+
+  @override
+  String get galaxyPerfStatusCritical => 'Galaxy Perf Status Critical';
+
+  @override
+  String get galaxyPerfStatusDegraded => 'Galaxy Perf Status Degraded';
+
+  @override
+  String get galaxyPerfStatusOptimal => 'Galaxy Perf Status Optimal';
+
+  @override
+  String get galaxyReload => 'Galaxy Reload';
+
+  @override
+  String get galaxySearchHint => 'Galaxy Search Hint';
+
+  @override
+  String get galaxySearchHintDetail => 'Galaxy Search Hint Detail';
+
+  @override
+  String get galaxySearchNoResults => 'Galaxy Search No Results';
+
+  @override
+  String get galaxySearchResultSubtitle => 'Galaxy Search Result Subtitle';
+
+  @override
+  String get galaxySearchTitle => 'Galaxy Search Title';
+
+  @override
+  String get galaxySectorArt => 'Galaxy Sector Art';
+
+  @override
+  String get galaxySectorCivilization => 'Galaxy Sector Civilization';
+
+  @override
+  String get galaxySectorCosmos => 'Galaxy Sector Cosmos';
+
+  @override
+  String get galaxySectorLife => 'Galaxy Sector Life';
+
+  @override
+  String get galaxySectorTech => 'Galaxy Sector Tech';
+
+  @override
+  String get galaxySectorVoid => 'Galaxy Sector Void';
+
+  @override
+  String get galaxySectorWisdom => 'Galaxy Sector Wisdom';
+
+  @override
+  String get galaxySimulationCenterGravity =>
+      'Galaxy Simulation Center Gravity';
+
+  @override
+  String get galaxySimulationGravity => 'Galaxy Simulation Gravity';
+
+  @override
+  String get galaxySimulationReplaySpeed => 'Galaxy Simulation Replay Speed';
+
+  @override
+  String get galaxySimulationRepulsion => 'Galaxy Simulation Repulsion';
+
+  @override
+  String get galaxySimulationReset => 'Galaxy Simulation Reset';
+
+  @override
+  String get galaxySimulationSubtitle => 'Galaxy Simulation Subtitle';
+
+  @override
+  String get galaxySimulationTitle => 'Galaxy Simulation Title';
+
+  @override
+  String get galaxyUsingCache => 'Galaxy Using Cache';
+
+  @override
+  String get guestUpgradeAcceptPoliciesRequired =>
+      'Guest Upgrade Accept Policies Required';
+
+  @override
+  String get guestUpgradeAgreePrivacy => 'Guest Upgrade Agree Privacy';
+
+  @override
+  String get guestUpgradeAgreeTerms => 'Guest Upgrade Agree Terms';
+
+  @override
+  String get guestUpgradeIntro => 'Guest Upgrade Intro';
+
+  @override
+  String get guestUpgradePasswordMinLength =>
+      'Guest Upgrade Password Min Length';
+
+  @override
+  String get guestUpgradeSocialSectionTitle =>
+      'Guest Upgrade Social Section Title';
+
+  @override
+  String get guestUpgradeSocialSuccess => 'Guest Upgrade Social Success';
+
+  @override
+  String get guestUpgradeSuccess => 'Guest Upgrade Success';
+
+  @override
+  String get guestUpgradeTitle => 'Guest Upgrade Title';
+
+  @override
+  String get guestUpgradeUsernameMinLength =>
+      'Guest Upgrade Username Min Length';
+
+  @override
+  String get guestUpgradeViewPrivacy => 'Guest Upgrade View Privacy';
+
+  @override
+  String get guestUpgradeViewTerms => 'Guest Upgrade View Terms';
+
+  @override
+  String get guestUpgradeWithApple => 'Guest Upgrade With Apple';
+
+  @override
+  String get guestUpgradeWithEmail => 'Guest Upgrade With Email';
+
+  @override
+  String get guestUpgradeWithGoogle => 'Guest Upgrade With Google';
+
+  @override
+  String get guestUpgradeWithWeChat => 'Guest Upgrade With We Chat';
+
+  @override
+  String get passwordSetConfirm => 'Password Set Confirm';
+
+  @override
+  String get passwordSetHint => 'Password Set Hint';
+
+  @override
+  String get passwordSetLabel => 'Password Set Label';
+
+  @override
+  String get passwordSetSuccess => 'Password Set Success';
+
+  @override
+  String get passwordSetTitle => 'Password Set Title';
+
+  @override
+  String get planArchive => 'Plan Archive';
+
+  @override
+  String get planArchiveConfirm => 'Plan Archive Confirm';
+
+  @override
+  String get planArchiveMessage => 'Plan Archive Message';
+
+  @override
+  String get planArchiveTitle => 'Plan Archive Title';
+
+  @override
+  String get planArchivedSuccess => 'Plan Archived Success';
+
+  @override
+  String get planContextTitle => 'Plan Context Title';
+
+  @override
+  String get planDaysRemaining => 'Plan Days Remaining';
+
+  @override
+  String get planDetailTitle => 'Plan Detail Title';
+
+  @override
+  String get planDueToday => 'Plan Due Today';
+
+  @override
+  String get planFactsFeedbackSummary => 'Plan Facts Feedback Summary';
+
+  @override
+  String get planKeyFacts => 'Plan Key Facts';
+
+  @override
+  String get planLoadFailed => 'Plan Load Failed';
+
+  @override
+  String get planNoContent => 'Plan No Content';
+
+  @override
+  String get planNoTasks => 'Plan No Tasks';
+
+  @override
+  String get planNoVisualizationData => 'Plan No Visualization Data';
+
+  @override
+  String get planOverdueDays => 'Plan Overdue Days';
+
+  @override
+  String get planProgressLabel => 'Plan Progress Label';
+
+  @override
+  String get planRecentFeedback => 'Plan Recent Feedback';
+
+  @override
+  String get planRelatedTasks => 'Plan Related Tasks';
+
+  @override
+  String get planRestore => 'Plan Restore';
+
+  @override
+  String get planRestoredSuccess => 'Plan Restored Success';
+
+  @override
+  String get planReviewAdditionalNotesHint =>
+      'Plan Review Additional Notes Hint';
+
+  @override
+  String get planReviewAdditionalNotesRequired =>
+      'Plan Review Additional Notes Required';
+
+  @override
+  String get planReviewApproveExecute => 'Plan Review Approve Execute';
+
+  @override
+  String get planReviewConfidenceTierLabel =>
+      'Plan Review Confidence Tier Label';
+
+  @override
+  String get planReviewConfidenceTitle => 'Plan Review Confidence Title';
+
+  @override
+  String get planReviewDecisionApproved => 'Plan Review Decision Approved';
+
+  @override
+  String get planReviewDecisionNeedsModification =>
+      'Plan Review Decision Needs Modification';
+
+  @override
+  String get planReviewDecisionRejected => 'Plan Review Decision Rejected';
+
+  @override
+  String get planReviewDecisionRequiresConfirmation =>
+      'Plan Review Decision Requires Confirmation';
+
+  @override
+  String get planReviewEvidenceLabel => 'Plan Review Evidence Label';
+
+  @override
+  String get planReviewImpactLabel => 'Plan Review Impact Label';
+
+  @override
+  String get planReviewModifyPlan => 'Plan Review Modify Plan';
+
+  @override
+  String get planReviewReasonDifficultyTooHigh =>
+      'Plan Review Reason Difficulty Too High';
+
+  @override
+  String get planReviewReasonDifficultyTooLow =>
+      'Plan Review Reason Difficulty Too Low';
+
+  @override
+  String get planReviewReasonMissingKeyTask =>
+      'Plan Review Reason Missing Key Task';
+
+  @override
+  String get planReviewReasonOther => 'Plan Review Reason Other';
+
+  @override
+  String get planReviewReasonScheduleUnreasonable =>
+      'Plan Review Reason Schedule Unreasonable';
+
+  @override
+  String get planReviewReasonTasksTooFew => 'Plan Review Reason Tasks Too Few';
+
+  @override
+  String get planReviewReasonTasksTooMany =>
+      'Plan Review Reason Tasks Too Many';
+
+  @override
+  String get planReviewRejectReasonTitle => 'Plan Review Reject Reason Title';
+
+  @override
+  String get planReviewRejectWithFeedback => 'Plan Review Reject With Feedback';
+
+  @override
+  String get planReviewSelectReasonRequired =>
+      'Plan Review Select Reason Required';
+
+  @override
+  String get planReviewSubmitFeedback => 'Plan Review Submit Feedback';
+
+  @override
+  String get planReviewSummaryApproved => 'Plan Review Summary Approved';
+
+  @override
+  String get planReviewSummaryNeedsModification =>
+      'Plan Review Summary Needs Modification';
+
+  @override
+  String get planReviewSummaryRejected => 'Plan Review Summary Rejected';
+
+  @override
+  String get planReviewSummaryRequiresConfirmation =>
+      'Plan Review Summary Requires Confirmation';
+
+  @override
+  String get planSectionCompletionRate => 'Plan Section Completion Rate';
+
+  @override
+  String get planSectionDailyCompletion => 'Plan Section Daily Completion';
+
+  @override
+  String get planSectionTaskTypeDistribution =>
+      'Plan Section Task Type Distribution';
+
+  @override
+  String get planShare => 'Plan Share';
+
+  @override
+  String get planStatusActive => 'Plan Status Active';
+
+  @override
+  String get planStatusArchived => 'Plan Status Archived';
+
+  @override
+  String get planStatusCompleted => 'Plan Status Completed';
+
+  @override
+  String get planStatusPaused => 'Plan Status Paused';
+
+  @override
+  String get planStatusUnknown => 'Plan Status Unknown';
+
+  @override
+  String get planTabOverview => 'Plan Tab Overview';
+
+  @override
+  String get planTabProgress => 'Plan Tab Progress';
+
+  @override
+  String get planTargetDate => 'Plan Target Date';
+
+  @override
+  String get planTargetMastery => 'Plan Target Mastery';
+
+  @override
+  String get planTaskProgress => 'Plan Task Progress';
+
+  @override
+  String get planUpcomingTasks => 'Plan Upcoming Tasks';
+
+  @override
+  String get pomodoroBreakFinished => 'Pomodoro Break Finished';
+
+  @override
+  String get pomodoroWorkFinished => 'Pomodoro Work Finished';
+
+  @override
+  String get profileDeleteAccount => 'Profile Delete Account';
+
+  @override
+  String get profileLinkedAccounts => 'Profile Linked Accounts';
+
+  @override
+  String get profilePersonalInfo => 'Profile Personal Info';
+
+  @override
+  String get profileSecurityLog => 'Profile Security Log';
+
+  @override
+  String get profileSessionManagement => 'Profile Session Management';
+
+  @override
+  String get profileUpgradeGuest => 'Profile Upgrade Guest';
+
+  @override
+  String get regenCustomHint => 'Regen Custom Hint';
+
+  @override
+  String get regenDescCompleted => 'Regen Desc Completed';
+
+  @override
+  String get regenDescFailed => 'Regen Desc Failed';
+
+  @override
+  String get regenDescInProgress => 'Regen Desc In Progress';
+
+  @override
+  String get regenDescPending => 'Regen Desc Pending';
+
+  @override
+  String get regenHintAddExamples => 'Regen Hint Add Examples';
+
+  @override
+  String get regenHintFixErrors => 'Regen Hint Fix Errors';
+
+  @override
+  String get regenHintFriendlierTone => 'Regen Hint Friendlier Tone';
+
+  @override
+  String get regenHintMoreAccurate => 'Regen Hint More Accurate';
+
+  @override
+  String get regenHintMoreConcise => 'Regen Hint More Concise';
+
+  @override
+  String get regenHintMoreDetailed => 'Regen Hint More Detailed';
+
+  @override
+  String get regenHintsOptional => 'Regen Hints Optional';
+
+  @override
+  String get regenImprovementsTitle => 'Regen Improvements Title';
+
+  @override
+  String get regenProgressTitle => 'Regen Progress Title';
+
+  @override
+  String get regenQualityImprovement => 'Regen Quality Improvement';
+
+  @override
+  String get regenResultFailed => 'Regen Result Failed';
+
+  @override
+  String get regenResultSuccess => 'Regen Result Success';
+
+  @override
+  String get regenRetryMessage => 'Regen Retry Message';
+
+  @override
+  String get regenSelectType => 'Regen Select Type';
+
+  @override
+  String get regenStart => 'Regen Start';
+
+  @override
+  String get regenTitleCompleted => 'Regen Title Completed';
+
+  @override
+  String get regenTitleFailed => 'Regen Title Failed';
+
+  @override
+  String get regenTitleIdle => 'Regen Title Idle';
+
+  @override
+  String get regenTitleInProgress => 'Regen Title In Progress';
+
+  @override
+  String get regenTitlePending => 'Regen Title Pending';
+
+  @override
+  String get regenTypeAddDetails => 'Regen Type Add Details';
+
+  @override
+  String get regenTypeChangeStyle => 'Regen Type Change Style';
+
+  @override
+  String get regenTypeCustom => 'Regen Type Custom';
+
+  @override
+  String get regenTypeFixIssues => 'Regen Type Fix Issues';
+
+  @override
+  String get regenTypeImproveQuality => 'Regen Type Improve Quality';
+
+  @override
+  String get regenTypeSimplify => 'Regen Type Simplify';
+
+  @override
+  String get reviewRatingAccuracyTitle => 'Review Rating Accuracy Title';
+
+  @override
+  String get reviewRatingAccurate => 'Review Rating Accurate';
+
+  @override
+  String get reviewRatingAddInaccuratePoint =>
+      'Review Rating Add Inaccurate Point';
+
+  @override
+  String get reviewRatingCommentsHint => 'Review Rating Comments Hint';
+
+  @override
+  String get reviewRatingCommentsTitle => 'Review Rating Comments Title';
+
+  @override
+  String get reviewRatingHelpful => 'Review Rating Helpful';
+
+  @override
+  String get reviewRatingInaccurate => 'Review Rating Inaccurate';
+
+  @override
+  String get reviewRatingInaccuratePointHint =>
+      'Review Rating Inaccurate Point Hint';
+
+  @override
+  String get reviewRatingInaccuratePointsTitle =>
+      'Review Rating Inaccurate Points Title';
+
+  @override
+  String get reviewRatingLessOptions => 'Review Rating Less Options';
+
+  @override
+  String get reviewRatingMoreOptions => 'Review Rating More Options';
+
+  @override
+  String get reviewRatingNotHelpful => 'Review Rating Not Helpful';
+
+  @override
+  String get reviewRatingSpecificityTitle => 'Review Rating Specificity Title';
+
+  @override
+  String get reviewRatingSubmit => 'Review Rating Submit';
+
+  @override
+  String get reviewRatingSubmitFailed => 'Review Rating Submit Failed';
+
+  @override
+  String get reviewRatingSubmitSuccess => 'Review Rating Submit Success';
+
+  @override
+  String get reviewRatingSubtitle => 'Review Rating Subtitle';
+
+  @override
+  String get reviewRatingTagsTitle => 'Review Rating Tags Title';
+
+  @override
+  String get reviewRatingTitle => 'Review Rating Title';
+
+  @override
+  String get reviewSpecificityAppropriate => 'Review Specificity Appropriate';
+
+  @override
+  String get reviewSpecificityTooDetailed => 'Review Specificity Too Detailed';
+
+  @override
+  String get reviewSpecificityTooVague => 'Review Specificity Too Vague';
+
+  @override
+  String get reviewTagAccurate => 'Review Tag Accurate';
+
+  @override
+  String get reviewTagClear => 'Review Tag Clear';
+
+  @override
+  String get reviewTagNeedsImprovement => 'Review Tag Needs Improvement';
+
+  @override
+  String get reviewTagPractical => 'Review Tag Practical';
+
+  @override
+  String get reviewTagTooLenient => 'Review Tag Too Lenient';
+
+  @override
+  String get reviewTagTooStrict => 'Review Tag Too Strict';
+
+  @override
+  String get securityLogActionAccountDelete =>
+      'Security Log Action Account Delete';
+
+  @override
+  String get securityLogActionEmailVerify => 'Security Log Action Email Verify';
+
+  @override
+  String get securityLogActionGuestUpgrade =>
+      'Security Log Action Guest Upgrade';
+
+  @override
+  String get securityLogActionLoginFailed => 'Security Log Action Login Failed';
+
+  @override
+  String get securityLogActionLoginSuccess =>
+      'Security Log Action Login Success';
+
+  @override
+  String get securityLogActionLogout => 'Security Log Action Logout';
+
+  @override
+  String get securityLogActionPasswordChange =>
+      'Security Log Action Password Change';
+
+  @override
+  String get securityLogActionPasswordReset =>
+      'Security Log Action Password Reset';
+
+  @override
+  String get securityLogActionRegister => 'Security Log Action Register';
+
+  @override
+  String get securityLogActionSocialLink => 'Security Log Action Social Link';
+
+  @override
+  String get securityLogActionSocialUnlink =>
+      'Security Log Action Social Unlink';
+
+  @override
+  String get securityLogActionTokenRefresh =>
+      'Security Log Action Token Refresh';
+
+  @override
+  String get securityLogAdditionalInfo => 'Security Log Additional Info';
+
+  @override
+  String get securityLogEmpty => 'Security Log Empty';
+
+  @override
+  String get securityLogIntro => 'Security Log Intro';
+
+  @override
+  String get securityLogOccurredAt => 'Security Log Occurred At';
+
+  @override
+  String get securityLogTitle => 'Security Log Title';
+
+  @override
+  String get sessionManagementCurrent => 'Session Management Current';
+
+  @override
+  String get sessionManagementEmpty => 'Session Management Empty';
+
+  @override
+  String get sessionManagementFirstLogin => 'Session Management First Login';
+
+  @override
+  String get sessionManagementIntro => 'Session Management Intro';
+
+  @override
+  String get sessionManagementLastActive => 'Session Management Last Active';
+
+  @override
+  String get sessionManagementRevokeOthers =>
+      'Session Management Revoke Others';
+
+  @override
+  String get sessionManagementRevokeThis => 'Session Management Revoke This';
+
+  @override
+  String get sessionManagementTitle => 'Session Management Title';
+
+  @override
+  String get sessionManagementUnknownDevice =>
+      'Session Management Unknown Device';
+
+  @override
+  String get socialAccountsIntro => 'Social Accounts Intro';
+
+  @override
+  String get socialAccountsLink => 'Social Accounts Link';
+
+  @override
+  String get socialAccountsLinked => 'Social Accounts Linked';
+
+  @override
+  String get socialAccountsTitle => 'Social Accounts Title';
+
+  @override
+  String get socialAccountsUnlink => 'Social Accounts Unlink';
+
+  @override
+  String get socialAccountsUnlinkConfirm => 'Social Accounts Unlink Confirm';
+
+  @override
+  String get socialAccountsUnlinkMessage => 'Social Accounts Unlink Message';
+
+  @override
+  String get socialAccountsUnlinkTitle => 'Social Accounts Unlink Title';
+
+  @override
+  String get socialAccountsUnlinkedHint => 'Social Accounts Unlinked Hint';
+
+  @override
+  String get socialAccountsWeChatPending => 'Social Accounts We Chat Pending';
+
+  @override
+  String get socialAccountsWeChatUnavailable =>
+      'Social Accounts We Chat Unavailable';
+
+  @override
+  String get sprintActionAbandonButton => 'Sprint Action Abandon Button';
+
+  @override
+  String get sprintActionAbandonSubtitle => 'Sprint Action Abandon Subtitle';
+
+  @override
+  String get sprintActionAbandonTitle => 'Sprint Action Abandon Title';
+
+  @override
+  String get sprintActionCompleteButton => 'Sprint Action Complete Button';
+
+  @override
+  String get sprintActionCompleteSubtitle => 'Sprint Action Complete Subtitle';
+
+  @override
+  String get sprintActionCompleteTitle => 'Sprint Action Complete Title';
+
+  @override
+  String get sprintActionExtendSubtitle => 'Sprint Action Extend Subtitle';
+
+  @override
+  String get sprintActionExtendTitle => 'Sprint Action Extend Title';
+
+  @override
+  String get sprintActionsTitle => 'Sprint Actions Title';
+
+  @override
+  String get sprintCompletedTasks => 'Sprint Completed Tasks';
+
+  @override
+  String get sprintCompletionRate => 'Sprint Completion Rate';
+
+  @override
+  String get sprintConfirmAbandonDesc => 'Sprint Confirm Abandon Desc';
+
+  @override
+  String get sprintConfirmAbandonMessage => 'Sprint Confirm Abandon Message';
+
+  @override
+  String get sprintConfirmAbandonTitle => 'Sprint Confirm Abandon Title';
+
+  @override
+  String get sprintConfirmCompleteDesc => 'Sprint Confirm Complete Desc';
+
+  @override
+  String get sprintConfirmCompleteMessage => 'Sprint Confirm Complete Message';
+
+  @override
+  String get sprintConfirmCompleteTitle => 'Sprint Confirm Complete Title';
+
+  @override
+  String get sprintDailyCompletion => 'Sprint Daily Completion';
+
+  @override
+  String get sprintDurationDaysLabel => 'Sprint Duration Days Label';
+
+  @override
+  String get sprintDurationDaysValue => 'Sprint Duration Days Value';
+
+  @override
+  String get sprintDurationLabel => 'Sprint Duration Label';
+
+  @override
+  String get sprintEndDateLabel => 'Sprint End Date Label';
+
+  @override
+  String get sprintExtendConfirm => 'Sprint Extend Confirm';
+
+  @override
+  String get sprintExtendMessage => 'Sprint Extend Message';
+
+  @override
+  String get sprintExtendOptionDays => 'Sprint Extend Option Days';
+
+  @override
+  String get sprintExtendSelectDays => 'Sprint Extend Select Days';
+
+  @override
+  String get sprintExtendTitle => 'Sprint Extend Title';
+
+  @override
+  String get sprintIncompleteTasks => 'Sprint Incomplete Tasks';
+
+  @override
+  String get sprintInfoTitle => 'Sprint Info Title';
+
+  @override
+  String get sprintOngoing => 'Sprint Ongoing';
+
+  @override
+  String get sprintProgressTitle => 'Sprint Progress Title';
+
+  @override
+  String get sprintRemainingTasks => 'Sprint Remaining Tasks';
+
+  @override
+  String get sprintStartDateLabel => 'Sprint Start Date Label';
+
+  @override
+  String get sprintStatsEmpty => 'Sprint Stats Empty';
+
+  @override
+  String get sprintStatsTitle => 'Sprint Stats Title';
+
+  @override
+  String get sprintStatusCompleted => 'Sprint Status Completed';
+
+  @override
+  String get sprintStatusInProgress => 'Sprint Status In Progress';
+
+  @override
+  String get sprintStatusLabel => 'Sprint Status Label';
+
+  @override
+  String get sprintStatusTodo => 'Sprint Status Todo';
+
+  @override
+  String get sprintTaskCount => 'Sprint Task Count';
+
+  @override
+  String get sprintTaskSummaryTitle => 'Sprint Task Summary Title';
+
+  @override
+  String get sprintTotalTasks => 'Sprint Total Tasks';
+
+  @override
+  String get statusCompleted => 'Status Completed';
+
+  @override
+  String get statusFailed => 'Status Failed';
+
+  @override
+  String get statusInProgress => 'Status In Progress';
+
+  @override
+  String get statusPending => 'Status Pending';
+
+  @override
+  String get taskBatchCreateTitle => 'Task Batch Create Title';
+
+  @override
+  String get taskChatAssistantTitle => 'Task Chat Assistant Title';
+
+  @override
+  String get taskChatEmptyPrompt => 'Task Chat Empty Prompt';
+
+  @override
+  String get taskChatInputHint => 'Task Chat Input Hint';
+
+  @override
+  String get taskCreateAction => 'Task Create Action';
+
+  @override
+  String get taskCreateFailed => 'Task Create Failed';
+
+  @override
+  String get taskCreateSuccess => 'Task Create Success';
+
+  @override
+  String get taskCreateTitle => 'Task Create Title';
+
+  @override
+  String get taskCreatedWithSuggestions => 'Task Created With Suggestions';
+
+  @override
+  String get taskCreating => 'Task Creating';
+
+  @override
+  String get taskDeadline => 'Task Deadline';
+
+  @override
+  String get taskDeadlineLabel => 'Task Deadline Label';
+
+  @override
+  String get taskDeleteConfirm => 'Task Delete Confirm';
+
+  @override
+  String get taskDeleteTitle => 'Task Delete Title';
+
+  @override
+  String get taskDetailLoadFailed => 'Task Detail Load Failed';
+
+  @override
+  String get taskDetailLoading => 'Task Detail Loading';
+
+  @override
+  String get taskDifficulty => 'Task Difficulty';
+
+  @override
+  String get taskDifficultyLabel => 'Task Difficulty Label';
+
+  @override
+  String get taskDifficultyLevel => 'Task Difficulty Level';
+
+  @override
+  String get taskEnergyCost => 'Task Energy Cost';
+
+  @override
+  String get taskEnergyCostLabel => 'Task Energy Cost Label';
+
+  @override
+  String get taskEnergyCostValue => 'Task Energy Cost Value';
+
+  @override
+  String get taskEstimatedDuration => 'Task Estimated Duration';
+
+  @override
+  String get taskEstimatedDurationLabel => 'Task Estimated Duration Label';
+
+  @override
+  String get taskExecutionAbandon => 'Task Execution Abandon';
+
+  @override
+  String get taskExecutionCompleteTitle => 'Task Execution Complete Title';
+
+  @override
+  String get taskExecutionCompletedTitle => 'Task Execution Completed Title';
+
+  @override
+  String get taskExecutionConfirmComplete => 'Task Execution Confirm Complete';
+
+  @override
+  String get taskExecutionElapsedMinutes => 'Task Execution Elapsed Minutes';
+
+  @override
+  String get taskExecutionEnterFocus => 'Task Execution Enter Focus';
+
+  @override
+  String get taskExecutionExpGained => 'Task Execution Exp Gained';
+
+  @override
+  String get taskExecutionFeatureCoach => 'Task Execution Feature Coach';
+
+  @override
+  String get taskExecutionFeatureDistraction =>
+      'Task Execution Feature Distraction';
+
+  @override
+  String get taskExecutionFeatureFlipClock =>
+      'Task Execution Feature Flip Clock';
+
+  @override
+  String get taskExecutionFeatureFullscreen =>
+      'Task Execution Feature Fullscreen';
+
+  @override
+  String get taskExecutionFeatureReward => 'Task Execution Feature Reward';
+
+  @override
+  String get taskExecutionFeatureStarfield =>
+      'Task Execution Feature Starfield';
+
+  @override
+  String get taskExecutionGuideEmpty => 'Task Execution Guide Empty';
+
+  @override
+  String get taskExecutionGuideTitle => 'Task Execution Guide Title';
+
+  @override
+  String get taskExecutionNoTask => 'Task Execution No Task';
+
+  @override
+  String get taskExecutionNoteHint => 'Task Execution Note Hint';
+
+  @override
+  String get taskExecutionNoteLabel => 'Task Execution Note Label';
+
+  @override
+  String get taskExecutionSkipAnimation => 'Task Execution Skip Animation';
+
+  @override
+  String get taskExecutionStartFailed => 'Task Execution Start Failed';
+
+  @override
+  String get taskExecutionStartNow => 'Task Execution Start Now';
+
+  @override
+  String get taskExecutionSyncFailed => 'Task Execution Sync Failed';
+
+  @override
+  String get taskExecutionTapToContinue => 'Task Execution Tap To Continue';
+
+  @override
+  String get taskExecutionTimerLabel => 'Task Execution Timer Label';
+
+  @override
+  String get taskExitCancelStep1 => 'Task Exit Cancel Step1';
+
+  @override
+  String get taskExitCancelStep2 => 'Task Exit Cancel Step2';
+
+  @override
+  String get taskExitCancelStep3 => 'Task Exit Cancel Step3';
+
+  @override
+  String get taskExitConfirmStep1 => 'Task Exit Confirm Step1';
+
+  @override
+  String get taskExitConfirmStep2 => 'Task Exit Confirm Step2';
+
+  @override
+  String get taskExitConfirmStep3 => 'Task Exit Confirm Step3';
+
+  @override
+  String get taskExitMessageStep1 => 'Task Exit Message Step1';
+
+  @override
+  String get taskExitMessageStep2 => 'Task Exit Message Step2';
+
+  @override
+  String get taskExitMessageStep3 => 'Task Exit Message Step3';
+
+  @override
+  String get taskExitTitleStep1 => 'Task Exit Title Step1';
+
+  @override
+  String get taskExitTitleStep2 => 'Task Exit Title Step2';
+
+  @override
+  String get taskExitTitleStep3 => 'Task Exit Title Step3';
+
+  @override
+  String get taskGenerateGuideSubtitle => 'Task Generate Guide Subtitle';
+
+  @override
+  String get taskGenerateGuideTitle => 'Task Generate Guide Title';
+
+  @override
+  String get taskGuideEmpty => 'Task Guide Empty';
+
+  @override
+  String get taskGuideTitle => 'Task Guide Title';
+
+  @override
+  String get taskListLoading => 'Task List Loading';
+
+  @override
+  String get taskListTitle => 'Task List Title';
+
+  @override
+  String get taskMinutesOption => 'Task Minutes Option';
+
+  @override
+  String get taskNudgeApplied => 'Task Nudge Applied';
+
+  @override
+  String get taskNudgeApply => 'Task Nudge Apply';
+
+  @override
+  String get taskNudgeConfidence => 'Task Nudge Confidence';
+
+  @override
+  String get taskNudgeDismiss => 'Task Nudge Dismiss';
+
+  @override
+  String get taskNudgeTitle => 'Task Nudge Title';
+
+  @override
+  String get taskReminderEnableSubtitle => 'Task Reminder Enable Subtitle';
+
+  @override
+  String get taskReminderEnableTitle => 'Task Reminder Enable Title';
+
+  @override
+  String get taskReminderInfoBody => 'Task Reminder Info Body';
+
+  @override
+  String get taskReminderInfoTitle => 'Task Reminder Info Title';
+
+  @override
+  String get taskReminderPermissionDenied => 'Task Reminder Permission Denied';
+
+  @override
+  String get taskReminderRefreshAll => 'Task Reminder Refresh All';
+
+  @override
+  String get taskReminderRefreshSuccess => 'Task Reminder Refresh Success';
+
+  @override
+  String get taskReminderSettingsTitle => 'Task Reminder Settings Title';
+
+  @override
+  String get taskReminderTimesTitle => 'Task Reminder Times Title';
+
+  @override
+  String get taskSearchHint => 'Task Search Hint';
+
+  @override
+  String get taskStart => 'Task Start';
+
+  @override
+  String get taskSuggestedKnowledge => 'Task Suggested Knowledge';
+
+  @override
+  String get taskTagsHint => 'Task Tags Hint';
+
+  @override
+  String get taskTagsLabel => 'Task Tags Label';
+
+  @override
+  String get taskTimerMinutes => 'Task Timer Minutes';
+
+  @override
+  String get taskTimerPomodoro => 'Task Timer Pomodoro';
+
+  @override
+  String get taskTitleHint => 'Task Title Hint';
+
+  @override
+  String get taskTitleLabel => 'Task Title Label';
+
+  @override
+  String get taskTitleRequired => 'Task Title Required';
+
+  @override
+  String get taskTypeLabel => 'Task Type Label';
+
+  @override
+  String get taskTypeOcr => 'Task Type Ocr';
+
+  @override
+  String get taskUntitled => 'Task Untitled';
+
+  @override
+  String get taskViewAll => 'Task View All';
+
+  @override
+  String get weeklyAgendaCollapsedHint => 'Weekly Agenda Collapsed Hint';
+
+  @override
+  String get weeklyAgendaEmptyHint => 'Weekly Agenda Empty Hint';
+
+  @override
+  String get weeklyAgendaSummary => 'Weekly Agenda Summary';
 }

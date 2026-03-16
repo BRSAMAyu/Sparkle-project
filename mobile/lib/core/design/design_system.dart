@@ -890,6 +890,7 @@ class DS {
   static const double xxl = 48.0;
   static const double xxxl = 64.0;
 
+  static const double spacing2 = 2.0;
   static const double spacing4 = 4.0;
   static const double spacing6 = 6.0;
   static const double spacing8 = 8.0;
@@ -918,12 +919,15 @@ class DS {
   static const double opacityDisabled = 0.4;
 
   // Radius
+  static const double radius6 = 6.0;
   static const double radius8 = 8.0;
   static const double radius12 = 12.0;
   static const double radius16 = 16.0;
   static const double radius20 = 20.0;
   static const BorderRadius borderRadius4 =
       BorderRadius.all(Radius.circular(4.0));
+  static const BorderRadius borderRadius6 =
+      BorderRadius.all(Radius.circular(radius6));
   static const BorderRadius borderRadius8 =
       BorderRadius.all(Radius.circular(radius8));
   static const BorderRadius borderRadius12 =
@@ -941,7 +945,9 @@ class DS {
   static const double iconSizeXs = 16.0;
   static const double iconSizeSm = 20.0;
   static const double iconSizeBase = 24.0;
+  static const double iconSizeMd = iconSizeBase;
   static const double iconSizeLg = 32.0;
+  static const double iconSizeXl = 40.0;
   static const double iconSize3xl = 48.0;
 
   // Typography

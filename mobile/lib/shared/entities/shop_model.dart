@@ -119,6 +119,8 @@ class ShopItem {
         return l10n.shopItemTypeConsumable;
       case ShopItemType.boost:
         return l10n.shopItemTypeBoost;
+      case ShopItemType.visualElement:
+        return l10n.shopItemTypeVisualElement;
     }
   }
 

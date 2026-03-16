@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/animation_lifecycle_mixin.dart';
+import 'package:sparkle/core/design/widgets/global_particle_counter.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 import 'package:sparkle/shared/entities/visual_element_model.dart';
 
@@ -69,16 +71,20 @@ class RarityVisualWrapper extends StatefulWidget {
 }
 
 class _RarityVisualWrapperState extends State<RarityVisualWrapper>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, AnimationLifecycleMixin {
   late AnimationController _shimmerController;
   late AnimationController _glowController;
   late AnimationController _particleController;
   late AnimationController _borderRotationController;
+  bool _reduceMotion = false;
+  bool _particlesEnabled = false;
+  int _registeredParticleCount = 0;
 
   @override
   void initState() {
     super.initState();
     _initControllers();
+    _updateParticleRegistration(force: true);
     _startAnimations();
   }
 
@@ -106,6 +112,23 @@ class _RarityVisualWrapperState extends State<RarityVisualWrapper>
       vsync: this,
       duration: _getBorderRotationDuration(),
     );
+
+    registerController(
+      _shimmerController,
+      onResume: () => _shimmerController.repeat(),
+    );
+    registerController(
+      _glowController,
+      onResume: () => _glowController.repeat(reverse: true),
+    );
+    registerController(
+      _particleController,
+      onResume: () => _particleController.repeat(),
+    );
+    registerController(
+      _borderRotationController,
+      onResume: () => _borderRotationController.repeat(),
+    );
   }
 
   Duration _getBorderRotationDuration() {
@@ -121,6 +144,7 @@ class _RarityVisualWrapperState extends State<RarityVisualWrapper>
   }
 
   void _startAnimations() {
+    if (_reduceMotion) return;
     final level = _getRarityLevel();
 
     // Shimmer for rare+
@@ -134,13 +158,35 @@ class _RarityVisualWrapperState extends State<RarityVisualWrapper>
     }
 
     // Particles for epic+ when enabled
-    if (widget.showParticles && level.index >= _RarityLevel.epic.index) {
+    if (_particlesEnabled) {
       _particleController.repeat();
     }
 
     // Border rotation for epic+
     if (level.index >= _RarityLevel.epic.index) {
       _borderRotationController.repeat();
+    }
+  }
+
+  void _stopAnimations() {
+    _shimmerController.stop();
+    _glowController.stop();
+    _particleController.stop();
+    _borderRotationController.stop();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final reduceMotion = context.reduceMotion;
+    if (reduceMotion == _reduceMotion) return;
+    _reduceMotion = reduceMotion;
+    if (_reduceMotion) {
+      _stopAnimations();
+      _releaseParticles();
+    } else {
+      _updateParticleRegistration(force: true);
+      _startAnimations();
     }
   }
 
@@ -234,6 +280,9 @@ class _RarityVisualWrapperState extends State<RarityVisualWrapper>
   @override
   void didUpdateWidget(RarityVisualWrapper oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.rarity != oldWidget.rarity) {
+      _borderRotationController.duration = _getBorderRotationDuration();
+    }
     if (widget.rarity != oldWidget.rarity ||
         widget.showShimmer != oldWidget.showShimmer ||
         widget.showGlow != oldWidget.showGlow ||
@@ -243,12 +292,14 @@ class _RarityVisualWrapperState extends State<RarityVisualWrapper>
       _glowController.reset();
       _particleController.reset();
       _borderRotationController.reset();
+      _updateParticleRegistration(force: true);
       _startAnimations();
     }
   }
 
   @override
   void dispose() {
+    _releaseParticles();
     _shimmerController.dispose();
     _glowController.dispose();
     _particleController.dispose();
@@ -258,8 +309,19 @@ class _RarityVisualWrapperState extends State<RarityVisualWrapper>
 
   @override
   Widget build(BuildContext context) {
+    if (_reduceMotion) {
+      return _buildStaticVersion(context);
+    }
+    return _buildAnimatedVersion(context);
+  }
+
+  Widget _buildAnimatedVersion(BuildContext context) {
     final level = _getRarityLevel();
     final rarityColor = _getRarityColor();
+    final particleColor = _getAdaptiveParticleColor(
+      rarityColor,
+      Theme.of(context).brightness,
+    );
 
     final children = <Widget>[widget.child];
 
@@ -304,13 +366,13 @@ class _RarityVisualWrapperState extends State<RarityVisualWrapper>
     }
 
     // Orbital particles (for epic+ when showParticles is true)
-    if (widget.showParticles && level.index >= _RarityLevel.epic.index) {
+    if (_particlesEnabled) {
       final particleCount = level == _RarityLevel.legendary ? 4 : 2;
       children.add(
         Positioned.fill(
           child: _OrbitalParticlesLayer(
             controller: _particleController,
-            rarityColor: rarityColor,
+            rarityColor: particleColor,
             particleCount: particleCount,
           ),
         ),
@@ -318,6 +380,64 @@ class _RarityVisualWrapperState extends State<RarityVisualWrapper>
     }
 
     return Stack(children: children);
+  }
+
+  Widget _buildStaticVersion(BuildContext context) {
+    final level = _getRarityLevel();
+    final children = <Widget>[widget.child];
+
+    if (level.index >= _RarityLevel.epic.index) {
+      children.add(
+        Positioned.fill(
+          child: CustomPaint(
+            painter: _RotatingGradientBorderPainter(
+              rotation: 0,
+              colors: _getGradientColors(),
+              borderRadius: widget.borderRadius,
+              borderWidth: level == _RarityLevel.legendary ? 2.5 : 2.0,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Stack(children: children);
+  }
+
+  Color _getAdaptiveParticleColor(Color baseColor, Brightness brightness) {
+    if (brightness == Brightness.dark) return baseColor;
+    return baseColor.withValues(
+      alpha: (baseColor.opacity * 1.3).clamp(0.0, 1.0),
+    );
+  }
+
+  void _releaseParticles() {
+    if (_registeredParticleCount > 0) {
+      GlobalParticleCounter.releaseParticles(_registeredParticleCount);
+      _registeredParticleCount = 0;
+    }
+    _particlesEnabled = false;
+  }
+
+  void _updateParticleRegistration({bool force = false}) {
+    final level = _getRarityLevel();
+    final wantsParticles =
+        widget.showParticles && level.index >= _RarityLevel.epic.index;
+    final desiredCount = wantsParticles && !_reduceMotion
+        ? (level == _RarityLevel.legendary ? 4 : 2)
+        : 0;
+
+    if (!force && desiredCount == _registeredParticleCount) {
+      return;
+    }
+
+    _releaseParticles();
+
+    if (desiredCount > 0 &&
+        GlobalParticleCounter.tryAddParticles(desiredCount)) {
+      _registeredParticleCount = desiredCount;
+      _particlesEnabled = true;
+    }
   }
 }
 
@@ -536,6 +656,7 @@ class _OrbitalParticlesPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (GlobalParticleCounter.isOverLimit) return;
     final center = Offset(size.width / 2, size.height / 2);
     final baseRadius = (size.width + size.height) / 4;
 
