@@ -9,102 +9,7 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/pgvector/pgvector-go"
 )
-
-type Achievementrarity string
-
-const (
-	AchievementrarityCOMMON    Achievementrarity = "COMMON"
-	AchievementrarityRARE      Achievementrarity = "RARE"
-	AchievementrarityEPIC      Achievementrarity = "EPIC"
-	AchievementrarityLEGENDARY Achievementrarity = "LEGENDARY"
-)
-
-func (e *Achievementrarity) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = Achievementrarity(s)
-	case string:
-		*e = Achievementrarity(s)
-	default:
-		return fmt.Errorf("unsupported scan type for Achievementrarity: %T", src)
-	}
-	return nil
-}
-
-type NullAchievementrarity struct {
-	Achievementrarity Achievementrarity `json:"achievementrarity"`
-	Valid             bool              `json:"valid"` // Valid is true if Achievementrarity is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullAchievementrarity) Scan(value interface{}) error {
-	if value == nil {
-		ns.Achievementrarity, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.Achievementrarity.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullAchievementrarity) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.Achievementrarity), nil
-}
-
-type Achievementtype string
-
-const (
-	AchievementtypeMILESTONE    Achievementtype = "MILESTONE"
-	AchievementtypeSTREAK       Achievementtype = "STREAK"
-	AchievementtypeMASTERY      Achievementtype = "MASTERY"
-	AchievementtypeTASKCOMPLETE Achievementtype = "TASK_COMPLETE"
-	AchievementtypeHIDDEN       Achievementtype = "HIDDEN"
-	AchievementtypeSOCIAL       Achievementtype = "SOCIAL"
-	AchievementtypeCONTRACT     Achievementtype = "CONTRACT"
-	AchievementtypeSTUDYTIME    Achievementtype = "STUDY_TIME"
-	AchievementtypeNODEEXPLORE  Achievementtype = "NODE_EXPLORE"
-	AchievementtypeSPRINT       Achievementtype = "SPRINT"
-)
-
-func (e *Achievementtype) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = Achievementtype(s)
-	case string:
-		*e = Achievementtype(s)
-	default:
-		return fmt.Errorf("unsupported scan type for Achievementtype: %T", src)
-	}
-	return nil
-}
-
-type NullAchievementtype struct {
-	Achievementtype Achievementtype `json:"achievementtype"`
-	Valid           bool            `json:"valid"` // Valid is true if Achievementtype is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullAchievementtype) Scan(value interface{}) error {
-	if value == nil {
-		ns.Achievementtype, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.Achievementtype.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullAchievementtype) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.Achievementtype), nil
-}
 
 type Analysisstatus string
 
@@ -191,93 +96,6 @@ func (ns NullAvatarstatus) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return string(ns.Avatarstatus), nil
-}
-
-type Contractstatus string
-
-const (
-	ContractstatusACTIVE    Contractstatus = "ACTIVE"
-	ContractstatusCOMPLETED Contractstatus = "COMPLETED"
-	ContractstatusFAILED    Contractstatus = "FAILED"
-	ContractstatusEXPIRED   Contractstatus = "EXPIRED"
-)
-
-func (e *Contractstatus) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = Contractstatus(s)
-	case string:
-		*e = Contractstatus(s)
-	default:
-		return fmt.Errorf("unsupported scan type for Contractstatus: %T", src)
-	}
-	return nil
-}
-
-type NullContractstatus struct {
-	Contractstatus Contractstatus `json:"contractstatus"`
-	Valid          bool           `json:"valid"` // Valid is true if Contractstatus is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullContractstatus) Scan(value interface{}) error {
-	if value == nil {
-		ns.Contractstatus, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.Contractstatus.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullContractstatus) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.Contractstatus), nil
-}
-
-type Depthlevel string
-
-const (
-	DepthlevelSHALLOW Depthlevel = "SHALLOW"
-	DepthlevelMEDIUM  Depthlevel = "MEDIUM"
-	DepthlevelDEEP    Depthlevel = "DEEP"
-)
-
-func (e *Depthlevel) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = Depthlevel(s)
-	case string:
-		*e = Depthlevel(s)
-	default:
-		return fmt.Errorf("unsupported scan type for Depthlevel: %T", src)
-	}
-	return nil
-}
-
-type NullDepthlevel struct {
-	Depthlevel Depthlevel `json:"depthlevel"`
-	Valid      bool       `json:"valid"` // Valid is true if Depthlevel is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullDepthlevel) Scan(value interface{}) error {
-	if value == nil {
-		ns.Depthlevel, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.Depthlevel.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullDepthlevel) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.Depthlevel), nil
 }
 
 type Focusstatus string
@@ -676,94 +494,6 @@ func (ns NullOfflinemessagestatus) Value() (driver.Value, error) {
 	return string(ns.Offlinemessagestatus), nil
 }
 
-type Planpriority string
-
-const (
-	PlanpriorityCritical Planpriority = "critical"
-	PlanpriorityHigh     Planpriority = "high"
-	PlanpriorityNormal   Planpriority = "normal"
-	PlanpriorityLow      Planpriority = "low"
-)
-
-func (e *Planpriority) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = Planpriority(s)
-	case string:
-		*e = Planpriority(s)
-	default:
-		return fmt.Errorf("unsupported scan type for Planpriority: %T", src)
-	}
-	return nil
-}
-
-type NullPlanpriority struct {
-	Planpriority Planpriority `json:"planpriority"`
-	Valid        bool         `json:"valid"` // Valid is true if Planpriority is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullPlanpriority) Scan(value interface{}) error {
-	if value == nil {
-		ns.Planpriority, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.Planpriority.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullPlanpriority) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.Planpriority), nil
-}
-
-type Planstage string
-
-const (
-	PlanstageSprint Planstage = "sprint"
-	PlanstageDaily  Planstage = "daily"
-	PlanstageReview Planstage = "review"
-	PlanstagePaused Planstage = "paused"
-)
-
-func (e *Planstage) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = Planstage(s)
-	case string:
-		*e = Planstage(s)
-	default:
-		return fmt.Errorf("unsupported scan type for Planstage: %T", src)
-	}
-	return nil
-}
-
-type NullPlanstage struct {
-	Planstage Planstage `json:"planstage"`
-	Valid     bool      `json:"valid"` // Valid is true if Planstage is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullPlanstage) Scan(value interface{}) error {
-	if value == nil {
-		ns.Planstage, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.Planstage.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullPlanstage) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.Planstage), nil
-}
-
 type Plantype string
 
 const (
@@ -896,49 +626,6 @@ func (ns NullReportstatus) Value() (driver.Value, error) {
 	return string(ns.Reportstatus), nil
 }
 
-type Subtaskstatus string
-
-const (
-	SubtaskstatusPENDING    Subtaskstatus = "PENDING"
-	SubtaskstatusINPROGRESS Subtaskstatus = "IN_PROGRESS"
-	SubtaskstatusCOMPLETED  Subtaskstatus = "COMPLETED"
-)
-
-func (e *Subtaskstatus) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = Subtaskstatus(s)
-	case string:
-		*e = Subtaskstatus(s)
-	default:
-		return fmt.Errorf("unsupported scan type for Subtaskstatus: %T", src)
-	}
-	return nil
-}
-
-type NullSubtaskstatus struct {
-	Subtaskstatus Subtaskstatus `json:"subtaskstatus"`
-	Valid         bool          `json:"valid"` // Valid is true if Subtaskstatus is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullSubtaskstatus) Scan(value interface{}) error {
-	if value == nil {
-		ns.Subtaskstatus, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.Subtaskstatus.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullSubtaskstatus) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.Subtaskstatus), nil
-}
-
 type Taskstatus string
 
 const (
@@ -992,7 +679,6 @@ const (
 	TasktypeREFLECTION Tasktype = "REFLECTION"
 	TasktypeSOCIAL     Tasktype = "SOCIAL"
 	TasktypePLANNING   Tasktype = "PLANNING"
-	TasktypeOCR        Tasktype = "OCR"
 )
 
 func (e *Tasktype) Scan(src interface{}) error {
@@ -1073,205 +759,8 @@ func (ns NullUserstatus) Value() (driver.Value, error) {
 	return string(ns.Userstatus), nil
 }
 
-type Visualeffecttype string
-
-const (
-	VisualeffecttypeNONE               Visualeffecttype = "NONE"
-	VisualeffecttypeBLACKHOLE          Visualeffecttype = "BLACK_HOLE"
-	VisualeffecttypeSUPERNOVA          Visualeffecttype = "SUPERNOVA"
-	VisualeffecttypeGRAVITYWAVE        Visualeffecttype = "GRAVITY_WAVE"
-	VisualeffecttypeNEBULATRANSFORM    Visualeffecttype = "NEBULA_TRANSFORM"
-	VisualeffecttypeGALAXYSKIN         Visualeffecttype = "GALAXY_SKIN"
-	VisualeffecttypeDUALSTARCONNECTION Visualeffecttype = "DUAL_STAR_CONNECTION"
-)
-
-func (e *Visualeffecttype) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = Visualeffecttype(s)
-	case string:
-		*e = Visualeffecttype(s)
-	default:
-		return fmt.Errorf("unsupported scan type for Visualeffecttype: %T", src)
-	}
-	return nil
-}
-
-type NullVisualeffecttype struct {
-	Visualeffecttype Visualeffecttype `json:"visualeffecttype"`
-	Valid            bool             `json:"valid"` // Valid is true if Visualeffecttype is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullVisualeffecttype) Scan(value interface{}) error {
-	if value == nil {
-		ns.Visualeffecttype, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.Visualeffecttype.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullVisualeffecttype) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.Visualeffecttype), nil
-}
-
-type AbExperiment struct {
-	Name                    string           `json:"name"`
-	Description             pgtype.Text      `json:"description"`
-	Hypothesis              string           `json:"hypothesis"`
-	Status                  string           `json:"status"`
-	CreatedBy               pgtype.UUID      `json:"created_by"`
-	SampleSizeTarget        pgtype.Int4      `json:"sample_size_target"`
-	SignificanceLevel       float64          `json:"significance_level"`
-	Power                   float64          `json:"power"`
-	MinimumDetectableEffect pgtype.Float8    `json:"minimum_detectable_effect"`
-	StartDate               pgtype.Timestamp `json:"start_date"`
-	EndDate                 pgtype.Timestamp `json:"end_date"`
-	Conclusion              pgtype.Text      `json:"conclusion"`
-	WinningVariantID        pgtype.UUID      `json:"winning_variant_id"`
-	ExtraMetadata           []byte           `json:"extra_metadata"`
-	ID                      pgtype.UUID      `json:"id"`
-	CreatedAt               pgtype.Timestamp `json:"created_at"`
-	UpdatedAt               pgtype.Timestamp `json:"updated_at"`
-	DeletedAt               pgtype.Timestamp `json:"deleted_at"`
-}
-
-type AbExperimentAssignment struct {
-	ExperimentID    pgtype.UUID      `json:"experiment_id"`
-	UserID          pgtype.UUID      `json:"user_id"`
-	VariantID       pgtype.UUID      `json:"variant_id"`
-	AssignmentDate  pgtype.Timestamp `json:"assignment_date"`
-	IsExcluded      bool             `json:"is_excluded"`
-	ExclusionReason pgtype.Text      `json:"exclusion_reason"`
-	ID              pgtype.UUID      `json:"id"`
-	CreatedAt       pgtype.Timestamp `json:"created_at"`
-	UpdatedAt       pgtype.Timestamp `json:"updated_at"`
-	DeletedAt       pgtype.Timestamp `json:"deleted_at"`
-}
-
-type AbExperimentMetric struct {
-	ExperimentID pgtype.UUID      `json:"experiment_id"`
-	VariantID    pgtype.UUID      `json:"variant_id"`
-	UserID       pgtype.UUID      `json:"user_id"`
-	MetricName   string           `json:"metric_name"`
-	MetricValue  float64          `json:"metric_value"`
-	MetricType   string           `json:"metric_type"`
-	ContextData  []byte           `json:"context_data"`
-	Timestamp    pgtype.Timestamp `json:"timestamp"`
-	ID           pgtype.UUID      `json:"id"`
-	CreatedAt    pgtype.Timestamp `json:"created_at"`
-	UpdatedAt    pgtype.Timestamp `json:"updated_at"`
-	DeletedAt    pgtype.Timestamp `json:"deleted_at"`
-}
-
-type AbExperimentVariant struct {
-	ExperimentID                pgtype.UUID      `json:"experiment_id"`
-	VariantName                 string           `json:"variant_name"`
-	Description                 pgtype.Text      `json:"description"`
-	IsControl                   bool             `json:"is_control"`
-	PromptVersion               pgtype.Text      `json:"prompt_version"`
-	Configuration               []byte           `json:"configuration"`
-	AllocationWeight            float64          `json:"allocation_weight"`
-	TrafficAllocationPercentage float64          `json:"traffic_allocation_percentage"`
-	ExtraMetadata               []byte           `json:"extra_metadata"`
-	ID                          pgtype.UUID      `json:"id"`
-	CreatedAt                   pgtype.Timestamp `json:"created_at"`
-	UpdatedAt                   pgtype.Timestamp `json:"updated_at"`
-	DeletedAt                   pgtype.Timestamp `json:"deleted_at"`
-}
-
-type Achievement struct {
-	ID               string                `json:"id"`
-	Name             string                `json:"name"`
-	Description      pgtype.Text           `json:"description"`
-	IconUrl          pgtype.Text           `json:"icon_url"`
-	Type             Achievementtype       `json:"type"`
-	Rarity           NullAchievementrarity `json:"rarity"`
-	TriggerCode      string                `json:"trigger_code"`
-	TriggerConfig    []byte                `json:"trigger_config"`
-	IsHidden         pgtype.Bool           `json:"is_hidden"`
-	Hint             pgtype.Text           `json:"hint"`
-	Prerequisites    []byte                `json:"prerequisites"`
-	VisualEffectType NullVisualeffecttype  `json:"visual_effect_type"`
-	VisualConfig     []byte                `json:"visual_config"`
-	RewardConfig     []byte                `json:"reward_config"`
-	TotalUnlocked    pgtype.Int4           `json:"total_unlocked"`
-	FirstUnlockerID  pgtype.UUID           `json:"first_unlocker_id"`
-	SortOrder        pgtype.Int4           `json:"sort_order"`
-	Category         pgtype.Text           `json:"category"`
-	ParentID         pgtype.Text           `json:"parent_id"`
-	CreatedAt        pgtype.Timestamp      `json:"created_at"`
-	UpdatedAt        pgtype.Timestamp      `json:"updated_at"`
-	DeletedAt        pgtype.Timestamp      `json:"deleted_at"`
-}
-
 type AlembicVersion struct {
 	VersionNum string `json:"version_num"`
-}
-
-type Appeal struct {
-	AppealID          string           `json:"appeal_id"`
-	ReviewID          string           `json:"review_id"`
-	UserID            pgtype.UUID      `json:"user_id"`
-	AppealReason      string           `json:"appeal_reason"`
-	IssuesWithReview  []byte           `json:"issues_with_review"`
-	Status            string           `json:"status"`
-	AssignedTo        pgtype.Text      `json:"assigned_to"`
-	SecondaryReviewID pgtype.Text      `json:"secondary_review_id"`
-	SecondaryDecision pgtype.Text      `json:"secondary_decision"`
-	SecondaryScore    pgtype.Float8    `json:"secondary_score"`
-	Resolution        pgtype.Text      `json:"resolution"`
-	ResolvedBy        pgtype.Text      `json:"resolved_by"`
-	ResolvedAt        pgtype.Timestamp `json:"resolved_at"`
-	ID                pgtype.UUID      `json:"id"`
-	CreatedAt         pgtype.Timestamp `json:"created_at"`
-	UpdatedAt         pgtype.Timestamp `json:"updated_at"`
-	DeletedAt         pgtype.Timestamp `json:"deleted_at"`
-}
-
-type ArbitrationCase struct {
-	CaseID               string           `json:"case_id"`
-	AppealID             string           `json:"appeal_id"`
-	ReviewID             string           `json:"review_id"`
-	UserID               pgtype.UUID      `json:"user_id"`
-	EscalationReason     string           `json:"escalation_reason"`
-	Priority             string           `json:"priority"`
-	Status               string           `json:"status"`
-	AssignedTo           pgtype.Text      `json:"assigned_to"`
-	AssignedAt           pgtype.Timestamp `json:"assigned_at"`
-	OriginalReviewScore  float64          `json:"original_review_score"`
-	SecondaryReviewScore pgtype.Float8    `json:"secondary_review_score"`
-	ScoreDiscrepancy     float64          `json:"score_discrepancy"`
-	Resolution           pgtype.Text      `json:"resolution"`
-	FinalDecision        pgtype.Text      `json:"final_decision"`
-	ResolvedAt           pgtype.Timestamp `json:"resolved_at"`
-	ResolvedBy           pgtype.Text      `json:"resolved_by"`
-	Notes                []byte           `json:"notes"`
-	Evidence             []byte           `json:"evidence"`
-	ID                   pgtype.UUID      `json:"id"`
-	CreatedAt            pgtype.Timestamp `json:"created_at"`
-	UpdatedAt            pgtype.Timestamp `json:"updated_at"`
-	DeletedAt            pgtype.Timestamp `json:"deleted_at"`
-}
-
-type ArbitrationDecision struct {
-	CaseID           string           `json:"case_id"`
-	Decision         string           `json:"decision"`
-	Explanation      string           `json:"explanation"`
-	ArbitratorID     string           `json:"arbitrator_id"`
-	ArbitratorRole   string           `json:"arbitrator_role"`
-	Confidence       float64          `json:"confidence"`
-	FeedbackForModel pgtype.Text      `json:"feedback_for_model"`
-	DecidedAt        pgtype.Timestamp `json:"decided_at"`
-	ID               pgtype.UUID      `json:"id"`
-	CreatedAt        pgtype.Timestamp `json:"created_at"`
-	UpdatedAt        pgtype.Timestamp `json:"updated_at"`
-	DeletedAt        pgtype.Timestamp `json:"deleted_at"`
 }
 
 type BehaviorPattern struct {
@@ -1284,12 +773,12 @@ type BehaviorPattern struct {
 	ConfidenceScore pgtype.Float8    `json:"confidence_score"`
 	Frequency       pgtype.Int4      `json:"frequency"`
 	IsArchived      pgtype.Bool      `json:"is_archived"`
-	LastObservedAt  pgtype.Timestamp `json:"last_observed_at"`
-	LastDecayAt     pgtype.Timestamp `json:"last_decay_at"`
 	ID              pgtype.UUID      `json:"id"`
 	CreatedAt       pgtype.Timestamp `json:"created_at"`
 	UpdatedAt       pgtype.Timestamp `json:"updated_at"`
 	DeletedAt       pgtype.Timestamp `json:"deleted_at"`
+	LastObservedAt  pgtype.Timestamp `json:"last_observed_at"`
+	LastDecayAt     pgtype.Timestamp `json:"last_decay_at"`
 }
 
 type BehavioralOutcome struct {
@@ -1318,53 +807,6 @@ type BroadcastMessage struct {
 	DeletedAt      pgtype.Timestamp `json:"deleted_at"`
 }
 
-type CapsuleFavorite struct {
-	UserID    pgtype.UUID      `json:"user_id"`
-	CapsuleID pgtype.UUID      `json:"capsule_id"`
-	Note      pgtype.Text      `json:"note"`
-	ID        pgtype.UUID      `json:"id"`
-	CreatedAt pgtype.Timestamp `json:"created_at"`
-	UpdatedAt pgtype.Timestamp `json:"updated_at"`
-	DeletedAt pgtype.Timestamp `json:"deleted_at"`
-}
-
-type CapsuleFeedback struct {
-	UserID                 pgtype.UUID      `json:"user_id"`
-	CapsuleID              pgtype.UUID      `json:"capsule_id"`
-	Rating                 pgtype.Int4      `json:"rating"`
-	Helpful                pgtype.Bool      `json:"helpful"`
-	Category               pgtype.Text      `json:"category"`
-	Comment                pgtype.Text      `json:"comment"`
-	InferredDepthDelta     pgtype.Float8    `json:"inferred_depth_delta"`
-	InferredCuriosityDelta pgtype.Float8    `json:"inferred_curiosity_delta"`
-	ID                     pgtype.UUID      `json:"id"`
-	CreatedAt              pgtype.Timestamp `json:"created_at"`
-	UpdatedAt              pgtype.Timestamp `json:"updated_at"`
-	DeletedAt              pgtype.Timestamp `json:"deleted_at"`
-}
-
-type CapsuleGenerationJob struct {
-	UserID              pgtype.UUID      `json:"user_id"`
-	Status              string           `json:"status"`
-	GenerationType      string           `json:"generation_type"`
-	DepthPreference     float64          `json:"depth_preference"`
-	CuriosityPreference float64          `json:"curiosity_preference"`
-	RequestedCount      int32            `json:"requested_count"`
-	ActualCount         pgtype.Int4      `json:"actual_count"`
-	CapsuleIds          []pgtype.UUID    `json:"capsule_ids"`
-	Progress            float64          `json:"progress"`
-	ErrorMessage        pgtype.Text      `json:"error_message"`
-	DurationMs          pgtype.Int4      `json:"duration_ms"`
-	ModelUsed           pgtype.Text      `json:"model_used"`
-	ScheduledFor        pgtype.Timestamp `json:"scheduled_for"`
-	StartedAt           pgtype.Timestamp `json:"started_at"`
-	CompletedAt         pgtype.Timestamp `json:"completed_at"`
-	ID                  pgtype.UUID      `json:"id"`
-	CreatedAt           pgtype.Timestamp `json:"created_at"`
-	UpdatedAt           pgtype.Timestamp `json:"updated_at"`
-	DeletedAt           pgtype.Timestamp `json:"deleted_at"`
-}
-
 type ChatMessage struct {
 	ID            pgtype.UUID      `json:"id"`
 	CreatedAt     pgtype.Timestamp `json:"created_at"`
@@ -1378,17 +820,6 @@ type ChatMessage struct {
 	ParseDegraded pgtype.Bool      `json:"parse_degraded"`
 	TokensUsed    pgtype.Int4      `json:"tokens_used"`
 	ModelName     pgtype.Text      `json:"model_name"`
-	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
-	DeletedAt     pgtype.Timestamp `json:"deleted_at"`
-}
-
-type ChatSession struct {
-	UserID        pgtype.UUID      `json:"user_id"`
-	Title         pgtype.Text      `json:"title"`
-	IsActive      bool             `json:"is_active"`
-	LastMessageAt pgtype.Timestamp `json:"last_message_at"`
-	ID            pgtype.UUID      `json:"id"`
-	CreatedAt     pgtype.Timestamp `json:"created_at"`
 	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
 	DeletedAt     pgtype.Timestamp `json:"deleted_at"`
 }
@@ -1412,7 +843,7 @@ type CognitiveFragment struct {
 	ErrorTags              []byte           `json:"error_tags"`
 	ContextTags            []byte           `json:"context_tags"`
 	Severity               int32            `json:"severity"`
-	Embedding              pgvector.Vector  `json:"embedding"`
+	Embedding              interface{}      `json:"embedding"`
 	ID                     pgtype.UUID      `json:"id"`
 	CreatedAt              pgtype.Timestamp `json:"created_at"`
 	UpdatedAt              pgtype.Timestamp `json:"updated_at"`
@@ -1512,22 +943,16 @@ type CryptoShreddingCertificate struct {
 }
 
 type CuriosityCapsule struct {
-	UserID           pgtype.UUID      `json:"user_id"`
-	Title            string           `json:"title"`
-	Content          string           `json:"content"`
-	RelatedSubject   pgtype.Text      `json:"related_subject"`
-	RelatedTaskID    pgtype.UUID      `json:"related_task_id"`
-	IsRead           bool             `json:"is_read"`
-	DepthLevel       NullDepthlevel   `json:"depth_level"`
-	GenerationMethod pgtype.Text      `json:"generation_method"`
-	SourceContext    []byte           `json:"source_context"`
-	QualityScore     pgtype.Float8    `json:"quality_score"`
-	FeedbackCount    int32            `json:"feedback_count"`
-	ShareCount       int32            `json:"share_count"`
-	ID               pgtype.UUID      `json:"id"`
-	CreatedAt        pgtype.Timestamp `json:"created_at"`
-	UpdatedAt        pgtype.Timestamp `json:"updated_at"`
-	DeletedAt        pgtype.Timestamp `json:"deleted_at"`
+	UserID         pgtype.UUID      `json:"user_id"`
+	Title          string           `json:"title"`
+	Content        string           `json:"content"`
+	RelatedSubject pgtype.Text      `json:"related_subject"`
+	RelatedTaskID  pgtype.UUID      `json:"related_task_id"`
+	IsRead         bool             `json:"is_read"`
+	ID             pgtype.UUID      `json:"id"`
+	CreatedAt      pgtype.Timestamp `json:"created_at"`
+	UpdatedAt      pgtype.Timestamp `json:"updated_at"`
+	DeletedAt      pgtype.Timestamp `json:"deleted_at"`
 }
 
 type DataAccessLog struct {
@@ -1585,20 +1010,17 @@ type DlqReplayAuditLog struct {
 }
 
 type DocumentChunk struct {
-	FileID          pgtype.UUID      `json:"file_id"`
-	UserID          pgtype.UUID      `json:"user_id"`
-	ChunkIndex      int32            `json:"chunk_index"`
-	PageNumbers     []byte           `json:"page_numbers"`
-	SectionTitle    pgtype.Text      `json:"section_title"`
-	Bbox            []byte           `json:"bbox"`
-	QualityScore    pgtype.Float8    `json:"quality_score"`
-	PipelineVersion pgtype.Text      `json:"pipeline_version"`
-	Content         string           `json:"content"`
-	Embedding       pgvector.Vector  `json:"embedding"`
-	ID              pgtype.UUID      `json:"id"`
-	CreatedAt       pgtype.Timestamp `json:"created_at"`
-	UpdatedAt       pgtype.Timestamp `json:"updated_at"`
-	DeletedAt       pgtype.Timestamp `json:"deleted_at"`
+	FileID       pgtype.UUID      `json:"file_id"`
+	UserID       pgtype.UUID      `json:"user_id"`
+	ChunkIndex   int32            `json:"chunk_index"`
+	PageNumber   pgtype.Int4      `json:"page_number"`
+	SectionTitle pgtype.Text      `json:"section_title"`
+	Content      string           `json:"content"`
+	Embedding    interface{}      `json:"embedding"`
+	ID           pgtype.UUID      `json:"id"`
+	CreatedAt    pgtype.Timestamp `json:"created_at"`
+	UpdatedAt    pgtype.Timestamp `json:"updated_at"`
+	DeletedAt    pgtype.Timestamp `json:"deleted_at"`
 }
 
 type EpisodicMemory struct {
@@ -1608,19 +1030,19 @@ type EpisodicMemory struct {
 	SourceID          pgtype.Text      `json:"source_id"`
 	OccurredAt        pgtype.Timestamp `json:"occurred_at"`
 	ImportanceScore   pgtype.Float8    `json:"importance_score"`
-	EvidenceScore     float64          `json:"evidence_score"`
-	CorrectionCount   int32            `json:"correction_count"`
 	Tags              []byte           `json:"tags"`
 	EvidenceRefs      []byte           `json:"evidence_refs"`
-	EvidenceMissing   bool             `json:"evidence_missing"`
-	EvidenceCheckedAt pgtype.Timestamp `json:"evidence_checked_at"`
-	EvidenceSnapshot  []byte           `json:"evidence_snapshot"`
-	RetractedAt       pgtype.Timestamp `json:"retracted_at"`
-	Embedding         pgvector.Vector  `json:"embedding"`
+	Embedding         interface{}      `json:"embedding"`
 	ID                pgtype.UUID      `json:"id"`
 	CreatedAt         pgtype.Timestamp `json:"created_at"`
 	UpdatedAt         pgtype.Timestamp `json:"updated_at"`
 	DeletedAt         pgtype.Timestamp `json:"deleted_at"`
+	EvidenceMissing   bool             `json:"evidence_missing"`
+	EvidenceCheckedAt pgtype.Timestamp `json:"evidence_checked_at"`
+	EvidenceSnapshot  []byte           `json:"evidence_snapshot"`
+	RetractedAt       pgtype.Timestamp `json:"retracted_at"`
+	EvidenceScore     float64          `json:"evidence_score"`
+	CorrectionCount   int32            `json:"correction_count"`
 }
 
 type ErrorRecord struct {
@@ -1651,7 +1073,7 @@ type ErrorRecord struct {
 type EventOutbox struct {
 	ID             pgtype.UUID      `json:"id"`
 	AggregateType  string           `json:"aggregate_type"`
-	AggregateID    pgtype.UUID      `json:"aggregate_id"`
+	AggregateID    string           `json:"aggregate_id"`
 	EventType      string           `json:"event_type"`
 	EventVersion   int32            `json:"event_version"`
 	Payload        []byte           `json:"payload"`
@@ -1662,32 +1084,15 @@ type EventOutbox struct {
 }
 
 type EventStore struct {
-	ID             pgtype.UUID      `json:"id"`
+	ID             int64            `json:"id"`
 	AggregateType  string           `json:"aggregate_type"`
-	AggregateID    pgtype.UUID      `json:"aggregate_id"`
+	AggregateID    string           `json:"aggregate_id"`
 	EventType      string           `json:"event_type"`
 	EventVersion   int32            `json:"event_version"`
 	SequenceNumber int64            `json:"sequence_number"`
 	Payload        []byte           `json:"payload"`
 	Metadata       []byte           `json:"metadata"`
 	CreatedAt      pgtype.Timestamp `json:"created_at"`
-}
-
-type EvolutionPrediction struct {
-	MemoryID            pgtype.UUID      `json:"memory_id"`
-	PredictionType      string           `json:"prediction_type"`
-	Probability         float64          `json:"probability"`
-	TimeHorizon         pgtype.Int4      `json:"time_horizon"`
-	PredictedValue      []byte           `json:"predicted_value"`
-	PredictedConfidence pgtype.Float8    `json:"predicted_confidence"`
-	Factors             []byte           `json:"factors"`
-	SimilarEvolutions   []int32          `json:"similar_evolutions"`
-	CreatedAt           pgtype.Timestamp `json:"created_at"`
-	ActualizedAt        pgtype.Timestamp `json:"actualized_at"`
-	ActualizationError  pgtype.Float8    `json:"actualization_error"`
-	ID                  pgtype.UUID      `json:"id"`
-	UpdatedAt           pgtype.Timestamp `json:"updated_at"`
-	DeletedAt           pgtype.Timestamp `json:"deleted_at"`
 }
 
 type ExpansionFeedback struct {
@@ -1731,21 +1136,6 @@ type Friendship struct {
 	CreatedAt   pgtype.Timestamp `json:"created_at"`
 	UpdatedAt   pgtype.Timestamp `json:"updated_at"`
 	DeletedAt   pgtype.Timestamp `json:"deleted_at"`
-}
-
-type GalaxySkin struct {
-	ID                string                `json:"id"`
-	Name              pgtype.Text           `json:"name"`
-	Description       pgtype.Text           `json:"description"`
-	PreviewUrl        pgtype.Text           `json:"preview_url"`
-	UnlockType        pgtype.Text           `json:"unlock_type"`
-	UnlockRequirement []byte                `json:"unlock_requirement"`
-	SkinConfig        []byte                `json:"skin_config"`
-	Rarity            NullAchievementrarity `json:"rarity"`
-	SortOrder         pgtype.Int4           `json:"sort_order"`
-	CreatedAt         pgtype.Timestamp      `json:"created_at"`
-	UpdatedAt         pgtype.Timestamp      `json:"updated_at"`
-	DeletedAt         pgtype.Timestamp      `json:"deleted_at"`
 }
 
 type GalaxyUserPermission struct {
@@ -1904,11 +1294,11 @@ type InterventionFeedback struct {
 	UserID         pgtype.UUID      `json:"user_id"`
 	FeedbackType   string           `json:"feedback_type"`
 	ExtraData      []byte           `json:"extra_data"`
-	IdempotencyKey string           `json:"idempotency_key"`
 	ID             pgtype.UUID      `json:"id"`
 	CreatedAt      pgtype.Timestamp `json:"created_at"`
 	UpdatedAt      pgtype.Timestamp `json:"updated_at"`
 	DeletedAt      pgtype.Timestamp `json:"deleted_at"`
+	IdempotencyKey string           `json:"idempotency_key"`
 }
 
 type InterventionRequest struct {
@@ -1921,11 +1311,6 @@ type InterventionRequest struct {
 	Reason            []byte           `json:"reason"`
 	Content           []byte           `json:"content"`
 	CooldownPolicy    []byte           `json:"cooldown_policy"`
-	DeliveryMethod    pgtype.Text      `json:"delivery_method"`
-	TemplateID        pgtype.Text      `json:"template_id"`
-	TemplateVariantID pgtype.Text      `json:"template_variant_id"`
-	ScaffoldingLevel  pgtype.Int4      `json:"scaffolding_level"`
-	IntentType        pgtype.Text      `json:"intent_type"`
 	SchemaVersion     string           `json:"schema_version"`
 	PolicyVersion     pgtype.Text      `json:"policy_version"`
 	ModelVersion      pgtype.Text      `json:"model_version"`
@@ -1936,6 +1321,11 @@ type InterventionRequest struct {
 	CreatedAt         pgtype.Timestamp `json:"created_at"`
 	UpdatedAt         pgtype.Timestamp `json:"updated_at"`
 	DeletedAt         pgtype.Timestamp `json:"deleted_at"`
+	DeliveryMethod    pgtype.Text      `json:"delivery_method"`
+	TemplateID        pgtype.Text      `json:"template_id"`
+	TemplateVariantID pgtype.Text      `json:"template_variant_id"`
+	ScaffoldingLevel  pgtype.Int4      `json:"scaffolding_level"`
+	IntentType        pgtype.Text      `json:"intent_type"`
 }
 
 type InterventionTemplate struct {
@@ -1945,8 +1335,8 @@ type InterventionTemplate struct {
 	Variants     []byte           `json:"variants"`
 	Meta         []byte           `json:"meta"`
 	Version      int32            `json:"version"`
-	ID           pgtype.UUID      `json:"id"`
 	CreatedAt    pgtype.Timestamp `json:"created_at"`
+	ID           pgtype.UUID      `json:"id"`
 	UpdatedAt    pgtype.Timestamp `json:"updated_at"`
 	DeletedAt    pgtype.Timestamp `json:"deleted_at"`
 }
@@ -1991,10 +1381,7 @@ type KnowledgeNode struct {
 	IsSeed           pgtype.Bool      `json:"is_seed"`
 	SourceType       pgtype.Text      `json:"source_type"`
 	SourceTaskID     pgtype.UUID      `json:"source_task_id"`
-	SourceFileID     pgtype.UUID      `json:"source_file_id"`
-	ChunkRefs        []byte           `json:"chunk_refs"`
-	Status           pgtype.Text      `json:"status"`
-	Embedding        pgvector.Vector  `json:"embedding"`
+	Embedding        interface{}      `json:"embedding"`
 	PositionX        pgtype.Float8    `json:"position_x"`
 	PositionY        pgtype.Float8    `json:"position_y"`
 	GlobalSparkCount int32            `json:"global_spark_count"`
@@ -2033,12 +1420,22 @@ type LoginAttempt struct {
 }
 
 type LtmDailySnapshot struct {
-	SnapshotDate pgtype.Date      `json:"snapshot_date"`
-	Payload      []byte           `json:"payload"`
 	ID           pgtype.UUID      `json:"id"`
 	CreatedAt    pgtype.Timestamp `json:"created_at"`
 	UpdatedAt    pgtype.Timestamp `json:"updated_at"`
 	DeletedAt    pgtype.Timestamp `json:"deleted_at"`
+	SnapshotDate pgtype.Date      `json:"snapshot_date"`
+	Payload      []byte           `json:"payload"`
+}
+
+type MasteryAuditLog struct {
+	ID           int32            `json:"id"`
+	UserID       pgtype.UUID      `json:"user_id"`
+	NodeID       pgtype.UUID      `json:"node_id"`
+	OldMastery   float64          `json:"old_mastery"`
+	NewMastery   float64          `json:"new_mastery"`
+	ChangeReason string           `json:"change_reason"`
+	CreatedAt    pgtype.Timestamp `json:"created_at"`
 }
 
 type MemoryCorrection struct {
@@ -2053,31 +1450,6 @@ type MemoryCorrection struct {
 	DeletedAt  pgtype.Timestamp `json:"deleted_at"`
 }
 
-type MemoryEvolution struct {
-	MemoryID            pgtype.UUID      `json:"memory_id"`
-	MemoryType          string           `json:"memory_type"`
-	OldValue            []byte           `json:"old_value"`
-	NewValue            []byte           `json:"new_value"`
-	ChangeType          string           `json:"change_type"`
-	ChangeReason        string           `json:"change_reason"`
-	ConfidenceDelta     float64          `json:"confidence_delta"`
-	ConfidenceBefore    float64          `json:"confidence_before"`
-	ConfidenceAfter     float64          `json:"confidence_after"`
-	EvidenceCountBefore int32            `json:"evidence_count_before"`
-	EvidenceCountAfter  int32            `json:"evidence_count_after"`
-	NewEvidenceIds      []pgtype.UUID    `json:"new_evidence_ids"`
-	ImpactScore         float64          `json:"impact_score"`
-	AffectedDecisions   []pgtype.UUID    `json:"affected_decisions"`
-	AffectedMemories    []pgtype.UUID    `json:"affected_memories"`
-	TriggerEvent        pgtype.Text      `json:"trigger_event"`
-	TriggerSource       pgtype.Text      `json:"trigger_source"`
-	WorkflowID          pgtype.Text      `json:"workflow_id"`
-	CreatedAt           pgtype.Timestamp `json:"created_at"`
-	ID                  pgtype.UUID      `json:"id"`
-	UpdatedAt           pgtype.Timestamp `json:"updated_at"`
-	DeletedAt           pgtype.Timestamp `json:"deleted_at"`
-}
-
 type MemoryGoal struct {
 	UserID            pgtype.UUID      `json:"user_id"`
 	Title             string           `json:"title"`
@@ -2086,17 +1458,17 @@ type MemoryGoal struct {
 	ExpiresAt         pgtype.Timestamp `json:"expires_at"`
 	LinkedTaskID      pgtype.UUID      `json:"linked_task_id"`
 	LinkedPlanID      pgtype.UUID      `json:"linked_plan_id"`
-	EvidenceScore     float64          `json:"evidence_score"`
-	CorrectionCount   int32            `json:"correction_count"`
 	EvidenceRefs      []byte           `json:"evidence_refs"`
 	Metadata          []byte           `json:"metadata"`
-	EvidenceMissing   bool             `json:"evidence_missing"`
-	EvidenceCheckedAt pgtype.Timestamp `json:"evidence_checked_at"`
-	RetractedAt       pgtype.Timestamp `json:"retracted_at"`
 	ID                pgtype.UUID      `json:"id"`
 	CreatedAt         pgtype.Timestamp `json:"created_at"`
 	UpdatedAt         pgtype.Timestamp `json:"updated_at"`
 	DeletedAt         pgtype.Timestamp `json:"deleted_at"`
+	EvidenceMissing   bool             `json:"evidence_missing"`
+	EvidenceCheckedAt pgtype.Timestamp `json:"evidence_checked_at"`
+	RetractedAt       pgtype.Timestamp `json:"retracted_at"`
+	EvidenceScore     float64          `json:"evidence_score"`
+	CorrectionCount   int32            `json:"correction_count"`
 }
 
 type MemoryPreference struct {
@@ -2106,16 +1478,16 @@ type MemoryPreference struct {
 	Version           int32            `json:"version"`
 	ReplacedByID      pgtype.UUID      `json:"replaced_by_id"`
 	Confidence        pgtype.Float8    `json:"confidence"`
-	EvidenceScore     float64          `json:"evidence_score"`
-	CorrectionCount   int32            `json:"correction_count"`
 	EvidenceRefs      []byte           `json:"evidence_refs"`
-	EvidenceMissing   bool             `json:"evidence_missing"`
-	EvidenceCheckedAt pgtype.Timestamp `json:"evidence_checked_at"`
-	RetractedAt       pgtype.Timestamp `json:"retracted_at"`
 	ID                pgtype.UUID      `json:"id"`
 	CreatedAt         pgtype.Timestamp `json:"created_at"`
 	UpdatedAt         pgtype.Timestamp `json:"updated_at"`
 	DeletedAt         pgtype.Timestamp `json:"deleted_at"`
+	EvidenceMissing   bool             `json:"evidence_missing"`
+	EvidenceCheckedAt pgtype.Timestamp `json:"evidence_checked_at"`
+	RetractedAt       pgtype.Timestamp `json:"retracted_at"`
+	EvidenceScore     float64          `json:"evidence_score"`
+	CorrectionCount   int32            `json:"correction_count"`
 }
 
 type MemoryRankPolicy struct {
@@ -2154,22 +1526,6 @@ type MessageReport struct {
 	CreatedAt        pgtype.Timestamp     `json:"created_at"`
 	UpdatedAt        pgtype.Timestamp     `json:"updated_at"`
 	DeletedAt        pgtype.Timestamp     `json:"deleted_at"`
-}
-
-type NextActionSelection struct {
-	UserID                pgtype.UUID      `json:"user_id"`
-	TaskID                pgtype.UUID      `json:"task_id"`
-	ActionType            string           `json:"action_type"`
-	ActionTitle           string           `json:"action_title"`
-	Selected              bool             `json:"selected"`
-	Skipped               bool             `json:"skipped"`
-	DisplayPosition       pgtype.Int4      `json:"display_position"`
-	DisplayedActionsCount pgtype.Int4      `json:"displayed_actions_count"`
-	Context               []byte           `json:"context"`
-	ID                    pgtype.UUID      `json:"id"`
-	CreatedAt             pgtype.Timestamp `json:"created_at"`
-	UpdatedAt             pgtype.Timestamp `json:"updated_at"`
-	DeletedAt             pgtype.Timestamp `json:"deleted_at"`
 }
 
 type NightlyReview struct {
@@ -2230,33 +1586,6 @@ type Notification struct {
 	DeletedAt pgtype.Timestamp `json:"deleted_at"`
 }
 
-type NotificationInteraction struct {
-	ID        pgtype.UUID      `json:"id"`
-	CreatedAt pgtype.Timestamp `json:"created_at"`
-	UserID    pgtype.UUID      `json:"user_id"`
-	// system or intervention
-	NotificationType string      `json:"notification_type"`
-	NotificationID   pgtype.UUID `json:"notification_id"`
-	// viewed, clicked, dismissed
-	ActionType string           `json:"action_type"`
-	ActionTime pgtype.Timestamp `json:"action_time"`
-	// Seconds from creation to action
-	TimeToAction pgtype.Int4 `json:"time_to_action"`
-}
-
-type NotificationPreference struct {
-	UserID              pgtype.UUID `json:"user_id"`
-	EnableSystem        bool        `json:"enable_system"`
-	EnableInterventions bool        `json:"enable_interventions"`
-	NotificationLevel   string      `json:"notification_level"`
-	QuietHoursEnabled   bool        `json:"quiet_hours_enabled"`
-	// HH:MM format
-	QuietHoursStart pgtype.Text `json:"quiet_hours_start"`
-	// HH:MM format
-	QuietHoursEnd pgtype.Text      `json:"quiet_hours_end"`
-	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
-}
-
 type OfflineMessageQueue struct {
 	UserID       pgtype.UUID          `json:"user_id"`
 	ClientNonce  string               `json:"client_nonce"`
@@ -2272,6 +1601,14 @@ type OfflineMessageQueue struct {
 	CreatedAt    pgtype.Timestamp     `json:"created_at"`
 	UpdatedAt    pgtype.Timestamp     `json:"updated_at"`
 	DeletedAt    pgtype.Timestamp     `json:"deleted_at"`
+}
+
+type OutboxEvent struct {
+	ID        int32            `json:"id"`
+	EventType string           `json:"event_type"`
+	Payload   []byte           `json:"payload"`
+	CreatedAt pgtype.Timestamp `json:"created_at"`
+	Processed pgtype.Bool      `json:"processed"`
 }
 
 type PassiveSignal struct {
@@ -2298,33 +1635,11 @@ type PersonaSnapshot struct {
 	DeletedAt      pgtype.Timestamp `json:"deleted_at"`
 }
 
-type PhotonTransactionHistory struct {
-	ID              pgtype.UUID `json:"id"`
-	UserID          pgtype.UUID `json:"user_id"`
-	TransactionType string      `json:"transaction_type"`
-	// 变动数量（正数为增加，负数为减少）
-	Amount int32 `json:"amount"`
-	// 交易前余额
-	BalanceBefore int32 `json:"balance_before"`
-	// 交易后余额
-	BalanceAfter int32 `json:"balance_after"`
-	// 来源描述
-	Source pgtype.Text `json:"source"`
-	// 相关物品ID（如商城物品ID、成就ID等）
-	RelatedItemID pgtype.Text `json:"related_item_id"`
-	// 额外元数据（JSON格式）
-	ExtraData []byte           `json:"extra_data"`
-	CreatedAt pgtype.Timestamp `json:"created_at"`
-	UpdatedAt pgtype.Timestamp `json:"updated_at"`
-	DeletedAt pgtype.Timestamp `json:"deleted_at"`
-}
-
 type Plan struct {
 	UserID                pgtype.UUID      `json:"user_id"`
 	Name                  string           `json:"name"`
 	Type                  Plantype         `json:"type"`
 	Description           pgtype.Text      `json:"description"`
-	PlanStage             Planstage        `json:"plan_stage"`
 	TargetDate            pgtype.Date      `json:"target_date"`
 	DailyAvailableMinutes int32            `json:"daily_available_minutes"`
 	TotalEstimatedHours   pgtype.Float8    `json:"total_estimated_hours"`
@@ -2332,53 +1647,10 @@ type Plan struct {
 	MasteryLevel          float64          `json:"mastery_level"`
 	Progress              float64          `json:"progress"`
 	IsActive              bool             `json:"is_active"`
-	Priority              Planpriority     `json:"priority"`
-	IsPrimary             bool             `json:"is_primary"`
 	ID                    pgtype.UUID      `json:"id"`
 	CreatedAt             pgtype.Timestamp `json:"created_at"`
 	UpdatedAt             pgtype.Timestamp `json:"updated_at"`
 	DeletedAt             pgtype.Timestamp `json:"deleted_at"`
-}
-
-type PlanExecutionRecord struct {
-	PlanID            pgtype.UUID      `json:"plan_id"`
-	UserID            pgtype.UUID      `json:"user_id"`
-	ValidationStatus  string           `json:"validation_status"`
-	QualityScore      pgtype.Float8    `json:"quality_score"`
-	CriteriaResults   []byte           `json:"criteria_results"`
-	TotalTools        pgtype.Int4      `json:"total_tools"`
-	SuccessfulTools   pgtype.Int4      `json:"successful_tools"`
-	FailedTools       pgtype.Int4      `json:"failed_tools"`
-	Issues            []byte           `json:"issues"`
-	UserSatisfaction  pgtype.Int4      `json:"user_satisfaction"`
-	UserFeedback      pgtype.Text      `json:"user_feedback"`
-	AppliedToLearning pgtype.Bool      `json:"applied_to_learning"`
-	ID                pgtype.UUID      `json:"id"`
-	CreatedAt         pgtype.Timestamp `json:"created_at"`
-	UpdatedAt         pgtype.Timestamp `json:"updated_at"`
-	DeletedAt         pgtype.Timestamp `json:"deleted_at"`
-}
-
-type PlanState struct {
-	PlanID                    pgtype.UUID      `json:"plan_id"`
-	UserID                    pgtype.UUID      `json:"user_id"`
-	Facts                     []byte           `json:"facts"`
-	Milestones                []byte           `json:"milestones"`
-	TaskIndex                 []byte           `json:"task_index"`
-	TaskSummaries             []byte           `json:"task_summaries"`
-	FeedbackLog               []byte           `json:"feedback_log"`
-	Constraints               []byte           `json:"constraints"`
-	Version                   int32            `json:"version"`
-	ConsecutiveRejectionCount int32            `json:"consecutive_rejection_count"`
-	IsFocus                   bool             `json:"is_focus"`
-	LastFocusTime             pgtype.Timestamp `json:"last_focus_time"`
-	ParallelPriority          int32            `json:"parallel_priority"`
-	Status                    string           `json:"status"`
-	ArchivedAt                pgtype.Timestamp `json:"archived_at"`
-	ID                        pgtype.UUID      `json:"id"`
-	CreatedAt                 pgtype.Timestamp `json:"created_at"`
-	UpdatedAt                 pgtype.Timestamp `json:"updated_at"`
-	DeletedAt                 pgtype.Timestamp `json:"deleted_at"`
 }
 
 type Post struct {
@@ -2433,17 +1705,17 @@ type PrivateMessage struct {
 }
 
 type ProcessedEvent struct {
-	EventID       string           `json:"event_id"`
+	EventID       pgtype.UUID      `json:"event_id"`
 	ConsumerGroup string           `json:"consumer_group"`
 	ProcessedAt   pgtype.Timestamp `json:"processed_at"`
 }
 
 type ProjectionMetadatum struct {
 	ProjectionName        string           `json:"projection_name"`
-	LastProcessedPosition pgtype.Text      `json:"last_processed_position"`
+	Status                string           `json:"status"`
+	LastProcessedPosition int64            `json:"last_processed_position"`
 	LastProcessedAt       pgtype.Timestamp `json:"last_processed_at"`
 	Version               int32            `json:"version"`
-	Status                string           `json:"status"`
 	ErrorMessage          pgtype.Text      `json:"error_message"`
 	CreatedAt             pgtype.Timestamp `json:"created_at"`
 	UpdatedAt             pgtype.Timestamp `json:"updated_at"`
@@ -2452,9 +1724,9 @@ type ProjectionMetadatum struct {
 type ProjectionSnapshot struct {
 	ID             pgtype.UUID      `json:"id"`
 	ProjectionName string           `json:"projection_name"`
-	AggregateID    pgtype.UUID      `json:"aggregate_id"`
+	AggregateID    pgtype.Text      `json:"aggregate_id"`
 	SnapshotData   []byte           `json:"snapshot_data"`
-	StreamPosition string           `json:"stream_position"`
+	StreamPosition int64            `json:"stream_position"`
 	CreatedAt      pgtype.Timestamp `json:"created_at"`
 }
 
@@ -2463,12 +1735,12 @@ type PushHistory struct {
 	TriggerType     string           `json:"trigger_type"`
 	ContentHash     pgtype.Text      `json:"content_hash"`
 	Status          string           `json:"status"`
-	InteractionType pgtype.Text      `json:"interaction_type"`
-	InteractedAt    pgtype.Timestamp `json:"interacted_at"`
 	ID              pgtype.UUID      `json:"id"`
 	CreatedAt       pgtype.Timestamp `json:"created_at"`
 	UpdatedAt       pgtype.Timestamp `json:"updated_at"`
 	DeletedAt       pgtype.Timestamp `json:"deleted_at"`
+	InteractionType pgtype.Text      `json:"interaction_type"`
+	InteractedAt    pgtype.Timestamp `json:"interacted_at"`
 }
 
 type PushPreference struct {
@@ -2496,82 +1768,15 @@ type ResponseFeedback struct {
 	Reasons           []byte           `json:"reasons"`
 	FreeText          pgtype.Text      `json:"free_text"`
 	Meta              []byte           `json:"meta"`
+	ID                pgtype.UUID      `json:"id"`
+	CreatedAt         pgtype.Timestamp `json:"created_at"`
+	UpdatedAt         pgtype.Timestamp `json:"updated_at"`
+	DeletedAt         pgtype.Timestamp `json:"deleted_at"`
 	InterventionID    pgtype.UUID      `json:"intervention_id"`
 	ScaffoldingLevel  pgtype.Int4      `json:"scaffolding_level"`
 	TemplateVariantID pgtype.Text      `json:"template_variant_id"`
 	TimeToResponse    pgtype.Int4      `json:"time_to_response"`
 	ActionTaken       pgtype.Text      `json:"action_taken"`
-	ID                pgtype.UUID      `json:"id"`
-	CreatedAt         pgtype.Timestamp `json:"created_at"`
-	UpdatedAt         pgtype.Timestamp `json:"updated_at"`
-	DeletedAt         pgtype.Timestamp `json:"deleted_at"`
-}
-
-type ReviewFeedback struct {
-	FeedbackID       string           `json:"feedback_id"`
-	ReviewID         string           `json:"review_id"`
-	UserID           pgtype.UUID      `json:"user_id"`
-	FeedbackType     string           `json:"feedback_type"`
-	Rating           pgtype.Int4      `json:"rating"`
-	Comment          pgtype.Text      `json:"comment"`
-	IssuesReported   []byte           `json:"issues_reported"`
-	OriginalScore    float64          `json:"original_score"`
-	OriginalDecision pgtype.Text      `json:"original_decision"`
-	WasReflected     bool             `json:"was_reflected"`
-	WasHelpful       pgtype.Bool      `json:"was_helpful"`
-	WasAccurate      pgtype.Bool      `json:"was_accurate"`
-	InaccuratePoints []byte           `json:"inaccurate_points"`
-	SpecificityLevel pgtype.Text      `json:"specificity_level"`
-	Tags             []byte           `json:"tags"`
-	ID               pgtype.UUID      `json:"id"`
-	CreatedAt        pgtype.Timestamp `json:"created_at"`
-	UpdatedAt        pgtype.Timestamp `json:"updated_at"`
-	DeletedAt        pgtype.Timestamp `json:"deleted_at"`
-}
-
-type ReviewHistory struct {
-	ReviewID           string           `json:"review_id"`
-	TargetID           string           `json:"target_id"`
-	TargetType         string           `json:"target_type"`
-	UserID             pgtype.UUID      `json:"user_id"`
-	SessionID          pgtype.Text      `json:"session_id"`
-	Decision           string           `json:"decision"`
-	OverallScore       float64          `json:"overall_score"`
-	Metrics            []byte           `json:"metrics"`
-	IssuesCount        int32            `json:"issues_count"`
-	CriticalCount      int32            `json:"critical_count"`
-	WarningCount       int32            `json:"warning_count"`
-	ReflectionRound    int32            `json:"reflection_round"`
-	ReflectionOutcome  pgtype.Text      `json:"reflection_outcome"`
-	ScoreDelta         float64          `json:"score_delta"`
-	UserFeedback       pgtype.Text      `json:"user_feedback"`
-	UserSatisfied      pgtype.Bool      `json:"user_satisfied"`
-	FeedbackTimestamp  pgtype.Timestamp `json:"feedback_timestamp"`
-	ReviewerModel      pgtype.Text      `json:"reviewer_model"`
-	ReviewDurationMs   int32            `json:"review_duration_ms"`
-	RequiresReflection bool             `json:"requires_reflection"`
-	UserQuery          pgtype.Text      `json:"user_query"`
-	ContentSnapshot    pgtype.Text      `json:"content_snapshot"`
-	ID                 pgtype.UUID      `json:"id"`
-	CreatedAt          pgtype.Timestamp `json:"created_at"`
-	UpdatedAt          pgtype.Timestamp `json:"updated_at"`
-	DeletedAt          pgtype.Timestamp `json:"deleted_at"`
-}
-
-type ReviewOverride struct {
-	OverrideID       string           `json:"override_id"`
-	ReviewID         string           `json:"review_id"`
-	UserID           pgtype.UUID      `json:"user_id"`
-	OriginalDecision string           `json:"original_decision"`
-	NewDecision      string           `json:"new_decision"`
-	OverrideType     string           `json:"override_type"`
-	Reason           pgtype.Text      `json:"reason"`
-	WasCorrect       pgtype.Bool      `json:"was_correct"`
-	AdminReviewed    bool             `json:"admin_reviewed"`
-	ID               pgtype.UUID      `json:"id"`
-	CreatedAt        pgtype.Timestamp `json:"created_at"`
-	UpdatedAt        pgtype.Timestamp `json:"updated_at"`
-	DeletedAt        pgtype.Timestamp `json:"deleted_at"`
 }
 
 type ScaffoldingState struct {
@@ -2602,43 +1807,6 @@ type SecurityAuditLog struct {
 	Details     []byte           `json:"details"`
 	Timestamp   pgtype.Timestamp `json:"timestamp"`
 	CreatedAt   pgtype.Timestamp `json:"created_at"`
-}
-
-type SeedItem struct {
-	LibraryID       pgtype.UUID      `json:"library_id"`
-	ItemType        string           `json:"item_type"`
-	Title           pgtype.Text      `json:"title"`
-	Content         pgtype.Text      `json:"content"`
-	ContentData     []byte           `json:"content_data"`
-	Subject         pgtype.Text      `json:"subject"`
-	DifficultyLevel pgtype.Text      `json:"difficulty_level"`
-	Tags            []byte           `json:"tags"`
-	Embedding       pgvector.Vector  `json:"embedding"`
-	OrderIndex      int32            `json:"order_index"`
-	IsActive        bool             `json:"is_active"`
-	ID              pgtype.UUID      `json:"id"`
-	CreatedAt       pgtype.Timestamp `json:"created_at"`
-	UpdatedAt       pgtype.Timestamp `json:"updated_at"`
-	DeletedAt       pgtype.Timestamp `json:"deleted_at"`
-}
-
-type SeedLibrary struct {
-	Name          string           `json:"name"`
-	Description   pgtype.Text      `json:"description"`
-	Category      string           `json:"category"`
-	Visibility    string           `json:"visibility"`
-	OwnerID       pgtype.UUID      `json:"owner_id"`
-	Language      string           `json:"language"`
-	Tags          []byte           `json:"tags"`
-	ExtraMetadata []byte           `json:"extra_metadata"`
-	IsOfficial    bool             `json:"is_official"`
-	IsFeatured    bool             `json:"is_featured"`
-	UsageCount    int32            `json:"usage_count"`
-	QualityScore  pgtype.Float8    `json:"quality_score"`
-	ID            pgtype.UUID      `json:"id"`
-	CreatedAt     pgtype.Timestamp `json:"created_at"`
-	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
-	DeletedAt     pgtype.Timestamp `json:"deleted_at"`
 }
 
 type SemanticLink struct {
@@ -2675,100 +1843,20 @@ type SharedResource struct {
 	DeletedAt           pgtype.Timestamp `json:"deleted_at"`
 }
 
-type ShopItem struct {
-	// 物品ID（如：skin_galaxy_001）
-	ID string `json:"id"`
-	// 物品名称
-	Name string `json:"name"`
-	// 物品描述
-	Description pgtype.Text `json:"description"`
-	// 物品类型
-	ItemType string `json:"item_type"`
-	// 分类（如：galaxy_skin、achievement_title等）
-	Category string `json:"category"`
-	// 当前价格（光子）
-	PricePhotons int32 `json:"price_photons"`
-	// 原价（用于折扣显示）
-	OriginalPrice pgtype.Int4 `json:"original_price"`
-	// 折扣百分比（0-100）
-	DiscountPercent pgtype.Int4 `json:"discount_percent"`
-	// 是否可购买
-	IsAvailable bool `json:"is_available"`
-	// 是否限量
-	IsLimited bool `json:"is_limited"`
-	// 库存数量（限量物品使用）
-	StockQuantity pgtype.Int4 `json:"stock_quantity"`
-	// 物品图标URL
-	IconUrl pgtype.Text `json:"icon_url"`
-	// 物品稀有度
-	Rarity string `json:"rarity"`
-	// 物品配置（如皮肤ID、称号文本、消耗品效果等）
-	ItemConfig []byte `json:"item_config"`
-	// 排序权重（越大越靠前）
-	SortOrder int32            `json:"sort_order"`
-	CreatedAt pgtype.Timestamp `json:"created_at"`
-	UpdatedAt pgtype.Timestamp `json:"updated_at"`
-	DeletedAt pgtype.Timestamp `json:"deleted_at"`
-}
-
-type ShopPurchase struct {
-	ID     pgtype.UUID `json:"id"`
-	UserID pgtype.UUID `json:"user_id"`
-	ItemID string      `json:"item_id"`
-	// 实际支付价格
-	PricePaid int32 `json:"price_paid"`
-	// 购买前光子余额
-	PhotonBalanceBefore int32 `json:"photon_balance_before"`
-	// 购买后光子余额
-	PhotonBalanceAfter int32            `json:"photon_balance_after"`
-	CreatedAt          pgtype.Timestamp `json:"created_at"`
-	UpdatedAt          pgtype.Timestamp `json:"updated_at"`
-	DeletedAt          pgtype.Timestamp `json:"deleted_at"`
-}
-
-type SmokeDocumentVector struct {
-	ID        pgtype.UUID        `json:"id"`
-	FileName  string             `json:"file_name"`
-	ChunkText string             `json:"chunk_text"`
-	Embedding pgvector.Vector    `json:"embedding"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-}
-
-type SparkContract struct {
-	UserID             pgtype.UUID        `json:"user_id"`
-	TargetStudyMinutes pgtype.Int4        `json:"target_study_minutes"`
-	TargetDays         pgtype.Int4        `json:"target_days"`
-	PhotonStake        pgtype.Int4        `json:"photon_stake"`
-	Status             NullContractstatus `json:"status"`
-	StartDate          pgtype.Timestamp   `json:"start_date"`
-	EndDate            pgtype.Timestamp   `json:"end_date"`
-	CurrentDays        pgtype.Int4        `json:"current_days"`
-	CurrentMinutes     pgtype.Int4        `json:"current_minutes"`
-	CompletedAt        pgtype.Timestamp   `json:"completed_at"`
-	RewardMultiplier   pgtype.Float8      `json:"reward_multiplier"`
-	FailedAt           pgtype.Timestamp   `json:"failed_at"`
-	FailureReason      pgtype.Text        `json:"failure_reason"`
-	ID                 pgtype.UUID        `json:"id"`
-	CreatedAt          pgtype.Timestamp   `json:"created_at"`
-	UpdatedAt          pgtype.Timestamp   `json:"updated_at"`
-	DeletedAt          pgtype.Timestamp   `json:"deleted_at"`
-}
-
 type StoredFile struct {
-	UserID          pgtype.UUID      `json:"user_id"`
-	FileName        string           `json:"file_name"`
-	MimeType        string           `json:"mime_type"`
-	FileSize        int64            `json:"file_size"`
-	Bucket          string           `json:"bucket"`
-	ObjectKey       string           `json:"object_key"`
-	Status          string           `json:"status"`
-	Visibility      string           `json:"visibility"`
-	RetentionPolicy string           `json:"retention_policy"`
-	ErrorMessage    pgtype.Text      `json:"error_message"`
-	ID              pgtype.UUID      `json:"id"`
-	CreatedAt       pgtype.Timestamp `json:"created_at"`
-	UpdatedAt       pgtype.Timestamp `json:"updated_at"`
-	DeletedAt       pgtype.Timestamp `json:"deleted_at"`
+	UserID       pgtype.UUID      `json:"user_id"`
+	FileName     string           `json:"file_name"`
+	MimeType     string           `json:"mime_type"`
+	FileSize     int64            `json:"file_size"`
+	Bucket       string           `json:"bucket"`
+	ObjectKey    string           `json:"object_key"`
+	Status       string           `json:"status"`
+	Visibility   string           `json:"visibility"`
+	ErrorMessage pgtype.Text      `json:"error_message"`
+	ID           pgtype.UUID      `json:"id"`
+	CreatedAt    pgtype.Timestamp `json:"created_at"`
+	UpdatedAt    pgtype.Timestamp `json:"updated_at"`
+	DeletedAt    pgtype.Timestamp `json:"deleted_at"`
 }
 
 type StrategyNode struct {
@@ -2784,19 +1872,6 @@ type StrategyNode struct {
 	CreatedAt    pgtype.Timestamp `json:"created_at"`
 	UpdatedAt    pgtype.Timestamp `json:"updated_at"`
 	DeletedAt    pgtype.Timestamp `json:"deleted_at"`
-}
-
-type StudyBuddy struct {
-	User1ID            pgtype.UUID      `json:"user1_id"`
-	User2ID            pgtype.UUID      `json:"user2_id"`
-	Status             pgtype.Text      `json:"status"`
-	ConnectionStrength pgtype.Float8    `json:"connection_strength"`
-	MutualStudyDays    pgtype.Int4      `json:"mutual_study_days"`
-	LastMutualStudyAt  pgtype.Timestamp `json:"last_mutual_study_at"`
-	ID                 pgtype.UUID      `json:"id"`
-	CreatedAt          pgtype.Timestamp `json:"created_at"`
-	UpdatedAt          pgtype.Timestamp `json:"updated_at"`
-	DeletedAt          pgtype.Timestamp `json:"deleted_at"`
 }
 
 type StudyRecord struct {
@@ -2827,19 +1902,6 @@ type Subject struct {
 	SortOrder     pgtype.Int4        `json:"sort_order"`
 	CreatedAt     pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
-}
-
-type Subtask struct {
-	ParentTaskID pgtype.UUID      `json:"parent_task_id"`
-	Title        string           `json:"title"`
-	Description  pgtype.Text      `json:"description"`
-	Order        int32            `json:"order"`
-	Status       Subtaskstatus    `json:"status"`
-	CompletedAt  pgtype.Timestamp `json:"completed_at"`
-	ID           pgtype.UUID      `json:"id"`
-	CreatedAt    pgtype.Timestamp `json:"created_at"`
-	UpdatedAt    pgtype.Timestamp `json:"updated_at"`
-	DeletedAt    pgtype.Timestamp `json:"deleted_at"`
 }
 
 type SystemConfigChangeLog struct {
@@ -2878,59 +1940,10 @@ type Task struct {
 	DueDate           pgtype.Date      `json:"due_date"`
 	KnowledgeNodeID   pgtype.UUID      `json:"knowledge_node_id"`
 	AutoExpandEnabled pgtype.Bool      `json:"auto_expand_enabled"`
-	SubtasksTotal     int32            `json:"subtasks_total"`
-	SubtasksCompleted int32            `json:"subtasks_completed"`
 	ID                pgtype.UUID      `json:"id"`
 	CreatedAt         pgtype.Timestamp `json:"created_at"`
 	UpdatedAt         pgtype.Timestamp `json:"updated_at"`
 	DeletedAt         pgtype.Timestamp `json:"deleted_at"`
-}
-
-type TaskFeedback struct {
-	UserID                  pgtype.UUID      `json:"user_id"`
-	TaskID                  pgtype.UUID      `json:"task_id"`
-	CompletionQuality       pgtype.Int4      `json:"completion_quality"`
-	FeedbackText            pgtype.Text      `json:"feedback_text"`
-	Category                pgtype.Text      `json:"category"`
-	InferredDepthDelta      pgtype.Float8    `json:"inferred_depth_delta"`
-	InferredDifficultyDelta pgtype.Float8    `json:"inferred_difficulty_delta"`
-	TaskDifficultySnapshot  pgtype.Int4      `json:"task_difficulty_snapshot"`
-	TaskTypeSnapshot        pgtype.Text      `json:"task_type_snapshot"`
-	ActualMinutesSnapshot   pgtype.Int4      `json:"actual_minutes_snapshot"`
-	ID                      pgtype.UUID      `json:"id"`
-	CreatedAt               pgtype.Timestamp `json:"created_at"`
-	UpdatedAt               pgtype.Timestamp `json:"updated_at"`
-	DeletedAt               pgtype.Timestamp `json:"deleted_at"`
-}
-
-type TaskKnowledgeLink struct {
-	TaskID          pgtype.UUID      `json:"task_id"`
-	KnowledgeNodeID pgtype.UUID      `json:"knowledge_node_id"`
-	RelationType    string           `json:"relation_type"`
-	Strength        pgtype.Float8    `json:"strength"`
-	Notes           pgtype.Text      `json:"notes"`
-	OrderIndex      int32            `json:"order_index"`
-	IsPrimary       bool             `json:"is_primary"`
-	ID              pgtype.UUID      `json:"id"`
-	CreatedAt       pgtype.Timestamp `json:"created_at"`
-	UpdatedAt       pgtype.Timestamp `json:"updated_at"`
-	DeletedAt       pgtype.Timestamp `json:"deleted_at"`
-}
-
-type TaskResourceLink struct {
-	TaskID       pgtype.UUID      `json:"task_id"`
-	ResourceType string           `json:"resource_type"`
-	ResourceID   pgtype.UUID      `json:"resource_id"`
-	Title        pgtype.Text      `json:"title"`
-	Url          pgtype.Text      `json:"url"`
-	Summary      pgtype.Text      `json:"summary"`
-	Metadata     []byte           `json:"metadata"`
-	OrderIndex   int32            `json:"order_index"`
-	IsPrimary    bool             `json:"is_primary"`
-	ID           pgtype.UUID      `json:"id"`
-	CreatedAt    pgtype.Timestamp `json:"created_at"`
-	UpdatedAt    pgtype.Timestamp `json:"updated_at"`
-	DeletedAt    pgtype.Timestamp `json:"deleted_at"`
 }
 
 type TokenUsage struct {
@@ -2968,7 +1981,6 @@ type User struct {
 	Username              string           `json:"username"`
 	Email                 string           `json:"email"`
 	HashedPassword        string           `json:"hashed_password"`
-	EmailVerified         bool             `json:"email_verified"`
 	FullName              pgtype.Text      `json:"full_name"`
 	Nickname              pgtype.Text      `json:"nickname"`
 	AvatarUrl             pgtype.Text      `json:"avatar_url"`
@@ -2988,51 +2000,14 @@ type User struct {
 	WechatUnionid         pgtype.Text      `json:"wechat_unionid"`
 	RegistrationSource    string           `json:"registration_source"`
 	LastLoginAt           pgtype.Timestamp `json:"last_login_at"`
-	TokenRevokedBefore    pgtype.Timestamp `json:"token_revoked_before"`
 	IsMinor               pgtype.Bool      `json:"is_minor"`
 	AgeVerified           bool             `json:"age_verified"`
 	AgeVerificationSource pgtype.Text      `json:"age_verification_source"`
 	AgeVerifiedAt         pgtype.Timestamp `json:"age_verified_at"`
-	PhotonBalance         int32            `json:"photon_balance"`
-	PhotonUpdatedAt       pgtype.Timestamp `json:"photon_updated_at"`
-	EquippedSkin          pgtype.Text      `json:"equipped_skin"`
-	EquippedTitle         pgtype.Text      `json:"equipped_title"`
 	ID                    pgtype.UUID      `json:"id"`
 	CreatedAt             pgtype.Timestamp `json:"created_at"`
 	UpdatedAt             pgtype.Timestamp `json:"updated_at"`
 	DeletedAt             pgtype.Timestamp `json:"deleted_at"`
-}
-
-type UserAchievement struct {
-	UserID             pgtype.UUID      `json:"user_id"`
-	AchievementID      string           `json:"achievement_id"`
-	Progress           pgtype.Float8    `json:"progress"`
-	ProgressValue      pgtype.Int4      `json:"progress_value"`
-	ProgressTarget     pgtype.Int4      `json:"progress_target"`
-	UnlockedAt         pgtype.Timestamp `json:"unlocked_at"`
-	IsPinned           pgtype.Bool      `json:"is_pinned"`
-	ShareCount         pgtype.Int4      `json:"share_count"`
-	IsFirstUnlocker    pgtype.Bool      `json:"is_first_unlocker"`
-	LastProgressUpdate pgtype.Timestamp `json:"last_progress_update"`
-	ID                 pgtype.UUID      `json:"id"`
-	CreatedAt          pgtype.Timestamp `json:"created_at"`
-	UpdatedAt          pgtype.Timestamp `json:"updated_at"`
-	DeletedAt          pgtype.Timestamp `json:"deleted_at"`
-}
-
-type UserConsumable struct {
-	ID           pgtype.UUID `json:"id"`
-	UserID       pgtype.UUID `json:"user_id"`
-	ConsumableID string      `json:"consumable_id"`
-	// 效果类型
-	EffectType string `json:"effect_type"`
-	// 数量
-	Quantity int32 `json:"quantity"`
-	// 过期时间（NULL表示永久有效）
-	ExpiresAt pgtype.Timestamp `json:"expires_at"`
-	CreatedAt pgtype.Timestamp `json:"created_at"`
-	UpdatedAt pgtype.Timestamp `json:"updated_at"`
-	DeletedAt pgtype.Timestamp `json:"deleted_at"`
 }
 
 type UserDailyMetric struct {
@@ -3053,24 +2028,6 @@ type UserDailyMetric struct {
 	DeletedAt         pgtype.Timestamp `json:"deleted_at"`
 }
 
-type UserDevice struct {
-	UserID         pgtype.UUID      `json:"user_id"`
-	DeviceID       string           `json:"device_id"`
-	Platform       string           `json:"platform"`
-	PushToken      string           `json:"push_token"`
-	TokenType      string           `json:"token_type"`
-	DeviceName     pgtype.Text      `json:"device_name"`
-	AppVersion     pgtype.Text      `json:"app_version"`
-	OsVersion      pgtype.Text      `json:"os_version"`
-	IsActive       bool             `json:"is_active"`
-	LastUsedAt     pgtype.Timestamp `json:"last_used_at"`
-	DeviceMetadata []byte           `json:"device_metadata"`
-	ID             pgtype.UUID      `json:"id"`
-	CreatedAt      pgtype.Timestamp `json:"created_at"`
-	UpdatedAt      pgtype.Timestamp `json:"updated_at"`
-	DeletedAt      pgtype.Timestamp `json:"deleted_at"`
-}
-
 type UserEncryptionKey struct {
 	UserID    pgtype.UUID      `json:"user_id"`
 	PublicKey string           `json:"public_key"`
@@ -3082,18 +2039,6 @@ type UserEncryptionKey struct {
 	CreatedAt pgtype.Timestamp `json:"created_at"`
 	UpdatedAt pgtype.Timestamp `json:"updated_at"`
 	DeletedAt pgtype.Timestamp `json:"deleted_at"`
-}
-
-type UserGalaxySkin struct {
-	UserID       pgtype.UUID      `json:"user_id"`
-	SkinID       string           `json:"skin_id"`
-	UnlockedAt   pgtype.Timestamp `json:"unlocked_at"`
-	UnlockSource pgtype.Text      `json:"unlock_source"`
-	IsEquipped   pgtype.Bool      `json:"is_equipped"`
-	ID           pgtype.UUID      `json:"id"`
-	CreatedAt    pgtype.Timestamp `json:"created_at"`
-	UpdatedAt    pgtype.Timestamp `json:"updated_at"`
-	DeletedAt    pgtype.Timestamp `json:"deleted_at"`
 }
 
 type UserInterventionSetting struct {
@@ -3120,20 +2065,6 @@ type UserIrtAbility struct {
 	CreatedAt     pgtype.Timestamp `json:"created_at"`
 	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
 	DeletedAt     pgtype.Timestamp `json:"deleted_at"`
-}
-
-type UserLibrarySubscription struct {
-	UserID       pgtype.UUID      `json:"user_id"`
-	LibraryID    pgtype.UUID      `json:"library_id"`
-	IsEnabled    bool             `json:"is_enabled"`
-	Priority     int32            `json:"priority"`
-	Notes        pgtype.Text      `json:"notes"`
-	SubscribedAt pgtype.Timestamp `json:"subscribed_at"`
-	LastUsedAt   pgtype.Timestamp `json:"last_used_at"`
-	ID           pgtype.UUID      `json:"id"`
-	CreatedAt    pgtype.Timestamp `json:"created_at"`
-	UpdatedAt    pgtype.Timestamp `json:"updated_at"`
-	DeletedAt    pgtype.Timestamp `json:"deleted_at"`
 }
 
 type UserMemorySetting struct {
@@ -3199,18 +2130,6 @@ type UserPreferencesCenter struct {
 	DeletedAt          pgtype.Timestamp `json:"deleted_at"`
 }
 
-type UserSetting struct {
-	UserID               pgtype.UUID      `json:"user_id"`
-	TransparencyLevel    int32            `json:"transparency_level"`
-	SystemUpdateLevel    int32            `json:"system_update_level"`
-	TaskRemindersEnabled bool             `json:"task_reminders_enabled"`
-	TaskReminderTimes    []byte           `json:"task_reminder_times"`
-	ID                   pgtype.UUID      `json:"id"`
-	CreatedAt            pgtype.Timestamp `json:"created_at"`
-	UpdatedAt            pgtype.Timestamp `json:"updated_at"`
-	DeletedAt            pgtype.Timestamp `json:"deleted_at"`
-}
-
 type UserStateSnapshot struct {
 	UserID           pgtype.UUID      `json:"user_id"`
 	SnapshotAt       pgtype.Timestamp `json:"snapshot_at"`
@@ -3230,75 +2149,20 @@ type UserStateSnapshot struct {
 	DeletedAt        pgtype.Timestamp `json:"deleted_at"`
 }
 
-type UserStreakStat struct {
-	UserID             pgtype.UUID      `json:"user_id"`
-	CurrentStreak      pgtype.Int4      `json:"current_streak"`
-	MaxStreak          pgtype.Int4      `json:"max_streak"`
-	LastActivityDate   pgtype.Timestamp `json:"last_activity_date"`
-	FreezeCharges      pgtype.Int4      `json:"freeze_charges"`
-	MaxFreezeCharges   pgtype.Int4      `json:"max_freeze_charges"`
-	LastFreezeUsedAt   pgtype.Timestamp `json:"last_freeze_used_at"`
-	TotalCheckinDays   pgtype.Int4      `json:"total_checkin_days"`
-	LongestStreakStart pgtype.Timestamp `json:"longest_streak_start"`
-	LongestStreakEnd   pgtype.Timestamp `json:"longest_streak_end"`
-	LongestStreak      pgtype.Int4      `json:"longest_streak"`
-	ID                 pgtype.UUID      `json:"id"`
-	CreatedAt          pgtype.Timestamp `json:"created_at"`
-	UpdatedAt          pgtype.Timestamp `json:"updated_at"`
-	DeletedAt          pgtype.Timestamp `json:"deleted_at"`
-}
-
-type UserTitle struct {
-	UserID              pgtype.UUID      `json:"user_id"`
-	TitleID             string           `json:"title_id"`
-	TitleName           pgtype.Text      `json:"title_name"`
-	TitleDisplay        pgtype.Text      `json:"title_display"`
-	SourceAchievementID pgtype.Text      `json:"source_achievement_id"`
-	IsEquipped          pgtype.Bool      `json:"is_equipped"`
-	UnlockedAt          pgtype.Timestamp `json:"unlocked_at"`
-	ID                  pgtype.UUID      `json:"id"`
-	CreatedAt           pgtype.Timestamp `json:"created_at"`
-	UpdatedAt           pgtype.Timestamp `json:"updated_at"`
-	DeletedAt           pgtype.Timestamp `json:"deleted_at"`
-}
-
-type UserToolHistory struct {
-	ID               int32              `json:"id"`
-	UserID           pgtype.UUID        `json:"user_id"`
-	ToolName         string             `json:"tool_name"`
-	ToolCategory     pgtype.Text        `json:"tool_category"`
-	Success          bool               `json:"success"`
-	ExecutionTimeMs  pgtype.Int4        `json:"execution_time_ms"`
-	ErrorMessage     pgtype.Text        `json:"error_message"`
-	ErrorType        pgtype.Text        `json:"error_type"`
-	ContextSnapshot  []byte             `json:"context_snapshot"`
-	InputArgs        []byte             `json:"input_args"`
-	OutputSummary    pgtype.Text        `json:"output_summary"`
-	UserSatisfaction pgtype.Int4        `json:"user_satisfaction"`
-	WasHelpful       pgtype.Bool        `json:"was_helpful"`
-	CreatedAt        pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
-}
-
 type WordBook struct {
-	UserID              pgtype.UUID      `json:"user_id"`
-	Word                string           `json:"word"`
-	Phonetic            pgtype.Text      `json:"phonetic"`
-	Definition          string           `json:"definition"`
-	MasteryLevel        pgtype.Int4      `json:"mastery_level"`
-	Importance          int32            `json:"importance"`
-	ConsecutiveCorrect  int32            `json:"consecutive_correct"`
-	CorrectReviewCount  int32            `json:"correct_review_count"`
-	NextReviewAt        pgtype.Timestamp `json:"next_review_at"`
-	LastReviewAt        pgtype.Timestamp `json:"last_review_at"`
-	ReviewCount         pgtype.Int4      `json:"review_count"`
-	ContextSentence     pgtype.Text      `json:"context_sentence"`
-	SourceTaskID        pgtype.UUID      `json:"source_task_id"`
-	PartOfSpeech        pgtype.Text      `json:"part_of_speech"`
-	SourceTranslationID pgtype.Text      `json:"source_translation_id"`
-	Tags                []byte           `json:"tags"`
-	ID                  pgtype.UUID      `json:"id"`
-	CreatedAt           pgtype.Timestamp `json:"created_at"`
-	UpdatedAt           pgtype.Timestamp `json:"updated_at"`
-	DeletedAt           pgtype.Timestamp `json:"deleted_at"`
+	UserID          pgtype.UUID      `json:"user_id"`
+	Word            string           `json:"word"`
+	Phonetic        pgtype.Text      `json:"phonetic"`
+	Definition      string           `json:"definition"`
+	MasteryLevel    pgtype.Int4      `json:"mastery_level"`
+	NextReviewAt    pgtype.Timestamp `json:"next_review_at"`
+	LastReviewAt    pgtype.Timestamp `json:"last_review_at"`
+	ReviewCount     pgtype.Int4      `json:"review_count"`
+	ContextSentence pgtype.Text      `json:"context_sentence"`
+	SourceTaskID    pgtype.UUID      `json:"source_task_id"`
+	Tags            []byte           `json:"tags"`
+	ID              pgtype.UUID      `json:"id"`
+	CreatedAt       pgtype.Timestamp `json:"created_at"`
+	UpdatedAt       pgtype.Timestamp `json:"updated_at"`
+	DeletedAt       pgtype.Timestamp `json:"deleted_at"`
 }

@@ -1,5 +1,8 @@
 .PHONY: dev-up sync-db sync-equipment proto-gen proto-lint proto-breaking proto-check-generated proto-deprecation-check proto-tools-build db-migrate db-dump db-sqlc db-validate env-check smoke quality-baseline quality-baseline-full quality-budget-check openapi-contract-check flutter-analyze-gate mobile-design-lint fixture-init local-config-check local-ai-check local-backend-smoke local-mobile-smoke local-acceptance auth-test community-test file-pipeline-test worker-test
 
+# Load environment variables from .env
+include .env
+
 DB_CONTAINER=sparkle_db
 DB_USER?=$(if $(POSTGRES_USER),$(POSTGRES_USER),postgres)
 DB_NAME?=$(if $(POSTGRES_DB),$(POSTGRES_DB),sparkle)
@@ -276,21 +279,21 @@ celery-up:
 		cd backend && docker build -t sparkle_backend .; \
 	fi
 	@echo "   Starting services..."
-	@docker run -d --name sparkle_celery_worker --network sparkle-flutter_default \
+	@docker run -d --name sparkle_celery_worker --network sparkle-project_default \
 		-e DATABASE_URL=postgresql://$(DB_USER):$(DB_PASSWORD)@sparkle_db:5432/$(DB_NAME) \
 		-e REDIS_URL=redis://:$(REDIS_PASSWORD)@sparkle_redis:6379/1 \
 		-e CELERY_BROKER_URL=redis://:$(REDIS_PASSWORD)@sparkle_redis:6379/1 \
 		-e CELERY_RESULT_BACKEND=redis://:$(REDIS_PASSWORD)@sparkle_redis:6379/2 \
 		-v $$(pwd)/backend:/app \
 		sparkle_backend celery -A app.core.celery_app worker -l info -Q high_priority,default,low_priority --concurrency=2 2>/dev/null || echo "Worker may already be running"
-	@docker run -d --name sparkle_celery_beat --network sparkle-flutter_default \
+	@docker run -d --name sparkle_celery_beat --network sparkle-project_default \
 		-e DATABASE_URL=postgresql://$(DB_USER):$(DB_PASSWORD)@sparkle_db:5432/$(DB_NAME) \
 		-e REDIS_URL=redis://:$(REDIS_PASSWORD)@sparkle_redis:6379/1 \
 		-e CELERY_BROKER_URL=redis://:$(REDIS_PASSWORD)@sparkle_redis:6379/1 \
 		-v $$(pwd)/backend:/app \
 		sparkle_backend celery -A app.core.celery_app beat -l info 2>/dev/null || echo "Beat may already be running"
 	@if [ "$(FLOWER_ENABLE)" = "1" ]; then \
-		docker run -d --name sparkle_flower --network sparkle-flutter_default -p 5555:5555 \
+		docker run -d --name sparkle_flower --network sparkle-project_default -p 5555:5555 \
 			$(FLOWER_IMAGE) celery --broker=redis://:$(REDIS_PASSWORD)@sparkle_redis:6379/1 flower --port=5555 2>/dev/null || echo "Flower may already be running"; \
 	else \
 		echo "ℹ️  Flower disabled. Set FLOWER_ENABLE=1 to start it."; \

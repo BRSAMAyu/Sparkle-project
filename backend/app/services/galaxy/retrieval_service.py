@@ -434,12 +434,6 @@ class KnowledgeRetrievalService:
         return list(result.scalars().all())
 
 
-@dataclass
-class DocumentChunkResult:
-    chunk: DocumentChunk
-    file_name: str
-    score: float
-
     # --- Helpers ---
     async def _get_user_status(self, user_id: UUID, node_id: UUID) -> UserNodeStatus | None:
         stmt = select(UserNodeStatus).where(
@@ -501,3 +495,10 @@ class DocumentChunkResult:
             similarity=score,
             user_status=user_status_info
         )
+
+
+@dataclass
+class DocumentChunkResult:
+    chunk: DocumentChunk
+    file_name: str
+    score: float

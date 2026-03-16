@@ -123,11 +123,11 @@ func (q *Queries) CreatePostLike(ctx context.Context, arg CreatePostLikeParams) 
 
 const createSocialUser = `-- name: CreateSocialUser :one
 INSERT INTO users (
-    id, username, email, hashed_password, nickname,
-    email_verified, registration_source, is_active, apple_id, updated_at, created_at
+    id, username, email, hashed_password, nickname, 
+    registration_source, is_active, apple_id, updated_at, created_at
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
-RETURNING username, email, hashed_password, email_verified, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, token_revoked_before, is_minor, age_verified, age_verification_source, age_verified_at, photon_balance, photon_updated_at, equipped_skin, equipped_title, id, created_at, updated_at, deleted_at
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+RETURNING username, email, hashed_password, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, is_minor, age_verified, age_verification_source, age_verified_at, id, created_at, updated_at, deleted_at
 `
 
 type CreateSocialUserParams struct {
@@ -136,7 +136,6 @@ type CreateSocialUserParams struct {
 	Email              string      `json:"email"`
 	HashedPassword     string      `json:"hashed_password"`
 	Nickname           pgtype.Text `json:"nickname"`
-	EmailVerified      bool        `json:"email_verified"`
 	RegistrationSource string      `json:"registration_source"`
 	IsActive           bool        `json:"is_active"`
 	AppleID            pgtype.Text `json:"apple_id"`
@@ -149,7 +148,6 @@ func (q *Queries) CreateSocialUser(ctx context.Context, arg CreateSocialUserPara
 		arg.Email,
 		arg.HashedPassword,
 		arg.Nickname,
-		arg.EmailVerified,
 		arg.RegistrationSource,
 		arg.IsActive,
 		arg.AppleID,
@@ -159,7 +157,6 @@ func (q *Queries) CreateSocialUser(ctx context.Context, arg CreateSocialUserPara
 		&i.Username,
 		&i.Email,
 		&i.HashedPassword,
-		&i.EmailVerified,
 		&i.FullName,
 		&i.Nickname,
 		&i.AvatarUrl,
@@ -179,15 +176,10 @@ func (q *Queries) CreateSocialUser(ctx context.Context, arg CreateSocialUserPara
 		&i.WechatUnionid,
 		&i.RegistrationSource,
 		&i.LastLoginAt,
-		&i.TokenRevokedBefore,
 		&i.IsMinor,
 		&i.AgeVerified,
 		&i.AgeVerificationSource,
 		&i.AgeVerifiedAt,
-		&i.PhotonBalance,
-		&i.PhotonUpdatedAt,
-		&i.EquippedSkin,
-		&i.EquippedTitle,
 		&i.ID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -199,7 +191,7 @@ func (q *Queries) CreateSocialUser(ctx context.Context, arg CreateSocialUserPara
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (id, email, hashed_password, full_name, is_active, is_superuser, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
-RETURNING username, email, hashed_password, email_verified, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, token_revoked_before, is_minor, age_verified, age_verification_source, age_verified_at, photon_balance, photon_updated_at, equipped_skin, equipped_title, id, created_at, updated_at, deleted_at
+RETURNING username, email, hashed_password, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, is_minor, age_verified, age_verification_source, age_verified_at, id, created_at, updated_at, deleted_at
 `
 
 type CreateUserParams struct {
@@ -225,7 +217,6 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.Username,
 		&i.Email,
 		&i.HashedPassword,
-		&i.EmailVerified,
 		&i.FullName,
 		&i.Nickname,
 		&i.AvatarUrl,
@@ -245,15 +236,10 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.WechatUnionid,
 		&i.RegistrationSource,
 		&i.LastLoginAt,
-		&i.TokenRevokedBefore,
 		&i.IsMinor,
 		&i.AgeVerified,
 		&i.AgeVerificationSource,
 		&i.AgeVerifiedAt,
-		&i.PhotonBalance,
-		&i.PhotonUpdatedAt,
-		&i.EquippedSkin,
-		&i.EquippedTitle,
 		&i.ID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -311,15 +297,26 @@ FROM projection_metadata
 ORDER BY projection_name
 `
 
-func (q *Queries) GetAllProjectionMetadata(ctx context.Context) ([]ProjectionMetadatum, error) {
+type GetAllProjectionMetadataRow struct {
+	ProjectionName        string           `json:"projection_name"`
+	LastProcessedPosition int64            `json:"last_processed_position"`
+	LastProcessedAt       pgtype.Timestamp `json:"last_processed_at"`
+	Version               int32            `json:"version"`
+	Status                string           `json:"status"`
+	ErrorMessage          pgtype.Text      `json:"error_message"`
+	CreatedAt             pgtype.Timestamp `json:"created_at"`
+	UpdatedAt             pgtype.Timestamp `json:"updated_at"`
+}
+
+func (q *Queries) GetAllProjectionMetadata(ctx context.Context) ([]GetAllProjectionMetadataRow, error) {
 	rows, err := q.db.Query(ctx, getAllProjectionMetadata)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ProjectionMetadatum
+	var items []GetAllProjectionMetadataRow
 	for rows.Next() {
-		var i ProjectionMetadatum
+		var i GetAllProjectionMetadataRow
 		if err := rows.Scan(
 			&i.ProjectionName,
 			&i.LastProcessedPosition,
@@ -409,9 +406,9 @@ ORDER BY sequence_number ASC
 `
 
 type GetEventsAfterSequenceParams struct {
-	AggregateType  string      `json:"aggregate_type"`
-	AggregateID    pgtype.UUID `json:"aggregate_id"`
-	SequenceNumber int64       `json:"sequence_number"`
+	AggregateType  string `json:"aggregate_type"`
+	AggregateID    string `json:"aggregate_id"`
+	SequenceNumber int64  `json:"sequence_number"`
 }
 
 func (q *Queries) GetEventsAfterSequence(ctx context.Context, arg GetEventsAfterSequenceParams) ([]EventStore, error) {
@@ -453,8 +450,8 @@ ORDER BY sequence_number ASC
 `
 
 type GetEventsByAggregateParams struct {
-	AggregateType string      `json:"aggregate_type"`
-	AggregateID   pgtype.UUID `json:"aggregate_id"`
+	AggregateType string `json:"aggregate_type"`
+	AggregateID   string `json:"aggregate_id"`
 }
 
 func (q *Queries) GetEventsByAggregate(ctx context.Context, arg GetEventsByAggregateParams) ([]EventStore, error) {
@@ -569,7 +566,7 @@ func (q *Queries) GetGroupMessages(ctx context.Context, arg GetGroupMessagesPara
 
 const getKnowledgeNodeByID = `-- name: GetKnowledgeNodeByID :one
 
-SELECT subject_id, parent_id, name, name_en, description, keywords, importance_level, is_seed, source_type, source_task_id, source_file_id, chunk_refs, status, embedding, position_x, position_y, global_spark_count, id, created_at, updated_at, deleted_at FROM knowledge_nodes WHERE id = $1 AND deleted_at IS NULL
+SELECT subject_id, parent_id, name, name_en, description, keywords, importance_level, is_seed, source_type, source_task_id, embedding, position_x, position_y, global_spark_count, id, created_at, updated_at, deleted_at FROM knowledge_nodes WHERE id = $1 AND deleted_at IS NULL
 `
 
 // =====================
@@ -589,9 +586,6 @@ func (q *Queries) GetKnowledgeNodeByID(ctx context.Context, id pgtype.UUID) (Kno
 		&i.IsSeed,
 		&i.SourceType,
 		&i.SourceTaskID,
-		&i.SourceFileID,
-		&i.ChunkRefs,
-		&i.Status,
 		&i.Embedding,
 		&i.PositionX,
 		&i.PositionY,
@@ -616,7 +610,7 @@ LIMIT 1
 
 type GetLatestSnapshotParams struct {
 	ProjectionName string      `json:"projection_name"`
-	AggregateID    pgtype.UUID `json:"aggregate_id"`
+	AggregateID    pgtype.Text `json:"aggregate_id"`
 }
 
 // =====================
@@ -676,8 +670,8 @@ WHERE aggregate_type = $1 AND aggregate_id = $2
 `
 
 type GetNextSequenceNumberParams struct {
-	AggregateType string      `json:"aggregate_type"`
-	AggregateID   pgtype.UUID `json:"aggregate_id"`
+	AggregateType string `json:"aggregate_type"`
+	AggregateID   string `json:"aggregate_id"`
 }
 
 func (q *Queries) GetNextSequenceNumber(ctx context.Context, arg GetNextSequenceNumberParams) (int32, error) {
@@ -735,12 +729,23 @@ FROM projection_metadata
 WHERE projection_name = $1
 `
 
+type GetProjectionMetadataRow struct {
+	ProjectionName        string           `json:"projection_name"`
+	LastProcessedPosition int64            `json:"last_processed_position"`
+	LastProcessedAt       pgtype.Timestamp `json:"last_processed_at"`
+	Version               int32            `json:"version"`
+	Status                string           `json:"status"`
+	ErrorMessage          pgtype.Text      `json:"error_message"`
+	CreatedAt             pgtype.Timestamp `json:"created_at"`
+	UpdatedAt             pgtype.Timestamp `json:"updated_at"`
+}
+
 // =====================
 // CQRS: Projection Metadata Queries
 // =====================
-func (q *Queries) GetProjectionMetadata(ctx context.Context, projectionName string) (ProjectionMetadatum, error) {
+func (q *Queries) GetProjectionMetadata(ctx context.Context, projectionName string) (GetProjectionMetadataRow, error) {
 	row := q.db.QueryRow(ctx, getProjectionMetadata, projectionName)
-	var i ProjectionMetadatum
+	var i GetProjectionMetadataRow
 	err := row.Scan(
 		&i.ProjectionName,
 		&i.LastProcessedPosition,
@@ -767,7 +772,7 @@ func (q *Queries) GetSnapshotCount(ctx context.Context, projectionName string) (
 
 const getTaskByID = `-- name: GetTaskByID :one
 
-SELECT user_id, plan_id, title, type, tags, estimated_minutes, difficulty, energy_cost, guide_content, status, started_at, confirmed_at, completed_at, tool_result_id, actual_minutes, user_note, priority, due_date, knowledge_node_id, auto_expand_enabled, subtasks_total, subtasks_completed, id, created_at, updated_at, deleted_at FROM tasks WHERE id = $1 AND deleted_at IS NULL
+SELECT user_id, plan_id, title, type, tags, estimated_minutes, difficulty, energy_cost, guide_content, status, started_at, confirmed_at, completed_at, tool_result_id, actual_minutes, user_note, priority, due_date, knowledge_node_id, auto_expand_enabled, id, created_at, updated_at, deleted_at FROM tasks WHERE id = $1 AND deleted_at IS NULL
 `
 
 // =====================
@@ -797,8 +802,6 @@ func (q *Queries) GetTaskByID(ctx context.Context, id pgtype.UUID) (Task, error)
 		&i.DueDate,
 		&i.KnowledgeNodeID,
 		&i.AutoExpandEnabled,
-		&i.SubtasksTotal,
-		&i.SubtasksCompleted,
 		&i.ID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -850,7 +853,7 @@ func (q *Queries) GetUnpublishedOutboxEntries(ctx context.Context, limit int32) 
 }
 
 const getUser = `-- name: GetUser :one
-SELECT username, email, hashed_password, email_verified, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, token_revoked_before, is_minor, age_verified, age_verification_source, age_verified_at, photon_balance, photon_updated_at, equipped_skin, equipped_title, id, created_at, updated_at, deleted_at FROM users WHERE id = $1
+SELECT username, email, hashed_password, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, is_minor, age_verified, age_verification_source, age_verified_at, id, created_at, updated_at, deleted_at FROM users WHERE id = $1
 `
 
 func (q *Queries) GetUser(ctx context.Context, id pgtype.UUID) (User, error) {
@@ -860,7 +863,6 @@ func (q *Queries) GetUser(ctx context.Context, id pgtype.UUID) (User, error) {
 		&i.Username,
 		&i.Email,
 		&i.HashedPassword,
-		&i.EmailVerified,
 		&i.FullName,
 		&i.Nickname,
 		&i.AvatarUrl,
@@ -880,15 +882,10 @@ func (q *Queries) GetUser(ctx context.Context, id pgtype.UUID) (User, error) {
 		&i.WechatUnionid,
 		&i.RegistrationSource,
 		&i.LastLoginAt,
-		&i.TokenRevokedBefore,
 		&i.IsMinor,
 		&i.AgeVerified,
 		&i.AgeVerificationSource,
 		&i.AgeVerifiedAt,
-		&i.PhotonBalance,
-		&i.PhotonUpdatedAt,
-		&i.EquippedSkin,
-		&i.EquippedTitle,
 		&i.ID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -898,7 +895,7 @@ func (q *Queries) GetUser(ctx context.Context, id pgtype.UUID) (User, error) {
 }
 
 const getUserByAppleID = `-- name: GetUserByAppleID :one
-SELECT username, email, hashed_password, email_verified, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, token_revoked_before, is_minor, age_verified, age_verification_source, age_verified_at, photon_balance, photon_updated_at, equipped_skin, equipped_title, id, created_at, updated_at, deleted_at FROM users WHERE apple_id = $1 LIMIT 1
+SELECT username, email, hashed_password, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, is_minor, age_verified, age_verification_source, age_verified_at, id, created_at, updated_at, deleted_at FROM users WHERE apple_id = $1 LIMIT 1
 `
 
 func (q *Queries) GetUserByAppleID(ctx context.Context, appleID pgtype.Text) (User, error) {
@@ -908,7 +905,6 @@ func (q *Queries) GetUserByAppleID(ctx context.Context, appleID pgtype.Text) (Us
 		&i.Username,
 		&i.Email,
 		&i.HashedPassword,
-		&i.EmailVerified,
 		&i.FullName,
 		&i.Nickname,
 		&i.AvatarUrl,
@@ -928,15 +924,10 @@ func (q *Queries) GetUserByAppleID(ctx context.Context, appleID pgtype.Text) (Us
 		&i.WechatUnionid,
 		&i.RegistrationSource,
 		&i.LastLoginAt,
-		&i.TokenRevokedBefore,
 		&i.IsMinor,
 		&i.AgeVerified,
 		&i.AgeVerificationSource,
 		&i.AgeVerifiedAt,
-		&i.PhotonBalance,
-		&i.PhotonUpdatedAt,
-		&i.EquippedSkin,
-		&i.EquippedTitle,
 		&i.ID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -946,7 +937,7 @@ func (q *Queries) GetUserByAppleID(ctx context.Context, appleID pgtype.Text) (Us
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT username, email, hashed_password, email_verified, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, token_revoked_before, is_minor, age_verified, age_verification_source, age_verified_at, photon_balance, photon_updated_at, equipped_skin, equipped_title, id, created_at, updated_at, deleted_at FROM users WHERE email = $1 LIMIT 1
+SELECT username, email, hashed_password, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, is_minor, age_verified, age_verification_source, age_verified_at, id, created_at, updated_at, deleted_at FROM users WHERE email = $1 LIMIT 1
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
@@ -956,7 +947,6 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.Username,
 		&i.Email,
 		&i.HashedPassword,
-		&i.EmailVerified,
 		&i.FullName,
 		&i.Nickname,
 		&i.AvatarUrl,
@@ -976,15 +966,10 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.WechatUnionid,
 		&i.RegistrationSource,
 		&i.LastLoginAt,
-		&i.TokenRevokedBefore,
 		&i.IsMinor,
 		&i.AgeVerified,
 		&i.AgeVerificationSource,
 		&i.AgeVerifiedAt,
-		&i.PhotonBalance,
-		&i.PhotonUpdatedAt,
-		&i.EquippedSkin,
-		&i.EquippedTitle,
 		&i.ID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -1039,7 +1024,7 @@ INSERT INTO event_store (
 
 type InsertEventStoreEntryParams struct {
 	AggregateType  string           `json:"aggregate_type"`
-	AggregateID    pgtype.UUID      `json:"aggregate_id"`
+	AggregateID    string           `json:"aggregate_id"`
 	EventType      string           `json:"event_type"`
 	EventVersion   int32            `json:"event_version"`
 	SequenceNumber int64            `json:"sequence_number"`
@@ -1069,20 +1054,19 @@ const insertOutboxEntry = `-- name: InsertOutboxEntry :exec
 
 INSERT INTO event_outbox (
     id, aggregate_type, aggregate_id, event_type,
-    event_version, sequence_number, payload, metadata, created_at
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    event_version, payload, metadata, created_at
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 `
 
 type InsertOutboxEntryParams struct {
-	ID             pgtype.UUID      `json:"id"`
-	AggregateType  string           `json:"aggregate_type"`
-	AggregateID    pgtype.UUID      `json:"aggregate_id"`
-	EventType      string           `json:"event_type"`
-	EventVersion   int32            `json:"event_version"`
-	SequenceNumber int64            `json:"sequence_number"`
-	Payload        []byte           `json:"payload"`
-	Metadata       []byte           `json:"metadata"`
-	CreatedAt      pgtype.Timestamp `json:"created_at"`
+	ID            pgtype.UUID      `json:"id"`
+	AggregateType string           `json:"aggregate_type"`
+	AggregateID   string           `json:"aggregate_id"`
+	EventType     string           `json:"event_type"`
+	EventVersion  int32            `json:"event_version"`
+	Payload       []byte           `json:"payload"`
+	Metadata      []byte           `json:"metadata"`
+	CreatedAt     pgtype.Timestamp `json:"created_at"`
 }
 
 // =====================
@@ -1095,7 +1079,6 @@ func (q *Queries) InsertOutboxEntry(ctx context.Context, arg InsertOutboxEntryPa
 		arg.AggregateID,
 		arg.EventType,
 		arg.EventVersion,
-		arg.SequenceNumber,
 		arg.Payload,
 		arg.Metadata,
 		arg.CreatedAt,
@@ -1112,8 +1095,8 @@ SELECT EXISTS(
 `
 
 type IsEventProcessedParams struct {
-	EventID       string `json:"event_id"`
-	ConsumerGroup string `json:"consumer_group"`
+	EventID       pgtype.UUID `json:"event_id"`
+	ConsumerGroup string      `json:"consumer_group"`
 }
 
 // =====================
@@ -1142,64 +1125,6 @@ func (q *Queries) IsGroupMember(ctx context.Context, arg IsGroupMemberParams) (b
 	return exists, err
 }
 
-const linkAppleUser = `-- name: LinkAppleUser :one
-UPDATE users
-SET apple_id = COALESCE(apple_id, $2),
-    email_verified = TRUE,
-    updated_at = NOW()
-WHERE id = $1
-RETURNING username, email, hashed_password, email_verified, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, token_revoked_before, is_minor, age_verified, age_verification_source, age_verified_at, photon_balance, photon_updated_at, equipped_skin, equipped_title, id, created_at, updated_at, deleted_at
-`
-
-type LinkAppleUserParams struct {
-	ID      pgtype.UUID `json:"id"`
-	AppleID pgtype.Text `json:"apple_id"`
-}
-
-func (q *Queries) LinkAppleUser(ctx context.Context, arg LinkAppleUserParams) (User, error) {
-	row := q.db.QueryRow(ctx, linkAppleUser, arg.ID, arg.AppleID)
-	var i User
-	err := row.Scan(
-		&i.Username,
-		&i.Email,
-		&i.HashedPassword,
-		&i.EmailVerified,
-		&i.FullName,
-		&i.Nickname,
-		&i.AvatarUrl,
-		&i.AvatarStatus,
-		&i.PendingAvatarUrl,
-		&i.FlameLevel,
-		&i.FlameBrightness,
-		&i.DepthPreference,
-		&i.CuriosityPreference,
-		&i.SchedulePreferences,
-		&i.WeatherPreferences,
-		&i.IsActive,
-		&i.IsSuperuser,
-		&i.Status,
-		&i.GoogleID,
-		&i.AppleID,
-		&i.WechatUnionid,
-		&i.RegistrationSource,
-		&i.LastLoginAt,
-		&i.TokenRevokedBefore,
-		&i.IsMinor,
-		&i.AgeVerified,
-		&i.AgeVerificationSource,
-		&i.AgeVerifiedAt,
-		&i.PhotonBalance,
-		&i.PhotonUpdatedAt,
-		&i.EquippedSkin,
-		&i.EquippedTitle,
-		&i.ID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.DeletedAt,
-	)
-	return i, err
-}
-
 const markEventProcessed = `-- name: MarkEventProcessed :exec
 INSERT INTO processed_events (event_id, consumer_group, processed_at)
 VALUES ($1, $2, NOW())
@@ -1207,8 +1132,8 @@ ON CONFLICT (event_id, consumer_group) DO NOTHING
 `
 
 type MarkEventProcessedParams struct {
-	EventID       string `json:"event_id"`
-	ConsumerGroup string `json:"consumer_group"`
+	EventID       pgtype.UUID `json:"event_id"`
+	ConsumerGroup string      `json:"consumer_group"`
 }
 
 func (q *Queries) MarkEventProcessed(ctx context.Context, arg MarkEventProcessedParams) error {
@@ -1241,9 +1166,9 @@ DO UPDATE SET
 type SaveSnapshotParams struct {
 	ID             pgtype.UUID `json:"id"`
 	ProjectionName string      `json:"projection_name"`
-	AggregateID    pgtype.UUID `json:"aggregate_id"`
+	AggregateID    pgtype.Text `json:"aggregate_id"`
 	SnapshotData   []byte      `json:"snapshot_data"`
-	StreamPosition string      `json:"stream_position"`
+	StreamPosition int64       `json:"stream_position"`
 }
 
 func (q *Queries) SaveSnapshot(ctx context.Context, arg SaveSnapshotParams) error {
@@ -1285,8 +1210,8 @@ WHERE projection_name = $1
 `
 
 type UpdateProjectionPositionParams struct {
-	ProjectionName        string      `json:"projection_name"`
-	LastProcessedPosition pgtype.Text `json:"last_processed_position"`
+	ProjectionName        string `json:"projection_name"`
+	LastProcessedPosition int64  `json:"last_processed_position"`
 }
 
 func (q *Queries) UpdateProjectionPosition(ctx context.Context, arg UpdateProjectionPositionParams) error {
