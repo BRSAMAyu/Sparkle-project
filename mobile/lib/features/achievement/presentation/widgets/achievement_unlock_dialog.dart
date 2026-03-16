@@ -6,7 +6,9 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/rarity_badge.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart'
     as chat;
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
+import 'package:sparkle/shared/entities/visual_element_model.dart';
 
 /// 成就解锁弹窗
 ///
@@ -366,6 +368,13 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                   // 里程碑信息 (P1功能 - 进度里程碑庆祝)
                   if (widget.milestoneInfo != null)
                     _buildMilestoneSection(widget.milestoneInfo!),
+
+                  // 视觉元素奖励预览
+                  if (_hasVisualElementRewards())
+                    _VisualElementPreviewSection(
+                      rewards: widget.event.rewards!,
+                      glowAnimation: _glowAnimation,
+                    ),
 
                   const SizedBox(height: DS.spacing20),
 

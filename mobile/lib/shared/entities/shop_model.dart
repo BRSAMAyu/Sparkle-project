@@ -13,6 +13,8 @@ enum ShopItemType {
   consumable,
   @JsonValue('boost')
   boost,
+  @JsonValue('visual_element')
+  visualElement,
 }
 
 /// 物品稀有度

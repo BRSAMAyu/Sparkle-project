@@ -151,10 +151,17 @@ func (h *AuthHandler) randomString(n int) string {
 
 func (h *AuthHandler) createAccessToken(userID pgtype.UUID, sessionID string) (string, error) {
 	now := time.Now()
+
+	// Get expiration time from config, default to 30 minutes
+	expireMinutes := h.cfg.JWTAccessTokenExpireMinutes
+	if expireMinutes <= 0 {
+		expireMinutes = 30
+	}
+
 	claims := jwt.MapClaims{
 		"sub":  h.uuidToString(userID),
 		"sid":  sessionID,
-		"exp":  now.Add(time.Hour * 24).Unix(),
+		"exp":  now.Add(time.Duration(expireMinutes) * time.Minute).Unix(),
 		"iat":  now.Unix(),
 		"jti":  uuid.New().String(),
 		"type": "access",
@@ -172,10 +179,17 @@ func (h *AuthHandler) createAccessToken(userID pgtype.UUID, sessionID string) (s
 
 func (h *AuthHandler) createRefreshToken(userID pgtype.UUID, sessionID string) (string, error) {
 	now := time.Now()
+
+	// Get expiration time from config, default to 7 days
+	expireDays := h.cfg.JWTRefreshTokenExpireDays
+	if expireDays <= 0 {
+		expireDays = 7
+	}
+
 	claims := jwt.MapClaims{
 		"sub":  h.uuidToString(userID),
 		"sid":  sessionID,
-		"exp":  now.Add(7 * 24 * time.Hour).Unix(),
+		"exp":  now.Add(time.Duration(expireDays) * 24 * time.Hour).Unix(),
 		"iat":  now.Unix(),
 		"jti":  uuid.New().String(),
 		"type": "refresh",

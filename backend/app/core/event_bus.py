@@ -221,6 +221,84 @@ class UserSettingsUpdatedEvent(Event):
         }
 
 
+class CalendarEventCreated(Event):
+    """日历事件创建"""
+
+    def __init__(
+        self,
+        user_id: str,
+        event_id: str,
+        title: str,
+        start_time: datetime,
+        source: str = "manual",
+    ):
+        self.user_id = user_id
+        self.event_id = event_id
+        self.title = title
+        self.start_time = start_time
+        self.source = source
+        self.timestamp = datetime.now(UTC)
+
+    def to_dict(self):
+        return {
+            "event_type": "calendar.event.created",
+            "user_id": self.user_id,
+            "event_id": self.event_id,
+            "title": self.title,
+            "start_time": self.start_time.isoformat(),
+            "source": self.source,
+            "timestamp": self.timestamp.isoformat(),
+        }
+
+
+class CalendarEventUpdated(Event):
+    """日历事件更新"""
+
+    def __init__(
+        self,
+        user_id: str,
+        event_id: str,
+        changes: dict,
+    ):
+        self.user_id = user_id
+        self.event_id = event_id
+        self.changes = changes
+        self.timestamp = datetime.now(UTC)
+
+    def to_dict(self):
+        return {
+            "event_type": "calendar.event.updated",
+            "user_id": self.user_id,
+            "event_id": self.event_id,
+            "changes": self.changes,
+            "timestamp": self.timestamp.isoformat(),
+        }
+
+
+class CalendarEventDeleted(Event):
+    """日历事件删除"""
+
+    def __init__(
+        self,
+        user_id: str,
+        event_id: str,
+        hard_delete: bool = False,
+    ):
+        self.user_id = user_id
+        self.event_id = event_id
+        self.hard_delete = hard_delete
+        self.timestamp = datetime.now(UTC)
+
+    def to_dict(self):
+        return {
+            "event_type": "calendar.event.deleted",
+            "user_id": self.user_id,
+            "event_id": self.event_id,
+            "hard_delete": self.hard_delete,
+            "timestamp": self.timestamp.isoformat(),
+        }
+
+
 class EventBus:
     """
     Event Bus - Redis Streams Implementation

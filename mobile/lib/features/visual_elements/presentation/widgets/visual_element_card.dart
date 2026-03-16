@@ -1,11 +1,15 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/materials.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/visual_element_model.dart';
 
 /// 视觉元素卡片组件
-class VisualElementCard extends StatelessWidget {
+class VisualElementCard extends StatefulWidget {
   const VisualElementCard({
     required this.element,
     super.key,
@@ -22,104 +26,205 @@ class VisualElementCard extends StatelessWidget {
   final bool showStatus;
 
   @override
+  State<VisualElementCard> createState() => _VisualElementCardState();
+}
+
+class _VisualElementCardState extends State<VisualElementCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _breathingController;
+  late Animation<double> _breathingAnimation;
+  bool _isPressed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _breathingController = AnimationController(
+      duration: const Duration(milliseconds: 1600),
+      vsync: this,
+    );
+    _breathingAnimation = Tween<double>(begin: 0.3, end: 0.7).animate(
+      CurvedAnimation(
+        parent: _breathingController,
+        curve: Curves.easeInOut,
+      ),
+    );
+
+    // 已装备卡片启动呼吸动画
+    if (widget.element.isEquipped) {
+      _breathingController.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void didUpdateWidget(VisualElementCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // 装备状态变化时更新动画
+    if (widget.element.isEquipped != oldWidget.element.isEquipped) {
+      if (widget.element.isEquipped) {
+        _breathingController.repeat(reverse: true);
+      } else {
+        _breathingController.stop();
+        _breathingController.reset();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _breathingController.dispose();
+    super.dispose();
+  }
+
+  void _handleTapDown(TapDownDetails details) {
+    if (!widget.element.isUnlocked) return;
+    HapticFeedback.lightImpact();
+    setState(() => _isPressed = true);
+  }
+
+  void _handleTapUp(TapUpDetails details) {
+    setState(() => _isPressed = false);
+  }
+
+  void _handleTapCancel() {
+    setState(() => _isPressed = false);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final colors = _getRarityColors(element.rarity);
+    final colors = _getRarityColors(widget.element.rarity);
 
     return GestureDetector(
-      onTap: onTap,
-      onLongPress: onLongPress,
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              DS.surfaceSecondary,
-              DS.surfaceTertiary.withValues(alpha: 0.5),
-            ],
-          ),
-          borderRadius: isCompact ? DS.borderRadius12 : DS.borderRadius16,
-          border: Border.all(
-            color: element.isEquipped
-                ? colors.border
-                : DS.border.withValues(alpha: 0.5),
-            width: element.isEquipped ? 2 : 1,
-          ),
-          boxShadow: element.isEquipped
-              ? [
-                  BoxShadow(
-                    color: colors.border.withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    spreadRadius: 2,
-                  ),
-                ]
-              : null,
-        ),
-        child: ClipRRect(
-          borderRadius: isCompact ? DS.borderRadius12 : DS.borderRadius16,
-          child: Stack(
-            children: [
-              // 背景预览
-              _buildPreviewBackground(colors),
-
-              // 内容
-              Padding(
-                padding: EdgeInsets.all(isCompact ? DS.spacing8 : DS.spacing12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // 顶部：类型图标和稀有度徽章
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _buildTypeIcon(),
-                        _buildRarityBadge(colors, l10n),
-                      ],
-                    ),
-
-                    const Spacer(),
-
-                    // 底部：名称和状态
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          element.name,
-                          style: TextStyle(
-                            fontSize: isCompact ? DS.fontSizeSm : DS.fontSizeBase,
-                            fontWeight: DS.fontWeightSemibold,
-                            color: DS.textPrimary,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+      onTapDown: _handleTapDown,
+      onTapUp: _handleTapUp,
+      onTapCancel: _handleTapCancel,
+      onTap: widget.onTap,
+      onLongPress: widget.onLongPress,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOut,
+        transform: Matrix4.identity()..scale(_isPressed ? 0.96 : 1.0),
+        child: Stack(
+          children: [
+            // 主卡片
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    DS.surfaceSecondary,
+                    DS.surfaceTertiary.withValues(alpha: 0.5),
+                  ],
+                ),
+                borderRadius:
+                    widget.isCompact ? DS.borderRadius12 : DS.borderRadius16,
+                border: Border.all(
+                  color: widget.element.isEquipped
+                      ? colors.border
+                      : DS.border.withValues(alpha: 0.5),
+                  width: widget.element.isEquipped ? 2 : 1,
+                ),
+                boxShadow: widget.element.isEquipped
+                    ? [
+                        BoxShadow(
+                          color: colors.border.withValues(alpha: 0.3),
+                          blurRadius: 8,
+                          spreadRadius: 2,
                         ),
-                        if (element.description != null && !isCompact) ...[
-                          const SizedBox(height: DS.spacing4),
-                          Text(
-                            element.description!,
-                            style: TextStyle(
-                              fontSize: DS.fontSizeXs,
-                              color: DS.textSecondary,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                      ]
+                    : null,
+              ),
+              child: ClipRRect(
+                borderRadius:
+                    widget.isCompact ? DS.borderRadius12 : DS.borderRadius16,
+                child: Stack(
+                  children: [
+                    // 背景预览
+                    _buildPreviewBackground(colors),
+
+                    // 内容
+                    Padding(
+                      padding: EdgeInsets.all(
+                          widget.isCompact ? DS.spacing8 : DS.spacing12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // 顶部：类型图标和稀有度徽章
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              _buildTypeIcon(),
+                              _buildRarityBadge(colors, l10n),
+                            ],
+                          ),
+
+                          const Spacer(),
+
+                          // 底部：名称和状态
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.element.name,
+                                style: TextStyle(
+                                  fontSize: widget.isCompact
+                                      ? DS.fontSizeSm
+                                      : DS.fontSizeBase,
+                                  fontWeight: DS.fontWeightSemibold,
+                                  color: DS.textPrimary,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              if (widget.element.description != null &&
+                                  !widget.isCompact) ...[
+                                const SizedBox(height: DS.spacing4),
+                                Text(
+                                  widget.element.description!,
+                                  style: TextStyle(
+                                    fontSize: DS.fontSizeXs,
+                                    color: DS.textSecondary,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                              if (widget.showStatus) ...[
+                                const SizedBox(height: DS.spacing8),
+                                _buildStatusRow(l10n),
+                              ],
+                            ],
                           ),
                         ],
-                        if (showStatus) ...[
-                          const SizedBox(height: DS.spacing8),
-                          _buildStatusRow(l10n),
-                        ],
-                      ],
+                      ),
                     ),
+
+                    // 锁定遮罩（磨砂玻璃效果）
+                    if (!widget.element.isUnlocked)
+                      _buildLockedOverlay(l10n, colors),
                   ],
                 ),
               ),
+            ),
 
-              // 锁定遮罩
-              if (!element.isUnlocked) _buildLockedOverlay(l10n),
-            ],
-          ),
+            // 已装备呼吸边框
+            if (widget.element.isEquipped)
+              Positioned.fill(
+                child: AnimatedBuilder(
+                  animation: _breathingAnimation,
+                  builder: (context, child) => CustomPaint(
+                    painter: _BreathingBorderPainter(
+                      animation: _breathingAnimation,
+                      color: colors.border,
+                      borderRadius: widget.isCompact
+                          ? DS.borderRadius12
+                          : DS.borderRadius16,
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -137,26 +242,25 @@ class VisualElementCard extends StatelessWidget {
           ),
         ),
         child: CustomPaint(
-              painter: _ElementPreviewPainter(
-                elementType: element.elementType,
-                config: element.config,
-                seed: element.id.hashCode,
-                colors: colors,
-              ),
-            ),
+          painter: _ElementPreviewPainter(
+            elementType: widget.element.elementType,
+            config: widget.element.config,
+            seed: widget.element.id.hashCode,
+            colors: colors,
           ),
+        ),
+      ),
     );
   }
 
   List<Color> _getPreviewGradientColors() {
     // 从配置中提取渐变颜色，否则使用默认
-    final gradientConfig = element.config['gradient'] as Map<String, dynamic>?;
+    final gradientConfig =
+        widget.element.config['gradient'] as Map<String, dynamic>?;
     if (gradientConfig != null) {
       final colors = gradientConfig['colors'] as List<dynamic>?;
       if (colors != null && colors.isNotEmpty) {
-        return colors
-            .map((c) => _parseColor(c.toString()))
-            .toList();
+        return colors.map((c) => _parseColor(c.toString())).toList();
       }
     }
     // 默认渐变
@@ -179,7 +283,7 @@ class VisualElementCard extends StatelessWidget {
   }
 
   Widget _buildTypeIcon() {
-    final icon = _getTypeIcon(element.elementType);
+    final icon = _getTypeIcon(widget.element.elementType);
     return Container(
       padding: const EdgeInsets.all(DS.spacing6),
       decoration: BoxDecoration(
@@ -188,7 +292,7 @@ class VisualElementCard extends StatelessWidget {
       ),
       child: Icon(
         icon,
-        size: isCompact ? DS.iconSizeXs : DS.iconSizeSm,
+        size: widget.isCompact ? DS.iconSizeXs : DS.iconSizeSm,
         color: DS.textSecondary,
       ),
     );
@@ -210,7 +314,7 @@ class VisualElementCard extends StatelessWidget {
   Widget _buildRarityBadge(_RarityColors colors, AppLocalizations l10n) {
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: isCompact ? DS.spacing6 : DS.spacing8,
+        horizontal: widget.isCompact ? DS.spacing6 : DS.spacing8,
         vertical: DS.spacing4,
       ),
       decoration: BoxDecoration(
@@ -222,14 +326,14 @@ class VisualElementCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            _getRarityIcon(element.rarity),
-            size: isCompact ? 10 : DS.iconSizeXs,
+            _getRarityIcon(widget.element.rarity),
+            size: widget.isCompact ? 10 : DS.iconSizeXs,
             color: colors.text,
           ),
-          if (!isCompact) ...[
+          if (!widget.isCompact) ...[
             const SizedBox(width: DS.spacing4),
             Text(
-              _getRarityName(element.rarity, l10n),
+              _getRarityName(widget.element.rarity, l10n),
               style: TextStyle(
                 fontSize: DS.fontSizeXs,
                 fontWeight: DS.fontWeightMedium,
@@ -273,11 +377,11 @@ class VisualElementCard extends StatelessWidget {
     Color statusColor;
     IconData statusIcon;
 
-    if (element.isEquipped) {
+    if (widget.element.isEquipped) {
       statusText = l10n.visualElementEquipped;
       statusColor = DS.success;
       statusIcon = Icons.check_circle;
-    } else if (element.isUnlocked) {
+    } else if (widget.element.isUnlocked) {
       statusText = l10n.visualElementUnlocked;
       statusColor = DS.info;
       statusIcon = Icons.lock_open;
@@ -311,7 +415,7 @@ class VisualElementCard extends StatelessWidget {
   }
 
   String _getUnlockSourceText(AppLocalizations l10n) {
-    switch (element.unlockSource) {
+    switch (widget.element.unlockSource) {
       case VisualElementUnlockSource.system:
         return l10n.visualElementUnlockSystem;
       case VisualElementUnlockSource.achievement:
@@ -325,22 +429,75 @@ class VisualElementCard extends StatelessWidget {
     }
   }
 
-  Widget _buildLockedOverlay(AppLocalizations l10n) {
+  /// 磨砂玻璃锁定遮罩
+  Widget _buildLockedOverlay(AppLocalizations l10n, _RarityColors colors) {
     return Positioned.fill(
-      child: Container(
-        decoration: BoxDecoration(
-          color: DS.surfacePrimary.withValues(alpha: 0.7),
-          borderRadius: isCompact ? DS.borderRadius12 : DS.borderRadius16,
-        ),
-        child: Center(
-          child: Icon(
-            Icons.lock,
-            size: isCompact ? DS.iconSizeMd : DS.iconSizeLg,
-            color: DS.textTertiary,
-          ),
+      child: ClipRRect(
+        borderRadius:
+            widget.isCompact ? DS.borderRadius12 : DS.borderRadius16,
+        child: Stack(
+          children: [
+            // 磨砂玻璃背景
+            BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 8.0, sigmaY: 8.0),
+              child: Container(
+                color: DS.surfacePrimary.withValues(alpha: 0.85),
+              ),
+            ),
+            // 内容
+            Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.lock_outline,
+                    size: widget.isCompact ? DS.iconSizeMd : DS.iconSizeLg,
+                    color: DS.textTertiary,
+                  ),
+                  if (!widget.isCompact) ...[
+                    const SizedBox(height: DS.spacing8),
+                    Text(
+                      _getUnlockConditionSummary(l10n),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: DS.fontSizeXs,
+                        color: DS.textTertiary,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
+  }
+
+  String _getUnlockConditionSummary(AppLocalizations l10n) {
+    switch (widget.element.unlockSource) {
+      case VisualElementUnlockSource.system:
+        return l10n.visualElementUnlockHintSystem;
+      case VisualElementUnlockSource.achievement:
+        final achievementId =
+            widget.element.unlockRequirement?['achievement_id'];
+        if (achievementId != null) {
+          return l10n.visualElementUnlockHintAchievement(achievementId);
+        }
+        return l10n.visualElementUnlockHintAchievementDefault;
+      case VisualElementUnlockSource.shop:
+        final price = widget.element.unlockRequirement?['price_photons'];
+        if (price != null) {
+          return l10n.visualElementUnlockHintShop(price);
+        }
+        return l10n.visualElementUnlockHintShopDefault;
+      case VisualElementUnlockSource.event:
+        return l10n.visualElementUnlockHintEvent;
+      case VisualElementUnlockSource.season:
+        return l10n.visualElementUnlockHintSeason;
+    }
   }
 
   _RarityColors _getRarityColors(VisualElementRarity rarity) {
@@ -383,6 +540,36 @@ class _RarityColors {
   final Color background;
   final Color border;
   final Color text;
+}
+
+/// 呼吸边框画笔
+class _BreathingBorderPainter extends CustomPainter {
+  _BreathingBorderPainter({
+    required this.animation,
+    required this.color,
+    required this.borderRadius,
+  });
+
+  final Animation<double> animation;
+  final Color color;
+  final BorderRadius borderRadius;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final opacity = animation.value;
+    final paint = Paint()
+      ..color = color.withValues(alpha: opacity)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5;
+
+    final rrect = borderRadius.toRRect(Offset.zero & size);
+    canvas.drawRRect(rrect, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _BreathingBorderPainter oldDelegate) {
+    return animation.value != oldDelegate.animation.value;
+  }
 }
 
 /// 元素预览画笔
@@ -436,8 +623,8 @@ class _ElementPreviewPainter extends CustomPainter {
 
   void _drawParticlePreview(Canvas canvas, Size size) {
     // 绘制粒子点
-    final particleColors = config['colors'] as List<dynamic>? ??
-        ['#ffffff', '#ffd700'];
+    final particleColors =
+        config['colors'] as List<dynamic>? ?? ['#ffffff', '#ffd700'];
     final count = config['count'] as int? ?? 10;
 
     final random = _SeededRandom(seed);

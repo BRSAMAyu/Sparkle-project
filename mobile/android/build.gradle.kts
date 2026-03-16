@@ -2,6 +2,8 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+        // Huawei repository for JPush dependencies
+        maven { url = uri("https://developer.huawei.com/repo/") }
     }
 }
 

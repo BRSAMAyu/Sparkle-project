@@ -32,9 +32,11 @@ func (r *envelopeResponder) SendAck() {
 	traceparent := traceparentFromContext(r.ctx)
 	payload := map[string]json.RawMessage{}
 	ack := map[string]interface{}{
+		"message_id":  r.envelope.MessageID, // 添加 message_id 以便客户端匹配
 		"request_id":  r.envelope.RequestID,
 		"server_ts":   time.Now().UnixMilli(),
 		"traceparent": traceparent,
+		"status":      "received",
 	}
 	raw, err := json.Marshal(ack)
 	if err != nil {

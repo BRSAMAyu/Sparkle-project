@@ -24,6 +24,7 @@ type RateLimiter struct {
 	maxVisitors       int
 	cleanupIntervalSec int    // 清理间隔(秒)
 	expirySec          int    // 访客过期时间(秒)
+	stopCh             chan struct{} // 停止信号通道，用于优雅关闭
 }
 
 // visitor 访问者信息
@@ -44,12 +45,23 @@ func NewRateLimiterWithMax(r rate.Limit, b int, maxVisitors int) *RateLimiter {
 		rate:        r,
 		burst:       b,
 		maxVisitors: maxVisitors,
+		stopCh:      make(chan struct{}),
 	}
 
 	// 启动清理过期访问者的goroutine
 	go rl.cleanupVisitors()
 
 	return rl
+}
+
+// Stop 停止限流器的后台清理goroutine
+func (rl *RateLimiter) Stop() {
+	select {
+	case <-rl.stopCh:
+		// 已经关闭
+	default:
+		close(rl.stopCh)
+	}
 }
 
 // getVisitor 获取或创建访问者
@@ -73,16 +85,23 @@ func (rl *RateLimiter) getVisitor(ip string) *rate.Limiter {
 
 // cleanupVisitors 定期清理过期的访问者
 func (rl *RateLimiter) cleanupVisitors() {
-	for {
-		time.Sleep(time.Minute)
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
 
-		rl.mu.Lock()
-		for ip, v := range rl.visitors {
-			if time.Since(v.lastSeen) > 5*time.Minute {
-				delete(rl.visitors, ip)
+	for {
+		select {
+		case <-rl.stopCh:
+			// 收到停止信号，退出goroutine
+			return
+		case <-ticker.C:
+			rl.mu.Lock()
+			for ip, v := range rl.visitors {
+				if time.Since(v.lastSeen) > 5*time.Minute {
+					delete(rl.visitors, ip)
+				}
 			}
+			rl.mu.Unlock()
 		}
-		rl.mu.Unlock()
 	}
 }
 
@@ -233,10 +252,12 @@ func EndpointSpecificRateLimit(endpoint string, requestsPerSecond float64, burst
 }
 
 // AdaptiveRateLimitMiddleware 自适应速率限制
+// 修复: 预创建所有限流器，避免每次请求创建新实例
 func AdaptiveRateLimitMiddleware(baseRate float64, burst int) gin.HandlerFunc {
-	// 创建不同的限流器用于不同场景
+	// 预创建所有限流器用于不同场景
 	normalRL := NewRateLimiter(rate.Limit(baseRate), burst)
 	strictRL := NewRateLimiter(rate.Limit(baseRate/2), burst/2)
+	writeRL := NewRateLimiter(rate.Limit(baseRate*0.8), int(float64(burst)*0.8))
 
 	return func(c *gin.Context) {
 		var rl *RateLimiter
@@ -249,8 +270,8 @@ func AdaptiveRateLimitMiddleware(baseRate float64, burst int) gin.HandlerFunc {
 		if path == "/api/v1/auth/login" || path == "/api/v1/auth/register" {
 			rl = strictRL
 		} else if method == "POST" || method == "PUT" || method == "DELETE" {
-			// 写操作使用中等限制
-			rl = NewRateLimiter(rate.Limit(baseRate*0.8), int(float64(burst)*0.8))
+			// 写操作使用中等限制（使用预创建的限流器）
+			rl = writeRL
 		} else {
 			// 读操作使用正常限制
 			rl = normalRL

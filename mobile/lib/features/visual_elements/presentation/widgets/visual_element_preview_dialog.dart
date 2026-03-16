@@ -1,7 +1,9 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart' as share_plus;
 import 'package:sparkle/core/design/design_system.dart';
@@ -45,13 +47,18 @@ class VisualElementPreviewDialog extends StatefulWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => VisualElementPreviewDialog(
-        element: element,
-        baseConfig: baseConfig,
-        onEquip: onEquip,
-        onUnequip: onUnequip,
-        isEquipped: isEquipped,
-        isUnlocked: isUnlocked,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.4,
+        maxChildSize: 0.9,
+        builder: (context, scrollController) => VisualElementPreviewDialog(
+          element: element,
+          baseConfig: baseConfig,
+          onEquip: onEquip,
+          onUnequip: onUnequip,
+          isEquipped: isEquipped,
+          isUnlocked: isUnlocked,
+        ),
       ),
     );
   }
@@ -62,140 +69,203 @@ class VisualElementPreviewDialog extends StatefulWidget {
 }
 
 class _VisualElementPreviewDialogState
-    extends State<VisualElementPreviewDialog> {
+    extends State<VisualElementPreviewDialog>
+    with SingleTickerProviderStateMixin {
   final GlobalKey _previewKey = GlobalKey();
   bool _isPreviewing = true;
   bool _isSharing = false;
+  bool _showConfetti = false;
+
+  late ConfettiController _confettiController;
+  late AnimationController _crossfadeController;
+  late Animation<double> _crossfadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _confettiController = ConfettiController(duration: DS.durationSlow);
+    _crossfadeController = AnimationController(
+      duration: const Duration(milliseconds: 400),
+      vsync: this,
+    );
+    _crossfadeAnimation = CurvedAnimation(
+      parent: _crossfadeController,
+      curve: Curves.easeInOut,
+    );
+  }
+
+  @override
+  void dispose() {
+    _confettiController.dispose();
+    _crossfadeController.dispose();
+    super.dispose();
+  }
+
+  void _handleEquip() {
+    HapticFeedback.mediumImpact();
+    setState(() => _showConfetti = true);
+    _confettiController.play();
+    // Delay callback to let confetti start
+    Future.delayed(const Duration(milliseconds: 300), widget.onEquip);
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final colors = _getRarityColors(widget.element.rarity);
-    final screenHeight = MediaQuery.of(context).size.height;
 
-    return Container(
-      height: screenHeight * 0.75,
-      decoration: BoxDecoration(
-        color: DS.surfacePrimary,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: Column(
-        children: [
-          // 拖动条
-          Container(
-            margin: const EdgeInsets.only(top: DS.spacing12),
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: DS.neutral300,
-              borderRadius: DS.borderRadiusFull,
-            ),
+    return Stack(
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: DS.surfacePrimary,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           ),
-
-          Expanded(
-            child: CustomScrollView(
-              slivers: [
-                // 预览区域
-                SliverToBoxAdapter(
-                  child: RepaintBoundary(
-                    key: _previewKey,
-                    child: _PreviewArea(
-                      element: widget.element,
-                      baseConfig: widget.baseConfig,
-                      colors: colors,
-                      isPreviewing: _isPreviewing,
-                      onTogglePreview: () {
-                        setState(() => _isPreviewing = !_isPreviewing);
-                      },
-                    ),
-                  ),
+          child: Column(
+            children: [
+              // 拖动条
+              Container(
+                margin: const EdgeInsets.only(top: DS.spacing12),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: DS.neutral300,
+                  borderRadius: DS.borderRadiusFull,
                 ),
+              ),
 
-                // 信息区域
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.all(DS.spacing16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // 名称和稀有度
-                        Row(
+              Expanded(
+                child: CustomScrollView(
+                  slivers: [
+                    // 预览区域 (带交叉淡入淡出)
+                    SliverToBoxAdapter(
+                      child: RepaintBoundary(
+                        key: _previewKey,
+                        child: _CrossfadePreviewArea(
+                          element: widget.element,
+                          baseConfig: widget.baseConfig,
+                          colors: colors,
+                          isPreviewing: _isPreviewing,
+                          crossfadeAnimation: _crossfadeAnimation,
+                          onTogglePreview: () {
+                            _crossfadeController.forward(from: 0);
+                            setState(() => _isPreviewing = !_isPreviewing);
+                          },
+                        ),
+                      ),
+                    ),
+
+                    // 信息区域
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.all(DS.spacing16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              child: Text(
-                                widget.element.name,
-                                style: const TextStyle(
-                                  fontSize: DS.fontSizeXl,
-                                  fontWeight: DS.fontWeightBold,
-                                  color: DS.textPrimary,
+                            // 名称和稀有度
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    widget.element.name,
+                                    style: TextStyle(
+                                      fontSize: DS.fontSizeXl,
+                                      fontWeight: DS.fontWeightBold,
+                                      color: DS.textPrimary,
+                                    ),
+                                  ),
+                                ),
+                                _RarityBadge(
+                                  rarity: widget.element.rarity,
+                                  colors: colors,
+                                  l10n: l10n,
+                                ),
+                              ],
+                            ),
+
+                            if (widget.element.description != null) ...[
+                              const SizedBox(height: DS.spacing8),
+                              Text(
+                                widget.element.description!,
+                                style: TextStyle(
+                                  fontSize: DS.fontSizeSm,
+                                  color: DS.textSecondary,
+                                  height: 1.5,
                                 ),
                               ),
+                            ],
+
+                            const SizedBox(height: DS.spacing16),
+                            const Divider(),
+                            const SizedBox(height: DS.spacing16),
+
+                            // 详细信息
+                            _InfoRow(
+                              label: l10n.visualElementType,
+                              value: _getElementTypeName(
+                                widget.element.elementType,
+                                l10n,
+                              ),
                             ),
-                            _RarityBadge(
-                              rarity: widget.element.rarity,
-                              colors: colors,
-                              l10n: l10n,
+                            if (widget.element.category != null)
+                              _InfoRow(
+                                label: l10n.visualElementCategory,
+                                value: _getCategoryName(
+                                  widget.element.category!,
+                                  l10n,
+                                ),
+                              ),
+                            _InfoRow(
+                              label: l10n.visualElementSource,
+                              value: _getUnlockSourceText(
+                                widget.element.unlockSource,
+                                l10n,
+                              ),
                             ),
+
+                            const SizedBox(height: DS.spacing24),
+
+                            // 解锁条件
+                            if (!widget.isUnlocked)
+                              _UnlockRequirement(
+                                element: widget.element,
+                                l10n: l10n,
+                              ),
                           ],
                         ),
-
-                        if (widget.element.description != null) ...[
-                          const SizedBox(height: DS.spacing8),
-                          Text(
-                            widget.element.description!,
-                            style: TextStyle(
-                              fontSize: DS.fontSizeSm,
-                              color: DS.textSecondary,
-                              height: 1.5,
-                            ),
-                          ),
-                        ],
-
-                        const SizedBox(height: DS.spacing16),
-                        const Divider(),
-                        const SizedBox(height: DS.spacing16),
-
-                        // 详细信息
-                        _InfoRow(
-                          label: l10n.visualElementType,
-                          value: _getElementTypeName(
-                            widget.element.elementType,
-                            l10n,
-                          ),
-                        ),
-                        if (widget.element.category != null)
-                          _InfoRow(
-                            label: l10n.visualElementCategory,
-                            value: _getCategoryName(
-                              widget.element.category!,
-                              l10n,
-                            ),
-                          ),
-                        _InfoRow(
-                          label: l10n.visualElementSource,
-                          value: _getUnlockSourceText(widget.element.unlockSource, l10n),
-                        ),
-
-                        const SizedBox(height: DS.spacing24),
-
-                        // 解锁条件
-                        if (!widget.isUnlocked)
-                          _UnlockRequirement(
-                            element: widget.element,
-                            l10n: l10n,
-                          ),
-                      ],
+                      ),
                     ),
-                  ),
+                  ],
                 ),
+              ),
+
+              // 底部操作按钮
+              _buildActionButtons(l10n),
+            ],
+          ),
+        ),
+
+        // Confetti 效果
+        if (_showConfetti)
+          Align(
+            alignment: Alignment.topCenter,
+            child: ConfettiWidget(
+              confettiController: _confettiController,
+              blastDirectionality: BlastDirectionality.explosive,
+              colors: [
+                DS.brandPrimary,
+                DS.brandSecondary,
+                DS.warning,
+                DS.success,
               ],
+              gravity: 0.2,
+              emissionFrequency: 0.05,
+              numberOfParticles: 30,
+              maxBlastForce: 100,
+              minBlastForce: 80,
             ),
           ),
-
-          // 底部操作按钮
-          _buildActionButtons(l10n),
-        ],
-      ),
+      ],
     );
   }
 
@@ -235,7 +305,7 @@ class _VisualElementPreviewDialogState
   Widget _buildShareButton(AppLocalizations l10n) {
     return SizedBox(
       width: 124,
-      height: DS.buttonHeightLg,
+      height: 48,
       child: OutlinedButton.icon(
         onPressed: _isSharing ? null : _sharePreview,
         icon: _isSharing
@@ -263,9 +333,9 @@ class _VisualElementPreviewDialogState
   Widget _buildEquipButton(AppLocalizations l10n) {
     return SizedBox(
       width: double.infinity,
-      height: DS.buttonHeightLg,
+      height: 48,
       child: ElevatedButton.icon(
-        onPressed: widget.onEquip,
+        onPressed: _handleEquip,
         icon: const Icon(Icons.check_circle_outline),
         label: Text(l10n.visualElementEquip),
         style: ElevatedButton.styleFrom(
@@ -282,7 +352,7 @@ class _VisualElementPreviewDialogState
   Widget _buildUnequipButton(AppLocalizations l10n) {
     return SizedBox(
       width: double.infinity,
-      height: DS.buttonHeightLg,
+      height: 48,
       child: OutlinedButton.icon(
         onPressed: widget.onUnequip,
         icon: const Icon(Icons.remove_circle_outline),
@@ -301,7 +371,7 @@ class _VisualElementPreviewDialogState
   Widget _buildLockedButton(AppLocalizations l10n) {
     return SizedBox(
       width: double.infinity,
-      height: DS.buttonHeightLg,
+      height: 48,
       child: ElevatedButton.icon(
         onPressed: null,
         icon: const Icon(Icons.lock_outline),
@@ -319,7 +389,7 @@ class _VisualElementPreviewDialogState
 
   Future<void> _sharePreview() async {
     final boundary =
-        _previewKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+        _previewKey.currentContext?.findRenderObject() as ui.RenderRepaintBoundary?;
     if (boundary == null) {
       AppFeedback.error(
         context,
@@ -499,7 +569,7 @@ class _PreviewAreaState extends State<_PreviewArea>
       child: Stack(
         children: [
           ClipRRect(
-            borderRadius: DS.borderRadius14,
+            borderRadius: DS.borderRadius12,
             child: Stack(
               fit: StackFit.expand,
               children: [
@@ -552,6 +622,175 @@ class _PreviewAreaState extends State<_PreviewArea>
   UserVisualConfig _resolvePreviewConfig() {
     final base = widget.baseConfig;
     if (!widget.isPreviewing) {
+      return base ?? UserVisualConfig();
+    }
+
+    switch (widget.element.elementType) {
+      case VisualElementType.background:
+        return UserVisualConfig(
+          equippedBackground: widget.element,
+          equippedParticle: base?.equippedParticle,
+          equippedEffect: base?.equippedEffect,
+        );
+      case VisualElementType.particle:
+        return UserVisualConfig(
+          equippedBackground: base?.equippedBackground,
+          equippedParticle: widget.element,
+          equippedEffect: base?.equippedEffect,
+        );
+      case VisualElementType.effect:
+        return UserVisualConfig(
+          equippedBackground: base?.equippedBackground,
+          equippedParticle: base?.equippedParticle,
+          equippedEffect: widget.element,
+        );
+      case VisualElementType.bundle:
+        return UserVisualConfig(
+          equippedBackground: widget.element,
+          equippedParticle: widget.element,
+          equippedEffect: widget.element,
+        );
+    }
+  }
+}
+
+/// 带交叉淡入淡出的预览区域
+class _CrossfadePreviewArea extends StatefulWidget {
+  const _CrossfadePreviewArea({
+    required this.element,
+    required this.baseConfig,
+    required this.colors,
+    required this.isPreviewing,
+    required this.crossfadeAnimation,
+    required this.onTogglePreview,
+  });
+
+  final VisualElementModel element;
+  final UserVisualConfig? baseConfig;
+  final _RarityColors colors;
+  final bool isPreviewing;
+  final Animation<double> crossfadeAnimation;
+  final VoidCallback onTogglePreview;
+
+  @override
+  State<_CrossfadePreviewArea> createState() => _CrossfadePreviewAreaState();
+}
+
+class _CrossfadePreviewAreaState extends State<_CrossfadePreviewArea>
+    with TickerProviderStateMixin {
+  late AnimationController _mainController;
+  late AnimationController _particleController;
+
+  @override
+  void initState() {
+    super.initState();
+    _mainController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat(reverse: true);
+    _particleController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 3000),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _mainController.dispose();
+    _particleController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final previewConfig = _resolvePreviewConfig(true);
+    final baseConfig = _resolvePreviewConfig(false);
+
+    return Container(
+      height: 240,
+      margin: const EdgeInsets.all(DS.spacing16),
+      decoration: BoxDecoration(
+        borderRadius: DS.borderRadius16,
+        border: Border.all(color: widget.colors.border, width: 2),
+      ),
+      child: Stack(
+        children: [
+          ClipRRect(
+            borderRadius: DS.borderRadius12,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                // 底层：当前配置
+                FadeTransition(
+                  opacity: Tween<double>(begin: 1.0, end: 0.0).animate(
+                    widget.crossfadeAnimation,
+                  ),
+                  child: _buildPreviewLayers(baseConfig),
+                ),
+                // 顶层：预览配置
+                FadeTransition(
+                  opacity: Tween<double>(begin: 0.0, end: 1.0).animate(
+                    widget.crossfadeAnimation,
+                  ),
+                  child: _buildPreviewLayers(previewConfig),
+                ),
+              ],
+            ),
+          ),
+          Positioned(
+            right: DS.spacing12,
+            bottom: DS.spacing12,
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: widget.onTogglePreview,
+                borderRadius: DS.borderRadius8,
+                child: Container(
+                  padding: const EdgeInsets.all(DS.spacing8),
+                  decoration: BoxDecoration(
+                    color: DS.surfacePrimary.withValues(alpha: 0.9),
+                    borderRadius: DS.borderRadius8,
+                  ),
+                  child: Icon(
+                    widget.isPreviewing
+                        ? Icons.visibility_off
+                        : Icons.visibility,
+                    size: DS.iconSizeSm,
+                    color: DS.textSecondary,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPreviewLayers(UserVisualConfig config) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        BackgroundLayer(
+          element: config.equippedBackground,
+          mainAnimation: _mainController,
+        ),
+        ParticleLayer(
+          element: config.equippedParticle,
+          particleAnimation: _particleController,
+          mainAnimation: _mainController,
+        ),
+        EffectLayer(
+          element: config.equippedEffect,
+          mainAnimation: _mainController,
+        ),
+      ],
+    );
+  }
+
+  UserVisualConfig _resolvePreviewConfig(bool isPreviewing) {
+    final base = widget.baseConfig;
+    if (!isPreviewing) {
       return base ?? UserVisualConfig();
     }
 
@@ -743,13 +982,13 @@ class _UnlockRequirement extends StatelessWidget {
       case VisualElementUnlockSource.achievement:
         final achievementId = element.unlockRequirement?['achievement_id'];
         if (achievementId != null) {
-          return l10n.visualElementUnlockHintAchievement(achievementId);
+          return l10n.visualElementUnlockHintAchievement(achievementId as Object);
         }
         return l10n.visualElementUnlockHintAchievementDefault;
       case VisualElementUnlockSource.shop:
         final price = element.unlockRequirement?['price_photons'];
         if (price != null) {
-          return l10n.visualElementUnlockHintShop(price);
+          return l10n.visualElementUnlockHintShop(price as Object);
         }
         return l10n.visualElementUnlockHintShopDefault;
       case VisualElementUnlockSource.event:

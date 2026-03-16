@@ -12,6 +12,7 @@ from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
+from app.core.event_bus import event_bus, CalendarEventCreated, CalendarEventUpdated, CalendarEventDeleted
 from app.core.exceptions import NotFoundError
 from app.db.session import get_db
 from app.models.calendar_event import CalendarEvent
@@ -25,8 +26,28 @@ from app.schemas.calendar_event import (
     CalendarEventUpdate,
     BatchOperationResult,
 )
+from app.schemas.smart_schedule import (
+    SmartScheduleRequest,
+    SmartScheduleResponse,
+)
+from app.services.smart_schedule_service import SmartScheduleService
 
 router = APIRouter()
+
+
+@router.post("/suggest-time", response_model=SmartScheduleResponse)
+async def suggest_time_slots(
+    request: SmartScheduleRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    智能排程建议
+
+    根据任务参数和用户认知模式，推荐最佳时间槽。
+    """
+    service = SmartScheduleService(db)
+    return await service.suggest_time_slots(current_user.id, request)
 
 
 @router.get("", response_model=CalendarEventListResponse)
@@ -108,6 +129,18 @@ async def create_event(
     await db.refresh(event)
 
     logger.info(f"Calendar event created: {event.id} by user {current_user.id}")
+
+    # 发布事件到 EventBus
+    await event_bus.publish(
+        "calendar.event.created",
+        CalendarEventCreated(
+            user_id=str(current_user.id),
+            event_id=str(event.id),
+            title=event.title,
+            start_time=event.start_time,
+            source=event.source,
+        ).to_dict(),
+    )
 
     # TODO: 调度提醒通知 (Phase 2)
 
@@ -211,6 +244,16 @@ async def update_event(
 
     logger.info(f"Calendar event updated: {event.id} by user {current_user.id}")
 
+    # 发布事件到 EventBus
+    await event_bus.publish(
+        "calendar.event.updated",
+        CalendarEventUpdated(
+            user_id=str(current_user.id),
+            event_id=str(event.id),
+            changes=update_data,
+        ).to_dict(),
+    )
+
     return CalendarEventDetail.model_validate(event)
 
 
@@ -237,6 +280,16 @@ async def delete_event(
     await db.commit()
 
     logger.info(f"Calendar event {'hard' if hard_delete else 'soft'} deleted: {event_id} by user {current_user.id}")
+
+    # 发布事件到 EventBus
+    await event_bus.publish(
+        "calendar.event.deleted",
+        CalendarEventDeleted(
+            user_id=str(current_user.id),
+            event_id=str(event_id),
+            hard_delete=hard_delete,
+        ).to_dict(),
+    )
 
     return {"success": True}
 

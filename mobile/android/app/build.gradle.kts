@@ -44,6 +44,11 @@ android {
         targetSdk = 34  // Target Android 14
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // JPush configuration
+        manifestPlaceholders["JPUSH_PKGNAME"] = applicationIdValue
+        manifestPlaceholders["JPUSH_APPKEY"] = "YOUR_JPUSH_APPKEY"  // Replace with actual JPush AppKey
+        manifestPlaceholders["JPUSH_CHANNEL"] = "developer-default"
     }
 
     signingConfigs {

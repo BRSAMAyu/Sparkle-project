@@ -6,7 +6,14 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/offline/offline_providers.dart';
 import 'package:sparkle/core/providers/locale_provider.dart';
 import 'package:sparkle/core/providers/theme_provider.dart';
+import 'package:sparkle/core/services/unified_push_service.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+
+/// Provider for initializing push service once
+final pushInitProvider = FutureProvider<void>((ref) async {
+  final pushService = ref.watch(unifiedPushServiceProvider);
+  await pushService.initialize();
+});
 
 /// Sparkle Application Root Widget
 class SparkleApp extends ConsumerWidget {
@@ -19,6 +26,8 @@ class SparkleApp extends ConsumerWidget {
     ref.watch(themeManagerProvider);
     // Initialize sync engine early.
     ref.watch(syncEngineProvider);
+    // Initialize unified push service (FCM + JPush)
+    ref.watch(pushInitProvider);
     // Watch the mode specifically for MaterialApp.themeMode
     final themeMode = ref.watch(themeModeProvider);
     final locale = ref.watch(localeProvider);

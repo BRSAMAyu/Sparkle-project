@@ -8,6 +8,7 @@ import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/performance_service.dart';
 import 'package:sparkle/core/services/social_auth_service.dart';
+import 'package:sparkle/core/services/unified_push_service.dart';
 import 'package:sparkle/core/services/user_preferences_service.dart';
 import 'package:sparkle/core/services/view_storage_service.dart';
 import 'package:sparkle/core/tracing/tracing_service.dart';
@@ -68,6 +69,10 @@ void main() async {
     // Initialize Firebase (required for push notifications)
     // Note: google-services.json and GoogleService-Info.plist must be configured
     await _initializeFirebase();
+
+    // Initialize unified push service (FCM + JPush)
+    // This will be called after app starts, as it needs ProviderScope
+    // The actual initialization happens in SparkleApp
 
     runApp(
       ProviderScope(

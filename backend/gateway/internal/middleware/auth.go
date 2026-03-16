@@ -1,20 +1,23 @@
 package middleware
 
 import (
+	"context"
 	"crypto/subtle"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/redis/go-redis/v9"
 	"github.com/sparkle/gateway/internal/config"
 )
 
-func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
+func AuthMiddleware(cfg *config.Config, rdb *redis.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get token from Authorization header only.
 		tokenString := ""
@@ -31,7 +34,7 @@ func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 			return
 		}
 
-		userID, isAdmin, err := validateJWT(cfg, tokenString)
+		userID, isAdmin, err := validateJWT(cfg, rdb, tokenString)
 		if err != nil {
 			log.Printf("Auth failed: invalid token (err=%v)", err)
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
@@ -114,7 +117,7 @@ func isWebSocketRequest(c *gin.Context) bool {
 	return upgrade == "websocket" && strings.Contains(connection, "upgrade")
 }
 
-func validateJWT(cfg *config.Config, tokenString string) (string, bool, error) {
+func validateJWT(cfg *config.Config, rdb *redis.Client, tokenString string) (string, bool, error) {
 	const jwtClockSkew = 30 * time.Second
 
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
@@ -140,6 +143,42 @@ func validateJWT(cfg *config.Config, tokenString string) (string, bool, error) {
 	tokenType, ok := claims["type"].(string)
 	if !ok || tokenType != "access" {
 		return "", false, fmt.Errorf("invalid token type")
+	}
+
+	// Check token blacklist (Fail Open strategy - allow on Redis errors)
+	if rdb != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+		defer cancel()
+
+		// Check JTI blacklist (specific token revoked)
+		jti, _ := claims["jti"].(string)
+		if jti != "" {
+			blacklisted, err := rdb.Exists(ctx, "token_blacklist:"+jti).Result()
+			if err != nil {
+				// Fail Open: log error but continue
+				log.Printf("Redis blacklist check failed for jti, allowing token: %v", err)
+			} else if blacklisted > 0 {
+				return "", false, fmt.Errorf("token revoked")
+			}
+		}
+
+		// Check user-level token revocation (all tokens issued before timestamp)
+		iatValue, _ := claims["iat"].(float64)
+		if iatValue > 0 {
+			revokedBefore, err := rdb.Get(ctx, "user_revoked_before:"+userID).Result()
+			if err != nil {
+				// Fail Open: key not found or Redis error, continue
+				if err != redis.Nil {
+					log.Printf("Redis user revocation check failed, allowing token: %v", err)
+				}
+			} else {
+				if revokedTs, err := strconv.ParseInt(revokedBefore, 10, 64); err == nil {
+					if int64(iatValue) < revokedTs {
+						return "", false, fmt.Errorf("token revoked by user")
+					}
+				}
+			}
+		}
 	}
 
 	expValue, ok := claims["exp"]

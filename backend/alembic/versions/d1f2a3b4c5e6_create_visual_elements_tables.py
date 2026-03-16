@@ -77,10 +77,10 @@ def upgrade() -> None:
         sa.Column("category", sa.String(50), nullable=True),
         sa.Column("season_start", sa.String(10), nullable=True),
         sa.Column("season_end", sa.String(10), nullable=True),
-        sa.Column("id", sa.GUID(), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("updated_at", sa.DateTime(), nullable=False),
         sa.Column("deleted_at", sa.DateTime(), nullable=True),
+        sa.PrimaryKeyConstraint("id"),
     )
 
     # 创建索引
@@ -95,12 +95,11 @@ def upgrade() -> None:
     # 2. 创建 user_visual_elements 表
     op.create_table(
         "user_visual_elements",
-        sa.Column("user_id", sa.GUID(), nullable=False),
+        sa.Column("user_id", sa.UUID(), nullable=False),
         sa.Column("element_id", sa.String(50), nullable=False),
         sa.Column("unlocked_at", sa.DateTime(), nullable=False),
         sa.Column("unlock_source", sa.String(50), nullable=False),
         sa.Column("source_id", sa.String(100), nullable=True),
-        sa.Column("id", sa.GUID(), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("updated_at", sa.DateTime(), nullable=False),
         sa.Column("deleted_at", sa.DateTime(), nullable=True),
@@ -122,14 +121,13 @@ def upgrade() -> None:
     # 3. 创建 user_visual_configs 表
     op.create_table(
         "user_visual_configs",
-        sa.Column("user_id", sa.GUID(), nullable=False),
+        sa.Column("user_id", sa.UUID(), nullable=False),
         sa.Column("equipped_background_id", sa.String(50), nullable=True),
         sa.Column("equipped_particle_id", sa.String(50), nullable=True),
         sa.Column("equipped_effect_id", sa.String(50), nullable=True),
         sa.Column("background_equipped_at", sa.DateTime(), nullable=True),
         sa.Column("particle_equipped_at", sa.DateTime(), nullable=True),
         sa.Column("effect_equipped_at", sa.DateTime(), nullable=True),
-        sa.Column("id", sa.GUID(), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("updated_at", sa.DateTime(), nullable=False),
         sa.Column("deleted_at", sa.DateTime(), nullable=True),

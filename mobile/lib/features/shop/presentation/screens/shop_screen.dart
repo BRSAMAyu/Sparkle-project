@@ -23,7 +23,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: 6, vsync: this);
   }
 
   @override
@@ -46,6 +46,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen>
           tabs: [
             Tab(text: context.l10n.shopCategoryAll),
             Tab(text: context.l10n.shopCategorySkin),
+            Tab(text: context.l10n.shopCategoryVisualElement),
             Tab(text: context.l10n.shopCategoryTitle),
             Tab(text: context.l10n.shopCategoryConsumable),
             Tab(text: context.l10n.shopCategoryBoost),
@@ -61,6 +62,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen>
           children: [
             _buildCategoryGrid(null, state),
             _buildCategoryGrid(ShopItemType.skin, state),
+            _buildCategoryGrid(ShopItemType.visualElement, state),
             _buildCategoryGrid(ShopItemType.title, state),
             _buildCategoryGrid(ShopItemType.consumable, state),
             _buildCategoryGrid(ShopItemType.boost, state),

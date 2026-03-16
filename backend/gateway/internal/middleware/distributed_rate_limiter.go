@@ -3,29 +3,58 @@ package middleware
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/time/rate"
+)
+
+// Prometheus metrics for Redis rate limiter monitoring
+var (
+	redisFallbackCounter = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "sparkle_rate_limiter_redis_fallback_total",
+		Help: "Total number of fallbacks to local rate limiter due to Redis errors",
+	})
+
+	redisErrorCounter = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "sparkle_rate_limiter_redis_errors_total",
+		Help: "Total Redis errors in rate limiter by error type",
+	}, []string{"error_type"})
 )
 
 // DistributedRateLimiter implements Token Bucket algorithm using Redis
 // This ensures rate limiting works across multiple gateway instances
 type DistributedRateLimiter struct {
-	rdb       *redis.Client
-	rate      float64 // tokens per second
-	burst     int     // max bucket size
-	keyPrefix string
+	rdb           *redis.Client
+	rate          float64 // tokens per second
+	burst         int     // max bucket size
+	initialTokens int     // initial tokens in bucket (default: 0 to prevent burst abuse)
+	keyPrefix     string
 }
 
 // NewDistributedRateLimiter creates a Redis-backed rate limiter using Token Bucket algorithm
 func NewDistributedRateLimiter(rdb *redis.Client, rate float64, burst int, keyPrefix string) *DistributedRateLimiter {
 	return &DistributedRateLimiter{
-		rdb:       rdb,
-		rate:      rate,
-		burst:     burst,
-		keyPrefix: keyPrefix,
+		rdb:           rdb,
+		rate:          rate,
+		burst:         burst,
+		initialTokens: 0, // Default: start with 0 tokens to prevent burst abuse
+		keyPrefix:     keyPrefix,
+	}
+}
+
+// NewDistributedRateLimiterWithInitialTokens creates a rate limiter with custom initial tokens
+func NewDistributedRateLimiterWithInitialTokens(rdb *redis.Client, rate float64, burst, initialTokens int, keyPrefix string) *DistributedRateLimiter {
+	return &DistributedRateLimiter{
+		rdb:           rdb,
+		rate:          rate,
+		burst:         burst,
+		initialTokens: initialTokens,
+		keyPrefix:     keyPrefix,
 	}
 }
 
@@ -36,11 +65,13 @@ func (d *DistributedRateLimiter) Allow(ctx context.Context, key string) (bool, i
 
 	// Token Bucket Lua script
 	// Returns: [allowed (0/1), remaining_tokens]
+	// Fixed: Use configurable initial_tokens instead of burst to prevent burst abuse
 	script := redis.NewScript(`
 		local key = KEYS[1]
 		local rate = tonumber(ARGV[1])
 		local burst = tonumber(ARGV[2])
 		local now = tonumber(ARGV[3])
+		local initial_tokens = tonumber(ARGV[4])
 
 		local last = redis.call('HGET', key, 'last')
 		local tokens = redis.call('HGET', key, 'tokens')
@@ -48,7 +79,7 @@ func (d *DistributedRateLimiter) Allow(ctx context.Context, key string) (bool, i
 		-- Initialize if not exists
 		if last == false then
 			last = now
-			tokens = burst
+			tokens = initial_tokens
 		end
 
 		-- Calculate token replenishment
@@ -73,8 +104,12 @@ func (d *DistributedRateLimiter) Allow(ctx context.Context, key string) (bool, i
 	`)
 
 	result, err := script.Run(ctx, d.rdb, []string{fullKey},
-		d.rate, d.burst, float64(time.Now().UnixMilli())).Slice()
+		d.rate, d.burst, float64(time.Now().UnixMilli()), d.initialTokens).Slice()
 	if err != nil {
+		// Log and increment Prometheus metrics for Redis errors
+		log.Printf("[ALERT] Rate limiter Redis error: %v, falling back to local", err)
+		redisFallbackCounter.Inc()
+		redisErrorCounter.WithLabelValues("script_error").Inc()
 		return false, 0, fmt.Errorf("redis script execution failed: %w", err)
 	}
 
@@ -209,6 +244,7 @@ func NewRateLimiterWithCleanup(r rate.Limit, b int, cleanupInterval time.Duratio
 		rate:        r,
 		burst:       b,
 		maxVisitors: defaultMaxVisitors,
+		stopCh:      make(chan struct{}),
 	}
 
 	// Start cleanup goroutine with custom interval
@@ -219,16 +255,23 @@ func NewRateLimiterWithCleanup(r rate.Limit, b int, cleanupInterval time.Duratio
 
 // cleanupVisitorsWithInterval periodically cleans up expired visitors
 func (rl *RateLimiter) cleanupVisitorsWithInterval(interval time.Duration) {
-	for {
-		time.Sleep(interval)
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
 
-		rl.mu.Lock()
-		for ip, v := range rl.visitors {
-			// Expire after 3 times the cleanup interval (reduced from 5 minutes)
-			if time.Since(v.lastSeen) > 3*interval {
-				delete(rl.visitors, ip)
+	for {
+		select {
+		case <-rl.stopCh:
+			// Graceful shutdown
+			return
+		case <-ticker.C:
+			rl.mu.Lock()
+			for ip, v := range rl.visitors {
+				// Expire after 3 times the cleanup interval (reduced from 5 minutes)
+				if time.Since(v.lastSeen) > 3*interval {
+					delete(rl.visitors, ip)
+				}
 			}
+			rl.mu.Unlock()
 		}
-		rl.mu.Unlock()
 	}
 }

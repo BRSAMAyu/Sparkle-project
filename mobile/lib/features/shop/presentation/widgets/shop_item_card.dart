@@ -250,6 +250,8 @@ class ShopItemCard extends StatelessWidget {
         return Icons.inventory_2_outlined;
       case ShopItemType.boost:
         return Icons.trending_up_outlined;
+      case ShopItemType.visualElement:
+        return Icons.palette_outlined;
     }
   }
 }

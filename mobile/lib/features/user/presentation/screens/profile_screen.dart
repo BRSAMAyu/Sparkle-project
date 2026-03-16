@@ -8,6 +8,7 @@ import 'package:sparkle/core/providers/locale_provider.dart';
 import 'package:sparkle/features/achievement/achievement_routes.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/user/user_routes.dart';
+import 'package:sparkle/features/visual_elements/visual_elements_routes.dart';
 import 'package:sparkle/features/user/presentation/widgets/statistics_card.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
@@ -200,6 +201,16 @@ class ProfileScreen extends ConsumerWidget {
               accentColor: const Color(0xFFFFD700),
               onTap: () {
                 context.push(AchievementRoutes.basePath);
+              },
+            ),
+            const Divider(height: 1, indent: 60),
+            _buildSettingsTile(
+              context,
+              icon: Icons.palette_outlined,
+              title: l10n.visualElementsTitle,
+              accentColor: const Color(0xFF7B68EE),
+              onTap: () {
+                context.push(VisualElementsRoutes.basePath);
               },
             ),
             const Divider(height: 1, indent: 60),

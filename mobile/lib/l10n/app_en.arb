@@ -803,6 +803,7 @@
   "shopCategoryTitle": "Titles",
   "shopCategoryConsumable": "Consumables",
   "shopCategoryBoost": "Boosts",
+  "shopCategoryVisualElement": "Visual Elements",
   "shopEmpty": "No items yet",
   "shopPurchaseSuccess": "Purchased {name} successfully",
   "shopPurchaseFailed": "Purchase failed",

@@ -7,9 +7,11 @@ import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/chat/presentation/widgets/file_message_bubble.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
+import 'package:sparkle/features/community/presentation/widgets/share_cards/share_cards.dart';
 import 'package:sparkle/features/file/file.dart';
 
 class GroupChatBubble extends ConsumerStatefulWidget {
@@ -360,6 +362,14 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
         return _buildCheckinBubble(context, isMe);
       case MessageType.taskShare:
         return _buildTaskShareBubble(context, isMe);
+      case MessageType.planShare:
+        return _buildPlanShareBubble(context, isMe);
+      case MessageType.capsuleShare:
+        return _buildCapsuleShareBubble(context, isMe);
+      case MessageType.prismShare:
+        return _buildPrismShareBubble(context, isMe);
+      case MessageType.achievement:
+        return _buildAchievementShareBubble(context, isMe);
       case MessageType.fileShare:
         final data = FileMessageData.fromJson(widget.message.contentData ?? {});
         if (data.fileId.isEmpty) {
@@ -626,35 +636,304 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
         ],
       );
 
-  Widget _buildTaskShareBubble(BuildContext context, bool isMe) => Container(
-        padding: const EdgeInsets.all(DS.md),
+  Widget _buildTaskShareBubble(BuildContext context, bool isMe) {
+    final data = widget.message.contentData ?? {};
+    final payload = UniversalSharePayload(
+      contentType: ShareableContentType.taskCompletion,
+      resourceId: data['task_id'] as String? ?? '',
+      title: data['title'] as String? ?? widget.message.content ?? '任务',
+      subtitle: data['description'] as String?,
+      metadata: {
+        'duration': data['duration'],
+        'points': data['points'],
+        'streak': data['streak'],
+        'completed_at': data['completed_at'],
+      },
+    );
+
+    return _buildRichCardWrapper(
+      isMe: isMe,
+      child: TaskShareCardFactory.fromPayload(
+        payload,
+        isCompact: false,
+        onTap: () => _handleSharedResourceTap(payload),
+      ),
+    );
+  }
+
+  Widget _buildPlanShareBubble(BuildContext context, bool isMe) {
+    final data = widget.message.contentData ?? {};
+    final progress = data['progress'] as double?;
+    final payload = UniversalSharePayload(
+      contentType: ShareableContentType.planProgress,
+      resourceId: data['plan_id'] as String? ?? '',
+      title: data['title'] as String? ?? widget.message.content ?? '计划',
+      subtitle: progress != null ? '进度: ${(progress * 100).toStringAsFixed(0)}%' : null,
+      metadata: {
+        'progress': progress,
+        'completed_tasks': data['completed_tasks'],
+        'total_tasks': data['total_tasks'],
+        'milestones': data['milestones'],
+        'deadline': data['deadline'],
+      },
+    );
+
+    return _buildRichCardWrapper(
+      isMe: isMe,
+      child: PlanShareCardFactory.fromPayload(
+        payload,
+        isCompact: false,
+        onTap: () => _handleSharedResourceTap(payload),
+      ),
+    );
+  }
+
+  Widget _buildCapsuleShareBubble(BuildContext context, bool isMe) {
+    final data = widget.message.contentData ?? {};
+    final payload = UniversalSharePayload(
+      contentType: ShareableContentType.capsule,
+      resourceId: data['capsule_id'] as String? ?? '',
+      title: data['title'] as String? ?? widget.message.content ?? '时光胶囊',
+      subtitle: data['summary'] as String?,
+      metadata: {
+        'type': data['type'],
+        'depth': data['depth'],
+        'word_count': data['word_count'],
+        'tags': data['tags'],
+        'created_at': data['created_at'],
+      },
+    );
+
+    return _buildRichCardWrapper(
+      isMe: isMe,
+      child: CapsuleShareCardFactory.fromPayload(
+        payload,
+        isCompact: false,
+        onTap: () => _handleSharedResourceTap(payload),
+      ),
+    );
+  }
+
+  Widget _buildPrismShareBubble(BuildContext context, bool isMe) {
+    final data = widget.message.contentData ?? {};
+    return _buildRichCardWrapper(
+      isMe: isMe,
+      child: _buildPrismPreviewCard(context, isMe, data),
+    );
+  }
+
+  Widget _buildAchievementShareBubble(BuildContext context, bool isMe) {
+    final data = widget.message.contentData ?? {};
+    return _buildRichCardWrapper(
+      isMe: isMe,
+      child: _buildAchievementPreviewCard(context, isMe, data),
+    );
+  }
+
+  Widget _buildRichCardWrapper({
+    required bool isMe,
+    required Widget child,
+  }) =>
+      Container(
+        constraints: const BoxConstraints(maxWidth: 280),
         decoration: BoxDecoration(
-          color: isMe
-              ? Color.lerp(DS.chatBubbleUser, DS.brandSecondary, 0.2)
-              : DS.surfacePrimaryElevated,
+          color: isMe ? DS.chatBubbleUser : DS.chatBubbleOther,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: DS.shadowSm,
+          boxShadow: isMe
+              ? [
+                  BoxShadow(
+                    color: DS.chatBubbleUser.withValues(alpha: 0.24),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : DS.shadowSm,
           border: isMe ? null : Border.all(color: DS.borderSubtle),
         ),
-        child: Row(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: child,
+        ),
+      );
+
+  Widget _buildPrismPreviewCard(
+    BuildContext context,
+    bool isMe,
+    Map<String, dynamic> data,
+  ) =>
+      Container(
+        padding: const EdgeInsets.all(DS.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.task_alt,
-              color: isMe ? Colors.white : DS.brandSecondary,
-            ),
-            const SizedBox(width: DS.sm),
-            Flexible(
-              child: Text(
-                widget.message.content ?? context.l10n.communitySharedTask,
-                style: TextStyle(
-                  color: isMe ? Colors.white : DS.textPrimary,
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(DS.sm),
+                  decoration: BoxDecoration(
+                    color: DS.prismPurple.withValues(alpha: 0.15),
+                    borderRadius: DS.borderRadius8,
+                  ),
+                  child: Icon(
+                    Icons.psychology,
+                    color: isMe ? Colors.white : DS.prismPurple,
+                    size: 20,
+                  ),
                 ),
-              ),
+                const SizedBox(width: DS.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '认知棱镜',
+                        style: TextStyle(
+                          fontSize: DS.fontSizeXs,
+                          color: isMe
+                              ? Colors.white.withValues(alpha: 0.7)
+                              : DS.textTertiary,
+                        ),
+                      ),
+                      Text(
+                        data['title'] as String? ?? '学习模式分析',
+                        style: TextStyle(
+                          fontWeight: DS.fontWeightBold,
+                          color: isMe ? Colors.white : DS.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
+            if (data['patterns'] != null) ...[
+              const SizedBox(height: DS.sm),
+              Wrap(
+                spacing: DS.xs,
+                children: (data['patterns'] as List)
+                    .take(3)
+                    .map<Widget>((p) => Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: DS.sm,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isMe
+                                ? Colors.white.withValues(alpha: 0.15)
+                                : DS.prismPurple.withValues(alpha: 0.1),
+                            borderRadius: DS.borderRadius4,
+                          ),
+                          child: Text(
+                            p.toString(),
+                            style: TextStyle(
+                              fontSize: DS.fontSizeXs,
+                              color: isMe ? Colors.white : DS.prismPurple,
+                            ),
+                          ),
+                        ))
+                    .toList(),
+              ),
+            ],
           ],
         ),
       );
+
+  Widget _buildAchievementPreviewCard(
+    BuildContext context,
+    bool isMe,
+    Map<String, dynamic> data,
+  ) =>
+      Container(
+        padding: const EdgeInsets.all(DS.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(DS.sm),
+                  decoration: BoxDecoration(
+                    color: DS.warning.withValues(alpha: 0.15),
+                    borderRadius: DS.borderRadius8,
+                  ),
+                  child: Icon(
+                    Icons.emoji_events,
+                    color: isMe ? Colors.white : DS.warning,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: DS.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '成就解锁',
+                        style: TextStyle(
+                          fontSize: DS.fontSizeXs,
+                          color: isMe
+                              ? Colors.white.withValues(alpha: 0.7)
+                              : DS.textTertiary,
+                        ),
+                      ),
+                      Text(
+                        data['name'] as String? ?? '新成就',
+                        style: TextStyle(
+                          fontWeight: DS.fontWeightBold,
+                          color: isMe ? Colors.white : DS.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            if (data['rarity'] != null) ...[
+              const SizedBox(height: DS.sm),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: DS.sm,
+                  vertical: 2,
+                ),
+                decoration: BoxDecoration(
+                  color: _getRarityColor(data['rarity'] as String)
+                      .withValues(alpha: 0.15),
+                  borderRadius: DS.borderRadius4,
+                ),
+                child: Text(
+                  data['rarity'] as String,
+                  style: TextStyle(
+                    fontSize: DS.fontSizeXs,
+                    fontWeight: DS.fontWeightBold,
+                    color: _getRarityColor(data['rarity'] as String),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      );
+
+  Color _getRarityColor(String rarity) => switch (rarity.toLowerCase()) {
+        'legendary' => DS.warning,
+        'epic' => DS.prismPurple,
+        'rare' => DS.info,
+        _ => DS.neutral400,
+      };
+
+  void _handleSharedResourceTap(UniversalSharePayload payload) {
+    // Navigate to the shared resource
+    final deepLink = payload.deepLink;
+    if (deepLink.isNotEmpty) {
+      // Use go_router to navigate
+      // This would integrate with the app's routing system
+      UniversalShareService()
+          .copyDeepLink(deepLink); // For now, just copy the link
+      AppFeedback.info(context, '链接已复制');
+    }
+  }
 
   Widget _buildAvatar(UserBrief? user) => DecoratedBox(
         decoration: BoxDecoration(

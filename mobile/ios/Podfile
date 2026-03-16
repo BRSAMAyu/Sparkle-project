@@ -30,6 +30,11 @@ target 'Runner' do
   use_frameworks!
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+
+  # JPush dependencies for iOS
+  pod 'JCore', '~> 3.6.0'
+  pod 'JPush', '~> 5.0.0'
+
   target 'RunnerTests' do
     inherit! :search_paths
   end

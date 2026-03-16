@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
+import 'package:sparkle/features/community/presentation/widgets/share_cards/share_cards.dart';
 
 class PrivateChatBubble extends ConsumerStatefulWidget {
   const PrivateChatBubble({required this.message, super.key});
@@ -94,11 +96,86 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble>
   }
 
   Widget _buildContent(BuildContext context, bool isMe) {
-    // Private chat mostly text for now
     switch (widget.message.messageType) {
+      case MessageType.taskShare:
+        return _buildSharedResourceBubble(context, isMe);
+      case MessageType.planShare:
+        return _buildSharedResourceBubble(context, isMe);
+      case MessageType.capsuleShare:
+        return _buildSharedResourceBubble(context, isMe);
+      case MessageType.prismShare:
+        return _buildSharedResourceBubble(context, isMe);
+      case MessageType.achievement:
+        return _buildSharedResourceBubble(context, isMe);
       case MessageType.text:
       default:
         return _buildTextBubble(context, isMe);
+    }
+  }
+
+  Widget _buildSharedResourceBubble(BuildContext context, bool isMe) {
+    final data = widget.message.contentData ?? {};
+    final contentType = _getContentTypeFromMessageType(widget.message.messageType);
+
+    final payload = UniversalSharePayload(
+      contentType: contentType,
+      resourceId: data['id'] as String? ?? data['${contentType.stringValue}_id'] as String? ?? '',
+      title: data['title'] as String? ?? data['name'] as String? ?? widget.message.content ?? '',
+      subtitle: data['subtitle'] as String? ?? data['description'] as String?,
+      metadata: data,
+    );
+
+    return _buildRichCardWrapper(
+      isMe: isMe,
+      child: ShareCardFactory.fromPayload(
+        payload,
+        isCompact: false,
+        onTap: () => _handleSharedResourceTap(payload),
+      ),
+    );
+  }
+
+  ShareableContentType _getContentTypeFromMessageType(MessageType type) =>
+      switch (type) {
+        MessageType.taskShare => ShareableContentType.taskCompletion,
+        MessageType.planShare => ShareableContentType.planProgress,
+        MessageType.capsuleShare => ShareableContentType.capsule,
+        MessageType.prismShare => ShareableContentType.cognitivePrism,
+        MessageType.achievement => ShareableContentType.achievement,
+        _ => ShareableContentType.taskCompletion,
+      };
+
+  Widget _buildRichCardWrapper({
+    required bool isMe,
+    required Widget child,
+  }) =>
+      Container(
+        constraints: const BoxConstraints(maxWidth: 260),
+        decoration: BoxDecoration(
+          color: isMe ? DS.chatBubbleUser : DS.chatBubbleOther,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: isMe
+              ? [
+                  BoxShadow(
+                    color: DS.chatBubbleUser.withValues(alpha: 0.24),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : DS.shadowSm,
+          border: isMe ? null : Border.all(color: DS.borderSubtle),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: child,
+        ),
+      );
+
+  void _handleSharedResourceTap(UniversalSharePayload payload) {
+    final deepLink = payload.deepLink;
+    if (deepLink.isNotEmpty) {
+      UniversalShareService().copyDeepLink(deepLink);
+      AppFeedback.info(context, '链接已复制');
     }
   }
 

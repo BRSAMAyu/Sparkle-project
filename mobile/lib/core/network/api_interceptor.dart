@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logger/logger.dart';
 import 'package:sparkle/core/constants/api_constants.dart';
+import 'package:sparkle/core/network/http_client_pinning.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/device_identity_service.dart';
 import 'package:sparkle/features/auth/auth.dart';
@@ -58,6 +59,30 @@ class AuthInterceptor extends Interceptor {
   AuthInterceptor(this._ref);
   final Ref _ref;
 
+  // Lock for preventing concurrent token refresh
+  Completer<String>? _refreshCompleter;
+
+  // Lazy-initialized Dio instance for retry (without auth interceptor to avoid recursion)
+  Dio? _retryDio;
+
+  /// Get or create a Dio instance configured for retry requests.
+  /// This instance has SSL pinning but no AuthInterceptor to avoid infinite recursion.
+  Dio _getRetryDio() {
+    if (_retryDio == null) {
+      _retryDio = Dio(BaseOptions(
+        baseUrl: ApiConstants.baseUrl,
+        connectTimeout: const Duration(seconds: 10),
+        receiveTimeout: const Duration(seconds: 30),
+        contentType: 'application/json',
+      ),);
+      // Configure SSL pinning for secure communication
+      configureDioForPinning(_retryDio!, ApiConstants.apiCertSha256);
+      // Add only logging and retry interceptors (not auth)
+      _retryDio!.interceptors.add(_ref.read(loggingInterceptorProvider));
+    }
+    return _retryDio!;
+  }
+
   @override
   Future<void> onRequest(
     RequestOptions options,
@@ -80,10 +105,12 @@ class AuthInterceptor extends Interceptor {
   ) async {
     final path = err.requestOptions.path;
 
-    // 🎭 演示模式：忽略401错误，不尝试刷新token或logout
-    // 这样可以让演示模式下的请求失败时不会影响用户体验
-    if (DemoDataService.isDemoMode && err.response?.statusCode == 401) {
-      debugPrint('🎭 Demo Mode: Ignoring 401 error for $path');
+    // 🎭 演示模式：仅在特定的演示API路径上忽略401
+    // 更严格的条件，避免在真实API上忽略认证错误
+    if (DemoDataService.isDemoMode &&
+        err.response?.statusCode == 401 &&
+        (path.contains('/demo/') || path.contains('/mock/'))) {
+      debugPrint('🎭 Demo Mode: Ignoring 401 error for demo path: $path');
       return super.onError(err, handler);
     }
 
@@ -97,24 +124,49 @@ class AuthInterceptor extends Interceptor {
 
     if (err.response?.statusCode == 401) {
       try {
-        final authRepo = _ref.read(authRepositoryProvider);
-        final newToken = await authRepo.refreshToken();
-        // Clone the request and retry
-        // Use a new Dio instance with the same base configuration
-        final dio = Dio(BaseOptions(
-          baseUrl: ApiConstants.baseUrl,
-          connectTimeout: const Duration(seconds: 10),
-          receiveTimeout: const Duration(seconds: 30),
-        ),);
-        err.requestOptions.headers['Authorization'] =
-            'Bearer ${newToken.accessToken}';
-        final response = await dio.fetch<dynamic>(err.requestOptions);
-        return handler.resolve(response);
+        // Check if there's already a refresh in progress
+        if (_refreshCompleter != null && !_refreshCompleter!.isCompleted) {
+          try {
+            // Wait for the existing refresh to complete
+            final newToken = await _refreshCompleter!.future;
+            err.requestOptions.headers['Authorization'] = 'Bearer $newToken';
+            final dio = _getRetryDio();
+            final response = await dio.fetch<dynamic>(err.requestOptions);
+            return handler.resolve(response);
+          } catch (e) {
+            // The concurrent refresh failed, fall through to logout
+            return super.onError(err, handler);
+          }
+        }
+
+        // Start a new refresh operation
+        _refreshCompleter = Completer<String>();
+        try {
+          final authRepo = _ref.read(authRepositoryProvider);
+          final newToken = await authRepo.refreshToken();
+          _refreshCompleter!.complete(newToken.accessToken);
+
+          // Clone the request and retry using a Dio instance without auth interceptor
+          // This ensures SSL pinning is still used while avoiding infinite recursion
+          err.requestOptions.headers['Authorization'] =
+              'Bearer ${newToken.accessToken}';
+          final dio = _getRetryDio();
+          final response = await dio.fetch<dynamic>(err.requestOptions);
+          return handler.resolve(response);
+        } catch (e) {
+          _refreshCompleter?.completeError(e);
+          // Refresh token failed, logout user
+          unawaited(_ref.read(authRepositoryProvider).logout(
+                keepDemoMode: DemoDataService.isDemoMode,
+              ),);
+          return super.onError(err, handler);
+        } finally {
+          // Clear the completer after a short delay to allow any waiting requests to complete
+          Future.delayed(const Duration(milliseconds: 100), () {
+            _refreshCompleter = null;
+          });
+        }
       } catch (e) {
-        // Refresh token failed, logout user
-        unawaited(_ref.read(authRepositoryProvider).logout(
-              keepDemoMode: DemoDataService.isDemoMode,
-            ),);
         return super.onError(err, handler);
       }
     }

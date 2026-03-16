@@ -803,6 +803,7 @@
   "shopCategoryTitle": "称号",
   "shopCategoryConsumable": "消耗品",
   "shopCategoryBoost": "加成",
+  "shopCategoryVisualElement": "视觉元素",
   "shopEmpty": "暂无物品",
   "shopPurchaseSuccess": "成功购买 {name}",
   "shopPurchaseFailed": "购买失败",

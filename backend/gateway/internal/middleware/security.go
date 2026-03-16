@@ -8,8 +8,21 @@ import (
 // SecurityHeadersMiddleware adds security-related headers to every response
 func SecurityHeadersMiddleware(cfg ...*config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Content-Security-Policy: restrictive policy
-		c.Header("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self';")
+		// Content-Security-Policy: 更严格的策略
+		// 注意: 移除了 script-src 的 'unsafe-inline' 和 'unsafe-eval'
+		// 如果前端需要内联脚本，需要使用 nonce 或 hash 机制
+		// style-src 保留 'unsafe-inline' 因为很多 CSS 框架需要
+		c.Header("Content-Security-Policy",
+			"default-src 'self'; "+
+				"script-src 'self'; "+
+				"style-src 'self' 'unsafe-inline'; "+
+				"img-src 'self' data: https:; "+
+				"connect-src 'self' wss: https:; "+
+				"font-src 'self'; "+
+				"frame-src 'none'; "+
+				"object-src 'none'; "+
+				"base-uri 'self'; "+
+				"form-action 'self'")
 
 		// X-Frame-Options: prevent clickjacking
 		c.Header("X-Frame-Options", "DENY")

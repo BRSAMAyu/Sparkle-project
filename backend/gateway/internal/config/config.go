@@ -13,22 +13,24 @@ import (
 )
 
 type Config struct {
-	Port               string  `mapstructure:"PORT"`
-	DatabaseURL        string  `mapstructure:"DATABASE_URL"`
-	PostgresHost       string  `mapstructure:"POSTGRES_HOST"`
-	PostgresPort       int     `mapstructure:"POSTGRES_PORT"`
-	PostgresUser       string  `mapstructure:"POSTGRES_USER"`
-	PostgresPassword   string  `mapstructure:"POSTGRES_PASSWORD"`
-	PostgresDB         string  `mapstructure:"POSTGRES_DB"`
-	AgentAddress       string  `mapstructure:"AGENT_ADDRESS"`
-	AgentTLSEnabled    bool    `mapstructure:"AGENT_TLS_ENABLED"`
-	AgentTLSCACertPath string  `mapstructure:"AGENT_TLS_CA_CERT"`
-	AgentTLSServerName string  `mapstructure:"AGENT_TLS_SERVER_NAME"`
-	AgentTLSInsecure   bool    `mapstructure:"AGENT_TLS_INSECURE"`
-	GRPCTimeoutSeconds int     `mapstructure:"GRPC_TIMEOUT_SECONDS"`
-	JWTSecret          string  `mapstructure:"JWT_SECRET"`
-	JWTIssuer          string  `mapstructure:"JWT_ISSUER"`
-	JWTAudience        string  `mapstructure:"JWT_AUDIENCE"`
+	Port                       string  `mapstructure:"PORT"`
+	DatabaseURL                string  `mapstructure:"DATABASE_URL"`
+	PostgresHost               string  `mapstructure:"POSTGRES_HOST"`
+	PostgresPort               int     `mapstructure:"POSTGRES_PORT"`
+	PostgresUser               string  `mapstructure:"POSTGRES_USER"`
+	PostgresPassword           string  `mapstructure:"POSTGRES_PASSWORD"`
+	PostgresDB                 string  `mapstructure:"POSTGRES_DB"`
+	AgentAddress               string  `mapstructure:"AGENT_ADDRESS"`
+	AgentTLSEnabled            bool    `mapstructure:"AGENT_TLS_ENABLED"`
+	AgentTLSCACertPath         string  `mapstructure:"AGENT_TLS_CA_CERT"`
+	AgentTLSServerName         string  `mapstructure:"AGENT_TLS_SERVER_NAME"`
+	AgentTLSInsecure           bool    `mapstructure:"AGENT_TLS_INSECURE"`
+	GRPCTimeoutSeconds         int     `mapstructure:"GRPC_TIMEOUT_SECONDS"`
+	JWTSecret                  string  `mapstructure:"JWT_SECRET"`
+	JWTIssuer                  string  `mapstructure:"JWT_ISSUER"`
+	JWTAudience                string  `mapstructure:"JWT_AUDIENCE"`
+	JWTAccessTokenExpireMinutes int    `mapstructure:"JWT_ACCESS_TOKEN_EXPIRE_MINUTES"`
+	JWTRefreshTokenExpireDays   int    `mapstructure:"JWT_REFRESH_TOKEN_EXPIRE_DAYS"`
 	AllowWsQueryToken  bool    `mapstructure:"ALLOW_WS_QUERY_TOKEN"`
 	WSTicketTTLSeconds int     `mapstructure:"WS_TICKET_TTL_SECONDS"`
 	WSTicketRateRPS    float64 `mapstructure:"WS_TICKET_RATE_RPS"`
@@ -318,6 +320,8 @@ func Load() *Config {
 		"JWT_SECRET",
 		"JWT_ISSUER",
 		"JWT_AUDIENCE",
+		"JWT_ACCESS_TOKEN_EXPIRE_MINUTES",
+		"JWT_REFRESH_TOKEN_EXPIRE_DAYS",
 		"ALLOW_WS_QUERY_TOKEN",
 		"WS_TICKET_TTL_SECONDS",
 		"WS_TICKET_RATE_RPS",
@@ -381,8 +385,10 @@ func Load() *Config {
 	viper.SetDefault("AGENT_TLS_INSECURE", false)
 	viper.SetDefault("GRPC_TIMEOUT_SECONDS", 180)
 	// JWT_SECRET has no default - must be set via environment variable or .env file
-	viper.SetDefault("JWT_ISSUER", "")
-	viper.SetDefault("JWT_AUDIENCE", "")
+	viper.SetDefault("JWT_ISSUER", "sparkle-gateway")
+	viper.SetDefault("JWT_AUDIENCE", "sparkle-app")
+	viper.SetDefault("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", 30)  // 30 minutes for access token
+	viper.SetDefault("JWT_REFRESH_TOKEN_EXPIRE_DAYS", 7)     // 7 days for refresh token
 	viper.SetDefault("WS_TICKET_TTL_SECONDS", 120)
 	viper.SetDefault("WS_TICKET_RATE_RPS", 2.0)
 	viper.SetDefault("WS_TICKET_RATE_BURST", 5)

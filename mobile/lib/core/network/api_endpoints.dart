@@ -371,4 +371,5 @@ class ApiEndpoints {
   static const String calendarEventsSummary = '/calendar/summary';
   static const String calendarEventsBatch = '/calendar/batch';
   static String calendarEventRestore(String id) => '/calendar/$id/restore';
+  static const String calendarSuggestTime = '/calendar/suggest-time';
 }

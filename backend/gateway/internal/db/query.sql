@@ -94,7 +94,7 @@ ON CONFLICT (id) DO UPDATE SET
 RETURNING *;
 
 -- name: GetChatSessionMeta :one
-SELECT id, user_id, title, last_message_at, last_preview, is_active, created_at, updated_at
+SELECT id, user_id, title, last_message_at, is_active, created_at, updated_at
 FROM chat_sessions
 WHERE id = $1 AND user_id = $2
 LIMIT 1;

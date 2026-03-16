@@ -913,7 +913,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
   Timer? _heartbeatTimer;
   Timer? _heartbeatTimeoutTimer;
   static const Duration _heartbeatInterval = Duration(seconds: 30);
-  static const Duration _heartbeatTimeout = Duration(seconds: 90);
+  static const Duration _heartbeatTimeout = Duration(seconds: 60); // 从 90s 降低到 60s
   int _consecutiveHeartbeatFailures = 0;
   static const int _maxConsecutiveHeartbeatFailures = 3;
   DateTime? _lastPongReceivedTime;
@@ -1526,10 +1526,10 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     _reconnectAttempts++;
     _updateConnectionState(WsConnectionState.reconnecting);
 
-    // TODO-A7: Jitter
+    // 指数退避带上限 (最大 60 秒)
     final backoff = math.min(
       math.pow(2, _reconnectAttempts).toInt(),
-      32,
+      60, // 从 32s 提升到 60s 上限
     );
     final jitter = math.Random().nextInt(1000);
     final delayMs = (backoff * 1000) + jitter;

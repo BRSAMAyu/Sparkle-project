@@ -29,6 +29,64 @@ var (
 		Help: "Total number of failed WebSocket connections",
 	}, []string{"endpoint", "auth_method", "reason"})
 
+	// ========== Phase 3: Enhanced WebSocket Metrics ==========
+
+	// WSConnectionsActive tracks current active WebSocket connections
+	WSConnectionsActive = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "sparkle_ws_connections_active",
+		Help: "Current active WebSocket connections",
+	})
+
+	// WSMessageLatency tracks WebSocket message processing latency
+	WSMessageLatency = promauto.NewHistogram(prometheus.HistogramOpts{
+		Name:    "sparkle_ws_message_latency_seconds",
+		Help:    "WebSocket message processing latency",
+		Buckets: []float64{0.01, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5},
+	})
+
+	// WSAckPending tracks messages waiting for ACK
+	WSAckPending = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "sparkle_ws_ack_pending_messages",
+		Help: "Messages waiting for ACK",
+	})
+
+	// WSCompressionApplied tracks compressed messages
+	WSCompressionApplied = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "sparkle_ws_compression_applied_total",
+		Help: "Total WebSocket messages compressed",
+	})
+
+	// WSMessageReceived tracks received messages by type
+	WSMessageReceived = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "sparkle_ws_message_received_total",
+		Help: "Total WebSocket messages received by type",
+	}, []string{"message_type"})
+
+	// WSMessageSent tracks sent messages by type
+	WSMessageSent = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "sparkle_ws_message_sent_total",
+		Help: "Total WebSocket messages sent by type",
+	}, []string{"message_type"})
+
+	// WSHeartbeatLatency tracks heartbeat RTT
+	WSHeartbeatLatency = promauto.NewHistogram(prometheus.HistogramOpts{
+		Name:    "sparkle_ws_heartbeat_latency_seconds",
+		Help:    "WebSocket heartbeat round-trip time",
+		Buckets: []float64{0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10},
+	})
+
+	// WSReconnectTotal tracks reconnection attempts
+	WSReconnectTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "sparkle_ws_reconnect_total",
+		Help: "Total WebSocket reconnection attempts",
+	}, []string{"status"}) // status: success, failed
+
+	// WSMessageDedupTotal tracks deduplicated messages
+	WSMessageDedupTotal = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "sparkle_ws_message_dedup_total",
+		Help: "Total duplicate messages detected and dropped",
+	})
+
 	// ========== Community WebSocket Metrics ==========
 
 	WSCommunityConnectionTotal = promauto.NewCounterVec(prometheus.CounterOpts{

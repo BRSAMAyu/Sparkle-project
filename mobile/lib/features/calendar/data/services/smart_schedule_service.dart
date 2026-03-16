@@ -1,6 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:logger/logger.dart';
+import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
+
+final _logger = Logger();
 
 /// Time slot for scheduling
 /// 排程时间槽
@@ -186,14 +191,128 @@ class SuggestedTime {
 ///
 /// Analyzes user preferences and cognitive patterns to suggest optimal
 /// time slots for tasks.
+///
+/// Strategy: Backend-first with local fallback
+/// 策略: 后端优先，本地兜底
 class SmartScheduleService {
   SmartScheduleService(this._ref);
 
   final Ref _ref;
 
-  /// Get suggested time slots for a task
-  /// 获取任务的建议时间槽
+  /// Get suggested time slots for a task (Backend-first with local fallback)
+  /// 获取任务的建议时间槽（后端优先，本地兜底）
   Future<List<SuggestedTime>> suggestTimeSlots({
+    required int estimatedMinutes,
+    int energyCost = 2,
+    int difficulty = 2,
+    DateTime? preferredDate,
+    String? taskType,
+  }) async {
+    try {
+      // 1. 尝试调用后端 API
+      return await _fetchFromBackend(
+        estimatedMinutes: estimatedMinutes,
+        energyCost: energyCost,
+        difficulty: difficulty,
+        preferredDate: preferredDate,
+        taskType: taskType,
+      );
+    } catch (e) {
+      _logger.w('Backend failed, using local fallback: $e');
+
+      // 2. 本地兜底逻辑
+      return _localSuggestTimeSlots(
+        estimatedMinutes: estimatedMinutes,
+        energyCost: energyCost,
+        difficulty: difficulty,
+        preferredDate: preferredDate,
+      );
+    }
+  }
+
+  /// Fetch time slot suggestions from backend API
+  /// 从后端 API 获取时间槽建议
+  Future<List<SuggestedTime>> _fetchFromBackend({
+    required int estimatedMinutes,
+    required int energyCost,
+    required int difficulty,
+    DateTime? preferredDate,
+    String? taskType,
+  }) async {
+    final apiClient = _ref.read(apiClientProvider);
+    final response = await apiClient.post<Map<String, dynamic>>(
+      ApiEndpoints.calendarSuggestTime,
+      data: {
+        'estimated_minutes': estimatedMinutes,
+        'energy_cost': energyCost,
+        'difficulty': difficulty,
+        'preferred_date': preferredDate?.toIso8601String().split('T')[0],
+        'task_type': taskType,
+      },
+    );
+
+    final data = response.data;
+    if (data == null) {
+      throw Exception('Empty response from backend');
+    }
+
+    final suggestions = (data['suggestions'] as List)
+        .map((json) => _parseBackendSuggestion(json as Map<String, dynamic>))
+        .toList();
+
+    return suggestions;
+  }
+
+  /// Parse backend response to SuggestedTime
+  /// 解析后端响应为 SuggestedTime
+  SuggestedTime _parseBackendSuggestion(Map<String, dynamic> json) {
+    final startTime = json['start_time'] as String;
+    final endTime = json['end_time'] as String;
+
+    final startParts = startTime.split(':');
+    final startHour = int.parse(startParts[0]);
+    final startMinute = int.parse(startParts[1]);
+
+    final endParts = endTime.split(':');
+    final endHour = int.parse(endParts[0]);
+    final endMinute = int.parse(endParts[1]);
+
+    final timeSlot = TimeSlot(
+      startHour: startHour,
+      startMinute: startMinute,
+      endHour: endHour,
+      endMinute: endMinute,
+      quality: _parseQuality(json['quality'] as String),
+      label: json['reason'] as String?,
+    );
+
+    return SuggestedTime(
+      timeSlot: timeSlot,
+      reason: json['reason'] as String? ?? '推荐时段',
+      confidence: (json['confidence'] as num?)?.toDouble() ?? 0.7,
+    );
+  }
+
+  /// Parse quality string to enum
+  /// 解析质量字符串为枚举
+  TimeSlotQuality _parseQuality(String quality) {
+    switch (quality) {
+      case 'peak':
+        return TimeSlotQuality.peak;
+      case 'normal':
+        return TimeSlotQuality.normal;
+      case 'low':
+        return TimeSlotQuality.low;
+      case 'blocked':
+        return TimeSlotQuality.blocked;
+      default:
+        return TimeSlotQuality.normal;
+    }
+  }
+
+  /// Local fallback for time slot suggestions
+  /// 本地兜底的时间槽建议
+  Future<List<SuggestedTime>> _localSuggestTimeSlots({
     required int estimatedMinutes,
     required int energyCost,
     required int difficulty,
@@ -206,7 +325,6 @@ class SmartScheduleService {
     final slots = _generateAvailableSlots(
       preferences: preferences,
       date: preferredDate ?? DateTime.now(),
-      excludeBlocked: true,
     );
 
     // Score each slot based on task requirements and preferences
@@ -239,15 +357,17 @@ class SmartScheduleService {
   /// 获取任务的最佳时间槽
   Future<SuggestedTime?> getBestTimeSlot({
     required int estimatedMinutes,
-    required int energyCost,
-    required int difficulty,
+    int energyCost = 2,
+    int difficulty = 2,
     DateTime? preferredDate,
+    String? taskType,
   }) async {
     final suggestions = await suggestTimeSlots(
       estimatedMinutes: estimatedMinutes,
       energyCost: energyCost,
       difficulty: difficulty,
       preferredDate: preferredDate,
+      taskType: taskType,
     );
     return suggestions.isNotEmpty ? suggestions.first : null;
   }
@@ -323,7 +443,7 @@ class SmartScheduleService {
         endHour: nextHour,
         endMinute: nextMinute,
         quality: quality,
-      ));
+      ),);
 
       currentHour = nextHour;
       currentMinute = nextMinute;
@@ -447,9 +567,9 @@ class SmartScheduleService {
 
 /// Provider for SmartScheduleService
 /// 智能排程服务 Provider
-final smartScheduleServiceProvider = Provider<SmartScheduleService>((ref) {
-  return SmartScheduleService(ref);
-});
+final smartScheduleServiceProvider = Provider<SmartScheduleService>(
+  (ref) => SmartScheduleService(ref),
+);
 
 /// Provider for suggested time slots for a task
 /// 任务建议时间槽的 Provider
@@ -462,6 +582,7 @@ final suggestedTimeSlotsProvider =
       energyCost: params.energyCost,
       difficulty: params.difficulty,
       preferredDate: params.preferredDate,
+      taskType: params.taskType,
     );
   },
 );
@@ -474,10 +595,12 @@ class TaskScheduleParams {
     this.energyCost = 2,
     this.difficulty = 2,
     this.preferredDate,
+    this.taskType,
   });
 
   final int estimatedMinutes;
   final int energyCost;
   final int difficulty;
   final DateTime? preferredDate;
+  final String? taskType;
 }

@@ -409,7 +409,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 		middleware.WsAuthMiddleware(cfg, rdb),
 		handlers.wsProxy.HandlePersonalWS)
 
-	authMiddleware := middleware.AuthMiddleware(cfg)
+	authMiddleware := middleware.AuthMiddleware(cfg, rdb)
 	authRateLimit := middleware.HybridRateLimitMiddlewareSimple(rdb, 5.0, 15)
 
 	requestTimeout := 30
