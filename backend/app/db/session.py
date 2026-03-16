@@ -30,6 +30,14 @@ def _get_engine_kwargs(db_url: str, sslmode: str | None, sslrootcert: str | None
     """
     根据数据库类型返回适当的引擎配置
     PostgreSQL 使用连接池，SQLite 使用 NullPool
+
+    NOTE: asyncpg 0.31+ compatibility
+    - asyncpg does NOT accept 'sslmode' string parameter in connect_args
+    - asyncpg requires 'ssl' parameter (bool or SSLContext), NOT 'sslmode'
+    - We map sslmode values to asyncpg's ssl parameter:
+      - 'disable' -> ssl=False
+      - 'require', 'verify-ca', 'verify-full' -> ssl=True
+      - sslrootcert -> ssl=SSLContext with certificate verification
     """
     is_sqlite = db_url.startswith("sqlite")
 
@@ -42,16 +50,24 @@ def _get_engine_kwargs(db_url: str, sslmode: str | None, sslrootcert: str | None
         }
     else:
         # PostgreSQL 使用连接池配置
+        # asyncpg requires 'ssl' parameter (bool or SSLContext), NOT 'sslmode'
         connect_args = {}
+
         if sslrootcert:
+            # With certificate, create SSL context for verification
             connect_args["ssl"] = ssl.create_default_context(cafile=sslrootcert)
-        elif sslmode:
-            if sslmode == "disable":
-                connect_args["ssl"] = False
-            elif sslmode in ("require", "verify-ca", "verify-full"):
-                connect_args["ssl"] = True
-        elif not settings.DEBUG:
+        elif sslmode == "disable":
+            # Explicitly disable SSL
+            connect_args["ssl"] = False
+        elif sslmode in ("require", "verify-ca", "verify-full"):
+            # Enable SSL without certificate verification
             connect_args["ssl"] = True
+        elif not settings.DEBUG:
+            # Production default: require SSL
+            connect_args["ssl"] = True
+        else:
+            # Development: disable SSL for local connections
+            connect_args["ssl"] = False
 
         return {
             "pool_size": settings.DB_POOL_SIZE,

@@ -213,24 +213,30 @@ class GraphRAGRetriever:
         Returns:
             实体名称列表
         """
-        prompt = f"""
-        从以下查询中提取知识实体名称，返回 JSON 数组。
-        只提取明确的知识点、概念或领域名称。
+        system_prompt = """You are a knowledge entity extractor. Extract knowledge entity names from user queries.
+Return ONLY a valid JSON array of strings. No markdown, no explanation, no extra text.
 
-        查询: {query}
+Extract only explicit knowledge points, concepts, or domain names.
 
-        示例:
-        查询: "学习量子计算需要什么前置知识"
-        返回: ["量子计算"]
+Examples:
+Query: "学习量子计算需要什么前置知识"
+Return: ["量子计算"]
 
-        查询: "Python 和 Java 的区别"
-        返回: ["Python", "Java"]
+Query: "Python 和 Java 的区别"
+Return: ["Python", "Java"]"""
 
-        返回格式 (JSON):
-        """
+        user_prompt = f"""Extract knowledge entities from this query: {query}
+
+Return ONLY a JSON array of entity names."""
 
         try:
-            response = await llm_service.chat(prompt)
+            # llm_service.chat() expects messages parameter
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ]
+            response = await llm_service.chat(messages)
+
             # 清理响应
             response = response.strip()
             if response.startswith('```'):

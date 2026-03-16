@@ -3,9 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
-import 'package:sparkle/features/achievement/presentation/providers/close_to_unlock_provider.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/achievement_progress_banner.dart';
+import 'package:sparkle/features/achievement/presentation/widgets/achievement_share_bottom_sheet.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/achievement_unlock_dialog.dart';
+import 'package:sparkle/features/chat/data/models/chat_stream_events.dart' as chat;
 import 'package:sparkle/features/chat/data/services/message_notification_service.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
@@ -55,7 +56,7 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
   }
 
   Future<void> _showAchievementDialog(
-    dynamic event,
+    chat.AchievementUnlockEvent event,
     int? comboCount,
   ) async {
     if (_isShowingAchievementDialog) return;
@@ -66,7 +67,12 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
         event,
         comboCount: comboCount,
         onShare: () {
-          // TODO: share
+          Navigator.of(context).pop(); // Close unlock dialog first
+          showAchievementShareSheet(
+            context,
+            achievementId: event.achievementId,
+            achievementName: event.name,
+          );
         },
       );
     } finally {

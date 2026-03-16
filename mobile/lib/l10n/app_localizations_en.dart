@@ -2790,7 +2790,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get saveResultEmpty => 'Save result is empty';
 
   @override
-  String get gallerySaveFailed => 'Gallery save failed';
+  String get gallerySaveFailed => 'Failed to save to gallery';
 
   @override
   String shareUnlockMessage(Object achievementName) {
@@ -6115,4 +6115,31 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get memoryEvidenceContent => 'Content';
+
+  @override
+  String get shareOptionsTitle => 'Share Achievement';
+
+  @override
+  String get shareToWeChatFriends => 'Share to WeChat Friends';
+
+  @override
+  String get shareToWeChatMoments => 'Share to Moments';
+
+  @override
+  String get shareToSystem => 'System Share';
+
+  @override
+  String get shareToCommunity => 'Share to Community';
+
+  @override
+  String get saveImageToGallery => 'Save Image';
+
+  @override
+  String get copyDeepLink => 'Copy Link';
+
+  @override
+  String get linkCopied => 'Link copied';
+
+  @override
+  String get wechatNotInstalled => 'Please install WeChat first';
 }

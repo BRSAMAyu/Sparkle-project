@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/auth/auth.dart';
+import 'package:sparkle/features/calendar/data/services/smart_schedule_service.dart';
 import 'package:sparkle/features/user/user_routes.dart';
 
 class SchedulePreferencesScreen extends ConsumerStatefulWidget {
@@ -20,6 +21,9 @@ class _SchedulePreferencesScreenState
   final _commuteEndController = TextEditingController();
   final _lunchStartController = TextEditingController();
   final _lunchEndController = TextEditingController();
+  FocusPeriod _focusPeriod = FocusPeriod.morning;
+  int _preferredTaskDuration = 45;
+  int _preferredBreakDuration = 15;
 
   @override
   void initState() {
@@ -38,6 +42,27 @@ class _SchedulePreferencesScreenState
         _lunchStartController.text = lunch[0] as String;
         _lunchEndController.text = lunch[1] as String;
       }
+      // Load focus period preference
+      final focusPeriodStr = prefs['focus_period'] as String?;
+      if (focusPeriodStr != null) {
+        _focusPeriod = _parseFocusPeriod(focusPeriodStr);
+      }
+      // Load task duration preference
+      _preferredTaskDuration = prefs['preferred_task_duration'] as int? ?? 45;
+      _preferredBreakDuration = prefs['preferred_break_duration'] as int? ?? 15;
+    }
+  }
+
+  FocusPeriod _parseFocusPeriod(String value) {
+    switch (value) {
+      case 'morning':
+        return FocusPeriod.morning;
+      case 'afternoon':
+        return FocusPeriod.afternoon;
+      case 'evening':
+        return FocusPeriod.evening;
+      default:
+        return FocusPeriod.morning;
     }
   }
 
@@ -80,6 +105,13 @@ class _SchedulePreferencesScreenState
     if (lunchStart.isNotEmpty && lunchEnd.isNotEmpty) {
       newPrefs['lunch'] = [lunchStart, lunchEnd];
     }
+
+    // Add focus period preference
+    newPrefs['focus_period'] = _focusPeriod.name;
+
+    // Add duration preferences
+    newPrefs['preferred_task_duration'] = _preferredTaskDuration;
+    newPrefs['preferred_break_duration'] = _preferredBreakDuration;
 
     try {
       await ref.read(authProvider.notifier).updateProfile({

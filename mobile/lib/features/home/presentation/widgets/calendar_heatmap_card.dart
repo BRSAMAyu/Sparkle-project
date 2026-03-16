@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/calendar/presentation/providers/calendar_provider.dart';
+import 'package:sparkle/features/calendar/presentation/providers/unified_calendar_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/calendar_preview_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/calendar/task_preview_panel.dart';
 
@@ -181,10 +182,38 @@ class CalendarHeatmapCard extends ConsumerWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          Icon(
-            Icons.calendar_month_rounded,
-            size: dense ? 14 : 16,
-            color: DS.textSecondary,
+          // Quick jump to today button
+          GestureDetector(
+            onTap: () => context.push('/calendar/day?date=${DateTime.now().toIso8601String()}'),
+            child: Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: dense ? DS.spacing6 : DS.spacing8,
+                vertical: DS.spacing4,
+              ),
+              decoration: BoxDecoration(
+                color: DS.brandPrimary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.today_rounded,
+                    size: dense ? 12 : 14,
+                    color: DS.brandPrimary,
+                  ),
+                  const SizedBox(width: DS.spacing4),
+                  Text(
+                    '今日',
+                    style: TextStyle(
+                      fontSize: dense ? 10 : 11,
+                      fontWeight: FontWeight.w600,
+                      color: DS.brandPrimary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       );
@@ -323,7 +352,7 @@ class CalendarHeatmapCard extends ConsumerWidget {
   }
 }
 
-class _CompactCalendarSidebar extends StatelessWidget {
+class _CompactCalendarSidebar extends ConsumerWidget {
   const _CompactCalendarSidebar({
     required this.activeDays,
     required this.peakTasks,
@@ -335,33 +364,90 @@ class _CompactCalendarSidebar extends StatelessWidget {
   final bool showLegend;
 
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(DS.spacing8),
-        decoration: BoxDecoration(
-          color: DS.surfaceOverlay,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: DS.borderSubtle),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _CompactCalendarStat(label: '活跃', value: '$activeDays天'),
-            const SizedBox(height: DS.spacing10),
-            _CompactCalendarStat(label: '峰值', value: '$peakTasks项'),
-            const Spacer(),
-            if (showLegend)
-              Text(
-                '格子越深，任务越密集',
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: DS.textSecondary,
-                      height: 1.35,
-                    ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Get today's aggregate for summary
+    final todayAggregate = ref.watch(todayAggregateProvider);
+    final todaySummary = todayAggregate.summaryText;
+    final hasActivePlan = todayAggregate.activePlan != null;
+
+    return Container(
+      padding: const EdgeInsets.all(DS.spacing8),
+      decoration: BoxDecoration(
+        color: DS.surfaceOverlay,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: DS.borderSubtle),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Today's overview badge
+          if (todayAggregate.hasActivity)
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: DS.spacing6,
+                vertical: DS.spacing4,
               ),
+              decoration: BoxDecoration(
+                color: DS.brandPrimary.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                todaySummary,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: DS.brandPrimary,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          if (todayAggregate.hasActivity)
+            const SizedBox(height: DS.spacing10),
+          _CompactCalendarStat(label: '活跃', value: '$activeDays天'),
+          const SizedBox(height: DS.spacing10),
+          _CompactCalendarStat(label: '峰值', value: '$peakTasks项'),
+          // Active plan indicator
+          if (hasActivePlan) ...[
+            const SizedBox(height: DS.spacing10),
+            Row(
+              children: [
+                Icon(
+                  Icons.flag_rounded,
+                  size: 12,
+                  color: DS.warningAccent,
+                ),
+                const SizedBox(width: DS.spacing4),
+                Expanded(
+                  child: Text(
+                    todayAggregate.activePlan!.name,
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: DS.warningAccent,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
           ],
-        ),
-      );
+          const Spacer(),
+          if (showLegend)
+            Text(
+              '格子越深，任务越密集',
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: DS.textSecondary,
+                    height: 1.35,
+                  ),
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 class _CompactCalendarStat extends StatelessWidget {

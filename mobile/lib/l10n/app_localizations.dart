@@ -4997,7 +4997,7 @@ abstract class AppLocalizations {
   /// No description provided for @gallerySaveFailed.
   ///
   /// In zh, this message translates to:
-  /// **'相册保存失败'**
+  /// **'保存到相册失败'**
   String get gallerySaveFailed;
 
   /// No description provided for @shareUnlockMessage.
@@ -11017,6 +11017,60 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'内容'**
   String get memoryEvidenceContent;
+
+  /// No description provided for @shareOptionsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'分享成就'**
+  String get shareOptionsTitle;
+
+  /// No description provided for @shareToWeChatFriends.
+  ///
+  /// In zh, this message translates to:
+  /// **'分享到微信好友'**
+  String get shareToWeChatFriends;
+
+  /// No description provided for @shareToWeChatMoments.
+  ///
+  /// In zh, this message translates to:
+  /// **'分享到朋友圈'**
+  String get shareToWeChatMoments;
+
+  /// No description provided for @shareToSystem.
+  ///
+  /// In zh, this message translates to:
+  /// **'系统分享'**
+  String get shareToSystem;
+
+  /// No description provided for @shareToCommunity.
+  ///
+  /// In zh, this message translates to:
+  /// **'分享到社群'**
+  String get shareToCommunity;
+
+  /// No description provided for @saveImageToGallery.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存图片'**
+  String get saveImageToGallery;
+
+  /// No description provided for @copyDeepLink.
+  ///
+  /// In zh, this message translates to:
+  /// **'复制链接'**
+  String get copyDeepLink;
+
+  /// No description provided for @linkCopied.
+  ///
+  /// In zh, this message translates to:
+  /// **'链接已复制'**
+  String get linkCopied;
+
+  /// No description provided for @wechatNotInstalled.
+  ///
+  /// In zh, this message translates to:
+  /// **'请先安装微信'**
+  String get wechatNotInstalled;
 }
 
 class _AppLocalizationsDelegate

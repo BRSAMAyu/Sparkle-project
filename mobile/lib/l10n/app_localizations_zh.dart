@@ -2669,7 +2669,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get saveResultEmpty => '保存结果为空';
 
   @override
-  String get gallerySaveFailed => '相册保存失败';
+  String get gallerySaveFailed => '保存到相册失败';
 
   @override
   String shareUnlockMessage(Object achievementName) {
@@ -5880,4 +5880,31 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get memoryEvidenceContent => '内容';
+
+  @override
+  String get shareOptionsTitle => '分享成就';
+
+  @override
+  String get shareToWeChatFriends => '分享到微信好友';
+
+  @override
+  String get shareToWeChatMoments => '分享到朋友圈';
+
+  @override
+  String get shareToSystem => '系统分享';
+
+  @override
+  String get shareToCommunity => '分享到社群';
+
+  @override
+  String get saveImageToGallery => '保存图片';
+
+  @override
+  String get copyDeepLink => '复制链接';
+
+  @override
+  String get linkCopied => '链接已复制';
+
+  @override
+  String get wechatNotInstalled => '请先安装微信';
 }

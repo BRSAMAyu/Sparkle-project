@@ -2401,5 +2401,17 @@
   "memoryAddEvidence": "Add Evidence",
   "memoryEvidenceType": "Evidence Type",
   "memoryEvidenceSource": "Source",
-  "memoryEvidenceContent": "Content"
+  "memoryEvidenceContent": "Content",
+  "shareOptionsTitle": "Share Achievement",
+  "shareToWeChatFriends": "Share to WeChat Friends",
+  "shareToWeChatMoments": "Share to Moments",
+  "shareToSystem": "System Share",
+  "shareToCommunity": "Share to Community",
+  "saveImageToGallery": "Save Image",
+  "copyDeepLink": "Copy Link",
+  "linkCopied": "Link copied",
+  "wechatNotInstalled": "Please install WeChat first",
+  "shareCardDownloadFailed": "Failed to download share card ({statusCode})",
+  "gallerySaveFailed": "Failed to save to gallery",
+  "shareUnlockMessage": "I unlocked \"{achievementName}\" in Sparkle!"
 }
