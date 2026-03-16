@@ -13,6 +13,7 @@ import 'package:sparkle/features/home/presentation/widgets/next_actions_card.dar
 import 'package:sparkle/features/home/presentation/widgets/task_board/task_board_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/unified_omni_bar.dart';
 import 'package:sparkle/features/home/presentation/widgets/weather_header.dart';
+import 'package:sparkle/features/achievement/presentation/widgets/achievement_progress_card.dart';
 import 'package:sparkle/features/reviews/presentation/widgets/nightly_review_panel.dart';
 import 'package:sparkle/features/task/task.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
@@ -106,6 +107,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   const SliverToBoxAdapter(child: HomeNotificationCard()),
                   const SliverToBoxAdapter(child: NightlyReviewPanel()),
                   const SliverToBoxAdapter(child: DashboardCardSection()),
+                  const SliverToBoxAdapter(
+                    child: SizedBox(height: DS.spacing12),
+                  ),
+                  const SliverToBoxAdapter(child: AchievementProgressCard()),
                   const SliverToBoxAdapter(
                     child: SizedBox(height: DS.spacing12),
                   ),

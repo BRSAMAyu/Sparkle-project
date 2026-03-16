@@ -1064,6 +1064,12 @@ abstract class AppLocalizations {
   /// **'已断开连接'**
   String get aiStatusDisconnected;
 
+  /// No description provided for @levelPrefix.
+  ///
+  /// In zh, this message translates to:
+  /// **'Lv.'**
+  String get levelPrefix;
+
   /// No description provided for @toolsSpeechToTextTitle.
   ///
   /// In zh, this message translates to:
@@ -2084,11 +2090,77 @@ abstract class AppLocalizations {
   /// **'冲刺'**
   String get achievementTypeSprint;
 
+  /// No description provided for @achievementAlmostThere.
+  ///
+  /// In zh, this message translates to:
+  /// **'即将解锁'**
+  String get achievementAlmostThere;
+
+  /// No description provided for @achievementNeedMore.
+  ///
+  /// In zh, this message translates to:
+  /// **'再{action}即可解锁'**
+  String achievementNeedMore(Object action);
+
+  /// No description provided for @achievementCompleteTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成{count}个任务'**
+  String achievementCompleteTasks(Object count);
+
+  /// No description provided for @achievementUnlockNodes.
+  ///
+  /// In zh, this message translates to:
+  /// **'解锁{count}个知识点'**
+  String achievementUnlockNodes(Object count);
+
+  /// No description provided for @achievementChatCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'聊天{count}次'**
+  String achievementChatCount(Object count);
+
+  /// No description provided for @achievementCheckinDays.
+  ///
+  /// In zh, this message translates to:
+  /// **'连续签到{count}天'**
+  String achievementCheckinDays(Object count);
+
+  /// No description provided for @achievementCreatePlans.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建{count}个计划'**
+  String achievementCreatePlans(Object count);
+
+  /// No description provided for @achievementProgressGeneric.
+  ///
+  /// In zh, this message translates to:
+  /// **'进度{count}%'**
+  String achievementProgressGeneric(Object count);
+
   /// No description provided for @streakDetails.
   ///
   /// In zh, this message translates to:
   /// **'连胜详情'**
   String get streakDetails;
+
+  /// No description provided for @dashboardCustomizeCards.
+  ///
+  /// In zh, this message translates to:
+  /// **'可定制卡片区'**
+  String get dashboardCustomizeCards;
+
+  /// No description provided for @dashboardEmptyHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'至少保留一张卡片，编辑后会立即保存到本地配置。'**
+  String get dashboardEmptyHint;
+
+  /// No description provided for @achievementViewStreakStatus.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看成就与连续学习状态'**
+  String get achievementViewStreakStatus;
 
   /// No description provided for @taskStatusPending.
   ///
@@ -7952,6 +8024,12 @@ abstract class AppLocalizations {
   /// **'其他'**
   String get capsuleFeedbackOther;
 
+  /// No description provided for @capsuleFeedbackCategoryLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'想让我们改进哪一点？'**
+  String get capsuleFeedbackCategoryLabel;
+
   /// No description provided for @capsuleDepthShallow.
   ///
   /// In zh, this message translates to:
@@ -7969,6 +8047,42 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'深度'**
   String get capsuleDepthDeep;
+
+  /// No description provided for @capsulePersonalizationTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'为什么推荐给你'**
+  String get capsulePersonalizationTitle;
+
+  /// No description provided for @capsulePersonalizationBadge.
+  ///
+  /// In zh, this message translates to:
+  /// **'基于你的{pattern}模式'**
+  String capsulePersonalizationBadge(String pattern);
+
+  /// No description provided for @capsulePersonalizationExplanation.
+  ///
+  /// In zh, this message translates to:
+  /// **'基于你最近的{patterns}行为模式，AI为你精选了这个知识点。'**
+  String capsulePersonalizationExplanation(String patterns);
+
+  /// No description provided for @patternPlanningOptimism.
+  ///
+  /// In zh, this message translates to:
+  /// **'计划乐观偏差'**
+  String get patternPlanningOptimism;
+
+  /// No description provided for @patternFocusDecay.
+  ///
+  /// In zh, this message translates to:
+  /// **'专注力衰减'**
+  String get patternFocusDecay;
+
+  /// No description provided for @patternProcrastination.
+  ///
+  /// In zh, this message translates to:
+  /// **'拖延倾向'**
+  String get patternProcrastination;
 
   /// No description provided for @cognitiveSelectGalaxyNodes.
   ///

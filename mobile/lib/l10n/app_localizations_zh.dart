@@ -498,6 +498,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aiStatusDisconnected => '已断开连接';
 
   @override
+  String get levelPrefix => 'Lv.';
+
+  @override
   String get toolsSpeechToTextTitle => '语音转文字';
 
   @override
@@ -1022,7 +1025,54 @@ class AppLocalizationsZh extends AppLocalizations {
   String get achievementTypeSprint => '冲刺';
 
   @override
+  String get achievementAlmostThere => '即将解锁';
+
+  @override
+  String achievementNeedMore(Object action) {
+    return '再$action即可解锁';
+  }
+
+  @override
+  String achievementCompleteTasks(Object count) {
+    return '完成$count个任务';
+  }
+
+  @override
+  String achievementUnlockNodes(Object count) {
+    return '解锁$count个知识点';
+  }
+
+  @override
+  String achievementChatCount(Object count) {
+    return '聊天$count次';
+  }
+
+  @override
+  String achievementCheckinDays(Object count) {
+    return '连续签到$count天';
+  }
+
+  @override
+  String achievementCreatePlans(Object count) {
+    return '创建$count个计划';
+  }
+
+  @override
+  String achievementProgressGeneric(Object count) {
+    return '进度$count%';
+  }
+
+  @override
   String get streakDetails => '连胜详情';
+
+  @override
+  String get dashboardCustomizeCards => '可定制卡片区';
+
+  @override
+  String get dashboardEmptyHint => '至少保留一张卡片，编辑后会立即保存到本地配置。';
+
+  @override
+  String get achievementViewStreakStatus => '查看成就与连续学习状态';
 
   @override
   String get taskStatusPending => '待处理';
@@ -4230,6 +4280,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get capsuleFeedbackOther => '其他';
 
   @override
+  String get capsuleFeedbackCategoryLabel => '想让我们改进哪一点？';
+
+  @override
   String get capsuleDepthShallow => '浅度';
 
   @override
@@ -4237,6 +4290,28 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get capsuleDepthDeep => '深度';
+
+  @override
+  String get capsulePersonalizationTitle => '为什么推荐给你';
+
+  @override
+  String capsulePersonalizationBadge(String pattern) {
+    return '基于你的$pattern模式';
+  }
+
+  @override
+  String capsulePersonalizationExplanation(String patterns) {
+    return '基于你最近的$patterns行为模式，AI为你精选了这个知识点。';
+  }
+
+  @override
+  String get patternPlanningOptimism => '计划乐观偏差';
+
+  @override
+  String get patternFocusDecay => '专注力衰减';
+
+  @override
+  String get patternProcrastination => '拖延倾向';
 
   @override
   String get cognitiveSelectGalaxyNodes => '请先在 Galaxy 中选择要复习的节点';

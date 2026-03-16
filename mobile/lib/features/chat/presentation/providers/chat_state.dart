@@ -30,7 +30,6 @@ class ChatState {
     this.lastActionStatus,
     this.lastActionMessage,
     this.attachedFiles = const [],
-    this.pendingAchievementUnlock,
     this.pendingPlanReview,
     this.pendingReviewActionId,
     this.pendingContentReview,
@@ -71,7 +70,6 @@ class ChatState {
   final String? lastActionStatus;
   final String? lastActionMessage;
   final List<StoredFile> attachedFiles;
-  final AchievementUnlockEvent? pendingAchievementUnlock;
   final PlanReviewResult? pendingPlanReview;
   final String? pendingReviewActionId;
   final ContentReviewResult? pendingContentReview;
@@ -131,7 +129,6 @@ class ChatState {
     ContentReviewResult? pendingContentReview,
     bool clearPendingContentReview = false,
     List<InterventionPushMessage>? pendingInterventions,
-    AchievementUnlockEvent? pendingAchievementUnlock,
     int? lastPromptTokens,
     int? lastCompletionTokens,
     int? lastTotalTokens,
@@ -194,8 +191,6 @@ class ChatState {
             ? null
             : pendingContentReview ?? this.pendingContentReview,
         pendingInterventions: pendingInterventions ?? this.pendingInterventions,
-        pendingAchievementUnlock:
-            pendingAchievementUnlock ?? this.pendingAchievementUnlock,
         lastPromptTokens: lastPromptTokens ?? this.lastPromptTokens,
         lastCompletionTokens: lastCompletionTokens ?? this.lastCompletionTokens,
         lastTotalTokens: lastTotalTokens ?? this.lastTotalTokens,

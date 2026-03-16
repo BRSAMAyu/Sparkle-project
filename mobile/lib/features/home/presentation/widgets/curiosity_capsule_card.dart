@@ -25,6 +25,7 @@ class CuriosityCapsuleCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final rawPatterns = capsule.personalizationContext?['based_on_patterns'];
+    final localizedPatterns = _localizedPatterns(context, rawPatterns);
     // 1. Resolve base material (NeoGlass)
     var material = AppMaterials.neoGlass;
 
@@ -115,14 +116,12 @@ class CuriosityCapsuleCard extends ConsumerWidget {
                     // Divider line (optional, maybe just space)
                     const SizedBox(height: DS.sm),
 
-                    if (rawPatterns is List)
+                    if (localizedPatterns.isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.only(bottom: DS.spacing8),
                         child: _buildPersonalizationBadge(
                           context,
-                          patterns: List<String>.from(
-                            rawPatterns,
-                          ),
+                          patterns: localizedPatterns,
                         ),
                       ),
 
@@ -184,24 +183,61 @@ class CuriosityCapsuleCard extends ConsumerWidget {
     );
   }
 
+  List<String> _localizedPatterns(BuildContext context, dynamic rawPatterns) {
+    if (rawPatterns is! List) {
+      return [];
+    }
+    return rawPatterns
+        .map((item) => item.toString())
+        .where((item) => item.isNotEmpty)
+        .map((item) => _localizePatternName(context, item))
+        .toList();
+  }
+
+  String _localizePatternName(BuildContext context, String name) {
+    final l10n = context.l10n;
+    switch (name) {
+      case 'Planning Optimism':
+        return l10n.patternPlanningOptimism;
+      case 'Focus Decay':
+        return l10n.patternFocusDecay;
+      case 'Procrastination':
+        return l10n.patternProcrastination;
+      default:
+        return name;
+    }
+  }
+
   Widget _buildPersonalizationBadge(BuildContext context, {required List<String> patterns}) {
     if (patterns.isEmpty) {
       return const SizedBox.shrink();
     }
+    final l10n = context.l10n;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(
+        horizontal: DS.spacing8,
+        vertical: DS.spacing4,
+      ),
       decoration: BoxDecoration(
-        color: DS.prismPurple.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
+        color: DS.prismPurple.withValues(alpha: 0.08),
+        borderRadius: DS.borderRadius8,
+        border: Border.all(
+          color: DS.prismPurple.withValues(alpha: 0.2),
+          width: 0.5,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.psychology, size: 14, color: DS.prismPurple),
-          const SizedBox(width: 4),
+          Icon(Icons.psychology_outlined, size: 13, color: DS.prismPurple),
+          const SizedBox(width: DS.spacing4),
           Text(
-            "基于你的${patterns.first}模式",
-            style: const TextStyle(fontSize: 11, color: DS.prismPurple),
+            l10n.capsulePersonalizationBadge(patterns.first),
+            style: TextStyle(
+              fontSize: 11,
+              color: DS.prismPurple,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ),

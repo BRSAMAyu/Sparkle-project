@@ -2,7 +2,7 @@
 Capsule event consumer - listens to cognitive profile updates and feedback triggers.
 """
 import asyncio
-from datetime import UTC, datetime
+import os
 from uuid import UUID
 
 from loguru import logger
@@ -16,10 +16,6 @@ from app.services.personalization.preference_service import PreferenceService
 from app.services.system_update_service import SystemUpdateService, build_system_update
 
 
-def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
-
-
 class CapsuleEventConsumer:
     """监听画像变化，触发胶囊重新生成或提示。"""
 
@@ -29,21 +25,28 @@ class CapsuleEventConsumer:
     def __init__(self, event_bus: EventBus):
         self.event_bus = event_bus
         self._running = False
+        self._subscribed = False
+        self.consumer_name = f"capsule-{os.getpid()}"
         self.capsule_generation_service = CapsuleGenerationService()
 
     async def start(self):
         await self.event_bus.connect()
+        if self._running:
+            return
         self._running = True
         while self._running:
             try:
-                await self.event_bus.subscribe(
-                    stream=self.STREAM_NAME,
-                    group_name=self.GROUP_NAME,
-                    consumer_name=f"capsule-{_utcnow().timestamp()}",
-                    callback=self.handle_event,
-                )
-                break
+                if not self._subscribed:
+                    await self.event_bus.subscribe(
+                        stream=self.STREAM_NAME,
+                        group_name=self.GROUP_NAME,
+                        consumer_name=self.consumer_name,
+                        callback=self.handle_event,
+                    )
+                    self._subscribed = True
+                await asyncio.sleep(1)
             except Exception as exc:
+                self._subscribed = False
                 logger.error(f"CapsuleEventConsumer error: {exc}")
                 await asyncio.sleep(1)
 

@@ -312,21 +312,27 @@ extension ChatNotifierActions on ChatNotifier {
   void _handleAchievementUnlock(AchievementUnlockEvent event) {
     debugPrint('🏆 Achievement unlocked: ${event.name}');
 
-    state = state.copyWith(
-      pendingAchievementUnlock: event,
-      lastActionStatus: 'achievement_unlocked',
-      lastActionMessage: I18nService.instance.l10n
-          .chatAchievementUnlocked(event.name),
-    );
+    // Delegate to achievement_provider for combo queue management
+    final result = _ref.read(achievementProvider.notifier).handleAchievementUnlock(event);
 
-    // Clear after delay
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) {
-        state = state.copyWith(
-          clearActionFeedback: true,
-        );
-      }
-    });
+    if (result != null) {
+      // Write to global provider so any screen can show the dialog
+      _ref.read(pendingAchievementUnlockProvider.notifier).setPending(
+        event: result.event,
+        comboCount: result.comboCount,
+      );
+
+      // Show toast feedback
+      state = state.copyWith(
+        lastActionStatus: 'achievement_unlocked',
+        lastActionMessage: I18nService.instance.l10n.chatAchievementUnlocked(event.name),
+      );
+      Future.delayed(const Duration(seconds: 3), () {
+        if (mounted) state = state.copyWith(clearActionFeedback: true);
+      });
+    } else {
+      debugPrint('🏆 Achievement queued for combo: ${event.name}');
+    }
   }
 
   /// 处理成就里程碑事件
@@ -340,6 +346,9 @@ extension ChatNotifierActions on ChatNotifier {
       lastActionStatus: 'milestone_reached',
       lastActionMessage: event.message,
     );
+
+    // Phase 1B: Trigger close-to-unlock check
+    _ref.read(closeToUnlockProvider.notifier).triggerCheck();
 
     // Clear after delay
     Future.delayed(const Duration(seconds: 2), () {

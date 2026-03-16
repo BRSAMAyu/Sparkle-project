@@ -511,6 +511,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiStatusDisconnected => 'Disconnected';
 
   @override
+  String get levelPrefix => 'Lv.';
+
+  @override
   String get toolsSpeechToTextTitle => 'Speech to Text';
 
   @override
@@ -1037,7 +1040,56 @@ class AppLocalizationsEn extends AppLocalizations {
   String get achievementTypeSprint => 'Sprint';
 
   @override
+  String get achievementAlmostThere => 'Almost There';
+
+  @override
+  String achievementNeedMore(Object action) {
+    return '$action more to unlock';
+  }
+
+  @override
+  String achievementCompleteTasks(Object count) {
+    return 'Complete $count tasks';
+  }
+
+  @override
+  String achievementUnlockNodes(Object count) {
+    return 'Unlock $count nodes';
+  }
+
+  @override
+  String achievementChatCount(Object count) {
+    return 'Chat $count times';
+  }
+
+  @override
+  String achievementCheckinDays(Object count) {
+    return 'Check in $count days';
+  }
+
+  @override
+  String achievementCreatePlans(Object count) {
+    return 'Create $count plans';
+  }
+
+  @override
+  String achievementProgressGeneric(Object count) {
+    return '$count% progress';
+  }
+
+  @override
   String get streakDetails => 'Streak Details';
+
+  @override
+  String get dashboardCustomizeCards => 'Customizable Cards';
+
+  @override
+  String get dashboardEmptyHint =>
+      'Keep at least one card. Changes are saved to local config immediately.';
+
+  @override
+  String get achievementViewStreakStatus =>
+      'View achievements & learning streak';
 
   @override
   String get taskStatusPending => 'Pending';
@@ -4420,6 +4472,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get capsuleFeedbackOther => 'Other';
 
   @override
+  String get capsuleFeedbackCategoryLabel => 'What could be improved?';
+
+  @override
   String get capsuleDepthShallow => 'Light';
 
   @override
@@ -4427,6 +4482,28 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get capsuleDepthDeep => 'Deep';
+
+  @override
+  String get capsulePersonalizationTitle => 'Why this was recommended';
+
+  @override
+  String capsulePersonalizationBadge(String pattern) {
+    return 'Based on your $pattern pattern';
+  }
+
+  @override
+  String capsulePersonalizationExplanation(String patterns) {
+    return 'Based on your recent $patterns behavior patterns, AI picked this for you.';
+  }
+
+  @override
+  String get patternPlanningOptimism => 'Planning optimism';
+
+  @override
+  String get patternFocusDecay => 'Focus decay';
+
+  @override
+  String get patternProcrastination => 'Procrastination';
 
   @override
   String get cognitiveSelectGalaxyNodes =>

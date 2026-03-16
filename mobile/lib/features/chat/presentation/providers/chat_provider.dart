@@ -8,6 +8,8 @@ import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/utils/error_messages.dart';
+import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
+import 'package:sparkle/features/achievement/presentation/providers/close_to_unlock_provider.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
@@ -798,6 +800,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
         } else if (event is AchievementUnlockEvent) {
           // Achievement Unlock Event
           _handleAchievementUnlock(event);
+          _ref.read(closeToUnlockProvider.notifier).triggerCheck();
           flushPending();
         } else if (event is AchievementMilestoneEvent) {
           // Achievement Milestone Event

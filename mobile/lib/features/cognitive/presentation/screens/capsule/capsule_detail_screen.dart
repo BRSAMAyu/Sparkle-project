@@ -11,8 +11,6 @@ import 'package:sparkle/features/cognitive/data/models/curiosity_capsule_model.d
 import 'package:sparkle/features/cognitive/presentation/providers/capsule_provider.dart';
 
 /// 胶囊详情页
-///
-/// 显示胶囊完整内容，支持收藏和反馈
 class CapsuleDetailScreen extends ConsumerStatefulWidget {
   const CapsuleDetailScreen({
     required this.capsuleId,
@@ -27,14 +25,9 @@ class CapsuleDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
-  final _feedbackCommentController = TextEditingController();
-  int? _selectedRating;
-  bool _isSubmitting = false;
-
   @override
   void initState() {
     super.initState();
-    // Load capsule detail
     unawaited(
       Future.microtask(
         () => ref
@@ -45,17 +38,14 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
   }
 
   @override
-  void dispose() {
-    _feedbackCommentController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final detailState = ref.watch(capsuleDetailProvider(widget.capsuleId));
     final l10n = context.l10n;
 
-    return Scaffold(
+    final capsule = detailState.valueOrNull;
+
+    return SparklePageScaffold(
+      role: SparklePageRole.content,
       appBar: AppBar(
         leading: SparkleIconButton(
           icon: const Icon(Icons.arrow_back),
@@ -63,295 +53,167 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
           variant: ButtonVariant.ghost,
         ),
         title: Text(l10n.capsuleDetailTitle),
-        backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
+        backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
-          detailState.whenOrNull(
-                data: (capsule) => SparkleIconButton(
-                  icon: Icon(
-                    capsule?.isFavorite ?? false
-                        ? Icons.favorite
-                        : Icons.favorite_border,
-                  ),
-                  onPressed: () => _toggleFavorite(capsule),
-                  variant: capsule?.isFavorite ?? false
-                      ? ButtonVariant.destructive
-                      : ButtonVariant.ghost,
-                ),
-              ) ??
-              const SizedBox.shrink(),
+          if (capsule != null)
+            SparkleIconButton(
+              icon: Icon(
+                capsule.isFavorite ? Icons.favorite : Icons.favorite_border,
+              ),
+              onPressed: () => _toggleFavorite(capsule),
+              variant:
+                  capsule.isFavorite ? ButtonVariant.destructive : ButtonVariant.ghost,
+            ),
         ],
       ),
-      body: ContentConstraint(
-        child: detailState.when(
-          data: (capsule) {
-            if (capsule == null) {
-              return Center(child: Text(l10n.capsuleMissing));
-            }
-            return _buildContent(capsule);
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, stack) =>
-              Center(child: Text(l10n.capsuleLoadFailed('$err'))),
-        ),
+      bottomNavigationBar: capsule != null ? _buildBottomBar(capsule) : null,
+      child: detailState.when(
+        data: (c) {
+          if (c == null) return Center(child: Text(l10n.capsuleMissing));
+          return _buildContent(c);
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, _) =>
+            Center(child: Text(l10n.capsuleLoadFailed('$err'))),
       ),
     );
   }
 
   Widget _buildContent(CuriosityCapsuleModel capsule) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = context.l10n;
 
-    return SingleChildScrollView(
-      padding: EdgeInsets.zero,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 深度级别标签
-          if (capsule.depthLevel != null)
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: DS.spacing12,
-                vertical: DS.spacing6,
+    return ContentConstraint(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(
+          DS.spacing16,
+          DS.spacing16,
+          DS.spacing16,
+          DS.spacing32,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 深度级别标签
+            if (capsule.depthLevel != null) ...[
+              _DepthBadge(capsule: capsule),
+              const SizedBox(height: DS.spacing16),
+            ],
+
+            // 标题
+            Text(
+              capsule.title,
+              style: context.sparkleTypography.headingMedium,
+            ),
+            const SizedBox(height: DS.spacing8),
+
+            // 元信息行
+            _MetaRow(capsule: capsule),
+            const SizedBox(height: DS.spacing24),
+
+            // 个性化说明卡片
+            if (capsule.personalizationContext != null) ...[
+              _PersonalizationCard(
+                capsule: capsule,
+                localizePattern: _localizePatternName,
               ),
-              decoration: BoxDecoration(
-                color: capsule.depthLevelEnum == CapsuleDepthLevel.deep
-                    ? DS.info.withValues(alpha: 0.15)
-                    : capsule.depthLevelEnum == CapsuleDepthLevel.medium
-                        ? DS.warning.withValues(alpha: 0.15)
-                        : DS.success.withValues(alpha: 0.15),
-                borderRadius: DS.borderRadius8,
+              const SizedBox(height: DS.spacing24),
+            ],
+
+            // 主内容
+            MarkdownBody(
+              data: capsule.content,
+              styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+                p: context.sparkleTypography.bodyLarge,
+                h1: context.sparkleTypography.headingLarge,
+                h2: context.sparkleTypography.headingMedium,
+                h3: context.sparkleTypography.titleLarge,
+                strong: context.sparkleTypography.bodyLarge
+                    .copyWith(fontWeight: FontWeight.bold),
+                blockquote: context.sparkleTypography.bodyMedium.copyWith(
+                  color: DS.textSecondary,
+                  fontStyle: FontStyle.italic,
+                ),
+                code: context.sparkleTypography.bodyMedium.copyWith(
+                  fontFamily: 'monospace',
+                  backgroundColor: DS.surfaceTertiary,
+                ),
+                codeblockDecoration: BoxDecoration(
+                  color: DS.surfaceTertiary,
+                  borderRadius: DS.borderRadius8,
+                ),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
+            ),
+            const SizedBox(height: DS.spacing24),
+
+            // 相关主题 chip
+            if (capsule.relatedSubject != null) ...[
+              Wrap(
+                spacing: DS.spacing8,
                 children: [
-                  Text(capsule.depthEmoji),
-                  const SizedBox(width: DS.sm),
-                  Text(
-                    capsule.depthLabel,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? DS.textPrimary : DS.textPrimary,
+                  Chip(
+                    avatar: const Icon(Icons.tag, size: 14),
+                    label: Text(
+                      capsule.relatedSubject!,
+                      style: context.sparkleTypography.labelSmall,
                     ),
+                    backgroundColor:
+                        DS.surfaceSecondary,
+                    side: BorderSide(color: DS.border, width: 0.5),
+                    padding: const EdgeInsets.symmetric(horizontal: DS.spacing4),
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
                 ],
               ),
-            ),
-          const SizedBox(height: DS.spacing16),
-
-          // 标题
-          Text(
-            capsule.title,
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: DS.spacing8),
-
-          // 元信息行
-          Row(
-            children: [
-              if (capsule.generationMethod != null) ...[
-                Icon(
-                  Icons.psychology_outlined,
-                  size: 14,
-                  color: DS.textSecondary,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  capsule.generationMethod!,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: DS.textSecondary,
-                  ),
-                ),
-                const SizedBox(width: DS.spacing16),
-              ],
-              Icon(
-                Icons.calendar_today_outlined,
-                size: 14,
-                color: DS.textSecondary,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                Formatters.formatRelativeTime(capsule.createdAt),
-                style: TextStyle(fontSize: 12, color: DS.textSecondary),
-              ),
+              const SizedBox(height: DS.spacing24),
             ],
-          ),
-          const SizedBox(height: DS.spacing24),
 
-          if (capsule.personalizationContext != null) ...[
-            _buildPersonalizationExplanation(capsule),
-            const SizedBox(height: DS.spacing24),
+            // 质量评分 + 统计信息合并一行
+            _StatsRow(capsule: capsule),
           ],
-
-          // 内容
-          MarkdownBody(
-            data: capsule.content,
-            styleSheet: MarkdownStyleSheet(
-              p: TextStyle(
-                fontSize: 16,
-                color: isDark ? DS.textPrimary : DS.textPrimary,
-              ),
-              h1: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              h2: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              h3: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              strong: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: isDark ? DS.textPrimary : DS.textPrimary,
-              ),
-              blockquote: TextStyle(
-                color: isDark ? DS.textSecondary : DS.textSecondary,
-                fontStyle: FontStyle.italic,
-              ),
-              code: TextStyle(
-                backgroundColor: isDark ? DS.neutral700 : DS.neutral200,
-                fontFamily: 'monospace',
-              ),
-              codeblockDecoration: BoxDecoration(
-                color: isDark ? DS.neutral700 : DS.neutral200,
-                borderRadius: DS.borderRadius8,
-              ),
-            ),
-          ),
-          const SizedBox(height: DS.spacing32),
-
-          // 相关主题
-          if (capsule.relatedSubject != null) ...[
-            Wrap(
-              children: [
-                Chip(
-                  label: Text(capsule.relatedSubject!),
-                  backgroundColor:
-                      isDark ? DS.surfaceTertiary : DS.surfaceSecondary,
-                ),
-              ],
-            ),
-            const SizedBox(height: DS.spacing24),
-          ],
-
-          // 质量评分
-          if (capsule.qualityScore != null) ...[
-            Row(
-              children: [
-                Text(
-                  l10n.capsuleQualityLabel(capsule.qualityRating),
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: DS.textSecondary,
-                  ),
-                ),
-                const SizedBox(width: DS.sm),
-                ...List.generate(
-                  5,
-                  (index) => Icon(
-                    index < (capsule.qualityScore! * 5).round()
-                        ? Icons.star
-                        : Icons.star_border,
-                    size: 16,
-                    color: DS.warning,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: DS.spacing16),
-          ],
-
-          // 统计信息
-          Row(
-            children: [
-              Icon(Icons.favorite_border, size: 16, color: DS.textSecondary),
-              const SizedBox(width: 4),
-              Text(
-                l10n.capsuleFeedbackCount(capsule.feedbackCount),
-                style: TextStyle(fontSize: 12, color: DS.textSecondary),
-              ),
-              const SizedBox(width: DS.spacing16),
-              Icon(Icons.share_outlined, size: 16, color: DS.textSecondary),
-              const SizedBox(width: 4),
-              Text(
-                l10n.capsuleShareCount(capsule.shareCount),
-                style: TextStyle(fontSize: 12, color: DS.textSecondary),
-              ),
-            ],
-          ),
-          const SizedBox(height: DS.spacing32),
-
-          // 反馈按钮
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () => _showFeedbackSheet(capsule),
-              icon: const Icon(Icons.rate_review_outlined),
-              label: Text(l10n.capsuleSubmitFeedback),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: DS.spacing16),
-                side: BorderSide(color: DS.primaryBase),
-              ),
-            ),
-          ),
-          const SizedBox(height: DS.spacing16),
-
-          // 分享按钮
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () => _showShareSheet(capsule),
-              icon: const Icon(Icons.share_outlined),
-              label: Text(l10n.capsuleShare),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: DS.spacing16),
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildPersonalizationExplanation(CuriosityCapsuleModel capsule) {
-    final rawPatterns = capsule.personalizationContext?['based_on_patterns'];
-    final patterns = rawPatterns is List
-        ? rawPatterns.map((item) => item.toString()).where((item) => item.isNotEmpty).toList()
-        : <String>[];
-
-    if (patterns.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(DS.spacing16),
-      decoration: BoxDecoration(
-        color: DS.surfaceSecondary,
-        borderRadius: DS.borderRadius12,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.lightbulb_outline, size: 16, color: DS.info),
-              const SizedBox(width: 8),
-              const Text(
-                "为什么推荐给你",
-                style: TextStyle(fontWeight: FontWeight.bold),
+  Widget _buildBottomBar(CuriosityCapsuleModel capsule) {
+    final l10n = context.l10n;
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          DS.spacing16,
+          DS.spacing8,
+          DS.spacing16,
+          DS.spacing12,
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: SparkleButton(
+                label: l10n.capsuleSubmitFeedback,
+                variant: ButtonVariant.secondary,
+                icon: const Icon(Icons.rate_review_outlined, size: 18),
+                onPressed: () => _showFeedbackSheet(capsule),
+                expand: true,
               ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            "基于你最近的${patterns.join('、')}行为模式，AI为你精选了这个知识点。",
-            style: TextStyle(color: DS.textSecondary, fontSize: 13),
-          ),
-        ],
+            ),
+            const SizedBox(width: DS.spacing12),
+            Expanded(
+              child: SparkleButton(
+                label: l10n.capsuleShare,
+                variant: ButtonVariant.ghost,
+                icon: const Icon(Icons.share_outlined, size: 18),
+                onPressed: () => _showShareSheet(capsule),
+                expand: true,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  void _toggleFavorite(CuriosityCapsuleModel? capsule) {
-    if (capsule == null) return;
+  void _toggleFavorite(CuriosityCapsuleModel capsule) {
     unawaited(ref.read(capsuleProvider.notifier).toggleFavorite(capsule.id));
   }
 
@@ -360,13 +222,26 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
       showModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
-        builder: (context) => _FeedbackBottomSheet(
+        useRootNavigator: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(DS.radius20)),
+        ),
+        builder: (ctx) => _FeedbackBottomSheet(
           capsule: capsule,
-          ratingController: _feedbackCommentController,
-          selectedRating: _selectedRating,
-          isSubmitting: _isSubmitting,
-          onRatingChanged: (rating) => setState(() => _selectedRating = rating),
-          onSubmit: () => _submitFeedback(capsule),
+          localizePattern: _localizePatternName,
+          onSubmitted: (rating, category, comment) async {
+            await ref
+                .read(capsuleDetailProvider(widget.capsuleId).notifier)
+                .submitFeedback(
+                  capsule.id,
+                  rating: rating,
+                  category: category,
+                  comment: comment,
+                );
+            if (mounted) {
+              AppFeedback.success(context, context.l10n.capsuleFeedbackThanks);
+            }
+          },
         ),
       ),
     );
@@ -376,26 +251,49 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
     unawaited(
       showModalBottomSheet<void>(
         context: context,
-        builder: (context) => SafeArea(
+        useRootNavigator: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(DS.radius20)),
+        ),
+        builder: (ctx) => SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              const SizedBox(height: DS.spacing8),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: DS.border,
+                  borderRadius: DS.borderRadiusFull,
+                ),
+              ),
+              const SizedBox(height: DS.spacing16),
               ListTile(
-                leading: const Icon(Icons.link),
+                leading: Container(
+                  padding: const EdgeInsets.all(DS.spacing8),
+                  decoration: BoxDecoration(
+                    color: DS.surfaceSecondary,
+                    borderRadius: DS.borderRadius8,
+                  ),
+                  child: Icon(Icons.link, size: 20, color: DS.textSecondary),
+                ),
                 title: Text(context.l10n.capsuleCopyLink),
-                onTap: () {
-                  // TODO: 实现复制链接
-                  Navigator.pop(context);
-                },
+                onTap: () => Navigator.pop(ctx),
               ),
               ListTile(
-                leading: const Icon(Icons.group_outlined),
+                leading: Container(
+                  padding: const EdgeInsets.all(DS.spacing8),
+                  decoration: BoxDecoration(
+                    color: DS.surfaceSecondary,
+                    borderRadius: DS.borderRadius8,
+                  ),
+                  child: Icon(Icons.group_outlined, size: 20, color: DS.textSecondary),
+                ),
                 title: Text(context.l10n.capsuleShareToGroup),
-                onTap: () {
-                  // TODO: 实现分享到群组
-                  Navigator.pop(context);
-                },
+                onTap: () => Navigator.pop(ctx),
               ),
+              const SizedBox(height: DS.spacing8),
             ],
           ),
         ),
@@ -403,83 +301,321 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
     );
   }
 
-  Future<void> _submitFeedback(CuriosityCapsuleModel capsule) async {
-    if (_selectedRating == null) {
-      AppFeedback.info(context, context.l10n.capsuleRateFirst);
-      return;
+  String _localizePatternName(BuildContext context, String name) {
+    final l10n = context.l10n;
+    switch (name) {
+      case 'Planning Optimism':
+        return l10n.patternPlanningOptimism;
+      case 'Focus Decay':
+        return l10n.patternFocusDecay;
+      case 'Procrastination':
+        return l10n.patternProcrastination;
+      default:
+        return name;
     }
+  }
 
-    setState(() => _isSubmitting = true);
-
-    try {
-      await ref
-          .read(capsuleDetailProvider(widget.capsuleId).notifier)
-          .submitFeedback(
-            capsule.id,
-            rating: _selectedRating,
-            comment: _feedbackCommentController.text.isNotEmpty
-                ? _feedbackCommentController.text
-                : null,
-          );
-
-      if (mounted) {
-        Navigator.pop(context);
-        AppFeedback.success(context, context.l10n.capsuleFeedbackThanks);
-      }
-    } catch (e) {
-      if (mounted) {
-        AppFeedback.error(context, context.l10n.capsuleSubmitFailed('$e'));
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isSubmitting = false);
-      }
-    }
+  List<String> _localizedPatterns(
+      BuildContext context, dynamic rawPatterns) {
+    if (rawPatterns is! List) return [];
+    return rawPatterns
+        .map((e) => e.toString())
+        .where((e) => e.isNotEmpty)
+        .map((e) => _localizePatternName(context, e))
+        .toList();
   }
 }
 
-class _FeedbackBottomSheet extends StatelessWidget {
-  const _FeedbackBottomSheet({
-    required this.capsule,
-    required this.ratingController,
-    required this.selectedRating,
-    required this.isSubmitting,
-    required this.onRatingChanged,
-    required this.onSubmit,
-  });
+// ─────────────────────────────────────────────
+// Sub-widgets
+// ─────────────────────────────────────────────
 
+class _DepthBadge extends StatelessWidget {
+  const _DepthBadge({required this.capsule});
   final CuriosityCapsuleModel capsule;
-  final TextEditingController ratingController;
-  final int? selectedRating;
-  final bool isSubmitting;
-  final void Function(int) onRatingChanged;
-  final VoidCallback onSubmit;
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color bg;
+    final Color fg;
+    switch (capsule.depthLevelEnum) {
+      case CapsuleDepthLevel.deep:
+        bg = DS.info.withValues(alpha: 0.12);
+        fg = DS.info;
+      case CapsuleDepthLevel.medium:
+        bg = DS.warning.withValues(alpha: 0.12);
+        fg = DS.warning;
+      case CapsuleDepthLevel.shallow:
+        bg = DS.success.withValues(alpha: 0.12);
+        fg = DS.success;
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: DS.spacing12,
+        vertical: DS.spacing6,
+      ),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: DS.borderRadius8,
+        border: Border.all(color: fg.withValues(alpha: 0.25), width: 0.5),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(capsule.depthEmoji, style: const TextStyle(fontSize: 13)),
+          const SizedBox(width: DS.spacing6),
+          Text(
+            capsule.depthLabel,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: fg,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MetaRow extends StatelessWidget {
+  const _MetaRow({required this.capsule});
+  final CuriosityCapsuleModel capsule;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(Icons.auto_awesome_outlined, size: 13, color: DS.textSecondary),
+        const SizedBox(width: DS.spacing4),
+        Text(
+          'AI',
+          style: TextStyle(fontSize: 12, color: DS.textSecondary),
+        ),
+        const SizedBox(width: DS.spacing16),
+        Icon(Icons.calendar_today_outlined, size: 13, color: DS.textSecondary),
+        const SizedBox(width: DS.spacing4),
+        Text(
+          Formatters.formatRelativeTime(capsule.createdAt),
+          style: TextStyle(fontSize: 12, color: DS.textSecondary),
+        ),
+      ],
+    );
+  }
+}
+
+class _PersonalizationCard extends StatelessWidget {
+  const _PersonalizationCard({
+    required this.capsule,
+    required this.localizePattern,
+  });
+  final CuriosityCapsuleModel capsule;
+  final String Function(BuildContext, String) localizePattern;
+
+  @override
+  Widget build(BuildContext context) {
+    final rawPatterns = capsule.personalizationContext?['based_on_patterns'];
+    if (rawPatterns is! List) return const SizedBox.shrink();
+
+    final patterns = (rawPatterns as List)
+        .map((e) => e.toString())
+        .where((e) => e.isNotEmpty)
+        .map((e) => localizePattern(context, e))
+        .toList();
+
+    if (patterns.isEmpty) return const SizedBox.shrink();
+
     final l10n = context.l10n;
+    final separator =
+        Localizations.localeOf(context).languageCode == 'zh' ? '、' : ', ';
+
+    return Container(
+      padding: const EdgeInsets.all(DS.spacing16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            DS.prismPurple.withValues(alpha: 0.06),
+            DS.info.withValues(alpha: 0.04),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: DS.borderRadius12,
+        border: Border.all(
+          color: DS.prismPurple.withValues(alpha: 0.15),
+          width: 0.5,
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(DS.spacing6),
+            decoration: BoxDecoration(
+              color: DS.prismPurple.withValues(alpha: 0.12),
+              borderRadius: DS.borderRadius8,
+            ),
+            child: Icon(Icons.psychology_outlined, size: 16, color: DS.prismPurple),
+          ),
+          const SizedBox(width: DS.spacing12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.capsulePersonalizationTitle,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: DS.spacing4),
+                Text(
+                  l10n.capsulePersonalizationExplanation(patterns.join(separator)),
+                  style: TextStyle(
+                    color: DS.textSecondary,
+                    fontSize: 13,
+                    height: 1.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatsRow extends StatelessWidget {
+  const _StatsRow({required this.capsule});
+  final CuriosityCapsuleModel capsule;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Row(
+      children: [
+        if (capsule.qualityScore != null) ...[
+          ...List.generate(5, (i) {
+            final filled = i < (capsule.qualityScore! * 5).round();
+            return Icon(
+              filled ? Icons.star_rounded : Icons.star_outline_rounded,
+              size: 14,
+              color: filled ? DS.warning : DS.border,
+            );
+          }),
+          const SizedBox(width: DS.spacing8),
+          Text(
+            capsule.qualityRating,
+            style: TextStyle(fontSize: 12, color: DS.textSecondary),
+          ),
+          const SizedBox(width: DS.spacing16),
+        ],
+        Icon(Icons.rate_review_outlined, size: 13, color: DS.textSecondary),
+        const SizedBox(width: DS.spacing4),
+        Text(
+          l10n.capsuleFeedbackCount(capsule.feedbackCount),
+          style: TextStyle(fontSize: 12, color: DS.textSecondary),
+        ),
+        const SizedBox(width: DS.spacing12),
+        Icon(Icons.share_outlined, size: 13, color: DS.textSecondary),
+        const SizedBox(width: DS.spacing4),
+        Text(
+          l10n.capsuleShareCount(capsule.shareCount),
+          style: TextStyle(fontSize: 12, color: DS.textSecondary),
+        ),
+      ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────
+// Feedback bottom sheet — self-contained state
+// ─────────────────────────────────────────────
+
+class _FeedbackBottomSheet extends StatefulWidget {
+  const _FeedbackBottomSheet({
+    required this.capsule,
+    required this.localizePattern,
+    required this.onSubmitted,
+  });
+
+  final CuriosityCapsuleModel capsule;
+  final String Function(BuildContext, String) localizePattern;
+  final Future<void> Function(int? rating, String? category, String? comment)
+      onSubmitted;
+
+  @override
+  State<_FeedbackBottomSheet> createState() => _FeedbackBottomSheetState();
+}
+
+class _FeedbackBottomSheetState extends State<_FeedbackBottomSheet> {
+  final _commentController = TextEditingController();
+  int? _rating;
+  String? _category;
+  bool _submitting = false;
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    super.dispose();
+  }
+
+  static const _categories = [
+    ('just_right', Icons.check_circle_outline),
+    ('too_long', Icons.unfold_more),
+    ('too_short', Icons.unfold_less),
+    ('too_complex', Icons.psychology_outlined),
+    ('too_simple', Icons.sentiment_satisfied_outlined),
+    ('irrelevant', Icons.link_off_outlined),
+    ('other', Icons.more_horiz),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final labels = {
+      'just_right': l10n.capsuleFeedbackJustRight,
+      'too_long': l10n.capsuleFeedbackTooLong,
+      'too_short': l10n.capsuleFeedbackTooShort,
+      'too_complex': l10n.capsuleFeedbackTooComplex,
+      'too_simple': l10n.capsuleFeedbackTooSimple,
+      'irrelevant': l10n.capsuleFeedbackIrrelevant,
+      'other': l10n.capsuleFeedbackOther,
+    };
 
     return Padding(
       padding: EdgeInsets.only(
         left: DS.spacing16,
         right: DS.spacing16,
         top: DS.spacing16,
-        bottom: MediaQuery.of(context).viewInsets.bottom + DS.spacing16,
+        bottom: MediaQuery.of(context).viewInsets.bottom + DS.spacing24,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // 拖拽指示条
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: DS.border,
+                borderRadius: DS.borderRadiusFull,
+              ),
+            ),
+          ),
+          const SizedBox(height: DS.spacing16),
+
+          // 标题
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 l10n.capsuleSubmitFeedback,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: context.sparkleTypography.titleLarge,
               ),
               SparkleIconButton(
                 icon: const Icon(Icons.close),
@@ -488,64 +624,155 @@ class _FeedbackBottomSheet extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: DS.spacing16),
+          const SizedBox(height: DS.spacing20),
 
-          // 评分
+          // 星级评分
           Text(
             l10n.capsuleFeedbackQuestion,
-            style: TextStyle(fontSize: 14, color: DS.textSecondary),
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: DS.textSecondary,
+            ),
           ),
-          const SizedBox(height: DS.spacing8),
+          const SizedBox(height: DS.spacing12),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(5, (index) {
-              final starValue = index + 1;
-              return InkWell(
-                borderRadius: DS.borderRadiusFull,
-                onTap: () => onRatingChanged(starValue),
+            children: List.generate(5, (i) {
+              final v = i + 1;
+              final filled = _rating != null && v <= _rating!;
+              return GestureDetector(
+                onTap: () => setState(() => _rating = v),
                 child: Padding(
-                  padding: const EdgeInsets.all(DS.spacing8),
-                  child: Icon(
-                    selectedRating != null && starValue <= selectedRating!
-                        ? Icons.star
-                        : Icons.star_border,
-                    color: DS.warning,
-                    size: DS.spacing40,
+                  padding: const EdgeInsets.symmetric(horizontal: DS.spacing6),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 150),
+                    child: Icon(
+                      filled ? Icons.star_rounded : Icons.star_outline_rounded,
+                      key: ValueKey(filled),
+                      color: filled ? DS.warning : DS.border,
+                      size: DS.spacing40,
+                    ),
                   ),
                 ),
               );
             }),
           ),
+          const SizedBox(height: DS.spacing20),
+
+          // 分类选择
+          Text(
+            l10n.capsuleFeedbackCategoryLabel,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: DS.textSecondary,
+            ),
+          ),
+          const SizedBox(height: DS.spacing10),
+          Wrap(
+            spacing: DS.spacing8,
+            runSpacing: DS.spacing8,
+            children: _categories.map((pair) {
+              final (value, icon) = pair;
+              final selected = _category == value;
+              return FilterChip(
+                avatar: Icon(
+                  icon,
+                  size: 14,
+                  color: selected
+                      ? DS.brandPrimary
+                      : DS.textSecondary,
+                ),
+                label: Text(labels[value] ?? value),
+                selected: selected,
+                onSelected: (_) =>
+                    setState(() => _category = selected ? null : value),
+                selectedColor: DS.brandPrimary.withValues(alpha: 0.12),
+                checkmarkColor: DS.brandPrimary,
+                labelStyle: TextStyle(
+                  fontSize: 12,
+                  color: selected ? DS.brandPrimary : DS.textPrimary,
+                  fontWeight:
+                      selected ? FontWeight.w600 : FontWeight.normal,
+                ),
+                side: BorderSide(
+                  color: selected
+                      ? DS.brandPrimary.withValues(alpha: 0.4)
+                      : DS.border,
+                  width: 0.5,
+                ),
+                backgroundColor: DS.surfaceSecondary,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: DS.spacing4,
+                  vertical: DS.spacing4,
+                ),
+                showCheckmark: false,
+              );
+            }).toList(),
+          ),
           const SizedBox(height: DS.spacing16),
 
-          // 评论
+          // 评论输入
           TextField(
-            controller: ratingController,
+            controller: _commentController,
             maxLines: 3,
+            maxLength: 200,
+            style: context.sparkleTypography.bodyMedium,
             decoration: InputDecoration(
               hintText: l10n.capsuleFeedbackHint,
-              border: const OutlineInputBorder(
-                borderRadius: DS.borderRadius8,
-              ),
+              hintStyle: TextStyle(color: DS.textSecondary, fontSize: 14),
               filled: true,
-              fillColor: isDark ? DS.surfaceTertiary : DS.surfaceSecondary,
+              fillColor: DS.surfaceSecondary,
+              border: OutlineInputBorder(
+                borderRadius: DS.borderRadius12,
+                borderSide: BorderSide(color: DS.border, width: 0.5),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: DS.borderRadius12,
+                borderSide: BorderSide(color: DS.border, width: 0.5),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: DS.borderRadius12,
+                borderSide: BorderSide(color: DS.brandPrimary, width: 1),
+              ),
+              contentPadding: const EdgeInsets.all(DS.spacing12),
+              counterStyle: TextStyle(color: DS.textSecondary, fontSize: 11),
             ),
           ),
           const SizedBox(height: DS.spacing16),
 
-          // 提交按钮
+          // 提交
           SizedBox(
             width: double.infinity,
             child: SparkleButton(
               label: l10n.capsuleSubmit,
-              onPressed: onSubmit,
-              loading: isSubmitting,
-              disabled: isSubmitting,
+              onPressed: _rating == null ? null : _submit,
+              loading: _submitting,
+              disabled: _submitting || _rating == null,
               expand: true,
             ),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _submit() async {
+    setState(() => _submitting = true);
+    try {
+      await widget.onSubmitted(
+        _rating,
+        _category,
+        _commentController.text.isNotEmpty ? _commentController.text : null,
+      );
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) {
+        AppFeedback.error(context, context.l10n.capsuleSubmitFailed('$e'));
+      }
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
   }
 }

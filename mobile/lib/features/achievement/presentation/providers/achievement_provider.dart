@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/achievement/data/repositories/achievement_repository.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
+import 'package:sparkle/features/chat/data/models/chat_stream_events.dart' as chat;
 import 'package:sparkle/shared/entities/achievement_model.dart';
 
 // ========== Achievement State ==========
@@ -192,6 +193,30 @@ final titlesProvider = Provider<List<UserTitle>>((ref) {
   final state = ref.watch(achievementProvider);
   return state.titles;
 });
+
+/// Global provider for pending achievement unlock dialog
+/// 全局成就解锁弹窗队列，由 MainNavigationShell 监听
+final pendingAchievementUnlockProvider = StateNotifierProvider<
+    PendingAchievementUnlockNotifier,
+    ({chat.AchievementUnlockEvent event, int? comboCount})?>(
+  (ref) => PendingAchievementUnlockNotifier(),
+);
+
+class PendingAchievementUnlockNotifier extends StateNotifier<
+    ({chat.AchievementUnlockEvent event, int? comboCount})?> {
+  PendingAchievementUnlockNotifier() : super(null);
+
+  void setPending({
+    required chat.AchievementUnlockEvent event,
+    int? comboCount,
+  }) {
+    state = (event: event, comboCount: comboCount);
+  }
+
+  void clear() {
+    state = null;
+  }
+}
 
 // ========== Notifiers ==========
 
@@ -422,6 +447,96 @@ class AchievementNotifier extends StateNotifier<AchievementState> {
       debugPrint('Error getting close to unlock achievements: $e');
       return [];
     }
+  }
+
+  // ========== Phase 1A: Combo Queue Management ==========
+
+  Timer? _comboTimer;
+  static const _comboWindow = Duration(seconds: 3);
+  final List<chat.AchievementUnlockEvent> _unlockQueue = [];
+  int _currentComboCount = 0;
+  DateTime? _lastUnlockTime;
+
+  /// Handle achievement unlock event with combo queue management
+  /// Returns (event, comboCount) if dialog should be shown, null otherwise
+  /// 处理成就解锁事件，支持连击队列管理
+  /// 返回 (event, comboCount) 如果应该显示弹窗，否则返回 null
+  ({chat.AchievementUnlockEvent event, int? comboCount})? handleAchievementUnlock(
+    chat.AchievementUnlockEvent wsEvent,
+  ) {
+    final now = DateTime.now();
+
+    // Check if backend already calculated combo
+    final comboInfo = wsEvent.achievementData['combo_info'] as Map<String, dynamic>?;
+    final backendComboCount = comboInfo != null ? comboInfo['combo'] as int? : null;
+
+    if (backendComboCount != null && backendComboCount > 1) {
+      // Backend already calculated combo, show immediately
+      // Also clear any local queue
+      _unlockQueue.clear();
+      _currentComboCount = 0;
+      return (event: wsEvent, comboCount: backendComboCount);
+    }
+
+    // Client-side combo management
+    if (_lastUnlockTime != null &&
+        now.difference(_lastUnlockTime!) < _comboWindow) {
+      // Within combo window, add to queue
+      _comboTimer?.cancel();
+      _unlockQueue.add(wsEvent);
+      _currentComboCount++;
+      _lastUnlockTime = now;
+
+      // Reset timer to show combo dialog after window expires
+      _comboTimer = Timer(_comboWindow, _showComboDialog);
+
+      return null; // Don't show yet, waiting for combo window
+    } else {
+      // Outside combo window or first unlock
+      // Show any pending combo first
+      if (_unlockQueue.isNotEmpty) {
+        _comboTimer?.cancel();
+        final pendingResult = _showComboDialog();
+        // Add current to queue for next time
+        _unlockQueue.add(wsEvent);
+        _currentComboCount++;
+        _lastUnlockTime = now;
+        return pendingResult;
+      }
+
+      // Show current unlock immediately
+      _unlockQueue.clear();
+      _currentComboCount = 1;
+      _lastUnlockTime = now;
+      return (event: wsEvent, comboCount: null);
+    }
+  }
+
+  /// Show combo dialog with queued achievements
+  /// Returns the event and combo count to display
+  /// 显示连击弹窗，包含队列中的所有成就
+  ({chat.AchievementUnlockEvent event, int? comboCount})? _showComboDialog() {
+    if (_unlockQueue.isEmpty || _currentComboCount < 2) {
+      _unlockQueue.clear();
+      _currentComboCount = 0;
+      return null;
+    }
+
+    final lastEvent = _unlockQueue.last;
+    final comboCount = _currentComboCount;
+
+    // Clear queue
+    _unlockQueue.clear();
+    _currentComboCount = 0;
+    _comboTimer?.cancel();
+
+    return (event: lastEvent, comboCount: comboCount);
+  }
+
+  @override
+  void dispose() {
+    _comboTimer?.cancel();
+    super.dispose();
   }
 }
 

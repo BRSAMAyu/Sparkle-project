@@ -56,118 +56,121 @@ class ProfileScreen extends ConsumerWidget {
     BuildContext context,
     UserModel user, {
     required double headerHeight,
-  }) =>
-      SizedBox(
-        height: headerHeight,
-        child: Stack(
-          children: [
-            // Wave Background
-            Positioned.fill(
-              child: CustomPaint(
-                painter: _WaveHeaderPainter(
-                  startColor: Color.lerp(
-                      DS.surfacePrimaryElevated, DS.brandPrimary, 0.04,)!,
-                  middleColor:
-                      Color.lerp(DS.surfaceCanvas, DS.surfaceSecondary, 0.54)!,
-                  endColor:
-                      Color.lerp(DS.surfaceCanvas, DS.brandSecondary, 0.06)!,
-                ),
+  }) {
+    final l10n = AppLocalizations.of(context)!;
+
+    return SizedBox(
+      height: headerHeight,
+      child: Stack(
+        children: [
+          // Wave Background
+          Positioned.fill(
+            child: CustomPaint(
+              painter: _WaveHeaderPainter(
+                startColor: Color.lerp(
+                    DS.surfacePrimaryElevated, DS.brandPrimary, 0.04,)!,
+                middleColor:
+                    Color.lerp(DS.surfaceCanvas, DS.surfaceSecondary, 0.54)!,
+                endColor:
+                    Color.lerp(DS.surfaceCanvas, DS.brandSecondary, 0.06)!,
               ),
             ),
-            // Content
-            SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(DS.spacing24),
-                child: Column(
-                  children: [
-                    const SizedBox(height: DS.spacing16),
-                    Row(
-                      children: [
-                        // Avatar Area
-                        DecoratedBox(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: DS.borderStrong,
-                              width: 3,
+          ),
+          // Content
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(DS.spacing24),
+              child: Column(
+                children: [
+                  const SizedBox(height: DS.spacing16),
+                  Row(
+                    children: [
+                      // Avatar Area
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: DS.borderStrong,
+                            width: 3,
+                          ),
+                          boxShadow: DS.shadowMd,
+                        ),
+                        child: SparkleAvatar(
+                          radius: 40,
+                          backgroundColor: DS.avatarFallbackBackground,
+                          url: user.avatarStatus == AvatarStatus.pending
+                              ? (user.pendingAvatarUrl ?? user.avatarUrl)
+                              : user.avatarUrl,
+                          fallbackText: user.nickname ?? user.username,
+                          status: user.avatarStatus,
+                        ),
+                      ),
+                      const SizedBox(width: DS.spacing20),
+                      // Info Area
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              user.nickname ?? user.username,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .headlineSmall
+                                  ?.copyWith(
+                                    color: DS.textPrimary,
+                                    fontWeight: DS.fontWeightBold,
+                                  ),
                             ),
-                            boxShadow: DS.shadowMd,
-                          ),
-                          child: SparkleAvatar(
-                            radius: 40,
-                            backgroundColor: DS.avatarFallbackBackground,
-                            url: user.avatarStatus == AvatarStatus.pending
-                                ? (user.pendingAvatarUrl ?? user.avatarUrl)
-                                : user.avatarUrl,
-                            fallbackText: user.nickname ?? user.username,
-                            status: user.avatarStatus,
-                          ),
-                        ),
-                        const SizedBox(width: DS.spacing20),
-                        // Info Area
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                user.nickname ?? user.username,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .headlineSmall
-                                    ?.copyWith(
+                            const SizedBox(height: DS.sm),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: DS.surfaceOverlay,
+                                borderRadius: DS.borderRadius20,
+                                border: Border.all(color: DS.borderSubtle),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.local_fire_department_rounded,
+                                    color: DS.brandPrimaryConst,
+                                    size: 16,
+                                  ),
+                                  const SizedBox(width: DS.xs),
+                                  Text(
+                                    '${l10n.levelPrefix}${user.flameLevel}',
+                                    style: DS.labelLarge.copyWith(
                                       color: DS.textPrimary,
-                                      fontWeight: DS.fontWeightBold,
+                                      fontWeight: FontWeight.w700,
                                     ),
+                                  ),
+                                  const SizedBox(width: DS.sm),
+                                  Text(
+                                    '${l10n.brightness} ${(user.flameBrightness * 100).toInt()}%',
+                                    style: DS.labelSmall.copyWith(
+                                      color: DS.textSecondary,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(height: DS.sm),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: DS.surfaceOverlay,
-                                  borderRadius: DS.borderRadius20,
-                                  border: Border.all(color: DS.borderSubtle),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.local_fire_department_rounded,
-                                      color: DS.brandPrimaryConst,
-                                      size: 16,
-                                    ),
-                                    const SizedBox(width: DS.xs),
-                                    Text(
-                                      'Lv.${user.flameLevel}',
-                                      style: DS.labelLarge.copyWith(
-                                        color: DS.textPrimary,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                    const SizedBox(width: DS.sm),
-                                    Text(
-                                      '${l10n.brightness} ${(user.flameBrightness * 100).toInt()}%',
-                                      style: DS.labelSmall.copyWith(
-                                        color: DS.textSecondary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  ],
-                ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
-      );
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildSettingsSection(
     BuildContext context,

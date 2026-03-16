@@ -173,6 +173,7 @@
   "aiStatusConnecting": "Connecting...",
   "aiStatusReconnecting": "Reconnecting...",
   "aiStatusDisconnected": "Disconnected",
+  "levelPrefix": "Lv.",
 
   "toolsSpeechToTextTitle": "Speech to Text",
   "toolsSpeechToTextDesc": "Real-time speech transcription",
@@ -346,7 +347,18 @@
   "achievementTypeSocial": "Social",
   "achievementTypeContract": "Contract",
   "achievementTypeSprint": "Sprint",
+  "achievementAlmostThere": "Almost There",
+  "achievementNeedMore": "{action} more to unlock",
+  "achievementCompleteTasks": "Complete {count} tasks",
+  "achievementUnlockNodes": "Unlock {count} nodes",
+  "achievementChatCount": "Chat {count} times",
+  "achievementCheckinDays": "Check in {count} days",
+  "achievementCreatePlans": "Create {count} plans",
+  "achievementProgressGeneric": "{count}% progress",
   "streakDetails": "Streak Details",
+  "dashboardCustomizeCards": "Customizable Cards",
+  "dashboardEmptyHint": "Keep at least one card. Changes are saved to local config immediately.",
+  "achievementViewStreakStatus": "View achievements & learning streak",
 
   "taskStatusPending": "Pending",
   "taskStatusInProgress": "In Progress",
@@ -1512,9 +1524,30 @@
   "capsuleFeedbackTooSimple": "Too simple",
   "capsuleFeedbackIrrelevant": "Irrelevant",
   "capsuleFeedbackOther": "Other",
+  "capsuleFeedbackCategoryLabel": "What could be improved?",
   "capsuleDepthShallow": "Light",
   "capsuleDepthMedium": "Balanced",
   "capsuleDepthDeep": "Deep",
+  "capsulePersonalizationTitle": "Why this was recommended",
+  "capsulePersonalizationBadge": "Based on your {pattern} pattern",
+  "@capsulePersonalizationBadge": {
+    "placeholders": {
+      "pattern": {
+        "type": "String"
+      }
+    }
+  },
+  "capsulePersonalizationExplanation": "Based on your recent {patterns} behavior patterns, AI picked this for you.",
+  "@capsulePersonalizationExplanation": {
+    "placeholders": {
+      "patterns": {
+        "type": "String"
+      }
+    }
+  },
+  "patternPlanningOptimism": "Planning optimism",
+  "patternFocusDecay": "Focus decay",
+  "patternProcrastination": "Procrastination",
   "cognitiveSelectGalaxyNodes": "Select the nodes you want to review in Galaxy first",
   "cognitiveTimeMachine": "Knowledge Time Machine",
   "cognitiveFutureDays": "Next {count} days",

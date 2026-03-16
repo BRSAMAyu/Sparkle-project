@@ -86,6 +86,7 @@ type handlerBundle struct {
 	sttHandler               *handler.STTHandler
 	wsProxy                  *handler.WebSocketProxy
 	authHandler              *handler.AuthHandler
+	galaxyHandler            *handler.GalaxyHandler
 }
 
 type cqrsBundle struct {
@@ -246,6 +247,9 @@ func initHandlers(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client,
 	}
 	authHandler := handler.NewAuthHandler(cfg, dbh.queries, appleAuthService)
 
+	// Galaxy handler for knowledge graph endpoints
+	galaxyHandler := handler.NewGalaxyHandler(galaxyClient, rdb, cfg.BackendURL)
+
 	return &handlerBundle{
 		wsFactory:                wsFactory,
 		wsTicketHandler:          wsTicketHandler,
@@ -265,6 +269,7 @@ func initHandlers(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client,
 		sttHandler:               sttHandler,
 		wsProxy:                  wsProxy,
 		authHandler:              authHandler,
+		galaxyHandler:            galaxyHandler,
 	}, nil
 }
 
@@ -465,6 +470,11 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 
 		handlers.fileHandler.RegisterRoutes(api, authMiddleware)
 		handlers.dataConsistencyHandler.RegisterRoutes(api)
+
+		// Galaxy routes - authentication passthrough with rate limiting
+		galaxyRateLimit := middleware.UserBasedRateLimit(10, 20) // 10 RPS, 20 burst
+		handlers.galaxyHandler.RegisterRoutes(api, authMiddleware, galaxyRateLimit)
+
 		api.Any("/interventions/*path", authMiddleware, handlers.interventionProxyHandler.Proxy)
 		api.Any("/dashboard/*path", authMiddleware, handlers.dashboardProxyHandler.Proxy)
 		api.Any("/predictive/*path", authMiddleware, handlers.predictiveProxyHandler.Proxy)

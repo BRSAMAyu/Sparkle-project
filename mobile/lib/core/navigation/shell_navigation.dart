@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
+import 'package:sparkle/features/achievement/presentation/providers/close_to_unlock_provider.dart';
+import 'package:sparkle/features/achievement/presentation/widgets/achievement_progress_banner.dart';
+import 'package:sparkle/features/achievement/presentation/widgets/achievement_unlock_dialog.dart';
 import 'package:sparkle/features/chat/data/services/message_notification_service.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
@@ -11,7 +15,7 @@ import 'package:sparkle/l10n/app_localizations.dart';
 /// - InAppNotificationOverlay for in-app notifications
 /// - ResponsiveScaffold for adaptive layout (bottom nav on mobile, side rail on tablet, drawer on desktop)
 /// - Tab switching using StatefulNavigationShell.goBranch()
-class MainNavigationShell extends ConsumerWidget {
+class MainNavigationShell extends ConsumerStatefulWidget {
   const MainNavigationShell({
     required this.navigationShell,
     super.key,
@@ -21,7 +25,60 @@ class MainNavigationShell extends ConsumerWidget {
   final StatefulNavigationShell navigationShell;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MainNavigationShell> createState() =>
+      _MainNavigationShellState();
+}
+
+class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
+  bool _isShowingAchievementDialog = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _setupAchievementListener();
+    });
+  }
+
+  void _setupAchievementListener() {
+    ref.listenManual(
+      pendingAchievementUnlockProvider,
+      (previous, next) {
+        if (next != null &&
+            next != previous &&
+            mounted &&
+            !_isShowingAchievementDialog) {
+          _showAchievementDialog(next.event, next.comboCount);
+        }
+      },
+    );
+  }
+
+  Future<void> _showAchievementDialog(
+    dynamic event,
+    int? comboCount,
+  ) async {
+    if (_isShowingAchievementDialog) return;
+    _isShowingAchievementDialog = true;
+    try {
+      await AchievementUnlockDialog.showFromWsEvent(
+        context,
+        event,
+        comboCount: comboCount,
+        onShare: () {
+          // TODO: share
+        },
+      );
+    } finally {
+      if (mounted) {
+        _isShowingAchievementDialog = false;
+        ref.read(pendingAchievementUnlockProvider.notifier).clear();
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final unreadCount = ref.watch(unreadMessageCountProvider);
 
@@ -53,14 +110,20 @@ class MainNavigationShell extends ConsumerWidget {
       ),
     ];
 
-    return InAppNotificationOverlay(
-      child: ResponsiveScaffold(
-        title: 'Sparkle',
-        body: navigationShell,
-        destinations: destinations,
-        currentIndex: navigationShell.currentIndex,
-        onDestinationSelected: navigationShell.goBranch,
-      ),
+    return Stack(
+      children: [
+        InAppNotificationOverlay(
+          child: ResponsiveScaffold(
+            title: 'Sparkle',
+            body: widget.navigationShell,
+            destinations: destinations,
+            currentIndex: widget.navigationShell.currentIndex,
+            onDestinationSelected: widget.navigationShell.goBranch,
+          ),
+        ),
+        // Phase 1B: Close-to-unlock progress banner
+        const AchievementProgressBanner(),
+      ],
     );
   }
 

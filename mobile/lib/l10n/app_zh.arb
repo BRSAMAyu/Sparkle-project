@@ -173,6 +173,7 @@
   "aiStatusConnecting": "连接中...",
   "aiStatusReconnecting": "重新连接...",
   "aiStatusDisconnected": "已断开连接",
+  "levelPrefix": "Lv.",
 
   "toolsSpeechToTextTitle": "语音转文字",
   "toolsSpeechToTextDesc": "实时语音转录",
@@ -346,7 +347,18 @@
   "achievementTypeSocial": "社交",
   "achievementTypeContract": "契约",
   "achievementTypeSprint": "冲刺",
+  "achievementAlmostThere": "即将解锁",
+  "achievementNeedMore": "再{action}即可解锁",
+  "achievementCompleteTasks": "完成{count}个任务",
+  "achievementUnlockNodes": "解锁{count}个知识点",
+  "achievementChatCount": "聊天{count}次",
+  "achievementCheckinDays": "连续签到{count}天",
+  "achievementCreatePlans": "创建{count}个计划",
+  "achievementProgressGeneric": "进度{count}%",
   "streakDetails": "连胜详情",
+  "dashboardCustomizeCards": "可定制卡片区",
+  "dashboardEmptyHint": "至少保留一张卡片，编辑后会立即保存到本地配置。",
+  "achievementViewStreakStatus": "查看成就与连续学习状态",
 
   "taskStatusPending": "待处理",
   "taskStatusInProgress": "进行中",
@@ -1512,9 +1524,30 @@
   "capsuleFeedbackTooSimple": "太简单",
   "capsuleFeedbackIrrelevant": "不相关",
   "capsuleFeedbackOther": "其他",
+  "capsuleFeedbackCategoryLabel": "想让我们改进哪一点？",
   "capsuleDepthShallow": "浅度",
   "capsuleDepthMedium": "中度",
   "capsuleDepthDeep": "深度",
+  "capsulePersonalizationTitle": "为什么推荐给你",
+  "capsulePersonalizationBadge": "基于你的{pattern}模式",
+  "@capsulePersonalizationBadge": {
+    "placeholders": {
+      "pattern": {
+        "type": "String"
+      }
+    }
+  },
+  "capsulePersonalizationExplanation": "基于你最近的{patterns}行为模式，AI为你精选了这个知识点。",
+  "@capsulePersonalizationExplanation": {
+    "placeholders": {
+      "patterns": {
+        "type": "String"
+      }
+    }
+  },
+  "patternPlanningOptimism": "计划乐观偏差",
+  "patternFocusDecay": "专注力衰减",
+  "patternProcrastination": "拖延倾向",
   "cognitiveSelectGalaxyNodes": "请先在 Galaxy 中选择要复习的节点",
   "cognitiveTimeMachine": "知识时光机",
   "cognitiveFutureDays": "未来 {count} 天",

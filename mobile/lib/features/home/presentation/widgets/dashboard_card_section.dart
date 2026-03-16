@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/streak_indicator.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_card_config_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/calendar_heatmap_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/cognitive_tool_hub_card.dart';
@@ -43,7 +44,7 @@ class DashboardCardSection extends ConsumerWidget {
               child: TextButton.icon(
                 onPressed: () => _openEditSheet(context),
                 icon: const Icon(Icons.edit_outlined, size: 18),
-                label: const Text('可定制卡片区'),
+                label: Text(AppLocalizations.of(context)!.dashboardCustomizeCards),
               ),
             ),
           ],
@@ -95,63 +96,66 @@ class _DashboardStreakCard extends StatelessWidget {
   const _DashboardStreakCard();
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-        onTap: () => context.push('/achievements'),
-        child: MaterialStyler(
-          material: AppMaterials.ceramic.copyWith(
-            backgroundGradient: LinearGradient(
-              colors: [
-                DS.warning100,
-                DS.surfaceSecondary,
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderColor: DS.warning200,
-            borderWidth: 1,
-          ),
-          borderRadius: DS.borderRadius20,
-          padding: const EdgeInsets.all(DS.spacing12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.local_fire_department_rounded,
-                    color: DS.warning,
-                    size: 18,
-                  ),
-                  const SizedBox(width: DS.spacing8),
-                  Text(
-                    '连胜',
-                    style: context.sparkleTypography.labelLarge.copyWith(
-                      fontWeight: DS.fontWeightBold,
-                    ),
-                  ),
-                  const Spacer(),
-                  Icon(
-                    Icons.chevron_right_rounded,
-                    color: DS.textTertiary,
-                    size: 18,
-                  ),
-                ],
-              ),
-              const Spacer(),
-              const Center(child: DashboardStreakIndicator()),
-              const Spacer(),
-              Text(
-                '查看成就与连续学习状态',
-                style: context.sparkleTypography.labelSmall.copyWith(
-                  color: DS.textSecondary,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return GestureDetector(
+      onTap: () => context.push('/achievements'),
+      child: MaterialStyler(
+        material: AppMaterials.ceramic.copyWith(
+          backgroundGradient: LinearGradient(
+            colors: [
+              DS.warning100,
+              DS.surfaceSecondary,
             ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
+          borderColor: DS.warning200,
+          borderWidth: 1,
         ),
-      );
+        borderRadius: DS.borderRadius20,
+        padding: const EdgeInsets.all(DS.spacing12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.local_fire_department_rounded,
+                  color: DS.warning,
+                  size: 18,
+                ),
+                const SizedBox(width: DS.spacing8),
+                Text(
+                  l10n.winStreak,
+                  style: context.sparkleTypography.labelLarge.copyWith(
+                    fontWeight: DS.fontWeightBold,
+                  ),
+                ),
+                const Spacer(),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: DS.textTertiary,
+                  size: 18,
+                ),
+              ],
+            ),
+            const Spacer(),
+            const Center(child: DashboardStreakIndicator()),
+            const Spacer(),
+            Text(
+              l10n.achievementViewStreakStatus,
+              style: context.sparkleTypography.labelSmall.copyWith(
+                color: DS.textSecondary,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _EmptyDashboardCardSection extends StatelessWidget {
@@ -161,7 +165,7 @@ class _EmptyDashboardCardSection extends StatelessWidget {
   Widget build(BuildContext context) => GraphiteCardSurface(
         padding: const EdgeInsets.all(DS.spacing16),
         child: Text(
-          '至少保留一张卡片，编辑后会立即保存到本地配置。',
+          AppLocalizations.of(context)!.dashboardEmptyHint,
           style: context.sparkleTypography.bodyMedium.copyWith(
             color: DS.textSecondary,
           ),

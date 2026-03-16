@@ -23,7 +23,7 @@ COLLECTION_RULES = {
     },
     "focus_session": {
         "min_duration": 10,  # 最短10分钟
-        "interruption_threshold": 3,  # 中断超过3次
+        "interruption_threshold": 3,  # 中断达到或超过3次
         "window_hours": 24,  # 统计窗口
     },
     "error_pattern": {
@@ -135,7 +135,7 @@ class AutoFragmentCollector:
             result = await self.db.execute(stmt)
             interruption_count = int(result.scalar() or 0)
 
-        if interruption_count <= rules["interruption_threshold"]:
+        if interruption_count < rules["interruption_threshold"]:
             return None
 
         status_value = None
