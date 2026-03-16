@@ -37,7 +37,7 @@ dev-preflight:
 	@if [ -d postgres_data ]; then \
 		echo "ℹ️  Detected existing postgres_data. If auth fails, run 'make db-reset'."; \
 	fi
-	@python backend/scripts/check_shadowing.py
+	@python3 backend/scripts/check_shadowing.py
 
 # 核心同步流：Python 迁移 -> 导出结构 -> 生成 Go 代码
 sync-db: db-migrate db-dump db-sqlc
@@ -239,12 +239,12 @@ proto-gen-legacy:
 # Python gRPC 服务相关命令
 grpc-server:
 	@echo "🚀 Starting Python gRPC Server..."
-	@/bin/bash backend/scripts/run_grpc_with_env.sh
+	@BACKEND_PYTHON=$(BACKEND_PYTHON) /bin/bash backend/scripts/run_grpc_with_env.sh
 
 # Python FastAPI 服务
 api-server:
 	@echo "🚀 Starting Python FastAPI Server..."
-	cd backend && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --env-file .env
+	cd backend && ../$(BACKEND_PYTHON) -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --env-file .env
 
 grpc-test:
 	@echo "🧪 Testing gRPC Server..."

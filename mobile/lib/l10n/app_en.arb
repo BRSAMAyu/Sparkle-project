@@ -2629,5 +2629,37 @@
   "visualElementCategoryCyberpunk": "Cyberpunk",
   "visualElementCategoryAbstract": "Abstract",
   "visualElementCategoryAmbient": "Ambient",
-  "visualElementEmptyType": "No {type} elements"
+  "visualElementEmptyType": "No {type} elements",
+  "visualElementStatus": "Status",
+  "visualElementSort": "Sort",
+  "visualElementSortDefault": "Default",
+  "visualElementSortName": "Name",
+  "visualElementSortRarity": "Rarity",
+  "visualElementSortUnlockDate": "Unlock Date",
+  "visualElementUnlockTitle": "Visual Element Unlocked",
+  "visualElementUnlockSubtitle": "You've got a new visual element!",
+  "visualElementViewCollection": "View Collection",
+  "achievementMapFocusTooltip": "Focus on nearest achievement",
+  "achievementMapFocusHint": "Try unlocking: {name}",
+  "@visualElementUnlockTitle": {
+    "description": "Title displayed when a visual element is unlocked"
+  },
+  "@visualElementUnlockSubtitle": {
+    "description": "Subtitle displayed when a visual element is unlocked"
+  },
+  "@visualElementViewCollection": {
+    "description": "Button text to view the visual element collection"
+  },
+  "@achievementMapFocusTooltip": {
+    "description": "Tooltip for the focus button on the achievement map"
+  },
+  "@achievementMapFocusHint": {
+    "description": "Hint message showing which achievement to focus on",
+    "placeholders": {
+      "name": {
+        "type": "Object",
+        "example": "First Steps"
+      }
+    }
+  }
 }

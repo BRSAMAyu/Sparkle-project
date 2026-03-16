@@ -475,24 +475,30 @@ def _insert_default_elements() -> None:
     # 插入所有元素
     all_elements = backgrounds + particles + effects
     now = datetime.utcnow()
+    insert_stmt = sa.text(
+        """
+        INSERT INTO visual_elements (
+            id, name, description, name_i18n, description_i18n,
+            element_type, rarity, unlock_source, unlock_requirement,
+            config, is_active, is_default, sort_order, category,
+            season_start, season_end, created_at, updated_at
+        ) VALUES (
+            :id, :name, :description, :name_i18n, :description_i18n,
+            :element_type, :rarity, :unlock_source, :unlock_requirement,
+            :config, :is_active, :is_default, :sort_order, :category,
+            :season_start, :season_end, :created_at, :updated_at
+        )
+        """
+    ).bindparams(
+        sa.bindparam("name_i18n", type_=JSONB),
+        sa.bindparam("description_i18n", type_=JSONB),
+        sa.bindparam("unlock_requirement", type_=JSONB),
+        sa.bindparam("config", type_=JSONB),
+    )
 
     for element in all_elements:
         conn.execute(
-            sa.text(
-                """
-                INSERT INTO visual_elements (
-                    id, name, description, name_i18n, description_i18n,
-                    element_type, rarity, unlock_source, unlock_requirement,
-                    config, is_active, is_default, sort_order, category,
-                    season_start, season_end, created_at, updated_at
-                ) VALUES (
-                    :id, :name, :description, :name_i18n, :description_i18n,
-                    :element_type, :rarity, :unlock_source, :unlock_requirement,
-                    :config, :is_active, :is_default, :sort_order, :category,
-                    :season_start, :season_end, :created_at, :updated_at
-                )
-                """
-            ),
+            insert_stmt,
             {
                 **element,
                 "is_active": True,

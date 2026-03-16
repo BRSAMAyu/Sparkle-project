@@ -1234,7 +1234,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get contractCountdown => 'Countdown';
 
   @override
-  String contractDaysRemaining(int days) => '$days days remaining';
+  String contractDaysRemaining(int days) {
+    return '$days days remaining';
+  }
 
   @override
   String get contractDeadlineReached => 'Deadline reached';
@@ -2474,6 +2476,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get shopCategoryBoost => 'Boosts';
+
+  @override
+  String get shopCategoryVisualElement => 'Visual Elements';
 
   @override
   String get shopEmpty => 'No items yet';
@@ -6653,5 +6658,40 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String visualElementEmptyType(Object type) {
     return 'No $type elements';
+  }
+
+  @override
+  String get visualElementStatus => 'Status';
+
+  @override
+  String get visualElementSort => 'Sort';
+
+  @override
+  String get visualElementSortDefault => 'Default';
+
+  @override
+  String get visualElementSortName => 'Name';
+
+  @override
+  String get visualElementSortRarity => 'Rarity';
+
+  @override
+  String get visualElementSortUnlockDate => 'Unlock Date';
+
+  @override
+  String get visualElementUnlockTitle => 'Visual Element Unlocked';
+
+  @override
+  String get visualElementUnlockSubtitle => 'You\'ve got a new visual element!';
+
+  @override
+  String get visualElementViewCollection => 'View Collection';
+
+  @override
+  String get achievementMapFocusTooltip => 'Focus on nearest achievement';
+
+  @override
+  String achievementMapFocusHint(Object name) {
+    return 'Try unlocking: $name';
   }
 }

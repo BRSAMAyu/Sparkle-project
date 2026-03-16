@@ -15,7 +15,7 @@ RUN go mod download
 COPY . .
 # Build the binary
 # -ldflags="-w -s" strips debug information to reduce size
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o gateway cmd/server/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o gateway ./cmd/server
 
 FROM alpine:latest
 

@@ -1791,7 +1791,13 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     switch (state) {
       case AppLifecycleState.paused:
       case AppLifecycleState.inactive:
+      case AppLifecycleState.hidden:
         _log('📱 App backgrounded — disconnecting WebSocket');
+        _stopHeartbeat();
+        _closeConnection();
+        _updateConnectionState(WsConnectionState.disconnected);
+      case AppLifecycleState.detached:
+        _log('📱 App detached — closing WebSocket');
         _stopHeartbeat();
         _closeConnection();
         _updateConnectionState(WsConnectionState.disconnected);
@@ -1802,8 +1808,6 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
           _reconnectAttempts = 0;
           _establishConnection(_currentUserId!, _currentToken);
         }
-      default:
-        break;
     }
   }
 

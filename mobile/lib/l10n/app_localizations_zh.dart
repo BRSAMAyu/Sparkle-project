@@ -1218,7 +1218,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get contractCountdown => '倒计时';
 
   @override
-  String contractDaysRemaining(int days) => '还剩$days天';
+  String contractDaysRemaining(int days) {
+    return '还剩$days天';
+  }
 
   @override
   String get contractDeadlineReached => '已到截止日期';
@@ -2356,6 +2358,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get shopCategoryBoost => '加成';
+
+  @override
+  String get shopCategoryVisualElement => '视觉元素';
 
   @override
   String get shopEmpty => '暂无物品';
@@ -6405,5 +6410,40 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String visualElementEmptyType(Object type) {
     return '暂无$type';
+  }
+
+  @override
+  String get visualElementStatus => '状态';
+
+  @override
+  String get visualElementSort => '排序';
+
+  @override
+  String get visualElementSortDefault => '默认';
+
+  @override
+  String get visualElementSortName => '名称';
+
+  @override
+  String get visualElementSortRarity => '稀有度';
+
+  @override
+  String get visualElementSortUnlockDate => '解锁时间';
+
+  @override
+  String get visualElementUnlockTitle => '解锁视觉元素';
+
+  @override
+  String get visualElementUnlockSubtitle => '恭喜获得新的视觉元素！';
+
+  @override
+  String get visualElementViewCollection => '查看收藏';
+
+  @override
+  String get achievementMapFocusTooltip => '定位到最近的成就';
+
+  @override
+  String achievementMapFocusHint(Object name) {
+    return '尝试解锁：$name';
   }
 }

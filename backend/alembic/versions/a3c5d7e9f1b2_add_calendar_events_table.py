@@ -20,8 +20,8 @@ depends_on = None
 def upgrade() -> None:
     op.create_table(
         "calendar_events",
-        sa.Column("id", sa.GUID(), nullable=False),
-        sa.Column("user_id", sa.GUID(), nullable=False),
+        sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("user_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("title", sa.String(255), nullable=False),
         sa.Column("description", sa.Text(), nullable=True),
         sa.Column("start_time", sa.DateTime(timezone=True), nullable=False),
@@ -34,8 +34,8 @@ def upgrade() -> None:
         sa.Column("reminder_minutes", postgresql.JSONB(), nullable=False, server_default=sa.text("'[]'::jsonb")),
         sa.Column("source", sa.String(32), nullable=False, server_default=sa.text("'manual'")),
         sa.Column("source_metadata", postgresql.JSONB(), nullable=True),
-        sa.Column("task_id", sa.GUID(), nullable=True),
-        sa.Column("plan_id", sa.GUID(), nullable=True),
+        sa.Column("task_id", postgresql.UUID(as_uuid=True), nullable=True),
+        sa.Column("plan_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
         sa.Column("deleted_at", sa.DateTime(), nullable=True),

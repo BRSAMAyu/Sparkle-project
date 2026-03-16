@@ -59,7 +59,7 @@ class ShareCardFactory {
       GestureDetector(
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.all(DS.sm),
+          padding: EdgeInsets.all(DS.sm),
           decoration: BoxDecoration(
             color: DS.surfaceSecondary,
             borderRadius: DS.borderRadius8,
@@ -81,7 +81,7 @@ class ShareCardFactory {
                   size: 18,
                 ),
               ),
-              const SizedBox(width: DS.sm),
+              SizedBox(width: DS.sm),
               Flexible(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

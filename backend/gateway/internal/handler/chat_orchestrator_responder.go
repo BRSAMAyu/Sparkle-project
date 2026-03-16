@@ -221,6 +221,7 @@ func (r *envelopeResponder) writeEnvelope(payload map[string]json.RawMessage, tr
 	if err != nil {
 		return err
 	}
+	_ = r.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
 	return r.conn.WriteMessage(websocket.TextMessage, data)
 }
 
@@ -350,5 +351,6 @@ func (r *protobufResponder) sendProto(msgType string, payload []byte) error {
 	if err != nil {
 		return err
 	}
+	_ = r.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
 	return r.conn.WriteMessage(websocket.BinaryMessage, data)
 }

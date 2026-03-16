@@ -214,18 +214,25 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 	}()
 	defer close(pingDone)
 
-	// Idle timer — close connection if no messages for idleTimeout
+	// Idle timer — close connection if no messages for idleTimeout.
+	// connDone prevents the goroutine from touching conn after the handler exits.
 	idleTimer := time.NewTimer(idleTimeout)
 	defer idleTimer.Stop()
+	connDone := make(chan struct{})
+	defer close(connDone)
 	go func() {
-		<-idleTimer.C
-		log.Printf("WebSocket idle timeout for connection, closing")
-		_ = conn.WriteControl(
-			websocket.CloseMessage,
-			websocket.FormatCloseMessage(websocket.CloseGoingAway, "idle timeout"),
-			time.Now().Add(writeWait),
-		)
-		_ = conn.Close()
+		select {
+		case <-idleTimer.C:
+			log.Printf("WebSocket idle timeout for connection, closing")
+			_ = conn.WriteControl(
+				websocket.CloseMessage,
+				websocket.FormatCloseMessage(websocket.CloseGoingAway, "idle timeout"),
+				time.Now().Add(writeWait),
+			)
+			_ = conn.Close()
+		case <-connDone:
+			return
+		}
 	}()
 
 	// Require authenticated user_id from context (must be set by AuthMiddleware)
@@ -311,6 +318,9 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 		}
 
 		shouldClose := func() bool {
+			// Set write deadline for any response we send during this message handling
+			_ = conn.SetWriteDeadline(time.Now().Add(writeWait))
+
 			mode := wsModeLegacy
 			var envelope *wsEnvelopeIn
 			if env, ok := parseEnvelopeJSON(msg); ok {

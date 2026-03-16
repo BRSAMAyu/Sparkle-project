@@ -445,10 +445,10 @@ func Load() *Config {
 	// Request timeout
 	viper.SetDefault("REQUEST_TIMEOUT_SECONDS", 30)
 
- viper.SetDefault("CIRCUIT_BREAKER_SUCCESS_THRESHOLD", 2) // 2 successes to close
- viper.SetDefault("CIRCUIT_BREAKER_TIMEOUT", 30)             // 30 seconds open timeout
-
- viper.SetDefault("CIRCUIT_BREAKER_HALF_OPEN_REQUESTS", 3) // 3 requests in half-open
+	// Circuit breaker advanced defaults (used by health_checker)
+	viper.SetDefault("CIRCUIT_BREAKER_SUCCESS_THRESHOLD", 2)
+	viper.SetDefault("CIRCUIT_BREAKER_TIMEOUT", 30)
+	viper.SetDefault("CIRCUIT_BREAKER_HALF_OPEN_REQUESTS", 3)
 
 	// Read from .env files if they exist (root .env has priority)
 	cwd, err := os.Getwd()

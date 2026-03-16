@@ -21,12 +21,20 @@ depends_on = None
 
 
 def upgrade() -> None:
+    search_visibility_enum = postgresql.ENUM(
+        'everyone',
+        'friends',
+        'nobody',
+        name='searchvisibility',
+    )
+    search_visibility_enum.create(op.get_bind(), checkfirst=True)
+
     # 1. 添加用户搜索隐私设置字段
     op.add_column(
         'users',
         sa.Column(
             'searchable_by',
-            sa.Enum('everyone', 'friends', 'nobody', name='searchvisibility'),
+            search_visibility_enum,
             nullable=False,
             server_default='everyone',
             comment='用户搜索隐私设置'

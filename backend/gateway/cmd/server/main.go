@@ -99,11 +99,17 @@ func main() {
 	logger.Log.Info("Shutdown signal received, draining connections...",
 		zap.Int("timeout_seconds", shutdownTimeout))
 
-	// Phase 1: Drain WebSocket connections (5s)
+	// Phase 1: Drain WebSocket connections (1/3 of total timeout)
+	drainTimeout := time.Duration(shutdownTimeout/3) * time.Second
+	if drainTimeout < 2*time.Second {
+		drainTimeout = 2 * time.Second
+	}
 	if registry := handlers.chatOrchestrator.Registry(); registry != nil {
 		connCount := registry.Count()
-		logger.Log.Info("Draining WebSocket connections", zap.Int("count", connCount))
-		registry.DrainAll(5 * time.Second)
+		logger.Log.Info("Draining WebSocket connections",
+			zap.Int("count", connCount),
+			zap.Duration("drain_timeout", drainTimeout))
+		registry.DrainAll(drainTimeout)
 		logger.Log.Info("WebSocket connections drained")
 	}
 

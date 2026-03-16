@@ -43,6 +43,16 @@ class _AchievementMapScreenState extends ConsumerState<AchievementMapScreen> {
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
+        actions: [
+          // Focus button - navigate to nearest unlocked achievement
+          IconButton(
+            icon: Icon(Icons.my_location, color: DS.textPrimary),
+            tooltip: l10n.achievementMapFocusTooltip,
+            onPressed: state.isLoading || state.nodes.isEmpty
+                ? null
+                : () => _showFocusTooltip(context, state.nodes),
+          ),
+        ],
       ),
       child: state.isLoading
           ? Center(
@@ -72,6 +82,46 @@ class _AchievementMapScreenState extends ConsumerState<AchievementMapScreen> {
                   connections: state.connections,
                 ),
     );
+  }
+
+  /// Find and navigate to the nearest unlocked achievement
+  void _showFocusTooltip(BuildContext context, List<AchievementMapNode> nodes) {
+    // Find the first locked node that has unlocked prerequisites
+    AchievementMapNode? targetNode;
+
+    for (final node in nodes) {
+      if (!node.isUnlocked && !node.isHidden) {
+        // Check if any prerequisite is unlocked
+        final hasUnlockedPrereq = node.prerequisites.isEmpty ||
+            node.prerequisites.any((prereq) {
+              final prereqNode = nodes.firstWhere(
+                (n) => n.id == prereq,
+                orElse: () => node,
+              );
+              return prereqNode.isUnlocked;
+            });
+        if (hasUnlockedPrereq) {
+          targetNode = node;
+          break;
+        }
+      }
+    }
+
+    // If no accessible locked node, pick the first locked one
+    targetNode ??= nodes.firstWhere(
+      (n) => !n.isUnlocked && !n.isHidden,
+      orElse: () => nodes.first,
+    );
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.l10n.achievementMapFocusHint(targetNode.name)),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 }
 

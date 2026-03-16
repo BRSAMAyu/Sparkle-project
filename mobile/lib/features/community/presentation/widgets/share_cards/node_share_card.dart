@@ -42,7 +42,7 @@ class NodeShareCard extends StatelessWidget {
   Widget _buildCompactCard(BuildContext context) => GestureDetector(
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.all(DS.sm),
+          padding: EdgeInsets.all(DS.sm),
           decoration: BoxDecoration(
             color: DS.surfaceSecondary,
             borderRadius: DS.borderRadius8,
@@ -56,15 +56,15 @@ class NodeShareCard extends StatelessWidget {
                 height: 32,
                 decoration: BoxDecoration(
                   color: DS.brandSecondary.withValues(alpha: 0.15),
-                  borderRadius: DS.borderRadius6,
+                  borderRadius: DS.borderRadius8,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.school,
                   color: DS.brandSecondary,
                   size: 18,
                 ),
               ),
-              const SizedBox(width: DS.sm),
+              SizedBox(width: DS.sm),
               Flexible(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -145,7 +145,7 @@ class NodeShareCard extends StatelessWidget {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.all(DS.md),
+                padding: EdgeInsets.all(DS.md),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
@@ -154,18 +154,18 @@ class NodeShareCard extends StatelessWidget {
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.all(DS.sm),
+                          padding: EdgeInsets.all(DS.sm),
                           decoration: BoxDecoration(
                             color: DS.brandSecondary.withValues(alpha: 0.15),
                             borderRadius: DS.borderRadius8,
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.school,
                             color: DS.brandSecondary,
                             size: 20,
                           ),
                         ),
-                        const SizedBox(width: DS.sm),
+                        SizedBox(width: DS.sm),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -181,7 +181,7 @@ class NodeShareCard extends StatelessWidget {
                                 nodeName,
                                 style: TextStyle(
                                   fontWeight: DS.fontWeightBold,
-                                  fontSize: DS.fontSizeMd,
+                                  fontSize: DS.fontSizeBase,
                                   color: DS.textPrimary,
                                 ),
                                 maxLines: 1,
@@ -195,7 +195,7 @@ class NodeShareCard extends StatelessWidget {
 
                     // Parent path
                     if (parentPath != null && parentPath!.isNotEmpty) ...[
-                      const SizedBox(height: DS.xs),
+                      SizedBox(height: DS.xs),
                       Row(
                         children: [
                           Icon(
@@ -203,7 +203,7 @@ class NodeShareCard extends StatelessWidget {
                             size: 14,
                             color: DS.textTertiary,
                           ),
-                          const SizedBox(width: DS.xs),
+                          SizedBox(width: DS.xs),
                           Expanded(
                             child: Text(
                               parentPath!,
@@ -221,7 +221,7 @@ class NodeShareCard extends StatelessWidget {
 
                     // Mastery indicator
                     if (masteryLevel != null) ...[
-                      const SizedBox(height: DS.md),
+                      SizedBox(height: DS.md),
                       Row(
                         children: [
                           Expanded(
@@ -237,9 +237,9 @@ class NodeShareCard extends StatelessWidget {
                               ),
                             ),
                           ),
-                          const SizedBox(width: DS.sm),
+                          SizedBox(width: DS.sm),
                           Container(
-                            padding: const EdgeInsets.symmetric(
+                            padding: EdgeInsets.symmetric(
                               horizontal: DS.sm,
                               vertical: 2,
                             ),
@@ -260,7 +260,7 @@ class NodeShareCard extends StatelessWidget {
                       ),
                     ],
 
-                    const SizedBox(height: DS.md),
+                    SizedBox(height: DS.md),
 
                     // Stats row
                     Row(
@@ -272,7 +272,7 @@ class NodeShareCard extends StatelessWidget {
                             Icons.timer_outlined,
                           ),
                         if (connections != null && connections! > 0) ...[
-                          const SizedBox(width: DS.md),
+                          SizedBox(width: DS.md),
                           _buildStat(
                             '关联',
                             '$connections个',
@@ -316,7 +316,7 @@ class NodeShareCard extends StatelessWidget {
             size: 14,
             color: DS.textTertiary,
           ),
-          const SizedBox(width: DS.xs),
+          SizedBox(width: DS.xs),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

@@ -40,7 +40,7 @@ class PlanShareCard extends StatelessWidget {
   Widget _buildCompactCard(BuildContext context) => GestureDetector(
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.all(DS.sm),
+          padding: EdgeInsets.all(DS.sm),
           decoration: BoxDecoration(
             color: DS.surfaceSecondary,
             borderRadius: DS.borderRadius8,
@@ -54,15 +54,15 @@ class PlanShareCard extends StatelessWidget {
                 height: 32,
                 decoration: BoxDecoration(
                   color: DS.info.withValues(alpha: 0.15),
-                  borderRadius: DS.borderRadius6,
+                  borderRadius: DS.borderRadius8,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.flag,
                   color: DS.info,
                   size: 18,
                 ),
               ),
-              const SizedBox(width: DS.sm),
+              SizedBox(width: DS.sm),
               Flexible(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -124,7 +124,7 @@ class PlanShareCard extends StatelessWidget {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.all(DS.md),
+                padding: EdgeInsets.all(DS.md),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
@@ -133,18 +133,18 @@ class PlanShareCard extends StatelessWidget {
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.all(DS.sm),
+                          padding: EdgeInsets.all(DS.sm),
                           decoration: BoxDecoration(
                             color: DS.info.withValues(alpha: 0.15),
                             borderRadius: DS.borderRadius8,
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.flag,
                             color: DS.info,
                             size: 20,
                           ),
                         ),
-                        const SizedBox(width: DS.sm),
+                        SizedBox(width: DS.sm),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -160,7 +160,7 @@ class PlanShareCard extends StatelessWidget {
                                 planTitle,
                                 style: TextStyle(
                                   fontWeight: DS.fontWeightBold,
-                                  fontSize: DS.fontSizeMd,
+                                  fontSize: DS.fontSizeBase,
                                   color: DS.textPrimary,
                                 ),
                                 maxLines: 1,
@@ -174,7 +174,7 @@ class PlanShareCard extends StatelessWidget {
 
                     // Progress indicator
                     if (progress != null) ...[
-                      const SizedBox(height: DS.md),
+                      SizedBox(height: DS.md),
                       Row(
                         children: [
                           Expanded(
@@ -190,7 +190,7 @@ class PlanShareCard extends StatelessWidget {
                               ),
                             ),
                           ),
-                          const SizedBox(width: DS.sm),
+                          SizedBox(width: DS.sm),
                           Text(
                             '${_progressPercent!}%',
                             style: TextStyle(
@@ -203,7 +203,7 @@ class PlanShareCard extends StatelessWidget {
                       ),
                     ],
 
-                    const SizedBox(height: DS.md),
+                    SizedBox(height: DS.md),
 
                     // Stats row
                     Row(
@@ -215,7 +215,7 @@ class PlanShareCard extends StatelessWidget {
                             Icons.task_alt,
                           ),
                         if (milestones != null && milestones! > 0) ...[
-                          const SizedBox(width: DS.md),
+                          SizedBox(width: DS.md),
                           _buildStat(
                             '里程碑',
                             '$milestones',
@@ -223,7 +223,7 @@ class PlanShareCard extends StatelessWidget {
                           ),
                         ],
                         if (deadline != null) ...[
-                          const SizedBox(width: DS.md),
+                          SizedBox(width: DS.md),
                           _buildStat(
                             '截止',
                             _formatDeadline(deadline!),
@@ -259,7 +259,7 @@ class PlanShareCard extends StatelessWidget {
             size: 14,
             color: DS.textTertiary,
           ),
-          const SizedBox(width: DS.xs),
+          SizedBox(width: DS.xs),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

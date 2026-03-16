@@ -10,6 +10,10 @@ import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/visual_element_model.dart';
 import 'package:sparkle/shared/providers/visual_element_provider.dart';
 
+/// 布局动画时长
+const _kLayoutAnimationDuration = Duration(milliseconds: 400);
+const _kLayoutAnimationCurve = Curves.easeOutCubic;
+
 /// 视觉元素管理页面
 class VisualElementsScreen extends ConsumerStatefulWidget {
   const VisualElementsScreen({super.key});
@@ -310,21 +314,49 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
             padding: const EdgeInsets.all(DS.spacing16),
             sliver: SliverLayoutBuilder(
               builder: (context, constraints) {
-                return SliverGrid(
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: _calculateCrossAxisCount(
-                      constraints.crossAxisExtent,
+                return AnimatedSwitcher(
+                  duration: _kLayoutAnimationDuration,
+                  switchInCurve: _kLayoutAnimationCurve,
+                  switchOutCurve: _kLayoutAnimationCurve,
+                  layoutBuilder: (currentChild, previousChildren) {
+                    // 使用 Stack 实现交叉淡入淡出
+                    return Stack(
+                      alignment: Alignment.center,
+                      children: <Widget>[
+                        ...previousChildren,
+                        if (currentChild != null) currentChild,
+                      ],
+                    );
+                  },
+                  transitionBuilder: (child, animation) {
+                    return FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(0, 0.05),
+                          end: Offset.zero,
+                        ).animate(animation),
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: SliverGrid(
+                    key: ValueKey(_filterOptions.hashCode),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: _calculateCrossAxisCount(
+                        constraints.crossAxisExtent,
+                      ),
+                      mainAxisSpacing: DS.spacing12,
+                      crossAxisSpacing: DS.spacing12,
+                      mainAxisExtent: 180,
                     ),
-                    mainAxisSpacing: DS.spacing12,
-                    crossAxisSpacing: DS.spacing12,
-                    mainAxisExtent: 180,
-                  ),
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final element = filteredElements[index];
-                      return _buildElementCard(element, state, l10n);
-                    },
-                    childCount: filteredElements.length,
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final element = filteredElements[index];
+                        return _buildElementCard(element, state, l10n);
+                      },
+                      childCount: filteredElements.length,
+                    ),
                   ),
                 );
               },
@@ -738,56 +770,178 @@ class _FilterSheetState extends State<_FilterSheet> {
         color: DS.surfacePrimary,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Handle
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: DS.spacing20),
-              decoration: BoxDecoration(
-                color: DS.neutral300,
-                borderRadius: DS.borderRadiusFull,
-              ),
-            ),
-          ),
-
-          // 标题
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                l10n.visualElementFilter,
-                style: const TextStyle(
-                  fontSize: DS.fontSizeLg,
-                  fontWeight: DS.fontWeightBold,
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: DS.spacing20),
+                decoration: BoxDecoration(
+                  color: DS.neutral300,
+                  borderRadius: DS.borderRadiusFull,
                 ),
               ),
-              SparkleButton.ghost(
-                label: l10n.commonClear,
-                onPressed: widget.onClear,
-              ),
-            ],
-          ),
-          const SizedBox(height: DS.spacing16),
-
-          // 稀有度筛选
-          _buildRarityFilter(l10n),
-          const SizedBox(height: DS.spacing24),
-
-          // 应用按钮
-          SizedBox(
-            width: double.infinity,
-            child: SparkleButton.primary(
-              label: l10n.visualElementApplyFilter,
-              onPressed: () => widget.onApply(_options),
-              expand: true,
             ),
-          ),
-        ],
+
+            // 标题
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  l10n.visualElementFilter,
+                  style: const TextStyle(
+                    fontSize: DS.fontSizeLg,
+                    fontWeight: DS.fontWeightBold,
+                  ),
+                ),
+                SparkleButton.ghost(
+                  label: l10n.commonClear,
+                  onPressed: widget.onClear,
+                ),
+              ],
+            ),
+            const SizedBox(height: DS.spacing16),
+
+            // 稀有度筛选
+            _buildRarityFilter(l10n),
+            const SizedBox(height: DS.spacing16),
+
+            // 状态筛选
+            _buildStatusFilter(l10n),
+            const SizedBox(height: DS.spacing16),
+
+            // 排序选项
+            _buildSortFilter(l10n),
+            const SizedBox(height: DS.spacing24),
+
+            // 应用按钮
+            SizedBox(
+              width: double.infinity,
+              child: SparkleButton.primary(
+                label: l10n.visualElementApplyFilter,
+                onPressed: () => widget.onApply(_options),
+                expand: true,
+              ),
+            ),
+          ],
+        ),
       ),
+    );
+  }
+
+  Widget _buildStatusFilter(AppLocalizations l10n) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l10n.visualElementStatus,
+          style: TextStyle(
+            fontSize: DS.fontSizeSm,
+            fontWeight: DS.fontWeightSemibold,
+            color: DS.textSecondary,
+          ),
+        ),
+        const SizedBox(height: DS.spacing12),
+        Wrap(
+          spacing: DS.spacing8,
+          runSpacing: DS.spacing8,
+          children: [
+            _buildFilterChip(
+              l10n.visualElementUnlocked,
+              _options.showUnlockedOnly,
+              onTap: () {
+                setState(() {
+                  _options = _options.copyWith(
+                    showUnlockedOnly: !_options.showUnlockedOnly,
+                  );
+                });
+              },
+            ),
+            _buildFilterChip(
+              l10n.visualElementEquipped,
+              _options.showEquippedOnly,
+              onTap: () {
+                setState(() {
+                  _options = _options.copyWith(
+                    showEquippedOnly: !_options.showEquippedOnly,
+                  );
+                });
+              },
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSortFilter(AppLocalizations l10n) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l10n.visualElementSort,
+          style: TextStyle(
+            fontSize: DS.fontSizeSm,
+            fontWeight: DS.fontWeightSemibold,
+            color: DS.textSecondary,
+          ),
+        ),
+        const SizedBox(height: DS.spacing12),
+        Wrap(
+          spacing: DS.spacing8,
+          runSpacing: DS.spacing8,
+          children: [
+            _buildFilterChip(
+              l10n.visualElementSortDefault,
+              _options.sortBy == VisualElementSortBy.sortOrder,
+              onTap: () {
+                setState(() {
+                  _options = _options.copyWith(
+                    sortBy: VisualElementSortBy.sortOrder,
+                  );
+                });
+              },
+            ),
+            _buildFilterChip(
+              l10n.visualElementSortName,
+              _options.sortBy == VisualElementSortBy.name,
+              onTap: () {
+                setState(() {
+                  _options = _options.copyWith(
+                    sortBy: VisualElementSortBy.name,
+                  );
+                });
+              },
+            ),
+            _buildFilterChip(
+              l10n.visualElementSortRarity,
+              _options.sortBy == VisualElementSortBy.rarity,
+              onTap: () {
+                setState(() {
+                  _options = _options.copyWith(
+                    sortBy: VisualElementSortBy.rarity,
+                  );
+                });
+              },
+            ),
+            _buildFilterChip(
+              l10n.visualElementSortUnlockDate,
+              _options.sortBy == VisualElementSortBy.unlockDate,
+              onTap: () {
+                setState(() {
+                  _options = _options.copyWith(
+                    sortBy: VisualElementSortBy.unlockDate,
+                  );
+                });
+              },
+            ),
+          ],
+        ),
+      ],
     );
   }
 

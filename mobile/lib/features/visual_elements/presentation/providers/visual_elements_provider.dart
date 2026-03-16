@@ -4,6 +4,14 @@ import 'package:sparkle/shared/entities/visual_element_model.dart';
 
 // ========== Visual Elements Extended State ==========
 
+/// 排序选项
+enum VisualElementSortBy {
+  name,
+  rarity,
+  unlockDate,
+  sortOrder,
+}
+
 /// 筛选选项
 class VisualElementFilterOptions {
   const VisualElementFilterOptions({
@@ -11,31 +19,40 @@ class VisualElementFilterOptions {
     this.rarity,
     this.category,
     this.showUnlockedOnly = false,
+    this.showEquippedOnly = false,
+    this.sortBy = VisualElementSortBy.sortOrder,
   });
 
   final VisualElementType? type;
   final VisualElementRarity? rarity;
   final String? category;
   final bool showUnlockedOnly;
+  final bool showEquippedOnly;
+  final VisualElementSortBy sortBy;
 
   VisualElementFilterOptions copyWith({
     VisualElementType? type,
     VisualElementRarity? rarity,
     String? category,
     bool? showUnlockedOnly,
+    bool? showEquippedOnly,
+    VisualElementSortBy? sortBy,
   }) =>
       VisualElementFilterOptions(
         type: type ?? this.type,
         rarity: rarity ?? this.rarity,
         category: category ?? this.category,
         showUnlockedOnly: showUnlockedOnly ?? this.showUnlockedOnly,
+        showEquippedOnly: showEquippedOnly ?? this.showEquippedOnly,
+        sortBy: sortBy ?? this.sortBy,
       );
 
   bool get hasFilters =>
       type != null ||
       rarity != null ||
       category != null ||
-      showUnlockedOnly;
+      showUnlockedOnly ||
+      showEquippedOnly;
 }
 
 /// 视觉元素状态
@@ -142,7 +159,39 @@ class VisualElementsState {
           .toList();
     }
 
-    return filtered..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    if (filterOptions.showEquippedOnly) {
+      final equippedIdSet = equippedIds;
+      filtered = filtered
+          .where((e) => equippedIdSet.contains(e.id))
+          .toList();
+    }
+
+    // 排序
+    return filtered..sort((a, b) {
+      switch (filterOptions.sortBy) {
+        case VisualElementSortBy.name:
+          return a.name.compareTo(b.name);
+        case VisualElementSortBy.rarity:
+          // legendary > epic > rare > common
+          final rarityOrder = {
+            VisualElementRarity.legendary: 4,
+            VisualElementRarity.epic: 3,
+            VisualElementRarity.rare: 2,
+            VisualElementRarity.common: 1,
+          };
+          return rarityOrder[b.rarity]!.compareTo(rarityOrder[a.rarity]!);
+        case VisualElementSortBy.unlockDate:
+          // 按解锁时间排序（已解锁的排前面）
+          final aUnlocked = unlockedIds.contains(a.id);
+          final bUnlocked = unlockedIds.contains(b.id);
+          if (aUnlocked && !bUnlocked) return -1;
+          if (!aUnlocked && bUnlocked) return 1;
+          return a.sortOrder.compareTo(b.sortOrder);
+        case VisualElementSortBy.sortOrder:
+        default:
+          return a.sortOrder.compareTo(b.sortOrder);
+      }
+    });
   }
 
   /// 获取所有分类

@@ -42,7 +42,7 @@ class TaskShareCard extends StatelessWidget {
   Widget _buildCompactCard(BuildContext context) => GestureDetector(
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.all(DS.sm),
+          padding: EdgeInsets.all(DS.sm),
           decoration: BoxDecoration(
             color: DS.surfaceSecondary,
             borderRadius: DS.borderRadius8,
@@ -56,15 +56,15 @@ class TaskShareCard extends StatelessWidget {
                 height: 32,
                 decoration: BoxDecoration(
                   color: DS.success.withValues(alpha: 0.15),
-                  borderRadius: DS.borderRadius6,
+                  borderRadius: DS.borderRadius8,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.task_alt,
                   color: DS.success,
                   size: 18,
                 ),
               ),
-              const SizedBox(width: DS.sm),
+              SizedBox(width: DS.sm),
               Flexible(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -126,7 +126,7 @@ class TaskShareCard extends StatelessWidget {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.all(DS.md),
+                padding: EdgeInsets.all(DS.md),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
@@ -135,18 +135,18 @@ class TaskShareCard extends StatelessWidget {
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.all(DS.sm),
+                          padding: EdgeInsets.all(DS.sm),
                           decoration: BoxDecoration(
                             color: DS.success.withValues(alpha: 0.15),
                             borderRadius: DS.borderRadius8,
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.task_alt,
                             color: DS.success,
                             size: 20,
                           ),
                         ),
-                        const SizedBox(width: DS.sm),
+                        SizedBox(width: DS.sm),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -162,7 +162,7 @@ class TaskShareCard extends StatelessWidget {
                                 taskTitle,
                                 style: TextStyle(
                                   fontWeight: DS.fontWeightBold,
-                                  fontSize: DS.fontSizeMd,
+                                  fontSize: DS.fontSizeBase,
                                   color: DS.textPrimary,
                                 ),
                                 maxLines: 1,
@@ -176,7 +176,7 @@ class TaskShareCard extends StatelessWidget {
 
                     if (taskDescription != null &&
                         taskDescription!.isNotEmpty) ...[
-                      const SizedBox(height: DS.sm),
+                      SizedBox(height: DS.sm),
                       Text(
                         taskDescription!,
                         style: TextStyle(
@@ -188,25 +188,25 @@ class TaskShareCard extends StatelessWidget {
                       ),
                     ],
 
-                    const SizedBox(height: DS.md),
+                    SizedBox(height: DS.md),
 
                     // Stats row
                     Row(
                       children: [
                         if (duration != null) _buildStat('时长', '${duration}m'),
                         if (points != null) ...[
-                          const SizedBox(width: DS.md),
+                          SizedBox(width: DS.md),
                           _buildStat('积分', '+$points'),
                         ],
                         if (streak != null && streak! > 0) ...[
-                          const SizedBox(width: DS.md),
+                          SizedBox(width: DS.md),
                           _buildStat('连胜', '$streak🔥'),
                         ],
                       ],
                     ),
 
                     if (completedAt != null) ...[
-                      const SizedBox(height: DS.sm),
+                      SizedBox(height: DS.sm),
                       Text(
                         _formatTime(completedAt!),
                         style: TextStyle(

@@ -5,7 +5,6 @@ from loguru import logger
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.websocket import get_ws_manager
 from app.models.notification import Notification
 from app.schemas.notification import NotificationCreate
 
@@ -70,6 +69,8 @@ class NotificationService:
             notification: 通知对象
             priority: 优先级 (low, normal, high)
         """
+        from app.core.websocket import get_ws_manager
+
         ws_manager = get_ws_manager()
 
         message = {

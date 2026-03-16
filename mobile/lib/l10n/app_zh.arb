@@ -2650,5 +2650,16 @@
   "visualElementCategoryCyberpunk": "赛博朋克",
   "visualElementCategoryAbstract": "抽象",
   "visualElementCategoryAmbient": "氛围",
-  "visualElementEmptyType": "暂无{type}"
+  "visualElementEmptyType": "暂无{type}",
+  "visualElementStatus": "状态",
+  "visualElementSort": "排序",
+  "visualElementSortDefault": "默认",
+  "visualElementSortName": "名称",
+  "visualElementSortRarity": "稀有度",
+  "visualElementSortUnlockDate": "解锁时间",
+  "visualElementUnlockTitle": "解锁视觉元素",
+  "visualElementUnlockSubtitle": "恭喜获得新的视觉元素！",
+  "visualElementViewCollection": "查看收藏",
+  "achievementMapFocusTooltip": "定位到最近的成就",
+  "achievementMapFocusHint": "尝试解锁：{name}"
 }

@@ -7,6 +7,7 @@ Create Date: 2026-03-16
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 
 # revision identifiers, used by Alembic.
@@ -24,7 +25,7 @@ def upgrade() -> None:
 
     op.create_table(
         "user_streak_days",
-        sa.Column("user_id", sa.GUID(), nullable=False),
+        sa.Column("user_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("day", sa.Date(), nullable=False),
         sa.Column(
             "status",
@@ -33,7 +34,7 @@ def upgrade() -> None:
         ),
         sa.Column("used_freeze", sa.Boolean(), nullable=False, server_default=sa.text("false")),
         sa.Column("source_event", sa.String(50), nullable=True),
-        sa.Column("id", sa.GUID(), nullable=False),
+        sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("updated_at", sa.DateTime(), nullable=False),
         sa.Column("deleted_at", sa.DateTime(), nullable=True),

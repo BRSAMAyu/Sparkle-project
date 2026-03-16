@@ -4460,6 +4460,12 @@ abstract class AppLocalizations {
   /// **'加成'**
   String get shopCategoryBoost;
 
+  /// No description provided for @shopCategoryVisualElement.
+  ///
+  /// In zh, this message translates to:
+  /// **'视觉元素'**
+  String get shopCategoryVisualElement;
+
   /// No description provided for @shopEmpty.
   ///
   /// In zh, this message translates to:
@@ -12001,6 +12007,72 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'暂无{type}'**
   String visualElementEmptyType(Object type);
+
+  /// No description provided for @visualElementStatus.
+  ///
+  /// In zh, this message translates to:
+  /// **'状态'**
+  String get visualElementStatus;
+
+  /// No description provided for @visualElementSort.
+  ///
+  /// In zh, this message translates to:
+  /// **'排序'**
+  String get visualElementSort;
+
+  /// No description provided for @visualElementSortDefault.
+  ///
+  /// In zh, this message translates to:
+  /// **'默认'**
+  String get visualElementSortDefault;
+
+  /// No description provided for @visualElementSortName.
+  ///
+  /// In zh, this message translates to:
+  /// **'名称'**
+  String get visualElementSortName;
+
+  /// No description provided for @visualElementSortRarity.
+  ///
+  /// In zh, this message translates to:
+  /// **'稀有度'**
+  String get visualElementSortRarity;
+
+  /// No description provided for @visualElementSortUnlockDate.
+  ///
+  /// In zh, this message translates to:
+  /// **'解锁时间'**
+  String get visualElementSortUnlockDate;
+
+  /// No description provided for @visualElementUnlockTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'解锁视觉元素'**
+  String get visualElementUnlockTitle;
+
+  /// No description provided for @visualElementUnlockSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'恭喜获得新的视觉元素！'**
+  String get visualElementUnlockSubtitle;
+
+  /// No description provided for @visualElementViewCollection.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看收藏'**
+  String get visualElementViewCollection;
+
+  /// No description provided for @achievementMapFocusTooltip.
+  ///
+  /// In zh, this message translates to:
+  /// **'定位到最近的成就'**
+  String get achievementMapFocusTooltip;
+
+  /// No description provided for @achievementMapFocusHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'尝试解锁：{name}'**
+  String achievementMapFocusHint(Object name);
 }
 
 class _AppLocalizationsDelegate

@@ -2,23 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/rarity_visual_wrapper.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/rarity_badge.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-/// Rarity threshold: shimmer only applies to rare+ unlocked cards.
-const _shimmerRarities = {
-  AchievementRarity.rare,
-  AchievementRarity.epic,
-  AchievementRarity.legendary,
-};
-
-/// Duration window for the "newly unlocked" glow pulse.
-const _newlyUnlockedWindow = Duration(minutes: 5);
 
 // ---------------------------------------------------------------------------
 // AchievementCardStyle
@@ -119,148 +106,6 @@ class _AnimatedAchievementCardState extends State<AnimatedAchievementCard>
           ),
         ),
         child: widget.child,
-      );
-}
-
-// ---------------------------------------------------------------------------
-// _ShimmerOverlay  (rarity-based ambient shimmer for unlocked cards)
-// ---------------------------------------------------------------------------
-
-/// A subtle shimmer sweep that repeats every ~3 s.
-/// Max opacity is 0.1 to stay ambient.
-class _ShimmerOverlay extends StatefulWidget {
-  const _ShimmerOverlay({
-    required this.rarityColor,
-    required this.borderRadius,
-  });
-
-  final Color rarityColor;
-  final BorderRadius borderRadius;
-
-  @override
-  State<_ShimmerOverlay> createState() => _ShimmerOverlayState();
-}
-
-class _ShimmerOverlayState extends State<_ShimmerOverlay>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2400),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => AnimatedBuilder(
-        animation: _controller,
-        builder: (context, _) {
-          // Sweep from -1.0 to 2.0 across the card width.
-          final sweepPosition = -1.0 + _controller.value * 3.0;
-          return ClipRRect(
-            borderRadius: widget.borderRadius,
-            child: Opacity(
-              opacity: 0.1,
-              child: ShaderMask(
-                shaderCallback: (bounds) => LinearGradient(
-                  begin: Alignment(sweepPosition - 0.3, 0),
-                  end: Alignment(sweepPosition + 0.3, 0),
-                  colors: [
-                    Colors.transparent,
-                    widget.rarityColor,
-                    Colors.transparent,
-                  ],
-                  stops: const [0.0, 0.5, 1.0],
-                ).createShader(bounds),
-                blendMode: BlendMode.srcATop,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: widget.borderRadius,
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
-      );
-}
-
-// ---------------------------------------------------------------------------
-// _NewlyUnlockedGlow  (pulsing glow border for achievements unlocked < 5 min)
-// ---------------------------------------------------------------------------
-
-class _NewlyUnlockedGlow extends StatefulWidget {
-  const _NewlyUnlockedGlow({
-    required this.rarityColor,
-    required this.borderRadius,
-  });
-
-  final Color rarityColor;
-  final BorderRadius borderRadius;
-
-  @override
-  State<_NewlyUnlockedGlow> createState() => _NewlyUnlockedGlowState();
-}
-
-class _NewlyUnlockedGlowState extends State<_NewlyUnlockedGlow>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _glowAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1600),
-    )..repeat(reverse: true);
-
-    _glowAnimation = Tween<double>(begin: 0.15, end: 0.5).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => AnimatedBuilder(
-        animation: _glowAnimation,
-        builder: (context, _) => IgnorePointer(
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: widget.borderRadius,
-              border: Border.all(
-                color: widget.rarityColor.withValues(
-                  alpha: _glowAnimation.value,
-                ),
-                width: 2.5,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: widget.rarityColor.withValues(
-                    alpha: _glowAnimation.value * 0.6,
-                  ),
-                  blurRadius: 16,
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
-          ),
-        ),
       );
 }
 
@@ -401,12 +246,12 @@ class AchievementCard extends StatelessWidget {
   bool get _isNewlyUnlocked {
     final unlockedAt = achievement.userProgress?.unlockedAt;
     if (unlockedAt == null) return false;
-    return DateTime.now().difference(unlockedAt) < _newlyUnlockedWindow;
+    return DateTime.now().difference(unlockedAt) < newlyUnlockedWindow;
   }
 
   bool get _shouldShimmer =>
       achievement.isUnlocked &&
-      _shimmerRarities.contains(achievement.achievement.rarity);
+      shimmerRarities.contains(achievement.achievement.rarity);
 
   BorderRadius get _borderRadiusForStyle {
     switch (style) {
@@ -433,31 +278,19 @@ class AchievementCard extends StatelessWidget {
         card = _buildFull(context);
     }
 
-    // Layer shimmer + glow on top of the card.
-    final rarityColor =
-        RarityColorProvider.getColor(achievement.achievement.rarity);
-    final borderRadius = _borderRadiusForStyle;
+    // Use RarityVisualWrapper for consistent rarity-based effects
+    final shouldWrap = _shouldShimmer || _isNewlyUnlocked;
+    if (!shouldWrap) return card;
 
-    if (!_shouldShimmer && !_isNewlyUnlocked) return card;
-
-    return Stack(
-      children: [
-        card,
-        if (_shouldShimmer)
-          Positioned.fill(
-            child: _ShimmerOverlay(
-              rarityColor: rarityColor,
-              borderRadius: borderRadius,
-            ),
-          ),
-        if (_isNewlyUnlocked)
-          Positioned.fill(
-            child: _NewlyUnlockedGlow(
-              rarityColor: rarityColor,
-              borderRadius: borderRadius,
-            ),
-          ),
-      ],
+    return RarityVisualWrapper(
+      rarity: achievement.achievement.rarity,
+      borderRadius: _borderRadiusForStyle,
+      showShimmer: _shouldShimmer,
+      showGlow: _isNewlyUnlocked,
+      showParticles: false, // Cards don't show orbital particles
+      isNewlyUnlocked: _isNewlyUnlocked,
+      unlockedAt: achievement.userProgress?.unlockedAt,
+      child: card,
     );
   }
 
