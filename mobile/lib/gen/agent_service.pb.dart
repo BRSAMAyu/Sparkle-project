@@ -240,7 +240,8 @@ class ChatRequest extends $pb.GeneratedMessage {
   $pb.PbList<$core.String> get activeTools => $_getList(11);
 
   /// Chat mode for AI collaboration strategy.
-  /// Values: "standard" (default), "deep_analysis", "study_plan", "error_diagnosis"
+  /// Values: "standard" (default), "deep_analysis", "study_plan", "error_diagnosis",
+  ///         "expert_auto", "expert::<expert_id>"
   @$pb.TagNumber(13)
   $core.String get chatMode => $_getSZ(12);
   @$pb.TagNumber(13)
@@ -909,6 +910,7 @@ class ChatResponse extends $pb.GeneratedMessage {
     $core.String? promptVersion,
     $core.Iterable<$core.MapEntry<$core.String, $core.String>>? metadata,
     $2.Timestamp? eventTime,
+    $core.String? sessionId,
   }) {
     final result = create();
     if (responseId != null) result.responseId = responseId;
@@ -929,6 +931,7 @@ class ChatResponse extends $pb.GeneratedMessage {
     if (promptVersion != null) result.promptVersion = promptVersion;
     if (metadata != null) result.metadata.addEntries(metadata);
     if (eventTime != null) result.eventTime = eventTime;
+    if (sessionId != null) result.sessionId = sessionId;
     return result;
   }
 
@@ -988,6 +991,7 @@ class ChatResponse extends $pb.GeneratedMessage {
         packageName: const $pb.PackageName('agent.v1'))
     ..aOM<$2.Timestamp>(19, _omitFieldNames ? '' : 'eventTime',
         subBuilder: $2.Timestamp.create)
+    ..aOS(20, _omitFieldNames ? '' : 'sessionId')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -1219,6 +1223,17 @@ class ChatResponse extends $pb.GeneratedMessage {
   void clearEventTime() => $_clearField(19);
   @$pb.TagNumber(19)
   $2.Timestamp ensureEventTime() => $_ensure(17);
+
+  /// Session/Conversation ID - returned to client for conversation continuity
+  /// This is essential for maintaining context across multiple messages
+  @$pb.TagNumber(20)
+  $core.String get sessionId => $_getSZ(18);
+  @$pb.TagNumber(20)
+  set sessionId($core.String value) => $_setString(18, value);
+  @$pb.TagNumber(20)
+  $core.bool hasSessionId() => $_has(18);
+  @$pb.TagNumber(20)
+  void clearSessionId() => $_clearField(20);
 }
 
 class ResponseFeedbackRequest extends $pb.GeneratedMessage {

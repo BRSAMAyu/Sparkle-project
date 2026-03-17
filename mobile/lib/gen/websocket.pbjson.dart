@@ -195,3 +195,68 @@ const InterventionAction$json = {
 final $typed_data.Uint8List interventionActionDescriptor = $convert.base64Decode(
     'ChJJbnRlcnZlbnRpb25BY3Rpb24SDgoCaWQYASABKAlSAmlkEhQKBWxhYmVsGAIgASgJUgVsYW'
     'JlbBISCgR0eXBlGAMgASgJUgR0eXBl');
+
+@$core.Deprecated('Use messageAckDescriptor instead')
+const MessageAck$json = {
+  '1': 'MessageAck',
+  '2': [
+    {'1': 'message_id', '3': 1, '4': 1, '5': 9, '10': 'messageId'},
+    {'1': 'status', '3': 2, '4': 1, '5': 9, '10': 'status'},
+    {'1': 'timestamp', '3': 3, '4': 1, '5': 3, '10': 'timestamp'},
+    {'1': 'error_code', '3': 4, '4': 1, '5': 9, '10': 'errorCode'},
+    {'1': 'error_message', '3': 5, '4': 1, '5': 9, '10': 'errorMessage'},
+  ],
+};
+
+/// Descriptor for `MessageAck`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List messageAckDescriptor = $convert.base64Decode(
+    'CgpNZXNzYWdlQWNrEh0KCm1lc3NhZ2VfaWQYASABKAlSCW1lc3NhZ2VJZBIWCgZzdGF0dXMYAi'
+    'ABKAlSBnN0YXR1cxIcCgl0aW1lc3RhbXAYAyABKANSCXRpbWVzdGFtcBIdCgplcnJvcl9jb2Rl'
+    'GAQgASgJUgllcnJvckNvZGUSIwoNZXJyb3JfbWVzc2FnZRgFIAEoCVIMZXJyb3JNZXNzYWdl');
+
+@$core.Deprecated('Use messageNackDescriptor instead')
+const MessageNack$json = {
+  '1': 'MessageNack',
+  '2': [
+    {'1': 'message_id', '3': 1, '4': 1, '5': 9, '10': 'messageId'},
+    {'1': 'error_code', '3': 2, '4': 1, '5': 9, '10': 'errorCode'},
+    {'1': 'error_message', '3': 3, '4': 1, '5': 9, '10': 'errorMessage'},
+    {'1': 'retry_after_ms', '3': 4, '4': 1, '5': 5, '10': 'retryAfterMs'},
+    {'1': 'permanent', '3': 5, '4': 1, '5': 8, '10': 'permanent'},
+  ],
+};
+
+/// Descriptor for `MessageNack`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List messageNackDescriptor = $convert.base64Decode(
+    'CgtNZXNzYWdlTmFjaxIdCgptZXNzYWdlX2lkGAEgASgJUgltZXNzYWdlSWQSHQoKZXJyb3JfY2'
+    '9kZRgCIAEoCVIJZXJyb3JDb2RlEiMKDWVycm9yX21lc3NhZ2UYAyABKAlSDGVycm9yTWVzc2Fn'
+    'ZRIkCg5yZXRyeV9hZnRlcl9tcxgEIAEoBVIMcmV0cnlBZnRlck1zEhwKCXBlcm1hbmVudBgFIA'
+    'EoCFIJcGVybWFuZW50');
+
+@$core.Deprecated('Use heartbeatPingDescriptor instead')
+const HeartbeatPing$json = {
+  '1': 'HeartbeatPing',
+  '2': [
+    {'1': 'timestamp', '3': 1, '4': 1, '5': 3, '10': 'timestamp'},
+    {'1': 'client_id', '3': 2, '4': 1, '5': 9, '10': 'clientId'},
+  ],
+};
+
+/// Descriptor for `HeartbeatPing`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List heartbeatPingDescriptor = $convert.base64Decode(
+    'Cg1IZWFydGJlYXRQaW5nEhwKCXRpbWVzdGFtcBgBIAEoA1IJdGltZXN0YW1wEhsKCWNsaWVudF'
+    '9pZBgCIAEoCVIIY2xpZW50SWQ=');
+
+@$core.Deprecated('Use heartbeatPongDescriptor instead')
+const HeartbeatPong$json = {
+  '1': 'HeartbeatPong',
+  '2': [
+    {'1': 'client_timestamp', '3': 1, '4': 1, '5': 3, '10': 'clientTimestamp'},
+    {'1': 'server_timestamp', '3': 2, '4': 1, '5': 3, '10': 'serverTimestamp'},
+  ],
+};
+
+/// Descriptor for `HeartbeatPong`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List heartbeatPongDescriptor = $convert.base64Decode(
+    'Cg1IZWFydGJlYXRQb25nEikKEGNsaWVudF90aW1lc3RhbXAYASABKANSD2NsaWVudFRpbWVzdG'
+    'FtcBIpChBzZXJ2ZXJfdGltZXN0YW1wGAIgASgDUg9zZXJ2ZXJUaW1lc3RhbXA=');

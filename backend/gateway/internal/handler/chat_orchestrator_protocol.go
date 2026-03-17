@@ -49,7 +49,7 @@ var jsonMetadataKeys = map[string]bool{
 }
 
 // convertResponseToJSON converts protobuf ChatResponse to JSON-serializable map
-func convertResponseToJSON(resp *agentv1.ChatResponse, sessionID string) map[string]interface{} {
+func convertResponseToJSON(resp *agentv1.ChatResponse) map[string]interface{} {
 	metadata := map[string]interface{}{}
 	for key, value := range resp.Metadata {
 		if jsonMetadataKeys[key] {
@@ -81,7 +81,7 @@ func convertResponseToJSON(resp *agentv1.ChatResponse, sessionID string) map[str
 		"trace_id":       resp.TraceId,
 		"workflow_id":    resp.WorkflowId,
 		"prompt_version": resp.PromptVersion,
-		"session_id":     sessionID,
+		"session_id":     resp.SessionId, // Use proto field directly
 		"metadata":       metadata,
 	}
 	if ts := responseEventTimeMillis(resp); ts > 0 {

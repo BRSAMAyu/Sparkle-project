@@ -29,8 +29,8 @@ func TestCreateUpgrader(t *testing.T) {
 	factory := NewWebSocketFactory(cfg)
 	upgrader := factory.CreateUpgrader()
 
-	assert.Equal(t, 1024, upgrader.ReadBufferSize)
-	assert.Equal(t, 1024, upgrader.WriteBufferSize)
+	assert.Equal(t, 4096, upgrader.ReadBufferSize)
+	assert.Equal(t, 4096, upgrader.WriteBufferSize)
 	assert.NotNil(t, upgrader.CheckOrigin)
 }
 

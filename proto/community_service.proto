@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package sparkle.community;
 
-option go_package = "github.com/sparkle/proto/community;communitypb";
+option go_package = "github.com/sparkle/gateway/gen/community;communitypb";
 
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/empty.proto";

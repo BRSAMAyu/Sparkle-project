@@ -268,7 +268,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 				})
 			default:
 				conn := responder.(*websocket.Conn)
-				conn.WriteJSON(convertResponseToJSON(resp, input.SessionID))
+				conn.WriteJSON(convertResponseToJSON(resp))
 				conn.WriteJSON(gin.H{
 					"type": "meta",
 					"meta": map[string]interface{}{
@@ -462,7 +462,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		default:
 			conn := responder.(*websocket.Conn)
 			// Convert protobuf response to JSON-friendly map
-			jsonResp := convertResponseToJSON(resp, input.SessionID)
+			jsonResp := convertResponseToJSON(resp)
 			// Forward to WebSocket client
 			if err := conn.WriteJSON(jsonResp); err != nil {
 				log.Printf("Failed to write to WebSocket: %v", err)

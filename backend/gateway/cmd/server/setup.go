@@ -87,6 +87,7 @@ type handlerBundle struct {
 	wsProxy                  *handler.WebSocketProxy
 	authHandler              *handler.AuthHandler
 	galaxyHandler            *handler.GalaxyHandler
+	proxyRoutesHandler       *handler.ProxyRoutesHandler
 }
 
 type cqrsBundle struct {
@@ -383,7 +384,7 @@ func startCQRSWorkers(cqrs *cqrsBundle, log *zap.Logger) {
 	}()
 }
 
-func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, services *serviceBundle, handlers *handlerBundle, cqrs *cqrsBundle, proxy *proxyBundle, agentClient *agent.Client) *gin.Engine {
+func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, services *serviceBundle, handlers *handlerBundle, cqrs *cqrsBundle, proxy *proxyBundle, agentClient *agent.Client, logger *zap.Logger) *gin.Engine {
 	r := gin.Default()
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 	r.Use(otelgin.Middleware("sparkle-gateway"))
@@ -416,6 +417,13 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 	if cfg.RequestTimeoutSeconds > 0 {
 		requestTimeout = cfg.RequestTimeoutSeconds
 	}
+
+	// Create explicit proxy routes handler for better control and observability
+	proxyRoutesHandler := handler.NewProxyRoutesHandler(
+		proxy.proxy,
+		proxy.abTestMiddleware,
+		logger,
+	)
 
 	api := r.Group("/api/v1")
 	api.Use(middleware.TimeoutMiddleware(time.Duration(requestTimeout) * time.Second))
@@ -480,6 +488,9 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 		// Galaxy routes - authentication passthrough with rate limiting
 		galaxyRateLimit := middleware.HybridRateLimitMiddlewareSimple(rdb, 10, 20)
 		handlers.galaxyHandler.RegisterRoutes(api, authMiddleware, galaxyRateLimit)
+
+		// Register explicit proxy routes for critical Python Backend APIs
+		proxyRoutesHandler.RegisterProxyRoutes(api, authMiddleware)
 
 		api.Any("/interventions/*path", authMiddleware, handlers.interventionProxyHandler.Proxy)
 		api.Any("/dashboard/*path", authMiddleware, handlers.dashboardProxyHandler.Proxy)
@@ -720,6 +731,13 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 
 	r.NoRoute(func(c *gin.Context) {
 		path := c.Request.URL.Path
+		method := c.Request.Method
+
+		// DEBUG: 记录所有 NoRoute 请求
+		zap.L().Debug("NoRoute: proxying request",
+			zap.String("path", path),
+			zap.String("method", method),
+			zap.String("query", c.Request.URL.RawQuery))
 
 		if strings.HasPrefix(path, "/api/v1/auth") ||
 			path == "/api/v1/health" ||
@@ -733,11 +751,19 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 				}
 			}
 			proxy.proxy.ServeHTTP(c.Writer, c.Request)
+
+			// 记录代理结果
+			zap.L().Debug("NoRoute: auth path proxy completed",
+				zap.String("path", path),
+				zap.Int("status", c.Writer.Status()))
 			return
 		}
 
 		authMiddleware(c)
 		if c.IsAborted() {
+			zap.L().Debug("NoRoute: auth middleware aborted",
+				zap.String("path", path),
+				zap.Int("status", c.Writer.Status()))
 			return
 		}
 
@@ -752,16 +778,24 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 		proxy.abTestMiddleware.AssignVariant()(c)
 		proxy.proxy.ServeHTTP(c.Writer, c.Request)
 		proxy.abTestMiddleware.RecordMetricAfter(c)
+
+		// 记录代理结果
+		zap.L().Debug("NoRoute: proxy completed",
+			zap.String("path", path),
+			zap.Int("status", c.Writer.Status()))
 	})
 
 	return r
 }
 
-func setupProxy(cfg *config.Config) (*proxyBundle, error) {
+func setupProxy(cfg *config.Config, logger *zap.Logger) (*proxyBundle, error) {
 	backendURL := cfg.BackendURL
 	if backendURL == "" {
 		backendURL = "http://sparkle_api:8000"
 	}
+	logger.Info("Gateway proxy configured",
+		zap.String("backend_url", backendURL))
+
 	abTestMiddleware := middleware.NewABTestMiddleware(&middleware.ABTestConfig{
 		BackendURL: backendURL,
 		Timeout:    3 * time.Second,
@@ -771,6 +805,10 @@ func setupProxy(cfg *config.Config) (*proxyBundle, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	logger.Info("Gateway proxy target resolved",
+		zap.String("target_host", targetURL.Host),
+		zap.String("target_scheme", targetURL.Scheme))
 
 	proxy := httputil.NewSingleHostReverseProxy(targetURL)
 	proxy.Director = func(req *http.Request) {

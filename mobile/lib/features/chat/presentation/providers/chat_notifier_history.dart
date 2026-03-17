@@ -35,6 +35,10 @@ extension ChatNotifierHistory on ChatNotifier {
       '${date.day.toString().padLeft(2, '0')}';
 
   Future<void> loadConversationHistory(String conversationId) async {
+    // P0修复: 取消之前的加载请求，防止快速切换会话时竞态条件
+    _historyLoadOperation?.cancel();
+    _historyLoadOperation = null;
+
     // P0修复: 防止重复加载同一会话
     if (loadingConversationId == conversationId) {
       return;
@@ -60,17 +64,23 @@ extension ChatNotifierHistory on ChatNotifier {
       reasoningSteps: const [],
       pendingInterventions: const [],
     );
+
+    // P0修复: 使用CancelableOperation包装异步请求，支持取消
+    _historyLoadOperation = CancelableOperation.fromFuture(
+      _chatRepository.getConversationHistory(conversationId).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          debugPrint('[ChatHistory] Load timeout for $conversationId, falling back to empty history');
+          return <ChatMessageModel>[];
+        },
+      ),
+      onCancel: () {
+        debugPrint('[ChatHistory] Load cancelled for $conversationId');
+      },
+    );
+
     try {
-      // P0修复: 10s超时防止DB慢查询导致UI无限冻结，超时后降级为空历史
-      final history = await _chatRepository
-          .getConversationHistory(conversationId)
-          .timeout(
-            const Duration(seconds: 10),
-            onTimeout: () {
-              debugPrint('[ChatHistory] Load timeout for $conversationId, falling back to empty history');
-              return <ChatMessageModel>[];
-            },
-          );
+      final history = await _historyLoadOperation!.value;
 
       // P0修复: 若等待期间会话已切换（计划切换竞态），放弃此次更新
       if (loadingConversationId != conversationId) {
@@ -102,6 +112,7 @@ extension ChatNotifierHistory on ChatNotifier {
       if (loadingConversationId == conversationId) {
         loadingConversationId = null;
       }
+      _historyLoadOperation = null;
     }
   }
 

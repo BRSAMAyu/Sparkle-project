@@ -466,6 +466,265 @@ func (x *InterventionAction) GetType() string {
 	return ""
 }
 
+// MessageAck - Server acknowledgment of client message
+type MessageAck struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	MessageId     string                 `protobuf:"bytes,1,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`          // Client message ID being acknowledged
+	Status        string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`                                 // "received", "processing", "failed"
+	Timestamp     int64                  `protobuf:"varint,3,opt,name=timestamp,proto3" json:"timestamp,omitempty"`                          // Server timestamp when ack was sent
+	ErrorCode     string                 `protobuf:"bytes,4,opt,name=error_code,json=errorCode,proto3" json:"error_code,omitempty"`          // Error code if status is "failed"
+	ErrorMessage  string                 `protobuf:"bytes,5,opt,name=error_message,json=errorMessage,proto3" json:"error_message,omitempty"` // Human-readable error message if failed
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MessageAck) Reset() {
+	*x = MessageAck{}
+	mi := &file_websocket_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MessageAck) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MessageAck) ProtoMessage() {}
+
+func (x *MessageAck) ProtoReflect() protoreflect.Message {
+	mi := &file_websocket_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MessageAck.ProtoReflect.Descriptor instead.
+func (*MessageAck) Descriptor() ([]byte, []int) {
+	return file_websocket_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *MessageAck) GetMessageId() string {
+	if x != nil {
+		return x.MessageId
+	}
+	return ""
+}
+
+func (x *MessageAck) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *MessageAck) GetTimestamp() int64 {
+	if x != nil {
+		return x.Timestamp
+	}
+	return 0
+}
+
+func (x *MessageAck) GetErrorCode() string {
+	if x != nil {
+		return x.ErrorCode
+	}
+	return ""
+}
+
+func (x *MessageAck) GetErrorMessage() string {
+	if x != nil {
+		return x.ErrorMessage
+	}
+	return ""
+}
+
+// MessageNack - Server rejection of client message
+type MessageNack struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	MessageId     string                 `protobuf:"bytes,1,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`             // Client message ID being rejected
+	ErrorCode     string                 `protobuf:"bytes,2,opt,name=error_code,json=errorCode,proto3" json:"error_code,omitempty"`             // Error code (e.g., "rate_limited", "invalid_payload")
+	ErrorMessage  string                 `protobuf:"bytes,3,opt,name=error_message,json=errorMessage,proto3" json:"error_message,omitempty"`    // Human-readable error message
+	RetryAfterMs  int32                  `protobuf:"varint,4,opt,name=retry_after_ms,json=retryAfterMs,proto3" json:"retry_after_ms,omitempty"` // Suggested retry delay in milliseconds (0 = no retry)
+	Permanent     bool                   `protobuf:"varint,5,opt,name=permanent,proto3" json:"permanent,omitempty"`                             // If true, the message should not be retried
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MessageNack) Reset() {
+	*x = MessageNack{}
+	mi := &file_websocket_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MessageNack) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MessageNack) ProtoMessage() {}
+
+func (x *MessageNack) ProtoReflect() protoreflect.Message {
+	mi := &file_websocket_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MessageNack.ProtoReflect.Descriptor instead.
+func (*MessageNack) Descriptor() ([]byte, []int) {
+	return file_websocket_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *MessageNack) GetMessageId() string {
+	if x != nil {
+		return x.MessageId
+	}
+	return ""
+}
+
+func (x *MessageNack) GetErrorCode() string {
+	if x != nil {
+		return x.ErrorCode
+	}
+	return ""
+}
+
+func (x *MessageNack) GetErrorMessage() string {
+	if x != nil {
+		return x.ErrorMessage
+	}
+	return ""
+}
+
+func (x *MessageNack) GetRetryAfterMs() int32 {
+	if x != nil {
+		return x.RetryAfterMs
+	}
+	return 0
+}
+
+func (x *MessageNack) GetPermanent() bool {
+	if x != nil {
+		return x.Permanent
+	}
+	return false
+}
+
+// Heartbeat ping/pong for connection health monitoring
+type HeartbeatPing struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Timestamp     int64                  `protobuf:"varint,1,opt,name=timestamp,proto3" json:"timestamp,omitempty"`              // Client timestamp when ping was sent
+	ClientId      string                 `protobuf:"bytes,2,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"` // Optional client identifier
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HeartbeatPing) Reset() {
+	*x = HeartbeatPing{}
+	mi := &file_websocket_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HeartbeatPing) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HeartbeatPing) ProtoMessage() {}
+
+func (x *HeartbeatPing) ProtoReflect() protoreflect.Message {
+	mi := &file_websocket_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HeartbeatPing.ProtoReflect.Descriptor instead.
+func (*HeartbeatPing) Descriptor() ([]byte, []int) {
+	return file_websocket_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *HeartbeatPing) GetTimestamp() int64 {
+	if x != nil {
+		return x.Timestamp
+	}
+	return 0
+}
+
+func (x *HeartbeatPing) GetClientId() string {
+	if x != nil {
+		return x.ClientId
+	}
+	return ""
+}
+
+type HeartbeatPong struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	ClientTimestamp int64                  `protobuf:"varint,1,opt,name=client_timestamp,json=clientTimestamp,proto3" json:"client_timestamp,omitempty"` // Echo of client's ping timestamp for RTT calculation
+	ServerTimestamp int64                  `protobuf:"varint,2,opt,name=server_timestamp,json=serverTimestamp,proto3" json:"server_timestamp,omitempty"` // Server timestamp when pong was sent
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *HeartbeatPong) Reset() {
+	*x = HeartbeatPong{}
+	mi := &file_websocket_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HeartbeatPong) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HeartbeatPong) ProtoMessage() {}
+
+func (x *HeartbeatPong) ProtoReflect() protoreflect.Message {
+	mi := &file_websocket_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HeartbeatPong.ProtoReflect.Descriptor instead.
+func (*HeartbeatPong) Descriptor() ([]byte, []int) {
+	return file_websocket_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *HeartbeatPong) GetClientTimestamp() int64 {
+	if x != nil {
+		return x.ClientTimestamp
+	}
+	return 0
+}
+
+func (x *HeartbeatPong) GetServerTimestamp() int64 {
+	if x != nil {
+		return x.ServerTimestamp
+	}
+	return 0
+}
+
 var File_websocket_proto protoreflect.FileDescriptor
 
 const file_websocket_proto_rawDesc = "" +
@@ -517,7 +776,30 @@ const file_websocket_proto_rawDesc = "" +
 	"\x12InterventionAction\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05label\x18\x02 \x01(\tR\x05label\x12\x12\n" +
-	"\x04type\x18\x03 \x01(\tR\x04typeB&Z$github.com/sparkle/gateway/gen/ws;wsb\x06proto3"
+	"\x04type\x18\x03 \x01(\tR\x04type\"\xa5\x01\n" +
+	"\n" +
+	"MessageAck\x12\x1d\n" +
+	"\n" +
+	"message_id\x18\x01 \x01(\tR\tmessageId\x12\x16\n" +
+	"\x06status\x18\x02 \x01(\tR\x06status\x12\x1c\n" +
+	"\ttimestamp\x18\x03 \x01(\x03R\ttimestamp\x12\x1d\n" +
+	"\n" +
+	"error_code\x18\x04 \x01(\tR\terrorCode\x12#\n" +
+	"\rerror_message\x18\x05 \x01(\tR\ferrorMessage\"\xb4\x01\n" +
+	"\vMessageNack\x12\x1d\n" +
+	"\n" +
+	"message_id\x18\x01 \x01(\tR\tmessageId\x12\x1d\n" +
+	"\n" +
+	"error_code\x18\x02 \x01(\tR\terrorCode\x12#\n" +
+	"\rerror_message\x18\x03 \x01(\tR\ferrorMessage\x12$\n" +
+	"\x0eretry_after_ms\x18\x04 \x01(\x05R\fretryAfterMs\x12\x1c\n" +
+	"\tpermanent\x18\x05 \x01(\bR\tpermanent\"J\n" +
+	"\rHeartbeatPing\x12\x1c\n" +
+	"\ttimestamp\x18\x01 \x01(\x03R\ttimestamp\x12\x1b\n" +
+	"\tclient_id\x18\x02 \x01(\tR\bclientId\"e\n" +
+	"\rHeartbeatPong\x12)\n" +
+	"\x10client_timestamp\x18\x01 \x01(\x03R\x0fclientTimestamp\x12)\n" +
+	"\x10server_timestamp\x18\x02 \x01(\x03R\x0fserverTimestampB&Z$github.com/sparkle/gateway/gen/ws;wsb\x06proto3"
 
 var (
 	file_websocket_proto_rawDescOnce sync.Once
@@ -531,7 +813,7 @@ func file_websocket_proto_rawDescGZIP() []byte {
 	return file_websocket_proto_rawDescData
 }
 
-var file_websocket_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_websocket_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_websocket_proto_goTypes = []any{
 	(*WebSocketMessage)(nil),         // 0: sparkle.ws.WebSocketMessage
 	(*ChatMessage)(nil),              // 1: sparkle.ws.ChatMessage
@@ -539,22 +821,26 @@ var file_websocket_proto_goTypes = []any{
 	(*InterventionPushMessage)(nil),  // 3: sparkle.ws.InterventionPushMessage
 	(*InterventionContent)(nil),      // 4: sparkle.ws.InterventionContent
 	(*InterventionAction)(nil),       // 5: sparkle.ws.InterventionAction
-	nil,                              // 6: sparkle.ws.InterventionContent.ContextVariablesEntry
-	(*timestamppb.Timestamp)(nil),    // 7: google.protobuf.Timestamp
-	(*v1.ToolCall)(nil),              // 8: agent.v1.ToolCall
+	(*MessageAck)(nil),               // 6: sparkle.ws.MessageAck
+	(*MessageNack)(nil),              // 7: sparkle.ws.MessageNack
+	(*HeartbeatPing)(nil),            // 8: sparkle.ws.HeartbeatPing
+	(*HeartbeatPong)(nil),            // 9: sparkle.ws.HeartbeatPong
+	nil,                              // 10: sparkle.ws.InterventionContent.ContextVariablesEntry
+	(*timestamppb.Timestamp)(nil),    // 11: google.protobuf.Timestamp
+	(*v1.ToolCall)(nil),              // 12: agent.v1.ToolCall
 }
 var file_websocket_proto_depIdxs = []int32{
-	7, // 0: sparkle.ws.WebSocketMessage.event_time:type_name -> google.protobuf.Timestamp
-	8, // 1: sparkle.ws.ChatMessage.tool_calls:type_name -> agent.v1.ToolCall
-	7, // 2: sparkle.ws.UpdateNodeMasteryRequest.event_time:type_name -> google.protobuf.Timestamp
-	4, // 3: sparkle.ws.InterventionPushMessage.content:type_name -> sparkle.ws.InterventionContent
-	5, // 4: sparkle.ws.InterventionPushMessage.actions:type_name -> sparkle.ws.InterventionAction
-	6, // 5: sparkle.ws.InterventionContent.context_variables:type_name -> sparkle.ws.InterventionContent.ContextVariablesEntry
-	6, // [6:6] is the sub-list for method output_type
-	6, // [6:6] is the sub-list for method input_type
-	6, // [6:6] is the sub-list for extension type_name
-	6, // [6:6] is the sub-list for extension extendee
-	0, // [0:6] is the sub-list for field type_name
+	11, // 0: sparkle.ws.WebSocketMessage.event_time:type_name -> google.protobuf.Timestamp
+	12, // 1: sparkle.ws.ChatMessage.tool_calls:type_name -> agent.v1.ToolCall
+	11, // 2: sparkle.ws.UpdateNodeMasteryRequest.event_time:type_name -> google.protobuf.Timestamp
+	4,  // 3: sparkle.ws.InterventionPushMessage.content:type_name -> sparkle.ws.InterventionContent
+	5,  // 4: sparkle.ws.InterventionPushMessage.actions:type_name -> sparkle.ws.InterventionAction
+	10, // 5: sparkle.ws.InterventionContent.context_variables:type_name -> sparkle.ws.InterventionContent.ContextVariablesEntry
+	6,  // [6:6] is the sub-list for method output_type
+	6,  // [6:6] is the sub-list for method input_type
+	6,  // [6:6] is the sub-list for extension type_name
+	6,  // [6:6] is the sub-list for extension extendee
+	0,  // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_websocket_proto_init() }
@@ -568,7 +854,7 @@ func file_websocket_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_websocket_proto_rawDesc), len(file_websocket_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

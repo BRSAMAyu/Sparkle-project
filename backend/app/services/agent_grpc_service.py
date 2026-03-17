@@ -188,6 +188,9 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                             response.workflow_id = workflow_id
                         if not response.prompt_version:
                             response.prompt_version = prompt_version
+                        # Ensure session_id is always set for conversation continuity
+                        if not response.session_id:
+                            response.session_id = request.session_id
                         yield self._normalize_v2_response(response)
                     await db_session.commit()
                 except Exception:
@@ -206,6 +209,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                     trace_id=trace_id,
                     workflow_id=workflow_id,
                     prompt_version=prompt_version,
+                    session_id=request.session_id,
                     full_text="（系统提示）当前未生成有效回复，请稍后重试。",
                     finish_reason=agent_service_pb2.STOP,
                 )
@@ -223,6 +227,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                 trace_id=trace_id,
                 workflow_id=workflow_id,
                 prompt_version=prompt_version,
+                session_id=request.session_id,
                 error=agent_service_pb2.Error(
                     message=str(e),
                     retryable=True,

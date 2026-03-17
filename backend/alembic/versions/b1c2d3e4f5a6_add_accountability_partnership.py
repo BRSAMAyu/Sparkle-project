@@ -83,7 +83,7 @@ def upgrade() -> None:
             ["partner_id"], ["users.id"], ondelete="CASCADE"
         ),
         sa.ForeignKeyConstraint(
-            ["friendship_id"], ["friendship.id"], ondelete="SET NULL"
+            ["friendship_id"], ["friendships.id"], ondelete="SET NULL"
         ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint(

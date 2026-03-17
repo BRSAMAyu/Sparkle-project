@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:async/async.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -80,6 +81,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
   // P0修复: 跟踪当前正在加载历史的会话ID，防止并发加载和计划切换竞态
   String? loadingConversationId;
 
+  // P0修复: 可取消的历史加载操作，用于切换会话时取消之前的加载请求
+  CancelableOperation<List<ChatMessageModel>>? _historyLoadOperation;
+
   // P0修复: 计划切换进行中标志，阻止切换期间发送消息防止消息发送到错误上下文
   bool isSwitchingPlan = false;
 
@@ -91,6 +95,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
   @override
   void dispose() {
     _isDisposed = true;
+    _historyLoadOperation?.cancel();
+    _historyLoadOperation = null;
     unawaited(_connectionStateSubscription?.cancel());
     _streamDebouncer.cancel();
     _chatRepository.dispose();

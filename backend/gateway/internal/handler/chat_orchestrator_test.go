@@ -65,7 +65,7 @@ func TestConvertResponseToJSONCitations(t *testing.T) {
 		},
 	}
 
-	result := convertResponseToJSON(resp, "")
+	result := convertResponseToJSON(resp)
 	citationsAny, ok := result["citations"].([]map[string]interface{})
 	assert.True(t, ok)
 	assert.Len(t, citationsAny, 1)
@@ -114,7 +114,7 @@ func TestConvertResponseToJSONIntervention(t *testing.T) {
 		},
 	}
 
-	result := convertResponseToJSON(resp, "")
+	result := convertResponseToJSON(resp)
 	assert.Equal(t, "intervention", result["type"])
 	intervention, ok := result["intervention"].(map[string]interface{})
 	assert.True(t, ok)
@@ -138,7 +138,7 @@ func TestConvertResponseToJSONIncludesTraceMetadata(t *testing.T) {
 		},
 	}
 
-	result := convertResponseToJSON(resp, "")
+	result := convertResponseToJSON(resp)
 	assert.Equal(t, "trace-123", result["trace_id"])
 	assert.Equal(t, "standard_chat", result["workflow_id"])
 	assert.Equal(t, "v1", result["prompt_version"])
@@ -160,7 +160,7 @@ func TestConvertResponseToJSONDecodesExpertMetadata(t *testing.T) {
 		},
 	}
 
-	result := convertResponseToJSON(resp, "")
+	result := convertResponseToJSON(resp)
 	meta, ok := result["metadata"].(map[string]interface{})
 	assert.True(t, ok)
 	selected, ok := meta["selected_experts"].([]interface{})
@@ -182,7 +182,7 @@ func TestConvertResponseToJSONAddsUXProgressFromStatus(t *testing.T) {
 		},
 	}
 
-	result := convertResponseToJSON(resp, "")
+	result := convertResponseToJSON(resp)
 	meta, ok := result["metadata"].(map[string]interface{})
 	assert.True(t, ok)
 	uxProgress, ok := meta["ux_progress"].(map[string]interface{})
@@ -215,7 +215,7 @@ func TestConvertResponseToJSONBuildsExecutionSummaryWidget(t *testing.T) {
 		},
 	}
 
-	result := convertResponseToJSON(resp, "")
+	result := convertResponseToJSON(resp)
 	toolResult, ok := result["tool_result"].(map[string]interface{})
 	assert.True(t, ok)
 	assert.Equal(t, "execution_summary", toolResult["widget_type"])
@@ -236,7 +236,7 @@ func TestConvertResponseToJSONIncludesEventTimeFallback(t *testing.T) {
 		},
 	}
 
-	result := convertResponseToJSON(resp, "")
+	result := convertResponseToJSON(resp)
 	assert.Equal(t, now.UnixMilli(), result["event_time"])
 }
 
@@ -253,7 +253,7 @@ func TestConvertResponseToJSONErrorIncludesEnumOnly(t *testing.T) {
 		},
 	}
 
-	result := convertResponseToJSON(resp, "")
+	result := convertResponseToJSON(resp)
 	errObj, ok := result["error"].(map[string]interface{})
 	assert.True(t, ok)
 	assert.Equal(t, "rate_limited", errObj["error_code"])
@@ -274,7 +274,7 @@ func TestConvertResponseToJSONOmitsLegacyFields(t *testing.T) {
 		},
 	}
 
-	result := convertResponseToJSON(resp, "")
+	result := convertResponseToJSON(resp)
 	errObj, ok := result["error"].(map[string]interface{})
 	assert.True(t, ok)
 	if _, ok := errObj["code"]; ok {

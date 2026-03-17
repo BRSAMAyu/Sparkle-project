@@ -12,7 +12,7 @@ import (
 func TestHealthRoutesExposeLiveAndReadyAliases(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
-	NewHealthHandler(nil, nil, "test").RegisterRoutes(r)
+	NewHealthHandler(nil, nil, nil, "test").RegisterRoutes(r)
 
 	liveReq := httptest.NewRequest(http.MethodGet, "/live", nil)
 	liveResp := httptest.NewRecorder()

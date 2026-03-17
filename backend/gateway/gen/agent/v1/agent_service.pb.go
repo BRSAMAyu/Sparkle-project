@@ -596,7 +596,9 @@ type ChatRequest struct {
 	// Optional: List of tools currently active/available for this request
 	ActiveTools []string `protobuf:"bytes,12,rep,name=active_tools,json=activeTools,proto3" json:"active_tools,omitempty"`
 	// Chat mode for AI collaboration strategy.
-	// Values: "standard" (default), "deep_analysis", "study_plan", "error_diagnosis"
+	// Values: "standard" (default), "deep_analysis", "study_plan", "error_diagnosis",
+	//
+	//	"expert_auto", "expert::<expert_id>"
 	ChatMode      string `protobuf:"bytes,13,opt,name=chat_mode,json=chatMode,proto3" json:"chat_mode,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1261,6 +1263,9 @@ type ChatResponse struct {
 	Content isChatResponse_Content `protobuf_oneof:"content"`
 	// Indicates why the generation finished.
 	FinishReason FinishReason `protobuf:"varint,9,opt,name=finish_reason,json=finishReason,proto3,enum=agent.v1.FinishReason" json:"finish_reason,omitempty"`
+	// Session/Conversation ID - returned to client for conversation continuity
+	// This is essential for maintaining context across multiple messages
+	SessionId string `protobuf:"bytes,20,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
 	// Preferred event timestamp for new clients.
 	EventTime     *timestamppb.Timestamp `protobuf:"bytes,19,opt,name=event_time,json=eventTime,proto3" json:"event_time,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -1439,6 +1444,13 @@ func (x *ChatResponse) GetFinishReason() FinishReason {
 		return x.FinishReason
 	}
 	return FinishReason_NULL
+}
+
+func (x *ChatResponse) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
 }
 
 func (x *ChatResponse) GetEventTime() *timestamppb.Timestamp {
@@ -5027,7 +5039,7 @@ const file_agent_service_proto_rawDesc = "" +
 	"\bmetadata\x18\x05 \x03(\v2#.agent.v1.ChatMessage.MetadataEntryR\bmetadata\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x9b\a\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xba\a\n" +
 	"\fChatResponse\x12\x1f\n" +
 	"\vresponse_id\x18\x01 \x01(\tR\n" +
 	"responseId\x12\x1d\n" +
@@ -5051,7 +5063,9 @@ const file_agent_service_proto_rawDesc = "" +
 	"\vtool_result\x18\f \x01(\v2\x1b.agent.v1.ToolResultPayloadH\x00R\n" +
 	"toolResult\x12C\n" +
 	"\fintervention\x18\x0e \x01(\v2\x1d.agent.v1.InterventionPayloadH\x00R\fintervention\x12;\n" +
-	"\rfinish_reason\x18\t \x01(\x0e2\x16.agent.v1.FinishReasonR\ffinishReason\x129\n" +
+	"\rfinish_reason\x18\t \x01(\x0e2\x16.agent.v1.FinishReasonR\ffinishReason\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x14 \x01(\tR\tsessionId\x129\n" +
 	"\n" +
 	"event_time\x18\x13 \x01(\v2\x1a.google.protobuf.TimestampR\teventTime\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +

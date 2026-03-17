@@ -66,12 +66,12 @@ func main() {
 	cqrs := initCQRS(ctx, cfg, dbh, rdb, services, logger.Log)
 	startCQRSWorkers(cqrs, logger.Log)
 
-	proxy, err := setupProxy(cfg)
+	proxy, err := setupProxy(cfg, logger.Log)
 	if err != nil {
 		log.Fatalf("Failed to setup backend proxy: %v", err)
 	}
 
-	r := setupRouter(cfg, dbh, rdb, services, handlers, cqrs, proxy, agentClient)
+	r := setupRouter(cfg, dbh, rdb, services, handlers, cqrs, proxy, agentClient, logger.Log)
 
 	// --- Graceful shutdown ---
 	srv := &http.Server{
