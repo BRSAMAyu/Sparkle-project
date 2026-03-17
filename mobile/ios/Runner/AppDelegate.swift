@@ -9,11 +9,16 @@ import FirebaseMessaging
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
-    // Initialize Firebase
-    FirebaseApp.configure()
-
-    // Configure Firebase Messaging delegate
-    Messaging.messaging().delegate = self
+    // Initialize Firebase only if GoogleService-Info.plist exists
+    if let googleServicePath = Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist") {
+      if FirebaseApp.app() == nil {
+        FirebaseApp.configure()
+      }
+      // Configure Firebase Messaging delegate
+      Messaging.messaging().delegate = self
+    } else {
+      print("GoogleService-Info.plist not found, skipping Firebase initialization")
+    }
 
     // Initialize JPush
     // Read configuration from Info.plist
@@ -47,8 +52,10 @@ import FirebaseMessaging
     _ application: UIApplication,
     didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
   ) {
-    // Register with Firebase
-    Messaging.messaging().apnsToken = deviceToken
+    // Register with Firebase (only if configured)
+    if FirebaseApp.app() != nil {
+      Messaging.messaging().apnsToken = deviceToken
+    }
 
     // Register with JPush
     JPUSHService.registerDeviceToken(deviceToken)
