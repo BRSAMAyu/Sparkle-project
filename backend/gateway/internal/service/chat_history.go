@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -20,22 +21,41 @@ import (
 const (
 	DefaultMaxQueueSize = 10000
 	ChatHistoryTTL      = 30 * time.Minute
+
+	// P1修复: 断路器恢复机制参数
+	// 队列过载时消息进入本地重试缓冲，每隔 retryInterval 尝试重新入队
+	breakerRetryInterval = 5 * time.Second
+	breakerRetryMaxAge   = 2 * time.Minute // 超过此时间的消息丢弃（防止堆积无限增长）
+	breakerRetryBufMax   = 500             // 本地重试缓冲上限
 )
+
+// retryEntry 保存一条待重试的消息及其首次入队时间
+type retryEntry struct {
+	msg       []byte
+	enqueuedAt time.Time
+}
 
 type ChatHistoryService struct {
 	rdb              *redis.Client
 	pool             *pgxpool.Pool
 	breakerThreshold atomic.Int64
 	chatHistoryTTL   time.Duration
+
+	// P1修复: 断路器本地重试缓冲 + 后台重试 goroutine 控制
+	retryBuf    []retryEntry
+	retryMu     sync.Mutex
+	retryStopCh chan struct{}
 }
 
- func NewChatHistoryServiceWithPool(rdb *redis.Client, pool *pgxpool.Pool, ttl time.Duration) *ChatHistoryService {
+func NewChatHistoryServiceWithPool(rdb *redis.Client, pool *pgxpool.Pool, ttl time.Duration) *ChatHistoryService {
 	s := &ChatHistoryService{
 		rdb:            rdb,
 		pool:           pool,
 		chatHistoryTTL: ttl,
+		retryStopCh:    make(chan struct{}),
 	}
 	s.breakerThreshold.Store(DefaultMaxQueueSize)
+	go s.retryWorker()
 	return s
 }
 
@@ -62,9 +82,86 @@ func NewChatHistoryServiceWithTTL(rdb *redis.Client, ttl time.Duration) *ChatHis
 	s := &ChatHistoryService{
 		rdb:            rdb,
 		chatHistoryTTL: ttl,
+		retryStopCh:    make(chan struct{}),
 	}
 	s.breakerThreshold.Store(DefaultMaxQueueSize)
+	go s.retryWorker()
 	return s
+}
+
+// Stop shuts down the background retry worker gracefully.
+func (s *ChatHistoryService) Stop() {
+	select {
+	case <-s.retryStopCh:
+		// already closed
+	default:
+		close(s.retryStopCh)
+	}
+}
+
+// retryWorker periodically flushes the local retry buffer back into the persist queue.
+// P1修复: 替代原来的"直接丢弃"策略，提供有限次指数退避重试
+func (s *ChatHistoryService) retryWorker() {
+	ticker := time.NewTicker(breakerRetryInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-s.retryStopCh:
+			return
+		case <-ticker.C:
+			s.flushRetryBuf()
+		}
+	}
+}
+
+func (s *ChatHistoryService) flushRetryBuf() {
+	s.retryMu.Lock()
+	if len(s.retryBuf) == 0 {
+		s.retryMu.Unlock()
+		return
+	}
+	// 取出当前所有条目进行尝试，同时清空 buf
+	entries := s.retryBuf
+	s.retryBuf = nil
+	s.retryMu.Unlock()
+
+	ctx := context.Background()
+	queueKey := "queue:persist:history"
+	var requeue []retryEntry
+
+	for _, e := range entries {
+		// 超时丢弃
+		if time.Since(e.enqueuedAt) > breakerRetryMaxAge {
+			log.Printf("[ChatHistoryService] Retry entry expired after %v, dropping", breakerRetryMaxAge)
+			continue
+		}
+		qLen, err := s.rdb.LLen(ctx, queueKey).Result()
+		if err != nil {
+			requeue = append(requeue, e)
+			continue
+		}
+		threshold := s.breakerThreshold.Load()
+		if qLen < threshold {
+			if err := s.rdb.RPush(ctx, queueKey, e.msg).Err(); err != nil {
+				requeue = append(requeue, e)
+			}
+		} else {
+			// 队列仍然满，继续等待下次重试
+			requeue = append(requeue, e)
+		}
+	}
+
+	if len(requeue) > 0 {
+		s.retryMu.Lock()
+		s.retryBuf = append(requeue, s.retryBuf...)
+		// 防止缓冲无限增长
+		if len(s.retryBuf) > breakerRetryBufMax {
+			dropped := len(s.retryBuf) - breakerRetryBufMax
+			s.retryBuf = s.retryBuf[dropped:]
+			log.Printf("[ChatHistoryService] Retry buffer overflow, dropped %d oldest entries", dropped)
+		}
+		s.retryMu.Unlock()
+	}
 }
 
 // SetBreakerThreshold updates the circuit breaker limit dynamically
@@ -121,9 +218,16 @@ func (s *ChatHistoryService) SaveMessage(ctx context.Context, sid string, msg []
 	if qLen < threshold {
 		pipe.RPush(ctx, queueKey, msg)
 	} else {
-		// Circuit Breaker triggered
-		// Return explicit error instead of silently dropping message
-		return fmt.Errorf("persistence queue overloaded (%d/%d), retry later", qLen, threshold)
+		// P1修复: 队列过载时进入本地重试缓冲，由 retryWorker 定期重试入队，不再直接丢弃
+		log.Printf("[ChatHistoryService] Persist queue overloaded (%d/%d), buffering for retry", qLen, threshold)
+		s.retryMu.Lock()
+		if len(s.retryBuf) < breakerRetryBufMax {
+			s.retryBuf = append(s.retryBuf, retryEntry{msg: msg, enqueuedAt: time.Now()})
+		} else {
+			log.Printf("[ChatHistoryService] Retry buffer full, dropping message (queue: %d/%d)", qLen, threshold)
+		}
+		s.retryMu.Unlock()
+		// 仍继续执行 pipeline（缓存写入不受影响）
 	}
 
 	var payload ChatHistoryMessage
@@ -287,18 +391,29 @@ func (s *ChatHistoryService) backfillRedisMessages(sessionID string, messages []
 	ctx := context.Background()
 	cacheKey := "chat:history:" + sessionID
 
+	successCount := 0
 	for _, msg := range messages {
 		msgBytes, err := json.Marshal(msg)
 		if err != nil {
+			log.Printf("[ChatHistoryService] backfillRedisMessages: marshal error for session %s: %v", sessionID, err)
 			continue
 		}
-		s.rdb.RPush(ctx, cacheKey, msgBytes)
+		// P1修复: 捕获 RPush 错误，不再静默失败
+		if err := s.rdb.RPush(ctx, cacheKey, msgBytes).Err(); err != nil {
+			log.Printf("[ChatHistoryService] backfillRedisMessages: RPush error for session %s: %v", sessionID, err)
+			return // Redis 不可用时提前终止，避免无效循环
+		}
+		successCount++
 	}
 
-	s.rdb.LTrim(ctx, cacheKey, -20, -1)
-	s.rdb.Expire(ctx, cacheKey, s.chatHistoryTTL)
+	if err := s.rdb.LTrim(ctx, cacheKey, -20, -1).Err(); err != nil {
+		log.Printf("[ChatHistoryService] backfillRedisMessages: LTrim error for session %s: %v", sessionID, err)
+	}
+	if err := s.rdb.Expire(ctx, cacheKey, s.chatHistoryTTL).Err(); err != nil {
+		log.Printf("[ChatHistoryService] backfillRedisMessages: Expire error for session %s: %v", sessionID, err)
+	}
 
-	log.Printf("[ChatHistoryService] Backfilled Redis cache for session %s with %d messages", sessionID, len(messages))
+	log.Printf("[ChatHistoryService] Backfilled Redis cache for session %s: %d/%d messages", sessionID, successCount, len(messages))
 }
 
 func (s *ChatHistoryService) GetRecentSessions(ctx context.Context, userID string, limit int) ([]ChatSessionSummary, error) {
@@ -437,7 +552,8 @@ func (s *ChatHistoryService) backfillRedisCache(userID string, sessions []ChatSe
 	for _, session := range sessions {
 		// Add session ID to sorted set
 		score := float64(time.Now().Unix())
-		if t, err := time.Parse(session.UpdatedAt, time.RFC3339); err == nil {
+		// P1修复: time.Parse(layout, value) 参数顺序修正（原来颠倒了）
+		if t, err := time.Parse(time.RFC3339, session.UpdatedAt); err == nil {
 			score = float64(t.Unix())
 		}
 

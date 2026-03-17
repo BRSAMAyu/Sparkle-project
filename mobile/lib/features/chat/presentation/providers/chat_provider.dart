@@ -77,6 +77,12 @@ class ChatNotifier extends StateNotifier<ChatState> {
   // Review service (lazy initialized)
   ReviewGrpcService? _reviewService;
 
+  // P0修复: 跟踪当前正在加载历史的会话ID，防止并发加载和计划切换竞态
+  String? loadingConversationId;
+
+  // P0修复: 计划切换进行中标志，阻止切换期间发送消息防止消息发送到错误上下文
+  bool isSwitchingPlan = false;
+
   /// 手动触发重连
   Future<void> reconnect() async {
     await _chatRepository.reconnect();
@@ -380,6 +386,12 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
   /// 发送消息 (使用 SSE/WebSocket 流式响应)
   Future<void> sendMessage(String content, {String? taskId}) async {
+    // P0修复: 计划切换期间禁止发送，防止消息关联到错误的计划上下文
+    if (isSwitchingPlan) {
+      debugPrint('[Chat] sendMessage blocked: plan switch in progress');
+      return;
+    }
+
     // 获取当前用户信息
     final authState = _ref.read(authProvider);
     final user = authState.user;

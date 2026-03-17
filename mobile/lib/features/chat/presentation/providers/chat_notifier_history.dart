@@ -35,6 +35,12 @@ extension ChatNotifierHistory on ChatNotifier {
       '${date.day.toString().padLeft(2, '0')}';
 
   Future<void> loadConversationHistory(String conversationId) async {
+    // P0修复: 防止重复加载同一会话
+    if (loadingConversationId == conversationId) {
+      return;
+    }
+    loadingConversationId = conversationId;
+
     state = state.copyWith(
       isLoading: true,
       isSending: false,
@@ -55,13 +61,31 @@ extension ChatNotifierHistory on ChatNotifier {
       pendingInterventions: const [],
     );
     try {
-      final history = await _chatRepository.getConversationHistory(conversationId);
+      // P0修复: 10s超时防止DB慢查询导致UI无限冻结，超时后降级为空历史
+      final history = await _chatRepository
+          .getConversationHistory(conversationId)
+          .timeout(
+            const Duration(seconds: 10),
+            onTimeout: () {
+              debugPrint('[ChatHistory] Load timeout for $conversationId, falling back to empty history');
+              return <ChatMessageModel>[];
+            },
+          );
+
+      // P0修复: 若等待期间会话已切换（计划切换竞态），放弃此次更新
+      if (loadingConversationId != conversationId) {
+        return;
+      }
+
       state = state.copyWith(
         isLoading: false,
         messages: history,
         conversationId: conversationId,
       );
     } catch (e) {
+      if (loadingConversationId != conversationId) {
+        return;
+      }
       final l10n = I18nService.instance.l10n;
       final errorMessage = ErrorMessages.getUserFriendlyMessage(
         'UNKNOWN',
@@ -74,6 +98,10 @@ extension ChatNotifierHistory on ChatNotifier {
         errorCode: 'UNKNOWN',
         isErrorRetryable: true,
       );
+    } finally {
+      if (loadingConversationId == conversationId) {
+        loadingConversationId = null;
+      }
     }
   }
 

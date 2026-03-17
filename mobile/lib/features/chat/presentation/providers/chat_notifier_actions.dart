@@ -174,20 +174,26 @@ extension ChatNotifierActions on ChatNotifier {
       if (confirmed != true) return;
     }
 
-    state = state.copyWith(
-      conversationId: sessionId,
-      messages: [],
-      clearError: true,
-      streamingContent: '',
-      clearAiStatus: true,
-      clearReasoning: true,
-      agentActivities: const [],
-    );
+    // P0修复: 设置切换标志，阻止此期间的消息发送
+    isSwitchingPlan = true;
+    try {
+      state = state.copyWith(
+        conversationId: sessionId,
+        messages: [],
+        clearError: true,
+        streamingContent: '',
+        clearAiStatus: true,
+        clearReasoning: true,
+        agentActivities: const [],
+      );
 
-    await loadConversationHistory(sessionId);
+      await loadConversationHistory(sessionId);
+    } finally {
+      isSwitchingPlan = false;
+    }
 
     // Show feedback after successful switch
-    if (context != null) {
+    if (context != null && context.mounted) {
       AppFeedback.success(context, I18nService.instance.l10n.chatPlanContextSwitched);
     }
   }
