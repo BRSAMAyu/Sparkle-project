@@ -735,6 +735,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatInputPlaceholder => 'Type a message...';
 
   @override
+  String get chatInputAttachment => 'Attach';
+
+  @override
+  String get chatInputVoice => 'Voice';
+
+  @override
+  String get chatInputShare => 'Share';
+
+  @override
+  String get chatInputTapToShare => 'Tap to select content to share';
+
+  @override
   String get chatVoiceInput => 'Voice Input';
 
   @override
@@ -7461,6 +7473,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityAgentCollabOn => 'Community Agent Collab On';
 
   @override
+  String get communityAgentName => 'Sparkle AI';
+
+  @override
   String get communityAgentOnlyYou => 'Community Agent Only You';
 
   @override
@@ -8277,22 +8292,35 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pomodoroWorkFinished => 'Pomodoro Work Finished';
 
   @override
-  String get profileDeleteAccount => 'Profile Delete Account';
+  String get account => 'Account';
 
   @override
-  String get profileLinkedAccounts => 'Profile Linked Accounts';
+  String get accountSecurity => 'Account & Security';
 
   @override
-  String get profilePersonalInfo => 'Profile Personal Info';
+  String get accountSecurityIntro =>
+      'Manage linked accounts, login devices and security logs';
 
   @override
-  String get profileSecurityLog => 'Profile Security Log';
+  String get personalGrowth => 'Personal Growth';
 
   @override
-  String get profileSessionManagement => 'Profile Session Management';
+  String get profileDeleteAccount => 'Delete Account';
 
   @override
-  String get profileUpgradeGuest => 'Profile Upgrade Guest';
+  String get profileLinkedAccounts => 'Linked Accounts';
+
+  @override
+  String get profilePersonalInfo => 'Personal Info';
+
+  @override
+  String get profileSecurityLog => 'Security Log';
+
+  @override
+  String get profileSessionManagement => 'Session Management';
+
+  @override
+  String get profileUpgradeGuest => 'Upgrade Account';
 
   @override
   String get regenCustomHint => 'Regen Custom Hint';
@@ -8572,25 +8600,27 @@ class AppLocalizationsEn extends AppLocalizations {
       'Session Management Unknown Device';
 
   @override
-  String get socialAccountsIntro => 'Social Accounts Intro';
+  String get socialAccountsIntro =>
+      'Link third-party accounts for quick sign-in';
 
   @override
-  String get socialAccountsLink => 'Social Accounts Link';
+  String get socialAccountsLink => 'Link';
 
   @override
-  String get socialAccountsLinked => 'Social Accounts Linked';
+  String get socialAccountsLinked => 'Linked';
 
   @override
-  String get socialAccountsTitle => 'Social Accounts Title';
+  String get socialAccountsTitle => 'Linked Accounts';
 
   @override
-  String get socialAccountsUnlink => 'Social Accounts Unlink';
+  String get socialAccountsUnlink => 'Unlink';
 
   @override
-  String get socialAccountsUnlinkConfirm => 'Social Accounts Unlink Confirm';
+  String get socialAccountsUnlinkConfirm => 'Confirm Unlink';
 
   @override
-  String get socialAccountsUnlinkMessage => 'Social Accounts Unlink Message';
+  String get socialAccountsUnlinkMessage =>
+      'You won\'t be able to sign in with this account after unlinking';
 
   @override
   String socialAccountsUnlinkTitle(Object arg0) {
@@ -8598,14 +8628,13 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get socialAccountsUnlinkedHint => 'Social Accounts Unlinked Hint';
+  String get socialAccountsUnlinkedHint => 'Not linked';
 
   @override
-  String get socialAccountsWeChatPending => 'Social Accounts We Chat Pending';
+  String get socialAccountsWeChatPending => 'WeChat linking in progress';
 
   @override
-  String get socialAccountsWeChatUnavailable =>
-      'Social Accounts We Chat Unavailable';
+  String get socialAccountsWeChatUnavailable => 'WeChat unavailable';
 
   @override
   String get sprintActionAbandonButton => 'Sprint Action Abandon Button';

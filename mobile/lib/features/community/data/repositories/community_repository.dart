@@ -277,6 +277,26 @@ class CommunityRepository {
     }
   }
 
+  Future<UserBrief> getUserProfile(String userId) async {
+    final response = await _apiClient.get<dynamic>(ApiEndpoints.user(userId));
+    if (response.statusCode == 200) {
+      final data =
+          ApiResponseParser.unwrapMap(response.data, action: 'getUserProfile');
+      return UserBrief.fromJson(data);
+    }
+    throw Exception('Failed to load user profile');
+  }
+
+  Future<void> updateAnnouncement(String groupId, String? announcement) async {
+    final response = await _apiClient.put<dynamic>(
+      ApiEndpoints.groupAnnouncement(groupId),
+      data: {'announcement': announcement},
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Failed to update announcement');
+    }
+  }
+
   Future<List<MessageInfo>> getMessages(String groupId,
       {String? beforeId, int limit = 50,}) async {
     final response = await _apiClient.get<dynamic>(

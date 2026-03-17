@@ -382,10 +382,8 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
               )
             : null,
         onTap: () {
-          // TODO: Navigate to user profile
-          AppFeedback.info(
-            context,
-            'View ${member.user.displayName}\'s profile',
+          context.push(
+            '/community/users/${member.user.id}?name=${Uri.encodeComponent(member.user.displayName)}',
           );
         },
       ),

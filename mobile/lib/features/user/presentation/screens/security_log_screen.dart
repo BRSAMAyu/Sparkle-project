@@ -19,6 +19,7 @@ class SecurityLogScreen extends ConsumerStatefulWidget {
 class _SecurityLogScreenState extends ConsumerState<SecurityLogScreen> {
   List<AuthAuditLogModel> _logs = const [];
   bool _isLoading = true;
+  final Set<int> _expandedIndices = {};
 
   @override
   void initState() {
@@ -76,6 +77,52 @@ class _SecurityLogScreenState extends ConsumerState<SecurityLogScreen> {
     }
   }
 
+  IconData _actionIcon(String action) {
+    switch (action) {
+      case 'login':
+        return Icons.login_rounded;
+      case 'login_failed':
+        return Icons.warning_amber_rounded;
+      case 'logout':
+        return Icons.logout_rounded;
+      case 'register':
+        return Icons.person_add_outlined;
+      case 'password_change':
+      case 'password_reset':
+        return Icons.lock_reset_rounded;
+      case 'social_link':
+        return Icons.link_rounded;
+      case 'social_unlink':
+        return Icons.link_off_rounded;
+      case 'account_delete':
+        return Icons.delete_forever_rounded;
+      case 'token_refresh':
+        return Icons.refresh_rounded;
+      case 'email_verify':
+        return Icons.mark_email_read_outlined;
+      case 'guest_upgrade':
+        return Icons.upgrade_rounded;
+      default:
+        return Icons.history_rounded;
+    }
+  }
+
+  Color _actionColor(String action) {
+    switch (action) {
+      case 'login_failed':
+      case 'account_delete':
+        return DS.error;
+      case 'login':
+      case 'register':
+      case 'guest_upgrade':
+        return DS.success;
+      case 'logout':
+        return DS.warning;
+      default:
+        return DS.info;
+    }
+  }
+
   @override
   Widget build(BuildContext context) => SparklePageScaffold(
         role: SparklePageRole.settings,
@@ -111,51 +158,124 @@ class _SecurityLogScreenState extends ConsumerState<SecurityLogScreen> {
                     child: Text(context.l10n.securityLogEmpty),
                   )
                 else
-                  ..._logs.map(
-                    (item) => Padding(
-                      padding: const EdgeInsets.only(bottom: DS.spacing12),
-                      child: GraphiteCardSurface(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _actionLabel(item.action),
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.w700),
-                            ),
-                            const SizedBox(height: DS.spacing8),
-                            Text(
-                              context.l10n.securityLogOccurredAt(
-                                _formatTime(item.occurredAt),
+                  ..._logs.asMap().entries.map(
+                    (entry) {
+                      final index = entry.key;
+                      final item = entry.value;
+                      final isExpanded = _expandedIndices.contains(index);
+                      final color = _actionColor(item.action);
+
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: DS.spacing12),
+                        child: GraphiteCardSurface(
+                          child: InkWell(
+                            borderRadius: DS.borderRadius16,
+                            onTap: () {
+                              setState(() {
+                                if (isExpanded) {
+                                  _expandedIndices.remove(index);
+                                } else {
+                                  _expandedIndices.add(index);
+                                }
+                              });
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.all(DS.spacing16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(DS.sm),
+                                        decoration: BoxDecoration(
+                                          color: color.withValues(alpha: 0.12),
+                                          borderRadius: DS.borderRadius8,
+                                        ),
+                                        child: Icon(
+                                          _actionIcon(item.action),
+                                          size: 18,
+                                          color: color,
+                                        ),
+                                      ),
+                                      const SizedBox(width: DS.spacing12),
+                                      Expanded(
+                                        child: Text(
+                                          _actionLabel(item.action),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleMedium
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                        ),
+                                      ),
+                                      Icon(
+                                        isExpanded
+                                            ? Icons.keyboard_arrow_up_rounded
+                                            : Icons.keyboard_arrow_down_rounded,
+                                        color: DS.textSecondary,
+                                        size: 20,
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: DS.spacing8),
+                                  Text(
+                                    context.l10n.securityLogOccurredAt(
+                                      _formatTime(item.occurredAt),
+                                    ),
+                                    style: TextStyle(
+                                      color: DS.textSecondary,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  if ((item.ipAddress ?? '').isNotEmpty)
+                                    SelectableText(
+                                      'IP: ${item.ipAddress}',
+                                      style: TextStyle(
+                                        color: DS.textSecondary,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  if (isExpanded) ...[
+                                    const SizedBox(height: DS.spacing8),
+                                    if ((item.userAgent ?? '').isNotEmpty)
+                                      Text(
+                                        context.l10n.securityLogDevice(
+                                          item.userAgent!,
+                                        ),
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(
+                                              color: DS.textSecondary,
+                                            ),
+                                        maxLines: 3,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    if ((item.metadata ?? const {})
+                                        .isNotEmpty) ...[
+                                      const SizedBox(height: DS.spacing4),
+                                      Text(
+                                        context.l10n.securityLogAdditionalInfo(
+                                          item.metadata.toString(),
+                                        ),
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(
+                                              color: DS.textSecondary,
+                                            ),
+                                      ),
+                                    ],
+                                  ],
+                                ],
                               ),
                             ),
-                            if ((item.ipAddress ?? '').isNotEmpty)
-                              Text('IP：${item.ipAddress}'),
-                            if ((item.userAgent ?? '').isNotEmpty)
-                              Text(
-                                context.l10n
-                                    .securityLogDevice(item.userAgent!),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            if ((item.metadata ?? const {}).isNotEmpty) ...[
-                              const SizedBox(height: DS.spacing8),
-                              Text(
-                                context.l10n.securityLogAdditionalInfo(
-                                  item.metadata.toString(),
-                                ),
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.copyWith(color: DS.textSecondary),
-                              ),
-                            ],
-                          ],
+                          ),
                         ),
-                      ),
-                    ),
+                      );
+                    },
                   ),
               ],
             ),

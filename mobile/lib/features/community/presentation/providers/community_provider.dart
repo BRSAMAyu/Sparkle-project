@@ -400,6 +400,15 @@ class GroupDetailNotifier extends StateNotifier<AsyncValue<GroupInfo>> {
       rethrow;
     }
   }
+
+  Future<void> updateAnnouncement(String? announcement) async {
+    try {
+      await _repository.updateAnnouncement(_groupId, announcement);
+      await loadDetail();
+    } catch (e) {
+      rethrow;
+    }
+  }
 }
 
 class MyGroupsNotifier extends StateNotifier<AsyncValue<List<GroupListItem>>> {

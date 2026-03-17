@@ -78,8 +78,15 @@ class ChatRepository {
       queryParameters: queryParams.isEmpty ? null : queryParams,
     );
 
-    final data = ApiResponseParser.unwrapList(response.data,
-        action: 'getConversationHistory',);
+    // Handle both list response and wrapped response
+    dynamic data = response.data;
+    if (data is Map<String, dynamic> && data.containsKey('data')) {
+      data = data['data'];
+    }
+    if (data is! List) {
+      return [];
+    }
+
     return data
         .map((item) => ChatMessageModel.fromJson(item as Map<String, dynamic>))
         .toList();

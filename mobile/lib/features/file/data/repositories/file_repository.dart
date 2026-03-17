@@ -86,7 +86,7 @@ class FileRepository {
 
   Future<List<StoredFile>> listMyFiles(
       {String? status, int limit = 20, int offset = 0,}) async {
-    final response = await _dio.get<List<dynamic>>(
+    final response = await _dio.get<dynamic>(
       ApiEndpoints.myFiles,
       queryParameters: {
         if (status != null) 'status': status,
@@ -102,7 +102,7 @@ class FileRepository {
 
   Future<List<StoredFile>> searchMyFiles(
       {required String query, int limit = 20,}) async {
-    final response = await _dio.get<List<dynamic>>(
+    final response = await _dio.get<dynamic>(
       ApiEndpoints.myFilesSearch,
       queryParameters: {
         'q': query,
@@ -121,7 +121,7 @@ class FileRepository {
     int limit = 20,
     int offset = 0,
   }) async {
-    final response = await _dio.get<List<dynamic>>(
+    final response = await _dio.get<dynamic>(
       ApiEndpoints.groupFiles(groupId),
       queryParameters: {
         if (category != null) 'category': category,
@@ -174,7 +174,7 @@ class FileRepository {
   Future<List<GroupFileCategoryStat>> getGroupFileCategories(
       String groupId,) async {
     final response =
-        await _dio.get<List<dynamic>>(ApiEndpoints.groupFileCategories(groupId));
+        await _dio.get<dynamic>(ApiEndpoints.groupFileCategories(groupId));
     final data = ApiResponseParser.unwrapList(response.data, action: 'getGroupFileCategories');
     return data
         .map((item) =>

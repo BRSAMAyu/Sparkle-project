@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
-import 'package:sparkle/core/providers/locale_provider.dart';
 import 'package:sparkle/features/achievement/achievement_routes.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/user/user_routes.dart';
@@ -179,204 +178,139 @@ class ProfileScreen extends ConsumerWidget {
     AppLocalizations l10n,
     UserModel user,
   ) =>
-      GraphiteCardSurface(
-        child: Column(
-          children: [
-            if (user.registrationSource == 'guest') ...[
-              _buildSettingsTile(
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Guest upgrade (conditional)
+          if (user.registrationSource == 'guest') ...[
+            GraphiteCardSurface(
+              child: _buildSettingsTile(
                 context,
                 icon: Icons.upgrade_rounded,
                 title: l10n.profileUpgradeGuest,
                 accentColor: const Color(0xFFC37D3A),
-                onTap: () {
-                  context.push(UserRoutes.guestUpgrade);
-                },
+                onTap: () => context.push(UserRoutes.guestUpgrade),
               ),
-              const Divider(height: 1, indent: 60),
-            ],
-            _buildSettingsTile(
-              context,
-              icon: Icons.emoji_events_outlined,
-              title: l10n.achievementTitle,
-              accentColor: const Color(0xFFFFD700),
-              onTap: () {
-                context.push(AchievementRoutes.basePath);
-              },
             ),
-            const Divider(height: 1, indent: 60),
-            _buildSettingsTile(
-              context,
-              icon: Icons.palette_outlined,
-              title: l10n.visualElementsTitle,
-              accentColor: const Color(0xFF7B68EE),
-              onTap: () {
-                context.push(VisualElementsRoutes.basePath);
-              },
-            ),
-            const Divider(height: 1, indent: 60),
-            _buildSettingsTile(
-              context,
-              icon: Icons.person_outline_rounded,
-              title: l10n.profilePersonalInfo,
-              accentColor: const Color(0xFF9B7A72),
-              onTap: () {
-                context.push(UserRoutes.editProfile);
-              },
-            ),
-            const Divider(height: 1, indent: 60),
-            _buildSettingsTile(
-              context,
-              icon: Icons.tune_rounded,
-              title: l10n.schedulePreferences,
-              accentColor: const Color(0xFF7087A6),
-              onTap: () {
-                context.push(UserRoutes.settings);
-              },
-            ),
-            const Divider(height: 1, indent: 60),
-            _buildSettingsTile(
-              context,
-              icon: Icons.psychology_alt_outlined,
-              title: l10n.myPersona,
-              accentColor: const Color(0xFF8877A6),
-              onTap: () {
-                context.push(UserRoutes.persona);
-              },
-            ),
-            const Divider(height: 1, indent: 60),
-            _buildSettingsTile(
-              context,
-              icon: Icons.history_rounded,
-              title: l10n.systemActivity,
-              accentColor: const Color(0xFF7B948E),
-              onTap: () {
-                context.push(UserRoutes.systemUpdates);
-              },
-            ),
-            const Divider(height: 1, indent: 60),
-            _buildSettingsTile(
-              context,
-              icon: Icons.link_rounded,
-              title: l10n.profileLinkedAccounts,
-              accentColor: const Color(0xFF7A8C64),
-              onTap: () {
-                context.push(UserRoutes.socialAccounts);
-              },
-            ),
-            const Divider(height: 1, indent: 60),
-            _buildSettingsTile(
-              context,
-              icon: Icons.devices_rounded,
-              title: l10n.profileSessionManagement,
-              accentColor: const Color(0xFF5E8197),
-              onTap: () {
-                context.push(UserRoutes.sessionManagement);
-              },
-            ),
-            const Divider(height: 1, indent: 60),
-            _buildSettingsTile(
-              context,
-              icon: Icons.shield_outlined,
-              title: l10n.profileSecurityLog,
-              accentColor: const Color(0xFF8A7AAE),
-              onTap: () {
-                context.push(UserRoutes.securityLog);
-              },
-            ),
-            if (AppFeatureFlags.enableUserMemoryControls) ...[
-              const Divider(height: 1, indent: 60),
-              _buildSettingsTile(
-                context,
-                icon: Icons.memory_rounded,
-                title: l10n.memoryControl,
-                accentColor: const Color(0xFF6D9282),
-                onTap: () {
-                  context.push(UserRoutes.memorySettings);
-                },
-              ),
-            ],
-            const Divider(height: 1, indent: 60),
-            _buildSettingsTile(
-              context,
-              icon: Icons.language_rounded,
-              title: l10n.language,
-              accentColor: const Color(0xFF6E8FAE),
-              onTap: () {
-                _showLanguageDialog(context, ref);
-              },
-            ),
-            const Divider(height: 1, indent: 60),
-            _buildSettingsTile(
-              context,
-              icon: Icons.logout_rounded,
-              title: l10n.logout,
-              accentColor: const Color(0xFFB06F67),
-              isDestructive: true,
-              onTap: () {
-                _showLogoutDialog(context, ref, l10n);
-              },
-            ),
-            const Divider(height: 1, indent: 60),
-            _buildSettingsTile(
-              context,
-              icon: Icons.delete_forever_rounded,
-              title: l10n.profileDeleteAccount,
-              accentColor: const Color(0xFFB84F45),
-              isDestructive: true,
-              onTap: () {
-                context.push(UserRoutes.deleteAccount);
-              },
-            ),
+            const SizedBox(height: DS.spacing16),
           ],
-        ),
-      );
 
-  void _showLanguageDialog(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
-    final currentLocale = ref.read(localeProvider);
-
-    showDialog<void>(
-      context: context,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-        child: GraphiteModalSurface(
-          title: l10n.language,
-          showHandle: false,
-          borderRadius: BorderRadius.circular(28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                title: Text(l10n.languageChinese),
-                trailing: currentLocale.languageCode == 'zh'
-                    ? Icon(Icons.check, color: DS.primaryBase)
-                    : null,
-                onTap: () {
-                  ref
-                      .read(localeProvider.notifier)
-                      .setLocale(const Locale('zh'));
-                  Navigator.pop(context);
-                },
-              ),
-              ListTile(
-                title: Text(l10n.languageEnglish),
-                trailing: currentLocale.languageCode == 'en'
-                    ? Icon(Icons.check, color: DS.primaryBase)
-                    : null,
-                onTap: () {
-                  ref
-                      .read(localeProvider.notifier)
-                      .setLocale(const Locale('en'));
-                  Navigator.pop(context);
-                },
-              ),
-            ],
+          // Personal Growth
+          _buildSectionLabel(context, l10n.personalGrowth),
+          const SizedBox(height: DS.spacing8),
+          GraphiteCardSurface(
+            child: Column(
+              children: [
+                _buildSettingsTile(
+                  context,
+                  icon: Icons.emoji_events_outlined,
+                  title: l10n.achievementTitle,
+                  accentColor: const Color(0xFFFFD700),
+                  onTap: () => context.push(AchievementRoutes.basePath),
+                ),
+                const Divider(height: 1, indent: 60),
+                _buildSettingsTile(
+                  context,
+                  icon: Icons.palette_outlined,
+                  title: l10n.visualElementsTitle,
+                  accentColor: const Color(0xFF7B68EE),
+                  onTap: () => context.push(VisualElementsRoutes.basePath),
+                ),
+                const Divider(height: 1, indent: 60),
+                _buildSettingsTile(
+                  context,
+                  icon: Icons.psychology_alt_outlined,
+                  title: l10n.myPersona,
+                  accentColor: const Color(0xFF8877A6),
+                  onTap: () => context.push(UserRoutes.persona),
+                ),
+              ],
+            ),
           ),
-        ),
-      ),
-    );
-  }
+          const SizedBox(height: DS.spacing16),
+
+          // Settings
+          _buildSectionLabel(context, l10n.settings),
+          const SizedBox(height: DS.spacing8),
+          GraphiteCardSurface(
+            child: Column(
+              children: [
+                _buildSettingsTile(
+                  context,
+                  icon: Icons.person_outline_rounded,
+                  title: l10n.profilePersonalInfo,
+                  accentColor: const Color(0xFF9B7A72),
+                  onTap: () => context.push(UserRoutes.editProfile),
+                ),
+                const Divider(height: 1, indent: 60),
+                _buildSettingsTile(
+                  context,
+                  icon: Icons.tune_rounded,
+                  title: l10n.schedulePreferences,
+                  accentColor: const Color(0xFF7087A6),
+                  onTap: () => context.push(UserRoutes.settings),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: DS.spacing16),
+
+          // Account
+          _buildSectionLabel(context, l10n.account),
+          const SizedBox(height: DS.spacing8),
+          GraphiteCardSurface(
+            child: Column(
+              children: [
+                _buildSettingsTile(
+                  context,
+                  icon: Icons.manage_accounts_outlined,
+                  title: l10n.accountSecurity,
+                  accentColor: const Color(0xFF6E8FAE),
+                  onTap: () => context.push(UserRoutes.accountSecurity),
+                ),
+                if (AppFeatureFlags.enableUserMemoryControls) ...[
+                  const Divider(height: 1, indent: 60),
+                  _buildSettingsTile(
+                    context,
+                    icon: Icons.memory_rounded,
+                    title: l10n.memoryControl,
+                    accentColor: const Color(0xFF6D9282),
+                    onTap: () => context.push(UserRoutes.memorySettings),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: DS.spacing16),
+
+          // Sign Out
+          _buildSectionLabel(context, l10n.logout),
+          const SizedBox(height: DS.spacing8),
+          GraphiteCardSurface(
+            child: Column(
+              children: [
+                _buildSettingsTile(
+                  context,
+                  icon: Icons.logout_rounded,
+                  title: l10n.logout,
+                  accentColor: const Color(0xFFB06F67),
+                  isDestructive: true,
+                  onTap: () => _showLogoutDialog(context, ref, l10n),
+                ),
+                const Divider(height: 1, indent: 60),
+                _buildSettingsTile(
+                  context,
+                  icon: Icons.delete_forever_rounded,
+                  title: l10n.profileDeleteAccount,
+                  accentColor: const Color(0xFFB84F45),
+                  isDestructive: true,
+                  onTap: () => context.push(UserRoutes.deleteAccount),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
 
   void _showLogoutDialog(
     BuildContext context,
@@ -427,6 +361,18 @@ class ProfileScreen extends ConsumerWidget {
       ),
     );
   }
+
+  Widget _buildSectionLabel(BuildContext context, String title) => Padding(
+        padding: const EdgeInsets.only(left: DS.spacing4),
+        child: Text(
+          title,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: DS.fontWeightMedium,
+            color: DS.textSecondary,
+          ),
+        ),
+      );
 
   Widget _buildSettingsTile(
     BuildContext context, {

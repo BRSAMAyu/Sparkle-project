@@ -19,11 +19,13 @@ class VoiceInputButton extends ConsumerStatefulWidget {
     super.key,
     this.onRecordingStarted,
     this.onRecordingStopped,
+    this.size = 48,
   });
   final void Function(String text) onTranscription;
   final void Function(String error) onError;
   final VoidCallback? onRecordingStarted;
   final VoidCallback? onRecordingStopped;
+  final double size;
 
   @override
   ConsumerState<VoiceInputButton> createState() => _VoiceInputButtonState();
@@ -243,8 +245,8 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
           );
         },
         child: Container(
-          width: 48,
-          height: 48,
+          width: widget.size,
+          height: widget.size,
           decoration: BoxDecoration(
             color: _isRecording
                 ? DS.brandPrimary
@@ -271,10 +273,15 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
   Widget _buildButtonContent({required bool isDark}) {
     final idleIconColor =
         isDark ? DS.textSecondary.withValues(alpha: 0.92) : DS.neutral600;
+    // 根据按钮尺寸动态调整图标大小
+    final iconSize = (widget.size * 0.42).clamp(16.0, 28.0);
+    final progressSize = (widget.size * 0.46).clamp(18.0, 26.0);
+    final fontSize = (widget.size * 0.17).clamp(6.0, 10.0);
+
     if (_isProcessing) {
       return SizedBox(
-        width: 22,
-        height: 22,
+        width: progressSize,
+        height: progressSize,
         child: CircularProgressIndicator(
           strokeWidth: 2,
           color: DS.brandPrimaryConst,
@@ -289,12 +296,12 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
           Icon(
             Icons.mic,
             color: DS.textOnPrimary,
-            size: 20,
+            size: iconSize,
           ),
           Text(
             _formatDuration(_recordingDuration),
             style: TextStyle(
-              fontSize: 8,
+              fontSize: fontSize,
               color: DS.textOnPrimary,
               fontWeight: DS.fontWeightBold,
             ),
@@ -306,7 +313,7 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
     return Icon(
       Icons.mic_none,
       color: idleIconColor,
-      size: 20,
+      size: iconSize,
     );
   }
 }

@@ -6,7 +6,7 @@ import 'package:sparkle/core/extensions/context_l10n.dart';
 ///
 /// 根据用户偏好显示预计生成的胶囊信息:
 /// - 预计生成数量 (1-5个)
-/// - 深度级别 (浅度⚡/中度💡/深度🔬)
+/// - 深度级别 (浅度/中度/深度)
 /// - 使用模型名称
 class CapsuleGenerationPreview extends StatelessWidget {
   const CapsuleGenerationPreview({
@@ -19,13 +19,13 @@ class CapsuleGenerationPreview extends StatelessWidget {
   final double curiosityPreference;
 
   /// 根据深度偏好获取深度级别
-  (String Function(BuildContext) label, String emoji, String model) get _depthLevel {
+  (String Function(BuildContext) label, String model) get _depthLevel {
     if (depthPreference < 0.3) {
-      return ((context) => context.l10n.capsuleDepthShallow, '⚡', 'MIMO');
+      return ((context) => context.l10n.capsuleDepthShallow, 'MIMO');
     } else if (depthPreference < 0.7) {
-      return ((context) => context.l10n.capsuleDepthMedium, '💡', 'GLM-4.7');
+      return ((context) => context.l10n.capsuleDepthMedium, 'GLM-4.7');
     } else {
-      return ((context) => context.l10n.capsuleDepthDeep, '🔬', 'DeepSeek R1');
+      return ((context) => context.l10n.capsuleDepthDeep, 'DeepSeek R1');
     }
   }
 
@@ -43,7 +43,7 @@ class CapsuleGenerationPreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final (depthLabelBuilder, depthEmoji, modelName) = _depthLevel;
+    final (depthLabelBuilder, modelName) = _depthLevel;
     final depthLabel = depthLabelBuilder(context);
     final expectedCount = _expectedCount;
 
@@ -95,7 +95,7 @@ class CapsuleGenerationPreview extends StatelessWidget {
             context,
             icon: Icons.timeline_outlined,
             label: context.l10n.capsuleGenerationPreviewDepthLabel,
-            value: '$depthEmoji $depthLabel',
+            value: depthLabel,
             color: DS.warning,
           ),
           const SizedBox(height: DS.md),

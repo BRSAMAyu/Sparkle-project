@@ -13,6 +13,9 @@ import 'package:sparkle/features/file/presentation/widgets/file_picker_with_pres
 import 'package:sparkle/features/tools/tools.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 
+/// 输入模式枚举
+enum InputMode { text, voice, share }
+
 class ChatInput extends ConsumerStatefulWidget {
   const ChatInput({
     super.key,
@@ -48,6 +51,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   bool _isButtonPressed = false;
   // 🔧 Android输入法修复：防止快速聚焦/失焦导致输入法崩溃
   bool _isFocusChanging = false;
+  // 输入模式状态
+  InputMode _inputMode = InputMode.text;
 
   void _showAttachmentSheet() {
     if (widget.onFileUploaded != null) {
@@ -221,16 +226,28 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     );
   }
 
+  void _switchToVoiceMode() {
+    if (!widget.enabled) return;
+    setState(() => _inputMode = InputMode.voice);
+    _focusNode.unfocus();
+  }
+
+  void _switchToShareMode() {
+    if (!widget.enabled || widget.onQuickShare == null) return;
+    setState(() => _inputMode = InputMode.share);
+    _focusNode.unfocus();
+  }
+
+  void _switchToTextMode() {
+    setState(() => _inputMode = InputMode.text);
+  }
+
   @override
   Widget build(BuildContext context) {
     final enterToSend = ref.watch(enterToSendProvider);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final reduceMotion = context.reduceMotion;
-    // Use ResponsiveSystem instead of MediaQuery width for consistency
-    final isNarrow = ResponsiveSystem.isMobile(context);
-    final attachmentVisualSize = isNarrow ? 40.0 : DS.touchTargetMinSize;
-    final attachmentIconSize = isNarrow ? 20.0 : DS.iconSizeSm;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: DS.spacing8),
@@ -240,206 +257,366 @@ class _ChatInputState extends ConsumerState<ChatInput> {
           // Quote Preview
           if (widget.quotedMessage != null) _buildQuotePreview(isDark),
 
-          Padding(
-            padding: const EdgeInsets.all(DS.spacing8),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                // --- Attachment Button ---
-                SizedBox(
-                  width: DS.touchTargetMinSize,
-                  height: DS.touchTargetMinSize,
-                  child: Center(
-                    child: SizedBox(
-                      width: attachmentVisualSize,
-                      height: attachmentVisualSize,
-                      child: SparkleIconButton(
-                        icon: Icon(
-                          Icons.add_circle_outline_rounded,
-                          color: DS.textSecondary,
-                          size: attachmentIconSize,
-                        ),
-                        onPressed: widget.enabled ? _showAttachmentSheet : null,
-                        variant: ButtonVariant.ghost,
-                        size: attachmentVisualSize,
-                      ),
-                    ),
-                  ),
-                ),
+          // === 上方工具栏 ===
+          _buildToolbar(context, isDark),
 
-                // --- Voice Input Button ---
-                VoiceInputButton(
-                  onTranscription: (text) {
-                    // 将语音识别结果填入文本框
-                    _controller.text = text;
-                    // 🔧 Android输入法修复：延迟焦点请求
-                    if (!_isFocusChanging) {
-                      _isFocusChanging = true;
-                      Future.delayed(const Duration(milliseconds: 150), () {
-                        if (mounted && _focusNode.canRequestFocus) {
-                          _focusNode.requestFocus();
-                        }
-                        _isFocusChanging = false;
-                      });
-                    }
-                  },
-                  onError: (error) {
-                    // 显示错误提示
-                    AppFeedback.error(context, error);
-                  },
-                  onRecordingStarted: () {
-                    _isFocusChanging = true;
-                    _focusNode.unfocus();
-                    Future.delayed(const Duration(milliseconds: 100), () {
-                      if (mounted) {
-                        _isFocusChanging = false;
-                      }
-                    });
-                  },
-                  onRecordingStopped: () {
-                    // 🔧 Android输入法修复：录音结束后不立即请求焦点
-                    // 等待onTranscription回调设置文本后再聚焦
-                  },
-                ),
-
-                // --- Quick Share Button ---
-                if (widget.onQuickShare != null) ...[
-                  const SizedBox(width: DS.spacing8),
-                  SizedBox(
-                    width: attachmentVisualSize,
-                    height: attachmentVisualSize,
-                    child: SparkleIconButton(
-                      icon: Icon(
-                        Icons.share_rounded,
-                        color: DS.textSecondary,
-                        size: attachmentIconSize,
-                      ),
-                      onPressed: widget.enabled ? _showQuickShare : null,
-                      variant: ButtonVariant.ghost,
-                      size: attachmentVisualSize,
-                    ),
-                  ),
-                ],
-
-                const SizedBox(width: DS.spacing8),
-
-                Expanded(
-                  child: ValueListenableBuilder<bool>(
-                    valueListenable: _textNotEmpty,
-                    builder: (context, hasText, child) {
-                      final canSend = widget.enabled && !_isSending && hasText;
-                      return DecoratedBox(
-                        decoration: BoxDecoration(
-                          // Use surfaceTertiary for consistent theming
-                          color: DS.surfaceTertiary,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: DS.surfaceTertiary,
-                          ),
-                        ),
-                        child: TextField(
-                          controller: _controller,
-                          focusNode: _focusNode,
-                          maxLines: 4,
-                          minLines: 1,
-                          enabled: widget.enabled && !_isSending,
-                          textInputAction: enterToSend
-                              ? TextInputAction.send
-                              : TextInputAction.newline,
-                          // 🔧 Android输入法修复：确保键盘类型正确
-                          keyboardType: TextInputType.multiline,
-                          decoration: InputDecoration(
-                            hintText: widget.hintText ?? 'Type a message...',
-                            hintStyle: TextStyle(
-                              color: DS.textSecondary,
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: DS.spacing16,
-                              vertical: DS.spacing10,
-                            ),
-                            border: InputBorder.none,
-                            isDense: true,
-                          ),
-                          onSubmitted: canSend && enterToSend
-                              ? (_) => _handleSend()
-                              : null,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(width: DS.spacing12),
-                ValueListenableBuilder<bool>(
-                  valueListenable: _textNotEmpty,
-                  builder: (context, hasText, child) {
-                    final canSend = widget.enabled && !_isSending && hasText;
-                    return Semantics(
-                      button: true,
-                      enabled: canSend,
-                      label: 'Send message',
-                      child: AnimatedScale(
-                        scale: _isButtonPressed ? 0.9 : 1.0,
-                        duration: reduceMotion ? Duration.zero : DS.quick,
-                        curve: Curves.easeInOut,
-                        child: AnimatedContainer(
-                          duration: reduceMotion ? Duration.zero : DS.normal,
-                          width: DS.touchTargetMinSize,
-                          height: DS.touchTargetMinSize,
-                          decoration: BoxDecoration(
-                            gradient: canSend ? DS.primaryGradient : null,
-                            color: canSend ? null : DS.surfaceTertiary,
-                            shape: BoxShape.circle,
-                            boxShadow: canSend
-                                ? [
-                                    BoxShadow(
-                                      color: DS.brandPrimary
-                                          .withValues(alpha: 0.3),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ]
-                                : null,
-                          ),
-                          child: Material(
-                            color: DS.surfacePrimary.withValues(alpha: 0),
-                            shape: const CircleBorder(),
-                            child: InkWell(
-                              customBorder: const CircleBorder(),
-                              onTap: canSend ? _handleSend : null,
-                              onHighlightChanged: (pressed) {
-                                if (!mounted) return;
-                                setState(() => _isButtonPressed = pressed);
-                              },
-                              child: Center(
-                                child: _isSending
-                                    ? SizedBox(
-                                        width: 22,
-                                        height: 22,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: DS.textOnPrimary,
-                                        ),
-                                      )
-                                    : Icon(
-                                        Icons.arrow_upward_rounded,
-                                        color: canSend
-                                            ? DS.textOnPrimary
-                                            : DS.textSecondary,
-                                        size: DS.iconSizeBase,
-                                      ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
+          // === 可滑动的输入区域 ===
+          _buildSwipeableInputArea(
+            context,
+            isDark: isDark,
+            enterToSend: enterToSend,
+            reduceMotion: reduceMotion,
           ),
         ],
       ),
+    );
+  }
+
+  /// 构建上方工具栏
+  Widget _buildToolbar(BuildContext context, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: DS.spacing12,
+        vertical: DS.spacing4,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // 附件按钮
+          _ToolbarButton(
+            icon: Icons.attach_file_rounded,
+            label: context.l10n.chatInputAttachment,
+            onPressed: widget.enabled ? _showAttachmentSheet : null,
+            isDark: isDark,
+          ),
+          const SizedBox(width: DS.spacing24),
+          // 语音按钮
+          _ToolbarButton(
+            icon: Icons.mic_none,
+            label: context.l10n.chatInputVoice,
+            onPressed: widget.enabled ? _switchToVoiceMode : null,
+            isDark: isDark,
+          ),
+          // 分享按钮（仅当有分享回调时显示）
+          if (widget.onQuickShare != null) ...[
+            const SizedBox(width: DS.spacing24),
+            _ToolbarButton(
+              icon: Icons.share_rounded,
+              label: context.l10n.chatInputShare,
+              onPressed: widget.enabled ? _showQuickShare : null,
+              isDark: isDark,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// 构建可滑动的输入区域
+  Widget _buildSwipeableInputArea(
+    BuildContext context, {
+    required bool isDark,
+    required bool enterToSend,
+    required bool reduceMotion,
+  }) {
+    return GestureDetector(
+      onHorizontalDragEnd: (details) {
+        if (details.primaryVelocity == null) return;
+
+        // 左滑 (velocity > 0) -> 语音模式
+        if (details.primaryVelocity! > 300) {
+          _switchToVoiceMode();
+        }
+        // 右滑 (velocity < 0) -> 分享模式
+        else if (details.primaryVelocity! < -300) {
+          _switchToShareMode();
+        }
+      },
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 200),
+        switchInCurve: Curves.easeInOut,
+        switchOutCurve: Curves.easeInOut,
+        child: _buildInputContentForMode(
+          isDark: isDark,
+          enterToSend: enterToSend,
+          reduceMotion: reduceMotion,
+        ),
+      ),
+    );
+  }
+
+  /// 根据模式构建输入内容
+  Widget _buildInputContentForMode({
+    required bool isDark,
+    required bool enterToSend,
+    required bool reduceMotion,
+  }) {
+    switch (_inputMode) {
+      case InputMode.voice:
+        return _buildVoiceInputMode(isDark);
+      case InputMode.share:
+        return _buildShareInputMode(isDark);
+      case InputMode.text:
+        return _buildTextInputMode(
+          isDark: isDark,
+          enterToSend: enterToSend,
+          reduceMotion: reduceMotion,
+        );
+    }
+  }
+
+  /// 文字输入模式
+  Widget _buildTextInputMode({
+    required bool isDark,
+    required bool enterToSend,
+    required bool reduceMotion,
+  }) {
+    return Padding(
+      key: const ValueKey('text-mode'),
+      padding: const EdgeInsets.all(DS.spacing8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          // 输入框（居中，全宽）
+          Expanded(
+            child: ValueListenableBuilder<bool>(
+              valueListenable: _textNotEmpty,
+              builder: (context, hasText, child) {
+                final canSend = widget.enabled && !_isSending && hasText;
+                return DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: DS.surfaceTertiary,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: DS.surfaceTertiary,
+                    ),
+                  ),
+                  child: TextField(
+                    controller: _controller,
+                    focusNode: _focusNode,
+                    maxLines: 4,
+                    minLines: 1,
+                    enabled: widget.enabled && !_isSending,
+                    textInputAction: enterToSend
+                        ? TextInputAction.send
+                        : TextInputAction.newline,
+                    keyboardType: TextInputType.multiline,
+                    decoration: InputDecoration(
+                      hintText: widget.hintText ?? 'Type a message...',
+                      hintStyle: TextStyle(
+                        color: DS.textSecondary,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: DS.spacing16,
+                        vertical: DS.spacing10,
+                      ),
+                      border: InputBorder.none,
+                      isDense: true,
+                    ),
+                    onSubmitted:
+                        canSend && enterToSend ? (_) => _handleSend() : null,
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(width: DS.spacing12),
+          // 发送按钮
+          _buildSendButton(reduceMotion: reduceMotion),
+        ],
+      ),
+    );
+  }
+
+  /// 语音输入模式
+  Widget _buildVoiceInputMode(bool isDark) {
+    return Padding(
+      key: const ValueKey('voice-mode'),
+      padding: const EdgeInsets.all(DS.spacing8),
+      child: Row(
+        children: [
+          // 取消按钮
+          SparkleIconButton(
+            icon: Icon(
+              Icons.close,
+              color: DS.textSecondary,
+              size: DS.iconSizeMd,
+            ),
+            onPressed: _switchToTextMode,
+            variant: ButtonVariant.ghost,
+          ),
+          // 放大的语音按钮（居中）
+          Expanded(
+            child: Center(
+              child: VoiceInputButton(
+                size: 56,
+                onTranscription: (text) {
+                  _controller.text = text;
+                  _switchToTextMode();
+                  // 延迟聚焦
+                  if (!_isFocusChanging) {
+                    _isFocusChanging = true;
+                    Future.delayed(const Duration(milliseconds: 150), () {
+                      if (mounted && _focusNode.canRequestFocus) {
+                        _focusNode.requestFocus();
+                      }
+                      _isFocusChanging = false;
+                    });
+                  }
+                },
+                onError: (error) {
+                  AppFeedback.error(context, error);
+                },
+                onRecordingStarted: () {
+                  _isFocusChanging = true;
+                  _focusNode.unfocus();
+                  Future.delayed(const Duration(milliseconds: 100), () {
+                    if (mounted) {
+                      _isFocusChanging = false;
+                    }
+                  });
+                },
+                onRecordingStopped: () {
+                  // 录音结束后不立即请求焦点
+                },
+              ),
+            ),
+          ),
+          // 占位保持对称
+          const SizedBox(width: DS.touchTargetMinSize),
+        ],
+      ),
+    );
+  }
+
+  /// 分享输入模式
+  Widget _buildShareInputMode(bool isDark) {
+    return Padding(
+      key: const ValueKey('share-mode'),
+      padding: const EdgeInsets.all(DS.spacing8),
+      child: Row(
+        children: [
+          // 取消按钮
+          SparkleIconButton(
+            icon: Icon(
+              Icons.close,
+              color: DS.textSecondary,
+              size: DS.iconSizeMd,
+            ),
+            onPressed: _switchToTextMode,
+            variant: ButtonVariant.ghost,
+          ),
+          // 分享提示区域（居中）
+          Expanded(
+            child: InkWell(
+              onTap: () {
+                _showQuickShare();
+                _switchToTextMode();
+              },
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: DS.spacing16,
+                  vertical: DS.spacing12,
+                ),
+                decoration: BoxDecoration(
+                  color: DS.surfaceTertiary,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.share_rounded,
+                      color: DS.brandPrimary,
+                      size: DS.iconSizeMd,
+                    ),
+                    const SizedBox(width: DS.spacing8),
+                    Text(
+                      context.l10n.chatInputTapToShare,
+                      style: TextStyle(
+                        color: DS.textSecondary,
+                        fontSize: DS.fontSizeBase,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // 占位保持对称
+          const SizedBox(width: DS.touchTargetMinSize),
+        ],
+      ),
+    );
+  }
+
+  /// 构建发送按钮
+  Widget _buildSendButton({required bool reduceMotion}) {
+    return ValueListenableBuilder<bool>(
+      valueListenable: _textNotEmpty,
+      builder: (context, hasText, child) {
+        final canSend = widget.enabled && !_isSending && hasText;
+        return Semantics(
+          button: true,
+          enabled: canSend,
+          label: 'Send message',
+          child: AnimatedScale(
+            scale: _isButtonPressed ? 0.9 : 1.0,
+            duration: reduceMotion ? Duration.zero : DS.quick,
+            curve: Curves.easeInOut,
+            child: AnimatedContainer(
+              duration: reduceMotion ? Duration.zero : DS.normal,
+              width: DS.touchTargetMinSize,
+              height: DS.touchTargetMinSize,
+              decoration: BoxDecoration(
+                gradient: canSend ? DS.primaryGradient : null,
+                color: canSend ? null : DS.surfaceTertiary,
+                shape: BoxShape.circle,
+                boxShadow: canSend
+                    ? [
+                        BoxShadow(
+                          color: DS.brandPrimary.withValues(alpha: 0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Material(
+                color: DS.surfacePrimary.withValues(alpha: 0),
+                shape: const CircleBorder(),
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: canSend ? _handleSend : null,
+                  onHighlightChanged: (pressed) {
+                    if (!mounted) return;
+                    setState(() => _isButtonPressed = pressed);
+                  },
+                  child: Center(
+                    child: _isSending
+                        ? SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: DS.textOnPrimary,
+                            ),
+                          )
+                        : Icon(
+                            Icons.arrow_upward_rounded,
+                            color: canSend
+                                ? DS.textOnPrimary
+                                : DS.textSecondary,
+                            size: DS.iconSizeBase,
+                          ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -505,4 +682,55 @@ class _ChatInputState extends ConsumerState<ChatInput> {
           ],
         ),
       );
+}
+
+/// 工具栏按钮组件
+class _ToolbarButton extends StatelessWidget {
+  const _ToolbarButton({
+    required this.icon,
+    required this.label,
+    required this.isDark,
+    this.onPressed,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool isDark;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final isEnabled = onPressed != null;
+
+    return InkWell(
+      onTap: onPressed,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing12,
+          vertical: DS.spacing8,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: DS.iconSizeMd,
+              color: isEnabled
+                  ? (isDark ? DS.neutral300 : DS.neutral600)
+                  : DS.neutral400,
+            ),
+            const SizedBox(height: DS.spacing4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: DS.fontSizeXs,
+                color: isEnabled ? DS.textSecondary : DS.neutral400,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

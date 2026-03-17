@@ -654,11 +654,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 color: isDark ? DS.brandPrimary38 : DS.brandPrimary.shade500,
               ),
               const SizedBox(width: DS.md),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: isDark ? DS.brandPrimary54 : DS.brandPrimary.shade600,
+              Expanded(
+                child: Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: isDark ? DS.brandPrimary54 : DS.brandPrimary.shade600,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -693,12 +696,16 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               color: isDark ? DS.brandPrimary54 : DS.brandPrimary.shade600,
             ),
           ),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: isDark ? DS.brandPrimary : DS.neutral900,
+          Flexible(
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: isDark ? DS.brandPrimary : DS.neutral900,
+              ),
+              textAlign: TextAlign.end,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],

@@ -194,6 +194,7 @@ class GroupInfo {
     this.sprintGoal,
     this.daysRemaining,
     this.myRole,
+    this.announcement,
   });
 
   factory GroupInfo.fromJson(Map<String, dynamic> json) =>
@@ -227,6 +228,7 @@ class GroupInfo {
   final bool joinRequiresApproval;
   @JsonKey(name: 'my_role')
   final GroupRole? myRole;
+  final String? announcement;
   @JsonKey(name: 'created_at')
   final DateTime createdAt;
   @JsonKey(name: 'updated_at')

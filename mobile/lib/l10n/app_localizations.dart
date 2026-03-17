@@ -1496,6 +1496,30 @@ abstract class AppLocalizations {
   /// **'输入消息...'**
   String get chatInputPlaceholder;
 
+  /// No description provided for @chatInputAttachment.
+  ///
+  /// In zh, this message translates to:
+  /// **'附件'**
+  String get chatInputAttachment;
+
+  /// No description provided for @chatInputVoice.
+  ///
+  /// In zh, this message translates to:
+  /// **'语音'**
+  String get chatInputVoice;
+
+  /// No description provided for @chatInputShare.
+  ///
+  /// In zh, this message translates to:
+  /// **'分享'**
+  String get chatInputShare;
+
+  /// No description provided for @chatInputTapToShare.
+  ///
+  /// In zh, this message translates to:
+  /// **'点击选择分享内容'**
+  String get chatInputTapToShare;
+
   /// No description provided for @chatVoiceInput.
   ///
   /// In zh, this message translates to:
@@ -13364,6 +13388,12 @@ abstract class AppLocalizations {
   /// **'Community Agent Collab On'**
   String get communityAgentCollabOn;
 
+  /// No description provided for @communityAgentName.
+  ///
+  /// In zh, this message translates to:
+  /// **'星火AI'**
+  String get communityAgentName;
+
   /// No description provided for @communityAgentOnlyYou.
   ///
   /// In zh, this message translates to:
@@ -14810,40 +14840,64 @@ abstract class AppLocalizations {
   /// **'Pomodoro Work Finished'**
   String get pomodoroWorkFinished;
 
+  /// No description provided for @account.
+  ///
+  /// In zh, this message translates to:
+  /// **'账户'**
+  String get account;
+
+  /// No description provided for @accountSecurity.
+  ///
+  /// In zh, this message translates to:
+  /// **'账户与安全'**
+  String get accountSecurity;
+
+  /// No description provided for @accountSecurityIntro.
+  ///
+  /// In zh, this message translates to:
+  /// **'管理您的关联账户、登录设备和安全日志'**
+  String get accountSecurityIntro;
+
+  /// No description provided for @personalGrowth.
+  ///
+  /// In zh, this message translates to:
+  /// **'个人成长'**
+  String get personalGrowth;
+
   /// No description provided for @profileDeleteAccount.
   ///
   /// In zh, this message translates to:
-  /// **'Profile Delete Account'**
+  /// **'注销账户'**
   String get profileDeleteAccount;
 
   /// No description provided for @profileLinkedAccounts.
   ///
   /// In zh, this message translates to:
-  /// **'Profile Linked Accounts'**
+  /// **'关联账户'**
   String get profileLinkedAccounts;
 
   /// No description provided for @profilePersonalInfo.
   ///
   /// In zh, this message translates to:
-  /// **'Profile Personal Info'**
+  /// **'个人信息'**
   String get profilePersonalInfo;
 
   /// No description provided for @profileSecurityLog.
   ///
   /// In zh, this message translates to:
-  /// **'Profile Security Log'**
+  /// **'安全日志'**
   String get profileSecurityLog;
 
   /// No description provided for @profileSessionManagement.
   ///
   /// In zh, this message translates to:
-  /// **'Profile Session Management'**
+  /// **'设备管理'**
   String get profileSessionManagement;
 
   /// No description provided for @profileUpgradeGuest.
   ///
   /// In zh, this message translates to:
-  /// **'Profile Upgrade Guest'**
+  /// **'升级账户'**
   String get profileUpgradeGuest;
 
   /// No description provided for @regenCustomHint.
@@ -15359,43 +15413,43 @@ abstract class AppLocalizations {
   /// No description provided for @socialAccountsIntro.
   ///
   /// In zh, this message translates to:
-  /// **'Social Accounts Intro'**
+  /// **'关联第三方账户以便快速登录'**
   String get socialAccountsIntro;
 
   /// No description provided for @socialAccountsLink.
   ///
   /// In zh, this message translates to:
-  /// **'Social Accounts Link'**
+  /// **'绑定'**
   String get socialAccountsLink;
 
   /// No description provided for @socialAccountsLinked.
   ///
   /// In zh, this message translates to:
-  /// **'Social Accounts Linked'**
+  /// **'已绑定'**
   String get socialAccountsLinked;
 
   /// No description provided for @socialAccountsTitle.
   ///
   /// In zh, this message translates to:
-  /// **'Social Accounts Title'**
+  /// **'关联账户'**
   String get socialAccountsTitle;
 
   /// No description provided for @socialAccountsUnlink.
   ///
   /// In zh, this message translates to:
-  /// **'Social Accounts Unlink'**
+  /// **'解绑'**
   String get socialAccountsUnlink;
 
   /// No description provided for @socialAccountsUnlinkConfirm.
   ///
   /// In zh, this message translates to:
-  /// **'Social Accounts Unlink Confirm'**
+  /// **'确认解绑'**
   String get socialAccountsUnlinkConfirm;
 
   /// No description provided for @socialAccountsUnlinkMessage.
   ///
   /// In zh, this message translates to:
-  /// **'Social Accounts Unlink Message'**
+  /// **'解绑后您将无法使用该账号登录'**
   String get socialAccountsUnlinkMessage;
 
   /// No description provided for @socialAccountsUnlinkTitle.
@@ -15407,19 +15461,19 @@ abstract class AppLocalizations {
   /// No description provided for @socialAccountsUnlinkedHint.
   ///
   /// In zh, this message translates to:
-  /// **'Social Accounts Unlinked Hint'**
+  /// **'未绑定'**
   String get socialAccountsUnlinkedHint;
 
   /// No description provided for @socialAccountsWeChatPending.
   ///
   /// In zh, this message translates to:
-  /// **'Social Accounts We Chat Pending'**
+  /// **'微信绑定处理中'**
   String get socialAccountsWeChatPending;
 
   /// No description provided for @socialAccountsWeChatUnavailable.
   ///
   /// In zh, this message translates to:
-  /// **'Social Accounts We Chat Unavailable'**
+  /// **'微信暂不可用'**
   String get socialAccountsWeChatUnavailable;
 
   /// No description provided for @sprintActionAbandonButton.

@@ -720,6 +720,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatInputPlaceholder => '输入消息...';
 
   @override
+  String get chatInputAttachment => '附件';
+
+  @override
+  String get chatInputVoice => '语音';
+
+  @override
+  String get chatInputShare => '分享';
+
+  @override
+  String get chatInputTapToShare => '点击选择分享内容';
+
+  @override
   String get chatVoiceInput => '语音输入';
 
   @override
@@ -7212,6 +7224,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get communityAgentCollabOn => 'Community Agent Collab On';
 
   @override
+  String get communityAgentName => '星火AI';
+
+  @override
   String get communityAgentOnlyYou => 'Community Agent Only You';
 
   @override
@@ -8028,22 +8043,34 @@ class AppLocalizationsZh extends AppLocalizations {
   String get pomodoroWorkFinished => 'Pomodoro Work Finished';
 
   @override
-  String get profileDeleteAccount => 'Profile Delete Account';
+  String get account => '账户';
 
   @override
-  String get profileLinkedAccounts => 'Profile Linked Accounts';
+  String get accountSecurity => '账户与安全';
 
   @override
-  String get profilePersonalInfo => 'Profile Personal Info';
+  String get accountSecurityIntro => '管理您的关联账户、登录设备和安全日志';
 
   @override
-  String get profileSecurityLog => 'Profile Security Log';
+  String get personalGrowth => '个人成长';
 
   @override
-  String get profileSessionManagement => 'Profile Session Management';
+  String get profileDeleteAccount => '注销账户';
 
   @override
-  String get profileUpgradeGuest => 'Profile Upgrade Guest';
+  String get profileLinkedAccounts => '关联账户';
+
+  @override
+  String get profilePersonalInfo => '个人信息';
+
+  @override
+  String get profileSecurityLog => '安全日志';
+
+  @override
+  String get profileSessionManagement => '设备管理';
+
+  @override
+  String get profileUpgradeGuest => '升级账户';
 
   @override
   String get regenCustomHint => 'Regen Custom Hint';
@@ -8323,25 +8350,25 @@ class AppLocalizationsZh extends AppLocalizations {
       'Session Management Unknown Device';
 
   @override
-  String get socialAccountsIntro => 'Social Accounts Intro';
+  String get socialAccountsIntro => '关联第三方账户以便快速登录';
 
   @override
-  String get socialAccountsLink => 'Social Accounts Link';
+  String get socialAccountsLink => '绑定';
 
   @override
-  String get socialAccountsLinked => 'Social Accounts Linked';
+  String get socialAccountsLinked => '已绑定';
 
   @override
-  String get socialAccountsTitle => 'Social Accounts Title';
+  String get socialAccountsTitle => '关联账户';
 
   @override
-  String get socialAccountsUnlink => 'Social Accounts Unlink';
+  String get socialAccountsUnlink => '解绑';
 
   @override
-  String get socialAccountsUnlinkConfirm => 'Social Accounts Unlink Confirm';
+  String get socialAccountsUnlinkConfirm => '确认解绑';
 
   @override
-  String get socialAccountsUnlinkMessage => 'Social Accounts Unlink Message';
+  String get socialAccountsUnlinkMessage => '解绑后您将无法使用该账号登录';
 
   @override
   String socialAccountsUnlinkTitle(Object arg0) {
@@ -8349,14 +8376,13 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get socialAccountsUnlinkedHint => 'Social Accounts Unlinked Hint';
+  String get socialAccountsUnlinkedHint => '未绑定';
 
   @override
-  String get socialAccountsWeChatPending => 'Social Accounts We Chat Pending';
+  String get socialAccountsWeChatPending => '微信绑定处理中';
 
   @override
-  String get socialAccountsWeChatUnavailable =>
-      'Social Accounts We Chat Unavailable';
+  String get socialAccountsWeChatUnavailable => '微信暂不可用';
 
   @override
   String get sprintActionAbandonButton => 'Sprint Action Abandon Button';

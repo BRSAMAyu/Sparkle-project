@@ -232,8 +232,11 @@ class _SocialAccountsScreenState extends ConsumerState<SocialAccountsScreen> {
                               ),
                             ),
                             const SizedBox(width: DS.spacing12),
-                            SizedBox(
-                              width: 110,
+                            ConstrainedBox(
+                              constraints: const BoxConstraints(
+                                maxWidth: 110,
+                                minWidth: 72,
+                              ),
                               child: account.linked
                                   ? SparkleButton(
                                       label: context.l10n.socialAccountsUnlink,

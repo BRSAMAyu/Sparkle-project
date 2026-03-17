@@ -69,6 +69,7 @@ class ApiEndpoints {
   static const String chatStream = '/chat/stream'; // SSE 流式聊天端点
   static const String chatConfirm = '/chat/confirm'; // 确认聊天结果
   static const String chatSessions = '/chat/sessions';
+  static String chatHistory(String sessionId) => '/chat/history/$sessionId';
   static String sessionMessages(String id) => '/chat/sessions/$id/messages';
 
   // Statistics

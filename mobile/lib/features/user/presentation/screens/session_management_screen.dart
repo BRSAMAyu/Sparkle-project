@@ -172,7 +172,8 @@ class _SessionManagementScreenState
                                         ?.copyWith(fontWeight: FontWeight.w700),
                                   ),
                                 ),
-                                if (session.isCurrent)
+                                if (session.isCurrent) ...[
+                                  const SizedBox(width: DS.spacing8),
                                   Container(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: DS.spacing8,
@@ -184,8 +185,14 @@ class _SessionManagementScreenState
                                     ),
                                     child: Text(
                                       context.l10n.sessionManagementCurrent,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: DS.success,
+                                        fontWeight: FontWeight.w500,
+                                      ),
                                     ),
                                   ),
+                                ],
                               ],
                             ),
                             const SizedBox(height: DS.spacing12),
@@ -200,10 +207,21 @@ class _SessionManagementScreenState
                               ),
                             ),
                             if ((session.ipAddress ?? '').isNotEmpty)
-                              Text('IP：${session.ipAddress}'),
+                              Text(
+                                'IP: ${session.ipAddress}',
+                                style: TextStyle(
+                                  color: DS.textSecondary,
+                                  fontSize: 13,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             if ((session.userAgent ?? '').isNotEmpty)
                               Text(
-                                'UA：${session.userAgent}',
+                                session.userAgent!,
+                                style: TextStyle(
+                                  color: DS.textSecondary,
+                                  fontSize: 12,
+                                ),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),

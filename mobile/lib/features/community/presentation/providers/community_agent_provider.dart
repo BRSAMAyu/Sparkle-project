@@ -23,10 +23,10 @@ const String kAgentContextIdKey = 'agent_context_id';
 const int _maxContextMessages = 6;
 const int _maxContextChars = 160;
 
-UserBrief buildCommunityAgentUser() => UserBrief(
+UserBrief buildCommunityAgentUser({String? localizedName}) => UserBrief(
       id: kCommunityAgentUserId,
       username: 'sparkle_ai',
-      nickname: kCommunityAgentDisplayName,
+      nickname: localizedName ?? kCommunityAgentDisplayName,
       avatarUrl:
           'https://api.dicebear.com/9.x/avataaars/png?seed=$kCommunityAgentAvatarSeed',
       flameLevel: 9,

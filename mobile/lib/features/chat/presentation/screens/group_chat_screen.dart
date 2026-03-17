@@ -375,7 +375,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
   MessageInfo _buildStreamingAgentMessage(String content) => MessageInfo(
         id: 'agent_streaming_${DateTime.now().millisecondsSinceEpoch}',
         messageType: MessageType.text,
-        sender: buildCommunityAgentUser(),
+        sender: buildCommunityAgentUser(localizedName: context.l10n.communityAgentName),
         content: content,
         contentData: {kAgentMetadataKey: true, 'agent_streaming': true},
         createdAt: DateTime.now(),
@@ -573,8 +573,13 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                       onSubmitted: (value) async {
                         if (value.trim().isEmpty) return;
                         setState(() => isLoading = true);
-                        results = await notifier.searchMessages(value.trim());
-                        setState(() => isLoading = false);
+                        try {
+                          results = await notifier.searchMessages(value.trim());
+                        } catch (_) {
+                          results = [];
+                        } finally {
+                          setState(() => isLoading = false);
+                        }
                       },
                     ),
                     const SizedBox(height: DS.spacing16),

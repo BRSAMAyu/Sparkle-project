@@ -13,6 +13,7 @@ import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/chat/presentation/widgets/file_message_bubble.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/presentation/widgets/share_cards/share_cards.dart';
+import 'package:sparkle/features/community/presentation/providers/community_agent_provider.dart';
 import 'package:sparkle/features/file/file.dart';
 
 class GroupChatBubble extends ConsumerStatefulWidget {
@@ -234,11 +235,18 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                         ? CrossAxisAlignment.end
                         : CrossAxisAlignment.start,
                     children: [
-                      if (!isMe && widget.message.sender != null)
+                      if (!isMe &&
+                          (widget.message.sender != null ||
+                              isCommunityAgentMessage(widget.message)))
                         Padding(
                           padding: const EdgeInsets.only(left: 4, bottom: 4),
                           child: Text(
-                            widget.message.sender!.displayName,
+                            widget.message.sender?.displayName ??
+                                (isCommunityAgentMessage(widget.message)
+                                    ? kCommunityAgentDisplayName
+                                    : ''),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontSize: 12,
                               color: DS.neutral500,
@@ -936,16 +944,20 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
     }
   }
 
-  Widget _buildAvatar(UserBrief? user) => DecoratedBox(
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(color: DS.brandPrimaryConst, width: 2),
-          boxShadow: DS.shadowSm,
-        ),
-        child: SparkleAvatar(
-          radius: 16,
-          url: user?.avatarUrl,
-          fallbackText: user?.displayName,
-        ),
-      );
+  Widget _buildAvatar(UserBrief? user) {
+    final resolvedUser = user ??
+        (isCommunityAgentMessage(widget.message) ? buildCommunityAgentUser() : null);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: DS.brandPrimaryConst, width: 2),
+        boxShadow: DS.shadowSm,
+      ),
+      child: SparkleAvatar(
+        radius: 16,
+        url: resolvedUser?.avatarUrl,
+        fallbackText: resolvedUser?.displayName,
+      ),
+    );
+  }
 }

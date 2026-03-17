@@ -325,6 +325,7 @@ GroupInfo _$GroupInfoFromJson(Map<String, dynamic> json) => GroupInfo(
       sprintGoal: json['sprint_goal'] as String?,
       daysRemaining: (json['days_remaining'] as num?)?.toInt(),
       myRole: $enumDecodeNullable(_$GroupRoleEnumMap, json['my_role']),
+      announcement: json['announcement'] as String?,
     );
 
 Map<String, dynamic> _$GroupInfoToJson(GroupInfo instance) => <String, dynamic>{
@@ -345,6 +346,7 @@ Map<String, dynamic> _$GroupInfoToJson(GroupInfo instance) => <String, dynamic>{
       'is_public': instance.isPublic,
       'join_requires_approval': instance.joinRequiresApproval,
       'my_role': _$GroupRoleEnumMap[instance.myRole],
+      'announcement': instance.announcement,
       'created_at': instance.createdAt.toIso8601String(),
       'updated_at': instance.updatedAt.toIso8601String(),
     };

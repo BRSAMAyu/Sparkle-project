@@ -44,6 +44,18 @@
   - 在 `PlanProgress` 中添加 `totalMinutesSpent`, `estimatedRemainingHours` 字段
 - **修改文件**: `mobile/lib/features/plan/data/models/plan_model.dart`
 
+### 1.5 聊天会话历史 API 端点缺失 (严重)
+- **问题描述**: 后端缺少 Flutter 端调用的聊天会话列表和历史消息端点
+- **修复内容**:
+  - 在后端添加 `GET /chat/sessions` 端点获取会话列表
+  - 在后端添加 `GET /chat/history/{session_id}` 端点获取历史消息
+  - 在 Flutter 端添加 `chatHistory` 端点定义
+  - 修复 `getConversationHistory` 方法的响应解析逻辑
+- **修改文件**:
+  - `backend/app/api/v1/chat.py`
+  - `mobile/lib/core/network/api_endpoints.dart`
+  - `mobile/lib/features/chat/data/repositories/chat_repository.dart`
+
 ---
 
 ## 2. 已确认一致的部分

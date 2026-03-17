@@ -2,6 +2,7 @@ import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/features/memory/presentation/screens/memory_settings_screen.dart';
+import 'package:sparkle/features/user/presentation/screens/account_security_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/delete_account_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/edit_profile_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/guest_upgrade_screen.dart';
@@ -46,6 +47,7 @@ class UserRoutes {
   static const String socialAccounts = '/profile/social-accounts';
   static const String sessionManagement = '/profile/sessions';
   static const String securityLog = '/profile/security-log';
+  static const String accountSecurity = '/profile/account-security';
   static const String deleteAccount = '/profile/delete-account';
   static const String guestUpgrade = '/profile/upgrade-guest';
 
@@ -147,6 +149,14 @@ class UserRoutes {
           pageBuilder: (context, state) => _buildTransitionPage(
             state: state,
             child: const SecurityLogScreen(),
+          ),
+        ),
+        GoRoute(
+          path: accountSecurity,
+          name: 'accountSecurity',
+          pageBuilder: (context, state) => _buildTransitionPage(
+            state: state,
+            child: const AccountSecurityScreen(),
           ),
         ),
         GoRoute(

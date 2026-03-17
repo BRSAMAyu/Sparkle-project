@@ -12,6 +12,7 @@ import 'package:sparkle/features/community/presentation/screens/group_list_scree
 import 'package:sparkle/features/community/presentation/screens/group_members_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/group_search_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/group_tasks_screen.dart';
+import 'package:sparkle/features/community/presentation/screens/friend_profile_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/user_search_screen.dart';
 
 Page<dynamic> _buildTransitionPage({
@@ -46,6 +47,7 @@ class CommunityRoutes {
   static const String groupTasks = '/community/groups/:id/tasks';
   static const String groupMembers = '/community/groups/:id/members';
   static const String groupFiles = '/community/groups/:id/files';
+  static const String userProfile = '/community/users/:id';
 
   static List<RouteBase> get routes => [
         // Friends list (detail page, full-screen)
@@ -77,6 +79,20 @@ class CommunityRoutes {
             state: state,
             child: const UserSearchScreen(),
           ),
+        ),
+        // User profile (must be AFTER /community/users/search to avoid :id capturing "search")
+        GoRoute(
+          path: userProfile,
+          name: 'userProfile',
+          parentNavigatorKey: navigatorKey,
+          pageBuilder: (context, state) {
+            final userId = state.pathParameters['id']!;
+            final name = state.uri.queryParameters['name'];
+            return _buildTransitionPage(
+              state: state,
+              child: FriendProfileScreen(userId: userId, displayName: name),
+            );
+          },
         ),
         // Group list (detail page, full-screen)
         GoRoute(

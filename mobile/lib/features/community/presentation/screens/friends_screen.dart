@@ -127,6 +127,20 @@ class _MyFriendsTab extends ConsumerWidget {
                           ],
                         ),
                       ),
+                      SparkleIconButton(
+                        variant: ButtonVariant.ghost,
+                        size: 32,
+                        icon: Icon(
+                          Icons.person_outline,
+                          size: 18,
+                          color: DS.neutral500,
+                        ),
+                        onPressed: () {
+                          context.push(
+                            '/community/users/${friend.id}?name=${Uri.encodeComponent(friend.displayName)}',
+                          );
+                        },
+                      ),
                       Icon(
                         Icons.chevron_right,
                         size: 20,

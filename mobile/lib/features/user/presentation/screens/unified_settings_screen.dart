@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/providers/locale_provider.dart';
 import 'package:sparkle/core/providers/theme_provider.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/utils/chaos/chaos_control_dialog.dart';
@@ -339,6 +340,23 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                   onTap: () => context.push(UserRoutes.syncCenter),
                 ),
               ),
+              const SizedBox(height: DS.spacing20),
+              _buildSectionHeader(Icons.language_rounded, l10n.language),
+              const SizedBox(height: DS.spacing12),
+              GraphiteCardSurface(
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.language_rounded),
+                  title: Text(l10n.language),
+                  subtitle: Text(
+                    ref.watch(localeProvider).languageCode == 'zh'
+                        ? l10n.languageChinese
+                        : l10n.languageEnglish,
+                  ),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => _showLanguageDialog(context, ref, l10n),
+                ),
+              ),
               const SizedBox(height: DS.spacing64),
               Center(
                 child: GestureDetector(
@@ -406,6 +424,56 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         setState(() => _isGenerating = false);
       }
     }
+  }
+
+  void _showLanguageDialog(
+    BuildContext context,
+    WidgetRef ref,
+    AppLocalizations l10n,
+  ) {
+    final currentLocale = ref.read(localeProvider);
+
+    showDialog<void>(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        child: GraphiteModalSurface(
+          title: l10n.language,
+          showHandle: false,
+          borderRadius: BorderRadius.circular(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: Text(l10n.languageChinese),
+                trailing: currentLocale.languageCode == 'zh'
+                    ? Icon(Icons.check, color: DS.primaryBase)
+                    : null,
+                onTap: () {
+                  ref
+                      .read(localeProvider.notifier)
+                      .setLocale(const Locale('zh'));
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                title: Text(l10n.languageEnglish),
+                trailing: currentLocale.languageCode == 'en'
+                    ? Icon(Icons.check, color: DS.primaryBase)
+                    : null,
+                onTap: () {
+                  ref
+                      .read(localeProvider.notifier)
+                      .setLocale(const Locale('en'));
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildSectionHeader(IconData icon, String title) => Row(

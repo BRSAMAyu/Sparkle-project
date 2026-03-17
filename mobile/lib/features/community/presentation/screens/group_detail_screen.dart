@@ -228,6 +228,35 @@ class GroupDetailScreen extends ConsumerWidget {
                     const SizedBox(height: DS.xxl),
                   ],
 
+                  // Announcement
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Announcement',
+                          style: theme.textTheme.titleLarge
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      if (group.isAdmin)
+                        SparkleIconButton(
+                          icon: const Icon(Icons.edit_outlined, size: 18),
+                          onPressed: () => _showEditAnnouncementDialog(
+                              context, ref, group,),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: DS.sm),
+                  Text(
+                    group.announcement?.isNotEmpty == true
+                        ? group.announcement!
+                        : 'No announcement.',
+                    style: theme.textTheme.bodyMedium
+                        ?.copyWith(color: DS.neutral700, height: 1.5),
+                  ),
+
+                  const SizedBox(height: DS.xxl),
+
                   // Actions
                   if (isMember) ...[
                     CustomButton.primary(
@@ -396,6 +425,49 @@ class GroupDetailScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _showEditAnnouncementDialog(
+    BuildContext context,
+    WidgetRef ref,
+    GroupInfo group,
+  ) async {
+    final controller =
+        TextEditingController(text: group.announcement ?? '');
+    final result = await showDialog<String?>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Announcement'),
+        content: TextField(
+          controller: controller,
+          maxLines: 4,
+          maxLength: 2000,
+          decoration: const InputDecoration(
+            hintText: 'Enter group announcement...',
+          ),
+        ),
+        actions: [
+          SparkleButton.ghost(
+            label: 'Cancel',
+            onPressed: () => Navigator.pop(context),
+          ),
+          SparkleButton.primary(
+            label: 'Save',
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (result == null) return;
+    try {
+      await ref
+          .read(groupDetailProvider(groupId).notifier)
+          .updateAnnouncement(result.isEmpty ? null : result);
+      if (context.mounted) AppFeedback.success(context, 'Announcement updated');
+    } catch (e) {
+      if (context.mounted) AppFeedback.error(context, 'Failed to update: $e');
+    }
   }
 }
 

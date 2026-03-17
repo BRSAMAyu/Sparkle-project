@@ -824,7 +824,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
     var initial = '?';
 
     if (_isAgent) {
-      final agent = buildCommunityAgentUser();
+      final agent = buildCommunityAgentUser(localizedName: context.l10n.communityAgentName);
       avatarUrl = agent.avatarUrl;
       initial = 'AI';
     } else if (widget.message is ChatMessageModel) {

@@ -653,3 +653,27 @@ async def update_schedule_preferences(
 
     push_pref = await _get_push_pref(db, current_user.id)
     return _build_user_profile(current_user, push_pref)
+
+
+@router.get("/{user_id}", summary="获取用户公开资料")
+async def get_user_public_profile(
+    user_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get a user's public profile by ID."""
+    result = await db.execute(
+        select(User).where(User.id == user_id, User.is_active == True)  # noqa: E712
+    )
+    target_user = result.scalar_one_or_none()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+    return {
+        "id": str(target_user.id),
+        "username": target_user.username,
+        "nickname": target_user.nickname,
+        "avatar_url": target_user.avatar_url,
+        "flame_level": target_user.flame_level,
+        "flame_brightness": target_user.flame_brightness,
+        "status": target_user.status.value if target_user.status else "offline",
+    }

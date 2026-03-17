@@ -842,3 +842,104 @@ async def save_chat_message(
     db.add(assistant_msg_db)
 
     await db.commit()
+
+
+# ============ Chat Session Management API ============
+
+from app.models.chat import ChatSession as ChatSessionModel
+from app.schemas.chat import ChatMessageDetail, ChatSession
+
+
+@router.get("/sessions", response_model=list[ChatSession])
+async def get_chat_sessions(
+    limit: int = 20,
+    offset: int = 0,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    获取用户的聊天会话列表
+    """
+    # Query distinct sessions with message counts and last message time
+    stmt = (
+        select(
+            ChatMessage.session_id,
+            ChatMessage.user_id,
+            ChatMessage.task_id,
+            func.count(ChatMessage.id).label("message_count"),
+            func.max(ChatMessage.created_at).label("last_message_at"),
+            func.min(ChatMessage.created_at).label("created_at")
+        )
+        .where(ChatMessage.user_id == current_user.id)
+        .where(ChatMessage.session_id != UUID('00000000-0000-0000-0000-000000000000'))
+        .group_by(ChatMessage.session_id, ChatMessage.user_id, ChatMessage.task_id)
+        .order_by(func.max(ChatMessage.created_at).desc())
+        .offset(offset)
+        .limit(limit)
+    )
+    result = await db.execute(stmt)
+    rows = result.all()
+
+    sessions = []
+    for row in rows:
+        # Try to get title from ChatSessionModel
+        session_meta = await db.execute(
+            select(ChatSessionModel).where(ChatSessionModel.id == row.session_id)
+        )
+        session_meta = session_meta.scalar_one_or_none()
+
+        sessions.append(ChatSession(
+            session_id=row.session_id,
+            user_id=row.user_id,
+            task_id=row.task_id,
+            message_count=row.message_count,
+            created_at=row.created_at,
+            last_message_at=row.last_message_at,
+        ))
+
+    return sessions
+
+
+@router.get("/history/{session_id}", response_model=list[ChatMessageDetail])
+async def get_chat_history(
+    session_id: UUID,
+    limit: int = 50,
+    offset: int = 0,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    获取特定会话的聊天历史
+    """
+    # Verify the session belongs to the user
+    stmt = (
+        select(ChatMessage)
+        .where(
+            and_(
+                ChatMessage.user_id == current_user.id,
+                ChatMessage.session_id == session_id
+            )
+        )
+        .order_by(ChatMessage.created_at.asc())
+        .offset(offset)
+        .limit(limit)
+    )
+    result = await db.execute(stmt)
+    messages = result.scalars().all()
+
+    return [
+        ChatMessageDetail(
+            id=msg.id,
+            session_id=msg.session_id,
+            user_id=msg.user_id,
+            role=msg.role,
+            content=msg.content,
+            task_id=msg.task_id,
+            actions=msg.actions,
+            tokens_used=msg.tokens_used,
+            model_name=msg.model_name,
+            created_at=msg.created_at,
+            updated_at=msg.updated_at,
+        )
+        for msg in messages
+    ]
