@@ -111,6 +111,8 @@ class AccountabilityCheckinInfo {
     required this.mood,
     required this.minutes,
     required this.createdAt,
+    this.likes = 0,
+    this.encouragements = const [],
   });
 
   factory AccountabilityCheckinInfo.fromJson(Map<String, dynamic> json) =>
@@ -127,7 +129,34 @@ class AccountabilityCheckinInfo {
   @JsonKey(name: 'created_at')
   final DateTime createdAt;
 
+  // 互动字段
+  final int likes;
+  final List<EncouragementMessage> encouragements;
+
   Map<String, dynamic> toJson() => _$AccountabilityCheckinInfoToJson(this);
+}
+
+/// 鼓励消息模型
+@JsonSerializable()
+class EncouragementMessage {
+  EncouragementMessage({
+    required this.id,
+    required this.userId,
+    required this.message,
+    required this.createdAt,
+  });
+
+  factory EncouragementMessage.fromJson(Map<String, dynamic> json) =>
+      _$EncouragementMessageFromJson(json);
+
+  final String id;
+  @JsonKey(name: 'user_id')
+  final String userId;
+  final String message;
+  @JsonKey(name: 'created_at')
+  final DateTime createdAt;
+
+  Map<String, dynamic> toJson() => _$EncouragementMessageToJson(this);
 }
 
 @JsonSerializable()

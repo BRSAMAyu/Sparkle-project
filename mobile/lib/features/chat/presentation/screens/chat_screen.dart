@@ -1346,6 +1346,15 @@ class _StreamingBubble extends StatelessWidget {
                 style: TextStyle(
                   color: textColor,
                   fontSize: DS.fontSizeBase,
+                  fontFamilyFallback: const [
+                    'PingFang SC',
+                    'Hiragino Sans GB',
+                    'Heiti SC',
+                    'Noto Sans SC',
+                    'Apple Color Emoji',
+                    'Noto Color Emoji',
+                    'Segoe UI Emoji',
+                  ],
                 ),
               ),
             ),

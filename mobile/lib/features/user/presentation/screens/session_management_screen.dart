@@ -95,6 +95,29 @@ class _SessionManagementScreenState
     return l10n.sessionManagementUnknownDevice;
   }
 
+  Widget _buildInfoRow(IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: DS.spacing8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 14, color: DS.textSecondary),
+          const SizedBox(width: DS.spacing8),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                color: DS.textSecondary,
+                fontSize: 13,
+                height: 1.3,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) => SparklePageScaffold(
         role: SparklePageRole.settings,
@@ -155,76 +178,86 @@ class _SessionManagementScreenState
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Icon(
-                                  session.isCurrent
-                                      ? Icons.smartphone_rounded
-                                      : Icons.devices_other_rounded,
-                                  color: DS.primaryBase,
+                                Container(
+                                  padding: const EdgeInsets.all(DS.spacing8),
+                                  decoration: BoxDecoration(
+                                    color: DS.primaryBase.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(DS.spacing8),
+                                  ),
+                                  child: Icon(
+                                    session.isCurrent
+                                        ? Icons.smartphone_rounded
+                                        : Icons.devices_other_rounded,
+                                    color: DS.primaryBase,
+                                  ),
                                 ),
                                 const SizedBox(width: DS.spacing12),
                                 Expanded(
-                                  child: Text(
-                                    _deviceTitle(session),
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium
-                                        ?.copyWith(fontWeight: FontWeight.w700),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Wrap(
+                                        spacing: DS.spacing8,
+                                        crossAxisAlignment: WrapCrossAlignment.center,
+                                        children: [
+                                          Text(
+                                            _deviceTitle(session),
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .titleMedium
+                                                ?.copyWith(fontWeight: FontWeight.w700),
+                                          ),
+                                          if (session.isCurrent)
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: DS.spacing8,
+                                                vertical: DS.spacing4,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: DS.success.withValues(alpha: 0.12),
+                                                borderRadius: BorderRadius.circular(999),
+                                              ),
+                                              child: Text(
+                                                context.l10n.sessionManagementCurrent,
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: DS.success,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: DS.spacing12),
+                                      _buildInfoRow(
+                                        Icons.access_time_rounded,
+                                        context.l10n.sessionManagementLastActive(
+                                          _formatTime(session.lastActiveAt),
+                                        ),
+                                      ),
+                                      _buildInfoRow(
+                                        Icons.login_rounded,
+                                        context.l10n.sessionManagementFirstLogin(
+                                          _formatTime(session.createdAt),
+                                        ),
+                                      ),
+                                      if ((session.ipAddress ?? '').isNotEmpty)
+                                        _buildInfoRow(
+                                          Icons.wifi_rounded,
+                                          'IP: ${session.ipAddress}',
+                                        ),
+                                      if ((session.userAgent ?? '').isNotEmpty)
+                                        _buildInfoRow(
+                                          Icons.info_outline_rounded,
+                                          session.userAgent!,
+                                        ),
+                                    ],
                                   ),
                                 ),
-                                if (session.isCurrent) ...[
-                                  const SizedBox(width: DS.spacing8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: DS.spacing8,
-                                      vertical: DS.spacing4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: DS.success.withValues(alpha: 0.12),
-                                      borderRadius: BorderRadius.circular(999),
-                                    ),
-                                    child: Text(
-                                      context.l10n.sessionManagementCurrent,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: DS.success,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ),
-                                ],
                               ],
                             ),
-                            const SizedBox(height: DS.spacing12),
-                            Text(
-                              context.l10n.sessionManagementLastActive(
-                                _formatTime(session.lastActiveAt),
-                              ),
-                            ),
-                            Text(
-                              context.l10n.sessionManagementFirstLogin(
-                                _formatTime(session.createdAt),
-                              ),
-                            ),
-                            if ((session.ipAddress ?? '').isNotEmpty)
-                              Text(
-                                'IP: ${session.ipAddress}',
-                                style: TextStyle(
-                                  color: DS.textSecondary,
-                                  fontSize: 13,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            if ((session.userAgent ?? '').isNotEmpty)
-                              Text(
-                                session.userAgent!,
-                                style: TextStyle(
-                                  color: DS.textSecondary,
-                                  fontSize: 12,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
                             const SizedBox(height: DS.spacing16),
                             Align(
                               alignment: Alignment.centerRight,

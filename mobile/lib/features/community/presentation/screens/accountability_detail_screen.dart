@@ -459,7 +459,7 @@ class _AccountabilityCheckinSheetState
                 width: double.infinity,
                 child: SparkleButton.primary(
                   label: _isLoading ? '提交中...' : '提交打卡',
-                  onPressed: _isLoading ? null : () { unawaited(_submit()); },
+                  onPressed: _isLoading ? () {} : () { unawaited(_submit()); },
                 ),
               ),
             ],

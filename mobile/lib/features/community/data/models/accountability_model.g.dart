@@ -65,6 +65,12 @@ AccountabilityCheckinInfo _$AccountabilityCheckinInfoFromJson(
       mood: (json['mood'] as num).toInt(),
       minutes: (json['minutes'] as num).toInt(),
       createdAt: DateTime.parse(json['created_at'] as String),
+      likes: (json['likes'] as num?)?.toInt() ?? 0,
+      encouragements: (json['encouragements'] as List<dynamic>?)
+              ?.map((e) =>
+                  EncouragementMessage.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
     );
 
 Map<String, dynamic> _$AccountabilityCheckinInfoToJson(
@@ -76,6 +82,26 @@ Map<String, dynamic> _$AccountabilityCheckinInfoToJson(
       'content': instance.content,
       'mood': instance.mood,
       'minutes': instance.minutes,
+      'created_at': instance.createdAt.toIso8601String(),
+      'likes': instance.likes,
+      'encouragements': instance.encouragements,
+    };
+
+EncouragementMessage _$EncouragementMessageFromJson(
+        Map<String, dynamic> json) =>
+    EncouragementMessage(
+      id: json['id'] as String,
+      userId: json['user_id'] as String,
+      message: json['message'] as String,
+      createdAt: DateTime.parse(json['created_at'] as String),
+    );
+
+Map<String, dynamic> _$EncouragementMessageToJson(
+        EncouragementMessage instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'user_id': instance.userId,
+      'message': instance.message,
       'created_at': instance.createdAt.toIso8601String(),
     };
 

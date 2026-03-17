@@ -134,3 +134,52 @@ async def get_db_no_commit() -> AsyncSession:
             raise
         finally:
             await session.close()
+
+
+from contextlib import contextmanager
+
+
+@contextmanager
+def get_db_context():
+    """
+    同步上下文管理器，用于Celery任务中获取数据库会话
+
+    用法:
+        with get_db_context() as db:
+            asyncio.run(async_function(db))
+
+    事务管理：
+    - 成功时自动提交
+    - 异常时自动回滚
+    """
+    session = AsyncSessionLocal()
+    try:
+        yield session
+        import asyncio
+
+        # Run async commit
+        asyncio.run(_commit_session(session))
+    except Exception:
+        import asyncio
+
+        asyncio.run(_rollback_session(session))
+        raise
+    finally:
+        import asyncio
+
+        asyncio.run(_close_session(session))
+
+
+async def _commit_session(session: AsyncSession):
+    """异步提交会话"""
+    await session.commit()
+
+
+async def _rollback_session(session: AsyncSession):
+    """异步回滚会话"""
+    await session.rollback()
+
+
+async def _close_session(session: AsyncSession):
+    """异步关闭会话"""
+    await session.close()

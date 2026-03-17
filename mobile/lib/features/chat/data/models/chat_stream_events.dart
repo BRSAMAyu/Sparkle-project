@@ -14,6 +14,7 @@ abstract class ChatStreamEvent {
     this.workflowId,
     this.promptVersion,
     this.metadata,
+    this.sessionId,
   });
 
   final String? responseId;
@@ -21,6 +22,7 @@ abstract class ChatStreamEvent {
   final String? workflowId;
   final String? promptVersion;
   final Map<String, dynamic>? metadata;
+  final String? sessionId;
 }
 
 class SprintModeSwitchEvent extends ChatStreamEvent {
@@ -91,6 +93,8 @@ class DoneEvent extends ChatStreamEvent {
     super.traceId,
     super.workflowId,
     super.promptVersion,
+    super.metadata,
+    super.sessionId,
   });
   final String? finishReason;
 }
@@ -103,6 +107,8 @@ class UnknownEvent extends ChatStreamEvent {
     super.traceId,
     super.workflowId,
     super.promptVersion,
+    super.metadata,
+    super.sessionId,
   });
   final Map<String, dynamic> data;
 }

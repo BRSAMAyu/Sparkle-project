@@ -539,6 +539,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
         if (event.promptVersion != null && event.promptVersion!.isNotEmpty) {
           promptVersion = event.promptVersion;
         }
+        // Capture sessionId from backend response to maintain conversation continuity
+        if (event.sessionId != null && event.sessionId!.isNotEmpty) {
+          state = state.copyWith(conversationId: event.sessionId);
+        }
 
         if (event is TextEvent) {
           final metadata = event.metadata;

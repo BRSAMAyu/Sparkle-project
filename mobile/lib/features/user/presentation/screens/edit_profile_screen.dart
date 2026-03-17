@@ -472,20 +472,24 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                             DS.spacing16,
                             DS.spacing12,
                           ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              TextButton(
-                                onPressed:
-                                    _isLoading ? null : _verifyEmailWithCode,
-                                child: Text(l10n.editProfileEnterCode),
-                              ),
-                              TextButton(
-                                onPressed:
-                                    _isLoading ? null : _sendVerificationEmail,
-                                child: Text(l10n.editProfileSendEmail),
-                              ),
-                            ],
+                          child: Align(
+                            alignment: Alignment.centerRight,
+                            child: Wrap(
+                              alignment: WrapAlignment.end,
+                              spacing: DS.spacing8,
+                              children: [
+                                TextButton(
+                                  onPressed:
+                                      _isLoading ? null : _verifyEmailWithCode,
+                                  child: Text(l10n.editProfileEnterCode),
+                                ),
+                                TextButton(
+                                  onPressed:
+                                      _isLoading ? null : _sendVerificationEmail,
+                                  child: Text(l10n.editProfileSendEmail),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                     ],

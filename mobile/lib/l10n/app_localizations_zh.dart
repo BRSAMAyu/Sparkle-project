@@ -5069,10 +5069,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatTokenStats => 'Token 统计';
 
   @override
-  String get chatPromptTokens => 'Prompt Tokens';
+  String get chatPromptTokens => '提示词 Token';
 
   @override
-  String get chatCompletionTokens => 'Completion Tokens';
+  String get chatCompletionTokens => '补全 Token';
 
   @override
   String get chatTokenUsageToday => '今日使用';
@@ -6005,16 +6005,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get memoryRevertNotEnabled => 'Revert 功能尚未启用';
 
   @override
-  String get memoryWhyThisMemory => 'Why this memory?';
+  String get memoryWhyThisMemory => '为什么有这条记忆？';
 
   @override
-  String get memoryEvidenceCount => 'Evidence';
+  String get memoryEvidenceCount => '证据数';
 
   @override
-  String get memoryVersions => 'Versions';
+  String get memoryVersions => '版本数';
 
   @override
-  String get memoryBudget => 'Budget';
+  String get memoryBudget => '预算';
 
   @override
   String get memoryViewEvidence => '查看证据';
@@ -6056,16 +6056,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get memoryKeyBlockedHint => '该偏好已被屏蔽，后续不会记录此类记忆。';
 
   @override
-  String get memoryExplanationPreference =>
-      'Captured because your preference updated recently.';
+  String get memoryExplanationPreference => '已记录，因为您的偏好最近更新了。';
 
   @override
-  String get memoryExplanationEpisodic =>
-      'Captured because this experience was marked important.';
+  String get memoryExplanationEpisodic => '已记录，因为这段经历被标记为重要。';
 
   @override
-  String get memoryExplanationGoal =>
-      'Captured to keep your active goals visible.';
+  String get memoryExplanationGoal => '已记录，以保持您的活跃目标可见。';
 
   @override
   String get memoryCopied => '已复制记忆内容';
@@ -6077,16 +6074,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get memoryCorrectionActions => '纠错操作';
 
   @override
-  String get memoryCorrectionReject => 'Not true';
+  String get memoryCorrectionReject => '不正确';
 
   @override
-  String get memoryCorrectionNoLongerApplies => 'No longer applies';
+  String get memoryCorrectionNoLongerApplies => '不再适用';
 
   @override
-  String get memoryCorrectionLowerConfidence => 'Lower confidence';
+  String get memoryCorrectionLowerConfidence => '置信度较低';
 
   @override
-  String get memoryCorrectionMerge => 'Merge';
+  String get memoryCorrectionMerge => '合并';
 
   @override
   String get memoryMergeComingSoon => '合并功能即将上线';
@@ -6560,31 +6557,31 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get chatActionErrorTitle => 'Chat Action Error Title';
+  String get chatActionErrorTitle => '操作错误';
 
   @override
-  String get chatActionIgnore => 'Chat Action Ignore';
+  String get chatActionIgnore => '忽略';
 
   @override
-  String get chatActionLater => 'Chat Action Later';
+  String get chatActionLater => '稍后';
 
   @override
-  String get chatActionReviewed => 'Chat Action Reviewed';
+  String get chatActionReviewed => '已审阅';
 
   @override
-  String get chatActionStatusCompleted => 'Chat Action Status Completed';
+  String get chatActionStatusCompleted => '已完成';
 
   @override
-  String get chatActionStatusConfirmed => 'Chat Action Status Confirmed';
+  String get chatActionStatusConfirmed => '已确认';
 
   @override
-  String get chatActionStatusDismissed => 'Chat Action Status Dismissed';
+  String get chatActionStatusDismissed => '已忽略';
 
   @override
-  String get chatActionStatusFailed => 'Chat Action Status Failed';
+  String get chatActionStatusFailed => '失败';
 
   @override
-  String get chatActionStatusProcessing => 'Chat Action Status Processing';
+  String get chatActionStatusProcessing => '处理中';
 
   @override
   String chatActionStatusUpdate(Object arg0) {
@@ -6597,70 +6594,67 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get chatActionTitleAddError => 'Chat Action Title Add Error';
+  String get chatActionTitleAddError => '添加错误';
 
   @override
-  String get chatActionTitleBlockedInput => 'Chat Action Title Blocked Input';
+  String get chatActionTitleBlockedInput => '输入被阻止';
 
   @override
-  String get chatActionTitleContinuity => 'Chat Action Title Continuity';
+  String get chatActionTitleContinuity => '延续性';
 
   @override
-  String get chatActionTitleCreatePlan => 'Chat Action Title Create Plan';
+  String get chatActionTitleCreatePlan => '创建计划';
 
   @override
-  String get chatActionTitleCreateTask => 'Chat Action Title Create Task';
+  String get chatActionTitleCreateTask => '创建任务';
 
   @override
-  String get chatActionTitleDefault => 'Chat Action Title Default';
+  String get chatActionTitleDefault => '默认标题';
 
   @override
-  String get chatActionTitleEvolution => 'Chat Action Title Evolution';
+  String get chatActionTitleEvolution => '演进';
 
   @override
-  String get chatActionTitleExecutionSummary =>
-      'Chat Action Title Execution Summary';
+  String get chatActionTitleExecutionSummary => '执行摘要';
 
   @override
-  String get chatActionTitleFocusSprint => 'Chat Action Title Focus Sprint';
+  String get chatActionTitleFocusSprint => '专注冲刺';
 
   @override
-  String get chatActionTitleModeExplanation =>
-      'Chat Action Title Mode Explanation';
+  String get chatActionTitleModeExplanation => '模式说明';
 
   @override
-  String get chatActionTitleNextActions => 'Chat Action Title Next Actions';
+  String get chatActionTitleNextActions => '下一步行动';
 
   @override
-  String get chatActionTitleNightlyReview => 'Chat Action Title Nightly Review';
+  String get chatActionTitleNightlyReview => '夜间回顾';
 
   @override
-  String get chatActionTitleProgress => 'Chat Action Title Progress';
+  String get chatActionTitleProgress => '进度';
 
   @override
-  String get chatActionTitleReflection => 'Chat Action Title Reflection';
+  String get chatActionTitleReflection => '反思';
 
   @override
-  String get chatActionTitleSourceSummary => 'Chat Action Title Source Summary';
+  String get chatActionTitleSourceSummary => '来源摘要';
 
   @override
-  String get chatActionTitleSystemUpdate => 'Chat Action Title System Update';
+  String get chatActionTitleSystemUpdate => '系统更新';
 
   @override
-  String get chatActionTitleTaskList => 'Chat Action Title Task List';
+  String get chatActionTitleTaskList => '任务列表';
 
   @override
-  String get chatActionTitleUpdatePreference =>
-      'Chat Action Title Update Preference';
+  String get chatActionTitleUpdatePreference => '更新偏好';
 
   @override
-  String get chatActionViewNextSteps => 'Chat Action View Next Steps';
+  String get chatActionViewNextSteps => '查看下一步';
 
   @override
-  String get chatActionViewSources => 'Chat Action View Sources';
+  String get chatActionViewSources => '查看来源';
 
   @override
-  String get chatAgentRouting => 'Chat Agent Routing';
+  String get chatAgentRouting => '智能路由';
 
   @override
   String chatAgentRoutingFallback(Object arg0) {
@@ -6698,13 +6692,13 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get chatAuthExpired => 'Chat Auth Expired';
+  String get chatAuthExpired => '认证已过期';
 
   @override
-  String get chatAuthRefreshing => 'Chat Auth Refreshing';
+  String get chatAuthRefreshing => '正在刷新认证';
 
   @override
-  String get chatBlockedInputTitle => 'Chat Blocked Input Title';
+  String get chatBlockedInputTitle => '输入已阻止';
 
   @override
   String chatCitationLabel(Object arg0) {
@@ -6722,13 +6716,13 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get chatCollabTimelineTitle => 'Chat Collab Timeline Title';
+  String get chatCollabTimelineTitle => '协作时间线';
 
   @override
-  String get chatComparisonAfter => 'Chat Comparison After';
+  String get chatComparisonAfter => '之后';
 
   @override
-  String get chatComparisonBefore => 'Chat Comparison Before';
+  String get chatComparisonBefore => '之前';
 
   @override
   String chatComparisonCurrentPrevious(Object arg0, Object arg1) {
@@ -6736,25 +6730,25 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get chatCompletionBlocked => 'Chat Completion Blocked';
+  String get chatCompletionBlocked => '补全已阻止';
 
   @override
-  String get chatCompletionDone => 'Chat Completion Done';
+  String get chatCompletionDone => '补全完成';
 
   @override
-  String get chatCompletionNeedsInput => 'Chat Completion Needs Input';
+  String get chatCompletionNeedsInput => '需要输入';
 
   @override
-  String get chatCompletionPartial => 'Chat Completion Partial';
+  String get chatCompletionPartial => '部分完成';
 
   @override
-  String get chatCompletionProcessing => 'Chat Completion Processing';
+  String get chatCompletionProcessing => '处理中';
 
   @override
-  String get chatConfidenceCautious => 'Chat Confidence Cautious';
+  String get chatConfidenceCautious => '谨慎';
 
   @override
-  String get chatConfidenceHigh => 'Chat Confidence High';
+  String get chatConfidenceHigh => '高';
 
   @override
   String chatConfidenceLabel(Object arg0) {
@@ -6762,26 +6756,22 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get chatConfidenceMedium => 'Chat Confidence Medium';
+  String get chatConfidenceMedium => '中';
 
   @override
-  String get chatConfirmationActionDefault =>
-      'Chat Confirmation Action Default';
+  String get chatConfirmationActionDefault => '确认操作';
 
   @override
-  String get chatConfirmationConfirmUpdate =>
-      'Chat Confirmation Confirm Update';
+  String get chatConfirmationConfirmUpdate => '确认更新';
 
   @override
-  String get chatConfirmationTitleDefault => 'Chat Confirmation Title Default';
+  String get chatConfirmationTitleDefault => '确认';
 
   @override
-  String get chatConfirmationTitleUpdatePreference =>
-      'Chat Confirmation Title Update Preference';
+  String get chatConfirmationTitleUpdatePreference => '确认更新偏好';
 
   @override
-  String get chatConfirmationUpdatePreferenceGeneric =>
-      'Chat Confirmation Update Preference Generic';
+  String get chatConfirmationUpdatePreferenceGeneric => '更新偏好设置';
 
   @override
   String chatConfirmationUpdatePreferenceKeyOnly(Object arg0) {
@@ -6794,18 +6784,16 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get chatCopiedToClipboard => 'Chat Copied To Clipboard';
+  String get chatCopiedToClipboard => '已复制到剪贴板';
 
   @override
-  String get chatDagExecutionAbortedDefault =>
-      'Chat Dag Execution Aborted Default';
+  String get chatDagExecutionAbortedDefault => '执行已中止';
 
   @override
-  String get chatDagExecutionCompleted => 'Chat Dag Execution Completed';
+  String get chatDagExecutionCompleted => '执行已完成';
 
   @override
-  String get chatDagExecutionEndAbortedDefault =>
-      'Chat Dag Execution End Aborted Default';
+  String get chatDagExecutionEndAbortedDefault => '执行已中止';
 
   @override
   String chatDagLayerAborted(Object arg0) {
@@ -6838,7 +6826,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get chatDagStepFallback => 'Chat Dag Step Fallback';
+  String get chatDagStepFallback => '步骤回退';
 
   @override
   String chatDurationLabel(Object arg0) {
@@ -6856,7 +6844,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get chatEvolutionHeadlineDefault => 'Chat Evolution Headline Default';
+  String get chatEvolutionHeadlineDefault => '演进过程';
 
   @override
   String chatEvolutionNextWeekPlan(Object arg0) {
@@ -6869,34 +6857,34 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get chatExecutionCompleted => 'Chat Execution Completed';
+  String get chatExecutionCompleted => '执行完成';
 
   @override
-  String get chatExecutionFailed => 'Chat Execution Failed';
+  String get chatExecutionFailed => '执行失败';
 
   @override
-  String get chatExecutionPartial => 'Chat Execution Partial';
+  String get chatExecutionPartial => '部分执行';
 
   @override
-  String get chatFeedbackThanks => 'Chat Feedback Thanks';
+  String get chatFeedbackThanks => '感谢您的反馈！';
 
   @override
-  String get chatFocusSprintDefaultTitle => 'Chat Focus Sprint Default Title';
+  String get chatFocusSprintDefaultTitle => '专注冲刺';
 
   @override
-  String get chatFocusStart => 'Chat Focus Start';
+  String get chatFocusStart => '开始专注';
 
   @override
-  String get chatInputDocumentClean => 'Chat Input Document Clean';
+  String get chatInputDocumentClean => '清理文档';
 
   @override
-  String get chatInterventionViewPlan => 'Chat Intervention View Plan';
+  String get chatInterventionViewPlan => '查看计划';
 
   @override
-  String get chatInterventionViewSettings => 'Chat Intervention View Settings';
+  String get chatInterventionViewSettings => '查看设置';
 
   @override
-  String get chatKnowledgeCitationBody => 'Chat Knowledge Citation Body';
+  String get chatKnowledgeCitationBody => '知识引用';
 
   @override
   String chatKnowledgeCitationTitle(Object arg0) {
@@ -6904,22 +6892,22 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get chatModeCustomTeam => 'Chat Mode Custom Team';
+  String get chatModeCustomTeam => '自定义团队';
 
   @override
-  String get chatModeCustomTeamDesc => 'Chat Mode Custom Team Desc';
+  String get chatModeCustomTeamDesc => '选择特定的 AI 助手组成您的专属团队';
 
   @override
-  String get chatModeKeepCurrent => 'Chat Mode Keep Current';
+  String get chatModeKeepCurrent => '保持当前模式';
 
   @override
-  String get chatModeSuggestionTitle => 'Chat Mode Suggestion Title';
+  String get chatModeSuggestionTitle => '模式建议';
 
   @override
-  String get chatModeSwitch => 'Chat Mode Switch';
+  String get chatModeSwitch => '切换模式';
 
   @override
-  String get chatMultiAgentCollab => 'Chat Multi Agent Collab';
+  String get chatMultiAgentCollab => '多智能体协作';
 
   @override
   String chatNextActionLabel(Object arg0) {
@@ -6927,28 +6915,28 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get chatNextActionsRetryHint => 'Chat Next Actions Retry Hint';
+  String get chatNextActionsRetryHint => '点击重试';
 
   @override
-  String get chatNextActionsTitle => 'Chat Next Actions Title';
+  String get chatNextActionsTitle => '下一步行动';
 
   @override
-  String get chatNightlyReviewTodos => 'Chat Nightly Review Todos';
+  String get chatNightlyReviewTodos => '夜间待办';
 
   @override
-  String get chatNotificationGroupMessage => 'Chat Notification Group Message';
+  String get chatNotificationGroupMessage => '群组消息';
 
   @override
-  String get chatNotificationMention => 'Chat Notification Mention';
+  String get chatNotificationMention => '有人@我';
 
   @override
-  String get chatOptionalNotesHint => 'Chat Optional Notes Hint';
+  String get chatOptionalNotesHint => '可选备注...';
 
   @override
-  String get chatOrchestrationTraceStep => 'Chat Orchestration Trace Step';
+  String get chatOrchestrationTraceStep => '编排步骤';
 
   @override
-  String get chatOrchestrationTraceTitle => 'Chat Orchestration Trace Title';
+  String get chatOrchestrationTraceTitle => '编排追踪';
 
   @override
   String chatPendingMessagesFailed(Object arg0) {
@@ -6956,29 +6944,28 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get chatPlanContextClear => 'Chat Plan Context Clear';
+  String get chatPlanContextClear => '清除上下文';
 
   @override
-  String get chatPlanContextSelect => 'Chat Plan Context Select';
+  String get chatPlanContextSelect => '选择计划上下文';
 
   @override
-  String get chatPlanEmptySubtitle => 'Chat Plan Empty Subtitle';
+  String get chatPlanEmptySubtitle => '还没有计划，开始创建一个吧';
 
   @override
-  String get chatPlanEmptyTitle => 'Chat Plan Empty Title';
+  String get chatPlanEmptyTitle => '暂无计划';
 
   @override
-  String get chatPlanReviewAcknowledged => 'Chat Plan Review Acknowledged';
+  String get chatPlanReviewAcknowledged => '已确认';
 
   @override
-  String get chatPlanReviewApproved => 'Chat Plan Review Approved';
+  String get chatPlanReviewApproved => '已批准';
 
   @override
-  String get chatPlanReviewModifyRequested =>
-      'Chat Plan Review Modify Requested';
+  String get chatPlanReviewModifyRequested => '请求修改';
 
   @override
-  String get chatPlanReviewRejected => 'Chat Plan Review Rejected';
+  String get chatPlanReviewRejected => '已拒绝';
 
   @override
   String chatPlanReviewStatusUpdate(Object arg0) {
@@ -6986,7 +6973,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get chatPlanSelect => 'Chat Plan Select';
+  String get chatPlanSelect => '选择计划';
 
   @override
   String chatQuotePrefix(Object arg0) {
@@ -6994,55 +6981,49 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get chatReasoningProcess => 'Chat Reasoning Process';
+  String get chatReasoningProcess => '推理过程';
 
   @override
-  String get chatReasoningStatusAnalyzing => 'Chat Reasoning Status Analyzing';
+  String get chatReasoningStatusAnalyzing => '正在分析...';
 
   @override
-  String get chatReasoningStatusAudioProcessing =>
-      'Chat Reasoning Status Audio Processing';
+  String get chatReasoningStatusAudioProcessing => '正在处理音频...';
 
   @override
-  String get chatReasoningStatusCalculating =>
-      'Chat Reasoning Status Calculating';
+  String get chatReasoningStatusCalculating => '正在计算...';
 
   @override
-  String get chatReasoningStatusCoding => 'Chat Reasoning Status Coding';
+  String get chatReasoningStatusCoding => '正在编程...';
 
   @override
-  String get chatReasoningStatusDataAnalyzing =>
-      'Chat Reasoning Status Data Analyzing';
+  String get chatReasoningStatusDataAnalyzing => '正在分析数据...';
 
   @override
-  String get chatReasoningStatusDone => 'Chat Reasoning Status Done';
+  String get chatReasoningStatusDone => '完成';
 
   @override
-  String get chatReasoningStatusImageProcessing =>
-      'Chat Reasoning Status Image Processing';
+  String get chatReasoningStatusImageProcessing => '正在处理图像...';
 
   @override
-  String get chatReasoningStatusPlanning => 'Chat Reasoning Status Planning';
+  String get chatReasoningStatusPlanning => '正在规划...';
 
   @override
-  String get chatReasoningStatusPreparing => 'Chat Reasoning Status Preparing';
+  String get chatReasoningStatusPreparing => '正在准备...';
 
   @override
-  String get chatReasoningStatusReasoning => 'Chat Reasoning Status Reasoning';
+  String get chatReasoningStatusReasoning => '正在推理...';
 
   @override
-  String get chatReasoningStatusRetrieving =>
-      'Chat Reasoning Status Retrieving';
+  String get chatReasoningStatusRetrieving => '正在检索...';
 
   @override
-  String get chatReasoningStatusSearching => 'Chat Reasoning Status Searching';
+  String get chatReasoningStatusSearching => '正在搜索...';
 
   @override
-  String get chatReasoningStatusTranslating =>
-      'Chat Reasoning Status Translating';
+  String get chatReasoningStatusTranslating => '正在翻译...';
 
   @override
-  String get chatReasoningStatusWriting => 'Chat Reasoning Status Writing';
+  String get chatReasoningStatusWriting => '正在撰写...';
 
   @override
   String chatReasoningStepsCount(Object arg0) {
@@ -7055,10 +7036,10 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get chatReflectionDegraded => 'Chat Reflection Degraded';
+  String get chatReflectionDegraded => '反思质量下降';
 
   @override
-  String get chatReflectionFailed => 'Chat Reflection Failed';
+  String get chatReflectionFailed => '反思失败';
 
   @override
   String chatReflectionFixed(Object arg0, Object arg1) {
@@ -7071,7 +7052,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get chatReflectionNoChange => 'Chat Reflection No Change';
+  String get chatReflectionNoChange => '无需变更';
 
   @override
   String chatReflectionStatusUpdate(Object arg0) {
@@ -7084,16 +7065,16 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get chatSourceUnknown => 'Chat Source Unknown';
+  String get chatSourceUnknown => '未知来源';
 
   @override
-  String get chatSourceUntitled => 'Chat Source Untitled';
+  String get chatSourceUntitled => '无标题';
 
   @override
-  String get chatSourcesAvailable => 'Chat Sources Available';
+  String get chatSourcesAvailable => '有可用来源';
 
   @override
-  String get chatSourcesUnavailable => 'Chat Sources Unavailable';
+  String get chatSourcesUnavailable => '无可用来源';
 
   @override
   String chatStreakSummary(Object arg0, Object arg1) {
@@ -7101,10 +7082,10 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get chatSubmitFeedback => 'Chat Submit Feedback';
+  String get chatSubmitFeedback => '提交反馈';
 
   @override
-  String get chatSynthesisSuggestions => 'Chat Synthesis Suggestions';
+  String get chatSynthesisSuggestions => '综合建议';
 
   @override
   String chatTaskDataInvalid(Object arg0) {
@@ -7132,13 +7113,13 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get chatViewComparisonData => 'Chat View Comparison Data';
+  String get chatViewComparisonData => '查看对比数据';
 
   @override
-  String get chatViewPlanRationale => 'Chat View Plan Rationale';
+  String get chatViewPlanRationale => '查看计划依据';
 
   @override
-  String get chatVoiceNoMicPermission => 'Chat Voice No Mic Permission';
+  String get chatVoiceNoMicPermission => '没有麦克风权限';
 
   @override
   String chatVoiceStartFailed(Object arg0) {
@@ -7146,32 +7127,31 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get chatWhyThisAnswer => 'Chat Why This Answer';
+  String get chatWhyThisAnswer => '为什么是这个答案？';
 
   @override
-  String get chatWorkflowDebateProcessing => 'Chat Workflow Debate Processing';
+  String get chatWorkflowDebateProcessing => '辩论处理中...';
 
   @override
-  String get chatWorkflowDebateSubtitle => 'Chat Workflow Debate Subtitle';
+  String get chatWorkflowDebateSubtitle => '多角度探讨';
 
   @override
-  String get chatWorkflowDebateTitle => 'Chat Workflow Debate Title';
+  String get chatWorkflowDebateTitle => '辩论模式';
 
   @override
-  String get chatWorkflowDefault => 'Chat Workflow Default';
+  String get chatWorkflowDefault => '默认工作流';
 
   @override
-  String get chatWorkflowDelegationSubtitle =>
-      'Chat Workflow Delegation Subtitle';
+  String get chatWorkflowDelegationSubtitle => '委派给专业助手';
 
   @override
-  String get chatWorkflowDelegationTitle => 'Chat Workflow Delegation Title';
+  String get chatWorkflowDelegationTitle => '委派模式';
 
   @override
-  String get chatWorkflowErrorDiagnosis => 'Chat Workflow Error Diagnosis';
+  String get chatWorkflowErrorDiagnosis => '错误诊断';
 
   @override
-  String get chatWorkflowExpertRouting => 'Chat Workflow Expert Routing';
+  String get chatWorkflowExpertRouting => '专家路由';
 
   @override
   String chatWorkflowExpertsCount(Object arg0) {
@@ -7184,7 +7164,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get chatWorkflowParallelSubtitle => 'Chat Workflow Parallel Subtitle';
+  String get chatWorkflowParallelSubtitle => '并行处理多个任务';
 
   @override
   String chatWorkflowPhaseLabel(Object arg0) {
@@ -7192,85 +7172,79 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get chatWorkflowProgressiveExploration =>
-      'Chat Workflow Progressive Exploration';
+  String get chatWorkflowProgressiveExploration => '渐进式探索';
 
   @override
-  String get chatWorkflowStatusActive => 'Chat Workflow Status Active';
+  String get chatWorkflowStatusActive => '活跃';
 
   @override
-  String get chatWorkflowStatusDone => 'Chat Workflow Status Done';
+  String get chatWorkflowStatusDone => '完成';
 
   @override
-  String get chatWorkflowStatusError => 'Chat Workflow Status Error';
+  String get chatWorkflowStatusError => '错误';
 
   @override
-  String get chatWorkflowStatusWaiting => 'Chat Workflow Status Waiting';
+  String get chatWorkflowStatusWaiting => '等待中';
 
   @override
-  String get chatWorkflowTaskDecomposition =>
-      'Chat Workflow Task Decomposition';
+  String get chatWorkflowTaskDecomposition => '任务分解';
 
   @override
-  String get commonMinutesShort => 'Common Minutes Short';
+  String get commonMinutesShort => '分钟';
 
   @override
-  String get commonUnknown => 'Common Unknown';
+  String get commonUnknown => '未知';
 
   @override
-  String get communityAgentCollabOff => 'Community Agent Collab Off';
+  String get communityAgentCollabOff => 'AI 协作已关闭';
 
   @override
-  String get communityAgentCollabOn => 'Community Agent Collab On';
+  String get communityAgentCollabOn => 'AI 协作已开启';
 
   @override
   String get communityAgentName => '星火AI';
 
   @override
-  String get communityAgentOnlyYou => 'Community Agent Only You';
+  String get communityAgentOnlyYou => '只有你在群里';
 
   @override
-  String get communityAgentProcessing => 'Community Agent Processing';
+  String get communityAgentProcessing => 'AI 正在处理...';
 
   @override
-  String get communityAgentPromptHint => 'Community Agent Prompt Hint';
+  String get communityAgentPromptHint => '输入提示词...';
 
   @override
-  String get communityAgentQuickConsensus => 'Community Agent Quick Consensus';
+  String get communityAgentQuickConsensus => '快速共识';
 
   @override
-  String get communityAgentQuickConsensusPrompt =>
-      'Community Agent Quick Consensus Prompt';
+  String get communityAgentQuickConsensusPrompt => '帮我快速总结群内共识';
 
   @override
-  String get communityAgentQuickReminder => 'Community Agent Quick Reminder';
+  String get communityAgentQuickReminder => '快速提醒';
 
   @override
-  String get communityAgentQuickReminderPrompt =>
-      'Community Agent Quick Reminder Prompt';
+  String get communityAgentQuickReminderPrompt => '帮我设置一个提醒';
 
   @override
-  String get communityAgentQuickSummary => 'Community Agent Quick Summary';
+  String get communityAgentQuickSummary => '快速总结';
 
   @override
-  String get communityAgentQuickSummaryPrompt =>
-      'Community Agent Quick Summary Prompt';
+  String get communityAgentQuickSummaryPrompt => '帮我总结最近的讨论';
 
   @override
-  String get communityAgentThinking => 'Community Agent Thinking';
+  String get communityAgentThinking => 'AI 思考中...';
 
   @override
-  String get communityChatEmpty => 'Community Chat Empty';
+  String get communityChatEmpty => '暂无消息';
 
   @override
-  String get communityChatTitle => 'Community Chat Title';
+  String get communityChatTitle => '社群聊天';
 
   @override
-  String get communityCheckInAction => 'Community Check In Action';
+  String get communityCheckInAction => '打卡';
 
   @override
-  String get communityCheckInDurationLabel =>
-      'Community Check In Duration Label';
+  String get communityCheckInDurationLabel => '时长';
 
   @override
   String communityCheckInFailed(Object arg0) {
@@ -7278,16 +7252,16 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get communityCheckInMessageHint => 'Community Check In Message Hint';
+  String get communityCheckInMessageHint => '分享你的心得...';
 
   @override
-  String get communityCheckInMessageLabel => 'Community Check In Message Label';
+  String get communityCheckInMessageLabel => '打卡内容';
 
   @override
-  String get communityCheckInSuccess => 'Community Check In Success';
+  String get communityCheckInSuccess => '打卡成功！';
 
   @override
-  String get communityCheckInTitle => 'Community Check In Title';
+  String get communityCheckInTitle => '每日打卡';
 
   @override
   String communityFileSharedFailed(Object arg0) {
@@ -7295,10 +7269,10 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get communityFileSharedSuccess => 'Community File Shared Success';
+  String get communityFileSharedSuccess => '文件分享成功';
 
   @override
-  String get communityGroupFiles => 'Community Group Files';
+  String get communityGroupFiles => '群文件';
 
   @override
   String communityGroupMembersCount(Object arg0) {
@@ -7306,141 +7280,132 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get communityMessageFallback => 'Community Message Fallback';
+  String get communityMessageFallback => '消息加载中...';
 
   @override
-  String get communityMessageInputHint => 'Community Message Input Hint';
+  String get communityMessageInputHint => '输入消息...';
 
   @override
-  String get communitySearchGroupMessages => 'Community Search Group Messages';
+  String get communitySearchGroupMessages => '搜索群消息';
 
   @override
-  String get deleteAccountChecklistItem1 => 'Delete Account Checklist Item1';
+  String get deleteAccountChecklistItem1 => '您的所有个人数据将被永久删除';
 
   @override
-  String get deleteAccountChecklistItem2 => 'Delete Account Checklist Item2';
+  String get deleteAccountChecklistItem2 => '删除后将无法恢复账户';
 
   @override
-  String get deleteAccountChecklistItem3 => 'Delete Account Checklist Item3';
+  String get deleteAccountChecklistItem3 => '您的所有有效订阅将自动取消';
 
   @override
-  String get deleteAccountChecklistTitle => 'Delete Account Checklist Title';
+  String get deleteAccountChecklistTitle => '请仔细阅读以下注意事项：';
 
   @override
-  String get deleteAccountConfirmButton => 'Delete Account Confirm Button';
+  String get deleteAccountConfirmButton => '确认注销账户';
 
   @override
-  String get deleteAccountConfirmInputHint =>
-      'Delete Account Confirm Input Hint';
+  String get deleteAccountConfirmInputHint => '请输入 \"DELETE\" 以确认';
 
   @override
-  String get deleteAccountConfirmInputTitle =>
-      'Delete Account Confirm Input Title';
+  String get deleteAccountConfirmInputTitle => '确认注销';
 
   @override
-  String get deleteAccountNoSocialProvider =>
-      'Delete Account No Social Provider';
+  String get deleteAccountNoSocialProvider => '未找到关联的第三方账户';
 
   @override
-  String get deleteAccountPasswordHint => 'Delete Account Password Hint';
+  String get deleteAccountPasswordHint => '请输入您的密码';
 
   @override
-  String get deleteAccountPasswordLabel => 'Delete Account Password Label';
+  String get deleteAccountPasswordLabel => '密码';
 
   @override
-  String get deleteAccountReauthButton => 'Delete Account Reauth Button';
+  String get deleteAccountReauthButton => '验证';
 
   @override
-  String get deleteAccountReauthDone => 'Delete Account Reauth Done';
+  String get deleteAccountReauthDone => '验证完成';
 
   @override
-  String get deleteAccountReauthSuccess => 'Delete Account Reauth Success';
+  String get deleteAccountReauthSuccess => '身份验证成功';
 
   @override
-  String get deleteAccountRequireDeleteInput =>
-      'Delete Account Require Delete Input';
+  String get deleteAccountRequireDeleteInput => '请输入 DELETE 以确认操作';
 
   @override
-  String get deleteAccountRequirePassword => 'Delete Account Require Password';
+  String get deleteAccountRequirePassword => '请输入密码';
 
   @override
-  String get deleteAccountRequireReauth => 'Delete Account Require Reauth';
+  String get deleteAccountRequireReauth => '需要进行身份验证';
 
   @override
-  String get deleteAccountSocialProvider => 'Delete Account Social Provider';
+  String get deleteAccountSocialProvider => '第三方账户';
 
   @override
   String deleteAccountSocialReauthNotice(Object arg0) {
-    return '$arg0';
+    return '请使用 $arg0 进行身份验证';
   }
 
   @override
-  String get deleteAccountSuccess => 'Delete Account Success';
+  String get deleteAccountSuccess => '账户已成功注销';
 
   @override
-  String get deleteAccountTitle => 'Delete Account Title';
+  String get deleteAccountTitle => '注销账户';
 
   @override
-  String get deleteAccountWeChatUnavailable =>
-      'Delete Account We Chat Unavailable';
+  String get deleteAccountWeChatUnavailable => '微信暂不可用';
 
   @override
-  String get editProfileEmailUnverified => 'Edit Profile Email Unverified';
+  String get editProfileEmailUnverified => '未验证';
 
   @override
-  String get editProfileEmailUnverifiedDesc =>
-      'Edit Profile Email Unverified Desc';
+  String get editProfileEmailUnverifiedDesc => '请验证您的邮箱地址以确保账号安全';
 
   @override
-  String get editProfileEmailVerified => 'Edit Profile Email Verified';
+  String get editProfileEmailVerified => '已验证';
 
   @override
-  String get editProfileEmailVerifiedDesc => 'Edit Profile Email Verified Desc';
+  String get editProfileEmailVerifiedDesc => '您的邮箱地址已通过验证';
 
   @override
-  String get editProfileEnterCode => 'Edit Profile Enter Code';
+  String get editProfileEnterCode => '输入验证码';
 
   @override
-  String get editProfileRegistrationMethod =>
-      'Edit Profile Registration Method';
+  String get editProfileRegistrationMethod => '注册方式';
 
   @override
-  String get editProfileSendEmail => 'Edit Profile Send Email';
+  String get editProfileSendEmail => '发送验证邮件';
 
   @override
-  String get editProfileSetPassword => 'Edit Profile Set Password';
+  String get editProfileSetPassword => '设置密码';
 
   @override
-  String get editProfileSetPasswordHint => 'Edit Profile Set Password Hint';
+  String get editProfileSetPasswordHint => '为您的账户设置一个安全密码';
 
   @override
-  String get editProfileVerifyEmailConfirm =>
-      'Edit Profile Verify Email Confirm';
+  String get editProfileVerifyEmailConfirm => '确认';
 
   @override
-  String get editProfileVerifyEmailHint => 'Edit Profile Verify Email Hint';
+  String get editProfileVerifyEmailHint => '请输入邮件中的验证码';
 
   @override
-  String get editProfileVerifyEmailTitle => 'Edit Profile Verify Email Title';
+  String get editProfileVerifyEmailTitle => '验证邮箱';
 
   @override
-  String get fileStatusFailed => 'File Status Failed';
+  String get fileStatusFailed => '上传失败';
 
   @override
-  String get fileStatusProcessing => 'File Status Processing';
+  String get fileStatusProcessing => '处理中';
 
   @override
-  String get fileStatusReady => 'File Status Ready';
+  String get fileStatusReady => '就绪';
 
   @override
-  String get fileStatusUploaded => 'File Status Uploaded';
+  String get fileStatusUploaded => '已上传';
 
   @override
-  String get galaxyA11yActionStartLearning =>
-      'Galaxy A11y Action Start Learning';
+  String get galaxyA11yActionStartLearning => '开始学习';
 
   @override
-  String get galaxyA11yActionUnlockNode => 'Galaxy A11y Action Unlock Node';
+  String get galaxyA11yActionUnlockNode => '解锁节点';
 
   @override
   String galaxyA11yClusterLabel(Object arg0, Object arg1, Object arg2) {
@@ -7448,10 +7413,10 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get galaxyA11yHintStartLearning => 'Galaxy A11y Hint Start Learning';
+  String get galaxyA11yHintStartLearning => '点击开始学习此知识点';
 
   @override
-  String get galaxyA11yHintUnlockNode => 'Galaxy A11y Hint Unlock Node';
+  String get galaxyA11yHintUnlockNode => '点击解锁此节点';
 
   @override
   String galaxyA11yNavigateTo(Object arg0) {
@@ -7459,7 +7424,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get galaxyA11yNavigationHint => 'Galaxy A11y Navigation Hint';
+  String get galaxyA11yNavigationHint => '使用手势导航知识星图';
 
   @override
   String galaxyA11yNodeImportance(Object arg0) {
@@ -7467,7 +7432,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get galaxyA11yNodeLocked => 'Galaxy A11y Node Locked';
+  String get galaxyA11yNodeLocked => '节点已锁定';
 
   @override
   String galaxyA11yNodeMastery(Object arg0) {
@@ -7485,7 +7450,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get galaxyA11yNodeUnlocked => 'Galaxy A11y Node Unlocked';
+  String get galaxyA11yNodeUnlocked => '节点已解锁';
 
   @override
   String galaxyA11ySectorLabel(Object arg0, Object arg1) {
@@ -7498,99 +7463,97 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get galaxyControlOverview => 'Galaxy Control Overview';
+  String get galaxyControlOverview => '概览';
 
   @override
-  String get galaxyControlReplayStart => 'Galaxy Control Replay Start';
+  String get galaxyControlReplayStart => '开始回放';
 
   @override
-  String get galaxyControlReplayStop => 'Galaxy Control Replay Stop';
+  String get galaxyControlReplayStop => '停止回放';
 
   @override
-  String get galaxyControlSearchClose => 'Galaxy Control Search Close';
+  String get galaxyControlSearchClose => '关闭搜索';
 
   @override
-  String get galaxyControlSearchOpen => 'Galaxy Control Search Open';
+  String get galaxyControlSearchOpen => '打开搜索';
 
   @override
-  String get galaxyControlSettings => 'Galaxy Control Settings';
+  String get galaxyControlSettings => '设置';
 
   @override
-  String get galaxyControlZoomIn => 'Galaxy Control Zoom In';
+  String get galaxyControlZoomIn => '放大';
 
   @override
-  String get galaxyControlZoomOut => 'Galaxy Control Zoom Out';
+  String get galaxyControlZoomOut => '缩小';
 
   @override
-  String get galaxyEmptyMessage => 'Galaxy Empty Message';
+  String get galaxyEmptyMessage => '开始探索，点亮你的知识星图';
 
   @override
-  String get galaxyEmptyTitle => 'Galaxy Empty Title';
+  String get galaxyEmptyTitle => '星图空空如也';
 
   @override
-  String get galaxyErrorConnectionFailed => 'Galaxy Error Connection Failed';
+  String get galaxyErrorConnectionFailed => '连接失败';
 
   @override
-  String get galaxyErrorConnectionTimeout => 'Galaxy Error Connection Timeout';
+  String get galaxyErrorConnectionTimeout => '连接超时';
 
   @override
-  String get galaxyErrorLoadFailed => 'Galaxy Error Load Failed';
+  String get galaxyErrorLoadFailed => '加载失败';
 
   @override
-  String get galaxyErrorNetwork => 'Galaxy Error Network';
+  String get galaxyErrorNetwork => '网络错误';
 
   @override
-  String get galaxyErrorNetworkFailed => 'Galaxy Error Network Failed';
+  String get galaxyErrorNetworkFailed => '网络请求失败';
 
   @override
-  String get galaxyErrorRequestFailed => 'Galaxy Error Request Failed';
+  String get galaxyErrorRequestFailed => '请求失败';
 
   @override
-  String get galaxyErrorResponseTimeout => 'Galaxy Error Response Timeout';
+  String get galaxyErrorResponseTimeout => '响应超时';
 
   @override
-  String get galaxyErrorRetryHint => 'Galaxy Error Retry Hint';
+  String get galaxyErrorRetryHint => '点击重试';
 
   @override
-  String get galaxyErrorServiceTemporarilyUnavailable =>
-      'Galaxy Error Service Temporarily Unavailable';
+  String get galaxyErrorServiceTemporarilyUnavailable => '服务暂时不可用';
 
   @override
-  String get galaxyErrorServiceUnavailable =>
-      'Galaxy Error Service Unavailable';
+  String get galaxyErrorServiceUnavailable => '服务不可用';
 
   @override
-  String get galaxyErrorUnknown => 'Galaxy Error Unknown';
+  String get galaxyErrorUnknown => '未知错误';
 
   @override
-  String get galaxyGraphRagGraph => 'Galaxy Graph Rag Graph';
+  String get galaxyGraphRagGraph => '图谱检索';
 
   @override
-  String get galaxyGraphRagSearching => 'Galaxy Graph Rag Searching';
+  String get galaxyGraphRagSearching => '正在检索...';
 
   @override
-  String get galaxyGraphRagTime => 'Galaxy Graph Rag Time';
+  String get galaxyGraphRagTime => '时间';
 
   @override
-  String get galaxyGraphRagVector => 'Galaxy Graph Rag Vector';
+  String get galaxyGraphRagVector => '向量检索';
 
   @override
-  String get galaxyImportanceAdvanced => 'Galaxy Importance Advanced';
+  String get galaxyImportanceAdvanced => '进阶';
 
   @override
-  String get galaxyImportanceBasic => 'Galaxy Importance Basic';
+  String get galaxyImportanceBasic => '基础';
 
   @override
-  String get galaxyImportanceCore => 'Galaxy Importance Core';
+  String get galaxyImportanceCore => '核心';
 
   @override
-  String get galaxyImportanceEntry => 'Galaxy Importance Entry';
+  String get galaxyImportanceEntry => '入门';
 
   @override
-  String get galaxyImportanceIntermediate => 'Galaxy Importance Intermediate';
+  String get galaxyImportanceIntermediate => '中级';
 
   @override
-  String get galaxyImportanceNormal => 'Galaxy Importance Normal';
+  String get galaxyImportanceNormal => '普通';
 
   @override
   String galaxyLLMActionFailed(Object arg0) {
@@ -7598,25 +7561,25 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get galaxyLoadFailed => 'Galaxy Load Failed';
+  String get galaxyLoadFailed => '加载失败';
 
   @override
-  String get galaxyLoadFailedTitle => 'Galaxy Load Failed Title';
+  String get galaxyLoadFailedTitle => '星图加载失败';
 
   @override
-  String get galaxyLoadingMessage => 'Galaxy Loading Message';
+  String get galaxyLoadingMessage => '正在加载星图...';
 
   @override
-  String get galaxyLoadingTitle => 'Galaxy Loading Title';
+  String get galaxyLoadingTitle => '加载中';
 
   @override
-  String get galaxyNodeFocus => 'Galaxy Node Focus';
+  String get galaxyNodeFocus => '聚焦节点';
 
   @override
-  String get galaxyNodeInspectConnections => 'Galaxy Node Inspect Connections';
+  String get galaxyNodeInspectConnections => '查看连接';
 
   @override
-  String get galaxyNodeLocked => 'Galaxy Node Locked';
+  String get galaxyNodeLocked => '已锁定';
 
   @override
   String galaxyNodePreviewSubtitle(Object arg0, Object arg1) {
@@ -7624,19 +7587,19 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get galaxyNodeUnlocked => 'Galaxy Node Unlocked';
+  String get galaxyNodeUnlocked => '已解锁';
 
   @override
-  String get galaxyOfflineMode => 'Galaxy Offline Mode';
+  String get galaxyOfflineMode => '离线模式';
 
   @override
-  String get galaxyOverviewMastery => 'Galaxy Overview Mastery';
+  String get galaxyOverviewMastery => '掌握度';
 
   @override
-  String get galaxyOverviewNodes => 'Galaxy Overview Nodes';
+  String get galaxyOverviewNodes => '节点数';
 
   @override
-  String get galaxyOverviewUnlocked => 'Galaxy Overview Unlocked';
+  String get galaxyOverviewUnlocked => '已解锁';
 
   @override
   String galaxyPerfHighJank(Object arg0) {
@@ -7654,20 +7617,16 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get galaxyPerfRecommendationDisableParticles =>
-      'Galaxy Perf Recommendation Disable Particles';
+  String get galaxyPerfRecommendationDisableParticles => '禁用粒子效果';
 
   @override
-  String get galaxyPerfRecommendationLowQualityMode =>
-      'Galaxy Perf Recommendation Low Quality Mode';
+  String get galaxyPerfRecommendationLowQualityMode => '低质量模式';
 
   @override
-  String get galaxyPerfRecommendationOptimizeLayout =>
-      'Galaxy Perf Recommendation Optimize Layout';
+  String get galaxyPerfRecommendationOptimizeLayout => '优化布局';
 
   @override
-  String get galaxyPerfRecommendationReduceNodes =>
-      'Galaxy Perf Recommendation Reduce Nodes';
+  String get galaxyPerfRecommendationReduceNodes => '减少显示节点';
 
   @override
   String galaxyPerfSlowRender(Object arg0) {
@@ -7675,25 +7634,25 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get galaxyPerfStatusCritical => 'Galaxy Perf Status Critical';
+  String get galaxyPerfStatusCritical => '性能严重不足';
 
   @override
-  String get galaxyPerfStatusDegraded => 'Galaxy Perf Status Degraded';
+  String get galaxyPerfStatusDegraded => '性能下降';
 
   @override
-  String get galaxyPerfStatusOptimal => 'Galaxy Perf Status Optimal';
+  String get galaxyPerfStatusOptimal => '性能最佳';
 
   @override
-  String get galaxyReload => 'Galaxy Reload';
+  String get galaxyReload => '重新加载';
 
   @override
-  String get galaxySearchHint => 'Galaxy Search Hint';
+  String get galaxySearchHint => '搜索知识节点...';
 
   @override
-  String get galaxySearchHintDetail => 'Galaxy Search Hint Detail';
+  String get galaxySearchHintDetail => '输入关键词搜索';
 
   @override
-  String get galaxySearchNoResults => 'Galaxy Search No Results';
+  String get galaxySearchNoResults => '未找到相关节点';
 
   @override
   String galaxySearchResultSubtitle(Object arg0, Object arg1, Object arg2) {
@@ -7701,138 +7660,133 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get galaxySearchTitle => 'Galaxy Search Title';
+  String get galaxySearchTitle => '搜索星图';
 
   @override
-  String get galaxySectorArt => 'Galaxy Sector Art';
+  String get galaxySectorArt => '艺术';
 
   @override
-  String get galaxySectorCivilization => 'Galaxy Sector Civilization';
+  String get galaxySectorCivilization => '文明';
 
   @override
-  String get galaxySectorCosmos => 'Galaxy Sector Cosmos';
+  String get galaxySectorCosmos => '宇宙';
 
   @override
-  String get galaxySectorLife => 'Galaxy Sector Life';
+  String get galaxySectorLife => '生命';
 
   @override
-  String get galaxySectorTech => 'Galaxy Sector Tech';
+  String get galaxySectorTech => '科技';
 
   @override
-  String get galaxySectorVoid => 'Galaxy Sector Void';
+  String get galaxySectorVoid => '虚空';
 
   @override
-  String get galaxySectorWisdom => 'Galaxy Sector Wisdom';
+  String get galaxySectorWisdom => '智慧';
 
   @override
-  String get galaxySimulationCenterGravity =>
-      'Galaxy Simulation Center Gravity';
+  String get galaxySimulationCenterGravity => '中心引力';
 
   @override
-  String get galaxySimulationGravity => 'Galaxy Simulation Gravity';
+  String get galaxySimulationGravity => '引力';
 
   @override
-  String get galaxySimulationReplaySpeed => 'Galaxy Simulation Replay Speed';
+  String get galaxySimulationReplaySpeed => '回放速度';
 
   @override
-  String get galaxySimulationRepulsion => 'Galaxy Simulation Repulsion';
+  String get galaxySimulationRepulsion => '斥力';
 
   @override
-  String get galaxySimulationReset => 'Galaxy Simulation Reset';
+  String get galaxySimulationReset => '重置';
 
   @override
-  String get galaxySimulationSubtitle => 'Galaxy Simulation Subtitle';
+  String get galaxySimulationSubtitle => '调整物理参数';
 
   @override
-  String get galaxySimulationTitle => 'Galaxy Simulation Title';
+  String get galaxySimulationTitle => '模拟设置';
 
   @override
-  String get galaxyUsingCache => 'Galaxy Using Cache';
+  String get galaxyUsingCache => '使用缓存数据';
 
   @override
-  String get guestUpgradeAcceptPoliciesRequired =>
-      'Guest Upgrade Accept Policies Required';
+  String get guestUpgradeAcceptPoliciesRequired => '请先阅读并同意用户协议与隐私政策';
 
   @override
-  String get guestUpgradeAgreePrivacy => 'Guest Upgrade Agree Privacy';
+  String get guestUpgradeAgreePrivacy => '我已阅读并同意《隐私政策》';
 
   @override
-  String get guestUpgradeAgreeTerms => 'Guest Upgrade Agree Terms';
+  String get guestUpgradeAgreeTerms => '我已阅读并同意《用户协议》';
 
   @override
-  String get guestUpgradeIntro => 'Guest Upgrade Intro';
+  String get guestUpgradeIntro => '升级您的游客账户，以确保数据安全并享受多设备同步等完整功能。';
 
   @override
-  String get guestUpgradePasswordMinLength =>
-      'Guest Upgrade Password Min Length';
+  String get guestUpgradePasswordMinLength => '密码至少需要8个字符';
 
   @override
-  String get guestUpgradeSocialSectionTitle =>
-      'Guest Upgrade Social Section Title';
+  String get guestUpgradeSocialSectionTitle => '或使用第三方账户升级';
 
   @override
-  String get guestUpgradeSocialSuccess => 'Guest Upgrade Social Success';
+  String get guestUpgradeSocialSuccess => '账户升级成功';
 
   @override
-  String get guestUpgradeSuccess => 'Guest Upgrade Success';
+  String get guestUpgradeSuccess => '账户升级成功';
 
   @override
-  String get guestUpgradeTitle => 'Guest Upgrade Title';
+  String get guestUpgradeTitle => '升级账户';
 
   @override
-  String get guestUpgradeUsernameMinLength =>
-      'Guest Upgrade Username Min Length';
+  String get guestUpgradeUsernameMinLength => '用户名至少需要3个字符';
 
   @override
-  String get guestUpgradeViewPrivacy => 'Guest Upgrade View Privacy';
+  String get guestUpgradeViewPrivacy => '查看隐私政策';
 
   @override
-  String get guestUpgradeViewTerms => 'Guest Upgrade View Terms';
+  String get guestUpgradeViewTerms => '查看用户协议';
 
   @override
-  String get guestUpgradeWithApple => 'Guest Upgrade With Apple';
+  String get guestUpgradeWithApple => '使用 Apple 升级';
 
   @override
-  String get guestUpgradeWithEmail => 'Guest Upgrade With Email';
+  String get guestUpgradeWithEmail => '使用邮箱升级';
 
   @override
-  String get guestUpgradeWithGoogle => 'Guest Upgrade With Google';
+  String get guestUpgradeWithGoogle => '使用 Google 升级';
 
   @override
-  String get guestUpgradeWithWeChat => 'Guest Upgrade With We Chat';
+  String get guestUpgradeWithWeChat => '使用微信升级';
 
   @override
-  String get passwordSetConfirm => 'Password Set Confirm';
+  String get passwordSetConfirm => '确认设置密码';
 
   @override
-  String get passwordSetHint => 'Password Set Hint';
+  String get passwordSetHint => '请输入至少8位密码';
 
   @override
-  String get passwordSetLabel => 'Password Set Label';
+  String get passwordSetLabel => '设置密码';
 
   @override
-  String get passwordSetSuccess => 'Password Set Success';
+  String get passwordSetSuccess => '密码设置成功';
 
   @override
-  String get passwordSetTitle => 'Password Set Title';
+  String get passwordSetTitle => '设置密码';
 
   @override
-  String get planArchive => 'Plan Archive';
+  String get planArchive => '归档计划';
 
   @override
-  String get planArchiveConfirm => 'Plan Archive Confirm';
+  String get planArchiveConfirm => '确认归档';
 
   @override
-  String get planArchiveMessage => 'Plan Archive Message';
+  String get planArchiveMessage => '归档后计划将移至历史记录，确定要归档吗？';
 
   @override
-  String get planArchiveTitle => 'Plan Archive Title';
+  String get planArchiveTitle => '归档计划';
 
   @override
-  String get planArchivedSuccess => 'Plan Archived Success';
+  String get planArchivedSuccess => '计划已归档';
 
   @override
-  String get planContextTitle => 'Plan Context Title';
+  String get planContextTitle => '计划上下文';
 
   @override
   String planDaysRemaining(Object arg0) {
@@ -7840,10 +7794,10 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get planDetailTitle => 'Plan Detail Title';
+  String get planDetailTitle => '计划详情';
 
   @override
-  String get planDueToday => 'Plan Due Today';
+  String get planDueToday => '今日到期';
 
   @override
   String planFactsFeedbackSummary(Object arg0, Object arg1) {
@@ -7851,7 +7805,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get planKeyFacts => 'Plan Key Facts';
+  String get planKeyFacts => '关键事实';
 
   @override
   String planLoadFailed(Object arg0) {
@@ -7859,13 +7813,13 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get planNoContent => 'Plan No Content';
+  String get planNoContent => '暂无内容';
 
   @override
-  String get planNoTasks => 'Plan No Tasks';
+  String get planNoTasks => '暂无任务';
 
   @override
-  String get planNoVisualizationData => 'Plan No Visualization Data';
+  String get planNoVisualizationData => '暂无可视化数据';
 
   @override
   String planOverdueDays(Object arg0) {
@@ -7873,30 +7827,28 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get planProgressLabel => 'Plan Progress Label';
+  String get planProgressLabel => '计划进度';
 
   @override
-  String get planRecentFeedback => 'Plan Recent Feedback';
+  String get planRecentFeedback => '最近反馈';
 
   @override
-  String get planRelatedTasks => 'Plan Related Tasks';
+  String get planRelatedTasks => '相关任务';
 
   @override
-  String get planRestore => 'Plan Restore';
+  String get planRestore => '恢复计划';
 
   @override
-  String get planRestoredSuccess => 'Plan Restored Success';
+  String get planRestoredSuccess => '计划已恢复';
 
   @override
-  String get planReviewAdditionalNotesHint =>
-      'Plan Review Additional Notes Hint';
+  String get planReviewAdditionalNotesHint => '添加备注（可选）...';
 
   @override
-  String get planReviewAdditionalNotesRequired =>
-      'Plan Review Additional Notes Required';
+  String get planReviewAdditionalNotesRequired => '请填写备注';
 
   @override
-  String get planReviewApproveExecute => 'Plan Review Approve Execute';
+  String get planReviewApproveExecute => '批准并执行';
 
   @override
   String planReviewConfidenceTierLabel(Object arg0) {
@@ -7904,21 +7856,19 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get planReviewConfidenceTitle => 'Plan Review Confidence Title';
+  String get planReviewConfidenceTitle => '置信度评估';
 
   @override
-  String get planReviewDecisionApproved => 'Plan Review Decision Approved';
+  String get planReviewDecisionApproved => '已批准';
 
   @override
-  String get planReviewDecisionNeedsModification =>
-      'Plan Review Decision Needs Modification';
+  String get planReviewDecisionNeedsModification => '需要修改';
 
   @override
-  String get planReviewDecisionRejected => 'Plan Review Decision Rejected';
+  String get planReviewDecisionRejected => '已拒绝';
 
   @override
-  String get planReviewDecisionRequiresConfirmation =>
-      'Plan Review Decision Requires Confirmation';
+  String get planReviewDecisionRequiresConfirmation => '需要确认';
 
   @override
   String planReviewEvidenceLabel(Object arg0) {
@@ -7931,94 +7881,85 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get planReviewModifyPlan => 'Plan Review Modify Plan';
+  String get planReviewModifyPlan => '修改计划';
 
   @override
-  String get planReviewReasonDifficultyTooHigh =>
-      'Plan Review Reason Difficulty Too High';
+  String get planReviewReasonDifficultyTooHigh => '难度过高';
 
   @override
-  String get planReviewReasonDifficultyTooLow =>
-      'Plan Review Reason Difficulty Too Low';
+  String get planReviewReasonDifficultyTooLow => '难度过低';
 
   @override
-  String get planReviewReasonMissingKeyTask =>
-      'Plan Review Reason Missing Key Task';
+  String get planReviewReasonMissingKeyTask => '缺少关键任务';
 
   @override
-  String get planReviewReasonOther => 'Plan Review Reason Other';
+  String get planReviewReasonOther => '其他原因';
 
   @override
-  String get planReviewReasonScheduleUnreasonable =>
-      'Plan Review Reason Schedule Unreasonable';
+  String get planReviewReasonScheduleUnreasonable => '时间安排不合理';
 
   @override
-  String get planReviewReasonTasksTooFew => 'Plan Review Reason Tasks Too Few';
+  String get planReviewReasonTasksTooFew => '任务太少';
 
   @override
-  String get planReviewReasonTasksTooMany =>
-      'Plan Review Reason Tasks Too Many';
+  String get planReviewReasonTasksTooMany => '任务太多';
 
   @override
-  String get planReviewRejectReasonTitle => 'Plan Review Reject Reason Title';
+  String get planReviewRejectReasonTitle => '拒绝原因';
 
   @override
-  String get planReviewRejectWithFeedback => 'Plan Review Reject With Feedback';
+  String get planReviewRejectWithFeedback => '拒绝并反馈';
 
   @override
-  String get planReviewSelectReasonRequired =>
-      'Plan Review Select Reason Required';
+  String get planReviewSelectReasonRequired => '请选择原因';
 
   @override
-  String get planReviewSubmitFeedback => 'Plan Review Submit Feedback';
+  String get planReviewSubmitFeedback => '提交反馈';
 
   @override
-  String get planReviewSummaryApproved => 'Plan Review Summary Approved';
+  String get planReviewSummaryApproved => '计划已批准';
 
   @override
-  String get planReviewSummaryNeedsModification =>
-      'Plan Review Summary Needs Modification';
+  String get planReviewSummaryNeedsModification => '计划需要修改';
 
   @override
-  String get planReviewSummaryRejected => 'Plan Review Summary Rejected';
+  String get planReviewSummaryRejected => '计划已拒绝';
 
   @override
-  String get planReviewSummaryRequiresConfirmation =>
-      'Plan Review Summary Requires Confirmation';
+  String get planReviewSummaryRequiresConfirmation => '计划需要确认';
 
   @override
-  String get planSectionCompletionRate => 'Plan Section Completion Rate';
+  String get planSectionCompletionRate => '完成率';
 
   @override
-  String get planSectionDailyCompletion => 'Plan Section Daily Completion';
+  String get planSectionDailyCompletion => '每日完成情况';
 
   @override
-  String get planSectionTaskTypeDistribution =>
-      'Plan Section Task Type Distribution';
+  String get planSectionTaskTypeDistribution => '任务类型分布';
 
   @override
-  String get planShare => 'Plan Share';
+  String get planShare => '分享计划';
 
   @override
-  String get planStatusActive => 'Plan Status Active';
+  String get planStatusActive => '进行中';
 
   @override
-  String get planStatusArchived => 'Plan Status Archived';
+  String get planStatusArchived => '已归档';
 
   @override
-  String get planStatusCompleted => 'Plan Status Completed';
+  String get planStatusCompleted => '已完成';
 
   @override
-  String get planStatusPaused => 'Plan Status Paused';
+  String get planStatusPaused => '已暂停';
 
   @override
-  String get planStatusUnknown => 'Plan Status Unknown';
+  String get planStatusUnknown => '未知状态';
 
   @override
-  String get planTabOverview => 'Plan Tab Overview';
+  String get planTabOverview => '概览';
 
   @override
-  String get planTabProgress => 'Plan Tab Progress';
+  String get planTabProgress => '进度';
 
   @override
   String planTargetDate(Object arg0) {
@@ -8031,16 +7972,16 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get planTaskProgress => 'Plan Task Progress';
+  String get planTaskProgress => '任务进度';
 
   @override
-  String get planUpcomingTasks => 'Plan Upcoming Tasks';
+  String get planUpcomingTasks => '即将到来的任务';
 
   @override
-  String get pomodoroBreakFinished => 'Pomodoro Break Finished';
+  String get pomodoroBreakFinished => '休息结束！';
 
   @override
-  String get pomodoroWorkFinished => 'Pomodoro Work Finished';
+  String get pomodoroWorkFinished => '工作完成！';
 
   @override
   String get account => '账户';
@@ -8073,46 +8014,46 @@ class AppLocalizationsZh extends AppLocalizations {
   String get profileUpgradeGuest => '升级账户';
 
   @override
-  String get regenCustomHint => 'Regen Custom Hint';
+  String get regenCustomHint => '描述你想要的修改...';
 
   @override
-  String get regenDescCompleted => 'Regen Desc Completed';
+  String get regenDescCompleted => '重新生成完成';
 
   @override
-  String get regenDescFailed => 'Regen Desc Failed';
+  String get regenDescFailed => '重新生成失败';
 
   @override
-  String get regenDescInProgress => 'Regen Desc In Progress';
+  String get regenDescInProgress => '正在重新生成...';
 
   @override
-  String get regenDescPending => 'Regen Desc Pending';
+  String get regenDescPending => '等待重新生成';
 
   @override
-  String get regenHintAddExamples => 'Regen Hint Add Examples';
+  String get regenHintAddExamples => '添加更多示例';
 
   @override
-  String get regenHintFixErrors => 'Regen Hint Fix Errors';
+  String get regenHintFixErrors => '修正错误';
 
   @override
-  String get regenHintFriendlierTone => 'Regen Hint Friendlier Tone';
+  String get regenHintFriendlierTone => '更友好的语气';
 
   @override
-  String get regenHintMoreAccurate => 'Regen Hint More Accurate';
+  String get regenHintMoreAccurate => '更准确';
 
   @override
-  String get regenHintMoreConcise => 'Regen Hint More Concise';
+  String get regenHintMoreConcise => '更简洁';
 
   @override
-  String get regenHintMoreDetailed => 'Regen Hint More Detailed';
+  String get regenHintMoreDetailed => '更详细';
 
   @override
-  String get regenHintsOptional => 'Regen Hints Optional';
+  String get regenHintsOptional => '可选提示';
 
   @override
-  String get regenImprovementsTitle => 'Regen Improvements Title';
+  String get regenImprovementsTitle => '改进建议';
 
   @override
-  String get regenProgressTitle => 'Regen Progress Title';
+  String get regenProgressTitle => '重新生成进度';
 
   @override
   String regenQualityImprovement(Object arg0) {
@@ -8120,193 +8061,183 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get regenResultFailed => 'Regen Result Failed';
+  String get regenResultFailed => '生成失败';
 
   @override
-  String get regenResultSuccess => 'Regen Result Success';
+  String get regenResultSuccess => '生成成功';
 
   @override
-  String get regenRetryMessage => 'Regen Retry Message';
+  String get regenRetryMessage => '点击重试';
 
   @override
-  String get regenSelectType => 'Regen Select Type';
+  String get regenSelectType => '选择类型';
 
   @override
-  String get regenStart => 'Regen Start';
+  String get regenStart => '开始重新生成';
 
   @override
-  String get regenTitleCompleted => 'Regen Title Completed';
+  String get regenTitleCompleted => '重新生成完成';
 
   @override
-  String get regenTitleFailed => 'Regen Title Failed';
+  String get regenTitleFailed => '重新生成失败';
 
   @override
-  String get regenTitleIdle => 'Regen Title Idle';
+  String get regenTitleIdle => '等待操作';
 
   @override
-  String get regenTitleInProgress => 'Regen Title In Progress';
+  String get regenTitleInProgress => '正在生成...';
 
   @override
-  String get regenTitlePending => 'Regen Title Pending';
+  String get regenTitlePending => '等待中';
 
   @override
-  String get regenTypeAddDetails => 'Regen Type Add Details';
+  String get regenTypeAddDetails => '添加细节';
 
   @override
-  String get regenTypeChangeStyle => 'Regen Type Change Style';
+  String get regenTypeChangeStyle => '改变风格';
 
   @override
-  String get regenTypeCustom => 'Regen Type Custom';
+  String get regenTypeCustom => '自定义';
 
   @override
-  String get regenTypeFixIssues => 'Regen Type Fix Issues';
+  String get regenTypeFixIssues => '修复问题';
 
   @override
-  String get regenTypeImproveQuality => 'Regen Type Improve Quality';
+  String get regenTypeImproveQuality => '提高质量';
 
   @override
-  String get regenTypeSimplify => 'Regen Type Simplify';
+  String get regenTypeSimplify => '简化';
 
   @override
-  String get reviewRatingAccuracyTitle => 'Review Rating Accuracy Title';
+  String get reviewRatingAccuracyTitle => '准确性评价';
 
   @override
-  String get reviewRatingAccurate => 'Review Rating Accurate';
+  String get reviewRatingAccurate => '准确';
 
   @override
-  String get reviewRatingAddInaccuratePoint =>
-      'Review Rating Add Inaccurate Point';
+  String get reviewRatingAddInaccuratePoint => '添加不准确点';
 
   @override
-  String get reviewRatingCommentsHint => 'Review Rating Comments Hint';
+  String get reviewRatingCommentsHint => '输入您的评价...';
 
   @override
-  String get reviewRatingCommentsTitle => 'Review Rating Comments Title';
+  String get reviewRatingCommentsTitle => '评价内容';
 
   @override
-  String get reviewRatingHelpful => 'Review Rating Helpful';
+  String get reviewRatingHelpful => '有帮助';
 
   @override
-  String get reviewRatingInaccurate => 'Review Rating Inaccurate';
+  String get reviewRatingInaccurate => '不准确';
 
   @override
-  String get reviewRatingInaccuratePointHint =>
-      'Review Rating Inaccurate Point Hint';
+  String get reviewRatingInaccuratePointHint => '描述不准确的地方...';
 
   @override
-  String get reviewRatingInaccuratePointsTitle =>
-      'Review Rating Inaccurate Points Title';
+  String get reviewRatingInaccuratePointsTitle => '不准确之处';
 
   @override
-  String get reviewRatingLessOptions => 'Review Rating Less Options';
+  String get reviewRatingLessOptions => '收起选项';
 
   @override
-  String get reviewRatingMoreOptions => 'Review Rating More Options';
+  String get reviewRatingMoreOptions => '更多选项';
 
   @override
-  String get reviewRatingNotHelpful => 'Review Rating Not Helpful';
+  String get reviewRatingNotHelpful => '没帮助';
 
   @override
-  String get reviewRatingSpecificityTitle => 'Review Rating Specificity Title';
+  String get reviewRatingSpecificityTitle => '具体性评价';
 
   @override
-  String get reviewRatingSubmit => 'Review Rating Submit';
+  String get reviewRatingSubmit => '提交评价';
 
   @override
-  String get reviewRatingSubmitFailed => 'Review Rating Submit Failed';
+  String get reviewRatingSubmitFailed => '提交失败';
 
   @override
-  String get reviewRatingSubmitSuccess => 'Review Rating Submit Success';
+  String get reviewRatingSubmitSuccess => '评价提交成功';
 
   @override
-  String get reviewRatingSubtitle => 'Review Rating Subtitle';
+  String get reviewRatingSubtitle => '您的反馈将帮助我们改进';
 
   @override
-  String get reviewRatingTagsTitle => 'Review Rating Tags Title';
+  String get reviewRatingTagsTitle => '选择标签';
 
   @override
-  String get reviewRatingTitle => 'Review Rating Title';
+  String get reviewRatingTitle => '评价回复';
 
   @override
-  String get reviewSpecificityAppropriate => 'Review Specificity Appropriate';
+  String get reviewSpecificityAppropriate => '恰当';
 
   @override
-  String get reviewSpecificityTooDetailed => 'Review Specificity Too Detailed';
+  String get reviewSpecificityTooDetailed => '太详细';
 
   @override
-  String get reviewSpecificityTooVague => 'Review Specificity Too Vague';
+  String get reviewSpecificityTooVague => '太模糊';
 
   @override
-  String get reviewTagAccurate => 'Review Tag Accurate';
+  String get reviewTagAccurate => '准确';
 
   @override
-  String get reviewTagClear => 'Review Tag Clear';
+  String get reviewTagClear => '清晰';
 
   @override
-  String get reviewTagNeedsImprovement => 'Review Tag Needs Improvement';
+  String get reviewTagNeedsImprovement => '需要改进';
 
   @override
-  String get reviewTagPractical => 'Review Tag Practical';
+  String get reviewTagPractical => '实用';
 
   @override
-  String get reviewTagTooLenient => 'Review Tag Too Lenient';
+  String get reviewTagTooLenient => '太宽松';
 
   @override
-  String get reviewTagTooStrict => 'Review Tag Too Strict';
+  String get reviewTagTooStrict => '太严格';
 
   @override
-  String get securityLogActionAccountDelete =>
-      'Security Log Action Account Delete';
+  String get securityLogActionAccountDelete => '注销账户';
 
   @override
-  String get securityLogActionEmailVerify => 'Security Log Action Email Verify';
+  String get securityLogActionEmailVerify => '验证邮箱';
 
   @override
-  String get securityLogActionGuestUpgrade =>
-      'Security Log Action Guest Upgrade';
+  String get securityLogActionGuestUpgrade => '游客升级';
 
   @override
-  String get securityLogActionLoginFailed => 'Security Log Action Login Failed';
+  String get securityLogActionLoginFailed => '登录失败';
 
   @override
-  String get securityLogActionLoginSuccess =>
-      'Security Log Action Login Success';
+  String get securityLogActionLoginSuccess => '登录成功';
 
   @override
-  String get securityLogActionLogout => 'Security Log Action Logout';
+  String get securityLogActionLogout => '登出';
 
   @override
-  String get securityLogActionPasswordChange =>
-      'Security Log Action Password Change';
+  String get securityLogActionPasswordChange => '修改密码';
 
   @override
-  String get securityLogActionPasswordReset =>
-      'Security Log Action Password Reset';
+  String get securityLogActionPasswordReset => '重置密码';
 
   @override
-  String get securityLogActionRegister => 'Security Log Action Register';
+  String get securityLogActionRegister => '注册';
 
   @override
-  String get securityLogActionSocialLink => 'Security Log Action Social Link';
+  String get securityLogActionSocialLink => '绑定第三方账户';
 
   @override
-  String get securityLogActionSocialUnlink =>
-      'Security Log Action Social Unlink';
+  String get securityLogActionSocialUnlink => '解绑第三方账户';
 
   @override
-  String get securityLogActionTokenRefresh =>
-      'Security Log Action Token Refresh';
+  String get securityLogActionTokenRefresh => '刷新令牌';
 
   @override
   String securityLogAdditionalInfo(Object arg0) {
-    return '$arg0';
+    return '详细信息: $arg0';
   }
 
   @override
-  String get securityLogEmpty => 'Security Log Empty';
+  String get securityLogEmpty => '暂无安全日志记录';
 
   @override
-  String get securityLogIntro => 'Security Log Intro';
+  String get securityLogIntro => '最近的账户安全相关活动记录';
 
   @override
   String securityLogOccurredAt(Object arg0) {
@@ -8314,40 +8245,38 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get securityLogTitle => 'Security Log Title';
+  String get securityLogTitle => '安全日志';
 
   @override
-  String get sessionManagementCurrent => 'Session Management Current';
+  String get sessionManagementCurrent => '当前设备';
 
   @override
-  String get sessionManagementEmpty => 'Session Management Empty';
+  String get sessionManagementEmpty => '暂无活动设备';
 
   @override
   String sessionManagementFirstLogin(Object arg0) {
-    return '$arg0';
+    return '首次登录: $arg0';
   }
 
   @override
-  String get sessionManagementIntro => 'Session Management Intro';
+  String get sessionManagementIntro => '管理您已登录的设备与会话。若发现异常活动，请及时注销相关设备。';
 
   @override
   String sessionManagementLastActive(Object arg0) {
-    return '$arg0';
+    return '最后活跃: $arg0';
   }
 
   @override
-  String get sessionManagementRevokeOthers =>
-      'Session Management Revoke Others';
+  String get sessionManagementRevokeOthers => '注销其他设备';
 
   @override
-  String get sessionManagementRevokeThis => 'Session Management Revoke This';
+  String get sessionManagementRevokeThis => '注销';
 
   @override
-  String get sessionManagementTitle => 'Session Management Title';
+  String get sessionManagementTitle => '设备管理';
 
   @override
-  String get sessionManagementUnknownDevice =>
-      'Session Management Unknown Device';
+  String get sessionManagementUnknownDevice => '未知设备';
 
   @override
   String get socialAccountsIntro => '关联第三方账户以便快速登录';
@@ -8385,40 +8314,40 @@ class AppLocalizationsZh extends AppLocalizations {
   String get socialAccountsWeChatUnavailable => '微信暂不可用';
 
   @override
-  String get sprintActionAbandonButton => 'Sprint Action Abandon Button';
+  String get sprintActionAbandonButton => '放弃冲刺';
 
   @override
-  String get sprintActionAbandonSubtitle => 'Sprint Action Abandon Subtitle';
+  String get sprintActionAbandonSubtitle => '放弃当前冲刺';
 
   @override
-  String get sprintActionAbandonTitle => 'Sprint Action Abandon Title';
+  String get sprintActionAbandonTitle => '放弃冲刺';
 
   @override
-  String get sprintActionCompleteButton => 'Sprint Action Complete Button';
+  String get sprintActionCompleteButton => '完成冲刺';
 
   @override
-  String get sprintActionCompleteSubtitle => 'Sprint Action Complete Subtitle';
+  String get sprintActionCompleteSubtitle => '标记冲刺为完成';
 
   @override
-  String get sprintActionCompleteTitle => 'Sprint Action Complete Title';
+  String get sprintActionCompleteTitle => '完成冲刺';
 
   @override
-  String get sprintActionExtendSubtitle => 'Sprint Action Extend Subtitle';
+  String get sprintActionExtendSubtitle => '延长冲刺时间';
 
   @override
-  String get sprintActionExtendTitle => 'Sprint Action Extend Title';
+  String get sprintActionExtendTitle => '延长冲刺';
 
   @override
-  String get sprintActionsTitle => 'Sprint Actions Title';
+  String get sprintActionsTitle => '冲刺操作';
 
   @override
-  String get sprintCompletedTasks => 'Sprint Completed Tasks';
+  String get sprintCompletedTasks => '已完成任务';
 
   @override
-  String get sprintCompletionRate => 'Sprint Completion Rate';
+  String get sprintCompletionRate => '完成率';
 
   @override
-  String get sprintConfirmAbandonDesc => 'Sprint Confirm Abandon Desc';
+  String get sprintConfirmAbandonDesc => '确定要放弃这个冲刺吗？未完成的任务将保留。';
 
   @override
   String sprintConfirmAbandonMessage(Object arg0) {
@@ -8426,10 +8355,10 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get sprintConfirmAbandonTitle => 'Sprint Confirm Abandon Title';
+  String get sprintConfirmAbandonTitle => '确认放弃';
 
   @override
-  String get sprintConfirmCompleteDesc => 'Sprint Confirm Complete Desc';
+  String get sprintConfirmCompleteDesc => '恭喜完成冲刺！确定要标记为完成吗？';
 
   @override
   String sprintConfirmCompleteMessage(Object arg0) {
@@ -8437,13 +8366,13 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get sprintConfirmCompleteTitle => 'Sprint Confirm Complete Title';
+  String get sprintConfirmCompleteTitle => '确认完成';
 
   @override
-  String get sprintDailyCompletion => 'Sprint Daily Completion';
+  String get sprintDailyCompletion => '每日完成情况';
 
   @override
-  String get sprintDurationDaysLabel => 'Sprint Duration Days Label';
+  String get sprintDurationDaysLabel => '持续天数';
 
   @override
   String sprintDurationDaysValue(Object arg0) {
@@ -8451,10 +8380,10 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get sprintDurationLabel => 'Sprint Duration Label';
+  String get sprintDurationLabel => '持续时间';
 
   @override
-  String get sprintEndDateLabel => 'Sprint End Date Label';
+  String get sprintEndDateLabel => '结束日期';
 
   @override
   String sprintExtendConfirm(Object arg0) {
@@ -8472,46 +8401,46 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get sprintExtendSelectDays => 'Sprint Extend Select Days';
+  String get sprintExtendSelectDays => '选择延长天数';
 
   @override
-  String get sprintExtendTitle => 'Sprint Extend Title';
+  String get sprintExtendTitle => '延长冲刺';
 
   @override
-  String get sprintIncompleteTasks => 'Sprint Incomplete Tasks';
+  String get sprintIncompleteTasks => '未完成任务';
 
   @override
-  String get sprintInfoTitle => 'Sprint Info Title';
+  String get sprintInfoTitle => '冲刺信息';
 
   @override
-  String get sprintOngoing => 'Sprint Ongoing';
+  String get sprintOngoing => '进行中';
 
   @override
-  String get sprintProgressTitle => 'Sprint Progress Title';
+  String get sprintProgressTitle => '冲刺进度';
 
   @override
-  String get sprintRemainingTasks => 'Sprint Remaining Tasks';
+  String get sprintRemainingTasks => '剩余任务';
 
   @override
-  String get sprintStartDateLabel => 'Sprint Start Date Label';
+  String get sprintStartDateLabel => '开始日期';
 
   @override
-  String get sprintStatsEmpty => 'Sprint Stats Empty';
+  String get sprintStatsEmpty => '暂无统计数据';
 
   @override
-  String get sprintStatsTitle => 'Sprint Stats Title';
+  String get sprintStatsTitle => '冲刺统计';
 
   @override
-  String get sprintStatusCompleted => 'Sprint Status Completed';
+  String get sprintStatusCompleted => '已完成';
 
   @override
-  String get sprintStatusInProgress => 'Sprint Status In Progress';
+  String get sprintStatusInProgress => '进行中';
 
   @override
-  String get sprintStatusLabel => 'Sprint Status Label';
+  String get sprintStatusLabel => '冲刺状态';
 
   @override
-  String get sprintStatusTodo => 'Sprint Status Todo';
+  String get sprintStatusTodo => '待开始';
 
   @override
   String sprintTaskCount(Object arg0) {
@@ -8519,22 +8448,22 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get sprintTaskSummaryTitle => 'Sprint Task Summary Title';
+  String get sprintTaskSummaryTitle => '任务摘要';
 
   @override
-  String get sprintTotalTasks => 'Sprint Total Tasks';
+  String get sprintTotalTasks => '总任务数';
 
   @override
-  String get statusCompleted => 'Status Completed';
+  String get statusCompleted => '已完成';
 
   @override
-  String get statusFailed => 'Status Failed';
+  String get statusFailed => '失败';
 
   @override
-  String get statusInProgress => 'Status In Progress';
+  String get statusInProgress => '进行中';
 
   @override
-  String get statusPending => 'Status Pending';
+  String get statusPending => '待处理';
 
   @override
   String taskBatchCreateTitle(Object arg0) {
@@ -8542,16 +8471,16 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get taskChatAssistantTitle => 'Task Chat Assistant Title';
+  String get taskChatAssistantTitle => '任务助手';
 
   @override
-  String get taskChatEmptyPrompt => 'Task Chat Empty Prompt';
+  String get taskChatEmptyPrompt => '有什么可以帮你的？';
 
   @override
-  String get taskChatInputHint => 'Task Chat Input Hint';
+  String get taskChatInputHint => '输入消息...';
 
   @override
-  String get taskCreateAction => 'Task Create Action';
+  String get taskCreateAction => '创建任务';
 
   @override
   String taskCreateFailed(Object arg0) {
@@ -8559,28 +8488,28 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get taskCreateSuccess => 'Task Create Success';
+  String get taskCreateSuccess => '任务创建成功';
 
   @override
-  String get taskCreateTitle => 'Task Create Title';
+  String get taskCreateTitle => '创建任务';
 
   @override
-  String get taskCreatedWithSuggestions => 'Task Created With Suggestions';
+  String get taskCreatedWithSuggestions => '已根据建议创建任务';
 
   @override
-  String get taskCreating => 'Task Creating';
+  String get taskCreating => '正在创建任务...';
 
   @override
-  String get taskDeadline => 'Task Deadline';
+  String get taskDeadline => '截止时间';
 
   @override
-  String get taskDeadlineLabel => 'Task Deadline Label';
+  String get taskDeadlineLabel => '截止时间';
 
   @override
-  String get taskDeleteConfirm => 'Task Delete Confirm';
+  String get taskDeleteConfirm => '确定要删除这个任务吗？';
 
   @override
-  String get taskDeleteTitle => 'Task Delete Title';
+  String get taskDeleteTitle => '删除任务';
 
   @override
   String taskDetailLoadFailed(Object arg0) {
@@ -8588,13 +8517,13 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get taskDetailLoading => 'Task Detail Loading';
+  String get taskDetailLoading => '加载任务详情...';
 
   @override
-  String get taskDifficulty => 'Task Difficulty';
+  String get taskDifficulty => '难度';
 
   @override
-  String get taskDifficultyLabel => 'Task Difficulty Label';
+  String get taskDifficultyLabel => '难度';
 
   @override
   String taskDifficultyLevel(Object arg0) {
@@ -8602,10 +8531,10 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get taskEnergyCost => 'Task Energy Cost';
+  String get taskEnergyCost => '精力消耗';
 
   @override
-  String get taskEnergyCostLabel => 'Task Energy Cost Label';
+  String get taskEnergyCostLabel => '精力消耗';
 
   @override
   String taskEnergyCostValue(Object arg0) {
@@ -8613,22 +8542,22 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get taskEstimatedDuration => 'Task Estimated Duration';
+  String get taskEstimatedDuration => '预计时长';
 
   @override
-  String get taskEstimatedDurationLabel => 'Task Estimated Duration Label';
+  String get taskEstimatedDurationLabel => '预计时长';
 
   @override
-  String get taskExecutionAbandon => 'Task Execution Abandon';
+  String get taskExecutionAbandon => '放弃执行';
 
   @override
-  String get taskExecutionCompleteTitle => 'Task Execution Complete Title';
+  String get taskExecutionCompleteTitle => '完成任务';
 
   @override
-  String get taskExecutionCompletedTitle => 'Task Execution Completed Title';
+  String get taskExecutionCompletedTitle => '任务已完成';
 
   @override
-  String get taskExecutionConfirmComplete => 'Task Execution Confirm Complete';
+  String get taskExecutionConfirmComplete => '确认完成';
 
   @override
   String taskExecutionElapsedMinutes(Object arg0) {
@@ -8636,7 +8565,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get taskExecutionEnterFocus => 'Task Execution Enter Focus';
+  String get taskExecutionEnterFocus => '进入专注模式';
 
   @override
   String taskExecutionExpGained(Object arg0) {
@@ -8644,44 +8573,40 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get taskExecutionFeatureCoach => 'Task Execution Feature Coach';
+  String get taskExecutionFeatureCoach => '专注教练';
 
   @override
-  String get taskExecutionFeatureDistraction =>
-      'Task Execution Feature Distraction';
+  String get taskExecutionFeatureDistraction => '分心检测';
 
   @override
-  String get taskExecutionFeatureFlipClock =>
-      'Task Execution Feature Flip Clock';
+  String get taskExecutionFeatureFlipClock => '翻页时钟';
 
   @override
-  String get taskExecutionFeatureFullscreen =>
-      'Task Execution Feature Fullscreen';
+  String get taskExecutionFeatureFullscreen => '全屏模式';
 
   @override
-  String get taskExecutionFeatureReward => 'Task Execution Feature Reward';
+  String get taskExecutionFeatureReward => '完成奖励';
 
   @override
-  String get taskExecutionFeatureStarfield =>
-      'Task Execution Feature Starfield';
+  String get taskExecutionFeatureStarfield => '星空背景';
 
   @override
-  String get taskExecutionGuideEmpty => 'Task Execution Guide Empty';
+  String get taskExecutionGuideEmpty => '暂无执行指南';
 
   @override
-  String get taskExecutionGuideTitle => 'Task Execution Guide Title';
+  String get taskExecutionGuideTitle => '执行指南';
 
   @override
-  String get taskExecutionNoTask => 'Task Execution No Task';
+  String get taskExecutionNoTask => '当前没有执行中的任务';
 
   @override
-  String get taskExecutionNoteHint => 'Task Execution Note Hint';
+  String get taskExecutionNoteHint => '添加执行笔记...';
 
   @override
-  String get taskExecutionNoteLabel => 'Task Execution Note Label';
+  String get taskExecutionNoteLabel => '执行笔记';
 
   @override
-  String get taskExecutionSkipAnimation => 'Task Execution Skip Animation';
+  String get taskExecutionSkipAnimation => '跳过动画';
 
   @override
   String taskExecutionStartFailed(Object arg0) {
@@ -8689,37 +8614,37 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get taskExecutionStartNow => 'Task Execution Start Now';
+  String get taskExecutionStartNow => '立即开始';
 
   @override
-  String get taskExecutionSyncFailed => 'Task Execution Sync Failed';
+  String get taskExecutionSyncFailed => '同步失败';
 
   @override
-  String get taskExecutionTapToContinue => 'Task Execution Tap To Continue';
+  String get taskExecutionTapToContinue => '点击继续';
 
   @override
-  String get taskExecutionTimerLabel => 'Task Execution Timer Label';
+  String get taskExecutionTimerLabel => '计时器';
 
   @override
-  String get taskExitCancelStep1 => 'Task Exit Cancel Step1';
+  String get taskExitCancelStep1 => '取消退出';
 
   @override
-  String get taskExitCancelStep2 => 'Task Exit Cancel Step2';
+  String get taskExitCancelStep2 => '继续取消';
 
   @override
-  String get taskExitCancelStep3 => 'Task Exit Cancel Step3';
+  String get taskExitCancelStep3 => '保留任务';
 
   @override
-  String get taskExitConfirmStep1 => 'Task Exit Confirm Step1';
+  String get taskExitConfirmStep1 => '确认退出';
 
   @override
-  String get taskExitConfirmStep2 => 'Task Exit Confirm Step2';
+  String get taskExitConfirmStep2 => '再次确认';
 
   @override
-  String get taskExitConfirmStep3 => 'Task Exit Confirm Step3';
+  String get taskExitConfirmStep3 => '放弃任务';
 
   @override
-  String get taskExitMessageStep1 => 'Task Exit Message Step1';
+  String get taskExitMessageStep1 => '确定要退出吗？进度将丢失。';
 
   @override
   String taskExitMessageStep2(Object arg0, Object arg1) {
@@ -8727,34 +8652,34 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get taskExitMessageStep3 => 'Task Exit Message Step3';
+  String get taskExitMessageStep3 => '任务已放弃，下次继续加油！';
 
   @override
-  String get taskExitTitleStep1 => 'Task Exit Title Step1';
+  String get taskExitTitleStep1 => '退出任务';
 
   @override
-  String get taskExitTitleStep2 => 'Task Exit Title Step2';
+  String get taskExitTitleStep2 => '再次确认';
 
   @override
-  String get taskExitTitleStep3 => 'Task Exit Title Step3';
+  String get taskExitTitleStep3 => '已放弃';
 
   @override
-  String get taskGenerateGuideSubtitle => 'Task Generate Guide Subtitle';
+  String get taskGenerateGuideSubtitle => 'AI 正在生成执行指南...';
 
   @override
-  String get taskGenerateGuideTitle => 'Task Generate Guide Title';
+  String get taskGenerateGuideTitle => '生成执行指南';
 
   @override
-  String get taskGuideEmpty => 'Task Guide Empty';
+  String get taskGuideEmpty => '暂无指南';
 
   @override
-  String get taskGuideTitle => 'Task Guide Title';
+  String get taskGuideTitle => '任务指南';
 
   @override
-  String get taskListLoading => 'Task List Loading';
+  String get taskListLoading => '加载任务列表...';
 
   @override
-  String get taskListTitle => 'Task List Title';
+  String get taskListTitle => '任务列表';
 
   @override
   String taskMinutesOption(Object arg0) {
@@ -8767,7 +8692,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get taskNudgeApply => 'Task Nudge Apply';
+  String get taskNudgeApply => '应用建议';
 
   @override
   String taskNudgeConfidence(Object arg0) {
@@ -8775,52 +8700,52 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get taskNudgeDismiss => 'Task Nudge Dismiss';
+  String get taskNudgeDismiss => '忽略';
 
   @override
-  String get taskNudgeTitle => 'Task Nudge Title';
+  String get taskNudgeTitle => '任务建议';
 
   @override
-  String get taskReminderEnableSubtitle => 'Task Reminder Enable Subtitle';
+  String get taskReminderEnableSubtitle => '开启任务提醒功能';
 
   @override
-  String get taskReminderEnableTitle => 'Task Reminder Enable Title';
+  String get taskReminderEnableTitle => '开启提醒';
 
   @override
-  String get taskReminderInfoBody => 'Task Reminder Info Body';
+  String get taskReminderInfoBody => '任务提醒会在截止时间前通知您';
 
   @override
-  String get taskReminderInfoTitle => 'Task Reminder Info Title';
+  String get taskReminderInfoTitle => '提醒说明';
 
   @override
-  String get taskReminderPermissionDenied => 'Task Reminder Permission Denied';
+  String get taskReminderPermissionDenied => '没有通知权限';
 
   @override
-  String get taskReminderRefreshAll => 'Task Reminder Refresh All';
+  String get taskReminderRefreshAll => '刷新所有提醒';
 
   @override
-  String get taskReminderRefreshSuccess => 'Task Reminder Refresh Success';
+  String get taskReminderRefreshSuccess => '提醒已刷新';
 
   @override
-  String get taskReminderSettingsTitle => 'Task Reminder Settings Title';
+  String get taskReminderSettingsTitle => '提醒设置';
 
   @override
-  String get taskReminderTimesTitle => 'Task Reminder Times Title';
+  String get taskReminderTimesTitle => '提醒时间';
 
   @override
-  String get taskSearchHint => 'Task Search Hint';
+  String get taskSearchHint => '搜索任务...';
 
   @override
-  String get taskStart => 'Task Start';
+  String get taskStart => '开始任务';
 
   @override
-  String get taskSuggestedKnowledge => 'Task Suggested Knowledge';
+  String get taskSuggestedKnowledge => '推荐知识';
 
   @override
-  String get taskTagsHint => 'Task Tags Hint';
+  String get taskTagsHint => '添加标签...';
 
   @override
-  String get taskTagsLabel => 'Task Tags Label';
+  String get taskTagsLabel => '标签';
 
   @override
   String taskTimerMinutes(Object arg0) {
@@ -8828,34 +8753,34 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get taskTimerPomodoro => 'Task Timer Pomodoro';
+  String get taskTimerPomodoro => '番茄钟';
 
   @override
-  String get taskTitleHint => 'Task Title Hint';
+  String get taskTitleHint => '输入任务标题...';
 
   @override
-  String get taskTitleLabel => 'Task Title Label';
+  String get taskTitleLabel => '任务标题';
 
   @override
-  String get taskTitleRequired => 'Task Title Required';
+  String get taskTitleRequired => '请输入任务标题';
 
   @override
-  String get taskTypeLabel => 'Task Type Label';
+  String get taskTypeLabel => '任务类型';
 
   @override
-  String get taskTypeOcr => 'Task Type Ocr';
+  String get taskTypeOcr => 'OCR识别';
 
   @override
-  String get taskUntitled => 'Task Untitled';
+  String get taskUntitled => '未命名任务';
 
   @override
-  String get taskViewAll => 'Task View All';
+  String get taskViewAll => '查看全部';
 
   @override
-  String get weeklyAgendaCollapsedHint => 'Weekly Agenda Collapsed Hint';
+  String get weeklyAgendaCollapsedHint => '展开查看完整周日程';
 
   @override
-  String get weeklyAgendaEmptyHint => 'Weekly Agenda Empty Hint';
+  String get weeklyAgendaEmptyHint => '本周暂无日程安排';
 
   @override
   String weeklyAgendaSummary(Object arg0, Object arg1, Object arg2) {
@@ -8864,9 +8789,18 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String securityLogDevice(Object arg0) {
-    return '$arg0';
+    return '设备: $arg0';
   }
 
   @override
-  String get sessionManagementCurrentHint => 'Session Management Current Hint';
+  String get sessionManagementCurrentHint => '这是您当前正在使用的设备';
+
+  @override
+  String get personaAdjustInferredPreference => '调整推断偏好';
+
+  @override
+  String get personaNewValue => '新值';
+
+  @override
+  String get personaAdjustInferredPreferenceTitle => '调整推断偏好';
 }

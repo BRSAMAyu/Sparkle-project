@@ -127,4 +127,69 @@ class AccountabilityRepository {
     }
     throw Exception('Failed to load timeline');
   }
+
+  Future<Map<String, dynamic>> getHeatmap(
+    String partnershipId, {
+    int? year,
+  }) async {
+    final response = await _apiClient.get<dynamic>(
+      ApiEndpoints.accountabilityHeatmap(partnershipId),
+      queryParameters: year != null ? {'year': year} : null,
+    );
+    if (response.statusCode == 200) {
+      return ApiResponseParser.unwrapMap(
+          response.data, action: 'getHeatmap',);
+    }
+    throw Exception('Failed to load heatmap');
+  }
+
+  Future<Map<String, dynamic>> likeCheckin(String checkinId) async {
+    final response = await _apiClient.post<dynamic>(
+      ApiEndpoints.accountabilityCheckinLike(checkinId),
+    );
+    if (response.statusCode == 200) {
+      return ApiResponseParser.unwrapMap(
+          response.data, action: 'likeCheckin',);
+    }
+    throw Exception('Failed to like checkin');
+  }
+
+  Future<Map<String, dynamic>> encourageCheckin(
+    String checkinId,
+    String message,
+  ) async {
+    final response = await _apiClient.post<dynamic>(
+      ApiEndpoints.accountabilityCheckinEncourage(checkinId),
+      data: {'message': message},
+    );
+    if (response.statusCode == 200) {
+      return ApiResponseParser.unwrapMap(
+          response.data, action: 'encourageCheckin',);
+    }
+    throw Exception('Failed to send encouragement');
+  }
+
+  Future<Map<String, dynamic>> getAchievements() async {
+    final response = await _apiClient.get<dynamic>(
+      ApiEndpoints.accountabilityAchievements,
+    );
+    if (response.statusCode == 200) {
+      return ApiResponseParser.unwrapMap(
+          response.data, action: 'getAchievements',);
+    }
+    throw Exception('Failed to load achievements');
+  }
+
+  Future<Map<String, dynamic>> getPartnershipAchievements(
+    String partnershipId,
+  ) async {
+    final response = await _apiClient.get<dynamic>(
+      ApiEndpoints.accountabilityPartnershipAchievements(partnershipId),
+    );
+    if (response.statusCode == 200) {
+      return ApiResponseParser.unwrapMap(
+          response.data, action: 'getPartnershipAchievements',);
+    }
+    throw Exception('Failed to load partnership achievements');
+  }
 }

@@ -16,6 +16,22 @@ import 'package:sparkle/features/community/presentation/widgets/share_cards/shar
 import 'package:sparkle/features/community/presentation/providers/community_agent_provider.dart';
 import 'package:sparkle/features/file/file.dart';
 
+/// Font fallback list for chat content, including emoji support
+const _chatContentFontFallback = <String>[
+  'PingFang SC',
+  'Hiragino Sans GB',
+  'Heiti SC',
+  'Noto Sans SC',
+  'Noto Sans CJK SC',
+  'Source Han Sans SC',
+  'Microsoft YaHei',
+  'Arial Unicode MS',
+  // Emoji fonts for proper rendering
+  'Apple Color Emoji',
+  'Noto Color Emoji',
+  'Segoe UI Emoji',
+];
+
 class GroupChatBubble extends ConsumerStatefulWidget {
   const GroupChatBubble({
     required this.message,
@@ -287,6 +303,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                           ),
                         ),
                       _buildContent(context, isMe),
+                      _buildReactions(context),
                       const SizedBox(height: DS.xs),
                       // Timestamp and read status
                       Padding(
@@ -317,6 +334,58 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildReactions(BuildContext context) {
+    final reactions = widget.message.reactions;
+    if (reactions == null || reactions.isEmpty) return const SizedBox.shrink();
+
+    final entries = reactions.entries.where((e) {
+      final v = e.value;
+      if (v is int) return v > 0;
+      if (v is List) return (v).isNotEmpty;
+      return false;
+    }).toList();
+
+    if (entries.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: DS.xs),
+      child: Wrap(
+        spacing: DS.xs,
+        runSpacing: DS.xs,
+        children: entries.map((e) {
+          final count = e.value is int
+              ? e.value as int
+              : (e.value as List).length;
+          return GestureDetector(
+            onTap: widget.onReaction != null
+                ? () => widget.onReaction!(widget.message, e.key)
+                : null,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: DS.surfaceSecondary,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: DS.borderSubtle),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(e.key, style: const TextStyle(fontSize: 13)),
+                  const SizedBox(width: 3),
+                  Text(
+                    '$count',
+                    style: TextStyle(
+                        fontSize: 11, color: DS.textSecondary),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
       ),
     );
   }
@@ -463,6 +532,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                 color: isMe ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
                 fontSize: 16,
                 height: 1.4,
+                fontFamilyFallback: _chatContentFontFallback,
               ),
             ),
           ],

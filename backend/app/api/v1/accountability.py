@@ -3,7 +3,7 @@
 """
 from datetime import datetime, timezone
 from typing import Optional
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
@@ -16,6 +16,7 @@ from app.models.accountability import (
     AccountabilityPartnership,
     AccountabilityStatus,
 )
+from app.models.achievement import UserAchievement
 from app.models.community import Friendship, FriendshipStatus
 
 router = APIRouter()
@@ -65,6 +66,8 @@ class CheckinOut(BaseModel):
     mood: int
     minutes: int
     created_at: datetime
+    likes: int = 0
+    encouragements: list = []
 
     class Config:
         from_attributes = True
@@ -152,6 +155,15 @@ async def request_partnership(
     )
     await partnership.save(db)
     await db.refresh(partnership)
+
+    # Send notification to partner
+    from app.services.accountability_notification_service import (
+        accountability_notification_service,
+    )
+    await accountability_notification_service.send_partner_request(
+        db, partnership.id, current_user.id, body.partner_id, body.initiator_goal
+    )
+
     return PartnershipOut.model_validate(partnership)
 
 
@@ -190,6 +202,20 @@ async def respond_to_partnership(
 
     await partnership.save(db)
     await db.refresh(partnership)
+
+    # Send notification
+    from app.services.accountability_notification_service import (
+        accountability_notification_service,
+    )
+    if body.accept:
+        await accountability_notification_service.send_partner_accepted(
+            db, partnership.id, current_user.id, partnership.initiator_id
+        )
+    else:
+        await accountability_notification_service.send_partner_declined(
+            db, partnership.initiator_id, current_user.id
+        )
+
     return PartnershipOut.model_validate(partnership)
 
 
@@ -276,6 +302,20 @@ async def daily_checkin(
     )
     await checkin.save(db)
     await db.refresh(checkin)
+
+    # Notify partner about the check-in
+    from app.services.accountability_notification_service import (
+        accountability_notification_service,
+    )
+    partner_id = (
+        partnership.partner_id
+        if str(partnership.initiator_id) == str(current_user.id)
+        else partnership.initiator_id
+    )
+    await accountability_notification_service.send_partner_checked_in(
+        db, partner_id, partnership_id, current_user.full_name or current_user.username
+    )
+
     return CheckinOut.model_validate(checkin)
 
 
@@ -303,25 +343,46 @@ async def get_partnership_stats(
         else partnership.initiator_id
     )
 
-    # Count checkins per user (simplified streak: consecutive days from today)
+    from datetime import date, timedelta
     from sqlalchemy import func as sql_func
 
+    today_utc = datetime.now(timezone.utc).date()
     today_start = datetime.now(timezone.utc).replace(
         hour=0, minute=0, second=0, microsecond=0
     )
 
-    result = await db.execute(
-        select(
-            AccountabilityCheckin.user_id,
-            sql_func.count(AccountabilityCheckin.id).label("count"),
+    async def _streak(user_id) -> int:
+        """Calculate consecutive check-in days ending today or yesterday."""
+        result = await db.execute(
+            select(AccountabilityCheckin.created_at)
+            .where(
+                and_(
+                    AccountabilityCheckin.partnership_id == partnership_id,
+                    AccountabilityCheckin.user_id == user_id,
+                )
+            )
+            .order_by(AccountabilityCheckin.created_at.desc())
         )
-        .where(
-            AccountabilityCheckin.partnership_id == partnership_id
-        )
-        .group_by(AccountabilityCheckin.user_id)
+        checkin_dates: set[date] = set()
+        for (ts,) in result.all():
+            if ts.tzinfo is None:
+                ts = ts.replace(tzinfo=timezone.utc)
+            checkin_dates.add(ts.date())
+        streak = 0
+        current = today_utc
+        while current in checkin_dates:
+            streak += 1
+            current -= timedelta(days=1)
+        return streak
+
+    my_streak = await _streak(current_user.id)
+    partner_streak = await _streak(partner_id)
+
+    total_result = await db.execute(
+        select(sql_func.count(AccountabilityCheckin.id))
+        .where(AccountabilityCheckin.partnership_id == partnership_id)
     )
-    rows = result.all()
-    counts = {str(r.user_id): r.count for r in rows}
+    total_checkins = total_result.scalar_one() or 0
 
     partner_today = await db.execute(
         select(AccountabilityCheckin).where(
@@ -334,11 +395,11 @@ async def get_partnership_stats(
     )
 
     return PartnershipStatsOut(
-        my_streak_days=counts.get(str(current_user.id), 0),
-        partner_streak_days=counts.get(str(partner_id), 0),
+        my_streak_days=my_streak,
+        partner_streak_days=partner_streak,
         partner_checked_in_today=partner_today.scalar_one_or_none()
         is not None,
-        total_checkins=sum(counts.values()),
+        total_checkins=total_checkins,
     )
 
 
@@ -368,3 +429,268 @@ async def get_partnership_timeline(
         .limit(limit)
     )
     return [CheckinOut.model_validate(c) for c in result.scalars().all()]
+
+
+@router.get("/{partnership_id}/heatmap")
+async def get_partnership_heatmap(
+    partnership_id: UUID,
+    year: int | None = None,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """获取伙伴关系打卡热力图数据
+
+    返回每月每天的打卡状态，用于热力图可视化
+    """
+    partnership = await AccountabilityPartnership.get_by_id(
+        db, partnership_id
+    )
+    if not partnership:
+        raise HTTPException(status_code=404, detail="Partnership not found")
+
+    if str(partnership.initiator_id) != str(
+        current_user.id
+    ) and str(partnership.partner_id) != str(current_user.id):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    # 默认为当前年份
+    if year is None:
+        year = datetime.now(timezone.utc).year
+
+    year_start = datetime(year, 1, 1, tzinfo=timezone.utc)
+    year_end = datetime(year, 12, 31, 23, 59, 59, tzinfo=timezone.utc)
+
+    # 获取当年的所有打卡记录
+    result = await db.execute(
+        select(AccountabilityCheckin)
+        .where(
+            and_(
+                AccountabilityCheckin.partnership_id == partnership_id,
+                AccountabilityCheckin.created_at >= year_start,
+                AccountabilityCheckin.created_at <= year_end,
+            )
+        )
+        .order_by(AccountabilityCheckin.created_at)
+    )
+    checkins = result.scalars().all()
+
+    # 构建热力图数据
+    heatmap_data = {}
+    for checkin in checkins:
+        date_key = checkin.created_at.strftime("%Y-%m-%d")
+        if date_key not in heatmap_data:
+            heatmap_data[date_key] = {
+                "date": date_key,
+                "initiator_checkins": 0,
+                "partner_checkins": 0,
+            }
+
+        user_id_str = str(checkin.user_id)
+        if user_id_str == str(partnership.initiator_id):
+            heatmap_data[date_key]["initiator_checkins"] += 1
+        else:
+            heatmap_data[date_key]["partner_checkins"] += 1
+
+    return {
+        "year": year,
+        "partnership_id": str(partnership_id),
+        "heatmap": list(heatmap_data.values()),
+        "total_days": len(heatmap_data),
+    }
+
+
+@router.post("/checkin/{checkin_id}/like")
+async def like_checkin(
+    checkin_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """点赞打卡"""
+    checkin = await db.get(AccountabilityCheckin, checkin_id)
+    if not checkin:
+        raise HTTPException(status_code=404, detail="Checkin not found")
+
+    # 获取伙伴关系验证权限
+    partnership = await AccountabilityPartnership.get_by_id(db, checkin.partnership_id)
+    if not partnership:
+        raise HTTPException(status_code=404, detail="Partnership not found")
+
+    # 只有伙伴可以点赞
+    if (
+        str(current_user.id) != str(partnership.initiator_id)
+        and str(current_user.id) != str(partnership.partner_id)
+    ):
+        raise HTTPException(status_code=403, detail="Only partners can like checkins")
+
+    # 不能点赞自己的打卡
+    if str(checkin.user_id) == str(current_user.id):
+        raise HTTPException(status_code=400, detail="Cannot like your own checkin")
+
+    # 增加点赞数
+    checkin.likes = (checkin.likes or 0) + 1
+    await db.commit()
+
+    return {
+        "checkin_id": str(checkin_id),
+        "likes": checkin.likes,
+        "message": "Checkin liked successfully",
+    }
+
+
+@router.post("/checkin/{checkin_id}/encourage")
+async def encourage_checkin(
+    checkin_id: UUID,
+    message: str,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """发送鼓励消息到打卡"""
+    if not message or len(message.strip()) == 0:
+        raise HTTPException(status_code=400, detail="Message cannot be empty")
+
+    if len(message) > 500:
+        raise HTTPException(status_code=400, detail="Message too long (max 500 characters)")
+
+    checkin = await db.get(AccountabilityCheckin, checkin_id)
+    if not checkin:
+        raise HTTPException(status_code=404, detail="Checkin not found")
+
+    # 获取伙伴关系验证权限
+    partnership = await AccountabilityPartnership.get_by_id(db, checkin.partnership_id)
+    if not partnership:
+        raise HTTPException(status_code=404, detail="Partnership not found")
+
+    # 只有伙伴可以发送鼓励
+    if (
+        str(current_user.id) != str(partnership.initiator_id)
+        and str(current_user.id) != str(partnership.partner_id)
+    ):
+        raise HTTPException(status_code=403, detail="Only partners can send encouragement")
+
+    # 不能给自己发送鼓励
+    if str(checkin.user_id) == str(current_user.id):
+        raise HTTPException(status_code=400, detail="Cannot encourage your own checkin")
+
+    # 添加鼓励消息
+    encouragement = {
+        "id": str(uuid4()),
+        "user_id": str(current_user.id),
+        "message": message.strip(),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    if checkin.encouragements is None:
+        checkin.encouragements = []
+
+    encouragements_list = list(checkin.encouragements) if isinstance(checkin.encouragements, list) else []
+    encouragements_list.append(encouragement)
+    checkin.encouragements = encouragements_list
+
+    await db.commit()
+
+    return {
+        "checkin_id": str(checkin_id),
+        "encouragement": encouragement,
+        "total_encouragements": len(encouragements_list),
+        "message": "Encouragement sent successfully",
+    }
+
+
+@router.get("/achievements")
+async def get_accountability_achievements(
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """获取责任伙伴相关的成就定义和用户解锁状态"""
+    from app.services.accountability_achievement_service import (
+        accountability_achievement_service,
+    )
+
+    achievements = accountability_achievement_service.ACCOUNTABILITY_ACHIEVEMENTS
+
+    # 获取用户已解锁的成就
+    result = await db.execute(
+        select(UserAchievement).where(
+            and_(
+                UserAchievement.user_id == current_user.id,
+                UserAchievement.achievement_id.in_(achievements.keys()),
+            )
+        )
+    )
+    unlocked = {ua.achievement_id: ua for ua in result.scalars().all()}
+
+    # 构建响应
+    achievement_list = []
+    for achievement_id, definition in achievements.items():
+        user_achievement = unlocked.get(achievement_id)
+        achievement_list.append({
+            "id": achievement_id,
+            "name": definition["name"],
+            "description": definition["description"],
+            "icon": definition.get("icon", "🏆"),
+            "type": definition["type"].value,
+            "points": definition.get("points", 0),
+            "unlocked": user_achievement is not None,
+            "unlocked_at": user_achievement.unlocked_at.isoformat() if user_achievement else None,
+        })
+
+    return {
+        "achievements": achievement_list,
+        "total_unlocked": len(unlocked),
+        "total_available": len(achievements),
+    }
+
+
+@router.get("/{partnership_id}/achievements")
+async def get_partnership_achievements(
+    partnership_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """获取伙伴关系双方的成就状态"""
+    partnership = await AccountabilityPartnership.get_by_id(
+        db, partnership_id
+    )
+    if not partnership:
+        raise HTTPException(status_code=404, detail="Partnership not found")
+
+    if str(partnership.initiator_id) != str(
+        current_user.id
+    ) and str(partnership.partner_id) != str(current_user.id):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    from app.services.accountability_achievement_service import (
+        accountability_achievement_service,
+    )
+
+    achievements = accountability_achievement_service.ACCOUNTABILITY_ACHIEVEMENTS
+    partner_id = (
+        partnership.partner_id
+        if str(partnership.initiator_id) == str(current_user.id)
+        else partnership.initiator_id
+    )
+
+    # 获取双方成就
+    my_achievements = set()
+    partner_achievements = set()
+
+    for user_id, is_me in [(current_user.id, True), (partner_id, False)]:
+        result = await db.execute(
+            select(UserAchievement).where(
+                and_(
+                    UserAchievement.user_id == user_id,
+                    UserAchievement.achievement_id.in_(achievements.keys()),
+                )
+            )
+        )
+        unlocked = {ua.achievement_id for ua in result.scalars().all()}
+        if is_me:
+            my_achievements = unlocked
+        else:
+            partner_achievements = unlocked
+
+    return {
+        "partnership_id": str(partnership_id),
+        "my_achievements": list(my_achievements),
+        "partner_achievements": list(partner_achievements),
+    }

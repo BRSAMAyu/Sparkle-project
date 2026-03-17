@@ -70,6 +70,7 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
     final traceId = data['trace_id'] as String?;
     final workflowId = data['workflow_id'] as String?;
     final promptVersion = data['prompt_version'] as String?;
+    final sessionId = data['session_id'] as String?;
 
     switch (type) {
       case 'delta':
@@ -805,6 +806,7 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
             traceId: traceId,
             workflowId: workflowId,
             promptVersion: promptVersion,
+            sessionId: sessionId,
           );
         }
         return UnknownEvent(
@@ -813,6 +815,7 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
           traceId: traceId,
           workflowId: workflowId,
           promptVersion: promptVersion,
+          sessionId: sessionId,
         );
     }
   } catch (e) {

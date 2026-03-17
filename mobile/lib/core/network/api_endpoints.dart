@@ -378,6 +378,15 @@ class ApiEndpoints {
   static String accountabilityStats(String id) => '/accountability/$id/stats';
   static String accountabilityTimeline(String id) =>
       '/accountability/$id/timeline';
+  static String accountabilityHeatmap(String id) =>
+      '/accountability/$id/heatmap';
+  static String accountabilityCheckinLike(String id) =>
+      '/accountability/checkin/$id/like';
+  static String accountabilityCheckinEncourage(String id) =>
+      '/accountability/checkin/$id/encourage';
+  static const String accountabilityAchievements = '/accountability/achievements';
+  static String accountabilityPartnershipAchievements(String id) =>
+      '/accountability/$id/achievements';
 
   // Calendar Events
   static const String calendarEvents = '/calendar';

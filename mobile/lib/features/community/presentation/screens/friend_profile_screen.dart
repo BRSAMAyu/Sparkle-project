@@ -5,6 +5,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
+import 'package:sparkle/features/community/presentation/providers/accountability_provider.dart';
 import 'package:sparkle/shared/entities/user_brief.dart';
 
 class FriendProfileScreen extends ConsumerStatefulWidget {
@@ -174,9 +175,96 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
               ),
             ],
           ),
+          const SizedBox(height: DS.md),
+          SizedBox(
+            width: double.infinity,
+            child: CustomButton.secondary(
+              text: '发起责任伙伴',
+              icon: Icons.handshake_outlined,
+              onPressed: () => _showAccountabilityInvite(context, user),
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  Future<void> _showAccountabilityInvite(
+      BuildContext context, UserBrief user) async {
+    final goalController = TextEditingController();
+    var checkInDays = 1;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) => AlertDialog(
+          title: const Text('发起责任伙伴邀请'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('邀请 ${user.displayName} 成为你的责任伙伴',
+                  style: TextStyle(color: DS.textSecondary, fontSize: 13)),
+              const SizedBox(height: DS.spacing16),
+              TextField(
+                controller: goalController,
+                decoration: const InputDecoration(
+                  labelText: '我的目标',
+                  hintText: '例如：每天学习英语 30 分钟',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 2,
+              ),
+              const SizedBox(height: DS.spacing16),
+              const Text('打卡频率:',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: DS.xs),
+              Wrap(
+                spacing: DS.sm,
+                children: [1, 2, 3, 7].map((d) {
+                  final selected = checkInDays == d;
+                  return FilterChip(
+                    label: Text(d == 1 ? '每天' : '每 $d 天'),
+                    selected: selected,
+                    onSelected: (_) => setState(() => checkInDays = d),
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('发送邀请'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (confirmed != true) return;
+    final goal = goalController.text.trim();
+    if (goal.isEmpty) {
+      if (context.mounted) AppFeedback.info(context, '请填写目标');
+      return;
+    }
+
+    try {
+      await ref.read(myPartnershipsProvider.notifier).requestPartnership(
+            partnerId: user.id,
+            initiatorGoal: goal,
+            checkInDays: checkInDays,
+          );
+      if (context.mounted) {
+        AppFeedback.success(context, '责任伙伴邀请已发送！');
+      }
+    } catch (e) {
+      if (context.mounted) AppFeedback.error(context, '发送失败: $e');
+    }
   }
 
   Future<void> _sendFriendRequest(BuildContext context, UserBrief user) async {

@@ -5,6 +5,9 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/features/community/community_routes.dart';
+import 'package:sparkle/features/community/data/models/accountability_model.dart';
+import 'package:sparkle/features/community/presentation/providers/accountability_provider.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
@@ -52,116 +55,126 @@ class _MyFriendsTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final friendsState = ref.watch(friendsProvider);
+    final partnershipsState = ref.watch(myPartnershipsProvider);
 
-    return friendsState.when(
-      data: (friends) {
-        if (friends.isEmpty) {
-          return const Center(
-            child: CompactEmptyState(
-              message: 'No friends yet',
-              icon: Icons.people_outline,
-            ),
-          );
-        }
-        return RefreshIndicator(
-          onRefresh: () => ref.read(friendsProvider.notifier).refresh(),
-          child: ListView.builder(
-            itemCount: friends.length,
-            padding: const EdgeInsets.all(DS.lg),
-            itemBuilder: (context, index) {
-              final friendInfo = friends[index];
-              final friend = friendInfo.friend;
-              return InkWell(
-                onTap: () {
-                  context.push(
-                    '/chat/private/${friend.id}?name=${Uri.encodeComponent(friend.displayName)}',
-                  );
-                },
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  child: Row(
-                    children: [
-                      DecoratedBox(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border:
-                              Border.all(color: DS.brandPrimaryConst, width: 2),
-                          boxShadow: [
-                            BoxShadow(
-                              color:
-                                  DS.brandPrimaryConst.withValues(alpha: 0.05),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: CircleAvatar(
-                          backgroundImage: friend.avatarUrl != null
-                              ? NetworkImage(friend.avatarUrl!)
-                              : null,
-                          child: friend.avatarUrl == null
-                              ? Text(friend.displayName[0])
-                              : null,
-                        ),
-                      ),
-                      const SizedBox(width: DS.md),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              friend.displayName,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w500,
-                                fontSize: 16,
-                              ),
-                            ),
-                            Text(
-                              'Lv.${friend.flameLevel}',
-                              style: TextStyle(
-                                color: DS.brandPrimaryConst,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      SparkleIconButton(
-                        variant: ButtonVariant.ghost,
-                        size: 32,
-                        icon: Icon(
-                          Icons.person_outline,
-                          size: 18,
-                          color: DS.neutral500,
-                        ),
-                        onPressed: () {
-                          context.push(
-                            '/community/users/${friend.id}?name=${Uri.encodeComponent(friend.displayName)}',
-                          );
-                        },
-                      ),
-                      Icon(
-                        Icons.chevron_right,
-                        size: 20,
-                        color: DS.brandPrimaryConst,
-                      ),
-                    ],
+    return Column(
+      children: [
+        // 责任伙伴入口卡片（置顶）
+        _AccountabilityPartnersCard(partnershipsState: partnershipsState),
+        // 好友列表
+        Expanded(
+          child: friendsState.when(
+            data: (friends) {
+              if (friends.isEmpty) {
+                return const Center(
+                  child: CompactEmptyState(
+                    message: 'No friends yet',
+                    icon: Icons.people_outline,
                   ),
+                );
+              }
+              return RefreshIndicator(
+                onRefresh: () => ref.read(friendsProvider.notifier).refresh(),
+                child: ListView.builder(
+                  itemCount: friends.length,
+                  padding: const EdgeInsets.all(DS.lg),
+                  itemBuilder: (context, index) {
+                    final friendInfo = friends[index];
+                    final friend = friendInfo.friend;
+                    return InkWell(
+                      onTap: () {
+                        context.push(
+                          '/chat/private/${friend.id}?name=${Uri.encodeComponent(friend.displayName)}',
+                        );
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
+                        child: Row(
+                          children: [
+                            DecoratedBox(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                    color: DS.brandPrimaryConst, width: 2),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: DS.brandPrimaryConst
+                                        .withValues(alpha: 0.05),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: CircleAvatar(
+                                backgroundImage: friend.avatarUrl != null
+                                    ? NetworkImage(friend.avatarUrl!)
+                                    : null,
+                                child: friend.avatarUrl == null
+                                    ? Text(friend.displayName[0])
+                                    : null,
+                              ),
+                            ),
+                            const SizedBox(width: DS.md),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    friend.displayName,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Lv.${friend.flameLevel}',
+                                    style: TextStyle(
+                                      color: DS.brandPrimaryConst,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            SparkleIconButton(
+                              variant: ButtonVariant.ghost,
+                              size: 32,
+                              icon: Icon(
+                                Icons.person_outline,
+                                size: 18,
+                                color: DS.neutral500,
+                              ),
+                              onPressed: () {
+                                context.push(
+                                  '/community/users/${friend.id}?name=${Uri.encodeComponent(friend.displayName)}',
+                                );
+                              },
+                            ),
+                            Icon(
+                              Icons.chevron_right,
+                              size: 20,
+                              color: DS.brandPrimaryConst,
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
               );
             },
+            loading: () => const Center(child: LoadingIndicator()),
+            error: (e, s) => Center(
+              child: CustomErrorWidget.page(
+                context: context,
+                message: e.toString(),
+                onRetry: () => ref.read(friendsProvider.notifier).refresh(),
+              ),
+            ),
           ),
-        );
-      },
-      loading: () => const Center(child: LoadingIndicator()),
-      error: (e, s) => Center(
-        child: CustomErrorWidget.page(
-          context: context,
-          message: e.toString(),
-          onRetry: () => ref.read(friendsProvider.notifier).refresh(),
         ),
-      ),
+      ],
     );
   }
 }
@@ -304,4 +317,91 @@ class _RecommendationsTab extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// 责任伙伴入口卡片（显示在好友列表顶部）
+class _AccountabilityPartnersCard extends StatelessWidget {
+  const _AccountabilityPartnersCard({required this.partnershipsState});
+
+  final AsyncValue<List<AccountabilityPartnershipInfo>> partnershipsState;
+
+  @override
+  Widget build(BuildContext context) {
+    return partnershipsState.when(
+      loading: _buildSkeleton,
+      error: (_, __) => const SizedBox.shrink(), // 静默失败，不影响好友列表
+      data: (partnerships) {
+        final activeCount = partnerships
+            .where((p) => p.status == AccountabilityStatus.active)
+            .length;
+        final pendingCount = partnerships
+            .where((p) => p.status == AccountabilityStatus.pending)
+            .length;
+
+        return GraphiteCardSurface(
+          surfaceRole: SparkleSurfaceRole.card,
+          margin: const EdgeInsets.fromLTRB(DS.lg, DS.lg, DS.lg, DS.sm),
+          onTap: () => context.push(CommunityRoutes.accountability),
+          child: Row(
+            children: [
+              // 图标
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: DS.brandPrimary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(DS.borderRadiusMD),
+                ),
+                child: Icon(
+                  Icons.handshake_outlined,
+                  color: DS.brandPrimaryConst,
+                ),
+              ),
+              const SizedBox(width: DS.md),
+              // 文字
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '我的责任伙伴',
+                      style: DS.titleLarge.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: DS.xs),
+                    Text(
+                      _buildSubtitle(activeCount, pendingCount),
+                      style: DS.bodySmall.copyWith(color: DS.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+              // 箭头
+              Icon(Icons.chevron_right, color: DS.neutral400),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  String _buildSubtitle(int active, int pending) {
+    if (active == 0 && pending == 0) {
+      return '点击添加责任伙伴，互相监督成长';
+    }
+    final parts = <String>[];
+    if (active > 0) parts.add('$active 位进行中');
+    if (pending > 0) parts.add('$pending 位待确认');
+    return parts.join(' · ');
+  }
+
+  Widget _buildSkeleton() => Container(
+        margin: const EdgeInsets.fromLTRB(DS.lg, DS.lg, DS.lg, DS.sm),
+        height: 80,
+        decoration: BoxDecoration(
+          color: DS.surfaceSecondary,
+          borderRadius: BorderRadius.circular(DS.borderRadiusMD),
+        ),
+      );
 }

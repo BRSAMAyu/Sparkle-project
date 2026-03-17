@@ -7564,113 +7564,113 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communitySearchGroupMessages => 'Community Search Group Messages';
 
   @override
-  String get deleteAccountChecklistItem1 => 'Delete Account Checklist Item1';
+  String get deleteAccountChecklistItem1 =>
+      'All your personal data will be permanently deleted.';
 
   @override
-  String get deleteAccountChecklistItem2 => 'Delete Account Checklist Item2';
+  String get deleteAccountChecklistItem2 =>
+      'You will not be able to recover your account.';
 
   @override
-  String get deleteAccountChecklistItem3 => 'Delete Account Checklist Item3';
+  String get deleteAccountChecklistItem3 =>
+      'Active subscriptions will be automatically canceled.';
 
   @override
-  String get deleteAccountChecklistTitle => 'Delete Account Checklist Title';
+  String get deleteAccountChecklistTitle =>
+      'Please read carefully before proceeding:';
 
   @override
-  String get deleteAccountConfirmButton => 'Delete Account Confirm Button';
+  String get deleteAccountConfirmButton => 'Delete Account';
 
   @override
-  String get deleteAccountConfirmInputHint =>
-      'Delete Account Confirm Input Hint';
+  String get deleteAccountConfirmInputHint => 'Type \"DELETE\" to confirm';
 
   @override
-  String get deleteAccountConfirmInputTitle =>
-      'Delete Account Confirm Input Title';
+  String get deleteAccountConfirmInputTitle => 'Confirm Deletion';
 
   @override
   String get deleteAccountNoSocialProvider =>
-      'Delete Account No Social Provider';
+      'No associated social account found';
 
   @override
-  String get deleteAccountPasswordHint => 'Delete Account Password Hint';
+  String get deleteAccountPasswordHint => 'Enter your password';
 
   @override
-  String get deleteAccountPasswordLabel => 'Delete Account Password Label';
+  String get deleteAccountPasswordLabel => 'Password';
 
   @override
-  String get deleteAccountReauthButton => 'Delete Account Reauth Button';
+  String get deleteAccountReauthButton => 'Authenticate';
 
   @override
-  String get deleteAccountReauthDone => 'Delete Account Reauth Done';
+  String get deleteAccountReauthDone => 'Authenticated';
 
   @override
-  String get deleteAccountReauthSuccess => 'Delete Account Reauth Success';
+  String get deleteAccountReauthSuccess => 'Authentication successful';
 
   @override
-  String get deleteAccountRequireDeleteInput =>
-      'Delete Account Require Delete Input';
+  String get deleteAccountRequireDeleteInput => 'Please type DELETE to confirm';
 
   @override
-  String get deleteAccountRequirePassword => 'Delete Account Require Password';
+  String get deleteAccountRequirePassword => 'Password is required';
 
   @override
-  String get deleteAccountRequireReauth => 'Delete Account Require Reauth';
+  String get deleteAccountRequireReauth => 'Authentication required';
 
   @override
-  String get deleteAccountSocialProvider => 'Delete Account Social Provider';
+  String get deleteAccountSocialProvider => 'Social Account';
 
   @override
   String deleteAccountSocialReauthNotice(Object arg0) {
-    return '$arg0';
+    return 'Please authenticate with $arg0';
   }
 
   @override
-  String get deleteAccountSuccess => 'Delete Account Success';
+  String get deleteAccountSuccess => 'Account deleted successfully';
 
   @override
-  String get deleteAccountTitle => 'Delete Account Title';
+  String get deleteAccountTitle => 'Delete Account';
 
   @override
   String get deleteAccountWeChatUnavailable =>
-      'Delete Account We Chat Unavailable';
+      'WeChat is currently unavailable';
 
   @override
-  String get editProfileEmailUnverified => 'Edit Profile Email Unverified';
+  String get editProfileEmailUnverified => 'Unverified';
 
   @override
   String get editProfileEmailUnverifiedDesc =>
-      'Edit Profile Email Unverified Desc';
+      'Please verify your email address';
 
   @override
-  String get editProfileEmailVerified => 'Edit Profile Email Verified';
+  String get editProfileEmailVerified => 'Verified';
 
   @override
-  String get editProfileEmailVerifiedDesc => 'Edit Profile Email Verified Desc';
+  String get editProfileEmailVerifiedDesc => 'Your email is verified';
 
   @override
-  String get editProfileEnterCode => 'Edit Profile Enter Code';
+  String get editProfileEnterCode => 'Enter Code';
 
   @override
-  String get editProfileRegistrationMethod =>
-      'Edit Profile Registration Method';
+  String get editProfileRegistrationMethod => 'Registration Method';
 
   @override
-  String get editProfileSendEmail => 'Edit Profile Send Email';
+  String get editProfileSendEmail => 'Send Verification Email';
 
   @override
-  String get editProfileSetPassword => 'Edit Profile Set Password';
+  String get editProfileSetPassword => 'Set Password';
 
   @override
-  String get editProfileSetPasswordHint => 'Edit Profile Set Password Hint';
+  String get editProfileSetPasswordHint =>
+      'Set a secure password for your account';
 
   @override
-  String get editProfileVerifyEmailConfirm =>
-      'Edit Profile Verify Email Confirm';
+  String get editProfileVerifyEmailConfirm => 'Confirm';
 
   @override
-  String get editProfileVerifyEmailHint => 'Edit Profile Verify Email Hint';
+  String get editProfileVerifyEmailHint => 'Enter the verification code';
 
   @override
-  String get editProfileVerifyEmailTitle => 'Edit Profile Verify Email Title';
+  String get editProfileVerifyEmailTitle => 'Verify Email';
 
   @override
   String get fileStatusFailed => 'File Status Failed';
@@ -8000,55 +8000,55 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get guestUpgradeAcceptPoliciesRequired =>
-      'Guest Upgrade Accept Policies Required';
+      'Please read and agree to the policies';
 
   @override
-  String get guestUpgradeAgreePrivacy => 'Guest Upgrade Agree Privacy';
+  String get guestUpgradeAgreePrivacy => 'I agree to the Privacy Policy';
 
   @override
-  String get guestUpgradeAgreeTerms => 'Guest Upgrade Agree Terms';
+  String get guestUpgradeAgreeTerms => 'I agree to the Terms of Service';
 
   @override
-  String get guestUpgradeIntro => 'Guest Upgrade Intro';
+  String get guestUpgradeIntro =>
+      'Upgrade your guest account to securely save your progress and sync across devices.';
 
   @override
   String get guestUpgradePasswordMinLength =>
-      'Guest Upgrade Password Min Length';
+      'Password must be at least 8 characters';
 
   @override
-  String get guestUpgradeSocialSectionTitle =>
-      'Guest Upgrade Social Section Title';
+  String get guestUpgradeSocialSectionTitle => 'Or continue with';
 
   @override
-  String get guestUpgradeSocialSuccess => 'Guest Upgrade Social Success';
+  String get guestUpgradeSocialSuccess => 'Account upgraded successfully';
 
   @override
-  String get guestUpgradeSuccess => 'Guest Upgrade Success';
+  String get guestUpgradeSuccess => 'Account upgraded successfully';
 
   @override
-  String get guestUpgradeTitle => 'Guest Upgrade Title';
+  String get guestUpgradeTitle => 'Upgrade Account';
 
   @override
   String get guestUpgradeUsernameMinLength =>
-      'Guest Upgrade Username Min Length';
+      'Username must be at least 3 characters';
 
   @override
-  String get guestUpgradeViewPrivacy => 'Guest Upgrade View Privacy';
+  String get guestUpgradeViewPrivacy => 'View Privacy Policy';
 
   @override
-  String get guestUpgradeViewTerms => 'Guest Upgrade View Terms';
+  String get guestUpgradeViewTerms => 'View Terms of Service';
 
   @override
-  String get guestUpgradeWithApple => 'Guest Upgrade With Apple';
+  String get guestUpgradeWithApple => 'Continue with Apple';
 
   @override
-  String get guestUpgradeWithEmail => 'Guest Upgrade With Email';
+  String get guestUpgradeWithEmail => 'Upgrade with Email';
 
   @override
-  String get guestUpgradeWithGoogle => 'Guest Upgrade With Google';
+  String get guestUpgradeWithGoogle => 'Continue with Google';
 
   @override
-  String get guestUpgradeWithWeChat => 'Guest Upgrade With We Chat';
+  String get guestUpgradeWithWeChat => 'Continue with WeChat';
 
   @override
   String get passwordSetConfirm => 'Password Set Confirm';
@@ -8505,58 +8505,52 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reviewTagTooStrict => 'Review Tag Too Strict';
 
   @override
-  String get securityLogActionAccountDelete =>
-      'Security Log Action Account Delete';
+  String get securityLogActionAccountDelete => 'Account Deleted';
 
   @override
-  String get securityLogActionEmailVerify => 'Security Log Action Email Verify';
+  String get securityLogActionEmailVerify => 'Email Verified';
 
   @override
-  String get securityLogActionGuestUpgrade =>
-      'Security Log Action Guest Upgrade';
+  String get securityLogActionGuestUpgrade => 'Guest Upgraded';
 
   @override
-  String get securityLogActionLoginFailed => 'Security Log Action Login Failed';
+  String get securityLogActionLoginFailed => 'Login Failed';
 
   @override
-  String get securityLogActionLoginSuccess =>
-      'Security Log Action Login Success';
+  String get securityLogActionLoginSuccess => 'Login';
 
   @override
-  String get securityLogActionLogout => 'Security Log Action Logout';
+  String get securityLogActionLogout => 'Logout';
 
   @override
-  String get securityLogActionPasswordChange =>
-      'Security Log Action Password Change';
+  String get securityLogActionPasswordChange => 'Password Changed';
 
   @override
-  String get securityLogActionPasswordReset =>
-      'Security Log Action Password Reset';
+  String get securityLogActionPasswordReset => 'Password Reset';
 
   @override
-  String get securityLogActionRegister => 'Security Log Action Register';
+  String get securityLogActionRegister => 'Register';
 
   @override
-  String get securityLogActionSocialLink => 'Security Log Action Social Link';
+  String get securityLogActionSocialLink => 'Social Account Linked';
 
   @override
-  String get securityLogActionSocialUnlink =>
-      'Security Log Action Social Unlink';
+  String get securityLogActionSocialUnlink => 'Social Account Unlinked';
 
   @override
-  String get securityLogActionTokenRefresh =>
-      'Security Log Action Token Refresh';
+  String get securityLogActionTokenRefresh => 'Token Refreshed';
 
   @override
   String securityLogAdditionalInfo(Object arg0) {
-    return '$arg0';
+    return 'Details: $arg0';
   }
 
   @override
-  String get securityLogEmpty => 'Security Log Empty';
+  String get securityLogEmpty => 'No security logs';
 
   @override
-  String get securityLogIntro => 'Security Log Intro';
+  String get securityLogIntro =>
+      'Recent security events associated with your account.';
 
   @override
   String securityLogOccurredAt(Object arg0) {
@@ -8564,40 +8558,39 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get securityLogTitle => 'Security Log Title';
+  String get securityLogTitle => 'Security Log';
 
   @override
-  String get sessionManagementCurrent => 'Session Management Current';
+  String get sessionManagementCurrent => 'Current Device';
 
   @override
-  String get sessionManagementEmpty => 'Session Management Empty';
+  String get sessionManagementEmpty => 'No active sessions';
 
   @override
   String sessionManagementFirstLogin(Object arg0) {
-    return '$arg0';
+    return 'First login: $arg0';
   }
 
   @override
-  String get sessionManagementIntro => 'Session Management Intro';
+  String get sessionManagementIntro =>
+      'Manage your active sessions. If you notice any suspicious activity, please revoke the related sessions.';
 
   @override
   String sessionManagementLastActive(Object arg0) {
-    return '$arg0';
+    return 'Last active: $arg0';
   }
 
   @override
-  String get sessionManagementRevokeOthers =>
-      'Session Management Revoke Others';
+  String get sessionManagementRevokeOthers => 'Revoke Other Sessions';
 
   @override
-  String get sessionManagementRevokeThis => 'Session Management Revoke This';
+  String get sessionManagementRevokeThis => 'Revoke';
 
   @override
-  String get sessionManagementTitle => 'Session Management Title';
+  String get sessionManagementTitle => 'Session Management';
 
   @override
-  String get sessionManagementUnknownDevice =>
-      'Session Management Unknown Device';
+  String get sessionManagementUnknownDevice => 'Unknown Device';
 
   @override
   String get socialAccountsIntro =>
@@ -9116,9 +9109,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String securityLogDevice(Object arg0) {
-    return '$arg0';
+    return 'Device: $arg0';
   }
 
   @override
-  String get sessionManagementCurrentHint => 'Session Management Current Hint';
+  String get sessionManagementCurrentHint => 'This is your current device';
+
+  @override
+  String get personaAdjustInferredPreference => 'Adjust inferred preference';
+
+  @override
+  String get personaNewValue => 'New value';
+
+  @override
+  String get personaAdjustInferredPreferenceTitle =>
+      'Adjust Inferred Preference';
 }

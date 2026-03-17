@@ -855,7 +855,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Adjust inferred preference'),
+        title: Text(context.l10n.personaAdjustInferredPreference),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -863,8 +863,8 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
             const SizedBox(height: DS.spacing12),
             TextField(
               controller: controller,
-              decoration: const InputDecoration(
-                labelText: 'New value',
+              decoration: InputDecoration(
+                labelText: context.l10n.personaAdjustInferredPreference,
               ),
             ),
           ],
@@ -879,7 +879,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
               final nextValue = controller.text.trim();
               if (nextValue.isEmpty) {
                 if (context.mounted) {
-                  AppFeedback.info(context, 'Please enter a value');
+                  AppFeedback.info(context, context.l10n.personaPleaseEnterValue);
                 }
                 return;
               }

@@ -2283,9 +2283,274 @@ main  →  [A] → [B] → [C]
           'recent_activity': '30分钟前获得新成就',
         },
       ];
-}
 
-enum NodeStatus { locked, unlocked, review, mastered }
+  // --- 🤝 责任伙伴 Data ---
+  List<Map<String, dynamic>> get demoAccountabilityPartners => [
+        {
+          'id': 'partner_1',
+          'partner_id': 'friend_1',
+          'partner_name': 'Alice_Codes',
+          'partner_avatar': 'https://api.dicebear.com/9.x/avataaars/png?seed=Alice',
+          'status': 'active',
+          'started_at': DateTime.now().subtract(const Duration(days: 14)).toIso8601String(),
+          'my_streak': 7,
+          'partner_streak': 5,
+          'total_checkins': 12,
+          'last_checkin': DateTime.now().subtract(const Duration(hours: 3)).toIso8601String(),
+        },
+        {
+          'id': 'partner_2',
+          'partner_id': 'friend_3',
+          'partner_name': 'Carol_学习',
+          'partner_avatar': 'https://api.dicebear.com/9.x/avataaars/png?seed=Carol',
+          'status': 'active',
+          'started_at': DateTime.now().subtract(const Duration(days: 7)).toIso8601String(),
+          'my_streak': 3,
+          'partner_streak': 4,
+          'total_checkins': 8,
+          'last_checkin': DateTime.now().subtract(const Duration(hours: 1)).toIso8601String(),
+        },
+      ];
+
+  // --- 🏘️ 群组 Data ---
+  List<Map<String, dynamic>> get demoGroups => [
+        {
+          'id': 'group_1',
+          'name': '算法刷题小分队',
+          'description': '每天一起刷算法题，互相监督共同进步',
+          'avatar_url': 'https://api.dicebear.com/9.x/shapes/png?seed=algo',
+          'member_count': 15,
+          'is_member': true,
+          'is_public': true,
+          'created_at': DateTime.now().subtract(const Duration(days: 30)).toIso8601String(),
+          'last_activity': DateTime.now().subtract(const Duration(hours: 1)).toIso8601String(),
+        },
+        {
+          'id': 'group_2',
+          'name': 'Flutter开发者联盟',
+          'description': 'Flutter/Dart技术交流群，分享开发经验和最佳实践',
+          'avatar_url': 'https://api.dicebear.com/9.x/shapes/png?seed=flutter',
+          'member_count': 42,
+          'is_member': true,
+          'is_public': true,
+          'created_at': DateTime.now().subtract(const Duration(days: 60)).toIso8601String(),
+          'last_activity': DateTime.now().subtract(const Duration(minutes: 30)).toIso8601String(),
+        },
+        {
+          'id': 'group_3',
+          'name': 'AI学习小组',
+          'description': '人工智能和机器学习爱好者社区',
+          'avatar_url': 'https://api.dicebear.com/9.x/shapes/png?seed=ai',
+          'member_count': 28,
+          'is_member': false,
+          'is_public': true,
+          'created_at': DateTime.now().subtract(const Duration(days: 15)).toIso8601String(),
+          'last_activity': DateTime.now().subtract(const Duration(hours: 2)).toIso8601String(),
+        },
+      ];
+
+  // --- 💬 群组消息 Data ---
+  List<Map<String, dynamic>> get demoGroupMessages => [
+        {
+          'id': 'msg_1',
+          'group_id': 'group_1',
+          'sender_id': 'friend_1',
+          'sender_name': 'Alice_Codes',
+          'sender_avatar': 'https://api.dicebear.com/9.x/avataaars/png?seed=Alice',
+          'content': '今天有人一起刷动态规划吗？',
+          'created_at': DateTime.now().subtract(const Duration(minutes: 30)).toIso8601String(),
+          'reactions': [{'emoji': '👍', 'count': 3}],
+        },
+        {
+          'id': 'msg_2',
+          'group_id': 'group_1',
+          'sender_id': 'friend_2',
+          'sender_name': 'Bob_Dev',
+          'sender_avatar': 'https://api.dicebear.com/9.x/avataaars/png?seed=Bob',
+          'content': '我来！正好要做背包问题的练习',
+          'created_at': DateTime.now().subtract(const Duration(minutes: 25)).toIso8601String(),
+          'reactions': [{'emoji': '💪', 'count': 2}],
+        },
+        {
+          'id': 'msg_3',
+          'group_id': 'group_1',
+          'sender_id': 'friend_3',
+          'sender_name': 'Carol_学习',
+          'sender_avatar': 'https://api.dicebear.com/9.x/avataaars/png?seed=Carol',
+          'content': '加油！动态规划确实需要多练 💯',
+          'created_at': DateTime.now().subtract(const Duration(minutes: 20)).toIso8601String(),
+          'reactions': [],
+        },
+      ];
+
+  // --- 📊 责任伙伴打卡热力图 Data ---
+  List<Map<String, dynamic>> get demoAccountabilityHeatmap {
+    final now = DateTime.now();
+    final List<Map<String, dynamic>> heatmap = [];
+
+    // 生成过去365天的模拟数据
+    for (int i = 0; i < 365; i++) {
+      final date = now.subtract(Duration(days: i));
+      // 随机生成打卡强度 (0-4)
+      final intensity = i < 30 ? (date.weekday % 3 == 0 ? 2 : 0) : (i % 7 == 0 ? 3 : (i % 3));
+      heatmap.add({
+        'date': date.toIso8601String().split('T')[0],
+        'intensity': intensity,
+        'checkins': intensity > 0 ? [
+          {'time': '09:00', 'content': '早起学习一小时！'},
+          if (intensity > 2) {'time': '21:00', 'content': '晚上复习总结'},
+        ] : [],
+      });
+    }
+    return heatmap;
+  }
+
+  // --- 🔥 打卡记录 Data ---
+  List<Map<String, dynamic>> get demoCheckins => [
+        {
+          'id': 'checkin_1',
+          'partnership_id': 'partner_1',
+          'user_id': 'CS_Sophomore_12345',
+          'content': '今天完成了算法 chapter 3 的学习，理解了递归的核心思想！',
+          'created_at': DateTime.now().subtract(const Duration(hours: 3)).toIso8601String(),
+          'likes_count': 2,
+          'encouragements': [
+            {'user_id': 'friend_1', 'message': '太棒了！递归确实需要多练习 💪'},
+          ],
+        },
+        {
+          'id': 'checkin_2',
+          'partnership_id': 'partner_1',
+          'user_id': 'friend_1',
+          'content': '早起完成了 React Hooks 的复习，感觉理解更深了',
+          'created_at': DateTime.now().subtract(const Duration(hours: 5)).toIso8601String(),
+          'likes_count': 3,
+          'encouragements': [],
+        },
+      ];
+
+  // --- 🎯 视觉元素 Data ---
+  List<Map<String, dynamic>> get demoVisualElements => [
+        {
+          'id': 've_bg_1',
+          'name': '星空背景',
+          'description': '深邃的宇宙星空背景',
+          'element_type': 'background',
+          'rarity': 'common',
+          'category': '宇宙',
+          'is_unlocked': true,
+          'is_equipped': true,
+          'unlock_condition': '默认解锁',
+          'preview_url': 'https://images.unsplash.com/photo-1419248682-f54b?w=200',
+        },
+        {
+          'id': 've_bg_2',
+          'name': '极光背景',
+          'description': '绚丽的北极光效果',
+          'element_type': 'background',
+          'rarity': 'rare',
+          'category': '自然',
+          'is_unlocked': true,
+          'is_equipped': false,
+          'unlock_condition': '连续学习7天',
+          'preview_url': 'https://images.unsplash.com/photo-1486402638-b5b?w=200',
+        },
+        {
+          'id': 've_bg_3',
+          'name': '赛博朋克背景',
+          'description': '霓虹灯与未来城市',
+          'element_type': 'background',
+          'rarity': 'epic',
+          'category': '科幻',
+          'is_unlocked': false,
+          'is_equipped': false,
+          'unlock_condition': '完成10个任务',
+          'preview_url': 'https://images.unsplash.com/photo-1550751827-f584?w=200',
+        },
+        {
+          'id': 've_particle_1',
+          'name': '萤火虫粒子',
+          'description': '温暖的萤火虫飘动效果',
+          'element_type': 'particle',
+          'rarity': 'common',
+          'category': '自然',
+          'is_unlocked': true,
+          'is_equipped': true,
+          'unlock_condition': '默认解锁',
+          'preview_url': null,
+        },
+        {
+          'id': 've_particle_2',
+          'name': '雪花粒子',
+          'description': '轻柔的雪花飘落效果',
+          'element_type': 'particle',
+          'rarity': 'rare',
+          'category': '自然',
+          'is_unlocked': true,
+          'is_equipped': false,
+          'unlock_condition': '在冬季学习',
+          'preview_url': null,
+        },
+        {
+          'id': 've_effect_1',
+          'name': '金色光环',
+          'description': '完成任务时的金色光环效果',
+          'element_type': 'effect',
+          'rarity': 'epic',
+          'category': '特效',
+          'is_unlocked': false,
+          'is_equipped': false,
+          'unlock_condition': '连续打卡30天',
+          'preview_url': null,
+        },
+      ];
+
+  // --- 🏆 成就系统扩展 Data ---
+  List<Map<String, dynamic>> get demoAchievementDetails => [
+        {
+          'id': 'achv_1',
+          'name': '初出茅庐',
+          'description': '完成第一个任务',
+          'type': 'milestone',
+          'rarity': 'common',
+          'icon_url': '🎯',
+          'is_unlocked': true,
+          'unlocked_at': DateTime.now().subtract(const Duration(days: 30)).toIso8601String(),
+          'progress': {'current': 1, 'target': 1},
+        },
+        {
+          'id': 'achv_2',
+          'name': '持之以恒',
+          'description': '连续学习7天',
+          'type': 'streak',
+          'rarity': 'rare',
+          'icon_url': '🔥',
+          'is_unlocked': true,
+          'unlocked_at': DateTime.now().subtract(const Duration(days: 10)).toIso8601String(),
+          'progress': {'current': 7, 'target': 7},
+        },
+        {
+          'id': 'achv_3',
+          'name': '知识星探',
+          'description': '解锁50个知识节点',
+          'type': 'node_explore',
+          'rarity': 'epic',
+          'icon_url': '🌟',
+          'is_unlocked': false,
+          'progress': {'current': 23, 'target': 50},
+        },
+        {
+          'id': 'achv_4',
+          'name': '完美主义',
+          'description': '任务完成率达到95%',
+          'type': 'mastery',
+          'rarity': 'legendary',
+          'icon_url': '💎',
+          'is_unlocked': false,
+          'progress': {'current': 78, 'target': 100},
+        },
+      ];
+}
 
 /// Provider for DemoDataService
 final demoDataServiceProvider =

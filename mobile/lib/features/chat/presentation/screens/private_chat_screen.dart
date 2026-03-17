@@ -9,7 +9,7 @@ import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_bubble.dart';
-import 'package:sparkle/features/chat/presentation/widgets/chat_input.dart';
+import 'package:sparkle/features/chat/presentation/widgets/community_chat_input.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/repositories/community_share_repository.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
@@ -141,7 +141,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                 ),
               ),
             ),
-            ChatInput(
+            CommunityChatInput(
               quotedMessage: notifier.quotedMessage,
               onCancelQuote: () => setState(() => notifier.setQuote(null)),
               onSend: (text, {replyToId}) =>

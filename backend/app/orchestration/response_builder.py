@@ -65,6 +65,7 @@ class ResponseBuilderMixin:
         response_metadata = {
             "response_id": response_id,
             "trace_id": trace_id,
+            "session_id": session_id,  # Include session_id for conversation continuity
             "preference_version": (user_context_payload or {}).get("preference_version", 0),
             "verbosity_target": llm_profile_meta.get("verbosity_target", "balanced"),
             "experiment_cohort": (user_context_payload or {}).get("experiment_cohort", ""),
@@ -260,6 +261,7 @@ class ResponseBuilderMixin:
             metadata={str(k): str(v) for k, v in response_metadata.items()},
             full_text=full_response,
             finish_reason=agent_service_pb2.STOP,
+            session_id=session_id,
         )
         return final_response, final_response_data
 

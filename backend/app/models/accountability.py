@@ -18,6 +18,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
 from app.models.base import GUID, BaseModel
@@ -117,6 +118,10 @@ class AccountabilityCheckin(BaseModel):
     mood = Column(Integer, nullable=False, default=3)  # 1-5
     minutes = Column(Integer, nullable=False, default=0)
 
+    # 互动字段
+    likes = Column(Integer, nullable=False, default=0)  # 点赞数
+    encouragements = Column(JSONB, nullable=False, default=list)  # 鼓励消息列表
+
     # Relationships
     partnership = relationship(
         "AccountabilityPartnership", back_populates="checkins"
@@ -128,5 +133,9 @@ class AccountabilityCheckin(BaseModel):
             "idx_accountability_checkin_partnership_user",
             "partnership_id",
             "user_id",
+        ),
+        Index(
+            "idx_accountability_checkin_created_at",
+            "created_at",
         ),
     )

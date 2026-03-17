@@ -715,7 +715,7 @@ class ChatOrchestrator(
                 # Step 7: Notifications
                 await self._notify_pending_milestone_proposals(user_id, stream_callback)
                 if plan_switched and plan_id:
-                    await stream_callback(agent_service_pb2.ChatResponse(metadata={"plan_switched": "true", "switched_to_plan_id": str(plan_id)}))
+                    await stream_callback(agent_service_pb2.ChatResponse(metadata={"plan_switched": "true", "switched_to_plan_id": str(plan_id), "session_id": session_id}))
 
                 # Step 8: Inject dependencies into state
                 self._inject_state_dependencies(
@@ -824,6 +824,7 @@ class ChatOrchestrator(
                                         metadata={
                                             "event_type": "mode_suggestion",
                                             "suggestion": json.dumps(mode_suggestion, ensure_ascii=False),
+                                            "session_id": session_id,
                                         }
                                     )
                                 )
@@ -854,6 +855,7 @@ class ChatOrchestrator(
                         metadata={
                             **mode_strategy_metadata,
                             "chat_mode": chat_mode,
+                            "session_id": session_id,
                         },
                         duration_ms=self._roundtrip_ms(mode_strategy_started_at),
                     )
@@ -894,6 +896,7 @@ class ChatOrchestrator(
                         "mode": dual_core_decision.get("mode"),
                         "cognitive_adjustments": dual_core_decision.get("cognitive_adjustments", []),
                         "execution_constraints": dual_core_decision.get("execution_constraints", []),
+                        "session_id": session_id,
                     },
                     duration_ms=self._roundtrip_ms(dual_core_started_at),
                 )
@@ -1031,6 +1034,7 @@ class ChatOrchestrator(
                     response_id=response_id, created_at=int(datetime.now().timestamp()), request_id=request_id,
                     error=agent_service_pb2.Error(message=str(e), retryable=True, error_code=agent_service_pb2.ERROR_CODE_INTERNAL),
                     finish_reason=agent_service_pb2.ERROR,
+                    session_id=session_id,
                 )
 
             finally:

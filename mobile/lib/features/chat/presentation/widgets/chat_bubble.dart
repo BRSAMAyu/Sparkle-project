@@ -32,6 +32,10 @@ const _chatContentFontFallback = <String>[
   'Source Han Sans SC',
   'Microsoft YaHei',
   'Arial Unicode MS',
+  // Emoji fonts for proper rendering
+  'Apple Color Emoji', // iOS/macOS
+  'Noto Color Emoji', // Android/Linux
+  'Segoe UI Emoji', // Windows
 ];
 
 class ChatBubble extends StatefulWidget {

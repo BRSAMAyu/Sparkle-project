@@ -35,6 +35,7 @@ celery_app = Celery(
     backend=CELERY_RESULT_BACKEND,
     include=[
         "app.core.celery_tasks",
+        "app.tasks.accountability_tasks",
         "workers.signals_learning_worker",
     ]
 )
@@ -90,6 +91,12 @@ celery_app.conf.update(
         # P1: Knowledge Galaxy auto-update tasks
         "update_knowledge_galaxy": {"queue": "default"},
         "sync_plan_progress_to_galaxy": {"queue": "low_priority"},
+        # Accountability tasks
+        "tasks.accountability.send_daily_reminders": {"queue": "default"},
+        "tasks.accountability.check_partner_progress": {"queue": "low_priority"},
+        "tasks.accountability.evaluate_achievements": {"queue": "low_priority"},
+        "tasks.accountability.send_milestone_notification": {"queue": "default"},
+        "tasks.accountability.notify_partner_checkin": {"queue": "default"},
     },
 
     # 监控
@@ -837,6 +844,33 @@ celery_app.conf.beat_schedule = {
         "schedule": 900.0,  # 15分钟
         "args": (),
         "options": {"queue": "default"}
+    },
+
+    # ========== 责任伙伴系统任务 ==========
+
+    # 每天早上9点发送打卡提醒
+    "accountability-daily-reminders-morning": {
+        "task": "tasks.accountability.send_daily_reminders",
+        "schedule": crontab(hour=9, minute=0),
+        "options": {"queue": "default"}
+    },
+    # 每天晚上9点再次发送提醒
+    "accountability-daily-reminders-evening": {
+        "task": "tasks.accountability.send_daily_reminders",
+        "schedule": crontab(hour=21, minute=0),
+        "options": {"queue": "default"}
+    },
+    # 每天晚上11:59检查进度
+    "accountability-progress-check": {
+        "task": "tasks.accountability.check_partner_progress",
+        "schedule": crontab(hour=23, minute=59),
+        "options": {"queue": "low_priority"}
+    },
+    # 每天晚上11:59评估成就
+    "accountability-achievement-evaluation": {
+        "task": "tasks.accountability.evaluate_achievements",
+        "schedule": crontab(hour=23, minute=59),
+        "options": {"queue": "low_priority"}
     },
 }
 
