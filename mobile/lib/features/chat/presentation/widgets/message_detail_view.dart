@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
@@ -36,23 +37,27 @@ class MessageDetailView extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: DS.overlay30.withValues(alpha: 0),
-      body: GestureDetector(
-        // 点击背景关闭
-        onTap: () => Navigator.of(context).pop(),
-        child: ColoredBox(
-          color: DS.textPrimary.withValues(alpha: 0.5),
-          child: GestureDetector(
-            // 阻止点击内容区域时关闭
-            onTap: () {},
-            child: SafeArea(
-              child: Center(
+      body: Dismissible(
+        key: Key('message_detail_${message.id}'),
+        direction: DismissDirection.vertical,
+        onDismissed: (_) => Navigator.of(context).pop(),
+        child: GestureDetector(
+          // 点击背景关闭
+          onTap: () => Navigator.of(context).pop(),
+          child: ColoredBox(
+            color: DS.textPrimary.withValues(alpha: 0.5),
+            child: GestureDetector(
+              // 阻止点击内容区域时关闭
+              onTap: () {},
+              child: SafeArea(
+                child: Center(
                 child: Container(
                   margin: const EdgeInsets.symmetric(
-                    horizontal: DS.lg,
-                    vertical: DS.xl * 2,
+                    horizontal: DS.md,
+                    vertical: DS.lg,
                   ),
                   constraints: BoxConstraints(
-                    maxHeight: MediaQuery.of(context).size.height * 0.85,
+                    maxHeight: MediaQuery.of(context).size.height * 0.92,
                   ),
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.surface,
@@ -98,6 +103,7 @@ class MessageDetailView extends StatelessWidget {
           ),
         ),
       ),
+    ),
     );
   }
 
@@ -159,6 +165,27 @@ class MessageDetailView extends StatelessWidget {
             style: TextStyle(
               color: DS.textSecondary,
               fontSize: 12,
+            ),
+          ),
+
+          const SizedBox(width: DS.sm),
+
+          // 字数统计
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: DS.sm,
+              vertical: DS.xs,
+            ),
+            decoration: BoxDecoration(
+              color: DS.surfaceTertiary.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              '${message.content.length} ${context.l10n.chatCharacters}',
+              style: TextStyle(
+                color: DS.textTertiary,
+                fontSize: 11,
+              ),
             ),
           ),
 
@@ -301,19 +328,27 @@ class MessageDetailView extends StatelessWidget {
 
     final trimmed = content.trim();
     final strongPatterns = <RegExp>[
-      RegExp(r'(^|\n)#{1,6}\s', multiLine: true),
-      RegExp('```'),
-      RegExp(r'`[^`\n]+`'),
-      RegExp(r'\[[^\]]+\]\([^)]+\)'),
-      RegExp(r'(^|\n)>\s', multiLine: true),
-      RegExp(r'(^|\n)\|.+\|', multiLine: true),
-      RegExp(r'(\*\*|__)[^*_]+(\*\*|__)'),
+      RegExp(r'(^|\n)#{1,6}\s', multiLine: true), // 标题
+      RegExp('```'), // 代码块
+      RegExp(r'`[^`\n]+`'), // 行内代码
+      RegExp(r'\[[^\]]+\]\([^)]+\)'), // 链接
+      RegExp(r'(^|\n)>\s', multiLine: true), // 引用
+      RegExp(r'(^|\n)\|.+\|', multiLine: true), // 表格
+      RegExp(r'(\*\*|__)[^*_]+(\*\*|__)'), // 粗体
+      RegExp(r'(^|\n)[-*+]\s', multiLine: true), // 无序列表
+      RegExp(r'(^|\n)\d+\.\s', multiLine: true), // 有序列表
     ];
 
     return strongPatterns.any((pattern) => pattern.hasMatch(trimmed));
   }
 
-  Widget _buildActions(BuildContext context) => Container(
+  Widget _buildActions(BuildContext context) {
+    final charCount = message.content.length;
+    final wordCount = message.content.trim().isEmpty
+        ? 0
+        : message.content.trim().split(RegExp(r'\s+')).length;
+
+    return Container(
       padding: const EdgeInsets.all(DS.md),
       decoration: BoxDecoration(
         color: DS.surfaceTertiary.withValues(alpha: 0.35),
@@ -321,33 +356,53 @@ class MessageDetailView extends StatelessWidget {
           bottom: Radius.circular(20),
         ),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // 复制按钮
-          _ActionButton(
-            icon: Icons.copy,
-            label: context.l10n.chatCopy,
-            onPressed: () {
-              Clipboard.setData(ClipboardData(text: message.content));
-              AppFeedback.info(
-                context,
-                context.l10n.chatCopiedToClipboard,
-              );
-            },
+          // 字数统计
+          Padding(
+            padding: const EdgeInsets.only(bottom: DS.sm),
+            child: Text(
+              '$charCount ${context.l10n.chatCharacters} · $wordCount ${context.l10n.chatWords}',
+              style: TextStyle(
+                fontSize: 12,
+                color: DS.textTertiary,
+              ),
+            ),
           ),
+          // 操作按钮
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              // 复制按钮
+              _ActionButton(
+                icon: Icons.copy,
+                label: context.l10n.chatCopy,
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: message.content));
+                  AppFeedback.info(
+                    context,
+                    context.l10n.chatCopiedToClipboard,
+                  );
+                },
+              ),
 
-          // 分享按钮（可选，预留）
-          // _ActionButton(
-          //   icon: Icons.share,
-          //   label: '分享',
-          //   onPressed: () {
-          //     // TODO: 实现分享功能
-          //   },
-          // ),
+              // 分享按钮
+              _ActionButton(
+                icon: Icons.share,
+                label: context.l10n.chatShare,
+                onPressed: () async {
+                  await SharePlus.instance.share(
+                    ShareParams(text: message.content),
+                  );
+                },
+              ),
+            ],
+          ),
         ],
       ),
     );
+  }
 }
 
 class _ActionButton extends StatelessWidget {

@@ -965,6 +965,11 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     bool includeReferences = false,
     String? chatMode,
   }) {
+    // ✅ Fix H1: Reset connection state for new user session
+    if (_currentUserId != null && _currentUserId != userId) {
+      _resetConnectionState();
+    }
+
     // 更新 session ID
     _currentSessionId = sessionId ?? _currentSessionId ?? _generateSessionId();
 
@@ -1393,16 +1398,8 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
 
       _log('✅ Token refreshed successfully');
 
-      // 更新当前Token
-      _currentToken = newTokenResponse.accessToken;
-      _reconnectAttempts = 0; // 重置普通重连计数器
-
-      // 用新Token重连
-      if (_currentUserId != null) {
-        _closeConnection();
-        _updateConnectionState(WsConnectionState.disconnected);
-        _establishConnection(_currentUserId!, _currentToken);
-      }
+      // ✅ Fix H1: Restore connection state after successful token refresh
+      _onTokenRefreshSuccess(newTokenResponse.accessToken);
     } catch (e) {
       _log('❌ Token refresh failed: $e');
 
@@ -1451,6 +1448,31 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       _pendingMessages.clear();
     } finally {
       _isRefreshingToken = false;
+    }
+  }
+
+  /// ✅ Fix H1: Reset connection state to allow reconnection
+  void _resetConnectionState() {
+    if (_disposed) return;
+    _log('🔄 Resetting connection state');
+    _enableReconnectLocal = true;
+    _reconnectAttempts = 0;
+    _401ErrorCount = 0;
+    _isRefreshingToken = false;
+  }
+
+  /// ✅ Fix H1: Handle successful token refresh and restore connection state
+  void _onTokenRefreshSuccess(String newToken) {
+    if (_disposed) return;
+    _log('✅ Token refresh successful, restoring connection state');
+    _currentToken = newToken;
+    _resetConnectionState();
+
+    // 立即尝试重连
+    if (_currentUserId != null) {
+      _closeConnection();
+      _updateConnectionState(WsConnectionState.disconnected);
+      _establishConnection(_currentUserId!, _currentToken);
     }
   }
 
@@ -1838,6 +1860,10 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     }
     if (!_connectionStateController.isClosed) {
       unawaited(_connectionStateController.close());
+    }
+    // ✅ Fix C1: Close heartbeat metrics controller to prevent memory leak
+    if (!_heartbeatMetricsController.isClosed) {
+      unawaited(_heartbeatMetricsController.close());
     }
     _pendingMessages.clear();
   }

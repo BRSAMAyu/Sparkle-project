@@ -111,12 +111,15 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                       ),
                     );
                   }
-                  return ListView.builder(
-                    reverse: true,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: DS.spacing8, vertical: DS.spacing16,),
-                    itemCount: messages.length,
-                    itemBuilder: (context, index) {
+                  return Align(
+                    alignment: Alignment.topCenter,
+                    child: ListView.builder(
+                      reverse: true,
+                      shrinkWrap: true,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: DS.spacing8, vertical: DS.spacing16,),
+                      itemCount: messages.length,
+                      itemBuilder: (context, index) {
                       final message = messages[index];
                       return ChatBubble(
                         message: message,
@@ -127,6 +130,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                             .revokeMessage((msg as PrivateMessageInfo).id),
                       );
                     },
+                    ),
                   );
                 },
                 loading: () => const Center(child: LoadingIndicator()),

@@ -256,6 +256,8 @@
   "chatRegenerate": "重新生成",
   "chatCopy": "复制",
   "chatShare": "分享",
+  "chatCharacters": "字",
+  "chatWords": "词",
   "chatFeedback": "反馈",
   "chatReportIssue": "报告问题",
   "chatMessageTooLong": "消息过长",

@@ -1634,6 +1634,18 @@ abstract class AppLocalizations {
   /// **'分享'**
   String get chatShare;
 
+  /// No description provided for @chatCharacters.
+  ///
+  /// In zh, this message translates to:
+  /// **'字'**
+  String get chatCharacters;
+
+  /// No description provided for @chatWords.
+  ///
+  /// In zh, this message translates to:
+  /// **'词'**
+  String get chatWords;
+
   /// No description provided for @chatFeedback.
   ///
   /// In zh, this message translates to:

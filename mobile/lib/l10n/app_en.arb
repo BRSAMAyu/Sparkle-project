@@ -256,6 +256,8 @@
   "chatRegenerate": "Regenerate",
   "chatCopy": "Copy",
   "chatShare": "Share",
+  "chatCharacters": "chars",
+  "chatWords": "words",
   "chatFeedback": "Feedback",
   "chatReportIssue": "Report Issue",
   "chatMessageTooLong": "Message is too long",

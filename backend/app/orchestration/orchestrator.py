@@ -579,7 +579,8 @@ class ChatOrchestrator(
                     state.context_data["session_adaptation"] = session_adaptation_context.to_dict()
                 if conversation_rhythm is not None:
                     state.context_data["conversation_rhythm"] = conversation_rhythm
-                queue: asyncio.Queue = asyncio.Queue()
+                # ✅ Fix H4: Add maxsize to prevent OOM in slow client scenarios
+                queue: asyncio.Queue = asyncio.Queue(maxsize=200)
 
                 async def stream_callback(resp: agent_service_pb2.ChatResponse):
                     resp.response_id = response_id
@@ -588,7 +589,11 @@ class ChatOrchestrator(
                     resp.workflow_id = resp.workflow_id or workflow_id
                     resp.prompt_version = resp.prompt_version or prompt_version
                     resp.trace_id = resp.trace_id or trace_id
-                    await queue.put(resp)
+                    try:
+                        # Non-blocking put to prevent blocking when queue is full
+                        queue.put_nowait(resp)
+                    except asyncio.QueueFull:
+                        logger.warning(f"Response queue full (maxsize=200), dropping response: {resp.response_id}")
 
                 # Step 4.5: Proactively emit unread evolution/system updates at session start
                 await self._maybe_enqueue_perceptible_insight(

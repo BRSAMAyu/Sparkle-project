@@ -3,6 +3,7 @@ import 'dart:math';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
@@ -30,6 +31,17 @@ import 'package:sparkle/features/home/presentation/widgets/intent_prediction_bar
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
+
+const _chatContentFontFallback = <String>[
+  'PingFang SC',
+  'Hiragino Sans GB',
+  'Heiti SC',
+  'Noto Sans SC',
+  'Noto Sans CJK SC',
+  'Source Han Sans SC',
+  'Microsoft YaHei',
+  'Arial Unicode MS',
+];
 
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key});
@@ -1309,12 +1321,29 @@ class _StreamingBubble extends StatelessWidget {
   const _StreamingBubble({required this.content});
   final String content;
 
+  /// 检测内容是否包含 Markdown 语法
+  bool _hasMarkdownSyntax(String text) {
+    if (text.isEmpty) return false;
+    final patterns = <RegExp>[
+      RegExp(r'(^|\n)#{1,6}\s', multiLine: true), // 标题
+      RegExp('```'), // 代码块
+      RegExp(r'`[^`\n]+`'), // 行内代码
+      RegExp(r'(^|\n)[-*+]\s', multiLine: true), // 无序列表
+      RegExp(r'(^|\n)\d+\.\s', multiLine: true), // 有序列表
+      RegExp(r'\*\*[^*]+\*\*'), // 粗体
+      RegExp(r'\[[^\]]+\]\([^)]+\)'), // 链接
+    ];
+    return patterns.any((p) => p.hasMatch(text));
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     // Use a lighter color for better contrast in dark mode
     final bubbleColor = isDark ? DS.neutral800 : DS.brandPrimary;
     final textColor = isDark ? DS.textPrimary : DS.onBrandPrimary;
+    final shouldUseMarkdown = _hasMarkdownSyntax(content);
+
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
@@ -1341,22 +1370,58 @@ class _StreamingBubble extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Flexible(
-              child: Text(
-                content,
-                style: TextStyle(
-                  color: textColor,
-                  fontSize: DS.fontSizeBase,
-                  fontFamilyFallback: const [
-                    'PingFang SC',
-                    'Hiragino Sans GB',
-                    'Heiti SC',
-                    'Noto Sans SC',
-                    'Apple Color Emoji',
-                    'Noto Color Emoji',
-                    'Segoe UI Emoji',
-                  ],
-                ),
-              ),
+              child: shouldUseMarkdown
+                  ? MarkdownBody(
+                      key: ValueKey('stream_$content'),
+                      data: content,
+                      styleSheet: MarkdownStyleSheet(
+                        p: TextStyle(
+                          color: textColor,
+                          fontSize: DS.fontSizeBase,
+                          fontFamilyFallback: _chatContentFontFallback,
+                        ),
+                        code: TextStyle(
+                          backgroundColor: isDark
+                              ? DS.neutral700
+                              : DS.onBrandPrimary.withValues(alpha: 0.2),
+                          color: textColor,
+                          fontFamily: 'monospace',
+                          fontSize: 13,
+                        ),
+                        codeblockDecoration: BoxDecoration(
+                          color: isDark
+                              ? DS.neutral700
+                              : DS.onBrandPrimary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        listBullet: TextStyle(
+                          color: textColor,
+                        ),
+                        h1: TextStyle(
+                          color: textColor,
+                          fontSize: DS.fontSizeBase + 6,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        h2: TextStyle(
+                          color: textColor,
+                          fontSize: DS.fontSizeBase + 4,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        h3: TextStyle(
+                          color: textColor,
+                          fontSize: DS.fontSizeBase + 2,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    )
+                  : Text(
+                      content,
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: DS.fontSizeBase,
+                        fontFamilyFallback: _chatContentFontFallback,
+                      ),
+                    ),
             ),
             const SizedBox(width: DS.xs),
             // 闪烁的光标

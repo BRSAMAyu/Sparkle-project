@@ -804,6 +804,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatShare => 'Share';
 
   @override
+  String get chatCharacters => 'chars';
+
+  @override
+  String get chatWords => 'words';
+
+  @override
   String get chatFeedback => 'Feedback';
 
   @override

@@ -932,13 +932,15 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
 
     final trimmed = content.trim();
     final strongPatterns = <RegExp>[
-      RegExp(r'(^|\n)#{1,6}\s', multiLine: true),
-      RegExp('```'),
-      RegExp(r'`[^`\n]+`'),
-      RegExp(r'\[[^\]]+\]\([^)]+\)'),
-      RegExp(r'(^|\n)>\s', multiLine: true),
-      RegExp(r'(^|\n)\|.+\|', multiLine: true),
-      RegExp(r'(\*\*|__)[^*_]+(\*\*|__)'),
+      RegExp(r'(^|\n)#{1,6}\s', multiLine: true), // 标题
+      RegExp('```'), // 代码块
+      RegExp(r'`[^`\n]+`'), // 行内代码
+      RegExp(r'\[[^\]]+\]\([^)]+\)'), // 链接
+      RegExp(r'(^|\n)>\s', multiLine: true), // 引用
+      RegExp(r'(^|\n)\|.+\|', multiLine: true), // 表格
+      RegExp(r'(\*\*|__)[^*_]+(\*\*|__)'), // 粗体
+      RegExp(r'(^|\n)[-*+]\s', multiLine: true), // 无序列表
+      RegExp(r'(^|\n)\d+\.\s', multiLine: true), // 有序列表
     ];
 
     return strongPatterns.any((pattern) => pattern.hasMatch(trimmed));

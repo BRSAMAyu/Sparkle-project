@@ -118,7 +118,42 @@ class ObservabilityMixin:
             logger.warning(f"Unexpected llm_profile type: {type(llm_profile)}")
         return llm_profile_meta
 
-    async def _drain_queue(self, queue: asyncio.Queue) -> AsyncGenerator[agent_service_pb2.ChatResponse, None]:
-        while not queue.empty():
-            item = await queue.get()
-            yield item
+    async def _drain_queue(
+        self,
+        queue: asyncio.Queue,
+        timeout: float = 5.0,
+    ) -> AsyncGenerator[agent_service_pb2.ChatResponse, None]:
+        """
+        Drain all queued responses with exception protection.
+
+        Ensures all queued messages are yielded even if errors occur during processing.
+        Uses finally block to guarantee queue cleanup.
+
+        Args:
+            queue: The asyncio.Queue to drain
+            timeout: Maximum time to wait for each queue item (default 5.0 seconds)
+
+        Yields:
+            ChatResponse items from the queue
+        """
+        processed_count = 0
+        try:
+            while not queue.empty():
+                try:
+                    # Add timeout to prevent indefinite blocking
+                    item = await asyncio.wait_for(queue.get(), timeout=timeout)
+                    processed_count += 1
+                    yield item
+                except asyncio.TimeoutError:
+                    logger.warning(f"Queue drain timeout after {processed_count} items")
+                    break
+                except Exception as e:
+                    logger.error(f"Error processing queued item: {e}")
+                    # Continue processing remaining items
+        finally:
+            # Mark all processed items as done
+            for _ in range(processed_count):
+                try:
+                    queue.task_done()
+                except Exception:
+                    pass

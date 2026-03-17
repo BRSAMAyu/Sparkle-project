@@ -789,6 +789,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatShare => '分享';
 
   @override
+  String get chatCharacters => '字';
+
+  @override
+  String get chatWords => '词';
+
+  @override
   String get chatFeedback => '反馈';
 
   @override

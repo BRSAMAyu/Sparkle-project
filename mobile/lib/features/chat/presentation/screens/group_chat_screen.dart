@@ -363,12 +363,15 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                       child: Text(context.l10n.communityChatEmpty),
                     );
                   }
-                  return ListView.builder(
-                    reverse: true,
-                    padding: const EdgeInsets.all(DS.spacing16),
-                    itemCount:
-                        mergedMessages.length + (showAgentStatus ? 1 : 0),
-                    itemBuilder: (context, index) {
+                  return Align(
+                    alignment: Alignment.topCenter,
+                    child: ListView.builder(
+                      reverse: true,
+                      shrinkWrap: true,
+                      padding: const EdgeInsets.all(DS.spacing16),
+                      itemCount:
+                          mergedMessages.length + (showAgentStatus ? 1 : 0),
+                      itemBuilder: (context, index) {
                       if (showAgentStatus && index == 0) {
                         return Padding(
                           padding: EdgeInsets.only(bottom: DS.spacing16),
@@ -425,6 +428,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                             : _handleReport,
                       );
                     },
+                    ),
                   );
                 },
                 loading: () => const Center(child: LoadingIndicator()),
