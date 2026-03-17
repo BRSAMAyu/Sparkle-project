@@ -1100,7 +1100,7 @@ class BroadcastMessageCreate {
 
 @JsonSerializable()
 class GroupModerationSettings {
-  GroupModerationSettings({
+  const GroupModerationSettings({
     this.keywordFilters,
     this.muteAll,
     this.slowModeSeconds,

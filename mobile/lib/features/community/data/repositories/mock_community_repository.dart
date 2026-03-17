@@ -985,7 +985,85 @@ class MockCommunityRepository implements CommunityRepository {
 
   @override
   Future<void> updateAnnouncement(String groupId, String? announcement) async {
-    // Mock implementation - do nothing
     return;
   }
+
+  // ── Phase 1: Message Favorites ─────────────────────────────────────────────
+
+  @override
+  Future<void> addFavorite(
+    String? groupMessageId,
+    String? privateMessageId, {
+    String? note,
+    List<String>? tags,
+  }) async {}
+
+  @override
+  Future<List<MessageFavoriteInfo>> getFavorites({
+    String? tag,
+    int limit = 20,
+    int offset = 0,
+  }) async =>
+      [];
+
+  @override
+  Future<void> removeFavorite(String favoriteId) async {}
+
+  // ── Phase 1: Message Forward ───────────────────────────────────────────────
+
+  @override
+  Future<void> forwardMessage(
+    String messageId,
+    String sourceType, {
+    String? targetGroupId,
+    String? targetUserId,
+    String? comment,
+  }) async {}
+
+  // ── Phase 1: Message Report ────────────────────────────────────────────────
+
+  @override
+  Future<void> reportMessage(
+    String messageId,
+    ReportReason reason, {
+    String? description,
+  }) async {}
+
+  // ── Phase 2a: Group Member Moderation ─────────────────────────────────────
+
+  @override
+  Future<void> muteMember(
+    String groupId,
+    String userId,
+    int durationMinutes, {
+    String? reason,
+  }) async {}
+
+  @override
+  Future<void> unmuteMember(String groupId, String userId) async {}
+
+  @override
+  Future<void> warnMember(
+    String groupId,
+    String userId,
+    String reason,
+  ) async {}
+
+  // ── Phase 2b: Group Moderation Settings ───────────────────────────────────
+
+  @override
+  Future<GroupModerationSettings> getModerationSettings(
+          String groupId,) async =>
+      const GroupModerationSettings();
+
+  @override
+  Future<void> updateModerationSettings(
+    String groupId,
+    GroupModerationSettings settings,
+  ) async {}
+
+  // ── Phase 2d: Complete Task ────────────────────────────────────────────────
+
+  @override
+  Future<void> completeTask(String taskId) async {}
 }

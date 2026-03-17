@@ -2,14 +2,18 @@ import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/services/notification_service.dart';
+import 'package:sparkle/features/community/presentation/screens/accountability_screen.dart';
+import 'package:sparkle/features/community/presentation/screens/accountability_detail_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/create_group_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/create_post_screen.dart';
+import 'package:sparkle/features/community/presentation/screens/favorites_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/friends_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/group_detail_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/group_discover_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/group_files_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/group_list_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/group_members_screen.dart';
+import 'package:sparkle/features/community/presentation/screens/group_moderation_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/group_search_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/group_tasks_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/friend_profile_screen.dart';
@@ -47,7 +51,12 @@ class CommunityRoutes {
   static const String groupTasks = '/community/groups/:id/tasks';
   static const String groupMembers = '/community/groups/:id/members';
   static const String groupFiles = '/community/groups/:id/files';
+  static const String groupModeration = '/community/groups/:id/moderation';
   static const String userProfile = '/community/users/:id';
+  static const String favorites = '/community/favorites';
+  static const String accountability = '/community/accountability';
+  static const String accountabilityDetail =
+      '/community/accountability/:id';
 
   static List<RouteBase> get routes => [
         // Friends list (detail page, full-screen)
@@ -197,11 +206,56 @@ class CommunityRoutes {
           name: 'groupFiles',
           parentNavigatorKey: navigatorKey,
           pageBuilder: (context, state) {
-            // id is required in path, so it won't be null
             final groupId = state.pathParameters['id']!;
             return _buildTransitionPage(
               state: state,
               child: GroupFilesScreen(groupId: groupId),
+            );
+          },
+        ),
+        // Group moderation (admin only)
+        GoRoute(
+          path: groupModeration,
+          name: 'groupModeration',
+          parentNavigatorKey: navigatorKey,
+          pageBuilder: (context, state) {
+            final groupId = state.pathParameters['id']!;
+            return _buildTransitionPage(
+              state: state,
+              child: GroupModerationScreen(groupId: groupId),
+            );
+          },
+        ),
+        // Message favorites
+        GoRoute(
+          path: favorites,
+          name: 'favorites',
+          parentNavigatorKey: navigatorKey,
+          pageBuilder: (context, state) => _buildTransitionPage(
+            state: state,
+            child: const FavoritesScreen(),
+          ),
+        ),
+        // Accountability partner list
+        GoRoute(
+          path: accountability,
+          name: 'accountability',
+          parentNavigatorKey: navigatorKey,
+          pageBuilder: (context, state) => _buildTransitionPage(
+            state: state,
+            child: const AccountabilityScreen(),
+          ),
+        ),
+        // Accountability detail
+        GoRoute(
+          path: accountabilityDetail,
+          name: 'accountabilityDetail',
+          parentNavigatorKey: navigatorKey,
+          pageBuilder: (context, state) {
+            final id = state.pathParameters['id']!;
+            return _buildTransitionPage(
+              state: state,
+              child: AccountabilityDetailScreen(partnershipId: id),
             );
           },
         ),

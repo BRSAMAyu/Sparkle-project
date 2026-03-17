@@ -584,6 +584,172 @@ class CommunityRepository {
     );
   }
 
+  // ── Message Favorites (Phase 1a) ──────────────────────────────────────────
+
+  Future<void> addFavorite(
+    String? groupMessageId,
+    String? privateMessageId, {
+    String? note,
+    List<String>? tags,
+  }) async {
+    await _apiClient.post<dynamic>(
+      ApiEndpoints.messageFavorites,
+      data: {
+        if (groupMessageId != null) 'group_message_id': groupMessageId,
+        if (privateMessageId != null) 'private_message_id': privateMessageId,
+        if (note != null && note.isNotEmpty) 'note': note,
+        if (tags != null && tags.isNotEmpty) 'tags': tags,
+      },
+    );
+  }
+
+  Future<List<MessageFavoriteInfo>> getFavorites({
+    String? tag,
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    final response = await _apiClient.get<dynamic>(
+      ApiEndpoints.messageFavorites,
+      queryParameters: {
+        if (tag != null) 'tag': tag,
+        'limit': limit,
+        'offset': offset,
+      },
+    );
+    if (response.statusCode == 200) {
+      final data =
+          ApiResponseParser.unwrapList(response.data, action: 'getFavorites');
+      return data
+          .map((e) => MessageFavoriteInfo.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+    throw Exception('Failed to load favorites');
+  }
+
+  Future<void> removeFavorite(String favoriteId) async {
+    await _apiClient.delete<dynamic>(ApiEndpoints.messageFavorite(favoriteId));
+  }
+
+  // ── Message Forward (Phase 1b) ─────────────────────────────────────────────
+
+  Future<void> forwardMessage(
+    String messageId,
+    String sourceType, {
+    String? targetGroupId,
+    String? targetUserId,
+    String? comment,
+  }) async {
+    await _apiClient.post<dynamic>(
+      ApiEndpoints.messageForward,
+      data: {
+        'source_message_id': messageId,
+        'source_type': sourceType,
+        if (targetGroupId != null) 'target_group_id': targetGroupId,
+        if (targetUserId != null) 'target_user_id': targetUserId,
+        if (comment != null && comment.isNotEmpty) 'comment': comment,
+      },
+    );
+  }
+
+  // ── Message Report (Phase 1c) ──────────────────────────────────────────────
+
+  Future<void> reportMessage(
+    String messageId,
+    ReportReason reason, {
+    String? description,
+  }) async {
+    await _apiClient.post<dynamic>(
+      ApiEndpoints.messageReports,
+      data: {
+        'message_id': messageId,
+        'reason': _reportReasonToApi(reason),
+        if (description != null && description.isNotEmpty)
+          'description': description,
+      },
+    );
+  }
+
+  // ── Group Member Moderation (Phase 2a) ────────────────────────────────────
+
+  Future<void> muteMember(
+    String groupId,
+    String userId,
+    int durationMinutes, {
+    String? reason,
+  }) async {
+    await _apiClient.post<dynamic>(
+      ApiEndpoints.groupMemberMute(groupId, userId),
+      data: {
+        'duration_minutes': durationMinutes,
+        if (reason != null && reason.isNotEmpty) 'reason': reason,
+      },
+    );
+  }
+
+  Future<void> unmuteMember(String groupId, String userId) async {
+    await _apiClient.post<dynamic>(
+      ApiEndpoints.groupMemberUnmute(groupId, userId),
+    );
+  }
+
+  Future<void> warnMember(
+    String groupId,
+    String userId,
+    String reason,
+  ) async {
+    await _apiClient.post<dynamic>(
+      ApiEndpoints.groupMemberWarn(groupId, userId),
+      data: {'reason': reason},
+    );
+  }
+
+  // ── Group Moderation Settings (Phase 2b) ──────────────────────────────────
+
+  Future<GroupModerationSettings> getModerationSettings(String groupId) async {
+    final response = await _apiClient.get<dynamic>(
+      ApiEndpoints.groupModerationSettings(groupId),
+    );
+    if (response.statusCode == 200) {
+      final data = ApiResponseParser.unwrapMap(
+          response.data, action: 'getModerationSettings',);
+      return GroupModerationSettings.fromJson(data);
+    }
+    throw Exception('Failed to load moderation settings');
+  }
+
+  Future<void> updateModerationSettings(
+    String groupId,
+    GroupModerationSettings settings,
+  ) async {
+    await _apiClient.put<dynamic>(
+      ApiEndpoints.groupModerationSettings(groupId),
+      data: settings.toJson(),
+    );
+  }
+
+  // ── Complete Task (Phase 2d) ───────────────────────────────────────────────
+
+  Future<void> completeTask(String taskId) async {
+    await _apiClient.post<dynamic>('/community/tasks/$taskId/complete');
+  }
+
+  String _reportReasonToApi(ReportReason reason) {
+    switch (reason) {
+      case ReportReason.spam:
+        return 'spam';
+      case ReportReason.harassment:
+        return 'harassment';
+      case ReportReason.violence:
+        return 'violence';
+      case ReportReason.hateSpeech:
+        return 'hate_speech';
+      case ReportReason.misinformation:
+        return 'misinformation';
+      case ReportReason.other:
+        return 'other';
+    }
+  }
+
   String _messageTypeToApi(MessageType type) {
     switch (type) {
       case MessageType.text:

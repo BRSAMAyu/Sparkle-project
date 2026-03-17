@@ -11,6 +11,7 @@ import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/features/chat/presentation/widgets/ai_status_indicator.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_input.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
+import 'package:sparkle/features/community/data/repositories/community_repository.dart';
 import 'package:sparkle/features/community/data/repositories/community_share_repository.dart';
 import 'package:sparkle/features/community/presentation/providers/community_agent_provider.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
@@ -30,6 +31,179 @@ class GroupChatScreen extends ConsumerStatefulWidget {
 class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
   MessageInfo? _quotedMessage;
   bool _agentMode = false;
+
+  void _handleFavorite(MessageInfo msg) {
+    unawaited(
+      ref.read(communityRepositoryProvider).addFavorite(msg.id, null).then((_) {
+        if (!mounted) return;
+        AppFeedback.success(context, '已收藏');
+      }).catchError((Object e) {
+        if (!mounted) return;
+        AppFeedback.error(context, '收藏失败: $e');
+      }),
+    );
+  }
+
+  void _handleForward(MessageInfo msg) {
+    unawaited(_showForwardDialog(msg));
+  }
+
+  Future<void> _showForwardDialog(MessageInfo msg) async {
+    final groups = await ref.read(communityRepositoryProvider).getMyGroups();
+    if (!mounted) return;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
+      builder: (ctx) => DecoratedBox(
+        decoration: BoxDecoration(
+          color: Theme.of(ctx).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.all(DS.spacing16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('转发到群组',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: DS.fontSizeLg),),
+                const SizedBox(height: DS.spacing16),
+                SizedBox(
+                  height: 300,
+                  child: ListView.builder(
+                    itemCount: groups.length,
+                    itemBuilder: (ctx, i) {
+                      final g = groups[i];
+                      return ListTile(
+                        title: Text(g.name),
+                        subtitle: Text('${g.memberCount} 成员'),
+                        onTap: () async {
+                          Navigator.pop(ctx);
+                          try {
+                            await ref
+                                .read(communityRepositoryProvider)
+                                .forwardMessage(
+                                  msg.id,
+                                  'group',
+                                  targetGroupId: g.id,
+                                );
+                            if (!mounted) return;
+                            AppFeedback.success(context, '已转发到 ${g.name}');
+                          } catch (e) {
+                            if (!mounted) return;
+                            AppFeedback.error(context, '转发失败: $e');
+                          }
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _handleReport(MessageInfo msg) {
+    unawaited(_showReportSheet(msg));
+  }
+
+  Future<void> _showReportSheet(MessageInfo msg) async {
+    var selectedReason = ReportReason.spam;
+    final descController = TextEditingController();
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) => DecoratedBox(
+          decoration: BoxDecoration(
+            color: Theme.of(ctx).scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: EdgeInsets.only(
+                left: DS.spacing16,
+                right: DS.spacing16,
+                top: DS.spacing16,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + DS.spacing16,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('举报消息',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: DS.fontSizeLg),),
+                  const SizedBox(height: DS.spacing8),
+                  ...[
+                    (ReportReason.spam, '垃圾信息'),
+                    (ReportReason.harassment, '骚扰'),
+                    (ReportReason.violence, '暴力'),
+                    (ReportReason.hateSpeech, '仇恨言论'),
+                    (ReportReason.misinformation, '虚假信息'),
+                    (ReportReason.other, '其他'),
+                  ].map((entry) => RadioListTile<ReportReason>(
+                        title: Text(entry.$2),
+                        value: entry.$1,
+                        groupValue: selectedReason,
+                        onChanged: (v) =>
+                            setState(() => selectedReason = v!),
+                      ),),
+                  const SizedBox(height: DS.spacing8),
+                  TextField(
+                    controller: descController,
+                    decoration: const InputDecoration(
+                      hintText: '补充说明（可选）',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 2,
+                  ),
+                  const SizedBox(height: DS.spacing16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: SparkleButton.primary(
+                      label: '提交举报',
+                      onPressed: () async {
+                        Navigator.pop(ctx);
+                        try {
+                          await ref
+                              .read(communityRepositoryProvider)
+                              .reportMessage(
+                                msg.id,
+                                selectedReason,
+                                description: descController.text.trim().isEmpty
+                                    ? null
+                                    : descController.text.trim(),
+                              );
+                          if (!mounted) return;
+                          AppFeedback.success(context, '举报已提交，感谢反馈');
+                        } catch (e) {
+                          if (!mounted) return;
+                          AppFeedback.error(context, '举报失败: $e');
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    descController.dispose();
+  }
 
   void _showCheckinDialog() {
     final durationController = TextEditingController(text: '60');
@@ -240,6 +414,15 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                                     groupChatProvider(widget.groupId).notifier,)
                                 .toggleReaction(msg.id, emoji),
                         onThread: _openThread,
+                        onFavorite: isCommunityAgentMessage(message)
+                            ? null
+                            : _handleFavorite,
+                        onForward: isCommunityAgentMessage(message)
+                            ? null
+                            : _handleForward,
+                        onReport: isCommunityAgentMessage(message)
+                            ? null
+                            : _handleReport,
                       );
                     },
                   );

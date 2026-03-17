@@ -6,6 +6,7 @@ API v1 Router
 from fastapi import APIRouter
 
 from app.api.v1 import (
+    accountability,
     achievements,
     calendar,
     analytics,
@@ -140,6 +141,7 @@ api_router.include_router(decay_timemachine.router, tags=["Decay TimeMachine"])
 api_router.include_router(multi_agent.router, tags=["Multi-Agent"])
 # Calendar Events
 api_router.include_router(calendar.router, prefix="/calendar", tags=["calendar"])
+api_router.include_router(accountability.router, prefix="/accountability", tags=["accountability"])
 
 
 @api_router.get("/")

@@ -367,6 +367,18 @@ class ApiEndpoints {
   static const String registerDevice = '/devices/register';
   static const String unregisterDevice = '/devices/unregister';
 
+  // Accountability Partners (Phase 3)
+  static const String accountabilityMine = '/accountability/mine';
+  static const String accountabilityRequest = '/accountability/request';
+  static String accountabilityRespond(String id) =>
+      '/accountability/$id/respond';
+  static String accountabilityEnd(String id) => '/accountability/$id';
+  static String accountabilityCheckin(String id) =>
+      '/accountability/$id/checkin';
+  static String accountabilityStats(String id) => '/accountability/$id/stats';
+  static String accountabilityTimeline(String id) =>
+      '/accountability/$id/timeline';
+
   // Calendar Events
   static const String calendarEvents = '/calendar';
   static String calendarEvent(String id) => '/calendar/$id';

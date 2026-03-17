@@ -25,6 +25,9 @@ class GroupChatBubble extends ConsumerStatefulWidget {
     this.onEdit,
     this.onReaction,
     this.onThread,
+    this.onFavorite,
+    this.onForward,
+    this.onReport,
     super.key,
   });
   final MessageInfo message;
@@ -34,6 +37,9 @@ class GroupChatBubble extends ConsumerStatefulWidget {
   final void Function(MessageInfo message, String content)? onEdit;
   final void Function(MessageInfo message, String emoji)? onReaction;
   final void Function(MessageInfo message)? onThread;
+  final void Function(MessageInfo message)? onFavorite;
+  final void Function(MessageInfo message)? onForward;
+  final void Function(MessageInfo message)? onReport;
 
   @override
   ConsumerState<GroupChatBubble> createState() => _GroupChatBubbleState();
@@ -128,6 +134,24 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                       widget.onThread!(widget.message);
                     },
                   ),
+                if (widget.onFavorite != null)
+                  ListTile(
+                    leading: const Icon(Icons.bookmark_add_outlined),
+                    title: const Text('收藏'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      widget.onFavorite!(widget.message);
+                    },
+                  ),
+                if (widget.onForward != null)
+                  ListTile(
+                    leading: const Icon(Icons.forward_rounded),
+                    title: const Text('转发'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      widget.onForward!(widget.message);
+                    },
+                  ),
                 if (isMe &&
                     widget.onEdit != null &&
                     widget.message.messageType == MessageType.text)
@@ -136,9 +160,6 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                     title: Text(l10n.communityEdit),
                     onTap: () {
                       Navigator.pop(context);
-                      // Trigger edit flow (implementation dependent, but typically shows input)
-                      // For now, we assume onEdit is called with new content from some dialog
-                      // widget.onEdit!(widget.message, newContent);
                     },
                   ),
                 if (canRevoke && widget.onRevoke != null)
@@ -151,6 +172,18 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                     onTap: () {
                       Navigator.pop(context);
                       widget.onRevoke!(widget.message);
+                    },
+                  ),
+                if (!isMe && widget.onReport != null)
+                  ListTile(
+                    leading: Icon(Icons.flag_outlined, color: DS.error),
+                    title: Text(
+                      '举报',
+                      style: TextStyle(color: DS.error),
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+                      widget.onReport!(widget.message);
                     },
                   ),
                 const SizedBox(height: DS.sm),
