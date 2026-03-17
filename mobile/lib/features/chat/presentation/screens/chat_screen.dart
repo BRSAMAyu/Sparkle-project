@@ -128,6 +128,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             previous == WsConnectionState.reconnecting) {
           // 重连成功
           AppFeedback.success(context, l10n.chatReconnected);
+
+          // 🔧 修复：重连后重新加载历史消息
+          final conversationId = ref.read(chatProvider).conversationId;
+          if (conversationId != null && conversationId.isNotEmpty) {
+            unawaited(
+              ref.read(chatProvider.notifier).loadConversationHistory(conversationId),
+            );
+          }
         } else if (next == WsConnectionState.failed &&
             previous != WsConnectionState.failed) {
           // 连接失败

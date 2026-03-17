@@ -1498,6 +1498,7 @@
       "error": {}
     }
   },
+  "shareTypeNotSupportedYet": "该类型暂不支持分享到社群，请使用图片分享",
   "threadDiscussion": "线程讨论",
   "threadReplyHint": "回复线程...",
   "calendarSetDueDateTitle": "设置任务截止日期",

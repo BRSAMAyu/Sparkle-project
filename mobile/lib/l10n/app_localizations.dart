@@ -7730,6 +7730,12 @@ abstract class AppLocalizations {
   /// **'分享失败：{error}'**
   String shareResourceFailed(Object error);
 
+  /// No description provided for @shareTypeNotSupportedYet.
+  ///
+  /// In zh, this message translates to:
+  /// **'该类型暂不支持分享到社群，请使用图片分享'**
+  String get shareTypeNotSupportedYet;
+
   /// No description provided for @threadDiscussion.
   ///
   /// In zh, this message translates to:

@@ -123,11 +123,17 @@ extension ChatNotifierActions on ChatNotifier {
 
   Future<void> switchPlanSession(String? planId, {BuildContext? context}) async {
     if (planId == null) {
-      state = state.copyWith(
-        clearConversation: true,
-        messages: [],
-        agentActivities: const [],
-      );
+      // 🔧 修复：即使没有活跃计划，也尝试加载当前会话历史
+      final currentSessionId = state.conversationId;
+      if (currentSessionId != null && currentSessionId.isNotEmpty) {
+        await loadConversationHistory(currentSessionId);
+      } else {
+        state = state.copyWith(
+          clearConversation: true,
+          messages: [],
+          agentActivities: const [],
+        );
+      }
       return;
     }
 

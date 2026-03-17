@@ -494,7 +494,12 @@ class ChatNotifier extends StateNotifier<ChatState> {
       final chatMode = _ref.read(chatModeProvider);
       final chatModeValue = chatMode.apiValue;
 
-      await for (final event in _chatRepository.chatStream(
+      // 🔧 P1-FIX: Stream timeout protection (120 seconds)
+      // If no events received for 120 seconds, treat as timeout
+      const streamTimeout = Duration(seconds: 120);
+
+      // Create a timeout wrapper for the stream
+      final rawStream = _chatRepository.chatStream(
         content,
         state.conversationId,
         userId: userId,
@@ -504,7 +509,24 @@ class ChatNotifier extends StateNotifier<ChatState> {
         includeReferences: fileIds.isNotEmpty,
         extraContext: extraContext,
         chatMode: chatModeValue,
-      )) {
+      );
+
+      // Wrap with timeout check
+      final timedStream = rawStream.timeout(
+        streamTimeout,
+        onTimeout: (sink) {
+          debugPrint('[ChatProvider] Stream timeout after $streamTimeout');
+          sink
+            ..add(ErrorEvent(
+              code: 'STREAM_TIMEOUT',
+              message: 'Stream timed out after 120 seconds of inactivity',
+              retryable: true,
+            ))
+            ..close();
+        },
+      );
+
+      await for (final event in timedStream) {
         if (event.responseId != null && event.responseId!.isNotEmpty) {
           responseId = event.responseId;
         }

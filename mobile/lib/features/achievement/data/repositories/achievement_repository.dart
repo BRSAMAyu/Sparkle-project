@@ -604,46 +604,202 @@ class AchievementRepository {
         },
       );
 
-  AchievementMapData _getDemoAchievementMap() => AchievementMapData(
-        nodes: [
-          AchievementMapNode(
-            id: 'streak_7',
-            name: '一周坚持',
-            rarity: AchievementRarity.common,
-            category: 'streak',
-            position: {'x': 100, 'y': 100},
-            isUnlocked: true,
-            prerequisites: [],
-          ),
-          AchievementMapNode(
-            id: 'streak_30',
-            name: '月度冠军',
-            rarity: AchievementRarity.rare,
-            category: 'streak',
-            position: {'x': 100, 'y': 200},
-            isUnlocked: false,
-            prerequisites: ['streak_7'],
-            parentId: 'streak_7',
-          ),
-          AchievementMapNode(
-            id: 'night_owl',
-            name: '深夜学者',
-            rarity: AchievementRarity.epic,
-            category: 'hidden',
-            position: {'x': 300, 'y': 100},
-            isUnlocked: false,
-            isHidden: true,
-            prerequisites: [],
-          ),
-        ],
-        connections: [
-          {'from': 'streak_7', 'to': 'streak_30', 'type': 'parent'},
-        ],
-        categories: [
-          {'id': 'streak', 'name': 'streak', 'count': 5},
-          {'id': 'hidden', 'name': 'hidden', 'count': 3},
-        ],
-      );
+  AchievementMapData _getDemoAchievementMap() {
+    // 使用更大的画布尺寸和更分散的节点布局
+    // 模拟一个真实的成就地图，多个类别分布在不同的区域
+    final nodes = <AchievementMapNode>[
+      // === Streak Achievements (左上区域) ===
+      AchievementMapNode(
+        id: 'streak_3',
+        name: '起步启航',
+        rarity: AchievementRarity.common,
+        category: 'streak',
+        position: {'x': 80, 'y': 150},
+        isUnlocked: true,
+        prerequisites: [],
+      ),
+      AchievementMapNode(
+        id: 'streak_7',
+        name: '一周坚持',
+        rarity: AchievementRarity.common,
+        category: 'streak',
+        position: {'x': 80, 'y': 280},
+        isUnlocked: true,
+        prerequisites: ['streak_3'],
+        parentId: 'streak_3',
+      ),
+      AchievementMapNode(
+        id: 'streak_14',
+        name: '双周达人',
+        rarity: AchievementRarity.rare,
+        category: 'streak',
+        position: {'x': 80, 'y': 410},
+        isUnlocked: false,
+        prerequisites: ['streak_7'],
+        parentId: 'streak_7',
+      ),
+      AchievementMapNode(
+        id: 'streak_30',
+        name: '月度冠军',
+        rarity: AchievementRarity.rare,
+        category: 'streak',
+        position: {'x': 80, 'y': 540},
+        isUnlocked: false,
+        prerequisites: ['streak_14'],
+        parentId: 'streak_14',
+      ),
+      AchievementMapNode(
+        id: 'streak_100',
+        name: '百日传奇',
+        rarity: AchievementRarity.epic,
+        category: 'streak',
+        position: {'x': 80, 'y': 670},
+        isUnlocked: false,
+        prerequisites: ['streak_30'],
+        parentId: 'streak_30',
+      ),
+
+      // === Mastery Achievements (中间区域) ===
+      AchievementMapNode(
+        id: 'mastery_first',
+        name: '初窥门径',
+        rarity: AchievementRarity.common,
+        category: 'mastery',
+        position: {'x': 280, 'y': 150},
+        isUnlocked: true,
+        prerequisites: [],
+      ),
+      AchievementMapNode(
+        id: 'mastery_10',
+        name: '小有所成',
+        rarity: AchievementRarity.rare,
+        category: 'mastery',
+        position: {'x': 280, 'y': 280},
+        isUnlocked: false,
+        prerequisites: ['mastery_first'],
+        parentId: 'mastery_first',
+      ),
+      AchievementMapNode(
+        id: 'mastery_50',
+        name: '炉火纯青',
+        rarity: AchievementRarity.epic,
+        category: 'mastery',
+        position: {'x': 280, 'y': 410},
+        isUnlocked: false,
+        prerequisites: ['mastery_10'],
+        parentId: 'mastery_10',
+      ),
+      AchievementMapNode(
+        id: 'mastery_100',
+        name: '登峰造极',
+        rarity: AchievementRarity.legendary,
+        category: 'mastery',
+        position: {'x': 280, 'y': 540},
+        isUnlocked: false,
+        prerequisites: ['mastery_50'],
+        parentId: 'mastery_50',
+      ),
+
+      // === Exploration Achievements (右侧区域) ===
+      AchievementMapNode(
+        id: 'explore_10',
+        name: '初探星海',
+        rarity: AchievementRarity.common,
+        category: 'exploration',
+        position: {'x': 480, 'y': 150},
+        isUnlocked: true,
+        prerequisites: [],
+      ),
+      AchievementMapNode(
+        id: 'explore_50',
+        name: '星图漫游',
+        rarity: AchievementRarity.rare,
+        category: 'exploration',
+        position: {'x': 480, 'y': 280},
+        isUnlocked: false,
+        prerequisites: ['explore_10'],
+        parentId: 'explore_10',
+      ),
+      AchievementMapNode(
+        id: 'explore_100',
+        name: '星图探索者',
+        rarity: AchievementRarity.epic,
+        category: 'exploration',
+        position: {'x': 480, 'y': 410},
+        isUnlocked: false,
+        prerequisites: ['explore_50'],
+        parentId: 'explore_50',
+      ),
+      AchievementMapNode(
+        id: 'explore_500',
+        name: '宇宙开拓者',
+        rarity: AchievementRarity.legendary,
+        category: 'exploration',
+        position: {'x': 480, 'y': 540},
+        isUnlocked: false,
+        prerequisites: ['explore_100'],
+        parentId: 'explore_100',
+      ),
+
+      // === Hidden/Special Achievements (底部隐藏区域) ===
+      AchievementMapNode(
+        id: 'night_owl',
+        name: '深夜学者',
+        rarity: AchievementRarity.epic,
+        category: 'hidden',
+        position: {'x': 180, 'y': 700},
+        isUnlocked: false,
+        isHidden: true,
+        prerequisites: ['streak_30', 'mastery_10'],
+      ),
+      AchievementMapNode(
+        id: 'early_bird',
+        name: '早起鸟儿',
+        rarity: AchievementRarity.rare,
+        category: 'hidden',
+        position: {'x': 380, 'y': 700},
+        isUnlocked: false,
+        isHidden: true,
+        prerequisites: ['streak_14'],
+      ),
+    ];
+
+    final connections = <Map<String, dynamic>>[
+      // Streak chain
+      {'from': 'streak_3', 'to': 'streak_7', 'type': 'parent'},
+      {'from': 'streak_7', 'to': 'streak_14', 'type': 'parent'},
+      {'from': 'streak_14', 'to': 'streak_30', 'type': 'parent'},
+      {'from': 'streak_30', 'to': 'streak_100', 'type': 'parent'},
+
+      // Mastery chain
+      {'from': 'mastery_first', 'to': 'mastery_10', 'type': 'parent'},
+      {'from': 'mastery_10', 'to': 'mastery_50', 'type': 'parent'},
+      {'from': 'mastery_50', 'to': 'mastery_100', 'type': 'parent'},
+
+      // Exploration chain
+      {'from': 'explore_10', 'to': 'explore_50', 'type': 'parent'},
+      {'from': 'explore_50', 'to': 'explore_100', 'type': 'parent'},
+      {'from': 'explore_100', 'to': 'explore_500', 'type': 'parent'},
+
+      // Hidden prerequisites (cross-category)
+      {'from': 'streak_30', 'to': 'night_owl', 'type': 'prerequisite'},
+      {'from': 'mastery_10', 'to': 'night_owl', 'type': 'prerequisite'},
+      {'from': 'streak_14', 'to': 'early_bird', 'type': 'prerequisite'},
+    ];
+
+    final categories = <Map<String, dynamic>>[
+      {'id': 'streak', 'name': '连胜', 'count': 5},
+      {'id': 'mastery', 'name': '精通', 'count': 4},
+      {'id': 'exploration', 'name': '探索', 'count': 4},
+      {'id': 'hidden', 'name': '隐藏', 'count': 2},
+    ];
+
+    return AchievementMapData(
+      nodes: nodes,
+      connections: connections,
+      categories: categories,
+    );
+  }
 
   GalaxySkinListResponse _getDemoGalaxySkins() => GalaxySkinListResponse(
         skins: [

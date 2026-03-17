@@ -28,6 +28,11 @@ PlanModel _$PlanModelFromJson(Map<String, dynamic> json) => PlanModel(
           .toList(),
       source: json['source'] as String?,
       sourceMetadata: json['source_metadata'] as Map<String, dynamic>?,
+      planStage: $enumDecodeNullable(_$PlanStageEnumMap, json['plan_stage']) ??
+          PlanStage.sprint,
+      priority: $enumDecodeNullable(_$PlanPriorityEnumMap, json['priority']) ??
+          PlanPriority.normal,
+      isPrimary: json['is_primary'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$PlanModelToJson(PlanModel instance) => <String, dynamic>{
@@ -48,11 +53,28 @@ Map<String, dynamic> _$PlanModelToJson(PlanModel instance) => <String, dynamic>{
       'tasks': instance.tasks,
       'source': instance.source,
       'source_metadata': instance.sourceMetadata,
+      'plan_stage': _$PlanStageEnumMap[instance.planStage]!,
+      'priority': _$PlanPriorityEnumMap[instance.priority]!,
+      'is_primary': instance.isPrimary,
     };
 
 const _$PlanTypeEnumMap = {
   PlanType.sprint: 'sprint',
   PlanType.growth: 'growth',
+};
+
+const _$PlanStageEnumMap = {
+  PlanStage.sprint: 'sprint',
+  PlanStage.daily: 'daily',
+  PlanStage.review: 'review',
+  PlanStage.paused: 'paused',
+};
+
+const _$PlanPriorityEnumMap = {
+  PlanPriority.critical: 'critical',
+  PlanPriority.high: 'high',
+  PlanPriority.normal: 'normal',
+  PlanPriority.low: 'low',
 };
 
 PlanCreate _$PlanCreateFromJson(Map<String, dynamic> json) => PlanCreate(
@@ -64,6 +86,8 @@ PlanCreate _$PlanCreateFromJson(Map<String, dynamic> json) => PlanCreate(
           ? null
           : DateTime.parse(json['target_date'] as String),
       subject: json['subject'] as String?,
+      priority: $enumDecodeNullable(_$PlanPriorityEnumMap, json['priority']) ??
+          PlanPriority.normal,
     );
 
 Map<String, dynamic> _$PlanCreateToJson(PlanCreate instance) =>
@@ -74,6 +98,7 @@ Map<String, dynamic> _$PlanCreateToJson(PlanCreate instance) =>
       'target_date': instance.targetDate?.toIso8601String(),
       'subject': instance.subject,
       'daily_available_minutes': instance.dailyAvailableMinutes,
+      'priority': _$PlanPriorityEnumMap[instance.priority]!,
     };
 
 PlanUpdate _$PlanUpdateFromJson(Map<String, dynamic> json) => PlanUpdate(
@@ -84,6 +109,8 @@ PlanUpdate _$PlanUpdateFromJson(Map<String, dynamic> json) => PlanUpdate(
           : DateTime.parse(json['target_date'] as String),
       dailyAvailableMinutes: (json['daily_available_minutes'] as num?)?.toInt(),
       isActive: json['is_active'] as bool?,
+      priority: $enumDecodeNullable(_$PlanPriorityEnumMap, json['priority']),
+      planStage: $enumDecodeNullable(_$PlanStageEnumMap, json['plan_stage']),
     );
 
 Map<String, dynamic> _$PlanUpdateToJson(PlanUpdate instance) =>
@@ -93,6 +120,8 @@ Map<String, dynamic> _$PlanUpdateToJson(PlanUpdate instance) =>
       'target_date': instance.targetDate?.toIso8601String(),
       'daily_available_minutes': instance.dailyAvailableMinutes,
       'is_active': instance.isActive,
+      'priority': _$PlanPriorityEnumMap[instance.priority],
+      'plan_stage': _$PlanStageEnumMap[instance.planStage],
     };
 
 PlanProgress _$PlanProgressFromJson(Map<String, dynamic> json) => PlanProgress(
@@ -100,6 +129,9 @@ PlanProgress _$PlanProgressFromJson(Map<String, dynamic> json) => PlanProgress(
       progress: (json['progress'] as num).toDouble(),
       completedTasks: (json['completed_tasks'] as num).toInt(),
       totalTasks: (json['total_tasks'] as num).toInt(),
+      totalMinutesSpent: (json['total_minutes_spent'] as num?)?.toInt() ?? 0,
+      estimatedRemainingHours:
+          (json['estimated_remaining_hours'] as num?)?.toDouble(),
     );
 
 Map<String, dynamic> _$PlanProgressToJson(PlanProgress instance) =>
@@ -108,4 +140,6 @@ Map<String, dynamic> _$PlanProgressToJson(PlanProgress instance) =>
       'progress': instance.progress,
       'completed_tasks': instance.completedTasks,
       'total_tasks': instance.totalTasks,
+      'total_minutes_spent': instance.totalMinutesSpent,
+      'estimated_remaining_hours': instance.estimatedRemainingHours,
     };

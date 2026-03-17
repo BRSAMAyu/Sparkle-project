@@ -24,7 +24,8 @@ class AgentSessionStore {
     if (existing != null && existing.isNotEmpty) {
       return existing;
     }
-    final sessionId = 'agent_${_uuid.v4()}';
+    // 生成标准 UUID 格式，兼容后端 PostgreSQL uuid 类型
+    final sessionId = _uuid.v4();
     unawaited(_prefs.setString(key, sessionId));
     return sessionId;
   }

@@ -4139,6 +4139,9 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get shareTypeNotSupportedYet => '该类型暂不支持分享到社群，请使用图片分享';
+
+  @override
   String get threadDiscussion => '线程讨论';
 
   @override

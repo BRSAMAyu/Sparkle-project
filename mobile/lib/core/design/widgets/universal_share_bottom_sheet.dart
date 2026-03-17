@@ -787,6 +787,21 @@ class _UniversalShareBottomSheetState
       return;
     }
 
+    // Check if content type is supported for community sharing
+    final unsupportedTypes = [
+      ShareableContentType.achievement,
+      ShareableContentType.learningReport,
+    ];
+    if (unsupportedTypes.contains(widget.payload.contentType)) {
+      if (mounted) {
+        AppFeedback.warning(
+          context,
+          context.l10n.shareTypeNotSupportedYet,
+        );
+      }
+      return;
+    }
+
     // Default: show community share sheet
     await showShareResourceSheet(
       context,

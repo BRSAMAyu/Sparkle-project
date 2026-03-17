@@ -24,14 +24,16 @@ enum ShareableContentType {
 
 /// Extension for ShareableContentType
 extension ShareableContentTypeExtension on ShareableContentType {
+  /// Returns the API-compatible resource type string for backend sharing
+  /// Note: These values must match SharedResourceTypeEnum in backend/app/schemas/community.py
   String get stringValue => switch (this) {
-        ShareableContentType.achievement => 'achievement',
+        ShareableContentType.achievement => 'achievement', // Note: Backend doesn't support yet
         ShareableContentType.taskCompletion => 'task',
         ShareableContentType.planProgress => 'plan',
-        ShareableContentType.capsule => 'capsule',
-        ShareableContentType.knowledgeNode => 'node',
-        ShareableContentType.learningReport => 'report',
-        ShareableContentType.cognitivePrism => 'prism',
+        ShareableContentType.capsule => 'curiosity_capsule',
+        ShareableContentType.knowledgeNode => 'knowledge_node',
+        ShareableContentType.learningReport => 'report', // Note: Backend doesn't support yet
+        ShareableContentType.cognitivePrism => 'cognitive_prism_pattern',
       };
 
   String get deepLinkPrefix => switch (this) {

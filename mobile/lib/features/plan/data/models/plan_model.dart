@@ -3,9 +3,36 @@ import 'package:sparkle/shared/entities/task_model.dart';
 
 part 'plan_model.g.dart';
 
+/// 计划类型
 enum PlanType {
+  @JsonValue('sprint')
   sprint,
+  @JsonValue('growth')
   growth,
+}
+
+/// 计划阶段
+enum PlanStage {
+  @JsonValue('sprint')
+  sprint,
+  @JsonValue('daily')
+  daily,
+  @JsonValue('review')
+  review,
+  @JsonValue('paused')
+  paused,
+}
+
+/// 计划优先级
+enum PlanPriority {
+  @JsonValue('critical')
+  critical,
+  @JsonValue('high')
+  high,
+  @JsonValue('normal')
+  normal,
+  @JsonValue('low')
+  low,
 }
 
 @JsonSerializable()
@@ -28,6 +55,9 @@ class PlanModel {
     this.tasks,
     this.source,
     this.sourceMetadata,
+    this.planStage = PlanStage.sprint,
+    this.priority = PlanPriority.normal,
+    this.isPrimary = false,
   });
 
   factory PlanModel.fromJson(Map<String, dynamic> json) =>
@@ -58,6 +88,11 @@ class PlanModel {
   final String? source;
   @JsonKey(name: 'source_metadata')
   final Map<String, dynamic>? sourceMetadata;
+  @JsonKey(name: 'plan_stage')
+  final PlanStage planStage;
+  final PlanPriority priority;
+  @JsonKey(name: 'is_primary')
+  final bool isPrimary;
   Map<String, dynamic> toJson() => _$PlanModelToJson(this);
 }
 
@@ -70,6 +105,7 @@ class PlanCreate {
     this.description,
     this.targetDate,
     this.subject,
+    this.priority = PlanPriority.normal,
   });
 
   factory PlanCreate.fromJson(Map<String, dynamic> json) =>
@@ -82,6 +118,7 @@ class PlanCreate {
   final String? subject;
   @JsonKey(name: 'daily_available_minutes')
   final int dailyAvailableMinutes;
+  final PlanPriority priority;
   Map<String, dynamic> toJson() => _$PlanCreateToJson(this);
 }
 
@@ -93,6 +130,8 @@ class PlanUpdate {
     this.targetDate,
     this.dailyAvailableMinutes,
     this.isActive,
+    this.priority,
+    this.planStage,
   });
 
   factory PlanUpdate.fromJson(Map<String, dynamic> json) =>
@@ -105,6 +144,9 @@ class PlanUpdate {
   final int? dailyAvailableMinutes;
   @JsonKey(name: 'is_active')
   final bool? isActive;
+  final PlanPriority? priority;
+  @JsonKey(name: 'plan_stage')
+  final PlanStage? planStage;
   Map<String, dynamic> toJson() => _$PlanUpdateToJson(this);
 }
 
@@ -115,6 +157,8 @@ class PlanProgress {
     required this.progress,
     required this.completedTasks,
     required this.totalTasks,
+    this.totalMinutesSpent = 0,
+    this.estimatedRemainingHours,
   });
 
   factory PlanProgress.fromJson(Map<String, dynamic> json) =>
@@ -126,5 +170,9 @@ class PlanProgress {
   final int completedTasks;
   @JsonKey(name: 'total_tasks')
   final int totalTasks;
+  @JsonKey(name: 'total_minutes_spent')
+  final int totalMinutesSpent;
+  @JsonKey(name: 'estimated_remaining_hours')
+  final double? estimatedRemainingHours;
   Map<String, dynamic> toJson() => _$PlanProgressToJson(this);
 }

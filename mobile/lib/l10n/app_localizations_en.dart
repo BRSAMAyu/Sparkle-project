@@ -4308,6 +4308,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get shareTypeNotSupportedYet =>
+      'This content type is not yet supported for community sharing. Please use image sharing instead.';
+
+  @override
   String get threadDiscussion => 'Thread';
 
   @override

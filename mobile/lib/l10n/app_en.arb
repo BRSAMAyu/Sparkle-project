@@ -1498,6 +1498,7 @@
       "error": {}
     }
   },
+  "shareTypeNotSupportedYet": "This content type is not yet supported for community sharing. Please use image sharing instead.",
   "threadDiscussion": "Thread",
   "threadReplyHint": "Reply to thread...",
   "calendarSetDueDateTitle": "Set task due date",

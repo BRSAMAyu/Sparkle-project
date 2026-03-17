@@ -11,8 +11,10 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
+	"github.com/sparkle/gateway/internal/db"
 )
 
 const (
@@ -165,6 +167,37 @@ func (s *ChatHistoryService) GetMessages(ctx context.Context, userID, sessionID 
 		offset = 0
 	}
 
+	// 1. Try Redis first
+	messages, err := s.getMessagesFromRedis(ctx, userID, sessionID, limit, offset)
+	if err != nil {
+		log.Printf("[ChatHistoryService] Redis query failed: %v, trying DB fallback", err)
+	} else if len(messages) > 0 {
+		// Cache hit - return immediately
+		return messages, nil
+	}
+
+	// 2. Fallback to PostgreSQL if Redis is empty or failed
+	if s.pool != nil {
+		messages, err = s.getMessagesFromDB(ctx, userID, sessionID, limit, offset)
+		if err != nil {
+			log.Printf("[ChatHistoryService] DB fallback failed: %v", err)
+			return nil, err
+		}
+
+		// 3. Backfill Redis cache (async) - only if we got data from DB
+		if len(messages) > 0 {
+			go s.backfillRedisMessages(sessionID, messages)
+		}
+
+		return messages, nil
+	}
+
+	// 4. Return empty if no DB pool available
+	return []ChatHistoryMessage{}, nil
+}
+
+// getMessagesFromRedis fetches messages from Redis cache
+func (s *ChatHistoryService) getMessagesFromRedis(ctx context.Context, userID, sessionID string, limit, offset int) ([]ChatHistoryMessage, error) {
 	metaKey := fmt.Sprintf("chat:session_meta:%s", sessionID)
 	owner, err := s.rdb.HGet(ctx, metaKey, "user_id").Result()
 	if err != nil && err != redis.Nil {
@@ -206,6 +239,68 @@ func (s *ChatHistoryService) GetMessages(ctx context.Context, userID, sessionID 
 	return messages[offset:end], nil
 }
 
+// getMessagesFromDB fetches messages from PostgreSQL as fallback
+func (s *ChatHistoryService) getMessagesFromDB(ctx context.Context, userID, sessionID string, limit, offset int) ([]ChatHistoryMessage, error) {
+	if s.pool == nil {
+		return nil, fmt.Errorf("database pool not initialized")
+	}
+
+	// Parse UUIDs
+	var sessionUUID, userUUID pgtype.UUID
+	if err := sessionUUID.Scan(sessionID); err != nil {
+		return nil, fmt.Errorf("invalid session_id: %w", err)
+	}
+	if err := userUUID.Scan(userID); err != nil {
+		return nil, fmt.Errorf("invalid user_id: %w", err)
+	}
+
+	// Use the generated SQLC query
+	queries := db.New(s.pool)
+	dbMessages, err := queries.GetSessionMessagesFromDB(ctx, db.GetSessionMessagesFromDBParams{
+		SessionID: sessionUUID,
+		UserID:    userUUID,
+		Limit:     int32(limit),
+		Offset:    int32(offset),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert to ChatHistoryMessage format
+	messages := make([]ChatHistoryMessage, 0, len(dbMessages))
+	for _, dbMsg := range dbMessages {
+		messages = append(messages, ChatHistoryMessage{
+			ID:        dbMsg.ID.String(),
+			SessionID: dbMsg.SessionID.String(),
+			UserID:    dbMsg.UserID.String(),
+			Role:      string(dbMsg.Role),
+			Content:   dbMsg.Content,
+			Timestamp: fmt.Sprintf("%d", dbMsg.CreatedAt.Time.Unix()),
+		})
+	}
+
+	return messages, nil
+}
+
+// backfillRedisMessages populates Redis cache with messages from DB
+func (s *ChatHistoryService) backfillRedisMessages(sessionID string, messages []ChatHistoryMessage) {
+	ctx := context.Background()
+	cacheKey := "chat:history:" + sessionID
+
+	for _, msg := range messages {
+		msgBytes, err := json.Marshal(msg)
+		if err != nil {
+			continue
+		}
+		s.rdb.RPush(ctx, cacheKey, msgBytes)
+	}
+
+	s.rdb.LTrim(ctx, cacheKey, -20, -1)
+	s.rdb.Expire(ctx, cacheKey, s.chatHistoryTTL)
+
+	log.Printf("[ChatHistoryService] Backfilled Redis cache for session %s with %d messages", sessionID, len(messages))
+}
+
 func (s *ChatHistoryService) GetRecentSessions(ctx context.Context, userID string, limit int) ([]ChatSessionSummary, error) {
 	if limit <= 0 {
 		limit = 20
@@ -213,7 +308,7 @@ func (s *ChatHistoryService) GetRecentSessions(ctx context.Context, userID strin
 
 	// 1. Try Redis first
 	sessions, err := s.getRecentSessionsFromRedis(ctx, userID, limit)
-	if err == nil {
+	if err != nil {
 		log.Printf("[ChatHistoryService] Redis query failed: %v, trying DB fallback", err)
 	} else if len(sessions) > 0 {
 		// Cache hit - return immediately

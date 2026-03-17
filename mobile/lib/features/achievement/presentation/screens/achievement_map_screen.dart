@@ -162,12 +162,16 @@ class _CosmicConstellationCanvasState
   late final AnimationController _pulseController;
   late final AnimationController _nodeEntranceController;
 
+  /// Controller for InteractiveViewer
+  final TransformationController _transformationController = TransformationController();
+
   /// Cached star positions generated once with a seeded random.
   late List<_Star> _stars;
   int _starCount = 0;
   bool _reduceMotion = false;
   bool _orbitalParticlesEnabled = false;
   int _registeredParticleCount = 0;
+  bool _hasInitializedViewport = false;
 
   @override
   void initState() {
@@ -211,6 +215,56 @@ class _CosmicConstellationCanvasState
     _updateMotionPreference(context.reduceMotion);
     _updateOrbitalParticleRegistration(force: true);
     _updateStarField();
+    _initializeViewportCenter();
+  }
+
+  /// Initialize viewport to center the content
+  void _initializeViewportCenter() {
+    if (_hasInitializedViewport || widget.nodes.isEmpty) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      final screenSize = MediaQuery.of(context).size;
+      final appBarHeight = kToolbarHeight;
+
+      // Calculate canvas bounds
+      var minX = double.infinity;
+      var maxX = double.negativeInfinity;
+      var minY = double.infinity;
+      var maxY = double.negativeInfinity;
+      const padding = 100.0;
+
+      for (final node in widget.nodes) {
+        final x = (node.position['x'] ?? 0) + padding;
+        final y = (node.position['y'] ?? 0) + padding;
+        minX = math.min(minX, x);
+        maxX = math.max(maxX, x);
+        minY = math.min(minY, y);
+        maxY = math.max(maxY, y);
+      }
+
+      final contentWidth = maxX - minX + padding * 2;
+      final contentHeight = maxY - minY + padding * 2;
+
+      // Calculate scale to fit content on screen with some padding
+      final availableHeight = screenSize.height - appBarHeight - 100;
+      final scaleX = screenSize.width / contentWidth;
+      final scaleY = availableHeight / contentHeight;
+      final scale = math.min(scaleX, math.min(scaleY, 1.0));
+
+      // Calculate translation to center content
+      final scaledContentWidth = contentWidth * scale;
+      final scaledContentHeight = contentHeight * scale;
+      final offsetX = (screenSize.width - scaledContentWidth) / 2 - minX * scale + padding * scale;
+      final offsetY = appBarHeight + (availableHeight - scaledContentHeight) / 2 - minY * scale + padding * scale;
+
+      _transformationController.value = Matrix4.identity()
+        ..translate(offsetX, offsetY)
+        ..scale(scale, scale);
+
+      _hasInitializedViewport = true;
+    });
   }
 
   @override
@@ -306,6 +360,7 @@ class _CosmicConstellationCanvasState
     _twinkleController.dispose();
     _pulseController.dispose();
     _nodeEntranceController.dispose();
+    _transformationController.dispose();
     super.dispose();
   }
 
@@ -346,6 +401,7 @@ class _CosmicConstellationCanvasState
     final canvasHeight = maxY + padding;
 
     return InteractiveViewer(
+      transformationController: _transformationController,
       minScale: 0.4,
       maxScale: 3.0,
       constrained: false,
