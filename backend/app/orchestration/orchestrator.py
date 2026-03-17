@@ -1035,6 +1035,9 @@ class ChatOrchestrator(
                 await self._update_state(session_id, STATE_FAILED, str(e))
                 if transparency_generator is not None and emit_transparency_event is not None:
                     await emit_transparency_event(transparency_generator.get_complete_event())
+                # ✅ Fix C4: Drain queue before yielding error to ensure all queued messages are sent
+                async for queued in self._drain_queue(queue):
+                    yield queued
                 yield agent_service_pb2.ChatResponse(
                     response_id=response_id, created_at=int(datetime.now().timestamp()), request_id=request_id,
                     error=agent_service_pb2.Error(message=str(e), retryable=True, error_code=agent_service_pb2.ERROR_CODE_INTERNAL),

@@ -141,6 +141,28 @@ class FriendsNotifier extends StateNotifier<AsyncValue<List<FriendshipInfo>>> {
   }
 
   Future<void> refresh() => loadFriends();
+
+  /// 删除好友
+  Future<void> deleteFriend(String friendshipId) async {
+    await _repository.deleteFriend(friendshipId);
+    // Remove from local state
+    state.whenData((friends) {
+      state = AsyncValue.data(
+        friends.where((f) => f.id != friendshipId).toList(),
+      );
+    });
+  }
+
+  /// 拉黑用户（自动从好友列表移除）
+  Future<void> blockUser(String userId, {String? reason}) async {
+    await _repository.blockUser(userId, reason: reason);
+    // Remove from local state if present
+    state.whenData((friends) {
+      state = AsyncValue.data(
+        friends.where((f) => f.friend.id != userId).toList(),
+      );
+    });
+  }
 }
 
 final pendingRequestsProvider = StateNotifierProvider<PendingRequestsNotifier,
@@ -1592,5 +1614,42 @@ class CurrentUserStatusNotifier extends StateNotifier<UserStatus> {
     } catch (e) {
       debugPrint('Update Status Failed: $e');
     }
+  }
+}
+
+// 10. Blocked Users Provider (Phase 4)
+final blockedUsersProvider = StateNotifierProvider.autoDispose<
+    BlockedUsersNotifier, AsyncValue<List<BlockUserInfo>>>((ref) {
+  return BlockedUsersNotifier(ref.watch(communityRepositoryProvider));
+});
+
+class BlockedUsersNotifier
+    extends StateNotifier<AsyncValue<List<BlockUserInfo>>> {
+  BlockedUsersNotifier(this._repository) : super(const AsyncValue.loading()) {
+    loadBlockedUsers();
+  }
+  final CommunityRepository _repository;
+
+  Future<void> loadBlockedUsers() async {
+    state = const AsyncValue.loading();
+    try {
+      final blockedUsers = await _repository.getBlockedUsers();
+      state = AsyncValue.data(blockedUsers);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
+
+  Future<void> refresh() => loadBlockedUsers();
+
+  /// 解除拉黑
+  Future<void> unblockUser(String userId) async {
+    await _repository.unblockUser(userId);
+    // Remove from local state
+    state.whenData((users) {
+      state = AsyncValue.data(
+        users.where((u) => u.blockedUser.id != userId).toList(),
+      );
+    });
   }
 }

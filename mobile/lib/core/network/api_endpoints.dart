@@ -210,6 +210,12 @@ class ApiEndpoints {
   // Community - Message Forwarding
   static const String messageForward = '/community/messages/forward';
 
+  // Community - Friend Management (Phase 4)
+  static const String friendsBlocked = '/community/users/blocked';
+  static String friendDelete(String friendshipId) => '/community/friends/$friendshipId';
+  static const String userBlock = '/community/users/block';
+  static String userUnblock(String userId) => '/community/users/block/$userId';
+
   // Community - Broadcast
   static const String broadcast = '/community/broadcast';
 

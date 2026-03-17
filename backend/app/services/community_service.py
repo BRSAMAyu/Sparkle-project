@@ -215,6 +215,30 @@ class FriendshipService:
         )
         return list(result.scalars().all())
 
+    @staticmethod
+    async def delete_friendship(
+        db: AsyncSession,
+        user_id: UUID,
+        friendship_id: UUID
+    ) -> bool:
+        """
+        删除好友关系
+
+        - 双方都会解除好友关系
+        - 不会拉黑对方
+        """
+        friendship = await Friendship.get_by_id(db, friendship_id)
+        if not friendship:
+            raise ValueError("好友关系不存在")
+
+        # 验证当前用户是好友关系的一方
+        if user_id not in (friendship.user_id, friendship.friend_id):
+            raise ValueError("无权操作此好友关系")
+
+        # 软删除好友关系
+        await friendship.delete(db, soft=True)
+        return True
+
 
 class GroupService:
     """群组服务"""

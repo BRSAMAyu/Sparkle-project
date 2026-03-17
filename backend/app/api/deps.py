@@ -58,8 +58,17 @@ async def get_current_user(
                 user_id=str(user.id),
                 payload=payload,
             )
-    except Exception:
-        pass
+    except Exception as e:
+        # H1 Security Fix: Log session touch failure but don't block (fail open)
+        # Session will eventually expire naturally
+        import structlog
+        logger = structlog.get_logger()
+        logger.warning(
+            "session_touch_failed",
+            user_id=str(user.id),
+            error=str(e),
+            error_type=type(e).__name__
+        )
     return user
 
 async def get_current_active_user(

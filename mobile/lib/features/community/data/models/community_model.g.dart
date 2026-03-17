@@ -1215,3 +1215,16 @@ Map<String, dynamic> _$OfflineMessageRetryRequestToJson(
     <String, dynamic>{
       'message_ids': instance.messageIds,
     };
+
+BlockUserInfo _$BlockUserInfoFromJson(Map<String, dynamic> json) =>
+    BlockUserInfo(
+      blockedUser:
+          UserBrief.fromJson(json['blocked_user'] as Map<String, dynamic>),
+      reason: json['reason'] as String?,
+    );
+
+Map<String, dynamic> _$BlockUserInfoToJson(BlockUserInfo instance) =>
+    <String, dynamic>{
+      'blocked_user': instance.blockedUser,
+      'reason': instance.reason,
+    };

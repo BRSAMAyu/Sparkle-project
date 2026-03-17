@@ -776,4 +776,48 @@ class CommunityRepository {
         return 'system';
     }
   }
+
+  // ── Friend Management (Phase 4) ────────────────────────────────────────────
+
+  /// 删除好友
+  Future<void> deleteFriend(String friendshipId) async {
+    await _apiClient.delete<dynamic>(ApiEndpoints.friendDelete(friendshipId));
+  }
+
+  /// 拉黑用户
+  Future<void> blockUser(String targetUserId, {String? reason}) async {
+    await _apiClient.post<dynamic>(
+      ApiEndpoints.userBlock,
+      data: {
+        'target_user_id': targetUserId,
+        if (reason != null && reason.isNotEmpty) 'reason': reason,
+      },
+    );
+  }
+
+  /// 取消拉黑
+  Future<void> unblockUser(String userId) async {
+    await _apiClient.delete<dynamic>(ApiEndpoints.userUnblock(userId));
+  }
+
+  /// 获取黑名单列表
+  Future<List<BlockUserInfo>> getBlockedUsers({
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    final response = await _apiClient.get<dynamic>(
+      ApiEndpoints.friendsBlocked,
+      queryParameters: {'limit': limit, 'offset': offset},
+    );
+    if (response.statusCode == 200) {
+      final data = ApiResponseParser.unwrapList(
+        response.data,
+        action: 'getBlockedUsers',
+      );
+      return data
+          .map((e) => BlockUserInfo.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+    throw Exception('Failed to load blocked users');
+  }
 }

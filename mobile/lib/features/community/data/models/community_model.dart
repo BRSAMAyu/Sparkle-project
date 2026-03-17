@@ -1278,3 +1278,20 @@ class OfflineMessageRetryRequest {
   final List<String> messageIds;
   Map<String, dynamic> toJson() => _$OfflineMessageRetryRequestToJson(this);
 }
+
+// ============ 黑名单管理 ============
+
+@JsonSerializable()
+class BlockUserInfo {
+  BlockUserInfo({
+    required this.blockedUser,
+    this.reason,
+  });
+
+  factory BlockUserInfo.fromJson(Map<String, dynamic> json) =>
+      _$BlockUserInfoFromJson(json);
+  @JsonKey(name: 'blocked_user')
+  final UserBrief blockedUser;
+  final String? reason;
+  Map<String, dynamic> toJson() => _$BlockUserInfoToJson(this);
+}

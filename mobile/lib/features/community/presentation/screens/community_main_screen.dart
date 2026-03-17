@@ -192,6 +192,14 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
             ),
           ),
           Tooltip(
+            message: '我的收藏',
+            child: SparkleIconButton(
+              variant: ButtonVariant.ghost,
+              icon: const Icon(Icons.bookmark_outline),
+              onPressed: () => context.push('/community/favorites'),
+            ),
+          ),
+          Tooltip(
             message: context.l10n.communitySearch,
             child: SparkleIconButton(
               variant: ButtonVariant.ghost,

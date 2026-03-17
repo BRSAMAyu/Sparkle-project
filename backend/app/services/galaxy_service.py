@@ -403,7 +403,10 @@ class GalaxyService:
         revision: int | None = None,
     ):
         """
-        Update node mastery with Outbox pattern and version checking to prevent race conditions
+        Update node mastery with Outbox pattern and atomic revision checking to prevent race conditions.
+
+        Race condition fix (C1): Uses atomic UPDATE with WHERE revision = expected_revision
+        and RETURNING clause to detect conflicts in a single database operation.
         """
 
         def _to_utc_naive(dt: datetime | None) -> datetime | None:
@@ -413,55 +416,113 @@ class GalaxyService:
                 return dt.astimezone(UTC).replace(tzinfo=None)
             return dt
 
-        # 1. Get current state from user_node_status
-        query_current = text("""
-            SELECT mastery_score, updated_at, revision
-            FROM user_node_status
-            WHERE user_id = :user_id AND node_id = :node_id
-        """)
-        result = await self.db.execute(query_current, {"user_id": user_id, "node_id": node_id})
-        current = result.fetchone()
+        update_time = _to_utc_naive(version) or _utcnow()
 
-        current_revision = 0
-        if not current:
-            # If status doesn't exist, create one (initial unlock)
-            old_mastery = 0
-            # We skip version check for new entries or use a very old one
-        else:
-            old_mastery = current[0]
-            current_updated_at = _to_utc_naive(current[1])
-            current_revision = current[2] or 0
-
-            # 2. Conflict Resolution (Logical Clock Priority)
-            if revision is not None:
-                # Client provided a revision, ensure we are not overwriting a newer one (or equal, if not idempotent)
-                # Ideally, client revision should be base_revision + 1.
-                # If client revision < current_revision, it's a stale update.
-                if revision <= current_revision:
-                    logger.warning(
-                        f"Ignoring stale update (Revision) for node {node_id}. Client {revision} <= Server {current_revision}"
-                    )
-                    return {"success": False, "reason": "stale_revision", "current_revision": current_revision}
-
-            # Fallback to Physical Clock if revision not provided (Legacy)
-            elif version and current_updated_at and _to_utc_naive(version) <= current_updated_at:
-                logger.warning(
-                    f"Ignoring stale update (Time) for node {node_id}. Incoming version {version} <= current {current_updated_at}"
-                )
-                return {"success": False, "reason": "stale_update", "current_revision": current_revision}
-
-        # Calculate new revision
-        new_revision = current_revision + 1
-        if revision is not None and revision > current_revision:
-            # Adopt client revision if it's logically ahead (or simply increment server's)
-            # To maintain strict monotonicity, usually server authoritative revision = max(client, server) + 1
-            # But here we just want to increment.
-            new_revision = current_revision + 1
-
-        # 3. Transactional Update
         try:
+            # === ATOMIC UPDATE WITH OPTIMISTIC LOCKING ===
+            # If revision is provided, use atomic conditional UPDATE to prevent race conditions
+            if revision is not None:
+                # Atomic update: WHERE revision = expected_revision, returns row only if matched
+                atomic_update = text("""
+                    UPDATE user_node_status
+                    SET mastery_score = :mastery,
+                        updated_at = :updated_at,
+                        last_study_at = :updated_at,
+                        is_unlocked = true,
+                        revision = revision + 1
+                    WHERE user_id = :user_id
+                      AND node_id = :node_id
+                      AND revision = :expected_revision
+                    RETURNING mastery_score, revision
+                """)
+                result = await self.db.execute(atomic_update, {
+                    "user_id": user_id,
+                    "node_id": node_id,
+                    "mastery": new_mastery,
+                    "expected_revision": revision,
+                    "updated_at": update_time,
+                })
+                row = result.fetchone()
+
+                if not row:
+                    # Revision mismatch - concurrent update occurred
+                    # Fetch current revision for conflict response
+                    current_query = text("""
+                        SELECT revision FROM user_node_status
+                        WHERE user_id = :user_id AND node_id = :node_id
+                    """)
+                    current_result = await self.db.execute(current_query, {"user_id": user_id, "node_id": node_id})
+                    current_row = current_result.fetchone()
+                    current_revision = current_row[0] if current_row else 0
+
+                    logger.warning(
+                        f"Atomic update conflict for node {node_id}. Expected revision {revision}, current is {current_revision}"
+                    )
+                    return {"success": False, "reason": "conflict", "current_revision": current_revision}
+
+                # Get old mastery for audit log
+                old_mastery_query = text("""
+                    SELECT mastery_score FROM user_node_status
+                    WHERE user_id = :user_id AND node_id = :node_id
+                """)
+                old_result = await self.db.execute(old_mastery_query, {"user_id": user_id, "node_id": node_id})
+                old_row = old_result.fetchone()
+                old_mastery = old_row[0] if old_row else 0
+                new_revision = row[1]
+
+            else:
+                # === FALLBACK: UPSERT WITHOUT OPTIMISTIC LOCKING (legacy path) ===
+                # Get current state first (for audit log and conflict detection via timestamp)
+                query_current = text("""
+                    SELECT mastery_score, updated_at, revision
+                    FROM user_node_status
+                    WHERE user_id = :user_id AND node_id = :node_id
+                """)
+                result = await self.db.execute(query_current, {"user_id": user_id, "node_id": node_id})
+                current = result.fetchone()
+
+                if current:
+                    old_mastery = current[0]
+                    current_updated_at = _to_utc_naive(current[1])
+                    current_revision = current[2] or 0
+
+                    # Fallback to Physical Clock conflict detection (Legacy)
+                    if version and current_updated_at and _to_utc_naive(version) <= current_updated_at:
+                        logger.warning(
+                            f"Ignoring stale update (Time) for node {node_id}. Incoming version {version} <= current {current_updated_at}"
+                        )
+                        return {"success": False, "reason": "stale_update", "current_revision": current_revision}
+                else:
+                    old_mastery = 0
+                    current_revision = 0
+
+                new_revision = current_revision + 1
+
+                # UPSERT pattern for non-revision cases
+                upsert_query = text("""
+                    INSERT INTO user_node_status (user_id, node_id, mastery_score, updated_at, last_study_at, is_unlocked, revision, total_minutes, total_study_minutes, last_interacted_at, created_at, study_count, is_collapsed, is_favorite, decay_paused)
+                    VALUES (:user_id, :node_id, :mastery, :updated_at, :updated_at, true, :revision, 0, 0, :updated_at, :updated_at, 0, false, false, false)
+                    ON CONFLICT (user_id, node_id) DO UPDATE SET
+                        mastery_score = EXCLUDED.mastery_score,
+                        updated_at = EXCLUDED.updated_at,
+                        last_study_at = EXCLUDED.updated_at,
+                        is_unlocked = true,
+                        revision = EXCLUDED.revision
+                """)
+
+                await self.db.execute(
+                    upsert_query,
+                    {
+                        "user_id": user_id,
+                        "node_id": node_id,
+                        "mastery": new_mastery,
+                        "updated_at": update_time,
+                        "revision": new_revision,
+                    },
+                )
+
+            # === COMMON: Update Global Stats, Audit Log, Outbox ===
             # A. Update Global Stats (Collaborative Sparking)
-            # Increment global count if this is the first time the user unlocks it
             is_new_spark = old_mastery == 0 and new_mastery > 0
             if is_new_spark:
                 global_update = text("""
@@ -471,33 +532,7 @@ class GalaxyService:
                 """)
                 await self.db.execute(global_update, {"node_id": node_id})
 
-            # B. Update Individual Data (UPSERT pattern)
-            # Added revision column update
-            upsert_query = text("""
-                INSERT INTO user_node_status (user_id, node_id, mastery_score, updated_at, last_study_at, is_unlocked, revision, total_minutes, total_study_minutes, last_interacted_at, created_at, study_count, is_collapsed, is_favorite, decay_paused)
-                VALUES (:user_id, :node_id, :mastery, :updated_at, :updated_at, true, :revision, 0, 0, :updated_at, :updated_at, 0, false, false, false)
-                ON CONFLICT (user_id, node_id) DO UPDATE SET
-                    mastery_score = EXCLUDED.mastery_score,
-                    updated_at = EXCLUDED.updated_at,
-                    last_study_at = EXCLUDED.updated_at,
-                    is_unlocked = true,
-                    revision = EXCLUDED.revision
-            """)
-
-            update_time = _to_utc_naive(version) or _utcnow()
-
-            await self.db.execute(
-                upsert_query,
-                {
-                    "user_id": user_id,
-                    "node_id": node_id,
-                    "mastery": new_mastery,
-                    "updated_at": update_time,
-                    "revision": new_revision,
-                },
-            )
-
-            # C. Audit Log
+            # B. Audit Log
             audit_query = text("""
                 INSERT INTO mastery_audit_log (node_id, user_id, old_mastery, new_mastery, reason, request_id, revision)
                 VALUES (:node_id, :user_id, :old_mastery, :new_mastery, :reason, :request_id, :revision)

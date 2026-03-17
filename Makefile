@@ -62,6 +62,9 @@ db-migrate:
 			echo "alembic history (last 20 lines):"; ../$(ALEMBIC) history | tail -n 20 || true; \
 			if [ "$$FORCE_STAMP" = "1" ]; then \
 				echo "⚠️ FORCE_STAMP=1 set. Stamping heads (no purge) to reconcile state."; \
+				if [ -t 0 ]; then \
+					read -p "⚠️  This will skip consistency checks. Type 'yes' to confirm: " confirm && [ "$$confirm" = "yes" ] || exit 1; \
+				fi; \
 				../$(ALEMBIC) stamp heads; \
 			else \
 				echo "Set FORCE_STAMP=1 to stamp heads after you confirm the desired revision."; \
@@ -75,6 +78,9 @@ db-migrate:
 			echo "alembic history (last 20 lines):"; ../$(ALEMBIC) history | tail -n 20 || true; \
 			if [ "$$FORCE_STAMP" = "1" ]; then \
 				echo "⚠️ FORCE_STAMP=1 set. Stamping heads (no purge) to reconcile state."; \
+				if [ -t 0 ]; then \
+					read -p "⚠️  This will skip consistency checks. Type 'yes' to confirm: " confirm && [ "$$confirm" = "yes" ] || exit 1; \
+				fi; \
 				../$(ALEMBIC) stamp heads; \
 				../$(ALEMBIC) upgrade head; \
 			else \

@@ -532,6 +532,26 @@ async def respond_to_friend_request(
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@router.delete("/friends/{friendship_id}", summary="删除好友")
+async def delete_friend(
+    friendship_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    删除好友关系
+
+    - 双方都会解除好友关系
+    - 不会拉黑对方
+    """
+    try:
+        await FriendshipService.delete_friendship(db, current_user.id, friendship_id)
+        await db.commit()
+        return {"success": True}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.get("/friends", response_model=list[FriendshipInfo], summary="获取好友列表")
 async def get_friends(
     limit: int = Query(default=50, ge=1, le=100),

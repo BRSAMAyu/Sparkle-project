@@ -457,6 +457,43 @@ def promote_perceptible_cohort(self):
         raise self.retry(exc=exc, countdown=120)
 
 
+@celery_app.task(
+    bind=True,
+    max_retries=3,
+    default_retry_delay=60,
+    rate_limit="10/m",  # M2 Security Fix: 每分钟最多10封邮件
+    name="send_verification_email_task"
+)
+def send_verification_email_task(self, to_email: str, verify_token: str, username: str):
+    """
+    M2 Security Fix: 发送验证邮件 (Celery 任务)
+
+    通过 Celery 队列化邮件发送，添加速率限制防止邮件服务商封禁。
+    """
+    import asyncio
+
+    from app.core.email_service import email_service
+
+    async def _send():
+        try:
+            await email_service.send_verification_email(
+                to_email=to_email,
+                verify_token=verify_token,
+                username=username
+            )
+            logger.info(f"✅ Verification email sent to {to_email}")
+            return {"status": "success", "to_email": to_email}
+        except Exception as e:
+            logger.error(f"❌ Failed to send email to {to_email}: {e}")
+            raise
+
+    try:
+        return asyncio.run(_send())
+    except Exception as exc:
+        logger.error(f"Email send failed to {to_email}, retrying: {exc}")
+        raise self.retry(exc=exc)
+
+
 @celery_app.task(bind=True, max_retries=2, name="send_task_reminders")
 def send_task_reminders(self):
     """

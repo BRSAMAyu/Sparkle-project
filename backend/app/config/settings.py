@@ -3,11 +3,14 @@ Application Configuration Management
 使用 pydantic-settings 管理配置
 """
 import json
+import logging
 import os
 from urllib.parse import quote, unquote, urlparse, urlunparse
 
 from pydantic import AliasChoices, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+logger = logging.getLogger(__name__)
 
 # 获取当前文件的绝对路径
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -447,6 +450,7 @@ class Settings(BaseSettings):
     # Event Bus reliability
     EVENT_BUS_MAX_RETRIES: int = 3
     EVENT_BUS_DLQ_SUFFIX: str = ":dlq"
+    EVENT_BUS_DLQ_MAXLEN: int = 10000  # Maximum messages in DLQ before trimming
 
     # Translation Service
     TRANSLATION_DAILY_CARD_LIMIT: int = 20  # Max vocabulary cards created per day from translation
@@ -577,8 +581,23 @@ class Settings(BaseSettings):
         ):
             raise ValueError("GRPC_REQUIRE_TLS must be enabled in production")
 
-        if not self.DEBUG and not self.SECRET_KEY:
-            raise ValueError("SECRET_KEY must be set when DEBUG is false")
+        # C6 Security Fix: 强制所有环境设置 SECRET_KEY
+        if not self.SECRET_KEY:
+            raise ValueError(
+                "SECRET_KEY must be set in environment variables. "
+                "Generate a secure key with: python -c \"import secrets; print(secrets.token_urlsafe(32))\""
+            )
+
+        # 最小长度警告（不阻止启动）
+        if len(self.SECRET_KEY) < 32:
+            logger.warning(
+                f"SECRET_KEY is only {len(self.SECRET_KEY)} characters. "
+                "Recommended minimum: 32 characters for production."
+            )
+
+        # 生产环境额外检查：禁止使用常见默认值
+        if not self.DEBUG and self.SECRET_KEY in ["", "dev", "test", "secret", "changeme", "your-secret-key"]:
+            raise ValueError("SECRET_KEY cannot be a default value in production")
 
         if env in ("prod", "production") and not self.DATABASE_URL:
             raise ValueError("DATABASE_URL must be set in production")

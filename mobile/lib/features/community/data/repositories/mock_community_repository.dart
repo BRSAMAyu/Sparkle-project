@@ -1066,4 +1066,31 @@ class MockCommunityRepository implements CommunityRepository {
 
   @override
   Future<void> completeTask(String taskId) async {}
+
+  // ── Phase 4: Friend Management ─────────────────────────────────────────────
+
+  @override
+  Future<void> deleteFriend(String friendshipId) async {
+    _mockFriends.removeWhere((f) => f.id == friendshipId);
+  }
+
+  @override
+  Future<void> blockUser(String targetUserId, {String? reason}) async {
+    // Remove from friends if present
+    _mockFriends.removeWhere((f) => f.friend.id == targetUserId);
+  }
+
+  @override
+  Future<void> unblockUser(String userId) async {
+    // Mock implementation - no-op
+  }
+
+  @override
+  Future<List<BlockUserInfo>> getBlockedUsers({
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    // Return empty list for mock
+    return [];
+  }
 }

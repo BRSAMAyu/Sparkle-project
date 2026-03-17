@@ -350,8 +350,11 @@ class CognitiveService:
             previous_confidence = pattern.confidence_score
             # Update existing
             pattern.frequency += 1
-            # Update confidence (simple moving average-ish or max)
-            pattern.confidence_score = max(pattern.confidence_score, new_confidence)
+            # Update confidence using exponential moving average (EMA)
+            # This allows confidence to both increase AND decrease over time
+            # alpha = 0.3 means 30% weight to new observation, 70% to historical
+            alpha = 0.3
+            pattern.confidence_score = alpha * new_confidence + (1 - alpha) * pattern.confidence_score
             if pattern.evidence_ids:
                 # evidence_ids is JSON list
                 try:

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/features/community/presentation/screens/accountability_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/accountability_detail_screen.dart';
+import 'package:sparkle/features/community/presentation/screens/blocked_users_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/create_group_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/create_post_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/favorites_screen.dart';
@@ -54,6 +55,7 @@ class CommunityRoutes {
   static const String groupModeration = '/community/groups/:id/moderation';
   static const String userProfile = '/community/users/:id';
   static const String favorites = '/community/favorites';
+  static const String blockedUsers = '/community/blocked';
   static const String accountability = '/community/accountability';
   static const String accountabilityDetail =
       '/community/accountability/:id';
@@ -234,6 +236,16 @@ class CommunityRoutes {
           pageBuilder: (context, state) => _buildTransitionPage(
             state: state,
             child: const FavoritesScreen(),
+          ),
+        ),
+        // Blocked users (Phase 4)
+        GoRoute(
+          path: blockedUsers,
+          name: 'blockedUsers',
+          parentNavigatorKey: navigatorKey,
+          pageBuilder: (context, state) => _buildTransitionPage(
+            state: state,
+            child: const BlockedUsersScreen(),
           ),
         ),
         // Accountability partner list

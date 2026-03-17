@@ -1,0 +1,61 @@
+"""
+H7 Security Fix: 统一错误代码定义
+
+用于后端和客户端之间的错误通信，避免暴露技术细节。
+
+作者: Claude Code (Opus 4.5)
+创建时间: 2026-03-17
+"""
+
+from enum import Enum
+
+
+class ErrorCode(str, Enum):
+    """标准化错误代码枚举"""
+
+    # 连接相关错误
+    CONNECTION_ERROR = "CONNECTION_ERROR"
+    WEBSOCKET_ERROR = "WEBSOCKET_ERROR"
+    CONNECTION_TIMEOUT = "CONNECTION_TIMEOUT"
+    STREAM_TIMEOUT = "STREAM_TIMEOUT"
+
+    # 认证相关错误
+    UNAUTHORIZED = "UNAUTHORIZED"
+    AUTH_REQUIRED = "AUTH_REQUIRED"
+    TOKEN_EXPIRED = "TOKEN_EXPIRED"
+
+    # 服务端错误
+    SERVER_ERROR = "SERVER_ERROR"
+    INTERNAL_ERROR = "INTERNAL_ERROR"
+    SERVICE_UNAVAILABLE = "SERVICE_UNAVAILABLE"
+
+    # 请求相关错误
+    INVALID_REQUEST = "INVALID_REQUEST"
+    BAD_REQUEST = "BAD_REQUEST"
+    RATE_LIMIT_EXCEEDED = "RATE_LIMIT_EXCEEDED"
+
+    # AI 相关错误
+    LLM_ERROR = "LLM_ERROR"
+    AI_ERROR = "AI_ERROR"
+    CONTEXT_LENGTH_EXCEEDED = "CONTEXT_LENGTH_EXCEEDED"
+
+    # 数据相关错误
+    NOT_FOUND = "NOT_FOUND"
+
+    # 未知错误
+    UNKNOWN = "UNKNOWN"
+
+
+# 可重试的错误类型
+RETRYABLE_ERRORS = {
+    ErrorCode.CONNECTION_ERROR,
+    ErrorCode.WEBSOCKET_ERROR,
+    ErrorCode.CONNECTION_TIMEOUT,
+    ErrorCode.STREAM_TIMEOUT,
+    ErrorCode.SERVER_ERROR,
+    ErrorCode.INTERNAL_ERROR,
+    ErrorCode.SERVICE_UNAVAILABLE,
+    ErrorCode.LLM_ERROR,
+    ErrorCode.AI_ERROR,
+    ErrorCode.RATE_LIMIT_EXCEEDED,
+}

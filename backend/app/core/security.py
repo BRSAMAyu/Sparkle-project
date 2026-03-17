@@ -254,10 +254,29 @@ async def blacklist_token(jti: str, exp: int | float | datetime | None) -> None:
     now_ts = int(datetime.now(UTC).timestamp())
     ttl = exp_ts - now_ts
     if ttl <= 0:
-        return
+        return True  # Already expired, no need to blacklist
+
     key = f"{TOKEN_BLACKLIST_PREFIX}{jti}"
-    try:
-        await cache_service.set(key, "revoked", ttl=ttl)
-    except Exception:
-        # If blacklist write fails, do not block logout/refresh.
-        return
+
+    # H4 Security Fix: Add retry mechanism for blacklist write
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            await cache_service.set(key, "revoked", ttl=ttl)
+            return True
+        except Exception as e:
+            if attempt == max_retries - 1:
+                # Log failure on final attempt
+                logger.error(
+                    "token_blacklist_failed",
+                    jti_prefix=jti[:8] if len(jti) > 8 else jti,
+                    error=str(e),
+                    error_type=type(e).__name__,
+                    attempts=max_retries
+                )
+                return False
+            # Exponential backoff: 100ms, 200ms, 300ms
+            import asyncio
+            await asyncio.sleep(0.1 * (attempt + 1))
+
+    return True

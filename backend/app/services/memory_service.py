@@ -74,6 +74,7 @@ class MemoryService:
             return None
         normalized_refs = _normalize_evidence_refs(evidence_refs, require_non_empty=True)
 
+        # ✅ Fix C2: Use SELECT FOR UPDATE to acquire row-level lock and prevent race conditions
         result = await self.db.execute(
             select(MemoryPreference)
             .where(
@@ -85,6 +86,7 @@ class MemoryService:
             )
             .order_by(MemoryPreference.version.desc())
             .limit(1)
+            .with_for_update()  # 🔒 Acquires row-level lock until transaction ends
         )
         latest = result.scalar_one_or_none()
         version = 1 if latest is None else latest.version + 1

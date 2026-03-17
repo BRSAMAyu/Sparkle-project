@@ -300,17 +300,21 @@ async def register(
     Register a new user
     """
     _validate_terms_acceptance(data.accepted_tos, data.accepted_privacy)
-    logger.info(f"Registration attempt: username={data.username}, email={data.email}")
-    # Check existing user
-    result = await db.execute(select(User).where(User.username == data.username))
-    if result.scalars().first():
-        logger.warning(f"Registration failed: username {data.username} already exists")
-        raise HTTPException(status_code=400, detail="这个用户名已经被注册了")
+    logger.info(f"Registration attempt: username={data.username}")
 
-    result = await db.execute(select(User).where(User.email == data.email))
-    if result.scalars().first():
-        logger.warning(f"Registration failed: email {data.email} already exists")
-        raise HTTPException(status_code=400, detail="这个邮箱已经被注册了")
+    # C1 Security Fix: 统一检查用户名和邮箱，返回通用错误消息（防止枚举攻击）
+    existing_user = await db.execute(
+        select(User).where(
+            (User.username == data.username) | (User.email == data.email)
+        )
+    )
+    if existing_user.scalars().first():
+        # 统一返回通用消息，无法区分是用户名还是邮箱已存在
+        logger.warning(f"Registration failed: duplicate username or email")
+        raise HTTPException(
+            status_code=400,
+            detail="注册失败，请检查输入的用户名和邮箱"
+        )
 
     # Create user
     user = User(
@@ -334,7 +338,7 @@ async def register(
 
     logger.info(f"User registered successfully: {user.username} (ID: {user.id})")
 
-    # Send verification email (async, non-blocking)
+    # M2 Security Fix: Send verification email via Celery queue (rate-limited)
     try:
         verify_token = uuid.uuid4().hex
         await cache_service.set(
@@ -342,12 +346,12 @@ async def register(
             str(user.id),
             ttl=EMAIL_VERIFY_TTL_SECONDS,
         )
-        asyncio.create_task(
-            email_service.send_verification_email(
-                to_email=user.email,
-                verify_token=verify_token,
-                username=user.nickname or user.username,
-            )
+        # 使用 Celery 任务替代 asyncio.create_task
+        from app.core.celery_tasks import send_verification_email_task
+        send_verification_email_task.delay(
+            to_email=user.email,
+            verify_token=verify_token,
+            username=user.nickname or user.username
         )
     except Exception as e:
         logger.warning(f"Failed to schedule verification email: {e}")

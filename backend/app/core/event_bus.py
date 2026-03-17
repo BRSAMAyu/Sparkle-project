@@ -314,6 +314,9 @@ class EventBus:
         self._running = False
         self.max_retries = getattr(settings, "EVENT_BUS_MAX_RETRIES", 3)
         self.dlq_suffix = getattr(settings, "EVENT_BUS_DLQ_SUFFIX", ":dlq")
+        self.dlq_maxlen = getattr(settings, "EVENT_BUS_DLQ_MAXLEN", 10000)
+        # Idempotency store for deduplication
+        self._idempotency = None  # Lazy initialized
 
     def _dlq_stream(self, stream: str) -> str:
         return f"{stream}{self.dlq_suffix}"
@@ -362,6 +365,7 @@ class EventBus:
         await self.redis.xadd(
             self._dlq_stream(stream),
             {"data": json.dumps(payload, ensure_ascii=False, default=str)},
+            maxlen=self.dlq_maxlen,  # Prevent unbounded DLQ growth
         )
         await self.redis.xack(stream, group_name, message_id)
         logger.error(
@@ -559,6 +563,13 @@ class EventBus:
         task = asyncio.create_task(self._consume_loop(stream, group_name, consumer_name, callback))
         self._consumer_tasks.append(task)
 
+    async def _get_idempotency_store(self):
+        """Lazy initialization of idempotency store"""
+        if self._idempotency is None:
+            from app.core.idempotency import get_idempotency_store
+            self._idempotency = get_idempotency_store("redis")
+        return self._idempotency
+
     async def _consume_loop(self, stream: str, group_name: str, consumer_name: str, callback: Callable):
         logger.info(f"Starting consumer loop: {group_name}:{consumer_name} on {stream}")
 
@@ -579,20 +590,46 @@ class EventBus:
 
                 for _stream_name, messages in entries:
                     for message_id, data in messages:
+                        parsed_data = {}  # Initialize before try block for error handler
                         try:
                             # Parse data (handling json strings if we did that)
-                            parsed_data = {}
                             for k, v in data.items():
                                 try:
                                     parsed_data[k] = json.loads(v)
                                 except (json.JSONDecodeError, TypeError):
                                     parsed_data[k] = v
 
-                            # Invoke callback
-                            await callback(parsed_data)
+                            # === IDEMPOTENCY CHECK ===
+                            # Prevent duplicate processing when messages are redelivered after crash
+                            idempotency_key = f"evt:{stream}:{message_id}"
+                            idempotency = await self._get_idempotency_store()
 
-                            # ACK
-                            await self.redis.xack(stream, group_name, message_id)
+                            # Check if already processed
+                            existing = await idempotency.get(idempotency_key)
+                            if existing:
+                                logger.info(f"Skipping duplicate message: {message_id}")
+                                await self.redis.xack(stream, group_name, message_id)
+                                continue
+
+                            # Acquire processing lock
+                            if not await idempotency.lock(idempotency_key):
+                                logger.warning(f"Could not acquire lock for message: {message_id}")
+                                continue
+
+                            try:
+                                # Invoke callback
+                                await callback(parsed_data)
+
+                                # Mark as processed
+                                await idempotency.set(idempotency_key, {"status": "done"}, ttl=86400)
+
+                                # ACK
+                                await self.redis.xack(stream, group_name, message_id)
+
+                            except Exception as callback_error:
+                                # Release lock on failure so retry can proceed
+                                await idempotency.unlock(idempotency_key)
+                                raise callback_error
 
                         except Exception as e:
                             logger.error(f"Error processing message {message_id}: {e}")
