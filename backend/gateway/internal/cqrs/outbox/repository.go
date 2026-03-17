@@ -60,7 +60,7 @@ func (r *PostgresRepository) InsertWithTx(ctx context.Context, tx pgx.Tx, entry 
 		EventVersion:  int32(entry.EventVersion),
 		Payload:       entry.Payload,
 		Metadata:      entry.Metadata,
-		CreatedAt: pgtype.Timestamp{
+		CreatedAt: pgtype.Timestamptz{
 			Time:  entry.CreatedAt,
 			Valid: true,
 		},

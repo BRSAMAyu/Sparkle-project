@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/features/chat/presentation/widgets/voice_input_button.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
+import 'package:sparkle/features/community/presentation/widgets/quick_share_picker_sheet.dart';
 import 'package:sparkle/features/file/file.dart';
 import 'package:sparkle/features/file/presentation/widgets/file_picker_with_presigned.dart';
 import 'package:sparkle/features/tools/tools.dart';
@@ -22,6 +24,7 @@ class ChatInput extends ConsumerStatefulWidget {
     this.onFileUploaded,
     this.fileUploadGroupId,
     this.onTextChanged,
+    this.onQuickShare,
   });
   final bool enabled;
   final String? hintText;
@@ -31,6 +34,7 @@ class ChatInput extends ConsumerStatefulWidget {
   final void Function(StoredFile file)? onFileUploaded;
   final String? fileUploadGroupId;
   final void Function(String text)? onTextChanged;
+  final void Function(UniversalSharePayload payload)? onQuickShare;
 
   @override
   ConsumerState<ChatInput> createState() => _ChatInputState();
@@ -203,6 +207,20 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     }
   }
 
+  void _showQuickShare() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
+      builder: (context) => QuickSharePickerSheet(
+        onShare: (payload) {
+          Navigator.pop(context);
+          widget.onQuickShare?.call(payload);
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final enterToSend = ref.watch(enterToSendProvider);
@@ -283,6 +301,25 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                     // 等待onTranscription回调设置文本后再聚焦
                   },
                 ),
+
+                // --- Quick Share Button ---
+                if (widget.onQuickShare != null) ...[
+                  const SizedBox(width: DS.spacing8),
+                  SizedBox(
+                    width: attachmentVisualSize,
+                    height: attachmentVisualSize,
+                    child: SparkleIconButton(
+                      icon: Icon(
+                        Icons.share_rounded,
+                        color: DS.textSecondary,
+                        size: attachmentIconSize,
+                      ),
+                      onPressed: widget.enabled ? _showQuickShare : null,
+                      variant: ButtonVariant.ghost,
+                      size: attachmentVisualSize,
+                    ),
+                  ),
+                ],
 
                 const SizedBox(width: DS.spacing8),
 

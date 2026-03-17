@@ -11,6 +11,7 @@ import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/utils/formatters.dart';
+import 'package:sparkle/features/community/presentation/widgets/share_resource_sheet.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
@@ -147,6 +148,19 @@ class _TaskDetailView extends ConsumerWidget {
         ),
         expandedHeight: DS.spacing40 * 5, // 200 = 40 * 5
         pinned: true,
+        actions: [
+          SparkleIconButton(
+            variant: ButtonVariant.ghost,
+            icon: const Icon(Icons.share_outlined),
+            onPressed: () => showShareResourceSheet(
+              context,
+              resourceType: 'task',
+              resourceId: task.id,
+              title: task.title,
+              subtitle: task.guideContent?.split('\n').first ?? '',
+            ),
+          ),
+        ],
         flexibleSpace: FlexibleSpaceBar(
           background: Hero(
             tag: 'task-${task.id}',

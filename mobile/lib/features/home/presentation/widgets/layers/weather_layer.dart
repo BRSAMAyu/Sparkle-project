@@ -42,9 +42,22 @@ class _WeatherLayerState extends State<WeatherLayer> {
     return (densityScale * moodScale).clamp(0.4, 1.2);
   }
 
-  Color get _accentColor =>
-      Color.lerp(DS.brandPrimary, widget.blendParams.primaryTint, 0.45) ??
-      DS.brandPrimary;
+  Color get _accentColor {
+    final baseColor = Color.lerp(
+      DS.brandPrimary,
+      widget.blendParams.primaryTint,
+      0.45,
+    ) ?? DS.brandPrimary;
+
+    // 浅色模式：增加对比度
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    if (!isDark) {
+      // 浅色模式下使用更深的颜色
+      final hsl = HSLColor.fromColor(baseColor);
+      return hsl.withLightness(0.35).toColor();
+    }
+    return baseColor;
+  }
 
   double get _layerOpacity =>
       (0.4 + widget.blendParams.backgroundOpacity * 0.6)

@@ -15,6 +15,7 @@ from uuid import UUID
 
 from loguru import logger
 
+from app.services.llm_fallback_utils import router_llm
 from app.services.llm_service import LLMService
 
 
@@ -433,11 +434,15 @@ class UnifiedIntentRouter:
 - reasoning 用中文简短说明"""
 
         try:
-            # 使用低温度确保分类稳定
-            response = await self.llm_service.chat_json(
+            # 使用低温度确保分类稳定 (带降级保护)
+            response = await router_llm.json_call(
                 messages=[{"role": "user", "content": prompt}],
+                fallback={"primary_intent": "chat", "confidence": 0.5, "reasoning": "LLM分类降级", "is_complex": False, "suggested_execution_mode": "direct"},
                 temperature=0.1,
             )
+
+            if response is None:
+                response = {"primary_intent": "chat", "confidence": 0.5, "is_complex": False}
 
             # 解析结果
             primary_intent_str = response.get("primary_intent", "chat").lower()

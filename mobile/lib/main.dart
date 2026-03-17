@@ -8,14 +8,12 @@ import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/performance_service.dart';
 import 'package:sparkle/core/services/social_auth_service.dart';
-import 'package:sparkle/core/services/unified_push_service.dart';
 import 'package:sparkle/core/services/user_preferences_service.dart';
 import 'package:sparkle/core/services/view_storage_service.dart';
 import 'package:sparkle/core/tracing/tracing_service.dart';
 import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/features/chat/chat.dart';
 import 'package:sparkle/features/cognitive/data/repositories/local_cognitive_repository.dart';
-import 'firebase_options.dart';
 
 const _startupErrorPadding = 24.0;
 

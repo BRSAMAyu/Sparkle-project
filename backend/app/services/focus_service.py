@@ -10,7 +10,7 @@ from app.models.focus import FocusSession, FocusStatus, FocusType
 from app.models.task import Task, TaskStatus
 from app.models.user import User
 from app.services.cognitive.auto_fragment_collector import AutoFragmentCollector
-from app.services.llm_service import llm_service
+from app.services.llm_fallback_utils import focus_llm
 
 
 def _utcnow() -> datetime.datetime:
@@ -224,7 +224,7 @@ class FocusService:
             {"role": "user", "content": f"Task: {task_context}\n\nUser Question/Context: {user_input}"}
         ]
 
-        return await llm_service.chat(messages, temperature=0.7)
+        return await focus_llm.call(messages, fallback="继续专注，你做得很好！如果感到困惑，试着把问题分解成更小的部分。", temperature=0.7)
 
     @staticmethod
     async def breakdown_task_via_llm(
@@ -252,12 +252,14 @@ class FocusService:
         if persona_prompt:
             prompt += f"\n\n{persona_prompt}"
 
-        return await llm_service.chat_json(
+        result = await focus_llm.json_call(
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt}
-            ]
+            ],
+            fallback=[]  # 降级返回空列表
         )
+        return result if isinstance(result, list) else []
 
     @staticmethod
     async def get_weekly_stats(

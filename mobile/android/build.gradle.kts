@@ -1,5 +1,11 @@
 allprojects {
     repositories {
+        // 国内镜像优先 (Aliyun mirrors for China network)
+        maven { url = uri("https://maven.aliyun.com/repository/google") }
+        maven { url = uri("https://maven.aliyun.com/repository/central") }
+        maven { url = uri("https://maven.aliyun.com/repository/public") }
+        maven { url = uri("https://maven.aliyun.com/repository/gradle-plugin") }
+        // 原始仓库作为备用
         google()
         mavenCentral()
         // Huawei repository for JPush dependencies
@@ -10,6 +16,12 @@ allprojects {
 // Add Google Services plugin classpath
 buildscript {
     repositories {
+        // 国内镜像优先
+        maven { url = uri("https://maven.aliyun.com/repository/google") }
+        maven { url = uri("https://maven.aliyun.com/repository/central") }
+        maven { url = uri("https://maven.aliyun.com/repository/public") }
+        maven { url = uri("https://maven.aliyun.com/repository/gradle-plugin") }
+        // 原始仓库作为备用
         google()
         mavenCentral()
     }

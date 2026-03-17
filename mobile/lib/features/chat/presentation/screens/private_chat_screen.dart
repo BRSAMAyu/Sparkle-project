@@ -6,10 +6,12 @@ import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_bubble.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_input.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
+import 'package:sparkle/features/community/data/repositories/community_share_repository.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
 
 class PrivateChatScreen extends ConsumerStatefulWidget {
@@ -28,6 +30,7 @@ class PrivateChatScreen extends ConsumerStatefulWidget {
 class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
   String? _displayName;
   String? _avatarUrl;
+  bool _isSharing = false;
 
   @override
   void initState() {
@@ -143,10 +146,36 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
               onCancelQuote: () => setState(() => notifier.setQuote(null)),
               onSend: (text, {replyToId}) =>
                   notifier.sendMessage(content: text, replyToId: replyToId),
+              onQuickShare: _isSharing ? null : (payload) => _handleQuickShare(payload),
+              enabled: !_isSharing,
             ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _handleQuickShare(UniversalSharePayload payload) async {
+    if (_isSharing) return;
+
+    setState(() => _isSharing = true);
+    try {
+      await ref.read(communityShareRepositoryProvider).shareResource(
+            resourceType: payload.contentType.stringValue,
+            resourceId: payload.resourceId,
+            targetUserId: widget.friendId, // 私聊分享给好友
+            comment: payload.shareMessage,
+          );
+      if (!mounted) return;
+      ref.invalidate(privateChatProvider(widget.friendId));
+      AppFeedback.success(context, context.l10n.shareResourceSuccess);
+    } catch (e) {
+      if (!mounted) return;
+      AppFeedback.error(context, context.l10n.shareResourceFailed(e));
+    } finally {
+      if (mounted) {
+        setState(() => _isSharing = false);
+      }
+    }
   }
 }

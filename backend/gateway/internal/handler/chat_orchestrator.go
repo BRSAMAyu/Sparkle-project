@@ -237,9 +237,16 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 
 	// Require authenticated user_id from context (must be set by AuthMiddleware)
 	userID := c.GetString("user_id")
+	queryUserID := ""
 	if userID == "" {
 		// Fallback: Try query parameter (for Guest mode or WebSocket upgrade requests where headers might be stripped)
-		userID = c.Query("user_id")
+		// SECURITY WARNING: Query parameter authentication is deprecated and will be removed in a future version
+		// Use WebSocket ticket mechanism instead (see websocket_factory.go)
+		queryUserID = c.Query("user_id")
+		if queryUserID != "" {
+			log.Printf("[SECURITY WARNING] WebSocket using deprecated query parameter authentication for user_id. This will be removed in a future version. Use ticket-based authentication instead.")
+			userID = queryUserID
+		}
 	}
 
 	if userID == "" {
@@ -249,14 +256,27 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 		return
 	}
 	authToken := c.GetString("auth_token")
+	queryToken := ""
 	if authToken == "" {
-		authToken = c.Query("token")
+		queryToken = c.Query("token")
+		if queryToken != "" {
+			// SECURITY WARNING: Query token authentication is deprecated
+			// Use ticket-based authentication instead
+			if queryUserID != "" {
+				log.Printf("[SECURITY WARNING] WebSocket using deprecated query token authentication. This will be removed in a future version. Use ticket-based authentication instead.")
+			}
+			authToken = queryToken
+		}
 	}
 
 	log.Printf("WebSocket connected for user: %s", userID)
 	authMethod := c.GetString("ws_auth_method")
 	if authMethod == "" {
-		authMethod = "unknown"
+		if queryUserID != "" || queryToken != "" {
+			authMethod = "query_token_deprecated"
+		} else {
+			authMethod = "unknown"
+		}
 	}
 	metrics.WSConnectionSuccess.WithLabelValues("/ws/chat", authMethod).Inc()
 	h.registerConnection(userID, conn)

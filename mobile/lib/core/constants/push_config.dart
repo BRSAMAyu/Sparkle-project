@@ -5,6 +5,19 @@ class PushConfig {
   PushConfig._();
 
   // ===========================================================================
+  // Build Configuration
+  // ===========================================================================
+
+  /// Whether to enable Google services (Firebase, Google Sign-In)
+  ///
+  /// Set to false for China-only builds to avoid Google dependency issues.
+  /// Usage: flutter build --dart-define=ENABLE_GOOGLE_SERVICES=false
+  static const bool enableGoogleServices = bool.fromEnvironment(
+    'ENABLE_GOOGLE_SERVICES',
+    defaultValue: true,
+  );
+
+  // ===========================================================================
   // JPush Configuration
   // ===========================================================================
 
@@ -28,10 +41,16 @@ class PushConfig {
   // ===========================================================================
 
   /// Whether FCM is enabled
+  ///
+  /// Note: This is additionally gated by [enableGoogleServices].
+  /// If enableGoogleServices is false, FCM will be disabled regardless.
   static const bool fcmEnabled = bool.fromEnvironment(
     'FCM_ENABLED',
     defaultValue: true,
   );
+
+  /// Effective FCM enabled status (considers both flags)
+  static bool get fcmEffectiveEnabled => enableGoogleServices && fcmEnabled;
 
   // ===========================================================================
   // Local Notification Configuration
@@ -147,7 +166,7 @@ class PushConfig {
 
   /// Check if FCM should be used based on region
   static bool shouldUseFcm(String? region) {
-    if (!fcmEnabled) return false;
+    if (!fcmEffectiveEnabled) return false;
     if (region == null) return true; // Default to FCM
     return !jpushPreferredRegions.contains(region.toLowerCase());
   }

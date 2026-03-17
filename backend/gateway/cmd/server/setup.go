@@ -239,7 +239,7 @@ func initHandlers(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client,
 	sttURL = strings.Replace(sttURL, "https://", "wss://", 1)
 	sttHandler := handler.NewSTTHandler(sttURL+"/api/v1/stt/stream", logger)
 
-	wsProxy := handler.NewWebSocketProxy(cfg.BackendURL, logger)
+	wsProxy := handler.NewWebSocketProxy(cfg.BackendURL, logger, cfg)
 
 	appleAuthService, err := service.NewAppleAuthService(cfg)
 	if err != nil {

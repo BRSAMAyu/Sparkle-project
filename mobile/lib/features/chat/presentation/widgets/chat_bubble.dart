@@ -7,7 +7,9 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/deep_link_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/action_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart';
@@ -18,6 +20,7 @@ import 'package:sparkle/features/chat/presentation/widgets/mode_suggestion_card.
 import 'package:sparkle/features/chat/presentation/widgets/orchestration_trace_panel.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/presentation/providers/community_agent_provider.dart';
+import 'package:sparkle/features/community/presentation/widgets/share_cards/share_cards.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 const _chatContentFontFallback = <String>[
@@ -456,8 +459,12 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                           ),
                                         ),
                                       ),
-                                    // Use constrained height for long messages
-                                    LayoutBuilder(
+                                    // Share card for private messages
+                                    if (_isShareMessage())
+                                      _buildPrivateShareCard() ?? const SizedBox.shrink()
+                                    else
+                                      // Use constrained height for long messages
+                                      LayoutBuilder(
                                       builder: (context, constraints) {
                                         // Calculate max height based on screen size
                                         final maxHeight =
@@ -1012,6 +1019,144 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
         ),
       ),
     );
+  }
+
+  // ============================================================
+  // Share Card Support for Private Messages
+  // ============================================================
+
+  /// Check if private message is a share message
+  bool _isShareMessage() {
+    if (widget.message is! PrivateMessageInfo) return false;
+    final msg = widget.message as PrivateMessageInfo;
+    return msg.messageType != MessageType.text && msg.contentData != null;
+  }
+
+  /// Get shareable content type from message type
+  ShareableContentType? _getShareContentType(MessageType messageType) {
+    return switch (messageType) {
+      MessageType.taskShare => ShareableContentType.taskCompletion,
+      MessageType.planShare => ShareableContentType.planProgress,
+      MessageType.capsuleShare => ShareableContentType.capsule,
+      MessageType.prismShare => ShareableContentType.cognitivePrism,
+      MessageType.achievement => ShareableContentType.achievement,
+      _ => null,
+    };
+  }
+
+  /// Build share card for private message
+  Widget? _buildPrivateShareCard() {
+    if (widget.message is! PrivateMessageInfo) return null;
+    final msg = widget.message as PrivateMessageInfo;
+
+    final contentType = _getShareContentType(msg.messageType);
+    if (contentType == null) return null;
+
+    final data = msg.contentData ?? {};
+    final payload = UniversalSharePayload(
+      contentType: contentType,
+      resourceId: _getResourceId(msg.messageType, data),
+      title: _getShareTitle(msg.messageType, data, msg.content),
+      subtitle: _getShareSubtitle(msg.messageType, data),
+      metadata: data,
+    );
+
+    return ShareCardFactory.fromPayload(
+      payload,
+      onTap: () => _handleShareCardTap(payload),
+    );
+  }
+
+  /// Get resource ID from content data based on message type
+  String _getResourceId(MessageType type, Map<String, dynamic> data) {
+    // 安全地将各种数值类型转换为字符串
+    String safeGetString(dynamic value) {
+      if (value == null) return '';
+      if (value is String) return value;
+      return value.toString();
+    }
+
+    return switch (type) {
+      MessageType.taskShare => safeGetString(data['task_id']),
+      MessageType.planShare => safeGetString(data['plan_id']),
+      MessageType.capsuleShare => safeGetString(data['capsule_id']),
+      MessageType.prismShare => safeGetString(data['prism_id']),
+      MessageType.achievement => safeGetString(data['achievement_id']),
+      _ => '',
+    };
+  }
+
+  /// Get share title from content data
+  String _getShareTitle(
+    MessageType type,
+    Map<String, dynamic> data,
+    String? fallbackContent,
+  ) {
+    // 安全地将各种数值类型转换为字符串
+    String? safeGetString(dynamic value) {
+      if (value == null) return null;
+      if (value is String) return value.isEmpty ? null : value;
+      return value.toString();
+    }
+
+    final title = switch (type) {
+      MessageType.taskShare => safeGetString(data['title']),
+      MessageType.planShare => safeGetString(data['title']),
+      MessageType.capsuleShare => safeGetString(data['title']),
+      MessageType.prismShare => safeGetString(data['title']),
+      MessageType.achievement => safeGetString(data['name']),
+      _ => null,
+    };
+    return title ?? fallbackContent ?? '';
+  }
+
+  /// Get share subtitle from content data
+  String? _getShareSubtitle(MessageType type, Map<String, dynamic> data) {
+    // 安全地将数值类型转换为字符串
+    String? safeGetString(dynamic value) {
+      if (value == null) return null;
+      if (value is String) return value.isEmpty ? null : value;
+      return value.toString();
+    }
+
+    // 安全地将数值转换为 double
+    double? safeGetDouble(dynamic value) {
+      if (value == null) return null;
+      if (value is double) return value;
+      if (value is num) return value.toDouble();
+      return null;
+    }
+
+    // 安全地将数值转换为 int
+    int? safeGetInt(dynamic value) {
+      if (value == null) return null;
+      if (value is int) return value;
+      if (value is num) return value.toInt();
+      return null;
+    }
+
+    return switch (type) {
+      MessageType.taskShare => () {
+        final duration = safeGetInt(data['duration']) ?? 0;
+        return '已完成 · $duration分钟';
+      }(),
+      MessageType.planShare => () {
+        final progress = safeGetDouble(data['progress']);
+        return progress != null ? '进度: ${(progress * 100).toStringAsFixed(0)}%' : null;
+      }(),
+      MessageType.capsuleShare => safeGetString(data['summary']),
+      MessageType.prismShare => safeGetString(data['insight']),
+      MessageType.achievement => safeGetString(data['description']),
+      _ => null,
+    };
+  }
+
+  /// Handle share card tap - navigate to resource
+  void _handleShareCardTap(UniversalSharePayload payload) {
+    final deepLink = payload.deepLink;
+    if (deepLink.isNotEmpty) {
+      DeepLinkService.handleDeepLink(context, deepLink);
+    }
   }
 }
 

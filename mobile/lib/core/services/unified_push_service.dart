@@ -6,9 +6,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart';
 import 'package:sparkle/core/constants/push_config.dart';
-import 'package:sparkle/core/services/firebase_messaging_service.dart';
 import 'package:sparkle/core/services/jpush_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
+
+// Conditional import for Firebase services
+export 'firebase_messaging_service.dart' show FirebaseMessagingService, firebaseMessagingServiceProvider, fcmInitializedProvider;
+import 'firebase_messaging_service.dart' show FirebaseMessagingService, firebaseMessagingServiceProvider, fcmInitializedProvider;
 
 /// Push channel type
 enum PushChannel {
@@ -156,9 +159,11 @@ class UnifiedPushService {
       futures.add(_initializeJPush(production: production));
     }
 
-    // Always initialize FCM as primary or fallback
-    if (PushConfig.fcmEnabled) {
+    // Initialize FCM as primary or fallback (only if Google services enabled)
+    if (PushConfig.fcmEffectiveEnabled) {
       futures.add(_initializeFcm());
+    } else {
+      _logger.i('FCM disabled (Google services not enabled)');
     }
 
     await Future.wait(futures);
@@ -186,6 +191,12 @@ class UnifiedPushService {
 
   /// Initialize FCM service
   Future<void> _initializeFcm() async {
+    // Skip if Google services are disabled
+    if (!PushConfig.enableGoogleServices) {
+      _logger.i('FCM skipped: Google services disabled');
+      return;
+    }
+
     try {
       final fcmService = _ref.read(firebaseMessagingServiceProvider);
       await fcmService.initialize();
@@ -372,8 +383,8 @@ class UnifiedPushService {
       }
     }
 
-    // For FCM, subscribe to topics
-    if (PushConfig.fcmEnabled) {
+    // For FCM, subscribe to topics (only if Google services enabled)
+    if (PushConfig.fcmEffectiveEnabled) {
       try {
         final fcmService = _ref.read(firebaseMessagingServiceProvider);
         for (final tag in tags) {
@@ -392,8 +403,8 @@ class UnifiedPushService {
   Future<Map<PushChannel, String?>> getCurrentTokens() async {
     final tokens = <PushChannel, String?>{};
 
-    // Get FCM token
-    if (PushConfig.fcmEnabled) {
+    // Get FCM token (only if Google services enabled)
+    if (PushConfig.fcmEffectiveEnabled) {
       try {
         final fcmService = _ref.read(firebaseMessagingServiceProvider);
         tokens[PushChannel.fcm] = fcmService.currentToken;

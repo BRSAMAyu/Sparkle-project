@@ -1,10 +1,8 @@
-import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/materials.dart';
 import 'package:sparkle/core/design/widgets/rarity_visual_wrapper.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/l10n/app_localizations.dart';

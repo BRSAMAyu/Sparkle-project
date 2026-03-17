@@ -128,8 +128,8 @@ class _ModeChipState extends State<_ModeChip> {
 
   @override
   Widget build(BuildContext context) {
-    final foregroundColor =
-        widget.isDark ? const Color(0xFFF1E7DA) : DS.neutral900;
+    final colors = context.colorExtensions;
+    final foregroundColor = colors.adaptiveTextPrimary;
     return GestureDetector(
       onTapDown: (_) => setState(() => _isPressed = true),
       onTapUp: (_) {

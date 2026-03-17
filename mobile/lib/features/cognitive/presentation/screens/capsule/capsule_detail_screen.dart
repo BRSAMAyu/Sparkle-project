@@ -9,6 +9,7 @@ import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/cognitive/data/models/curiosity_capsule_model.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/capsule_provider.dart';
+import 'package:sparkle/features/community/presentation/widgets/share_resource_sheet.dart';
 
 /// 胶囊详情页
 class CapsuleDetailScreen extends ConsumerStatefulWidget {
@@ -248,56 +249,12 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
   }
 
   void _showShareSheet(CuriosityCapsuleModel capsule) {
-    unawaited(
-      showModalBottomSheet<void>(
-        context: context,
-        useRootNavigator: true,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(DS.radius20)),
-        ),
-        builder: (ctx) => SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: DS.spacing8),
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: DS.border,
-                  borderRadius: DS.borderRadiusFull,
-                ),
-              ),
-              const SizedBox(height: DS.spacing16),
-              ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(DS.spacing8),
-                  decoration: BoxDecoration(
-                    color: DS.surfaceSecondary,
-                    borderRadius: DS.borderRadius8,
-                  ),
-                  child: Icon(Icons.link, size: 20, color: DS.textSecondary),
-                ),
-                title: Text(context.l10n.capsuleCopyLink),
-                onTap: () => Navigator.pop(ctx),
-              ),
-              ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(DS.spacing8),
-                  decoration: BoxDecoration(
-                    color: DS.surfaceSecondary,
-                    borderRadius: DS.borderRadius8,
-                  ),
-                  child: Icon(Icons.group_outlined, size: 20, color: DS.textSecondary),
-                ),
-                title: Text(context.l10n.capsuleShareToGroup),
-                onTap: () => Navigator.pop(ctx),
-              ),
-              const SizedBox(height: DS.spacing8),
-            ],
-          ),
-        ),
-      ),
+    showShareResourceSheet(
+      context,
+      resourceType: 'capsule',
+      resourceId: capsule.id,
+      title: capsule.title,
+      subtitle: capsule.content.split('\n').first,
     );
   }
 

@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
-import 'package:image_gallery_saver/image_gallery_saver.dart';
+import 'package:gal/gal.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart' as share_plus;
@@ -235,25 +235,10 @@ class UniversalShareService {
         );
       }
 
-      final result = await ImageGallerySaver.saveFile(
-        imageFile.path,
-        name: name ?? 'sparkle_share',
-      );
-
-      if (result != null) {
-        final isSuccess = result is Map &&
-            (result['isSuccess'] == true || result['success'] == true);
-        if (isSuccess) {
-          return UniversalShareResult(
-            isSuccess: true,
-            filePath: imageFile.path,
-          );
-        }
-      }
-
-      return const UniversalShareResult(
-        isSuccess: false,
-        error: 'Save failed',
+      await Gal.putImage(imageFile.path, album: name ?? 'Sparkle');
+      return UniversalShareResult(
+        isSuccess: true,
+        filePath: imageFile.path,
       );
     } catch (e) {
       return UniversalShareResult(isSuccess: false, error: e.toString());

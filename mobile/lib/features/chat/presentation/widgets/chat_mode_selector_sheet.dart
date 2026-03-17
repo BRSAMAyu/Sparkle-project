@@ -173,7 +173,7 @@ class _TeamEntryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const color = Color(0xFF5C6BC0);
+    final color = context.colorExtensions.chatModeIndigo;
     return InkWell(
       onTap: () {
         unawaited(HapticFeedback.lightImpact());
@@ -194,7 +194,7 @@ class _TeamEntryTile extends StatelessWidget {
                 color: color.withValues(alpha: 0.15),
                 borderRadius: DS.borderRadius12,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.groups_rounded,
                 color: color,
                 size: DS.iconSizeBase,

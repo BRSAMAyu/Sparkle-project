@@ -7,9 +7,11 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/features/chat/presentation/widgets/ai_status_indicator.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_input.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
+import 'package:sparkle/features/community/data/repositories/community_share_repository.dart';
 import 'package:sparkle/features/community/presentation/providers/community_agent_provider.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
 import 'package:sparkle/features/community/community_routes.dart';
@@ -342,6 +344,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                       ),
                 );
               },
+              onQuickShare: (payload) => _handleQuickShare(payload),
             ),
           ],
         ),
@@ -395,6 +398,23 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
             recentMessages: messages,
           ),
     );
+  }
+
+  void _handleQuickShare(UniversalSharePayload payload) async {
+    try {
+      await ref.read(communityShareRepositoryProvider).shareResource(
+            resourceType: payload.contentType.stringValue,
+            resourceId: payload.resourceId,
+            targetGroupId: widget.groupId,
+            comment: payload.shareMessage,
+          );
+      if (!mounted) return;
+      ref.invalidate(groupChatProvider(widget.groupId));
+      AppFeedback.success(context, context.l10n.shareResourceSuccess);
+    } catch (e) {
+      if (!mounted) return;
+      AppFeedback.error(context, context.l10n.shareResourceFailed(e));
+    }
   }
 
   Widget _buildAgentToolbar(

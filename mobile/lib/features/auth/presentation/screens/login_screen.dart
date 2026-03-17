@@ -17,10 +17,11 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
-  static const _brandOrange = Color(0xFFD9773A);
-  static const _brandOrangeDeep = Color(0xFFBA5923);
-  static const _brandBlue = Color(0xFF4C78B2);
-  static const _brandBlueDeep = Color(0xFF2F588E);
+  // Brand colors - using color_extensions.dart via context.colorExtensions
+  Color get _brandOrange => context.colorExtensions.brandOrange;
+  Color get _brandOrangeDeep => context.colorExtensions.brandOrangeDeep;
+  Color get _brandBlue => context.colorExtensions.brandBlue;
+  Color get _brandBlueDeep => context.colorExtensions.brandBlueDeep;
 
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController();
@@ -113,7 +114,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         const SizedBox(height: DS.spacing24),
-                        const _BrandMark(
+                        _BrandMark(
                           orange: _brandOrange,
                           orangeDeep: _brandOrangeDeep,
                         ),

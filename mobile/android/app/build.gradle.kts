@@ -1,13 +1,20 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
-    // Google Services plugin for Firebase
-    id("com.google.gms.google-services")
 }
 
-import java.util.Properties
+// Google Services plugin for Firebase - only apply if config file exists
+// 添加 google-services.json 到 app/ 目录后启用
+val googleServicesJson = file("google-services.json")
+if (googleServicesJson.exists()) {
+    apply(plugin = "com.google.gms.google-services")
+} else {
+    logger.warn("google-services.json not found. Firebase features will be disabled.")
+}
 
 val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")

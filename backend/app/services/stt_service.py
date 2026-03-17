@@ -74,6 +74,8 @@ class STTService:
         if not text or len(text) < 2:
             return text
 
+        from app.services.llm_fallback_utils import stt_llm
+
         system_prompt = """
         You are a professional transcript editor.
         Task: Optimize the following Automatic Speech Recognition (ASR) text.
@@ -88,12 +90,8 @@ class STTService:
 
         messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": text}]
 
-        try:
-            enhanced_text = await llm_service.chat(messages, temperature=0.3)
-            return enhanced_text.strip()
-        except Exception as e:
-            logger.error(f"Enhancement failed: {e}")
-            return text
+        enhanced_text = await stt_llm.call(messages, fallback=text, temperature=0.3)
+        return enhanced_text.strip() if enhanced_text else text
 
     async def handle_websocket_stream(self, websocket: WebSocket):
         """

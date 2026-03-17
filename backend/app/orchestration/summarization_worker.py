@@ -199,29 +199,30 @@ class SummarizationWorker:
         Returns:
             生成的摘要文本
         """
+        from app.services.llm_fallback_utils import summarization_llm
+
         # 构建总结提示词
         prompt = self._build_summary_prompt(history)
 
-        # 调用 LLM 服务
-        try:
-            messages = [
-                {
-                    "role": "system",
-                    "content": "你是一个专业的对话总结助手。请用简洁的语言总结对话核心内容。",
-                },
-                {"role": "user", "content": prompt},
-            ]
-            summary = await llm_service.chat(
-                messages=messages,
-                model=None,
-                temperature=0.3,
-                max_tokens=500,
-            )
-            return summary
+        # 调用 LLM 服务（带降级保护）
+        messages = [
+            {
+                "role": "system",
+                "content": "你是一个专业的对话总结助手。请用简洁的语言总结对话核心内容。",
+            },
+            {"role": "user", "content": prompt},
+        ]
+        summary = await summarization_llm.call(
+            messages,
+            fallback="",  # 空字符串作为fallback
+            temperature=0.3,
+            max_tokens=500,
+        )
 
-        except Exception as e:
-            logger.error(f"LLM call failed: {e}")
-            raise
+        if not summary or len(summary.strip()) < 10:
+            raise ValueError("Summary too short or empty")
+
+        return summary
 
     def _build_summary_prompt(self, history: list[dict]) -> str:
         """

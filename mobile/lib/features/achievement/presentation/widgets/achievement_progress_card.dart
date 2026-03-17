@@ -232,17 +232,13 @@ class _AchievementRow extends StatelessWidget {
   }
 
   Color _rarityColor(AchievementRarity? rarity) {
-    switch (rarity) {
-      case AchievementRarity.legendary:
-        return const Color(0xFFFFB347);
-      case AchievementRarity.epic:
-        return const Color(0xFFB04AFF);
-      case AchievementRarity.rare:
-        return const Color(0xFF4A9EFF);
-      case AchievementRarity.common:
-      default:
-        return const Color(0xFF78C778);
-    }
+    final rarityName = switch (rarity) {
+      AchievementRarity.legendary => 'legendary',
+      AchievementRarity.epic => 'epic',
+      AchievementRarity.rare => 'rare',
+      AchievementRarity.common || null => 'common',
+    };
+    return getAchievementColor(rarityName);
   }
 }
 

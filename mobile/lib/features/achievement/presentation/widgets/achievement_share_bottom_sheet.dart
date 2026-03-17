@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
-import 'package:image_gallery_saver/image_gallery_saver.dart';
+import 'package:gal/gal.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart' as share_plus;
@@ -474,7 +474,7 @@ class _AchievementShareBottomSheetState
           _buildShareOption(
             icon: Icons.timeline,
             label: l10n.shareToWeChatMoments,
-            color: const Color(0xFF07C160),
+            color: const Color(0xFF07C160), // WeChat green
             onTap: () => _shareToWeChatTimeline(),
           ),
         ],
@@ -640,21 +640,10 @@ class _AchievementShareBottomSheetState
       }
 
       // Save to gallery
-      final result = await ImageGallerySaver.saveFile(
-        _shareCardFile!.path,
-        name: 'sparkle_${widget.achievementId}',
-      );
+      await Gal.putImage(_shareCardFile!.path, album: 'Sparkle');
 
       if (mounted) {
-        if (result != null) {
-          final isSuccess =
-              result is Map && (result['isSuccess'] == true || result['success'] == true);
-          if (isSuccess) {
-            AppFeedback.success(context, context.l10n.savedToGallery);
-          } else {
-            AppFeedback.error(context, context.l10n.gallerySaveFailed);
-          }
-        }
+        AppFeedback.success(context, context.l10n.savedToGallery);
       }
     } catch (e) {
       if (mounted) {

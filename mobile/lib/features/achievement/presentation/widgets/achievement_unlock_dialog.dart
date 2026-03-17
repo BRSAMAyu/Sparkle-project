@@ -8,7 +8,6 @@ import 'package:sparkle/features/chat/data/models/chat_stream_events.dart'
     as chat;
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
-import 'package:sparkle/shared/entities/visual_element_model.dart';
 
 /// 成就解锁弹窗
 ///

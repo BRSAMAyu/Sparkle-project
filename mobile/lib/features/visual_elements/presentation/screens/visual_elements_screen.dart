@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/features/visual_elements/data/repositories/visual_element_repository.dart';
 import 'package:sparkle/features/visual_elements/domain/services/visual_recommendation_service.dart';
 import 'package:sparkle/features/visual_elements/presentation/providers/visual_elements_provider.dart';
 import 'package:sparkle/features/visual_elements/presentation/providers/visual_recommendation_provider.dart';

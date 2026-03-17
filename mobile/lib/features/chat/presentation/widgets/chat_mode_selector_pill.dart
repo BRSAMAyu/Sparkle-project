@@ -178,7 +178,8 @@ class _SelectedPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final foregroundColor = isDark ? const Color(0xFFF1E7DA) : DS.textPrimary;
+    final colors = context.colorExtensions;
+    final foregroundColor = colors.adaptiveTextPrimary;
     final chevronColor =
         isDark ? foregroundColor.withValues(alpha: 0.72) : DS.textSecondary;
     return Padding(

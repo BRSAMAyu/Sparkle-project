@@ -44,6 +44,7 @@ import 'package:sparkle/core/utils/theme_utils.dart';
 
 export '../statistics/statistics.dart';
 export 'breakpoints.dart';
+export 'color_extensions.dart';
 export 'components/atoms/sparkle_button_v2.dart';
 export 'materials.dart';
 export 'responsive_widgets.dart';

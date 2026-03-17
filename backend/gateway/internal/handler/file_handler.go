@@ -5,8 +5,10 @@ import (
 	"context"
 	"errors"
 	"io"
+	"log"
 	"mime"
 	"net/http"
+	"os"
 	"path"
 	"strconv"
 	"strings"
@@ -15,10 +17,43 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/hashicorp/golang-lru/v2/expirable"
 	"github.com/sparkle/gateway/internal/service"
 	"golang.org/x/time/rate"
-	"github.com/hashicorp/golang-lru/v2/expirable"
 )
+
+// isDevelopmentMode checks if running in development environment
+func isDevelopmentModeForErrors() bool {
+	env := strings.ToLower(os.Getenv("ENVIRONMENT"))
+	return env == "" || env == "dev" || env == "development"
+}
+
+// sanitizeError returns a safe error message for client consumption
+// In production, internal error details are hidden; in development, full details are shown
+func sanitizeError(err error, fallback string) string {
+	if err == nil {
+		return fallback
+	}
+	if isDevelopmentModeForErrors() {
+		return err.Error()
+	}
+	// Production: hide internal error details
+	log.Printf("[FileHandler] Internal error (hidden from client): %v", err)
+	return fallback
+}
+
+// sanitizeErrorWithDetail returns sanitized error with optional context
+func sanitizeErrorWithDetail(err error, fallback string, detail string) gin.H {
+	if err == nil {
+		return gin.H{"error": fallback}
+	}
+	if isDevelopmentModeForErrors() {
+		return gin.H{"error": fallback, "detail": err.Error()}
+	}
+	// Production: log but don't expose details
+	log.Printf("[FileHandler] Internal error (hidden from client): %v, context: %s", err, detail)
+	return gin.H{"error": fallback}
+}
 
 var allowedMimeTypesByExt = map[string]map[string]bool{
 	".bin":  {"application/octet-stream": true},
@@ -124,7 +159,7 @@ func (h *FileHandler) PrepareUpload(c *gin.Context) {
 
 	var req PrepareUploadRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, sanitizeError(err, "invalid request body"))
 		return
 	}
 	if req.FileSize <= 0 {
@@ -170,10 +205,7 @@ func (h *FileHandler) PrepareUpload(c *gin.Context) {
 		objectKey,
 	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":  "failed to create file record",
-			"detail": err.Error(),
-		})
+		c.JSON(http.StatusInternalServerError, sanitizeErrorWithDetail(err, "failed to create file record", "CreatePendingFile"))
 		return
 	}
 
@@ -185,10 +217,7 @@ func (h *FileHandler) PrepareUpload(c *gin.Context) {
 		h.storage.MaxUploadSize(),
 	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":  "failed to generate upload url",
-			"detail": err.Error(),
-		})
+		c.JSON(http.StatusInternalServerError, sanitizeErrorWithDetail(err, "failed to generate upload url", "PresignPost"))
 		return
 	}
 
@@ -212,7 +241,7 @@ func (h *FileHandler) CompleteUpload(c *gin.Context) {
 
 	var req CompleteUploadRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, sanitizeError(err, "invalid request body"))
 		return
 	}
 
@@ -465,11 +494,11 @@ func fileToResponse(file service.StoredFile) FileResponse {
 func getUserID(c *gin.Context) (uuid.UUID, error) {
 	userIDStr, exists := c.Get("user_id")
 	if !exists {
-		return uuid.UUID{}, errors.New("missing user id")
+		return uuid.UUID{}, errors.New("authentication required")
 	}
 	userID, ok := userIDStr.(string)
 	if !ok {
-		return uuid.UUID{}, errors.New("invalid user id type")
+		return uuid.UUID{}, errors.New("invalid authentication")
 	}
 	return uuid.Parse(userID)
 }

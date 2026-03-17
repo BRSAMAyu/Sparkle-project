@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_config.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
@@ -28,7 +29,8 @@ class GalaxySearchPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final foreground = isDarkMode ? Colors.white : const Color(0xFF111827);
+    final colors = context.colorExtensions;
+    final foreground = colors.adaptiveForeground;
     final secondary = isDarkMode
         ? Colors.white.withValues(alpha: 0.64)
         : Colors.black.withValues(alpha: 0.56);
@@ -43,7 +45,7 @@ class GalaxySearchPanel extends StatelessWidget {
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: isDarkMode
-                ? const Color(0xB3141B2B)
+                ? colors.panelDarkOverlayLighter
                 : Colors.white.withValues(alpha: 0.82),
             borderRadius: BorderRadius.circular(24),
             border: Border.all(

@@ -7,7 +7,6 @@ import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/utils/formatters.dart';
-import 'package:sparkle/features/insights/data/models/learning_path_plan_response.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/presentation/providers/learning_path_progress_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';

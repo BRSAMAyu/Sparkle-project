@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/deep_link_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/chat/presentation/widgets/file_message_bubble.dart';
@@ -924,14 +925,14 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
       };
 
   void _handleSharedResourceTap(UniversalSharePayload payload) {
-    // Navigate to the shared resource
     final deepLink = payload.deepLink;
     if (deepLink.isNotEmpty) {
-      // Use go_router to navigate
-      // This would integrate with the app's routing system
-      UniversalShareService()
-          .copyDeepLink(deepLink); // For now, just copy the link
-      AppFeedback.info(context, '链接已复制');
+      // 使用深链接服务导航，而非复制链接
+      if (!DeepLinkService.handleDeepLink(context, deepLink)) {
+        // 导航失败时回退到复制链接
+        UniversalShareService().copyDeepLink(deepLink);
+        AppFeedback.info(context, '链接已复制');
+      }
     }
   }
 

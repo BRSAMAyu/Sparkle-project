@@ -10,6 +10,8 @@ from typing import Any, Literal
 
 from loguru import logger
 
+from app.services.llm_fallback_utils import sufficiency_llm
+
 
 class SufficiencyStatus(str, Enum):
     """信息充分性状态"""
@@ -296,7 +298,6 @@ class SufficiencyChecker:
         return "请确认是否继续此操作。"
 
     async def _llm_refinement(self, intent: str, user_message: str) -> bool:
-        from app.services.llm_service import llm_service
 
         prompt = f"""判断用户消息是否足够具体以执行意图。
 
@@ -306,18 +307,14 @@ class SufficiencyChecker:
 如果信息足够，返回 {{"specific": true}}
 如果信息不足，需要补充澄清，返回 {{"specific": false}}
 仅返回 JSON。"""
-        try:
-            result = await llm_service.chat_json(
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.1,
-            )
-            return bool(result.get("specific", False))
-        except Exception as e:
-            logger.warning(f"LLM refinement failed: {e}")
-            return True
+        result = await sufficiency_llm.json_call(
+            messages=[{"role": "user", "content": prompt}],
+            fallback={"specific": True},  # 降级时默认认为足够具体
+            temperature=0.1,
+        )
+        return bool(result.get("specific", True)) if result else True
 
     async def _generate_clarification(self, intent: str, user_message: str) -> str:
-        from app.services.llm_service import llm_service
 
         prompt = f"""你是学习助手。用户消息信息不足，请给出一句自然的追问。
 
@@ -328,15 +325,12 @@ class SufficiencyChecker:
 1. 一次只问 1-2 个关键问题
 2. 语气自然简短
 3. 直接输出追问文本"""
-        try:
-            text = await llm_service.chat(
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.6,
-            )
-            return text.strip()
-        except Exception as e:
-            logger.warning(f"Clarification generation failed: {e}")
-            return "为了更准确地帮你制定计划，请补充目标时间、考试节点和每天可投入时长。"
+        text = await sufficiency_llm.call(
+            messages=[{"role": "user", "content": prompt}],
+            fallback="为了更准确地帮你制定计划，请补充目标时间、考试节点和每天可投入时长。",
+            temperature=0.6,
+        )
+        return text.strip() if text else "为了更准确地帮你制定计划，请补充目标时间、考试节点和每天可投入时长。"
 
 
 # 全局实例

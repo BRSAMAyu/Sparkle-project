@@ -314,32 +314,8 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
   }
 
   Color _agentColor(String agentId) {
-    switch (agentId) {
-      case 'galaxy_guide':
-        return const Color(0xFF6C5CE7);
-      case 'exam_oracle':
-        return const Color(0xFFE17055);
-      case 'time_tutor':
-        return const Color(0xFF00B894);
-      case 'deep_analyst':
-        return const Color(0xFF0984E3);
-      case 'error_analyst':
-        return const Color(0xFFD63031);
-      case 'math_agent':
-        return const Color(0xFF6C5CE7);
-      case 'code_agent':
-        return const Color(0xFF00CEC9);
-      case 'writing_agent':
-        return const Color(0xFFE84393);
-      case 'science_agent':
-        return const Color(0xFF00B894);
-      case 'search_agent':
-        return const Color(0xFF636E72);
-      case 'study_buddy':
-        return const Color(0xFFFDCB6E);
-      default:
-        return DS.neutral500;
-    }
+    final colorName = _agentColorMapping[agentId] ?? 'neutral';
+    return getAgentColor(colorName);
   }
 
   String _agentLabelFallback(String agentId) {
@@ -371,6 +347,21 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
         return agentId.replaceAll('_', ' ');
     }
   }
+
+  /// Mapping from agent IDs to color names for getAgentColor()
+  static const _agentColorMapping = <String, String>{
+    'galaxy_guide': 'purple',
+    'exam_oracle': 'orange',
+    'time_tutor': 'green',
+    'deep_analyst': 'blue',
+    'error_analyst': 'red',
+    'math_agent': 'purple',
+    'code_agent': 'cyan',
+    'writing_agent': 'pink',
+    'science_agent': 'green',
+    'search_agent': 'gray',
+    'study_buddy': 'yellow',
+  };
 }
 
 /// Collaboration mode metadata for the UI.

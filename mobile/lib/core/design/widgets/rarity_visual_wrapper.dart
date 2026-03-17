@@ -407,7 +407,7 @@ class _RarityVisualWrapperState extends State<RarityVisualWrapper>
   Color _getAdaptiveParticleColor(Color baseColor, Brightness brightness) {
     if (brightness == Brightness.dark) return baseColor;
     return baseColor.withValues(
-      alpha: (baseColor.opacity * 1.3).clamp(0.0, 1.0),
+      alpha: (baseColor.a * 1.3).clamp(0.0, 1.0),
     );
   }
 
@@ -585,9 +585,6 @@ class _RotatingGradientBorderPainter extends CustomPainter {
     final rrect = borderRadius.toRRect(rect);
 
     // Create rotating gradient
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = (size.width + size.height) / 2;
-
     final gradient = SweepGradient(
       center: Alignment.center,
       startAngle: rotation,

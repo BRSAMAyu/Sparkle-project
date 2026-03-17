@@ -1,4 +1,4 @@
-.PHONY: dev-up sync-db sync-equipment proto-gen proto-lint proto-breaking proto-check-generated proto-deprecation-check proto-tools-build db-migrate db-dump db-sqlc db-validate env-check smoke quality-baseline quality-baseline-full quality-budget-check openapi-contract-check flutter-analyze-gate mobile-design-lint fixture-init local-config-check local-ai-check local-backend-smoke local-mobile-smoke local-acceptance auth-test community-test file-pipeline-test worker-test
+.PHONY: dev-up sync-db sync-equipment proto-gen proto-lint proto-breaking proto-check-generated proto-deprecation-check proto-tools-build db-migrate db-dump db-sqlc db-validate env-check smoke quality-baseline quality-baseline-full quality-budget-check openapi-contract-check flutter-analyze-gate mobile-design-lint fixture-init local-config-check local-ai-check local-backend-smoke local-mobile-smoke local-acceptance auth-test community-test file-pipeline-test worker-test china-mirrors-setup mobile-setup-china pip-install-china uv-install-china mobile-build-china mobile-build-intl mobile-build-china-ios mobile-build-intl-ios
 
 # Load environment variables from .env
 include .env
@@ -376,6 +376,23 @@ mobile-run:
 		unset CC CXX; \
 	fi; \
 	cd mobile && flutter run
+
+# Build variants for different markets
+mobile-build-china:
+	@echo "🇨🇳 Building for China market (Google services disabled)..."
+	cd mobile && flutter build apk --dart-define=ENABLE_GOOGLE_SERVICES=false --dart-define=FCM_ENABLED=false
+
+mobile-build-intl:
+	@echo "🌍 Building for International market..."
+	cd mobile && flutter build apk --dart-define=ENABLE_GOOGLE_SERVICES=true
+
+mobile-build-china-ios:
+	@echo "🇨🇳 Building iOS for China market..."
+	cd mobile && flutter build ios --dart-define=ENABLE_GOOGLE_SERVICES=false --dart-define=FCM_ENABLED=false
+
+mobile-build-intl-ios:
+	@echo "🌍 Building iOS for International market..."
+	cd mobile && flutter build ios --dart-define=ENABLE_GOOGLE_SERVICES=true
 # 配置自检
 env-check:
 	@echo "🔍 Checking effective config + connectivity..."
@@ -420,3 +437,26 @@ local-mobile-smoke:
 
 local-acceptance: local-backend-smoke local-ai-check local-mobile-smoke
 	@echo "✅ Local full-stack acceptance passed."
+
+# ═══════════════════════════════════════════════════════════════════
+# China Network Mirror Configuration
+# ═══════════════════════════════════════════════════════════════════
+
+china-mirrors-setup:
+	@echo "🇨🇳 Setting up China network mirrors..."
+	@bash scripts/setup_china_mirrors.sh
+
+mobile-setup-china:
+	@echo "📱 Setting up Flutter/Dart mirrors for China..."
+	@bash scripts/setup_flutter_mirrors.sh
+	@echo ""
+	@echo "⚠️  Please restart your terminal or run: source ~/.zshrc"
+	@echo "Then run: cd mobile && flutter pub get"
+
+pip-install-china:
+	@echo "🐍 Installing Python dependencies with China mirror..."
+	pip install -r backend/requirements.txt -i https://mirrors.aliyun.com/pypi/simple/
+
+uv-install-china:
+	@echo "🐍 Installing Python dependencies with uv (China mirror)..."
+	uv pip install -r backend/requirements.txt --index-url https://mirrors.aliyun.com/pypi/simple/

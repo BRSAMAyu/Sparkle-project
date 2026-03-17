@@ -83,6 +83,8 @@ class OmniBarService:
             return {"action_type": "CHAT", "data": {"initial_message": text}}
 
     async def _classify_intent(self, text: str) -> dict[str, Any]:
+        from app.services.llm_fallback_utils import omnibar_llm
+
         system_prompt = """
         You are the Omni-Bar Intent Classifier for the Sparkle App.
         Analyze the user's input and classify into:
@@ -100,11 +102,11 @@ class OmniBarService:
             {"role": "user", "content": text}
         ]
 
-        try:
-            response = await llm_service.chat(messages, temperature=0.1)
-            # Clean json
-            cleaned = response.replace("```json", "").replace("```", "").strip()
-            return json.loads(cleaned)
-        except Exception as e:
-            logger.error(f"OmniBar classification failed: {e}")
+        result = await omnibar_llm.json_call(
+            messages,
+            fallback={"type": "CHAT"},  # 默认降级到聊天模式
+            temperature=0.1,
+        )
+        if result is None:
             return {"type": "CHAT"}
+        return result

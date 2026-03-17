@@ -4,6 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
+import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
+import 'package:sparkle/features/galaxy/presentation/providers/galaxy_provider.dart';
+import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_config.dart';
+import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
+import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
+import 'package:sparkle/shared/entities/achievement_model.dart';
+import 'package:sparkle/shared/entities/task_model.dart';
 
 /// Quick share category
 enum QuickShareCategory {
@@ -125,124 +132,124 @@ class _QuickSharePickerSheetState extends ConsumerState<QuickSharePickerSheet>
   }
 
   Future<List<QuickShareItem>> _loadAchievements() async {
-    // TODO: Integrate with achievement provider
-    // Return mock data for now
-    return [
-      QuickShareItem(
-        id: 'ach_1',
-        title: '星空探索者',
-        subtitle: '解锁了第一个成就',
+    final state = ref.read(achievementProvider);
+
+    if (state.isLoading || state.error != null) return [];
+
+    final unlockedAchievements = state.achievements
+        .where((a) => a.isUnlocked)
+        .toList()
+      ..sort((a, b) => (b.userProgress?.unlockedAt ?? DateTime(1970))
+          .compareTo(a.userProgress?.unlockedAt ?? DateTime(1970)));
+
+    return unlockedAchievements.take(10).map((achievement) {
+      final rarity = achievement.achievement.rarity;
+      final rarityColor = _getRarityColor(rarity);
+      return QuickShareItem(
+        id: achievement.achievement.id,
+        title: achievement.achievement.name,
+        subtitle: achievement.achievement.description ?? '',
         contentType: ShareableContentType.achievement,
-        icon: Icons.emoji_events,
-        iconColor: DS.warning,
+        icon: _getRarityIcon(rarity),
+        iconColor: rarityColor,
         metadata: {
-          'rarity': 'legendary',
-          'type': 'milestone',
+          'rarity': rarity.name,
+          'type': achievement.achievement.type.name,
         },
-      ),
-      QuickShareItem(
-        id: 'ach_2',
-        title: '连续学习7天',
-        subtitle: '学习连胜',
-        contentType: ShareableContentType.achievement,
-        icon: Icons.local_fire_department,
-        iconColor: DS.error,
-        metadata: {
-          'rarity': 'rare',
-          'type': 'streak',
-        },
-      ),
-    ];
+      );
+    }).toList();
   }
 
+  Color _getRarityColor(AchievementRarity rarity) => switch (rarity) {
+        AchievementRarity.legendary => DS.warning,
+        AchievementRarity.epic => DS.prismPurple,
+        AchievementRarity.rare => DS.info,
+        AchievementRarity.common => DS.neutral500,
+      };
+
+  IconData _getRarityIcon(AchievementRarity rarity) => switch (rarity) {
+        AchievementRarity.legendary => Icons.emoji_events,
+        AchievementRarity.epic => Icons.military_tech,
+        AchievementRarity.rare => Icons.star,
+        AchievementRarity.common => Icons.check_circle,
+      };
+
   Future<List<QuickShareItem>> _loadPlans() async {
-    // TODO: Integrate with plan provider
-    return [
-      QuickShareItem(
-        id: 'plan_1',
-        title: 'Python学习计划',
-        subtitle: '进度: 75%',
+    final state = ref.read(planListProvider);
+
+    if (state.isLoading || state.error != null) return [];
+
+    final activePlans = state.activePlans.toList()
+      ..sort((a, b) => b.progress.compareTo(a.progress));
+
+    return activePlans.take(10).map((plan) {
+      return QuickShareItem(
+        id: plan.id,
+        title: plan.name,
+        subtitle: '进度: ${(plan.progress * 100).toStringAsFixed(0)}%',
         contentType: ShareableContentType.planProgress,
         icon: Icons.flag,
         iconColor: DS.info,
         metadata: {
-          'progress': 0.75,
-          'completed_tasks': 12,
-          'total_tasks': 16,
+          'progress': plan.progress,
+          'subject': plan.subject,
         },
-      ),
-      QuickShareItem(
-        id: 'plan_2',
-        title: '算法练习',
-        subtitle: '进度: 50%',
-        contentType: ShareableContentType.planProgress,
-        icon: Icons.flag,
-        iconColor: DS.info,
-        metadata: {
-          'progress': 0.5,
-          'completed_tasks': 5,
-          'total_tasks': 10,
-        },
-      ),
-    ];
+      );
+    }).toList();
   }
 
   Future<List<QuickShareItem>> _loadRecentTasks() async {
-    // TODO: Integrate with task provider
-    return [
-      QuickShareItem(
-        id: 'task_1',
-        title: '完成Flutter基础教程',
-        subtitle: '已完成 · 45分钟',
+    final state = ref.read(taskListProvider);
+
+    if (state.isLoading || state.error != null) return [];
+
+    final completedTasks = state.tasks
+        .where((t) => t.status == TaskStatus.completed)
+        .toList()
+      ..sort((a, b) =>
+          (b.completedAt ?? DateTime(1970)).compareTo(a.completedAt ?? DateTime(1970)));
+
+    return completedTasks.take(10).map((task) {
+      return QuickShareItem(
+        id: task.id,
+        title: task.title,
+        subtitle: '已完成 · ${task.actualMinutes ?? task.estimatedMinutes}分钟',
         contentType: ShareableContentType.taskCompletion,
         icon: Icons.task_alt,
         iconColor: DS.success,
         metadata: {
-          'duration': 45,
+          'duration': task.actualMinutes ?? task.estimatedMinutes,
+          'type': task.type.name,
         },
-      ),
-      QuickShareItem(
-        id: 'task_2',
-        title: '复习数据结构',
-        subtitle: '已完成 · 30分钟',
-        contentType: ShareableContentType.taskCompletion,
-        icon: Icons.task_alt,
-        iconColor: DS.success,
-        metadata: {
-          'duration': 30,
-        },
-      ),
-    ];
+      );
+    }).toList();
   }
 
   Future<List<QuickShareItem>> _loadKnowledgeNodes() async {
-    // TODO: Integrate with Galaxy/Knowledge service
-    return [
-      QuickShareItem(
-        id: 'node_1',
-        title: '微积分基础',
-        subtitle: '掌握度: 75%',
+    final state = ref.read(galaxyProvider);
+
+    if (state.isLoading || state.lastError != null) return [];
+
+    final nodesWithMastery = state.nodes
+        .where((n) => n.masteryScore > 0)
+        .toList()
+      ..sort((a, b) => b.masteryScore.compareTo(a.masteryScore));
+
+    return nodesWithMastery.take(10).map((node) {
+      final sectorStyle = SectorConfig.getStyle(node.sector);
+      return QuickShareItem(
+        id: node.id,
+        title: node.name,
+        subtitle: '掌握度: ${node.masteryScore}%',
         contentType: ShareableContentType.knowledgeNode,
         icon: Icons.school,
-        iconColor: DS.brandSecondary,
+        iconColor: sectorStyle.primaryColor,
         metadata: {
-          'mastery': 0.75,
-          'category': '数学',
+          'mastery': node.masteryScore / 100,
+          'sector': node.sector,
         },
-      ),
-      QuickShareItem(
-        id: 'node_2',
-        title: 'Python 编程',
-        subtitle: '掌握度: 60%',
-        contentType: ShareableContentType.knowledgeNode,
-        icon: Icons.school,
-        iconColor: DS.brandSecondary,
-        metadata: {
-          'mastery': 0.6,
-          'category': '编程',
-        },
-      ),
-    ];
+      );
+    }).toList();
   }
 
   void _onItemTap(QuickShareItem item) {

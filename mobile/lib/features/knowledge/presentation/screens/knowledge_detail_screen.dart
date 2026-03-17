@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/features/community/presentation/widgets/share_resource_sheet.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
 import 'package:sparkle/features/insights/presentation/widgets/learning_path_dialog.dart';
 import 'package:sparkle/features/knowledge/data/models/knowledge_detail_model.dart';
@@ -106,6 +107,17 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                 onPressed: () {
                   ref.read(toggleFavoriteProvider(nodeId));
                 },
+              ),
+              SparkleIconButton(
+                variant: ButtonVariant.ghost,
+                icon: const Icon(Icons.share_outlined),
+                onPressed: () => showShareResourceSheet(
+                  context,
+                  resourceType: 'node',
+                  resourceId: nodeId,
+                  title: detail.node.name,
+                  subtitle: detail.node.nameEn ?? detail.node.description?.split('\n').first,
+                ),
               ),
             ],
             flexibleSpace: FlexibleSpaceBar(

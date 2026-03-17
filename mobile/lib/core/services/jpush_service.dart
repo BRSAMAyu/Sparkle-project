@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jpush_flutter/jpush_flutter.dart';
 import 'package:logger/logger.dart';
@@ -119,7 +118,7 @@ class JPushService extends AsyncNotifier<void> {
 
       // Get registration ID
       _jpush.getRegistrationID().then((rid) {
-        if (rid != null && rid.isNotEmpty) {
+        if (rid.isNotEmpty) {
           _registrationId = rid;
           _logger.i('JPush Registration ID: $rid');
           _registerTokenWithBackend(rid);

@@ -45,6 +45,7 @@ type Config struct {
 	RedisHost          string  `mapstructure:"REDIS_HOST"`
 	RedisPort          int     `mapstructure:"REDIS_PORT"`
 	RedisPassword      string  `mapstructure:"REDIS_PASSWORD"`
+	RedisFailClosed    bool    `mapstructure:"REDIS_FAIL_CLOSED"` // Security: reject tokens on Redis failure
 	BackendURL         string  `mapstructure:"BACKEND_URL"`
 	AppleClientID      string  `mapstructure:"APPLE_CLIENT_ID"`
 	AdminSecret        string  `mapstructure:"ADMIN_SECRET"`
@@ -370,6 +371,7 @@ func Load() *Config {
 		"REDIS_HOST",
 		"REDIS_PORT",
 		"REDIS_PASSWORD",
+		"REDIS_FAIL_CLOSED",
 		"BACKEND_URL",
 		"APPLE_CLIENT_ID",
 		"ADMIN_SECRET",
@@ -436,6 +438,9 @@ func Load() *Config {
 	viper.SetDefault("REDIS_HOST", "sparkle_redis")
 	viper.SetDefault("REDIS_PORT", 6379)
 	viper.SetDefault("REDIS_PASSWORD", "")
+	// Security: Fail-Closed mode for Redis - production should set to true
+	// In development, defaults to false (Fail-Open) for easier debugging
+	viper.SetDefault("REDIS_FAIL_CLOSED", false)
 	viper.SetDefault("BACKEND_URL", "http://localhost:8000")
 	viper.SetDefault("APPLE_CLIENT_ID", "")
 	viper.SetDefault("RABBITMQ_URL", "") // Default to empty (disabled)

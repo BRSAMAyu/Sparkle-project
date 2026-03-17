@@ -9,7 +9,6 @@ import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/calendar/data/models/calendar_event_model.dart';
 import 'package:sparkle/features/calendar/presentation/providers/calendar_provider.dart';
-import 'package:sparkle/features/calendar/presentation/providers/unified_calendar_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';

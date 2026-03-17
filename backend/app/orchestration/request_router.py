@@ -633,7 +633,7 @@ class RequestRouter:
         P2 Improvement: LLM-assisted intent classification for ambiguous cases.
         When keyword matching confidence is low, use LLM for better accuracy.
         """
-        from app.services.llm_service import llm_service
+        from app.services.llm_fallback_utils import router_llm
 
         # Phase 1.3: 获取用户常用意图（从Redis）
         user_patterns = await self._get_user_intent_patterns(user_id) if user_id else {}
@@ -657,36 +657,16 @@ class RequestRouter:
 
 可选意图: {', '.join(all_intents)}"""
 
-        try:
-            # Phase 1.3: 使用更快的模型参数
-            response = await llm_service.chat(
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0,  # 降低随机性，提高一致性
-                max_tokens=10,  # 限制输出长度，减少延迟
-            )
-            intent = response.strip().lower()
+        # Phase 1.3: 使用更快的模型参数（带降级保护）
+        response = await router_llm.call(
+            messages=[{"role": "user", "content": prompt}],
+            fallback="chat",  # 降级到默认聊天
+            temperature=0,  # 降低随机性，提高一致性
+            max_tokens=10,  # 限制输出长度，减少延迟
+        )
+        intent = response.strip().lower() if response else "chat"
 
-            # 映射到标准意图
-            intent_mapping = {
-                "behavior analysis": "prism",
-                "cognitive prism": "prism",
-                "focus mode": "sprint",
-                "study habits": "prism",
-                "translate": "translation",
-                "translating": "translation",
-            }
-            mapped_intent = intent_mapping.get(intent, intent)
 
-            # 验证返回的意图是否在有效列表中
-            if mapped_intent in all_intents:
-                return mapped_intent
-            else:
-                logger.warning(f"LLM returned invalid intent: {intent}, falling back to keyword matching")
-                return self._classify_intent(message)
-
-        except Exception as e:
-            logger.warning(f"LLM intent classification failed: {e}, falling back to keyword matching")
-            return self._classify_intent(message)  # 降级到关键词匹配
 
     async def _progressive_classify(
         self,

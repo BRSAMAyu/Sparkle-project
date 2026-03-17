@@ -2,8 +2,6 @@ import Flutter
 import UIKit
 import FirebaseCore
 import FirebaseMessaging
-import JCore
-import JPush
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
@@ -25,7 +23,7 @@ import JPush
     // Initialize JPush with launch options
     // Note: For production, set apsForProduction to true
     let isProduction = false  // Set to true for App Store builds
-    JPushInterface.setup(withOption: launchOptions, appKey: jpushAppKey, channel: jpushChannel, apsForProduction: isProduction)
+    JPUSHService.setup(withOption: launchOptions, appKey: jpushAppKey, channel: jpushChannel, apsForProduction: isProduction)
 
     // Request notification permissions
     UNUserNotificationCenter.current().delegate = self
@@ -53,7 +51,7 @@ import JPush
     Messaging.messaging().apnsToken = deviceToken
 
     // Register with JPush
-    JPushInterface.registerDeviceToken(deviceToken)
+    JPUSHService.registerDeviceToken(deviceToken)
 
     super.application(application, didRegisterForRemoteNotificationsWithDeviceToken: deviceToken)
   }
@@ -75,7 +73,7 @@ import JPush
   ) {
     // Forward to JPush
     let userInfo = notification.request.content.userInfo
-    JPushInterface.handleRemoteNotification(userInfo)
+    JPUSHService.handleRemoteNotification(userInfo)
 
     // Show notification even when app is in foreground
     completionHandler([.banner, .badge, .sound])
@@ -89,7 +87,7 @@ import JPush
   ) {
     // Forward to JPush
     let userInfo = response.notification.request.content.userInfo
-    JPushInterface.handleRemoteNotification(userInfo)
+    JPUSHService.handleRemoteNotification(userInfo)
 
     completionHandler()
   }

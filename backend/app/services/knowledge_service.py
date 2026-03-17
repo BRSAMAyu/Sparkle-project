@@ -21,7 +21,7 @@ from app.schemas.galaxy import SearchResultItem
 from app.services.embedding_service import embedding_service
 from app.services.galaxy.rag_router import RagRouter
 from app.services.galaxy_service import GalaxyService
-from app.services.llm_service import llm_service
+from app.services.llm_fallback_utils import hyde_llm
 
 
 @dataclass
@@ -52,8 +52,8 @@ class KnowledgeService:
 
             # Use a fast, cheap call if possible, or just the standard chat
             messages = [{"role": "user", "content": prompt}]
-            response = await llm_service.chat(messages, temperature=0.7)
-            return response
+            response = await hyde_llm.call(messages, fallback="", temperature=0.7)
+            return response if response else query
         except Exception as e:
             logger.warning(f"HyDE generation failed, falling back to original query: {e}")
             return query

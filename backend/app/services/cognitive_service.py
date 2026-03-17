@@ -15,7 +15,6 @@ from app.models.cognitive import AnalysisStatus, BehaviorPattern, CognitiveFragm
 from app.services.analysis.unified_analysis_service import UnifiedAnalysisService
 from app.services.analytics_service import AnalyticsService
 from app.services.embedding_service import embedding_service
-from app.services.llm_service import llm_service
 from app.services.system_update_service import SystemUpdateService, build_system_update
 
 
@@ -136,6 +135,8 @@ class CognitiveService:
 
     async def _generate_hyde_document(self, content: str) -> str | None:
         """Generate a hypothetical document for HyDE strategy."""
+        from app.services.llm_fallback_utils import cognitive_llm
+
         prompt = f"""
         Given the user thought: "{content}"
         Write a short hypothetical psychological analysis or behavior pattern description that might explain this thought.
@@ -145,11 +146,8 @@ class CognitiveService:
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": prompt}
         ]
-        try:
-            return await llm_service.chat(messages, temperature=0.7)
-        except Exception as e:
-            logger.warning(f"HyDE generation failed: {e}")
-            return None
+        result = await cognitive_llm.call(messages, fallback="", temperature=0.7)
+        return result if result else None
 
     async def analyze_behavior(self, user_id: UUID, fragment_id: UUID) -> dict:
         """
@@ -283,18 +281,24 @@ class CognitiveService:
                     {"role": "user", "content": prompt}
                 ]
 
-                # 5. Call LLM
-                response_text = await llm_service.chat(messages, temperature=0.5)
+                # 5. Call LLM (带降级保护)
+                from app.services.llm_fallback_utils import cognitive_llm
 
-                try:
-                    cleaned_text = response_text.replace("```json", "").replace("```", "").strip()
-                    analysis = json.loads(cleaned_text)
-                except json.JSONDecodeError:
+                analysis = await cognitive_llm.json_call(
+                    messages,
+                    fallback={
+                        "pattern_name": "Unknown Pattern",
+                        "confidence_score": 0.0,
+                        "root_cause": "分析暂时不可用",
+                    },
+                    temperature=0.5
+                )
+
+                if analysis is None:
                     logger.error(f"Failed to parse LLM analysis for {fragment_id}")
                     analysis = {
                         "pattern_name": "Unknown Pattern",
                         "confidence_score": 0.0,
-                        "raw_text": response_text,
                     }
 
             # 6. Save/Update Pattern

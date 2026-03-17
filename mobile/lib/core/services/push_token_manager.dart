@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:device_info_plus/device_info_plus.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logger/logger.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -53,7 +52,7 @@ class PushTokenManager extends AsyncNotifier<void> {
 
       // Create a hash for consistent device ID
       deviceId = 'sparkle_${identifier.hashCode.toRadixString(16)}';
-      await prefs.setString(_deviceIdKey, deviceId!);
+      await prefs.setString(_deviceIdKey, deviceId);
       _logger.i('Generated new device ID: $deviceId');
     }
 
@@ -175,7 +174,7 @@ class PushTokenManager extends AsyncNotifier<void> {
       final deviceId = await _getOrCreateDeviceId();
 
       final apiClient = ref.read(apiClientProvider);
-      await apiClient.delete(
+      await apiClient.delete<void>(
         ApiEndpoints.unregisterDevice,
         queryParameters: {'device_id': deviceId},
       );

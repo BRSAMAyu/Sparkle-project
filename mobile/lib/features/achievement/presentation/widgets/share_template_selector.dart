@@ -115,13 +115,7 @@ class _TemplateCard extends StatelessWidget {
   }
 
   Color _getTemplateColor(String templateId) {
-    return switch (templateId) {
-      'cosmic' => const Color(0xFF6366F1), // Indigo
-      'minimal' => const Color(0xFF64748B), // Slate
-      'neon' => const Color(0xFF22D3EE), // Cyan
-      'elegant' => const Color(0xFFD4AF37), // Gold
-      _ => DS.brandPrimary,
-    };
+    return getTemplateColor(templateId);
   }
 
   IconData _getTemplateIcon(String templateId) {

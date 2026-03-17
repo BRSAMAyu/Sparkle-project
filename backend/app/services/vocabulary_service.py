@@ -162,6 +162,8 @@ class VocabularyService:
         This keeps the lookup tool usable even when the local dictionary or MDX
         assets are not populated in a fresh environment.
         """
+        from app.services.llm_fallback_utils import vocabulary_llm
+
         prompt = (
             "You are a compact English dictionary service. "
             "Return strict JSON with keys: word, phonetic, pos, definitions, examples. "
@@ -169,7 +171,7 @@ class VocabularyService:
             "If unsure, keep phonetic or pos null instead of inventing details.\n"
             f"word: {word}"
         )
-        response = await llm_service.chat(
+        data = await vocabulary_llm.json_call(
             [
                 {
                     "role": "system",
@@ -179,9 +181,11 @@ class VocabularyService:
                 },
                 {"role": "user", "content": prompt},
             ],
+            fallback={"word": word, "definitions": [], "examples": []},
             temperature=0.2,
         )
-        data = VocabularyService._extract_json_object(response) or {}
+        if data is None:
+            data = {}
 
         definitions = data.get("definitions")
         examples = data.get("examples")
@@ -476,23 +480,34 @@ class VocabularyService:
     @staticmethod
     async def get_word_associations(word: str) -> list[str]:
         """Get related words/synonyms/antonyms via LLM"""
+        from app.services.llm_fallback_utils import vocabulary_llm
+
         prompt = f"Provide 5-8 related words (synonyms, antonyms, or related concepts) for the word '{word}'. Format as a simple comma-separated list."
-        response = await llm_service.chat([{"role": "user", "content": prompt}])
-        return [w.strip() for w in response.split(',')]
+        response = await vocabulary_llm.chat(prompt, fallback="")
+        if not response:
+            return []
+        return [w.strip() for w in response.split(',') if w.strip()]
 
     @staticmethod
     async def generate_example_sentence(word: str, context: str | None = None) -> str:
         """Generate a natural example sentence for the word"""
+        from app.services.llm_fallback_utils import vocabulary_llm
+
         prompt = f"Create a natural, helpful example sentence for the word '{word}'."
         if context:
             prompt += f" The context is: {context}"
-        return await llm_service.chat([{"role": "user", "content": prompt}])
+        return await vocabulary_llm.chat(
+            prompt,
+            fallback=f"Example sentence for '{word}' is not available at the moment."
+        )
 
     @staticmethod
     async def polish_definition(word: str, original_def: str) -> str:
         """Polish and simplify a word definition for a student"""
+        from app.services.llm_fallback_utils import vocabulary_llm
+
         prompt = f"Polish and simplify this definition for the word '{word}' so it's easier for a college student to understand: '{original_def}'. Keep it concise."
-        return await llm_service.chat([{"role": "user", "content": prompt}])
+        return await vocabulary_llm.chat(prompt, fallback=original_def)
 
 
 vocabulary_service = VocabularyService()

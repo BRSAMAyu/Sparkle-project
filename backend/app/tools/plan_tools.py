@@ -12,7 +12,7 @@ from app.orchestration.persona_aware_planner import PersonaAwarePlanner
 from app.schemas.plan import PlanCreate
 from app.schemas.task import TaskCreate
 from app.services.knowledge_service import KnowledgeService
-from app.services.llm_service import llm_service
+from app.services.llm_fallback_utils import plan_llm
 from app.services.plan_service import PlanService
 from app.services.task_service import TaskService
 
@@ -345,18 +345,19 @@ class GenerateTasksForPlanTool(BaseTool):
 严格返回 JSON 格式，不要其他文本。
 """
 
+        result = await plan_llm.json_call(
+            messages=[{"role": "user", "content": prompt}],
+            fallback=[],  # 降级返回空列表
+            temperature=0.3
+        )
+
+        if not result:
+            logger.warning("LLM returned empty response for plan generation")
+            return None
+
         try:
-            response = await llm_service.chat_json(
-                prompt=prompt,
-                schema=None  # 使用 chat_json 的自动 JSON 提取
-            )
-
-            if not response:
-                logger.warning("LLM returned empty response")
-                return None
-
             # 解析 JSON 响应
-            tasks = json.loads(response) if isinstance(response, str) else response
+            tasks = result if isinstance(result, list) else []
 
             # 验证和清理任务数据
             validated_tasks = []
@@ -386,9 +387,6 @@ class GenerateTasksForPlanTool(BaseTool):
             logger.info(f"Generated {len(validated_tasks)} validated tasks from LLM")
             return validated_tasks
 
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse LLM JSON response: {e}")
-            return None
         except Exception as e:
-            logger.error(f"LLM generation failed: {e}")
+            logger.error(f"Plan task generation failed: {e}")
             return None
