@@ -331,7 +331,7 @@ SPEC CHECKSUMS:
   JCore: 1128d8c6f33f5c3607536a7b87c0e450d2c6ada6
   JPush: b71f497a3c1b825c7843fd97f290b05d5cd75f2e
   jpush_flutter: 81be43c2095cac5c2ac45e673e26c83230304015
-  nanopb: 28cccbb23523e0348ae2a785e440b41619731714
+  nanopb: 052a9a74da27438c8e9345925c2579396c34f408
   package_info_plus: af8e2ca6888548050f16fa2f1938db7b5a5df499
   path_provider_foundation: bb55f6dbba17d0dccd6737fe6f7f34fbd0376880
   permission_handler_apple: 4ed2196e43d0651e8ff7ca3483a069d469701f2d
@@ -348,6 +348,6 @@ SPEC CHECKSUMS:
   url_launcher_ios: 7a95fa5b60cc718a708b8f2966718e93db0cef1b
   WechatOpenSDK-XCFramework: ff342ae616bb86df3d236aca38059dfd4bc4a949
 
-PODFILE CHECKSUM: 06a833dc4b0c9c5526cc11ad839d563db0661751
+PODFILE CHECKSUM: ebab60ea385acee106a4d1f4e422d835890ee68b
 
 COCOAPODS: 1.16.2
