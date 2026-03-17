@@ -76,6 +76,23 @@ class UnifiedCalendarNotifier extends StateNotifier<UnifiedCalendarState> {
   final TaskRepository _taskRepository;
   final CalendarRepository _calendarRepository;
 
+  /// Track if initial load has been triggered
+  bool _initialLoadTriggered = false;
+
+  /// Initialize the provider with deferred loading
+  /// This method should be called after the widget tree is built
+  void initializeIfNeeded() {
+    if (_initialLoadTriggered) return;
+    _initialLoadTriggered = true;
+
+    // Defer loading to avoid Riverpod initialization issues
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (mounted) {
+        loadMonth(DateTime.now());
+      }
+    });
+  }
+
   /// Load aggregated data for a specific month
   /// 加载特定月份的聚合数据
   Future<void> loadMonth(DateTime month, {bool force = false}) async {
@@ -333,13 +350,19 @@ final dayAggregateProvider =
 
 /// Provider for today's aggregate (sync, with auto-refresh)
 /// 今日聚合数据的同步 Provider（带自动刷新）
+///
+/// Note: Uses initializeIfNeeded to defer loading to avoid
+/// modifying other providers during initialization.
 final todayAggregateProvider = Provider<CalendarDayAggregate>((ref) {
   final now = DateTime.now();
   final state = ref.watch(unifiedCalendarProvider);
 
-  // Trigger loading if not loaded
-  if (!state.isMonthLoaded(now.year, now.month)) {
-    unawaited(ref.read(unifiedCalendarProvider.notifier).loadMonth(now));
+  // Trigger deferred initialization if not loaded
+  if (!state.isMonthLoaded(now.year, now.month) && !state.isLoading) {
+    // Use Future.microtask to defer the initialization call
+    Future.microtask(() {
+      ref.read(unifiedCalendarProvider.notifier).initializeIfNeeded();
+    });
   }
 
   return state.getDayAggregate(now) ?? CalendarDayAggregate.empty(now);
@@ -347,13 +370,19 @@ final todayAggregateProvider = Provider<CalendarDayAggregate>((ref) {
 
 /// Provider for current month's aggregate
 /// 当前月份聚合数据的 Provider
+///
+/// Note: Uses initializeIfNeeded to defer loading to avoid
+/// modifying other providers during initialization.
 final currentMonthAggregateProvider = Provider<CalendarMonthAggregate?>((ref) {
   final now = DateTime.now();
   final state = ref.watch(unifiedCalendarProvider);
 
-  // Trigger loading if not loaded
-  if (!state.isMonthLoaded(now.year, now.month)) {
-    unawaited(ref.read(unifiedCalendarProvider.notifier).loadMonth(now));
+  // Trigger deferred initialization if not loaded
+  if (!state.isMonthLoaded(now.year, now.month) && !state.isLoading) {
+    // Use Future.microtask to defer the initialization call
+    Future.microtask(() {
+      ref.read(unifiedCalendarProvider.notifier).initializeIfNeeded();
+    });
   }
 
   final monthKey = '${now.year}-${now.month.toString().padLeft(2, '0')}';

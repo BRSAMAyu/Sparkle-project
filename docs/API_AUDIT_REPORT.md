@@ -56,6 +56,17 @@
   - `mobile/lib/core/network/api_endpoints.dart`
   - `mobile/lib/features/chat/data/repositories/chat_repository.dart`
 
+### 1.6 Riverpod Provider 初始化顺序问题 (严重)
+- **问题描述**: `unified_calendar_provider.dart` 中 Provider 在初始化期间修改其他 Provider，导致运行时错误
+- **错误信息**: `Providers are not allowed to modify other providers during their initialization`
+- **根本原因**: `todayAggregateProvider` 和 `currentMonthAggregateProvider` 在初始化时直接调用 `ref.read(unifiedCalendarProvider.notifier).loadMonth()`
+- **修复方案**: 实现延迟加载机制
+  - 添加 `initializeIfNeeded()` 方法到 `UnifiedCalendarNotifier`
+  - 使用 `Future.delayed` 延迟触发初始化
+  - 在 Provider 中使用 `Future.microtask` 延迟调用
+- **修改文件**:
+  - `mobile/lib/features/calendar/presentation/providers/unified_calendar_provider.dart`
+
 ---
 
 ## 2. 已确认一致的部分
