@@ -105,12 +105,12 @@ func TestProxyRoutesHandler_RegisterProxyRoutes(t *testing.T) {
 		"DELETE /api/v1/tasks/:id",
 	}
 
-	// Expected route patterns for plans
+	// Expected route patterns for plans (Python uses PATCH, not PUT)
 	expectedPlansRoutes := []string{
 		"GET /api/v1/plans",
 		"POST /api/v1/plans",
 		"GET /api/v1/plans/:id",
-		"PUT /api/v1/plans/:id",
+		"PATCH /api/v1/plans/:id",
 		"DELETE /api/v1/plans/:id",
 		"POST /api/v1/plans/:id/archive",
 	}

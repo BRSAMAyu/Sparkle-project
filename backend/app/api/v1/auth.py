@@ -791,8 +791,9 @@ async def guest_login(
     )
     user = existing_user.scalars().first()
 
-    # 如果不存在，创建一个临时guest用户
-    if not user:
+    # 如果不存在，创建一个临时guest用户并播种演示数据
+    is_new_guest = not user
+    if is_new_guest:
         user = User(
             username=guest_id,
             email=f"{guest_id}@guest.local",  # 临时邮箱
@@ -806,7 +807,15 @@ async def guest_login(
         await db.commit()
         await db.refresh(user)
 
-    logger.info(f"Guest login: guest_id={guest_id}, user_id={user.id}")
+        # 为新游客播种演示数据，确保完整体验
+        try:
+            from app.services.guest_seed_service import seed_guest_user_data
+            await seed_guest_user_data(db, user)
+            await db.refresh(user)
+        except Exception as e:
+            logger.warning(f"Guest seed failed (non-fatal): {e}")
+
+    logger.info(f"Guest login: guest_id={guest_id}, user_id={user.id}, new={is_new_guest}")
 
     return {
         **await _issue_auth_tokens(

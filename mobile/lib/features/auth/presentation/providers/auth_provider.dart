@@ -49,12 +49,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true);
     try {
       final prefs = _ref.read(sharedPreferencesProvider);
-      DemoDataService.isDemoMode = prefs.getBool(_demoGuestModePreferenceKey) ??
-          DemoDataService.isDemoMode;
+      // 只有 loginAsDemoAccount 会存 true；访客模式现在存 false
+      final savedDemoMode = prefs.getBool(_demoGuestModePreferenceKey) ?? false;
+      DemoDataService.isDemoMode = savedDemoMode;
 
       final isLoggedIn = await _authRepository.isLoggedIn();
       if (isLoggedIn) {
         try {
+          // 有真实 token 时，强制关闭 isDemoMode，确保从后端读取真实数据
+          DemoDataService.isDemoMode = false;
           final user = await _authRepository.getCurrentUser();
           state = state.copyWith(
             isLoading: false,
@@ -166,12 +169,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> loginAsGuest() async {
     state = state.copyWith(isLoading: true);
     try {
-      // 恢复原有访客体验：预设演示数据 + 真实 token。
-      DemoDataService.isDemoMode = true;
+      // 访客模式：使用真实后端 token + 后端预置演示数据，不走本地假数据
+      DemoDataService.isDemoMode = false;
       await _ref
           .read(sharedPreferencesProvider)
-          .setBool(_demoGuestModePreferenceKey, true);
-      debugPrint('🎭 Guest login using demo content with live backend token');
+          .setBool(_demoGuestModePreferenceKey, false);
+      debugPrint('🎭 Guest login using real backend token + seeded data');
 
       final guestService = _ref.read(guestServiceProvider);
       final guestId = await guestService.getGuestId();
@@ -187,7 +190,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
       );
     } catch (e) {
       debugPrint('⚠️ Guest login failed: $e');
-      DemoDataService.isDemoMode = true;
       state = state.copyWith(
         isLoading: false,
         isAuthenticated: false,

@@ -79,12 +79,19 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	{
 		plans.GET("", h.proxyWithHeaders)
 		plans.POST("", h.proxyWithHeaders)
+		plans.GET("/stats/summary", h.proxyWithHeaders)
+		plans.GET("/quota/status", h.proxyWithHeaders)
+		plans.GET("/primary", h.proxyWithHeaders)
+		plans.POST("/primary", h.proxyWithHeaders)
+		plans.GET("/archived", h.proxyWithHeaders)
 		plans.GET("/:id", h.proxyWithHeaders)
-		plans.PUT("/:id", h.proxyWithHeaders)
+		plans.PATCH("/:id", h.proxyWithHeaders) // Python uses PATCH (not PUT)
 		plans.DELETE("/:id", h.proxyWithHeaders)
 		plans.POST("/:id/archive", h.proxyWithHeaders)
 		plans.POST("/:id/restore", h.proxyWithHeaders)
-		plans.GET("/:id/tasks", h.proxyWithHeaders)
+		plans.GET("/:id/progress", h.proxyWithHeaders)
+		plans.PATCH("/:id/priority", h.proxyWithHeaders)
+		plans.GET("/:id/learning-path-progress", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered plans proxy routes")
 
@@ -126,42 +133,89 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	}
 	h.logger.Info("Registered recommendations proxy routes")
 
-	// ==================== Reflections Routes ====================
-	reflections := api.Group("/reflections")
-	reflections.Use(authMiddleware)
-	{
-		reflections.GET("", h.proxyWithHeaders)
-		reflections.POST("", h.proxyWithHeaders)
-		reflections.GET("/:id", h.proxyWithHeaders)
-		reflections.PUT("/:id", h.proxyWithHeaders)
-		reflections.DELETE("/:id", h.proxyWithHeaders)
-	}
-	h.logger.Info("Registered reflections proxy routes")
+	// NOTE: /goals and /reflections routes are intentionally omitted —
+	// no Python backend implementation exists yet. Add here when implemented.
 
-	// ==================== Goals Routes ====================
-	goals := api.Group("/goals")
-	goals.Use(authMiddleware)
+	// ==================== Community Routes ====================
+	community := api.Group("/community")
+	community.Use(authMiddleware)
 	{
-		goals.GET("", h.proxyWithHeaders)
-		goals.POST("", h.proxyWithHeaders)
-		goals.GET("/:id", h.proxyWithHeaders)
-		goals.PUT("/:id", h.proxyWithHeaders)
-		goals.DELETE("/:id", h.proxyWithHeaders)
-		goals.POST("/:id/checkpoint", h.proxyWithHeaders)
-		goals.GET("/:id/progress", h.proxyWithHeaders)
+		// Friend System
+		community.POST("/friends/request", h.proxyWithHeaders)
+		community.POST("/friends/respond", h.proxyWithHeaders) // Python: POST /friends/respond with friendship_id in body
+		community.GET("/friends", h.proxyWithHeaders)
+		community.GET("/friends/pending", h.proxyWithHeaders)
+		community.DELETE("/friends/:friendshipId", h.proxyWithHeaders)
+		// Block System
+		community.POST("/users/block", h.proxyWithHeaders)
+		community.DELETE("/users/block/:userId", h.proxyWithHeaders)
+		community.GET("/users/blocked", h.proxyWithHeaders)
+		// Privacy
+		community.PUT("/users/privacy", h.proxyWithHeaders)
+		community.GET("/users/privacy", h.proxyWithHeaders)
+		// Search
+		community.GET("/users/search", h.proxyWithHeaders)
+		community.GET("/groups/search", h.proxyWithHeaders)
+		// Group System
+		community.POST("/groups", h.proxyWithHeaders)
+		community.GET("/groups", h.proxyWithHeaders)
+		community.GET("/groups/:id", h.proxyWithHeaders)
+		community.POST("/groups/:id/join", h.proxyWithHeaders)
+		community.DELETE("/groups/:id/leave", h.proxyWithHeaders)
+		community.GET("/groups/:id/members", h.proxyWithHeaders)
+		community.GET("/groups/:id/messages", h.proxyWithHeaders)
+		community.POST("/groups/:id/messages", h.proxyWithHeaders)
+		community.DELETE("/groups/:id/messages/:msgId", h.proxyWithHeaders)
+		community.POST("/groups/:id/messages/read", h.proxyWithHeaders)
+		// Private Messages
+		community.POST("/messages/private", h.proxyWithHeaders)
+		community.GET("/messages/private/:userId", h.proxyWithHeaders)
+		community.DELETE("/messages/private/:msgId", h.proxyWithHeaders)
+		// Feed & Posts
+		community.POST("/posts", h.proxyWithHeaders)
+		community.POST("/posts/:id/like", h.proxyWithHeaders)
+		community.GET("/feed", h.proxyWithHeaders)
+		// Check-in
+		community.POST("/checkin", h.proxyWithHeaders)
 	}
-	h.logger.Info("Registered goals proxy routes")
+	h.logger.Info("Registered community proxy routes")
+
+	// ==================== Interventions Routes ====================
+	interventions := api.Group("/interventions")
+	interventions.Use(authMiddleware)
+	{
+		interventions.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered interventions proxy routes")
+
+	// ==================== Dashboard Routes ====================
+	dashboard := api.Group("/dashboard")
+	dashboard.Use(authMiddleware)
+	{
+		dashboard.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered dashboard proxy routes")
+
+	// ==================== Predictive Routes ====================
+	predictive := api.Group("/predictive")
+	predictive.Use(authMiddleware)
+	{
+		predictive.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered predictive proxy routes")
+
+	// ==================== STT Batch Transcription ====================
+	stt := api.Group("/stt")
+	stt.Use(authMiddleware)
+	{
+		stt.POST("/transcribe", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered STT proxy routes")
 }
 
 // proxyWithHeaders proxies request to Python Backend with user context headers
 func (h *ProxyRoutesHandler) proxyWithHeaders(c *gin.Context) {
-	// Set user context headers (provided by authMiddleware)
-	if userID := c.GetString("user_id"); userID != "" {
-		c.Request.Header.Set("X-User-ID", userID)
-	}
-	if token := c.GetString("auth_token"); token != "" {
-		c.Request.Header.Set("Authorization", "Bearer "+token)
-	}
+	SetProxyUserContextHeaders(c)
 
 	// A/B testing variant assignment
 	h.abTestMiddleware.AssignVariant()(c)
@@ -181,4 +235,16 @@ func (h *ProxyRoutesHandler) proxyWithHeaders(c *gin.Context) {
 	h.logger.Debug("Explicit route proxy completed",
 		zap.String("path", c.Request.URL.Path),
 		zap.Int("status", c.Writer.Status()))
+}
+
+// SetProxyUserContextHeaders sets X-User-ID and Authorization headers
+// from gin context values populated by AuthMiddleware.
+// Used by both ProxyRoutesHandler and NoRoute fallback.
+func SetProxyUserContextHeaders(c *gin.Context) {
+	if userID := c.GetString("user_id"); userID != "" {
+		c.Request.Header.Set("X-User-ID", userID)
+	}
+	if token := c.GetString("auth_token"); token != "" {
+		c.Request.Header.Set("Authorization", "Bearer "+token)
+	}
 }

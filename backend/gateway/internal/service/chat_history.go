@@ -274,6 +274,10 @@ func (s *ChatHistoryService) GetMessages(ctx context.Context, userID, sessionID 
 	// 1. Try Redis first
 	messages, err := s.getMessagesFromRedis(ctx, userID, sessionID, limit, offset)
 	if err != nil {
+		// Security errors must not be swallowed — never fallback to DB on access denial
+		if err.Error() == "forbidden" {
+			return nil, err
+		}
 		log.Printf("[ChatHistoryService] Redis query failed: %v, trying DB fallback", err)
 	} else if len(messages) > 0 {
 		// Cache hit - return immediately
@@ -307,6 +311,7 @@ func (s *ChatHistoryService) getMessagesFromRedis(ctx context.Context, userID, s
 	if err != nil && err != redis.Nil {
 		return nil, err
 	}
+	// If meta exists and owner doesn't match, reject immediately (even if messages list is empty)
 	if owner != "" && owner != userID {
 		return nil, fmt.Errorf("forbidden")
 	}

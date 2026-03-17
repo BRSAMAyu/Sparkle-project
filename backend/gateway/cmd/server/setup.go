@@ -19,7 +19,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	redisv9 "github.com/redis/go-redis/v9"
 	"github.com/sparkle/gateway/internal/agent"
-	v1 "github.com/sparkle/gateway/internal/api/v1"
 	"github.com/sparkle/gateway/internal/chaos"
 	"github.com/sparkle/gateway/internal/config"
 	cqrsEvent "github.com/sparkle/gateway/internal/cqrs/event"
@@ -78,11 +77,8 @@ type handlerBundle struct {
 	errorBookHandler         *handler.ErrorBookHandler
 	chaosHandler             *handler.ChaosHandler
 	fileHandler              *handler.FileHandler
-	interventionPushHandler  *handler.InterventionPushHandler
-	interventionProxyHandler *handler.InterventionProxyHandler
-	dashboardProxyHandler    *handler.DashboardProxyHandler
-	predictiveProxyHandler   *handler.PredictiveProxyHandler
-	dataConsistencyHandler   *handler.DataConsistencyHandler
+	interventionPushHandler *handler.InterventionPushHandler
+	dataConsistencyHandler  *handler.DataConsistencyHandler
 	sttHandler               *handler.STTHandler
 	wsProxy                  *handler.WebSocketProxy
 	authHandler              *handler.AuthHandler
@@ -231,9 +227,6 @@ func initHandlers(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client,
 	chaosHandler := handler.NewChaosHandler(services.chatHistory, cfg.ToxiproxyURL)
 	fileHandler := handler.NewFileHandler(services.fileStorage, services.fileMetadata, services.fileProcessing)
 	interventionPushHandler := handler.NewInterventionPushHandler(chatOrchestrator)
-	interventionProxyHandler := handler.NewInterventionProxyHandler(cfg.BackendURL)
-	dashboardProxyHandler := handler.NewDashboardProxyHandler(cfg.BackendURL)
-	predictiveProxyHandler := handler.NewPredictiveProxyHandler(cfg.BackendURL)
 	dataConsistencyHandler := handler.NewDataConsistencyHandler(services.chatHistory, dbh.queries, rdb)
 
 	sttURL := strings.Replace(cfg.BackendURL, "http://", "ws://", 1)
@@ -262,11 +255,8 @@ func initHandlers(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client,
 		errorBookHandler:         errorBookHandler,
 		chaosHandler:             chaosHandler,
 		fileHandler:              fileHandler,
-		interventionPushHandler:  interventionPushHandler,
-		interventionProxyHandler: interventionProxyHandler,
-		dashboardProxyHandler:    dashboardProxyHandler,
-		predictiveProxyHandler:   predictiveProxyHandler,
-		dataConsistencyHandler:   dataConsistencyHandler,
+		interventionPushHandler: interventionPushHandler,
+		dataConsistencyHandler:  dataConsistencyHandler,
 		sttHandler:               sttHandler,
 		wsProxy:                  wsProxy,
 		authHandler:              authHandler,
@@ -477,11 +467,6 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 		api.GET("/groups/:group_id/messages", authMiddleware, handlers.groupChatHandler.GetMessages)
 		handlers.errorBookHandler.RegisterRoutes(api, authMiddleware)
 
-		commCmdService := service.NewCommunityCommandService(dbh.pool)
-		commQueryService := service.NewCommunityQueryService(rdb)
-		commHandler := v1.NewCommunityHandler(commCmdService, commQueryService)
-		commHandler.RegisterRoutes(api, authMiddleware)
-
 		handlers.fileHandler.RegisterRoutes(api, authMiddleware)
 		handlers.dataConsistencyHandler.RegisterRoutes(api)
 
@@ -491,10 +476,6 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 
 		// Register explicit proxy routes for critical Python Backend APIs
 		proxyRoutesHandler.RegisterProxyRoutes(api, authMiddleware)
-
-		api.Any("/interventions/*path", authMiddleware, handlers.interventionProxyHandler.Proxy)
-		api.Any("/dashboard/*path", authMiddleware, handlers.dashboardProxyHandler.Proxy)
-		api.Any("/predictive/*path", authMiddleware, handlers.predictiveProxyHandler.Proxy)
 	}
 
 	internal := r.Group("/internal", middleware.InternalAPIKeyMiddleware(cfg))
@@ -767,13 +748,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 			return
 		}
 
-		userID := c.GetString("user_id")
-		if userID != "" {
-			c.Request.Header.Set("X-User-ID", userID)
-		}
-		if token := c.GetString("auth_token"); token != "" {
-			c.Request.Header.Set("Authorization", "Bearer "+token)
-		}
+		handler.SetProxyUserContextHeaders(c)
 
 		proxy.abTestMiddleware.AssignVariant()(c)
 		proxy.proxy.ServeHTTP(c.Writer, c.Request)
