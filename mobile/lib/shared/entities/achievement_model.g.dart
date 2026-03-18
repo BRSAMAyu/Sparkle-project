@@ -306,8 +306,8 @@ Map<String, dynamic> _$GalaxySkinToJson(GalaxySkin instance) =>
       'is_unlocked': instance.isUnlocked,
       'is_equipped': instance.isEquipped,
       'unlocked_at': instance.unlockedAt?.toIso8601String(),
-      'created_at': instance.createdAt.toIso8601String(),
-      'updated_at': instance.updatedAt.toIso8601String(),
+      'created_at': instance.createdAt?.toIso8601String(),
+      'updated_at': instance.updatedAt?.toIso8601String(),
     };
 
 UserTitle _$UserTitleFromJson(Map<String, dynamic> json) => UserTitle(

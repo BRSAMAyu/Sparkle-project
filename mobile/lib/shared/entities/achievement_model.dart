@@ -490,10 +490,6 @@ class GalaxySkin {
   final DateTime? createdAt;
   @JsonKey(name: 'updated_at')
   final DateTime? updatedAt;
-  @JsonKey(name: 'created_at')
-  final DateTime createdAt;
-  @JsonKey(name: 'updated_at')
-  final DateTime updatedAt;
 
   Map<String, dynamic> toJson() => _$GalaxySkinToJson(this);
 }
