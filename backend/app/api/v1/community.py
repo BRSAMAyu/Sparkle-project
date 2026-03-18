@@ -821,7 +821,7 @@ async def get_friend_recommendations(
 
             if user_obj and user_obj.is_active:
                 seen_user_ids.add(user_id)
-                match_score = min(100, common_count * 25)
+                match_score = min(1.0, common_count * 0.25)  # Normalize to 0-1 range
 
                 recommendations.append(FriendRecommendation(
                     user=UserBrief(
@@ -832,7 +832,7 @@ async def get_friend_recommendations(
                         flame_level=user_obj.flame_level,
                         flame_brightness=user_obj.flame_brightness
                     ),
-                    match_score=float(match_score),
+                    match_score=match_score,
                     match_reasons=[f"在 {common_count} 个相同的学习群组"]
                 ))
 
@@ -871,7 +871,7 @@ async def get_friend_recommendations(
         tag_matches.sort(key=lambda x: x[1], reverse=True)
 
         for user_obj, common_count in tag_matches[:remaining_limit]:
-            match_score = min(100, common_count * 20)
+            match_score = min(1.0, common_count * 0.2)  # Normalize to 0-1 range
 
             recommendations.append(FriendRecommendation(
                 user=UserBrief(
@@ -882,7 +882,7 @@ async def get_friend_recommendations(
                     flame_level=user_obj.flame_level,
                     flame_brightness=user_obj.flame_brightness
                 ),
-                match_score=float(match_score),
+                match_score=match_score,
                 match_reasons=[f"有 {common_count} 个相同的学习兴趣"]
             ))
 
@@ -919,7 +919,7 @@ async def get_friend_recommendations(
                     flame_level=user_obj.flame_level,
                     flame_brightness=user_obj.flame_brightness
                 ),
-                match_score=50.0,
+                match_score=0.5,  # Normalize to 0-1 range
                 match_reasons=["活跃用户"]
             ))
 

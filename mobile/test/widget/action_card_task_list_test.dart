@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/action_card.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 void main() {
   testWidgets('ActionCard handles task_list correctly', (WidgetTester tester) async {
@@ -31,6 +32,9 @@ void main() {
     // 2. Act: Pump the ActionCard
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh'),
         home: Scaffold(
           body: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -48,13 +52,13 @@ void main() {
     // It SHOULD render specific Task List UI
     
     // Check if the title is correct
-    expect(find.text('AI任务拆解'), findsOneWidget);
+    expect(find.text('任务列表'), findsOneWidget);
 
     // Check if it renders the task titles
     expect(find.text('Task 1'), findsOneWidget, reason: 'Task 1 title should be visible');
     expect(find.text('Task 2'), findsOneWidget, reason: 'Task 2 title should be visible');
 
     // Check if confirm button is visible
-    expect(find.text('确认'), findsOneWidget);
+    expect(find.text('确定'), findsOneWidget);
   });
 }

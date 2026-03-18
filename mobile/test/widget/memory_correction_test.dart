@@ -1,3 +1,4 @@
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -113,6 +114,9 @@ void main() {
           ),
         ],
         child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh'),
           home: MemoryDetailScreen(
             args: MemoryDetailArgs.preference(preference),
           ),
@@ -155,6 +159,9 @@ void main() {
           memoryApiServiceProvider.overrideWithValue(service),
         ],
         child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh'),
           home: MemoryDetailScreen(
             args: MemoryDetailArgs.preference(preference),
           ),

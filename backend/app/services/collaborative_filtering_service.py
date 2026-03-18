@@ -11,7 +11,7 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import and_, desc, func, or_, select
+from sqlalchemy import and_, desc, func, literal, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.galaxy import KnowledgeNode
@@ -463,10 +463,10 @@ class CollaborativeFilteringService:
         """获取缓存的推荐"""
         query = select(RecommendationCache).where(
             RecommendationCache.user_id == user_id,
-            RecommendationCache.recommendation_type == item_type.value if item_type else "collaborative",
+            RecommendationCache.recommendation_type == (item_type.value if item_type else literal("collaborative")),
             RecommendationCache.expires_at > _utcnow(),
             RecommendationCache.not_deleted_filter()
-        ).order_by(desc(RecommendationCache.generated_at)).first()
+        ).order_by(desc(RecommendationCache.generated_at)).limit(1)
 
         result = await self.db.execute(query)
         return result.scalar_one_or_none()

@@ -305,7 +305,7 @@ async def get_galaxy_stats(
 
     包含节点统计、衰减统计等。
     """
-    user_stats = await galaxy_service._calculate_user_stats(UUID(user_id))
+    user_stats = await galaxy_service.stats.calculate_user_stats(UUID(user_id))
     decay_stats = await decay_service.get_decay_stats(UUID(user_id))
 
     return {"user_stats": user_stats, "decay_stats": decay_stats}

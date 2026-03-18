@@ -153,6 +153,7 @@ async def get_dropout_risk_assessment(
     try:
         service = PredictiveService(db)
         assessment = await service.detect_dropout_risk(current_user.id)
+        metrics = assessment.get("metrics", {})
 
         return {
             "status": "success",
@@ -163,15 +164,15 @@ async def get_dropout_risk_assessment(
                 "risk_factors": [
                     {
                         "name": "activity_change",
-                        "value": assessment["activity_change"],
+                        "value": metrics.get("activity_change_percent", 0),
                     },
                     {
                         "name": "completion_rate",
-                        "value": assessment["completion_rate"],
+                        "value": metrics.get("completion_rate_percent", 0),
                     },
                     {
                         "name": "recent_7d_count",
-                        "value": assessment["recent_7d_count"],
+                        "value": metrics.get("recent_7d_activities", 0),
                     },
                 ],
             }

@@ -162,19 +162,29 @@ class GalaxyService:
         # 2. Get Stats (Parallelizable if needed, but fast enough)
         user_stats = await self.stats.calculate_user_stats(user_id)
 
-        # 3. Assemble
+        # 3. Build edge list (Flutter expects 'edges' field)
+        edge_list = [
+            NodeRelationInfo(
+                source_node_id=rel.source_node_id,
+                target_node_id=rel.target_node_id,
+                relation_type=rel.relation_type,
+                strength=rel.strength,
+            )
+            for rel in relations
+        ]
+
+        # 4. Calculate user flame intensity from stats
+        user_flame_intensity = 0.0
+        if user_stats.total_nodes > 0:
+            user_flame_intensity = min(1.0, user_stats.unlocked_count / max(1, user_stats.total_nodes))
+
+        # 5. Assemble with Flutter-compatible fields
         return GalaxyGraphResponse(
             nodes=[NodeWithStatus.from_models(node, status) for node, status in nodes_with_status],
-            relations=[
-                NodeRelationInfo(
-                    source_node_id=rel.source_node_id,
-                    target_node_id=rel.target_node_id,
-                    relation_type=rel.relation_type,
-                    strength=rel.strength,
-                )
-                for rel in relations
-            ],
+            relations=edge_list,
+            edges=edge_list,  # Flutter expects this field name
             user_stats=user_stats,
+            user_flame_intensity=user_flame_intensity,  # Flutter expects 0.0-1.0
         )
 
     async def get_galaxy_graph_viewport(

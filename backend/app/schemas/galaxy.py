@@ -256,8 +256,10 @@ class GalaxyGraphResponse(BaseModel):
     """星图完整数据响应"""
 
     nodes: list[NodeWithStatus]
-    relations: list[NodeRelationInfo]
+    relations: list[NodeRelationInfo] = []  # Alias: edges (for Flutter compatibility)
+    edges: list[NodeRelationInfo] | None = None  # Flutter expects this field name
     user_stats: GalaxyUserStats
+    user_flame_intensity: float = 0.85  # Flutter expects this field (0.0-1.0)
 
 
 class SparkEvent(BaseModel):

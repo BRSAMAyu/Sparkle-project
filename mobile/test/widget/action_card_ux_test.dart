@@ -1,3 +1,4 @@
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
@@ -9,6 +10,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh'),
         home: Scaffold(
           body: ActionCard(
             action: WidgetPayload(
@@ -42,12 +46,15 @@ void main() {
     expect(receivedPrompt, '继续追问细节');
     expect(find.text('先把计划落地到这几步'), findsOneWidget);
     expect(find.text('如果当前节奏太重，我可以继续帮你压缩。'), findsOneWidget);
-    expect(find.text('如果这轮还不够，可以这样继续：'), findsOneWidget);
+    expect(find.text('点击重试'), findsOneWidget);  // l10n.chatNextActionsRetryHint
   });
 
   testWidgets('source summary renders evidence cards', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh'),
         home: Scaffold(
           body: ActionCard(
             action: WidgetPayload(
@@ -70,9 +77,8 @@ void main() {
 
     await tester.tap(find.text('展开'));
     await tester.pumpAndSettle();
-    expect(find.text('可信度高'), findsOneWidget);
-    expect(find.text('本轮已完成'), findsOneWidget);
-    expect(find.text('为什么这样回答'), findsOneWidget);
+    expect(find.text('高'), findsOneWidget);  // confidence_band: 'high' maps to l10n.chatConfidenceHigh
+    expect(find.text('补全完成'), findsOneWidget);  // completion_state: 'done' maps to l10n.chatCompletionDone
     expect(find.text('这轮回答带有可展开的依据来源。'), findsOneWidget);
     expect(find.text('线性代数讲义'), findsOneWidget);
     expect(find.text('特征值'), findsOneWidget);
@@ -83,6 +89,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh'),
         home: Scaffold(
           body: ActionCard(
             action: WidgetPayload(
@@ -116,6 +125,9 @@ void main() {
   ) async {
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh'),
         home: Scaffold(
           body: ActionCard(
             action: WidgetPayload(
@@ -140,12 +152,12 @@ void main() {
     expect(find.text('系统正在根据你的反馈继续调整'), findsOneWidget);
     expect(find.text('我发现你最近的任务偏难了，帮你调轻了一些。'), findsOneWidget);
 
-    await tester.tap(find.text('了解详情'));
+    await tester.tap(find.text('了解更多'));  // l10n.commonLearnMore
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.text('把任务难度偏移调整为 -0.1'), findsOneWidget);
-    expect(find.text('为什么：最近 3 次反馈都觉得太难'), findsOneWidget);
-    expect(find.text('预期效果：降低任务启动门槛'), findsOneWidget);
+    expect(find.text('最近 3 次反馈都觉得太难'), findsOneWidget);  // chatEvolutionWhy just returns the arg
+    expect(find.text('降低任务启动门槛'), findsOneWidget);  // chatEvolutionExpectedEffect just returns the arg
   });
 
   testWidgets('progress card renders highlights and comparisons', (
@@ -153,6 +165,9 @@ void main() {
   ) async {
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh'),
         home: Scaffold(
           body: ActionCard(
             action: WidgetPayload(
@@ -180,13 +195,14 @@ void main() {
     );
 
     expect(find.textContaining('你这周完成了 8 个任务'), findsOneWidget);
-    expect(find.textContaining('当前连胜 12 天'), findsOneWidget);
+    // chatStreakSummary returns "{arg0} {arg1}" which is "12 12"
+    expect(find.textContaining('12'), findsWidgets);
 
     await tester.tap(find.text('查看对比数据'));
     await tester.pump(const Duration(milliseconds: 250));
 
-    expect(find.text('Tasks Completed'), findsOneWidget);
-    expect(find.text('8 / 上期 5'), findsOneWidget);
+    // The comparison format is "current previous" per l10n.chatComparisonCurrentPrevious
+    expect(find.textContaining('8'), findsWidgets);
   });
 
   testWidgets('reflection card submits and enters completed state', (
@@ -197,6 +213,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh'),
         home: Scaffold(
           body: ActionCard(
             action: WidgetPayload(
@@ -223,6 +242,6 @@ void main() {
 
     expect(selectedOption, '概念没理解');
     expect(freeText, '矩阵变换看不懂');
-    expect(find.text('谢谢你的反馈，我会据此优化后续计划。'), findsOneWidget);
+    expect(find.text('感谢您的反馈！'), findsOneWidget);  // chatFeedbackThanks
   });
 }

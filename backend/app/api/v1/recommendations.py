@@ -274,6 +274,8 @@ async def get_recommendation_stats(
         - cache_hit_rate: 缓存命中率
     """
     try:
+        from datetime import UTC, datetime, timedelta
+
         from sqlalchemy import func, or_, select
 
         from app.models.recommendation import RecommendationCache, UserItemInteraction, UserSimilarity
@@ -286,9 +288,10 @@ async def get_recommendation_stats(
         interaction_result = await db.execute(interaction_count_query)
         total_interactions = interaction_result.scalar() or 0
 
-        # 统计相似用户数量
+        # 统计相似用户数量 (使用Python计算时间)
+        yesterday = datetime.now(UTC).replace(tzinfo=None) - timedelta(hours=24)
         similar_users_query = select(func.count(UserSimilarity.id)).where(
-            UserSimilarity.last_calculated_at >= func.now() - func.interval('24 hours'),
+            UserSimilarity.last_calculated_at >= yesterday,
             or_(
                 UserSimilarity.user_id_1 == current_user.id,
                 UserSimilarity.user_id_2 == current_user.id
@@ -302,7 +305,7 @@ async def get_recommendation_stats(
         last_rec_query = select(RecommendationCache).where(
             RecommendationCache.user_id == current_user.id,
             RecommendationCache.not_deleted_filter()
-        ).order_by(RecommendationCache.generated_at.desc()).first()
+        ).order_by(RecommendationCache.generated_at.desc()).limit(1)
         last_rec_result = await db.execute(last_rec_query)
         last_recommendation = last_rec_result.scalar_one_or_none()
 

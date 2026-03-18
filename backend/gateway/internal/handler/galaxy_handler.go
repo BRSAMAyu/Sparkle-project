@@ -211,9 +211,12 @@ func (h *GalaxyHandler) ProxyToBackend(c *gin.Context) {
 		c.Request.Header.Set("X-User-ID", userID)
 	}
 
-	// Preserve auth token if present
+	// Preserve auth token - try both stored token and original Authorization header
 	if token := c.GetString("auth_token"); token != "" {
 		c.Request.Header.Set("Authorization", "Bearer "+token)
+	} else if auth := c.GetHeader("Authorization"); auth != "" {
+		// Keep original Authorization header if auth_token not set
+		c.Request.Header.Set("Authorization", auth)
 	}
 
 	h.proxy.ServeHTTP(c.Writer, c.Request)

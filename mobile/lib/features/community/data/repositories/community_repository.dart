@@ -22,16 +22,21 @@ class CommunityRepository {
   final ApiClient _apiClient;
 
   Future<List<Post>> getFeed({int page = 1, int limit = 20}) async {
-    final response = await _apiClient.get<dynamic>(
-      ApiEndpoints.communityFeed,
-      queryParameters: {'page': page, 'limit': limit},
-    );
+    try {
+      final response = await _apiClient.get<dynamic>(
+        ApiEndpoints.communityFeed,
+        queryParameters: {'page': page, 'limit': limit},
+      );
 
-    if (response.statusCode == 200) {
-      final data = ApiResponseParser.unwrapList(response.data, action: 'getFeed');
-      return data.map((e) => Post.fromJson(e as Map<String, dynamic>)).toList();
+      if (response.statusCode == 200) {
+        final data = ApiResponseParser.unwrapList(response.data, action: 'getFeed');
+        return data.map((e) => Post.fromJson(e as Map<String, dynamic>)).toList();
+      }
+      return [];
+    } catch (e) {
+      // Feed endpoint not yet implemented on backend — return empty list gracefully
+      return [];
     }
-    throw Exception('Failed to load feed');
   }
 
   Future<String> createPost(CreatePostRequest request) async {

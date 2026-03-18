@@ -155,6 +155,25 @@ class CuriosityCapsuleService:
         )
         return result.scalars().all()
 
+    async def get_user_capsules(
+        self,
+        user_id: UUID,
+        db: AsyncSession,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> list[CuriosityCapsule]:
+        """
+        Get all capsules for a user (paginated).
+        """
+        result = await db.execute(
+            select(CuriosityCapsule)
+            .where(CuriosityCapsule.user_id == user_id)
+            .order_by(desc(CuriosityCapsule.created_at))
+            .limit(limit)
+            .offset(offset)
+        )
+        return result.scalars().all()
+
     async def mark_as_read(self, capsule_id: UUID, db: AsyncSession):
         capsule = await db.get(CuriosityCapsule, capsule_id)
         if capsule:

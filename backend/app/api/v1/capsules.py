@@ -415,3 +415,26 @@ async def get_capsule_detail(
         **capsule.__dict__,
         is_favorite=is_fav,
     )
+
+
+# =============================================================================
+# 根路径端点（兼容性）- 使用 /list 避免与 /{id} 路由冲突
+# =============================================================================
+
+@router.get("/list/all", response_model=list[CuriosityCapsuleSchema])
+async def list_capsules(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+):
+    """
+    获取用户的胶囊列表
+    """
+    capsules = await curiosity_capsule_service.get_user_capsules(
+        user_id=current_user.id,
+        db=db,
+        limit=limit,
+        offset=offset
+    )
+    return capsules

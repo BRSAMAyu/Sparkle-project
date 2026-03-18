@@ -57,7 +57,7 @@ class AccountabilityPartnership(BaseModel):
     partner_goal = Column(Text, nullable=True)
     check_in_days = Column(Integer, nullable=False, default=1)
     status = Column(
-        Enum(AccountabilityStatus),
+        Enum(AccountabilityStatus, values_callable=lambda obj: [e.value for e in obj]),
         nullable=False,
         default=AccountabilityStatus.PENDING,
         index=True,

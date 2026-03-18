@@ -28,6 +28,7 @@ from app.models import (
     GroupMessage,
     GroupRole,
     GroupType,
+    KnowledgeNode,
     MessageRole,
     MessageType,
     Plan,
@@ -39,6 +40,7 @@ from app.models import (
     User,
     UserAchievement,
     UserGalaxySkin,
+    UserNodeStatus,
     UserStreakStats,
     UserTitle,
     ChatMessage,
@@ -227,6 +229,84 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
                 max_freeze_charges=3,
             )
         )
+
+    # Knowledge Nodes (Galaxy) - Create demo knowledge graph
+    # First, ensure global knowledge nodes exist
+    demo_nodes = [
+        {
+            "name": "CS101 课程说明",
+            "description": "CS101 课程是计算机科学入门。期末考试占比 40%，期中考试 20%，平时作业 40%。任课老师是张教授。",
+            "importance_level": 5,
+            "sector_code": "VOID",
+            "is_seed": True,
+            "tags": ["CS101", "考试", "占比", "seed", "core"],
+        },
+        {
+            "name": "系统错误码 0x8004",
+            "description": "错误码 0x8004 代表 'DB_CONNECTION_TIMEOUT'。这通常发生在数据库负载过高或 Redis 响应慢时。",
+            "importance_level": 5,
+            "sector_code": "VOID",
+            "is_seed": True,
+            "tags": ["0x8004", "错误码", "超时", "seed", "core"],
+        },
+        {
+            "name": "Sparkle RAG v2.0",
+            "description": "Sparkle 学习助手采用 RAG v2.0 架构，支持混合检索和本地重排序。混合检索结合了向量搜索和 BM25 关键词匹配。",
+            "importance_level": 5,
+            "sector_code": "VOID",
+            "is_seed": True,
+            "tags": ["RAG", "混合检索", "BM25", "seed", "core"],
+        },
+    ]
+
+    for idx, node_data in enumerate(demo_nodes):
+        node_exists = await session.execute(
+            select(KnowledgeNode).where(KnowledgeNode.name == node_data["name"])
+        )
+        if not node_exists.scalar_one_or_none():
+            import math
+            angle = (idx / len(demo_nodes)) * 2 * math.pi
+            radius = 250.0
+            node = KnowledgeNode(
+                name=node_data["name"],
+                description=node_data["description"],
+                importance_level=node_data["importance_level"],
+                sector_code=node_data["sector_code"],
+                is_seed=node_data["is_seed"],
+                tags=node_data["tags"],
+                position_angle=angle,
+                position_radius=radius,
+                position_x=radius * math.cos(angle),
+                position_y=radius * math.sin(angle),
+            )
+            session.add(node)
+
+    await session.flush()
+
+    # Unlock first node for user
+    first_node = (await session.execute(
+        select(KnowledgeNode).where(KnowledgeNode.name == "CS101 课程说明")
+    )).scalar_one_or_none()
+
+    if first_node:
+        status_exists = await session.execute(
+            select(UserNodeStatus).where(
+                UserNodeStatus.user_id == user.id,
+                UserNodeStatus.node_id == first_node.id,
+            )
+        )
+        if not status_exists.scalar_one_or_none():
+            session.add(
+                UserNodeStatus(
+                    user_id=user.id,
+                    node_id=first_node.id,
+                    is_unlocked=True,
+                    mastery_score=0.3,
+                    total_study_minutes=45,
+                    first_unlock_at=now - timedelta(days=2),
+                    last_study_at=now - timedelta(hours=3),
+                )
+            )
 
     # Galaxy skins
     await _ensure_galaxy_skins(session)
