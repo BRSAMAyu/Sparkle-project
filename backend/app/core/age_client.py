@@ -100,6 +100,31 @@ class AgeClient:
         except json.JSONDecodeError:
             return cleaned.strip('"')
 
+    @staticmethod
+    def _sql_literal(value: str) -> str:
+        return "'" + value.replace("'", "''") + "'"
+
+    @staticmethod
+    def _dollar_quote(value: str, tag: str = "age_query") -> str:
+        delimiter = f"${tag}$"
+        while delimiter in value:
+            tag = f"{tag}_{uuid.uuid4().hex}"
+            delimiter = f"${tag}$"
+        return f"{delimiter}{value}{delimiter}"
+
+    @classmethod
+    def _inline_cypher_params(cls, cypher: str, params: dict[str, Any] | None) -> str:
+        if not params:
+            return cypher
+
+        def replace(match: re.Match[str]) -> str:
+            key = match.group(1)
+            if key not in params:
+                raise KeyError(f"Missing AGE parameter: {key}")
+            return cls._cypher_literal(params[key])
+
+        return re.sub(r"\$([A-Za-z_][A-Za-z0-9_]*)\b", replace, cypher)
+
     async def _prepare_connection(self, conn: asyncpg.Connection):
         await conn.execute("LOAD 'age';")
         await conn.execute('SET search_path = ag_catalog, "$user", public;')
@@ -152,20 +177,14 @@ class AgeClient:
         try:
             async with self.pool.acquire() as conn:
                 await self._prepare_connection(conn)
-
-                if params:
-                    rows = await conn.fetch(
-                        "SELECT * FROM cypher($1, $2, $3::agtype) AS (result agtype);",
-                        self.config.graph_name,
-                        cypher,
-                        json.dumps(params, ensure_ascii=False),
-                    )
-                else:
-                    rows = await conn.fetch(
-                        "SELECT * FROM cypher($1, $2) AS (result agtype);",
-                        self.config.graph_name,
-                        cypher,
-                    )
+                rendered_cypher = self._inline_cypher_params(cypher, params)
+                sql = (
+                    "SELECT * FROM ag_catalog.cypher("
+                    f"{self._sql_literal(self.config.graph_name)}::name, "
+                    f"{self._dollar_quote(rendered_cypher)}::cstring"
+                    ") AS (result agtype);"
+                )
+                rows = await conn.fetch(sql)
 
                 results = []
                 for row in rows:
@@ -296,20 +315,21 @@ class AgeClient:
             depth: 搜索深度
             edge_filter: 边类型过滤
         """
-        match_clause = " AND ".join([f"n.{k} = '{v}'" for k, v in properties.items()])
-        edge_filter_clause = f"|{edge_filter}|" if edge_filter else "*"
         filters = self._property_filters("n", properties)
+        edge_type_condition = ""
+        if edge_filter:
+            edge_type_condition = f' AND ALL(edge IN r WHERE type(edge) = "{self._validate_identifier(edge_filter)}")'
 
         cypher = f"""
-        MATCH (n:{self._validate_identifier(label)})-[r{edge_filter_clause}*1..{depth}]-(neighbor)
-        WHERE {filters}
+        MATCH (n:{self._validate_identifier(label)})-[r*1..{depth}]-(neighbor)
+        WHERE {filters}{edge_type_condition}
         RETURN {{
             name: neighbor.name,
             description: neighbor.description,
             relation_type: type(r[0]),
             strength: r[0].strength
         }} as result
-        ORDER BY r[0].strength DESC
+        ORDER BY toFloat(r[0].strength) DESC
         """
 
         return await self.execute_cypher(cypher)
@@ -328,8 +348,11 @@ class AgeClient:
         to_match = self._property_filters("b", to_props)
 
         cypher = f"""
-        MATCH path = shortestPath((a)-[*1..{max_depth}]-(b))
+        MATCH path = (a)-[*1..{max_depth}]-(b)
         WHERE {from_match} AND {to_match}
+        WITH path
+        ORDER BY length(path) ASC
+        LIMIT 1
         RETURN {{
             nodes: [node IN nodes(path) | node.name],
             edges: [edge IN relationships(path) | type(edge)]

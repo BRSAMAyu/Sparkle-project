@@ -28,6 +28,7 @@ const (
 	defaultChatMode = "standard"
 	expertModeAuto  = "expert_auto"
 	expertModePref  = "expert::"
+	wsWriteWait     = 10 * time.Second
 )
 
 func shortHash(parts ...string) string {
@@ -79,6 +80,11 @@ func normalizeChatMode(mode string) string {
 	default:
 		return defaultChatMode
 	}
+}
+
+func writeLegacyJSON(conn *websocket.Conn, payload interface{}) error {
+	_ = conn.SetWriteDeadline(time.Now().Add(wsWriteWait))
+	return conn.WriteJSON(payload)
 }
 
 func workflowIDForChatMode(mode string) string {
@@ -268,8 +274,8 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 				})
 			default:
 				conn := responder.(*websocket.Conn)
-				conn.WriteJSON(convertResponseToJSON(resp))
-				conn.WriteJSON(gin.H{
+				_ = writeLegacyJSON(conn, convertResponseToJSON(resp))
+				_ = writeLegacyJSON(conn, gin.H{
 					"type": "meta",
 					"meta": map[string]interface{}{
 						"latency_ms":   time.Since(startTime).Milliseconds(),
@@ -311,7 +317,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 					r.SendError("resource_exhausted", "Quota exhausted", false)
 				default:
 					conn := responder.(*websocket.Conn)
-					conn.WriteJSON(gin.H{"type": "error", "message": "Quota exhausted"})
+					_ = writeLegacyJSON(conn, gin.H{"type": "error", "message": "Quota exhausted"})
 				}
 				return false
 			}
@@ -353,7 +359,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 			r.SendError("unavailable", "AI Service Unavailable", true)
 		default:
 			conn := responder.(*websocket.Conn)
-			conn.WriteJSON(gin.H{"type": "error", "message": "AI Service Unavailable"})
+			_ = writeLegacyJSON(conn, gin.H{"type": "error", "message": "AI Service Unavailable"})
 		}
 		return false
 	}
@@ -370,7 +376,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 			r.SendError("unavailable", "AI Service Unavailable", true)
 		default:
 			conn := responder.(*websocket.Conn)
-			conn.WriteJSON(gin.H{"type": "error", "message": "AI Service Unavailable"})
+			_ = writeLegacyJSON(conn, gin.H{"type": "error", "message": "AI Service Unavailable"})
 		}
 		return false
 	}
@@ -407,7 +413,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 				r.SendError("aborted", "Stream interrupted", true)
 			default:
 				conn := responder.(*websocket.Conn)
-				conn.WriteJSON(gin.H{"type": "error", "message": "Stream interrupted"})
+				_ = writeLegacyJSON(conn, gin.H{"type": "error", "message": "Stream interrupted"})
 			}
 			break
 		}
@@ -437,7 +443,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 						r.SendError("resource_exhausted", "Daily quota exceeded", false)
 					default:
 						conn := responder.(*websocket.Conn)
-						conn.WriteJSON(gin.H{"type": "error", "message": "Daily quota exceeded"})
+						_ = writeLegacyJSON(conn, gin.H{"type": "error", "message": "Daily quota exceeded"})
 					}
 					return false
 				}
@@ -464,7 +470,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 			// Convert protobuf response to JSON-friendly map
 			jsonResp := convertResponseToJSON(resp)
 			// Forward to WebSocket client
-			if err := conn.WriteJSON(jsonResp); err != nil {
+			if err := writeLegacyJSON(conn, jsonResp); err != nil {
 				log.Printf("Failed to write to WebSocket: %v", err)
 				respSpan.End()
 				return true
@@ -517,7 +523,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 	default:
 		conn := responder.(*websocket.Conn)
 		// Send final metadata
-		conn.WriteJSON(gin.H{
+		_ = writeLegacyJSON(conn, gin.H{
 			"type": "meta",
 			"meta": meta,
 		})
@@ -525,10 +531,14 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 
 	// Persist completed message to database and cache (async)
 	if fullText != "" && input.SessionID != "" {
-		// Capture values for goroutine before returning input to pool
+		// Multi-turn chat depends on the assistant turn being visible in Redis
+		// before the client sends the next user message, so persist history
+		// synchronously and keep only semantic-cache updates async.
 		sessionID := input.SessionID
 		queryText := input.Message
 		result := fullText
+
+		h.saveMessage(userID, sessionID, "assistant", result)
 
 		go func() {
 			// Update Semantic Cache
@@ -537,8 +547,6 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 					log.Printf("Failed to update cache: %v", err)
 				}
 			}
-			// Save to History
-			h.saveMessage(userID, sessionID, "assistant", result)
 		}()
 	}
 

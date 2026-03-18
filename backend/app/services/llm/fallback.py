@@ -263,6 +263,7 @@ class LLMModelFallbackManager:
             if model_key not in exclude_models and model_key in llm_router._available_models:
                 config = llm_router._available_models[model_key]
                 selection = LLMSelection(
+                    model_key=model_key,
                     config=config,
                     agent_role=agent_role,
                     task_type=task_type,
@@ -291,6 +292,7 @@ class LLMModelFallbackManager:
                 if model_key not in exclude_models and model_key in llm_router._available_models:
                     config = llm_router._available_models[model_key]
                     selection = LLMSelection(
+                        model_key=model_key,
                         config=config,
                         agent_role=agent_role,
                         task_type=task_type,
@@ -340,19 +342,8 @@ class LLMModelFallbackManager:
         current_selection = original_selection
 
         for attempt in range(self.max_fallback_attempts):
-            model_key = None
-            provider = None
-
-            # 从 selection 中提取信息
-            for key, config in llm_router._available_models.items():
-                if config.model_name == current_selection.config.model_name:
-                    model_key = key
-                    provider = config.provider.value
-                    break
-
-            if not model_key:
-                model_key = "unknown"
-                provider = "unknown"
+            model_key = self._get_model_key_from_selection(current_selection)
+            provider = current_selection.config.provider.value if current_selection.config.provider else "unknown"
 
             # 检查模型健康状态
             is_healthy = await self.health_tracker.is_healthy(model_key)
@@ -379,7 +370,6 @@ class LLMModelFallbackManager:
                 )
                 if candidates:
                     current_selection = candidates[0]
-                    exclude_models.add(current_selection.config.model_name)
                     continue
                 else:
                     # 没有更多候选，抛出异常
@@ -513,10 +503,7 @@ class LLMModelFallbackManager:
                         raise e
 
             def _get_model_key(self, selection: LLMSelection) -> str:
-                for key, config in llm_router._available_models.items():
-                    if config.model_name == selection.config.model_name:
-                        return key
-                return "unknown"
+                return self.manager._get_model_key_from_selection(selection)
 
         # 非回退模式下的流式处理
         handler = StreamingFallbackHandler(self)
@@ -532,27 +519,45 @@ class LLMModelFallbackManager:
             # 尝试回退
             logger.warning(f"[LLMFallback] Stream connection failed: {fallback_reason.value}, attempting fallback...")
 
-            exclude_models: set[str] = set()
+            original_model_key = self._get_model_key_from_selection(original_selection)
+            await self.health_tracker.record_failure(original_model_key, fallback_reason)
+
+            exclude_models: set[str] = {original_model_key}
             candidates = self._get_fallback_candidates(original_selection, exclude_models)
 
             for selection in candidates:
+                model_key = self._get_model_key_from_selection(selection)
+                if not await self.health_tracker.is_healthy(model_key):
+                    logger.warning(f"[LLMFallback] Skipping unhealthy stream fallback model: {selection.config.model_name}")
+                    continue
                 try:
                     logger.info(f"[LLMFallback] Trying fallback model: {selection.config.model_name}")
                     async for chunk in handler.execute(selection, stream_fn):
                         yield chunk
                     return  # 成功
                 except Exception as fallback_error:
+                    fallback_failure_reason = self._detect_fallback_reason(fallback_error)
+                    if fallback_failure_reason is not None:
+                        await self.health_tracker.record_failure(model_key, fallback_failure_reason)
                     logger.warning(f"[LLMFallback] Fallback to {selection.config.model_name} also failed: {fallback_error}")
-                    exclude_models.add(self._get_model_key_from_selection(selection))
+                    exclude_models.add(model_key)
 
             # 所有回退都失败
             raise e
 
     def _get_model_key_from_selection(self, selection: LLMSelection) -> str:
+        if selection.model_key and selection.model_key in llm_router._available_models:
+            return selection.model_key
+
         for key, config in llm_router._available_models.items():
-            if config.model_name == selection.config.model_name:
+            if (
+                config.model_name == selection.config.model_name
+                and config.provider == selection.config.provider
+                and config.base_url == selection.config.base_url
+                and config.clear_thinking == selection.config.clear_thinking
+            ):
                 return key
-        return "unknown"
+        return selection.model_key or "unknown"
 
 
 # 全局单例

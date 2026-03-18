@@ -65,6 +65,7 @@ from app.schemas.community import (
     GroupFileInfo,
     GroupFilePermissions,
     GroupFilePermissionUpdate,
+    GroupMemberInfo,
     # 群文件
     GroupFileShareRequest,
     # 火堆
@@ -364,6 +365,19 @@ def _build_group_file_info(group_file: GroupFile, member_role) -> GroupFileInfo:
         can_download=GroupFileService.can_download(member_role, group_file.download_role),
         can_manage=GroupFileService.can_manage(member_role, group_file.manage_role),
     )
+
+
+def _build_group_member_info(member: GroupMember) -> GroupMemberInfo:
+    return GroupMemberInfo(
+        user=UserBrief.model_validate(member.user),
+        role=member.role,
+        flame_contribution=member.flame_contribution,
+        tasks_completed=member.tasks_completed,
+        checkin_streak=member.checkin_streak,
+        joined_at=member.joined_at,
+        last_active_at=member.last_active_at,
+    )
+
 
 def _build_private_message_info(msg: PrivateMessage) -> PrivateMessageInfo:
     sender = UserBrief.model_validate(msg.sender)
@@ -1308,6 +1322,111 @@ async def transfer_group_owner(
         return {"success": True}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/groups/{group_id}/members", response_model=list[GroupMemberInfo], summary="获取群成员列表")
+async def get_group_members(
+    group_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """获取群成员列表。"""
+    try:
+        members = await GroupService.get_group_members(db, group_id, current_user.id)
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    return [_build_group_member_info(member) for member in members]
+
+
+@router.post("/groups/{group_id}/members/{user_id}/kick", summary="移出群成员")
+async def kick_group_member(
+    group_id: UUID,
+    user_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """移出群成员。"""
+    try:
+        await GroupService.kick_member(db, group_id, current_user.id, user_id)
+        await db.commit()
+        await manager.broadcast(
+            {
+                "type": "member_kicked",
+                "group_id": str(group_id),
+                "user_id": str(user_id),
+                "operator_id": str(current_user.id),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            },
+            str(group_id),
+        )
+        return {"success": True}
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+@router.post("/groups/{group_id}/members/{user_id}/promote", summary="提升成员为管理员")
+async def promote_group_member(
+    group_id: UUID,
+    user_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """提升成员为管理员。"""
+    try:
+        member = await GroupService.promote_member(db, group_id, current_user.id, user_id)
+        await db.commit()
+        await manager.broadcast(
+            {
+                "type": "member_role_updated",
+                "group_id": str(group_id),
+                "user_id": str(user_id),
+                "role": member.role.value,
+                "operator_id": str(current_user.id),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            },
+            str(group_id),
+        )
+        return {"success": True}
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+@router.post("/groups/{group_id}/members/{user_id}/demote", summary="降级管理员为普通成员")
+async def demote_group_member(
+    group_id: UUID,
+    user_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """降级管理员为普通成员。"""
+    try:
+        member = await GroupService.demote_member(db, group_id, current_user.id, user_id)
+        await db.commit()
+        await manager.broadcast(
+            {
+                "type": "member_role_updated",
+                "group_id": str(group_id),
+                "user_id": str(user_id),
+                "role": member.role.value,
+                "operator_id": str(current_user.id),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            },
+            str(group_id),
+        )
+        return {"success": True}
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+@router.post("/groups/{group_id}/members/{user_id}/transfer-ownership", summary="转让群主")
+async def transfer_group_owner_by_path(
+    group_id: UUID,
+    user_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """按移动端使用的路径转让群主身份。"""
+    return await transfer_group_owner(group_id, user_id, current_user, db)
 
 
 @router.get("/groups", response_model=list[GroupListItem], summary="获取我的群组")

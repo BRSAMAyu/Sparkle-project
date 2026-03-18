@@ -245,6 +245,43 @@ class GroupService:
     """群组服务"""
 
     @staticmethod
+    async def _get_active_member(
+        db: AsyncSession,
+        group_id: UUID,
+        user_id: UUID,
+    ) -> GroupMember | None:
+        result = await db.execute(
+            select(GroupMember).where(
+                GroupMember.group_id == group_id,
+                GroupMember.user_id == user_id,
+                GroupMember.not_deleted_filter(),
+            )
+        )
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def _require_active_member(
+        db: AsyncSession,
+        group_id: UUID,
+        user_id: UUID,
+    ) -> GroupMember:
+        member = await GroupService._get_active_member(db, group_id, user_id)
+        if not member:
+            raise ValueError("不是群组成员")
+        return member
+
+    @staticmethod
+    def _can_manage_member(
+        operator_role: GroupRole,
+        target_role: GroupRole,
+    ) -> bool:
+        if operator_role == GroupRole.OWNER:
+            return target_role != GroupRole.OWNER
+        if operator_role == GroupRole.ADMIN:
+            return target_role == GroupRole.MEMBER
+        return False
+
+    @staticmethod
     async def search_groups(
         db: AsyncSession,
         keyword: str | None = None,
@@ -408,6 +445,47 @@ class GroupService:
             'my_role': my_role,
             'days_remaining': days_remaining
         }
+
+    @staticmethod
+    async def get_group_members(
+        db: AsyncSession,
+        group_id: UUID,
+        user_id: UUID,
+    ) -> list[GroupMember]:
+        """获取群成员列表，仅允许群成员查看。"""
+        group = await Group.get_by_id(db, group_id)
+        if not group or group.is_deleted:
+            raise ValueError("群组不存在")
+
+        await GroupService._require_active_member(db, group_id, user_id)
+
+        result = await db.execute(
+            select(GroupMember)
+            .options(selectinload(GroupMember.user))
+            .where(
+                GroupMember.group_id == group_id,
+                GroupMember.not_deleted_filter(),
+            )
+            .order_by(
+                GroupMember.role.asc(),
+                GroupMember.flame_contribution.desc(),
+                GroupMember.joined_at.asc(),
+            )
+        )
+        members = list(result.scalars().all())
+        role_priority = {
+            GroupRole.OWNER: 0,
+            GroupRole.ADMIN: 1,
+            GroupRole.MEMBER: 2,
+        }
+        members.sort(
+            key=lambda member: (
+                role_priority.get(member.role, 99),
+                -(member.flame_contribution or 0),
+                member.joined_at,
+            )
+        )
+        return members
 
     @staticmethod
     async def join_group(
@@ -616,6 +694,90 @@ class GroupService:
         )
 
         return True
+
+    @staticmethod
+    async def kick_member(
+        db: AsyncSession,
+        group_id: UUID,
+        operator_id: UUID,
+        target_user_id: UUID,
+    ) -> bool:
+        """移出群成员。"""
+        if operator_id == target_user_id:
+            raise ValueError("不能移除自己，请使用退出群组")
+
+        operator = await GroupService._require_active_member(db, group_id, operator_id)
+        target = await GroupService._get_active_member(db, group_id, target_user_id)
+        if not target:
+            raise ValueError("目标用户不是群成员")
+        if not GroupService._can_manage_member(operator.role, target.role):
+            raise ValueError("无权移除此成员")
+
+        await target.delete(db, soft=True)
+        await GroupMessageService.send_system_message(
+            db,
+            group_id,
+            f"成员已被移出群组：{target.user_id}",
+        )
+        return True
+
+    @staticmethod
+    async def promote_member(
+        db: AsyncSession,
+        group_id: UUID,
+        operator_id: UUID,
+        target_user_id: UUID,
+    ) -> GroupMember:
+        """将成员提升为管理员，仅群主可操作。"""
+        operator = await GroupService._require_active_member(db, group_id, operator_id)
+        if operator.role != GroupRole.OWNER:
+            raise ValueError("只有群主可以提升管理员")
+
+        target = await GroupService._get_active_member(db, group_id, target_user_id)
+        if not target:
+            raise ValueError("目标用户不是群成员")
+        if target.role == GroupRole.OWNER:
+            raise ValueError("不能修改群主角色")
+        if target.role == GroupRole.ADMIN:
+            return target
+
+        target.role = GroupRole.ADMIN
+        await db.flush()
+        await GroupMessageService.send_system_message(
+            db,
+            group_id,
+            f"成员已晋升为管理员：{target.user_id}",
+        )
+        return target
+
+    @staticmethod
+    async def demote_member(
+        db: AsyncSession,
+        group_id: UUID,
+        operator_id: UUID,
+        target_user_id: UUID,
+    ) -> GroupMember:
+        """将管理员降级为普通成员，仅群主可操作。"""
+        operator = await GroupService._require_active_member(db, group_id, operator_id)
+        if operator.role != GroupRole.OWNER:
+            raise ValueError("只有群主可以调整管理员角色")
+
+        target = await GroupService._get_active_member(db, group_id, target_user_id)
+        if not target:
+            raise ValueError("目标用户不是群成员")
+        if target.role == GroupRole.OWNER:
+            raise ValueError("不能修改群主角色")
+        if target.role == GroupRole.MEMBER:
+            return target
+
+        target.role = GroupRole.MEMBER
+        await db.flush()
+        await GroupMessageService.send_system_message(
+            db,
+            group_id,
+            f"管理员已调整为普通成员：{target.user_id}",
+        )
+        return target
 
 
 class GroupMessageService:

@@ -271,7 +271,11 @@ class ChatOrchestrator(
 
         # Initialize components
         self.state_manager = SessionStateManager(redis_client)
-        self.validator = RequestValidator(redis_client, daily_quota=100000)
+        self.validator = RequestValidator(
+            redis_client,
+            daily_quota=getattr(settings, "DAILY_QUOTA", 100000),
+            enable_quota_check=bool(getattr(settings, "LLM_QUOTA_ENABLED", False)),
+        )
         self.tool_executor = ToolExecutor()
         self.response_composer = ResponseComposer()
         self.dual_core_router = dual_core_router

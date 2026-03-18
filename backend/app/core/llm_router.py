@@ -53,6 +53,7 @@ class ModelConfig:
 @dataclass
 class LLMSelection:
     """LLM选择结果（可观测）"""
+    model_key: str
     config: ModelConfig
     agent_role: AgentRole
     task_type: TaskType | None
@@ -355,6 +356,7 @@ class LLMRouter:
         elif profile.specific_model:
             # Agent指定了具体模型，直接用
             return self._create_selection(
+                profile.specific_model,
                 self._available_models.get(profile.specific_model, self._available_models["default"]),
                 agent_role,
                 task_type,
@@ -380,7 +382,7 @@ class LLMRouter:
         model_key = candidates[0]
         model_config = self._available_models.get(model_key, self._available_models["default"])
 
-        return self._create_selection(model_config, agent_role, task_type, reason)
+        return self._create_selection(model_key, model_config, agent_role, task_type, reason)
 
     def select_specific_model(
         self,
@@ -395,10 +397,12 @@ class LLMRouter:
         task_type = self._normalize_task_type(task_type)
         config = self._available_models.get(model_key, self._available_models["default"])
         reason = f"指定模型key: {model_key}" if model_key in self._available_models else f"模型key未注册: {model_key}，回退默认"
-        return self._create_selection(config, agent_role, task_type, reason)
+        resolved_key = model_key if model_key in self._available_models else "default"
+        return self._create_selection(resolved_key, config, agent_role, task_type, reason)
 
     def _create_selection(
         self,
+        model_key: str,
         config: ModelConfig,
         agent_role: AgentRole,
         task_type: TaskType | None,
@@ -406,6 +410,7 @@ class LLMRouter:
     ) -> LLMSelection:
         """创建LLMSelection对象"""
         return LLMSelection(
+            model_key=model_key,
             config=config,
             agent_role=agent_role,
             task_type=task_type,
@@ -512,9 +517,11 @@ class LLMRouter:
         if not candidates:
             return failed_selection
 
-        fallback_config = self._available_models.get(candidates[0], self._available_models["default"])
+        fallback_key = candidates[0]
+        fallback_config = self._available_models.get(fallback_key, self._available_models["default"])
 
         return LLMSelection(
+            model_key=fallback_key,
             config=fallback_config,
             agent_role=failed_selection.agent_role,
             task_type=failed_selection.task_type,

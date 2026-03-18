@@ -203,9 +203,14 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		community.GET("/groups/:group_id", h.proxyWithHeaders)
 		community.DELETE("/groups/:group_id", h.proxyWithHeaders)
 		community.POST("/groups/:group_id/join", h.proxyWithHeaders)
+		community.POST("/groups/:group_id/leave", h.proxyWithHeaders)
 		community.DELETE("/groups/:group_id/leave", h.proxyWithHeaders)
 		community.POST("/groups/:group_id/transfer", h.proxyWithHeaders)
 		community.GET("/groups/:group_id/members", h.proxyWithHeaders)
+		community.POST("/groups/:group_id/members/:user_id/kick", h.proxyWithHeaders)
+		community.POST("/groups/:group_id/members/:user_id/promote", h.proxyWithHeaders)
+		community.POST("/groups/:group_id/members/:user_id/demote", h.proxyWithHeaders)
+		community.POST("/groups/:group_id/members/:user_id/transfer-ownership", h.proxyWithHeaders)
 		// Group Messages
 		community.GET("/groups/:group_id/messages", h.proxyWithHeaders)
 		community.POST("/groups/:group_id/messages", h.proxyWithHeaders)
@@ -238,6 +243,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		community.GET("/groups/:group_id/reports", h.proxyWithHeaders)
 		community.GET("/groups/:group_id/resources", h.proxyWithHeaders)
 		// Private Messages
+		community.POST("/messages", h.proxyWithHeaders)
 		community.POST("/messages/private", h.proxyWithHeaders)
 		community.GET("/messages/private/:user_id", h.proxyWithHeaders)
 		community.DELETE("/messages/private/:msg_id", h.proxyWithHeaders)

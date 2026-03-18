@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/sparkle/gateway/internal/galaxy"
 	redisv9 "github.com/redis/go-redis/v9"
+	"github.com/sparkle/gateway/internal/galaxy"
 )
 
 // GalaxyHandler handles HTTP requests for the Galaxy service.
@@ -55,16 +55,20 @@ func NewGalaxyHandler(
 func (h *GalaxyHandler) RegisterRoutes(r *gin.RouterGroup, authMiddleware gin.HandlerFunc, rateLimit gin.HandlerFunc) {
 	galaxy := r.Group("/galaxy")
 	galaxy.Use(authMiddleware)
-	if rateLimit != nil {
-		galaxy.Use(rateLimit)
-	}
 
 	{
 		// gRPC direct endpoints (high priority - for performance)
-		galaxy.POST("/nodes/:id/spark", h.SparkNode)
-		galaxy.POST("/nodes/:id/mastery", h.UpdateMastery)
+		if rateLimit != nil {
+			galaxy.POST("/nodes/:id/spark", rateLimit, h.SparkNode)
+			galaxy.POST("/nodes/:id/mastery", rateLimit, h.UpdateMastery)
+		} else {
+			galaxy.POST("/nodes/:id/spark", h.SparkNode)
+			galaxy.POST("/nodes/:id/mastery", h.UpdateMastery)
+		}
 
-		// Proxy endpoints (delegated to Python backend for flexibility)
+		// Read-heavy graph endpoints are used by page rendering and AI context hydration.
+		// Do not put them behind the tight shared rate limiter, or normal navigation can
+		// sporadically fail with 429 and break the knowledge graph experience.
 		galaxy.GET("/graph", h.ProxyToBackend)
 		galaxy.GET("/nodes", h.ProxyToBackend)
 		galaxy.GET("/nodes/:id", h.ProxyToBackend)
@@ -72,8 +76,13 @@ func (h *GalaxyHandler) RegisterRoutes(r *gin.RouterGroup, authMiddleware gin.Ha
 		galaxy.GET("/stats", h.ProxyToBackend)
 		galaxy.GET("/heatmap", h.ProxyToBackend)
 		galaxy.GET("/predict", h.ProxyToBackend)
-		galaxy.GET("/events", h.ProxyToBackend) // SSE stream for real-time galaxy updates
-		galaxy.POST("/sync", h.ProxyToBackend)
+		if rateLimit != nil {
+			galaxy.GET("/events", rateLimit, h.ProxyToBackend) // SSE stream for real-time galaxy updates
+			galaxy.POST("/sync", rateLimit, h.ProxyToBackend)
+		} else {
+			galaxy.GET("/events", h.ProxyToBackend) // SSE stream for real-time galaxy updates
+			galaxy.POST("/sync", h.ProxyToBackend)
+		}
 	}
 }
 
@@ -131,11 +140,11 @@ func (h *GalaxyHandler) SparkNode(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"success":        true,
-		"old_mastery":    resp.OldMastery,
-		"new_mastery":    resp.NewMastery,
-		"revision":       resp.CurrentRevision,
-		"node_id":        nodeID,
+		"success":     true,
+		"old_mastery": resp.OldMastery,
+		"new_mastery": resp.NewMastery,
+		"revision":    resp.CurrentRevision,
+		"node_id":     nodeID,
 	})
 }
 
@@ -192,11 +201,11 @@ func (h *GalaxyHandler) UpdateMastery(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"success":       true,
-		"old_mastery":   resp.OldMastery,
-		"new_mastery":   resp.NewMastery,
-		"revision":      resp.CurrentRevision,
-		"node_id":       nodeID,
+		"success":     true,
+		"old_mastery": resp.OldMastery,
+		"new_mastery": resp.NewMastery,
+		"revision":    resp.CurrentRevision,
+		"node_id":     nodeID,
 	})
 }
 

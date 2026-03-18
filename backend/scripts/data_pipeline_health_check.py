@@ -131,7 +131,7 @@ class DataPipelineHealthCheck:
 
                     # 检查默认图谱
                     db_result = await session.execute(text(
-                        "SELECT EXISTS(SELECT 1 FROM ag_graph WHERE name = 'sparkle_galaxy')"
+                        "SELECT EXISTS(SELECT 1 FROM ag_catalog.ag_graph WHERE name = 'sparkle_galaxy')"
                     ))
                     graph_exists = db_result.scalar()
                     if graph_exists:

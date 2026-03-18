@@ -16,6 +16,7 @@ Phase 2c: 集成审查历史和反馈学习
 """
 
 import time
+import json
 from datetime import timezone, datetime
 from typing import Any
 
@@ -273,6 +274,13 @@ def _state_get(state: SparkleState, key: str, default=None):
     return getattr(state, key, default)
 
 
+def _message_attr(message: Any, key: str, default=None):
+    """Read a message field from either dict-based or object-based state."""
+    if isinstance(message, dict):
+        return message.get(key, default)
+    return getattr(message, key, default)
+
+
 def _should_skip_review(state: SparkleState) -> bool:
     """
     判断是否应该跳过审查
@@ -300,7 +308,7 @@ def _should_skip_review(state: SparkleState) -> bool:
         messages = _state_get(state, "messages", [])
         if messages:
             last_message = messages[-1]
-            content = last_message.content if hasattr(last_message, 'content') else str(last_message)
+            content = _message_attr(last_message, "content", "") or str(last_message)
             content_lower = content.lower()
 
             # 检查长度
@@ -365,7 +373,7 @@ async def generation_review_node(state: SparkleState) -> dict[str, Any]:
     last_assistant_idx = -1
     for i in range(len(messages) - 1, -1, -1):
         msg = messages[i]
-        role = getattr(msg, 'role', None)
+        role = _message_attr(msg, "role")
         if role == "assistant":
             last_assistant_msg = msg
             last_assistant_idx = i
@@ -375,7 +383,7 @@ async def generation_review_node(state: SparkleState) -> dict[str, Any]:
         logger.warning("[ReviewNode] No assistant message to review")
         return {"next_step": "__end__"}
 
-    llm_response = getattr(last_assistant_msg, 'content', '')
+    llm_response = _message_attr(last_assistant_msg, "content", "")
     if not llm_response:
         logger.warning("[ReviewNode] Empty response, skipping review")
         return {"next_step": "__end__"}
@@ -384,7 +392,7 @@ async def generation_review_node(state: SparkleState) -> dict[str, Any]:
     user_query = ""
     if last_assistant_idx > 0:
         user_msg = messages[last_assistant_idx - 1]
-        user_query = getattr(user_msg, 'content', '')
+        user_query = _message_attr(user_msg, "content", "")
 
     logger.info(f"[ReviewNode] Reviewing response: {len(llm_response)} chars")
 
@@ -412,7 +420,7 @@ async def generation_review_node(state: SparkleState) -> dict[str, Any]:
 
     # Phase 2c: Record review to history
     context_data = _state_get(state, "context_data", {})
-    target_id = context_data.get("response_id") or getattr(last_assistant_msg, 'id', '')
+    target_id = context_data.get("response_id") or _message_attr(last_assistant_msg, "id", "")
     review_duration = int(time.time() * 1000 - review_start_time) if 'review_start_time' in locals() else 0
     await _record_review_to_history(
         state=state,
@@ -467,7 +475,7 @@ async def generation_review_node(state: SparkleState) -> dict[str, Any]:
                 delta=review_delta,
                 metadata={
                     **review_metadata,
-                    "review_data": review_result.to_dict(),
+                    "review_data": json.dumps(review_result.to_dict(), ensure_ascii=False),
                 }
             ))
 
@@ -659,9 +667,9 @@ async def reflection_node(state: SparkleState) -> dict[str, Any]:
     user_query = ""
     for i in range(len(messages) - 1, -1, -1):
         msg = messages[i]
-        role = getattr(msg, 'role', None)
+        role = _message_attr(msg, "role")
         if role == "user":
-            user_query = getattr(msg, 'content', '')
+            user_query = _message_attr(msg, "content", "")
             break
 
     if not user_query:

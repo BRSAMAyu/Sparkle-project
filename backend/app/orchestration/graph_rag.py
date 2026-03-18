@@ -374,10 +374,11 @@ Return ONLY a JSON array of entity names."""
         """
         try:
             cypher = """
-            MATCH (u:User {id: $user_id})-[r:INTERESTED_IN|STUDIED]->(k:KnowledgeNode)
-            WHERE r.strength > 0.3
+            MATCH (u:User {id: $user_id})-[r]->(k:KnowledgeNode)
+            WHERE type(r) IN ["INTERESTED_IN", "STUDIED"]
+              AND toFloat(r.strength) > 0.3
             RETURN DISTINCT {name: k.name} as result
-            ORDER BY r.strength DESC
+            ORDER BY toFloat(r.strength) DESC
             LIMIT 10
             """
 
@@ -586,9 +587,8 @@ Return ONLY a JSON array of entity names."""
         """
         try:
             cypher = """
-            MATCH path = shortestPath(
-                (start:KnowledgeNode {name: $start})-[*1..5]-(end:KnowledgeNode {name: $target})
-            )
+            MATCH path =
+                (start:KnowledgeNode {name: $start})-[:PREREQUISITE*1..5]->(goal:KnowledgeNode {name: $target})
             UNWIND nodes(path) as node
             RETURN {
                 name: node.name,
@@ -622,15 +622,16 @@ Return ONLY a JSON array of entity names."""
         """
         try:
             cypher = """
-            MATCH (c:KnowledgeNode {name: $concept})-[r:RELATED|PREREQUISITE|APPLIES_TO]-(related)
-            WHERE r.strength > 0.3
+            MATCH (c:KnowledgeNode {name: $concept})-[r]-(related)
+            WHERE type(r) IN ["RELATED", "PREREQUISITE", "APPLIES_TO"]
+              AND toFloat(r.strength) > 0.3
             RETURN {
                 name: related.name,
                 description: related.description,
                 relation: type(r),
                 strength: r.strength
             } as result
-            ORDER BY r.strength DESC
+            ORDER BY toFloat(r.strength) DESC
             LIMIT $limit
             """
 

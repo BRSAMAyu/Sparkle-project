@@ -274,8 +274,10 @@ class GraphKnowledgeService:
         """
         try:
             cypher = """
-            MATCH (u:User {id: $user_id})-[r:INTERESTED_IN|STUDIED]->(k:KnowledgeNode)
-            OPTIONAL MATCH (k)-[related:RELATED|PREREQUISITE]-(other)
+            MATCH (u:User {id: $user_id})-[r]->(k:KnowledgeNode)
+            WHERE type(r) IN ["INTERESTED_IN", "STUDIED"]
+            OPTIONAL MATCH (k)-[related]-(other)
+            WHERE related IS NULL OR type(related) IN ["RELATED", "PREREQUISITE"]
             RETURN {
                 core: k.name,
                 sector: k.sector,

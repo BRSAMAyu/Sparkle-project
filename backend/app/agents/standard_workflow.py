@@ -65,6 +65,198 @@ def _resolve_generation_task_type(state: WorkflowState) -> TaskType:
         return TaskType.ERROR_DIAGNOSIS
     return TaskType.STANDARD_RESPONSE
 
+
+def _build_generation_fallback_response(
+    *,
+    user_message: str,
+    knowledge_context: str,
+    document_context: str,
+) -> str:
+    best_fact = _extract_best_retrieval_fact(knowledge_context, document_context)
+    if best_fact:
+        return (
+            f"根据当前检索到的知识，{best_fact}\n\n"
+            "当前生成模型暂时繁忙，所以我先直接返回了检索结果里的关键信息。"
+        )
+
+    snippets: list[str] = []
+
+    for raw_context in (knowledge_context, document_context):
+        if not raw_context:
+            continue
+        for line in raw_context.splitlines():
+            cleaned = line.strip()
+            if not cleaned:
+                continue
+            if cleaned.startswith("Relevant Knowledge Base") or cleaned.startswith("Relevant Documents"):
+                continue
+            snippets.append(cleaned)
+            if len(snippets) >= 4:
+                break
+        if len(snippets) >= 4:
+            break
+
+    if snippets:
+        joined = "\n".join(snippets)
+        return (
+            "我先根据已检索到的知识结果直接回答你：\n"
+            f"{joined}\n\n"
+            "当前生成模型暂时繁忙，所以我优先返回了检索到的可靠内容。"
+        )
+
+    return (
+        f"我已经收到你的问题“{user_message}”，但当前生成模型暂时繁忙。"
+        "请稍后再试，或让我先基于已有知识检索结果继续整理。"
+    )
+
+
+def _extract_community_prompt_context(user_message: str) -> dict[str, str]:
+    text = str(user_message or "")
+    if not text:
+        return {}
+
+    private_match = re.search(r"你是Sparkle内置的私聊AI助手，正在协助我与「(?P<name>[^」]+)」的对话。", text)
+    if private_match:
+        question_match = re.search(r"用户问题:\s*(?P<question>.+)$", text, re.S)
+        return {
+            "context_type": "community_private",
+            "name": private_match.group("name").strip(),
+            "question": (question_match.group("question").strip() if question_match else ""),
+        }
+
+    group_match = re.search(r"你是Sparkle内置的群聊AI助手，正在协助群聊「(?P<name>[^」]+)」。", text)
+    if group_match:
+        question_match = re.search(r"用户问题:\s*(?P<question>.+)$", text, re.S)
+        return {
+            "context_type": "community_group",
+            "name": group_match.group("name").strip(),
+            "question": (question_match.group("question").strip() if question_match else ""),
+        }
+
+    return {}
+
+
+def _build_community_prompt_fallback_response(user_message: str) -> str:
+    prompt_context = _extract_community_prompt_context(user_message)
+    context_type = prompt_context.get("context_type")
+    name = prompt_context.get("name", "").strip()
+    question = prompt_context.get("question", "").strip()
+    if not context_type or not question:
+        return ""
+
+    normalized_question = re.sub(r"\s+", " ", question).strip()
+    normalized_question = normalized_question.rstrip("。！？!?")
+
+    if context_type == "community_private":
+        direct_message = normalized_question
+        question_parts = re.split(r"[，,]", normalized_question, maxsplit=1)
+        if len(question_parts) == 2 and any(
+            marker in question_parts[0] for marker in ("写一条", "回复", "消息", "文案", "建议")
+        ):
+            direct_message = question_parts[1].strip()
+        else:
+            direct_message = re.sub(
+                r"^帮我给[^，,。]*写一条.*?(?:回复|消息|文案|建议)?",
+                "",
+                normalized_question,
+            ).strip()
+        if not direct_message:
+            direct_message = normalized_question
+        if direct_message.startswith("约"):
+            direct_message = direct_message[1:].strip()
+        direct_message = direct_message.rstrip("。！？!?")
+        if not direct_message:
+            direct_message = "这件事我们再对一下"
+        prefix = f"{name}，" if name else ""
+        return f"{prefix}{direct_message}，你方便吗？"
+
+    if context_type == "community_group":
+        direct_message = re.sub(
+            r"^帮我(?:在群里)?(?:发|写|说)(?:一条)?(?:简短|自然|清晰)?(?:、|，|,)?(?:消息|提醒|回复)?(?:，|,)?",
+            "",
+            normalized_question,
+        ).strip()
+        if not direct_message:
+            direct_message = normalized_question
+        direct_message = direct_message.rstrip("。！？!?")
+        if not direct_message:
+            direct_message = "这件事大家同步一下"
+        return f"大家好，{direct_message}。"
+
+    return ""
+
+
+def _extract_best_retrieval_fact(*contexts: str) -> str:
+    for raw_context in contexts:
+        if not raw_context:
+            continue
+        for line in raw_context.splitlines():
+            cleaned = line.strip()
+            if not cleaned:
+                continue
+            if cleaned.startswith("Relevant Knowledge Base") or cleaned.startswith("Relevant Documents"):
+                continue
+            if cleaned.startswith("- [") and "]: " in cleaned:
+                return cleaned.split("]: ", 1)[1].strip()
+            if cleaned.startswith("- "):
+                return cleaned[2:].strip()
+    return ""
+
+
+def _is_low_information_generation_response(text: str) -> bool:
+    normalized = re.sub(r"\s+", "", str(text or "")).lower()
+    if not normalized:
+        return False
+
+    weak_starters = (
+        "我来帮你查询",
+        "我来帮你查找",
+        "我来帮你看看",
+        "我来帮你给",
+        "我来帮你写",
+        "我来帮你草拟",
+        "我来帮你整理",
+        "让我帮你查询",
+        "让我帮你查找",
+        "我帮你查询",
+        "我先帮你查询",
+    )
+    return any(starter in normalized for starter in weak_starters)
+
+
+def _resolve_recent_memory_answer(conversation_context: dict[str, Any] | None, user_message: str) -> str | None:
+    normalized_question = str(user_message or "").strip()
+    if not normalized_question:
+        return None
+
+    question_match = re.search(r"(?:我刚才说的)?我的(?P<key>[\w\u4e00-\u9fa5]{1,12})是什么", normalized_question)
+    if not question_match:
+        return None
+
+    memory_key = question_match.group("key").strip()
+    messages = (conversation_context or {}).get("messages", []) if isinstance(conversation_context, dict) else []
+
+    for message in reversed(messages):
+        if not isinstance(message, dict) or message.get("role") != "user":
+            continue
+        content = str(message.get("content") or "").strip()
+        if not content or content == normalized_question or "？" in content or "?" in content:
+            continue
+        fact_match = re.search(
+            r"(?:记住)?我的(?P<key>[\w\u4e00-\u9fa5]{1,12})是(?P<value>[^，。！？\n]+)",
+            content,
+        )
+        if not fact_match:
+            continue
+        if fact_match.group("key").strip() != memory_key:
+            continue
+        value = fact_match.group("value").strip().strip("“”\"'")
+        if value in {"什么", "多少", "谁", "哪", "哪里", "几点", "几号", "怎么"}:
+            continue
+        return value
+
+    return None
+
 async def context_builder_node(state: WorkflowState) -> WorkflowState:
     """Build user and conversation context."""
     logger.info("Building context...")
@@ -259,6 +451,22 @@ Ask about their available time and current tasks if needed.
 
     user_message = state.messages[-1]["content"] or ""
     tools = state.context_data.get("tools_schema", [])
+    memory_answer = _resolve_recent_memory_answer(conversation_context, user_message)
+
+    if memory_answer:
+        if stream_callback:
+            await stream_callback(agent_service_pb2.ChatResponse(
+                delta=memory_answer,
+                status_update=agent_service_pb2.AgentStatus(
+                    state=agent_service_pb2.AgentStatus.GENERATING,
+                    details="正在根据最近对话补全答案...",
+                    current_agent_name="Sparkle AI"
+                )
+            ))
+        state.context_data["generation_shortcut"] = "recent_memory"
+        state.append_message("assistant", memory_answer)
+        state.next_step = "__end__"
+        return state
 
     # 检查是否使用思考模式，如果是则发送状态更新
     # 这会让前端显示"思考中"提示
@@ -285,49 +493,83 @@ Ask about their available time and current tasks if needed.
     if selection is not None:
         state.context_data["active_generation_model"] = selection.config.model_name
 
-    async for chunk in generation_llm.chat_stream_with_tools(
-        system_prompt=system_prompt,
-        user_message=user_message,
-        tools=tools,
-        user_context=user_context,
-    ):
-        if chunk.type == "text":
-            full_response += chunk.content
-            if stream_callback:
-                # Send GENERATING status with first chunk to transition from THINKING
-                if not first_chunk_sent:
-                    first_chunk_sent = True
+    try:
+        async for chunk in generation_llm.chat_stream_with_tools(
+            system_prompt=system_prompt,
+            user_message=user_message,
+            tools=tools,
+            user_context=user_context,
+        ):
+            if chunk.type == "text":
+                full_response += chunk.content
+                if stream_callback:
+                    # Send GENERATING status with first chunk to transition from THINKING
+                    if not first_chunk_sent:
+                        first_chunk_sent = True
+                        await stream_callback(agent_service_pb2.ChatResponse(
+                            delta=chunk.content,
+                            status_update=agent_service_pb2.AgentStatus(
+                                state=agent_service_pb2.AgentStatus.GENERATING,
+                                details="正在生成回复...",
+                                current_agent_name="Sparkle AI"
+                            )
+                        ))
+                    else:
+                        await stream_callback(agent_service_pb2.ChatResponse(
+                            delta=chunk.content
+                        ))
+            elif chunk.type == "tool_call_end":
+                tool_calls.append(chunk)
+                if stream_callback:
                     await stream_callback(agent_service_pb2.ChatResponse(
-                        delta=chunk.content,
-                        status_update=agent_service_pb2.AgentStatus(
-                            state=agent_service_pb2.AgentStatus.GENERATING,
-                            details="正在生成回复...",
-                            current_agent_name="Sparkle AI"
+                        tool_call=agent_service_pb2.ToolCall(
+                            id=chunk.tool_call_id,
+                            name=chunk.tool_name,
+                            arguments=json.dumps(chunk.full_arguments)
                         )
                     ))
-                else:
+            elif chunk.type == "usage":
+                if stream_callback:
                     await stream_callback(agent_service_pb2.ChatResponse(
-                        delta=chunk.content
+                        usage=agent_service_pb2.Usage(
+                            prompt_tokens=chunk.prompt_tokens or 0,
+                            completion_tokens=chunk.completion_tokens or 0,
+                            total_tokens=(chunk.prompt_tokens or 0) + (chunk.completion_tokens or 0)
+                        )
                     ))
-        elif chunk.type == "tool_call_end":
-            tool_calls.append(chunk)
-            if stream_callback:
+    except Exception as e:
+        logger.warning(f"Generation streaming failed, using retrieval fallback: {e}")
+        state.context_data["generation_fallback_reason"] = str(e)
+
+    retrieval_grounded_response = _build_generation_fallback_response(
+        user_message=user_message,
+        knowledge_context=knowledge_context,
+        document_context=document_context,
+    )
+    if full_response and not tool_calls and _is_low_information_generation_response(full_response):
+        community_fallback = _build_community_prompt_fallback_response(user_message)
+        if community_fallback:
+            logger.info("Replacing low-information generation response with community prompt fallback")
+            full_response = community_fallback
+        else:
+            logger.info("Replacing low-information generation response with retrieval-grounded answer")
+            full_response = retrieval_grounded_response
+
+    if not full_response:
+        fallback_response = retrieval_grounded_response
+        full_response = fallback_response
+        if stream_callback:
+            if not first_chunk_sent:
                 await stream_callback(agent_service_pb2.ChatResponse(
-                    tool_call=agent_service_pb2.ToolCall(
-                        id=chunk.tool_call_id,
-                        name=chunk.tool_name,
-                        arguments=json.dumps(chunk.full_arguments)
+                    delta=fallback_response,
+                    status_update=agent_service_pb2.AgentStatus(
+                        state=agent_service_pb2.AgentStatus.GENERATING,
+                        details="正在返回检索结果（生成模型暂时繁忙）...",
+                        current_agent_name="Sparkle AI"
                     )
                 ))
-        elif chunk.type == "usage":
-            if stream_callback:
-                await stream_callback(agent_service_pb2.ChatResponse(
-                    usage=agent_service_pb2.Usage(
-                        prompt_tokens=chunk.prompt_tokens or 0,
-                        completion_tokens=chunk.completion_tokens or 0,
-                        total_tokens=(chunk.prompt_tokens or 0) + (chunk.completion_tokens or 0)
-                    )
-                ))
+            else:
+                await stream_callback(agent_service_pb2.ChatResponse(delta=fallback_response))
 
     state.append_message("assistant", full_response)
     if tool_calls:
@@ -674,10 +916,17 @@ def detect_exam_urgency(text: str) -> int | None:
 
 def _classify_user_intent(message: str) -> str | None:
     """Classify user intent from message for multi-step tool planning."""
+    if _extract_community_prompt_context(message):
+        return None
+
     message_lower = message.lower()
 
     exam_keywords = ["考试", "考研", "期末", "测验", "模拟考", "quiz", "midterm", "final", "exam", "test"]
-    if any(keyword in message_lower for keyword in exam_keywords):
+    exam_planning_keywords = ["准备", "备考", "复习", "冲刺", "计划", "安排", "倒计时", "最后", "提分"]
+    if any(keyword in message_lower for keyword in exam_keywords) and (
+        any(keyword in message_lower for keyword in exam_planning_keywords)
+        or detect_exam_urgency(message) is not None
+    ):
         return "exam_preparation"
 
     # Intent patterns mapping

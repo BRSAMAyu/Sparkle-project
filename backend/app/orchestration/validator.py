@@ -48,18 +48,23 @@ class RequestValidator:
         re.compile(r'onerror=', re.IGNORECASE),
     ]
 
-    def __init__(self, redis_client=None, daily_quota: int = 100000):
+    def __init__(self, redis_client=None, daily_quota: int = 100000, enable_quota_check: bool = True):
         """
         初始化 RequestValidator
 
         Args:
             redis_client: Redis 客户端（用于配额检查）
             daily_quota: 每日 Token 配额限制
+            enable_quota_check: 是否启用配额校验
         """
         self.redis = redis_client
         self.daily_quota = daily_quota
-        self.token_tracker = TokenTracker(redis_client) if redis_client else None
-        logger.info(f"RequestValidator initialized with daily_quota={daily_quota}")
+        self.enable_quota_check = enable_quota_check
+        self.token_tracker = TokenTracker(redis_client) if redis_client and enable_quota_check else None
+        logger.info(
+            f"RequestValidator initialized with daily_quota={daily_quota}, "
+            f"enable_quota_check={enable_quota_check}"
+        )
 
     async def validate_chat_request(self, request: agent_service_pb2.ChatRequest) -> ValidationResult:
         """
