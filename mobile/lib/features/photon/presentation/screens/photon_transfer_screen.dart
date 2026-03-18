@@ -58,7 +58,7 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
                   padding: const EdgeInsets.all(DS.md),
                   decoration: BoxDecoration(
                     color: DS.warningLight,
-                    borderRadius: BorderRadius.circular(DS.radiusMd),
+                    borderRadius: BorderRadius.circular(DS.borderRadiusMD),
                     border: Border.all(color: DS.warning.withValues(alpha: 0.3)),
                   ),
                   child: Row(

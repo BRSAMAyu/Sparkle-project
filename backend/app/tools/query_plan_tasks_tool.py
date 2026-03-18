@@ -11,7 +11,7 @@ from loguru import logger
 from sqlalchemy import select
 
 from app.models.task import Task
-from app.tools.base import BaseTool, ToolContext
+from app.tools.base import BaseTool, ToolCategory, ToolContext
 
 
 class QueryPlanTasksTool(BaseTool):
@@ -26,6 +26,7 @@ class QueryPlanTasksTool(BaseTool):
     """
 
     name = "query_plan_tasks"
+    category = ToolCategory.QUERY
     description = """
 查询特定学习计划的任务卡。
 
