@@ -17,6 +17,19 @@ import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+/// Decode a value that may be a Map or a JSON-encoded string into a Map.
+/// Backend sometimes sends review_data as a JSON string.
+Map<String, dynamic>? _decodeMapOrString(dynamic value) {
+  if (value is Map<String, dynamic>) return value;
+  if (value is String && value.isNotEmpty) {
+    try {
+      final decoded = json.decode(value);
+      if (decoded is Map<String, dynamic>) return decoded;
+    } catch (_) {}
+  }
+  return null;
+}
+
 bool _isTrue(dynamic value) {
   if (value is bool) {
     return value;
@@ -206,7 +219,7 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
 
         // Phase 2b: Check if this delta contains content review data
         if (metadata != null && _isTrue(metadata['has_review_result'])) {
-          final reviewData = metadata['review_data'] as Map<String, dynamic>?;
+          final reviewData = _decodeMapOrString(metadata['review_data']);
           return ContentReviewWidgetEvent(
             reviewData: reviewData ?? metadata,
             responseId: responseId,
@@ -258,7 +271,7 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
 
         // Check if this delta contains plan review data
         if (metadata != null && _isTrue(metadata['requires_review'])) {
-          final reviewData = metadata['review_data'] as Map<String, dynamic>?;
+          final reviewData = _decodeMapOrString(metadata['review_data']);
           return PlanReviewWidgetEvent(
             reviewData: reviewData ?? metadata,
             responseId: responseId,
@@ -629,7 +642,7 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
         );
 
       case 'plan_review_widget':
-        final reviewData = data['review_data'] as Map<String, dynamic>?;
+        final reviewData = _decodeMapOrString(data['review_data']);
         if (reviewData != null) {
           return PlanReviewWidgetEvent(
             reviewData: reviewData,

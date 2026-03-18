@@ -319,8 +319,8 @@ async def start_task(
 
 @router.post("/{task_id}/abandon", response_model=dict[str, Any])
 async def abandon_task(
-    request: TaskAbandon,
     task_id: UUID = Path(..., description="Task ID"),
+    request: TaskAbandon | None = None,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -331,11 +331,12 @@ async def abandon_task(
     - 状态同步
     - 发布 task.abandoned 事件 (用于认知分析)
     """
+    reason = request.reason if request else None
     task = await TaskService.abandon_task(
         db=db,
         task_id=task_id,
         user_id=current_user.id,
-        reason=request.reason
+        reason=reason
     )
 
     try:
@@ -348,7 +349,7 @@ async def abandon_task(
         await reflection_service.create_abandon_feedback_and_prompt(
             user_id=current_user.id,
             task=task,
-            reason=request.reason,
+            reason=reason,
             time_spent_minutes=time_spent,
         )
         await db.commit()

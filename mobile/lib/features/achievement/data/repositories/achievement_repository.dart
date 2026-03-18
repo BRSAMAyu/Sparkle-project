@@ -242,14 +242,11 @@ class AchievementRepository {
         },
       );
 
+      // Backend returns {"success": true, "data": {...}}
+      // unwrapMap extracts the "data" dict directly, so parse it directly
       final payload =
           ApiResponseParser.unwrapMap(response.data, action: 'createContract');
-      final contractData = payload['data'] as Map<String, dynamic>?;
-      if (contractData == null) {
-        throw Exception('createContract: data is null');
-      }
-
-      return SparkContract.fromJson(contractData);
+      return SparkContract.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'createContract');
     }
@@ -327,15 +324,11 @@ class AchievementRepository {
           ApiResponseParser.unwrapMap(response.data, action: 'getTitles');
       final dataList = payload['data'] as List<dynamic>?;
 
-      return dataList?.map(
-            (json) {
-              final item = Map<String, dynamic>.from(
-                json as Map<String, dynamic>,
-              );
-              item.putIfAbsent('user_id', () => '');
-              return UserTitle.fromJson(item);
-            },
-          ).toList() ??
+      return dataList
+              ?.map(
+                (json) => UserTitle.fromJson(json as Map<String, dynamic>),
+              )
+              .toList() ??
           [];
     } on DioException catch (e) {
       return _handleDioError(e, 'getTitles');

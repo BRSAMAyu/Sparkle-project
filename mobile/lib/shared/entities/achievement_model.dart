@@ -427,7 +427,9 @@ class SparkContract {
   final int currentMinutes;
   @JsonKey(name: 'reward_multiplier')
   final double rewardMultiplier;
+  @JsonKey(name: 'completed_at')
   final DateTime? completedAt;
+  @JsonKey(name: 'failed_at')
   final DateTime? failedAt;
   @JsonKey(name: 'failure_reason')
   final String? failureReason;

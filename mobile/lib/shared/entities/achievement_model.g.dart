@@ -236,12 +236,12 @@ SparkContract _$SparkContractFromJson(Map<String, dynamic> json) =>
       currentDays: (json['current_days'] as num).toInt(),
       currentMinutes: (json['current_minutes'] as num).toInt(),
       rewardMultiplier: (json['reward_multiplier'] as num).toDouble(),
-      completedAt: json['completedAt'] == null
+      completedAt: json['completed_at'] == null
           ? null
-          : DateTime.parse(json['completedAt'] as String),
-      failedAt: json['failedAt'] == null
+          : DateTime.parse(json['completed_at'] as String),
+      failedAt: json['failed_at'] == null
           ? null
-          : DateTime.parse(json['failedAt'] as String),
+          : DateTime.parse(json['failed_at'] as String),
       failureReason: json['failure_reason'] as String?,
     );
 
@@ -257,8 +257,8 @@ Map<String, dynamic> _$SparkContractToJson(SparkContract instance) =>
       'current_days': instance.currentDays,
       'current_minutes': instance.currentMinutes,
       'reward_multiplier': instance.rewardMultiplier,
-      'completedAt': instance.completedAt?.toIso8601String(),
-      'failedAt': instance.failedAt?.toIso8601String(),
+      'completed_at': instance.completedAt?.toIso8601String(),
+      'failed_at': instance.failedAt?.toIso8601String(),
       'failure_reason': instance.failureReason,
     };
 
