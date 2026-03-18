@@ -922,6 +922,10 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
   DateTime? _lastPongReceivedTime;
   DateTime? _lastPingSentTime;
 
+  // 流式消息活跃标记 — 活跃时抑制心跳超时触发的重连
+  bool _isStreamActive = false;
+  DateTime? _lastStreamDataTime;
+
   // 心跳指标
   final _heartbeatMetricsController = StreamController<HeartbeatMetrics>.broadcast();
   Stream<HeartbeatMetrics> get heartbeatMetrics => _heartbeatMetricsController.stream;
@@ -1268,6 +1272,12 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       // Parse event in isolate to avoid blocking main thread
       final event = await compute(_parseChatEvent, data);
 
+      // 🔧 P0修复：标记流活跃状态，抑制心跳超时触发的假性重连
+      _lastStreamDataTime = DateTime.now();
+      if (event is! DoneEvent) {
+        _isStreamActive = true;
+      }
+
       if (_messageStreamController != null) {
         _safeAdd(_messageStreamController!, event);
 
@@ -1291,11 +1301,17 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
                 promptVersion: jsonData['prompt_version'] as String?,
               ),
             );
+            _isStreamActive = false;
           }
         } catch (e) {
           // 忽略解析错误，因为这是额外的检查
           _log('⚠️ Failed to check finish_reason: $e');
         }
+      }
+
+      // DoneEvent 到达时清除流活跃标记
+      if (event is DoneEvent) {
+        _isStreamActive = false;
       }
     } catch (e) {
       _log('❌ Parse error: $e');
@@ -1649,6 +1665,16 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     _log('❌ Heartbeat failure #$_consecutiveHeartbeatFailures/$_maxConsecutiveHeartbeatFailures');
 
     if (_consecutiveHeartbeatFailures >= _maxConsecutiveHeartbeatFailures) {
+      // 🔧 P0修复：流式消息活跃期间，如果最近收到过数据则跳过重连
+      // 避免心跳pong丢失导致正在接收的AI回复被中断
+      if (_isStreamActive && _lastStreamDataTime != null) {
+        final sinceLastData = DateTime.now().difference(_lastStreamDataTime!);
+        if (sinceLastData.inSeconds < 120) {
+          _log('💡 Suppressing heartbeat reconnect: stream active, last data ${sinceLastData.inSeconds}s ago');
+          _consecutiveHeartbeatFailures = 0; // Reset to avoid immediate re-trigger
+          return;
+        }
+      }
       _log('🔌 Too many heartbeat failures, triggering reconnect');
       _handleConnectionClosed();
     }

@@ -46,6 +46,7 @@ from app.models import (
     ChatMessage,
     ChatSession,
 )
+from app.models.galaxy import NodeRelation
 
 
 async def _ensure_achievements(session: AsyncSession):
@@ -230,83 +231,200 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
             )
         )
 
-    # Knowledge Nodes (Galaxy) - Create demo knowledge graph
-    # First, ensure global knowledge nodes exist
-    demo_nodes = [
-        {
-            "name": "CS101 课程说明",
-            "description": "CS101 课程是计算机科学入门。期末考试占比 40%，期中考试 20%，平时作业 40%。任课老师是张教授。",
-            "importance_level": 5,
-            "sector_code": "VOID",
-            "is_seed": True,
-            "tags": ["CS101", "考试", "占比", "seed", "core"],
-        },
-        {
-            "name": "系统错误码 0x8004",
-            "description": "错误码 0x8004 代表 'DB_CONNECTION_TIMEOUT'。这通常发生在数据库负载过高或 Redis 响应慢时。",
-            "importance_level": 5,
-            "sector_code": "VOID",
-            "is_seed": True,
-            "tags": ["0x8004", "错误码", "超时", "seed", "core"],
-        },
-        {
-            "name": "Sparkle RAG v2.0",
-            "description": "Sparkle 学习助手采用 RAG v2.0 架构，支持混合检索和本地重排序。混合检索结合了向量搜索和 BM25 关键词匹配。",
-            "importance_level": 5,
-            "sector_code": "VOID",
-            "is_seed": True,
-            "tags": ["RAG", "混合检索", "BM25", "seed", "core"],
-        },
+    # Knowledge Nodes (Galaxy) - Create a rich demo knowledge graph
+    # Mirrors the 6-sector structure from DemoDataService (COSMOS/TECH/ART/CIVILIZATION/LIFE/WISDOM)
+    import math
+
+    # Define nodes: (name, description, importance, keywords, sector_label, unlocked, mastery, study_count)
+    _DEMO_NODES = [
+        # === COSMOS 星域 - 自然科学基础 ===
+        ("高等数学", "微积分、极限、导数、积分等基础数学知识", 5, ["数学", "基础"], "COSMOS", True, 85, 12),
+        ("线性代数", "矩阵、向量空间、线性变换", 4, ["数学", "线性代数"], "COSMOS", True, 70, 8),
+        ("概率论与数理统计", "概率、随机变量、统计推断", 4, ["数学", "统计"], "COSMOS", True, 60, 6),
+        ("离散数学", "集合论、图论、组合数学、数理逻辑", 4, ["数学", "离散"], "COSMOS", True, 55, 5),
+        ("大学物理", "力学、电磁学、热学、光学基础", 4, ["物理", "基础"], "COSMOS", True, 65, 7),
+        ("经典力学", "牛顿力学、动量、能量", 3, ["物理", "力学"], "COSMOS", True, 70, 5),
+        ("电磁学基础", "电场、磁场、电磁感应", 3, ["物理", "电磁"], "COSMOS", True, 50, 4),
+        ("普通化学", "化学反应、元素周期表、化学键", 3, ["化学", "基础"], "COSMOS", True, 45, 3),
+        ("有机化学", "有机物结构、反应机理", 2, ["化学", "有机"], "COSMOS", False, 0, 0),
+        # === TECH 星域 - 科技与工程 ===
+        ("程序设计基础", "变量、控制流、函数、基本算法", 5, ["编程", "基础"], "TECH", True, 90, 15),
+        ("Python编程", "Python语法、数据结构、面向对象", 4, ["Python", "编程"], "TECH", True, 80, 10),
+        ("C/C++编程", "C语言基础、指针、C++面向对象", 4, ["C++", "编程"], "TECH", True, 75, 9),
+        ("Java编程", "Java语法、OOP、集合框架", 4, ["Java", "编程"], "TECH", True, 70, 8),
+        ("数据结构", "线性表、栈、队列、树、图", 5, ["数据结构", "算法"], "TECH", True, 85, 12),
+        ("算法设计与分析", "排序、搜索、动态规划、贪心算法", 5, ["算法", "优化"], "TECH", True, 70, 8),
+        ("计算机组成原理", "CPU、内存、I/O系统", 4, ["计算机系统", "硬件"], "TECH", True, 65, 7),
+        ("操作系统", "进程、内存管理、文件系统", 5, ["操作系统", "OS"], "TECH", True, 60, 6),
+        ("计算机网络", "TCP/IP、HTTP、网络协议", 4, ["网络", "协议"], "TECH", True, 55, 5),
+        ("数据库系统", "SQL、关系模型、事务处理", 4, ["数据库", "SQL"], "TECH", True, 70, 8),
+        ("Web前端开发", "HTML、CSS、JavaScript基础", 3, ["Web", "前端"], "TECH", True, 60, 6),
+        ("Web后端开发", "RESTful API、服务器开发", 3, ["Web", "后端"], "TECH", True, 50, 4),
+        ("人工智能基础", "机器学习、神经网络入门", 4, ["AI", "机器学习"], "TECH", True, 40, 3),
+        ("机器学习", "监督学习、非监督学习、模型评估", 4, ["机器学习", "ML"], "TECH", False, 0, 0),
+        # === ART 星域 - 艺术与人文 ===
+        ("中国文学", "古代文学、现代文学、诗词赏析", 4, ["文学", "中国"], "ART", True, 75, 9),
+        ("外国文学", "西方文学、世界文学经典", 3, ["文学", "外国"], "ART", True, 60, 6),
+        ("写作技巧", "议论文、说明文、创意写作", 3, ["写作", "技巧"], "ART", True, 65, 7),
+        ("美术基础", "素描、色彩、构图", 2, ["美术", "绘画"], "ART", True, 45, 4),
+        ("音乐欣赏", "音乐史、乐理、作品欣赏", 2, ["音乐", "欣赏"], "ART", True, 50, 5),
+        ("设计思维", "UI/UX设计、平面设计原理", 3, ["设计", "UI"], "ART", True, 55, 5),
+        ("摄影基础", "构图、光影、后期处理", 2, ["摄影", "艺术"], "ART", True, 60, 6),
+        ("影视制作", "视频拍摄、剪辑、叙事技巧", 2, ["影视", "制作"], "ART", False, 0, 0),
+        # === CIVILIZATION 星域 - 社会与文明 ===
+        ("中国近现代史", "辛亥革命、新中国成立、改革开放", 4, ["历史", "中国"], "CIVILIZATION", True, 80, 10),
+        ("世界历史", "文艺复兴、工业革命、两次世界大战", 4, ["历史", "世界"], "CIVILIZATION", True, 70, 8),
+        ("马克思主义基本原理", "唯物辩证法、政治经济学", 4, ["政治", "马克思主义"], "CIVILIZATION", True, 75, 9),
+        ("经济学原理", "微观经济、宏观经济、市场机制", 4, ["经济", "市场"], "CIVILIZATION", True, 60, 6),
+        ("管理学基础", "组织管理、领导力、战略规划", 3, ["管理", "组织"], "CIVILIZATION", True, 55, 5),
+        ("法律基础", "宪法、民法、刑法基础知识", 3, ["法律", "权利"], "CIVILIZATION", True, 50, 4),
+        ("社会学导论", "社会结构、群体行为、社会问题", 3, ["社会", "群体"], "CIVILIZATION", True, 45, 3),
+        # === LIFE 星域 - 生命科学 ===
+        ("普通生物学", "细胞、遗传、进化、生态", 4, ["生物", "基础"], "LIFE", True, 70, 8),
+        ("人体生理学", "循环系统、消化系统、神经系统", 3, ["生理", "人体"], "LIFE", True, 60, 6),
+        ("基因与遗传", "DNA、基因表达、遗传规律", 3, ["遗传", "基因"], "LIFE", True, 55, 5),
+        ("健康与养生", "营养、运动、睡眠、疾病预防", 3, ["健康", "养生"], "LIFE", True, 75, 9),
+        ("急救与安全", "CPR、止血、常见急症处理", 3, ["急救", "安全"], "LIFE", True, 65, 7),
+        ("心理学导论", "认知、情绪、人格、行为", 4, ["心理", "认知"], "LIFE", True, 70, 8),
+        ("发展心理学", "儿童、青少年、成人心理发展", 3, ["心理", "发展"], "LIFE", True, 50, 4),
+        ("社会心理学", "态度、说服、群体影响", 3, ["心理", "社会"], "LIFE", True, 45, 3),
+        # === WISDOM 星域 - 智慧与思考 ===
+        ("哲学导论", "形而上学、认识论、伦理学", 4, ["哲学", "思考"], "WISDOM", True, 65, 7),
+        ("中国哲学", "儒家、道家、佛家思想", 3, ["哲学", "中国"], "WISDOM", True, 60, 6),
+        ("西方哲学", "古希腊哲学、近代哲学、现代哲学", 3, ["哲学", "西方"], "WISDOM", True, 55, 5),
+        ("批判性思维", "逻辑推理、论证分析、谬误识别", 5, ["思维", "逻辑"], "WISDOM", True, 70, 8),
+        ("创新思维", "发散思维、联想、头脑风暴", 4, ["思维", "创新"], "WISDOM", True, 60, 6),
+        ("系统思维", "整体观、反馈循环、涌现特性", 4, ["思维", "系统"], "WISDOM", True, 50, 4),
+        ("学习科学", "记忆原理、遗忘曲线、刻意练习", 5, ["学习", "方法"], "WISDOM", True, 80, 10),
+        ("时间管理", "四象限法则、番茄钟、GTD", 4, ["效率", "时间"], "WISDOM", True, 75, 9),
     ]
 
-    for idx, node_data in enumerate(demo_nodes):
-        node_exists = await session.execute(
-            select(KnowledgeNode).where(KnowledgeNode.name == node_data["name"])
+    # Sector layout: each sector occupies a 60° arc, nodes spread within it
+    _SECTOR_ANGLES = {
+        "COSMOS": 0, "TECH": 60, "ART": 120,
+        "CIVILIZATION": 180, "LIFE": 240, "WISDOM": 300,
+    }
+    _sector_counters: dict[str, int] = {}
+
+    created_nodes: dict[str, KnowledgeNode] = {}  # name -> node (for relations)
+
+    for node_tuple in _DEMO_NODES:
+        name, desc, importance, keywords, sector, unlocked, mastery, study_count = node_tuple
+
+        existing = (await session.execute(
+            select(KnowledgeNode).where(KnowledgeNode.name == name)
+        )).scalar_one_or_none()
+        if existing:
+            created_nodes[name] = existing
+            continue
+
+        # Calculate position within sector
+        sector_idx = _sector_counters.get(sector, 0)
+        _sector_counters[sector] = sector_idx + 1
+        base_angle_deg = _SECTOR_ANGLES[sector]
+        # Spread nodes within 50° range, offset from sector center
+        angle_deg = base_angle_deg + 5 + (sector_idx * 5) % 50
+        angle_rad = math.radians(angle_deg)
+        # Vary radius by importance (more important = closer to center)
+        radius = 150.0 + (5 - importance) * 40 + (sector_idx % 3) * 20
+
+        node = KnowledgeNode(
+            name=name,
+            description=desc,
+            importance_level=importance,
+            is_seed=True,
+            source_type="seed",
+            keywords=keywords,
+            position_x=radius * math.cos(angle_rad),
+            position_y=radius * math.sin(angle_rad),
         )
-        if not node_exists.scalar_one_or_none():
-            import math
-            angle = (idx / len(demo_nodes)) * 2 * math.pi
-            radius = 250.0
-            node = KnowledgeNode(
-                name=node_data["name"],
-                description=node_data["description"],
-                importance_level=node_data["importance_level"],
-                sector_code=node_data["sector_code"],
-                is_seed=node_data["is_seed"],
-                tags=node_data["tags"],
-                position_angle=angle,
-                position_radius=radius,
-                position_x=radius * math.cos(angle),
-                position_y=radius * math.sin(angle),
+        session.add(node)
+        await session.flush()
+        created_nodes[name] = node
+
+    # Create relations between nodes (prerequisite/related edges)
+    _RELATIONS = [
+        ("高等数学", "线性代数", "prerequisite", 0.9),
+        ("高等数学", "概率论与数理统计", "prerequisite", 0.8),
+        ("高等数学", "离散数学", "related", 0.6),
+        ("大学物理", "经典力学", "prerequisite", 0.9),
+        ("大学物理", "电磁学基础", "prerequisite", 0.8),
+        ("普通化学", "有机化学", "prerequisite", 0.7),
+        ("程序设计基础", "Python编程", "prerequisite", 0.9),
+        ("程序设计基础", "C/C++编程", "prerequisite", 0.9),
+        ("程序设计基础", "Java编程", "prerequisite", 0.8),
+        ("程序设计基础", "数据结构", "prerequisite", 0.9),
+        ("数据结构", "算法设计与分析", "prerequisite", 0.9),
+        ("计算机组成原理", "操作系统", "prerequisite", 0.8),
+        ("操作系统", "计算机网络", "related", 0.6),
+        ("数据库系统", "Web后端开发", "prerequisite", 0.7),
+        ("Web前端开发", "设计思维", "related", 0.5),
+        ("人工智能基础", "机器学习", "prerequisite", 0.9),
+        ("概率论与数理统计", "机器学习", "prerequisite", 0.8),
+        ("线性代数", "人工智能基础", "prerequisite", 0.7),
+        ("心理学导论", "发展心理学", "prerequisite", 0.8),
+        ("心理学导论", "社会心理学", "prerequisite", 0.8),
+        ("普通生物学", "人体生理学", "prerequisite", 0.8),
+        ("普通生物学", "基因与遗传", "prerequisite", 0.7),
+        ("哲学导论", "中国哲学", "prerequisite", 0.7),
+        ("哲学导论", "西方哲学", "prerequisite", 0.7),
+        ("批判性思维", "学习科学", "related", 0.6),
+        ("学习科学", "时间管理", "related", 0.7),
+        # Cross-sector relations
+        ("离散数学", "数据结构", "prerequisite", 0.8),
+        ("离散数学", "算法设计与分析", "prerequisite", 0.7),
+        ("心理学导论", "学习科学", "related", 0.7),
+        ("批判性思维", "写作技巧", "application", 0.5),
+        ("经济学原理", "管理学基础", "related", 0.6),
+    ]
+
+    for src_name, tgt_name, rel_type, strength in _RELATIONS:
+        src = created_nodes.get(src_name)
+        tgt = created_nodes.get(tgt_name)
+        if not src or not tgt:
+            continue
+        rel_exists = (await session.execute(
+            select(NodeRelation).where(
+                NodeRelation.source_node_id == src.id,
+                NodeRelation.target_node_id == tgt.id,
             )
-            session.add(node)
+        )).scalar_one_or_none()
+        if not rel_exists:
+            session.add(NodeRelation(
+                source_node_id=src.id,
+                target_node_id=tgt.id,
+                relation_type=rel_type,
+                strength=strength,
+                created_by="seed",
+            ))
 
     await session.flush()
 
-    # Unlock first node for user
-    first_node = (await session.execute(
-        select(KnowledgeNode).where(KnowledgeNode.name == "CS101 课程说明")
-    )).scalar_one_or_none()
-
-    if first_node:
-        status_exists = await session.execute(
+    # Create UserNodeStatus for unlocked nodes
+    for node_tuple in _DEMO_NODES:
+        name, _, _, _, _, unlocked, mastery, study_count = node_tuple
+        if not unlocked:
+            continue
+        node = created_nodes.get(name)
+        if not node:
+            continue
+        status_exists = (await session.execute(
             select(UserNodeStatus).where(
                 UserNodeStatus.user_id == user.id,
-                UserNodeStatus.node_id == first_node.id,
+                UserNodeStatus.node_id == node.id,
             )
-        )
-        if not status_exists.scalar_one_or_none():
-            session.add(
-                UserNodeStatus(
-                    user_id=user.id,
-                    node_id=first_node.id,
-                    is_unlocked=True,
-                    mastery_score=0.3,
-                    total_study_minutes=45,
-                    first_unlock_at=now - timedelta(days=2),
-                    last_study_at=now - timedelta(hours=3),
-                )
-            )
+        )).scalar_one_or_none()
+        if not status_exists:
+            session.add(UserNodeStatus(
+                user_id=user.id,
+                node_id=node.id,
+                is_unlocked=True,
+                mastery_score=mastery,
+                total_study_minutes=study_count * 15,
+                study_count=study_count,
+                first_unlock_at=now - timedelta(days=max(1, study_count)),
+                last_study_at=now - timedelta(hours=study_count),
+            ))
 
     # Galaxy skins
     await _ensure_galaxy_skins(session)
@@ -592,24 +710,32 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
                 )
             )
 
-    # Community feed posts
-    for content in [
-        "连续一周打卡成功！今天的专注时间达到了 120 分钟。",
-        "分享一个高效学习番茄钟设置方法，欢迎交流。",
-    ]:
+    # Community feed posts — guest user + friend posts for a lively feed
+    _feed_posts = [
+        (user, "连续一周打卡成功！今天的专注时间达到了 120 分钟。", "学习分享", 12, 3),
+        (user, "分享一个高效学习番茄钟设置方法，欢迎交流。", "学习分享", 8, 2),
+    ]
+    # Add posts from friends if they were created
+    if len(friends) >= 3:
+        _feed_posts.extend([
+            (friends[0], "刚做完数据结构的链表练习，感觉指针终于理解了！💡", "学习心得", 15, 4),
+            (friends[1], "推荐一本《算法导论》配套笔记，图论部分写得特别清楚。", "资源分享", 20, 6),
+            (friends[2], "今天的番茄钟完成了8个，创个人纪录！🍅", "打卡", 10, 2),
+        ])
+    for post_user, content, topic, likes, comments in _feed_posts:
         post_exists = await session.execute(
-            select(Post).where(Post.user_id == user.id, Post.content == content)
+            select(Post).where(Post.user_id == post_user.id, Post.content == content)
         )
         if not post_exists.scalar_one_or_none():
             session.add(
                 Post(
-                    user_id=user.id,
+                    user_id=post_user.id,
                     content=content,
                     image_urls=["https://picsum.photos/seed/sparkle/600/400"],
-                    topic="学习分享",
+                    topic=topic,
                     visibility="public",
-                    like_count=12,
-                    comment_count=3,
+                    like_count=likes,
+                    comment_count=comments,
                 )
             )
 

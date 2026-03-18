@@ -130,11 +130,108 @@ from app.services.community_service import (
 from app.services.streak_signal_processor import StreakSignalProcessor
 from app.services.group_file_service import GroupFileService
 from app.services.group_recommendation_service import GroupRecommendationService
+from app.models.community import Post, PostLike
 
 router = APIRouter()
 
 def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
+
+
+def _post_to_response(post: Post) -> dict:
+    """Convert Post ORM object to Flutter-compatible response dict."""
+    user_data = {
+        "id": str(post.user.id) if post.user else str(post.user_id),
+        "username": post.user.username if post.user else "unknown",
+        "avatar_url": post.user.avatar_url if post.user else None,
+    }
+    return {
+        "id": str(post.id),
+        "user_id": str(post.user_id),
+        "content": post.content or "",
+        "created_at": post.created_at.isoformat() if post.created_at else None,
+        "user": user_data,
+        "image_urls": post.image_urls or [],
+        "topic": post.topic,
+        "like_count": post.like_count or 0,
+    }
+
+
+@router.get("/feed", summary="获取社区动态流")
+async def get_feed(
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=20, ge=1, le=50),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """获取社区动态列表，按创建时间倒序"""
+    from sqlalchemy.orm import selectinload
+
+    offset = (page - 1) * limit
+    stmt = (
+        select(Post)
+        .options(selectinload(Post.user))
+        .order_by(Post.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+    result = await db.execute(stmt)
+    posts = result.scalars().all()
+    return [_post_to_response(p) for p in posts]
+
+
+@router.post("/posts", summary="发布社区动态", status_code=201)
+async def create_post(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """创建社区动态帖子"""
+    body = await request.json()
+    post = Post(
+        user_id=current_user.id,
+        content=body.get("content", ""),
+        topic=body.get("topic"),
+        image_urls=body.get("image_urls", []),
+        visibility="public",
+        like_count=0,
+        comment_count=0,
+    )
+    db.add(post)
+    await db.commit()
+    await db.refresh(post, attribute_names=["user"])
+    return _post_to_response(post)
+
+
+@router.post("/posts/{post_id}/like", summary="点赞/取消点赞")
+async def toggle_like_post(
+    post_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Toggle like on a post. Returns updated like_count."""
+    post = (await db.execute(select(Post).where(Post.id == post_id))).scalar_one_or_none()
+    if not post:
+        raise HTTPException(status_code=404, detail="动态不存在")
+
+    existing = (await db.execute(
+        select(PostLike).where(
+            PostLike.user_id == current_user.id,
+            PostLike.post_id == post_id,
+        )
+    )).scalar_one_or_none()
+
+    if existing:
+        await db.delete(existing)
+        post.like_count = max(0, (post.like_count or 1) - 1)
+        liked = False
+    else:
+        db.add(PostLike(user_id=current_user.id, post_id=post_id))
+        post.like_count = (post.like_count or 0) + 1
+        liked = True
+
+    await db.commit()
+    return {"liked": liked, "like_count": post.like_count}
 
 
 def _build_message_info(msg: GroupMessage) -> MessageInfo:

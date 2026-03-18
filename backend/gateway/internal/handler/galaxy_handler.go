@@ -37,6 +37,7 @@ func NewGalaxyHandler(
 	}
 
 	proxy := httputil.NewSingleHostReverseProxy(targetURL)
+	proxy.FlushInterval = -1 // Flush immediately for SSE support
 	proxy.Director = func(req *http.Request) {
 		req.URL.Scheme = targetURL.Scheme
 		req.URL.Host = targetURL.Host
@@ -71,6 +72,7 @@ func (h *GalaxyHandler) RegisterRoutes(r *gin.RouterGroup, authMiddleware gin.Ha
 		galaxy.GET("/stats", h.ProxyToBackend)
 		galaxy.GET("/heatmap", h.ProxyToBackend)
 		galaxy.GET("/predict", h.ProxyToBackend)
+		galaxy.GET("/events", h.ProxyToBackend) // SSE stream for real-time galaxy updates
 		galaxy.POST("/sync", h.ProxyToBackend)
 	}
 }

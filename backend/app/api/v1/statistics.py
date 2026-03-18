@@ -19,8 +19,55 @@ router = APIRouter()
 
 
 @router.get("/daily")
-async def get_daily_stats():
-    return {"data": {}}
+async def get_daily_stats(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    获取今日统计数据
+    Get daily statistics for current user
+    """
+    user_id = current_user.id
+    today_start = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
+
+    # Tasks completed today
+    completed_query = select(func.count(Task.id)).where(
+        and_(
+            Task.user_id == user_id,
+            Task.status == "COMPLETED",
+            Task.completed_at >= today_start
+        )
+    )
+    completed_result = await db.execute(completed_query)
+    tasks_completed = completed_result.scalar() or 0
+
+    # Study minutes today (based on estimated_minutes of completed tasks)
+    time_query = select(func.sum(Task.estimated_minutes)).where(
+        and_(
+            Task.user_id == user_id,
+            Task.status == "COMPLETED",
+            Task.completed_at >= today_start
+        )
+    )
+    time_result = await db.execute(time_query)
+    study_minutes = time_result.scalar() or 0
+
+    # Total tasks today (created or due)
+    total_today_query = select(func.count(Task.id)).where(
+        and_(
+            Task.user_id == user_id,
+            Task.due_date == today_start.date()
+        )
+    )
+    total_today_result = await db.execute(total_today_query)
+    total_today = total_today_result.scalar() or 0
+
+    return {
+        "tasks_completed": tasks_completed,
+        "study_minutes": study_minutes,
+        "total_tasks_today": total_today,
+        "focus_sessions": 0,  # TODO: integrate with focus_sessions table when available
+    }
 
 
 @router.get("/overview")
@@ -73,7 +120,10 @@ async def get_stats_overview(
 
     study_days = 0
     if first_task_date:
-        delta = datetime.now(UTC) - first_task_date.replace(tzinfo=UTC)
+        # Use naive UTC to match DB TIMESTAMP WITHOUT TIME ZONE
+        now_naive = datetime.now(UTC).replace(tzinfo=None)
+        first_naive = first_task_date.replace(tzinfo=None) if first_task_date.tzinfo else first_task_date
+        delta = now_naive - first_naive
         study_days = delta.days + 1
 
     return {

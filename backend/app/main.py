@@ -173,6 +173,20 @@ async def lifespan(app: FastAPI):
             # 0. 初始化数据库数据
             await init_db(db)
 
+            # 0.5 确保全局成就和皮肤定义存在 (所有用户共享)
+            try:
+                from app.services.guest_seed_service import (
+                    _ensure_achievements,
+                    _ensure_galaxy_skins,
+                )
+                await _ensure_achievements(db)
+                await _ensure_galaxy_skins(db)
+                await db.commit()
+                logger.info("Global achievements & galaxy skins ensured")
+            except Exception as e:
+                await db.rollback()
+                logger.warning(f"Failed to ensure global achievements (non-fatal): {e}")
+
             # 1. 恢复中断的 Job
             job_service = JobService()
             await job_service.startup_recovery(db)

@@ -398,6 +398,12 @@ class ChatNotifier extends StateNotifier<ChatState> {
       return;
     }
 
+    // P0修复: 正在发送中禁止重复发送，防止请求速度过快导致卡顿
+    if (state.isSending) {
+      debugPrint('[Chat] sendMessage blocked: already sending');
+      return;
+    }
+
     // 获取当前用户信息
     final authState = _ref.read(authProvider);
     final user = authState.user;

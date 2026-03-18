@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:sparkle/core/constants/app_constants.dart';
@@ -631,7 +632,7 @@ class AuthRepository {
     return await getAccessToken() != null;
   }
 
-  /// Guest login - 获取访客模式的JWT token，使用真实后端数据
+  /// Guest login - 优先使用后端真实数据，失败时回退到本地演示数据
   Future<UserModel> guestLogin(String guestId) async {
     try {
       final response = await _apiClient.post<Map<String, dynamic>>(
@@ -649,9 +650,18 @@ class AuthRepository {
 
       return UserModel.fromJson(data['user'] as Map<String, dynamic>);
     } on DioException catch (e) {
+      // 后端不可用时回退到本地演示数据，保证离线/开发时可用
+      if (DemoDataService.isDemoMode) {
+        debugPrint('⚠️ Guest API failed, using demo user as fallback: $e');
+        return DemoDataService().demoUser;
+      }
       final message = _extractErrorMessage(e.response?.data);
       throw Exception(message ?? '访客登录失败');
     } catch (e) {
+      if (DemoDataService.isDemoMode) {
+        debugPrint('⚠️ Guest API failed, using demo user as fallback: $e');
+        return DemoDataService().demoUser;
+      }
       throw Exception('An unexpected error occurred: $e');
     }
   }
