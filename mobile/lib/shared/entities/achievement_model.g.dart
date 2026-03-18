@@ -274,8 +274,12 @@ GalaxySkin _$GalaxySkinFromJson(Map<String, dynamic> json) => GalaxySkin(
       name: json['name'] as String,
       rarity: $enumDecode(_$AchievementRarityEnumMap, json['rarity']),
       sortOrder: (json['sort_order'] as num).toInt(),
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
+      createdAt: json['created_at'] == null
+          ? null
+          : DateTime.parse(json['created_at'] as String),
+      updatedAt: json['updated_at'] == null
+          ? null
+          : DateTime.parse(json['updated_at'] as String),
       description: json['description'] as String?,
       previewUrl: json['preview_url'] as String?,
       unlockType: json['unlock_type'] as String?,

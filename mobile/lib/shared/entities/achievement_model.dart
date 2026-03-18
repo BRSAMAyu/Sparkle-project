@@ -451,8 +451,8 @@ class GalaxySkin {
     required this.name,
     required this.rarity,
     required this.sortOrder,
-    required this.createdAt,
-    required this.updatedAt,
+    this.createdAt,
+    this.updatedAt,
     this.description,
     this.previewUrl,
     this.unlockType,
@@ -486,6 +486,10 @@ class GalaxySkin {
   final bool isEquipped;
   @JsonKey(name: 'unlocked_at')
   final DateTime? unlockedAt;
+  @JsonKey(name: 'created_at')
+  final DateTime? createdAt;
+  @JsonKey(name: 'updated_at')
+  final DateTime? updatedAt;
   @JsonKey(name: 'created_at')
   final DateTime createdAt;
   @JsonKey(name: 'updated_at')

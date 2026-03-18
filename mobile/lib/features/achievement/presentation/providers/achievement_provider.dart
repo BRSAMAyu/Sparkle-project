@@ -300,8 +300,9 @@ class AchievementNotifier extends StateNotifier<AchievementState> {
         titles: titles,
         activeContract: contract,
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
       debugPrint('Error loading achievement data: $e');
+      debugPrint('Stack trace: $stackTrace');
       state = AchievementState.error(e.toString());
     }
   }

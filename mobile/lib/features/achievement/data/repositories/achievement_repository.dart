@@ -838,7 +838,6 @@ class AchievementRepository {
 
   List<UserTitle> _getDemoTitles() => [
         UserTitle(
-          userId: 'demo_user',
           titleId: 'early_explorer',
           titleName: '星际探索者',
           titleDisplay: '星际探索者',
@@ -846,7 +845,6 @@ class AchievementRepository {
           isEquipped: true,
         ),
         UserTitle(
-          userId: 'demo_user',
           titleId: 'week_warrior',
           titleName: '周常战士',
           titleDisplay: '周常战士',
