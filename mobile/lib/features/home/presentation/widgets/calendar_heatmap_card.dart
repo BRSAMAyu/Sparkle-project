@@ -434,16 +434,6 @@ class _CompactCalendarSidebar extends ConsumerWidget {
             ),
           ],
           const Spacer(),
-          if (showLegend)
-            Text(
-              '格子越深，任务越密集',
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: DS.textSecondary,
-                    height: 1.35,
-                  ),
-            ),
         ],
       ),
     );

@@ -4,10 +4,11 @@ Visual Element System Models
 """
 import enum
 
-from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Index, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, declared_attr
 
+from app.db.session import Base
 from app.models.base import GUID, BaseModel
 
 
@@ -48,11 +49,11 @@ class VisualElement(BaseModel):
     description_i18n = Column(JSONB, default=dict, nullable=True)
 
     # 类型与稀有度
-    element_type = Column(Enum(VisualElementType), nullable=False, index=True)
-    rarity = Column(Enum(VisualElementRarity), default=VisualElementRarity.COMMON, nullable=False)
+    element_type = Column(Enum(VisualElementType, values_callable=lambda obj: [e.value for e in obj]), nullable=False, index=True)
+    rarity = Column(Enum(VisualElementRarity, values_callable=lambda obj: [e.value for e in obj]), default=VisualElementRarity.COMMON, nullable=False)
 
     # 解锁来源
-    unlock_source = Column(Enum(VisualElementUnlockSource), default=VisualElementUnlockSource.SYSTEM)
+    unlock_source = Column(Enum(VisualElementUnlockSource, values_callable=lambda obj: [e.value for e in obj]), default=VisualElementUnlockSource.SYSTEM)
     unlock_requirement = Column(JSONB, nullable=True)  # {"achievement_id": "streak_30"} 或 {"price_photons": 200}
 
     # 元素配置（根据 element_type 不同，配置内容不同）
@@ -131,9 +132,10 @@ class UserVisualElement(BaseModel):
         return f"<UserVisualElement(user_id={self.user_id}, element_id={self.element_id})>"
 
 
-class UserVisualConfig(BaseModel):
+class UserVisualConfig(Base):
     """用户当前视觉配置（装备状态）"""
     __tablename__ = "user_visual_configs"
+    __table_args__ = {'extend_existing': True}
 
     user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
 
@@ -146,6 +148,11 @@ class UserVisualConfig(BaseModel):
     background_equipped_at = Column(DateTime, nullable=True)
     particle_equipped_at = Column(DateTime, nullable=True)
     effect_equipped_at = Column(DateTime, nullable=True)
+
+    # Timestamps (手动定义，不继承BaseModel)
+    created_at = Column(DateTime, default=func.now(), nullable=False)
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
+    deleted_at = Column(DateTime, nullable=True, index=True)
 
     def __repr__(self):
         return f"<UserVisualConfig(user_id={self.user_id}, bg={self.equipped_background_id})>"
