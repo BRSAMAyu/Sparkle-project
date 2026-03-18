@@ -276,11 +276,12 @@ class GraphKnowledgeService:
             cypher = """
             MATCH (u:User {id: $user_id})-[r:INTERESTED_IN|STUDIED]->(k:KnowledgeNode)
             OPTIONAL MATCH (k)-[related:RELATED|PREREQUISITE]-(other)
-            RETURN
-                k.name as core,
-                k.sector as sector,
-                collect(DISTINCT other.name) as related,
-                collect(DISTINCT type(related)) as relation_types
+            RETURN {
+                core: k.name,
+                sector: k.sector,
+                related: collect(DISTINCT other.name),
+                relation_types: collect(DISTINCT type(related))
+            } as result
             """
 
             results = await self.age_client.execute_cypher(

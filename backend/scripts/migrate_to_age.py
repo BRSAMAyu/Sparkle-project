@@ -289,7 +289,8 @@ class AgeMigrator:
 
         # 统计顶点
         vertex_count = await self.age_client.execute_cypher("""
-        MATCH (n) RETURN labels(n) as label, COUNT(n) as count
+        MATCH (n)
+        RETURN {label: labels(n), count: COUNT(n)} as result
         """)
 
         print("\n顶点统计:")
@@ -298,7 +299,8 @@ class AgeMigrator:
 
         # 统计边
         edge_count = await self.age_client.execute_cypher("""
-        MATCH ()-[r]->() RETURN type(r) as type, COUNT(r) as count
+        MATCH ()-[r]->()
+        RETURN {type: type(r), count: COUNT(r)} as result
         """)
 
         print("\n边统计:")
@@ -309,7 +311,7 @@ class AgeMigrator:
         print("\n示例查询:")
         sample = await self.age_client.execute_cypher("""
         MATCH (u:User)-[:INTERESTED_IN]->(k:KnowledgeNode)
-        RETURN u.nickname as user, k.name as knowledge
+        RETURN {user: u.nickname, knowledge: k.name} as result
         LIMIT 3
         """)
         for s in sample:

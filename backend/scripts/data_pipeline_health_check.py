@@ -341,7 +341,7 @@ class DataPipelineHealthCheck:
 
             # 测试简单查询
             test_result = await client.execute_cypher(
-                "MATCH (n) RETURN count(n) as count LIMIT 1"
+                "MATCH (n) RETURN {count: count(n)} as result LIMIT 1"
             )
 
             result.add_detail("连接正常")

@@ -40,11 +40,24 @@ async def check_age_extension():
             version = result.scalar()
             print(f"   版本: {version}")
         else:
-            print("❌ Apache AGE 扩展未安装")
-            print("\n请运行以下命令安装 AGE:")
-            print("  Docker: 在 docker-compose.yml 中添加 AGE 扩展配置")
-            print("  本地: 参考 AGE 官方文档安装")
-            return False
+            available = await session.execute(text(
+                "SELECT EXISTS(SELECT 1 FROM pg_available_extensions WHERE name = 'age')"
+            ))
+            age_available = available.scalar()
+            if not age_available:
+                print("❌ Apache AGE 扩展不可用")
+                print("\n当前数据库镜像未内置 AGE，请先切换到包含 AGE 的数据库镜像。")
+                return False
+
+            print("⚙️  Apache AGE 扩展可用，正在安装...")
+            await session.execute(text("CREATE EXTENSION IF NOT EXISTS age"))
+            await session.commit()
+
+            result = await session.execute(text(
+                "SELECT extversion FROM pg_extension WHERE extname = 'age'"
+            ))
+            version = result.scalar()
+            print(f"✅ Apache AGE 扩展安装完成 (版本: {version})")
 
     return True
 
@@ -111,15 +124,8 @@ async def init_age_schema():
         # 4. 验证 Schema
         print("\n" + "-" * 60)
         print("🔍 验证 Schema...")
-        verify_query = """
-        SELECT * FROM cypher('sparkle_galaxy', $$
-            MATCH (n) RETURN DISTINCT labels(n) as vertex_labels
-            LIMIT 10
-        $$) as (result agtype);
-        """
-
         result = await client.execute_cypher(
-            "MATCH (n) RETURN DISTINCT labels(n) as vertex_labels LIMIT 10"
+            "MATCH (n) RETURN {vertex_labels: labels(n)} as result LIMIT 10"
         )
 
         if result:

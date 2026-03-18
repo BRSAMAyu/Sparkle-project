@@ -206,25 +206,25 @@ proto-gen-legacy:
 	mkdir -p backend/app/gen/agent/v1
 	mkdir -p backend/app/gen/galaxy/v1
 	mkdir -p backend/app/gen/stt/v1
-	python -m grpc_tools.protoc \
+	python3 -m grpc_tools.protoc \
 	       --proto_path=proto \
 	       --python_out=backend/app/gen/agent/v1 \
 	       --grpc_python_out=backend/app/gen/agent/v1 \
 	       --pyi_out=backend/app/gen/agent/v1 \
 	       proto/agent_service.proto
-	python -m grpc_tools.protoc \
+	python3 -m grpc_tools.protoc \
 	       --proto_path=proto \
 	       --python_out=backend/app/gen/galaxy/v1 \
 	       --grpc_python_out=backend/app/gen/galaxy/v1 \
 	       --pyi_out=backend/app/gen/galaxy/v1 \
 	       proto/galaxy_service.proto
-	python -m grpc_tools.protoc \
+	python3 -m grpc_tools.protoc \
 	       --proto_path=proto \
 	       --python_out=backend/app/gen/stt/v1 \
 	       --grpc_python_out=backend/app/gen/stt/v1 \
 	       --pyi_out=backend/app/gen/stt/v1 \
 	       proto/stt_service.proto
-	python -m grpc_tools.protoc \
+	python3 -m grpc_tools.protoc \
 	       --proto_path=proto \
 	       --python_out=backend/app/gen \
 	       --pyi_out=backend/app/gen \

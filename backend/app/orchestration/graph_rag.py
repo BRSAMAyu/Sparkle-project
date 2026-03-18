@@ -320,15 +320,16 @@ Return ONLY a JSON array of entity names."""
                 MATCH (start:KnowledgeNode {{name: $entity}})
                 -[r*1..{depth}]-(related)
                 WHERE ALL(edge IN r WHERE edge.strength > $min_strength)
-                RETURN
-                    start.id as start_id,
-                    start.name as start_name,
-                    related.id as id,
-                    related.name as name,
-                    related.description as description,
-                    type(r[0]) as relation_type,
-                    r[0].strength as strength,
-                    related.sector as sector
+                RETURN {{
+                    start_id: start.id,
+                    start_name: start.name,
+                    id: related.id,
+                    name: related.name,
+                    description: related.description,
+                    relation_type: type(r[0]),
+                    strength: r[0].strength,
+                    sector: related.sector
+                }} as result
                 ORDER BY r[0].strength DESC
                 LIMIT 10
                 """
@@ -375,7 +376,7 @@ Return ONLY a JSON array of entity names."""
             cypher = """
             MATCH (u:User {id: $user_id})-[r:INTERESTED_IN|STUDIED]->(k:KnowledgeNode)
             WHERE r.strength > 0.3
-            RETURN DISTINCT k.name as name
+            RETURN DISTINCT {name: k.name} as result
             ORDER BY r.strength DESC
             LIMIT 10
             """
@@ -589,10 +590,11 @@ Return ONLY a JSON array of entity names."""
                 (start:KnowledgeNode {name: $start})-[*1..5]-(end:KnowledgeNode {name: $target})
             )
             UNWIND nodes(path) as node
-            RETURN
-                node.name as name,
-                node.description as description,
-                node.importance as importance
+            RETURN {
+                name: node.name,
+                description: node.description,
+                importance: node.importance
+            } as result
             """
 
             results = await self.age_client.execute_cypher(
@@ -622,11 +624,12 @@ Return ONLY a JSON array of entity names."""
             cypher = """
             MATCH (c:KnowledgeNode {name: $concept})-[r:RELATED|PREREQUISITE|APPLIES_TO]-(related)
             WHERE r.strength > 0.3
-            RETURN
-                related.name as name,
-                related.description as description,
-                type(r) as relation,
-                r.strength as strength
+            RETURN {
+                name: related.name,
+                description: related.description,
+                relation: type(r),
+                strength: r.strength
+            } as result
             ORDER BY r.strength DESC
             LIMIT $limit
             """

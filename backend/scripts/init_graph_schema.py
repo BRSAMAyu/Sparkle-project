@@ -48,9 +48,9 @@ async def init_graph_schema():
         # 4. 验证创建结果
         print("\n[4/4] 验证 Schema...")
         verify_query = """
-        MATCH (n) RETURN DISTINCT labels(n) as vertex_labels
-        UNION ALL
-        MATCH ()-[r]->() RETURN DISTINCT type(r) as edge_labels
+        MATCH (n)
+        RETURN {vertex_labels: labels(n)} as result
+        LIMIT 10
         """
 
         result = await client.execute_cypher(verify_query)

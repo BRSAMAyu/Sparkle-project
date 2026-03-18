@@ -1,7 +1,11 @@
 # Unified Sparkle Docker Infrastructure - Stabilized Communication
 services:
   sparkle_db:
-    image: pgvector/pgvector:pg16
+    build:
+      context: .
+      dockerfile: docker/pgvector-age.Dockerfile
+      args:
+        AGE_REF: PG16/v1.6.0-rc0
     container_name: sparkle_db
     ports:
       - "${SPARKLE_DB_PORT:-5432}:5432"
@@ -16,6 +20,26 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  sparkle_age_init:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sparkle_age_init
+    env_file:
+      - .env
+    command: python scripts/init_age_extension.py
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sparkle_db:5432/${POSTGRES_DB}
+      - POSTGRES_HOST=sparkle_db
+      - POSTGRES_PORT=5432
+      - SERVICE_ROLE=age-init
+    volumes:
+      - ./backend:/app
+    depends_on:
+      sparkle_db:
+        condition: service_healthy
+    restart: "no"
 
   redis:
     image: redis/redis-stack-server:latest
@@ -68,6 +92,8 @@ services:
     depends_on:
       sparkle_db:
         condition: service_healthy
+      sparkle_age_init:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
     user: root
@@ -109,6 +135,8 @@ services:
     depends_on:
       sparkle_db:
         condition: service_healthy
+      sparkle_age_init:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
     deploy:
@@ -145,6 +173,8 @@ services:
     depends_on:
       sparkle_db:
         condition: service_healthy
+      sparkle_age_init:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
     volumes:

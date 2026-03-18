@@ -34,7 +34,7 @@ run_in_docker() {
 
 case "$1" in
   gen)
-    CMD='buf generate && buf generate --template buf.gen.dart.yaml'
+    CMD='buf generate --template buf.gen.yaml && buf generate --template buf.gen.dart.yaml && bash scripts/generate_python_protos.sh && python3 scripts/sync_buf_python_stubs.py'
     LEGACY_CMD='make proto-gen-legacy'
     ;;
   lint)
@@ -45,7 +45,7 @@ case "$1" in
     CMD="buf breaking --against '${AGAINST}'"
     ;;
   check-generated)
-    CMD='buf generate && buf generate --template buf.gen.dart.yaml && git diff --exit-code -- backend/gateway/gen backend/app/gen mobile/lib/gen'
+    CMD='buf generate --template buf.gen.yaml && buf generate --template buf.gen.dart.yaml && bash scripts/generate_python_protos.sh && python3 scripts/sync_buf_python_stubs.py && git diff --exit-code -- backend/gateway/gen backend/app/gen mobile/lib/gen'
     ;;
   *)
     echo "Unknown subcommand: $1"

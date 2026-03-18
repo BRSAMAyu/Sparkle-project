@@ -31,6 +31,30 @@ class KnowledgeRetrievalService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
+    async def _keyword_fallback(
+        self,
+        user_id_uuid: UUID,
+        query_str: str,
+        subject_id: int | None,
+        limit: int,
+    ) -> list[SearchResultItem]:
+        try:
+            keyword_nodes = await self.keyword_search(
+                user_id=user_id_uuid,
+                query=query_str,
+                subject_id=subject_id,
+                limit=limit,
+            )
+        except Exception as e:
+            logger.warning(f"Keyword fallback search failed: {e}")
+            RETRIEVAL_ERROR_TOTAL.labels(source="keyword_fallback", stage="retrieve").inc()
+            return []
+
+        if not keyword_nodes:
+            return []
+
+        return await self._build_results_from_nodes(keyword_nodes[:limit], user_id_uuid)
+
     async def _get_knowledge_version(self) -> str | None:
         if not cache_service.redis:
             return await self._compute_knowledge_version()
@@ -116,7 +140,12 @@ class KnowledgeRetrievalService:
         # 2. Prepare Queries
         start_time = time.time()
         actual_vector_text = vector_query if vector_query else query_str
-        query_embedding = await embedding_service.get_embedding(actual_vector_text, text_type="query")
+        try:
+            query_embedding = await embedding_service.get_embedding(actual_vector_text, text_type="query")
+        except Exception as e:
+            logger.warning(f"Embedding generation failed for hybrid search: {e}")
+            RETRIEVAL_ERROR_TOTAL.labels(source="redis_hybrid", stage="embedding").inc()
+            return await self._keyword_fallback(user_id_uuid, query_str, subject_id, limit)
 
         # 3. Parallel Retrieval
         vector_limit = limit * 10
@@ -285,7 +314,8 @@ class KnowledgeRetrievalService:
         )
 
         if not candidates:
-            return []
+            logger.info("pgvector fallback returned no candidates, trying keyword fallback")
+            return await self._keyword_fallback(user_id_uuid, query_str, subject_id, limit)
 
         rerank_start = time.time()
         if use_reranker:
@@ -309,7 +339,12 @@ class KnowledgeRetrievalService:
             time.time() - rerank_start
         )
 
-        return await self._build_results_from_nodes(reranked, user_id_uuid)
+        results = await self._build_results_from_nodes(reranked, user_id_uuid)
+        if results:
+            return results
+
+        logger.info("pgvector fallback produced no assembled results, trying keyword fallback")
+        return await self._keyword_fallback(user_id_uuid, query_str, subject_id, limit)
 
     async def document_vector_search(
         self,

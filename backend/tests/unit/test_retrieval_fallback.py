@@ -32,3 +32,24 @@ async def test_hybrid_search_fallback_on_timeout(monkeypatch):
     )
 
     assert results == fallback_result
+
+
+@pytest.mark.asyncio
+async def test_pgvector_fallback_uses_keyword_search_when_vectors_empty(monkeypatch):
+    db = AsyncMock()
+    service = KnowledgeRetrievalService(db)
+
+    monkeypatch.setattr(service, "semantic_search_nodes", AsyncMock(return_value=[]))
+    monkeypatch.setattr(service, "keyword_search", AsyncMock(return_value=["keyword-node"]))
+    monkeypatch.setattr(service, "_build_results_from_nodes", AsyncMock(return_value=["keyword-result"]))
+
+    results = await service._pgvector_fallback(
+        user_id_uuid=uuid.uuid4(),
+        query_str="test query",
+        subject_id=None,
+        limit=2,
+        threshold=0.3,
+        use_reranker=False,
+    )
+
+    assert results == ["keyword-result"]
