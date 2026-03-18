@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 A/B Test Experiment Management API
 A/B测试实验管理API

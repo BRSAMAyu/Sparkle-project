@@ -2,8 +2,9 @@
 社群功能服务层
 Community Service - 好友、群组、消息、打卡、任务的业务逻辑
 """
+from __future__ import annotations
 import asyncio
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -35,7 +36,7 @@ from app.services.community_signal_collector import CommunitySignalCollector
 
 def _utcnow() -> datetime:
     """Return naive UTC datetime compatible with existing DB fields."""
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 def _record_community_signal(

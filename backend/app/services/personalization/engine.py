@@ -1,6 +1,7 @@
 """
 Personalization Engine - 偏好到策略的映射中心
 """
+from __future__ import annotations
 from uuid import UUID
 
 from app.core.profile_context import ProfileContext

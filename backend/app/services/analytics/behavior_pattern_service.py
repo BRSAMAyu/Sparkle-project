@@ -1,4 +1,5 @@
-from datetime import UTC, date, datetime, time, timedelta
+from __future__ import annotations
+from datetime import timezone, date, datetime, time, timedelta
 from uuid import UUID
 
 from sqlalchemy import desc, func, select
@@ -15,7 +16,7 @@ from app.services.nudge_service import NudgeService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class BehaviorPatternService:

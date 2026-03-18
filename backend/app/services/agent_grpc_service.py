@@ -2,12 +2,15 @@
 AgentService gRPC Implementation
 实现 gRPC 服务端，对接现有的 LLM 服务和 RAG 能力
 """
+from __future__ import annotations
+
+
 import asyncio
 import json
 import time
 import uuid
 from collections.abc import AsyncIterator, Callable
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 
 import grpc
 from loguru import logger
@@ -36,7 +39,7 @@ from app.services.progress_narrative_service import ProgressNarrativeService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
@@ -65,7 +68,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         if mode == CHAT_MODE_EXPERT_AUTO:
             return "expert_auto_workflow"
         if mode.startswith(CHAT_MODE_EXPERT_PREFIX):
-            expert_id = mode[len(CHAT_MODE_EXPERT_PREFIX):].strip() or "unknown"
+            expert_id = mode[len(CHAT_MODE_EXPERT_PREFIX) :].strip() or "unknown"
             return f"expert_{expert_id}_workflow"
         return "standard_chat"
 
@@ -74,7 +77,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         service = "agent_grpc_service"
 
         if not response.HasField("event_time"):
-            response.event_time.FromDatetime(datetime.now(UTC))
+            response.event_time.FromDatetime(datetime.now(timezone.utc))
             PROTO_FIELD_READ_TOTAL.labels(service=service, field="chat_response.event_time", source="defaulted").inc()
         else:
             PROTO_FIELD_READ_TOTAL.labels(service=service, field="chat_response.event_time", source="new").inc()
@@ -140,14 +143,16 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
 
             # Security Audit: Log missing authorization headers
             if not metadata.get("authorization") and not request.user_id:
-                logger.warning(f"SECURITY ALERT: StreamChat call without authorization metadata or user_id. Session: {request.session_id}")
+                logger.warning(
+                    f"SECURITY ALERT: StreamChat call without authorization metadata or user_id. Session: {request.session_id}"
+                )
             elif metadata.get("authorization"):
                 logger.debug(f"Auth metadata found for user_id={user_id}")
 
             trace_id = metadata.get("x-trace-id", request.request_id) or str(uuid.uuid4())
 
             # 🔧 根据请求的 chat_mode 选择 workflow
-            chat_mode = normalize_chat_mode(getattr(request, 'chat_mode', None) or CHAT_MODE_STANDARD)
+            chat_mode = normalize_chat_mode(getattr(request, "chat_mode", None) or CHAT_MODE_STANDARD)
             logger.info(f"📋 Chat mode: {chat_mode}")
             workflow_id = self._resolve_workflow_id(chat_mode)
 
@@ -199,8 +204,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
 
             if not has_text_content:
                 logger.warning(
-                    f"StreamChat completed without text content for trace={trace_id}, "
-                    f"session={request.session_id}"
+                    f"StreamChat completed without text content for trace={trace_id}, session={request.session_id}"
                 )
                 fallback = agent_service_pb2.ChatResponse(
                     response_id=str(uuid.uuid4()),
@@ -213,7 +217,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                     full_text="（系统提示）当前未生成有效回复，请稍后重试。",
                     finish_reason=agent_service_pb2.STOP,
                 )
-                fallback.event_time.FromDatetime(datetime.now(UTC))
+                fallback.event_time.FromDatetime(datetime.now(timezone.utc))
                 yield fallback
 
             logger.info(f"StreamChat completed for trace={trace_id}")
@@ -233,9 +237,9 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                     retryable=True,
                     error_code=agent_service_pb2.ERROR_CODE_INTERNAL,
                 ),
-                finish_reason=agent_service_pb2.STOP # Using STOP as finish reason even for errors in gRPC mapping if needed, or define ERROR
+                finish_reason=agent_service_pb2.STOP,  # Using STOP as finish reason even for errors in gRPC mapping if needed, or define ERROR
             )
-            response.event_time.FromDatetime(datetime.now(UTC))
+            response.event_time.FromDatetime(datetime.now(timezone.utc))
             yield response
 
     async def SubmitResponseFeedback(
@@ -353,10 +357,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
             except (TypeError, ValueError):
                 return
             delta = max(0, int(time.time()) - last_ts)
-            FEEDBACK_TO_EFFECT_SECONDS.labels(
-                workflow_id=workflow_id,
-                prompt_version=prompt_version
-            ).observe(delta)
+            FEEDBACK_TO_EFFECT_SECONDS.labels(workflow_id=workflow_id, prompt_version=prompt_version).observe(delta)
             await self.orchestrator.redis.delete(key)
         except Exception:
             return
@@ -392,7 +393,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                     user_id=uuid.UUID(request.user_id),
                     query=request.query_text,
                     limit=request.limit if request.limit > 0 else 10,
-                    threshold=request.min_score if request.min_score > 0 else 0.3
+                    threshold=request.min_score if request.min_score > 0 else 0.3,
                 )
 
                 # Convert to gRPC MemoryResult items
@@ -400,7 +401,9 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                 for result in search_results:
                     # Build metadata
                     metadata = {
-                        "sector_code": result.node.sector_code.value if hasattr(result.node.sector_code, 'value') else str(result.node.sector_code),
+                        "sector_code": result.node.sector_code.value
+                        if hasattr(result.node.sector_code, "value")
+                        else str(result.node.sector_code),
                         "importance_level": str(result.node.importance_level),
                         "is_seed": str(result.node.is_seed),
                     }
@@ -416,14 +419,11 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                         id=str(result.node.id),
                         content=f"{result.node.name}: {result.node.description}",
                         score=result.similarity,
-                        metadata=metadata
+                        metadata=metadata,
                     )
                     memory_items.append(memory_item)
 
-                return agent_service_pb2.MemoryResult(
-                    items=memory_items,
-                    total_found=len(memory_items)
-                )
+                return agent_service_pb2.MemoryResult(items=memory_items, total_found=len(memory_items))
 
         except Exception as e:
             logger.error(f"RetrieveMemory error: {e}", exc_info=True)
@@ -465,9 +465,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
 
                 # preferences map requires string values
                 preferences = {
-                    str(key): str(value)
-                    for key, value in (user_context.preferences or {}).items()
-                    if value is not None
+                    str(key): str(value) for key, value in (user_context.preferences or {}).items() if value is not None
                 }
                 extra_payload = {
                     "active_slots": user_context.active_slots,
@@ -615,6 +613,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
             if plan_id:
                 try:
                     from app.services.plan_feedback_service import get_plan_feedback_service
+
                     async with self.db_session_factory() as db:
                         feedback_svc = get_plan_feedback_service(db, self.orchestrator.redis)
                         is_rejection = proto_decision == agent_service_pb2.REJECT
@@ -625,8 +624,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                         )
                         if should_rollback:
                             logger.info(
-                                f"Phase rollback will be triggered for plan {plan_id} "
-                                f"(rejection_count={count})"
+                                f"Phase rollback will be triggered for plan {plan_id} (rejection_count={count})"
                             )
                 except Exception as e:
                     logger.warning(f"Failed to track rejection for plan {plan_id}: {e}")
@@ -639,7 +637,9 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                         user_id=user_id,
                         db_session=db,
                     )
-                logger.info(f"Plan {plan_id} resumed after approval by {user_id}, task_generation={result.get('task_generation_initiated')}")
+                logger.info(
+                    f"Plan {plan_id} resumed after approval by {user_id}, task_generation={result.get('task_generation_initiated')}"
+                )
 
             elif proto_decision == agent_service_pb2.REJECT:
                 # Handle rejection - notify and stop
@@ -696,6 +696,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         Records user feedback on content reviews and stores it for learning.
         """
         import uuid
+
         try:
             raw_metadata = context.invocation_metadata()
             metadata = dict(raw_metadata) if raw_metadata else {}
@@ -771,6 +772,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                 # Trigger learning analysis (async, non-blocking)
                 try:
                     from app.services.feedback_learning_service import get_feedback_learning_service
+
                     learning_service = get_feedback_learning_service(history_service)
 
                     # Run learning analysis in background
@@ -856,6 +858,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
 
             async with self.db_session_factory() as db_session:
                 from app.services.review_history_service import get_review_history_service
+
                 history_service = get_review_history_service(db_session)
 
                 override = await history_service.record_user_override(
@@ -946,8 +949,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                     user_id=user_id,
                     review_id=request.review_id,
                     appeal_reason=request.appeal_reason,
-                    issues_with_review=list(request.issues_with_review)
-                    if request.issues_with_review else [],
+                    issues_with_review=list(request.issues_with_review) if request.issues_with_review else [],
                 )
 
                 appeal = await appeal_service.submit_appeal(appeal_request)
@@ -988,7 +990,6 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         Returns current status and resolution details if available.
         """
         try:
-
             if not request.appeal_id:
                 context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
                 context.set_details("appeal_id is required")
@@ -1060,8 +1061,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                 )
 
             logger.info(
-                f"SubmitReviewFeedback - user={user_id}, review={request.review_id}, "
-                f"type={request.feedback_type}"
+                f"SubmitReviewFeedback - user={user_id}, review={request.review_id}, type={request.feedback_type}"
             )
 
             async with self.db_session_factory() as db_session:
@@ -1091,10 +1091,8 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                     rating=request.rating if request.rating > 0 else None,
                     was_helpful=request.was_helpful,
                     was_accurate=request.was_accurate,
-                    inaccurate_points=list(request.inaccurate_points)
-                    if request.inaccurate_points else None,
-                    specificity_level=request.specificity_level
-                    if request.specificity_level else None,
+                    inaccurate_points=list(request.inaccurate_points) if request.inaccurate_points else None,
+                    specificity_level=request.specificity_level if request.specificity_level else None,
                     comments=request.comments,
                     tags=list(request.tags) if request.tags else None,
                 )
@@ -1185,17 +1183,13 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                     review_id=request.review_id,
                     user_id=user_id,
                     regeneration_type=regen_type,
-                    improvement_hints=list(request.improvement_hints)
-                    if request.improvement_hints else None,
-                    focus_areas=list(request.focus_areas)
-                    if request.focus_areas else None,
+                    improvement_hints=list(request.improvement_hints) if request.improvement_hints else None,
+                    focus_areas=list(request.focus_areas) if request.focus_areas else None,
                     custom_instructions=request.custom_instructions,
                 )
 
                 # Process the regeneration
-                result = await regen_service.process_regeneration(
-                    regen_request.request_id
-                )
+                result = await regen_service.process_regeneration(regen_request.request_id)
                 await db_session.commit()
 
                 return agent_service_pb2.RegenerationResponse(
@@ -1246,9 +1240,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
 
             period_days = request.period_days if request.period_days > 0 else 30
 
-            logger.info(
-                f"GetFeedbackStatistics - user={user_id}, period={period_days} days"
-            )
+            logger.info(f"GetFeedbackStatistics - user={user_id}, period={period_days} days")
 
             async with self.db_session_factory() as db_session:
                 from app.services.feedback_driven_generation import (
@@ -1298,10 +1290,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
             if not await self._require_admin(context, metadata):
                 return agent_service_pb2.GetArbitrationQueueResponse()
 
-            logger.info(
-                f"GetArbitrationQueue - limit={limit}, "
-                f"priority={priority_filter}, status={status_filter}"
-            )
+            logger.info(f"GetArbitrationQueue - limit={limit}, priority={priority_filter}, status={status_filter}")
 
             async with self.db_session_factory() as db_session:
                 from app.services.arbitration_service import (
@@ -1400,10 +1389,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                     message="arbitrator_id is required",
                 )
 
-            logger.info(
-                f"AssignArbitrationCase - case={request.case_id}, "
-                f"arbitrator={request.arbitrator_id}"
-            )
+            logger.info(f"AssignArbitrationCase - case={request.case_id}, arbitrator={request.arbitrator_id}")
 
             async with self.db_session_factory() as db_session:
                 from app.services.arbitration_service import (
@@ -1497,10 +1483,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                     message="arbitrator_id is required",
                 )
 
-            logger.info(
-                f"SubmitArbitrationDecision - case={request.case_id}, "
-                f"decision={request.decision}"
-            )
+            logger.info(f"SubmitArbitrationDecision - case={request.case_id}, decision={request.decision}")
 
             async with self.db_session_factory() as db_session:
                 from app.services.arbitration_service import (

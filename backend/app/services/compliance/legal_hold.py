@@ -1,4 +1,5 @@
-from datetime import UTC, datetime
+from __future__ import annotations
+from datetime import timezone, datetime
 from uuid import UUID
 
 from sqlalchemy import select
@@ -8,7 +9,7 @@ from app.models.compliance import LegalHold
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class LegalHoldService:

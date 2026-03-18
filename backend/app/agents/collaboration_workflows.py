@@ -6,6 +6,7 @@ Collaboration Workflows - 多智能体协作工作流
 2. ProgressiveExplorationWorkflow - 渐进式深度探索
 3. ErrorDiagnosisWorkflow - 错题诊断循环
 """
+from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass

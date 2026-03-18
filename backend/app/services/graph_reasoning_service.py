@@ -7,6 +7,7 @@ Features:
 - 循环检测预处理
 - 个性化学习路径生成
 """
+from __future__ import annotations
 
 import pickle
 from typing import Any, TypedDict

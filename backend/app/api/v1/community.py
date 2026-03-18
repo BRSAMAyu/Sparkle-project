@@ -2,10 +2,11 @@
 社群功能 API 路由
 Community API - 好友、群组、消息、打卡、任务相关接口
 """
+from __future__ import annotations
 import asyncio
 import contextlib
 import json
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
@@ -147,7 +148,7 @@ from app.models.community import Post, PostLike
 router = APIRouter()
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 def _post_to_response(post: Post) -> dict:
@@ -1236,7 +1237,7 @@ async def join_group(
             "type": "member_joined",
             "group_id": str(group_id),
             "user": UserBrief.model_validate(current_user).model_dump(mode='json'),
-            "timestamp": datetime.now(UTC).isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }, str(group_id))
 
         return {"success": True}
@@ -1260,7 +1261,7 @@ async def leave_group(
             "type": "member_left",
             "group_id": str(group_id),
             "user_id": str(current_user.id),
-            "timestamp": datetime.now(UTC).isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }, str(group_id))
 
         return {"success": True}
@@ -1301,7 +1302,7 @@ async def transfer_group_owner(
             "group_id": str(group_id),
             "old_owner_id": str(current_user.id),
             "new_owner_id": str(new_owner_id),
-            "timestamp": datetime.now(UTC).isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }, str(group_id))
 
         return {"success": True}
@@ -1936,7 +1937,7 @@ async def checkin(
             "group_id": str(data.group_id),
             "user": UserBrief.model_validate(current_user).model_dump(mode='json'),
             "duration": data.today_duration_minutes,
-            "timestamp": datetime.now(UTC).isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }, str(data.group_id))
 
         return result
@@ -1977,7 +1978,7 @@ async def create_group_task(
                 "description": task.description,
                 "creator": UserBrief.model_validate(current_user).model_dump(mode='json')
             },
-            "timestamp": datetime.now(UTC).isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }, str(group_id))
 
         return GroupTaskInfo(
@@ -2508,7 +2509,7 @@ async def update_group_moderation_settings(
             "type": "group_settings_updated",
             "group_id": str(group_id),
             "settings": data.model_dump(mode='json'),
-            "timestamp": datetime.now(UTC).isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }, str(group_id))
 
         return {

@@ -2,8 +2,9 @@
 Achievement Engine Service
 成就引擎核心服务 - 处理成就解锁逻辑、连胜统计、契约管理
 """
+from __future__ import annotations
 import asyncio
-from datetime import UTC, date, datetime, timedelta
+from datetime import timezone, date, datetime, timedelta
 from typing import Any
 
 from loguru import logger
@@ -32,7 +33,7 @@ from app.services.system_update_service import SystemUpdateService, build_system
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class AchievementEvent:

@@ -2,6 +2,7 @@
 Calendar API Endpoints
 日历事件 CRUD 接口
 """
+from __future__ import annotations
 from datetime import date, datetime, UTC
 from typing import Any
 from uuid import UUID

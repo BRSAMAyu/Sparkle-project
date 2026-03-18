@@ -7,10 +7,11 @@ Responsibilities:
 3. Provide version comparison functionality
 4. Track context versions for conflict detection
 """
+from __future__ import annotations
 import contextlib
 import json
 import uuid
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import Any
 
 from loguru import logger
@@ -19,7 +20,7 @@ from app.orchestration.schemas import StateSnapshot
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class StateSnapshotManager:

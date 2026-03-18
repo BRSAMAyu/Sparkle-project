@@ -2,6 +2,7 @@
 Learning Paths API
 基于拓扑排序的动态学习路径接口
 """
+from __future__ import annotations
 
 from typing import Any, Union
 from uuid import UUID

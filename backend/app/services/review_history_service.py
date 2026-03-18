@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 Review History Service - Phase 2c
 
@@ -14,7 +15,7 @@ Review History Service - Phase 2c
 import json
 import uuid
 from dataclasses import asdict, dataclass, field
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from enum import Enum
 from typing import Any
 
@@ -41,7 +42,7 @@ from app.models.review_system import (
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 class FeedbackType(str, Enum):
     """用户反馈类型"""

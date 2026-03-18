@@ -7,6 +7,7 @@ Plan Quota Service
 - 支持配额扩展机制（VIP用户）
 - 自动主计划选择逻辑
 """
+from __future__ import annotations
 from dataclasses import dataclass
 from uuid import UUID
 

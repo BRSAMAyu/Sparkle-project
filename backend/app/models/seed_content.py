@@ -2,7 +2,7 @@
 Seed Content Models
 种子内容库模型 - 支持 few-shot 示例、预设教学内容、通用回复模板
 """
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from enum import Enum
 
 from pgvector.sqlalchemy import Vector
@@ -17,7 +17,7 @@ VectorCompat = Vector(1024).with_variant(JSON(), "sqlite")
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class LibraryCategory(str, Enum):
@@ -306,5 +306,5 @@ class UserLibrarySubscription(BaseModel):
 
     def mark_used(self) -> None:
         """标记为已使用"""
-        from datetime import UTC, datetime
+        from datetime import timezone, datetime
         self.last_used_at = _utcnow()

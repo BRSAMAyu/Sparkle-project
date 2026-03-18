@@ -8,6 +8,7 @@ Permission Service - 统一权限检查和管理
 - 权限检查装饰器
 - 资源访问控制
 """
+from __future__ import annotations
 from enum import Enum
 from functools import wraps
 from typing import Any, Callable, TypeVar

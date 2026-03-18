@@ -3,6 +3,7 @@ GraphRAG 检索器
 
 结合向量检索和图检索，提供增强的知识检索能力
 """
+from __future__ import annotations
 
 import asyncio
 import hashlib

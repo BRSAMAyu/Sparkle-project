@@ -1,4 +1,5 @@
-from datetime import UTC, datetime
+from __future__ import annotations
+from datetime import timezone, datetime
 from uuid import UUID, uuid4
 
 from loguru import logger
@@ -10,7 +11,7 @@ from app.schemas.notification import NotificationCreate
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class NotificationService:

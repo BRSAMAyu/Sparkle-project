@@ -3,7 +3,8 @@ Agent Execution Statistics Service
 
 跟踪和分析Multi-Agent系统中各个Agent的使用情况和性能指标。
 """
-from datetime import UTC, datetime, timedelta
+from __future__ import annotations
+from datetime import timezone, datetime, timedelta
 from typing import Any
 
 from loguru import logger
@@ -14,7 +15,7 @@ from app.models.agent_stats import AgentExecutionStats
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class AgentStatsService:

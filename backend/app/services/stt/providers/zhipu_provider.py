@@ -3,6 +3,7 @@
 
 使用 GLM-ASR-2512 文件转写接口，并对现有 PCM WebSocket 流做分段封装。
 """
+from __future__ import annotations
 
 import asyncio
 import io

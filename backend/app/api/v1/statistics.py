@@ -2,7 +2,7 @@
 统计数据 API
 Statistics API
 """
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
@@ -28,7 +28,7 @@ async def get_daily_stats(
     Get daily statistics for current user
     """
     user_id = current_user.id
-    today_start = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
 
     # Tasks completed today
     completed_query = select(func.count(Task.id)).where(
@@ -121,7 +121,7 @@ async def get_stats_overview(
     study_days = 0
     if first_task_date:
         # Use naive UTC to match DB TIMESTAMP WITHOUT TIME ZONE
-        now_naive = datetime.now(UTC).replace(tzinfo=None)
+        now_naive = datetime.now(timezone.utc).replace(tzinfo=None)
         first_naive = first_task_date.replace(tzinfo=None) if first_task_date.tzinfo else first_task_date
         delta = now_naive - first_naive
         study_days = delta.days + 1
@@ -150,7 +150,7 @@ async def get_weekly_stats(
     Get weekly statistics
     """
     user_id = current_user.id
-    now = datetime.now(UTC).replace(tzinfo=None)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     week_ago = now - timedelta(days=7)
 
     # 周内完成任务

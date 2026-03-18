@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import datetime
 from typing import Any
 from uuid import UUID
@@ -14,7 +16,7 @@ from app.services.llm_fallback_utils import focus_llm
 
 
 def _utcnow() -> datetime.datetime:
-    return datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
+    return datetime.datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class FocusService:
@@ -22,7 +24,7 @@ class FocusService:
     def _to_utc_naive(ts: datetime.datetime) -> datetime.datetime:
         if ts.tzinfo is None:
             return ts
-        return ts.astimezone(datetime.UTC).replace(tzinfo=None)
+        return ts.astimezone(timezone.utc).replace(tzinfo=None)
 
     @staticmethod
     async def log_session(

@@ -8,6 +8,7 @@ Production-grade features:
 - Offline push notification hooks
 - Message deduplication via message IDs
 """
+from __future__ import annotations
 import asyncio
 import contextlib
 import hashlib

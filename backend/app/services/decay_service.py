@@ -3,13 +3,13 @@
 实现艾宾浩斯遗忘曲线，让知识点随时间逐渐暗淡
 """
 import math
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from uuid import UUID
 
 
 def _utcnow() -> datetime:
     """Return current UTC time as timezone-naive datetime (matches DB TIMESTAMP WITHOUT TIME ZONE)."""
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession

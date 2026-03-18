@@ -46,6 +46,20 @@ COMMENT ON EXTENSION vector IS 'vector data type and ivfflat and hnsw access met
 
 
 --
+-- Name: accountabilitystatus; Type: TYPE; Schema: public; Owner: postgres
+--
+
+CREATE TYPE accountabilitystatus AS ENUM (
+    'pending',
+    'active',
+    'paused',
+    'ended'
+);
+
+
+ALTER TYPE accountabilitystatus OWNER TO postgres;
+
+--
 -- Name: achievementrarity; Type: TYPE; Schema: public; Owner: postgres
 --
 
@@ -568,6 +582,51 @@ CREATE TABLE ab_experiments (
 
 
 ALTER TABLE ab_experiments OWNER TO postgres;
+
+--
+-- Name: accountability_checkin; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE accountability_checkin (
+    id uuid NOT NULL,
+    partnership_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    content text NOT NULL,
+    mood integer DEFAULT 3 NOT NULL,
+    minutes integer DEFAULT 0 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    deleted_at timestamp with time zone,
+    likes integer DEFAULT 0 NOT NULL,
+    encouragements jsonb DEFAULT '[]'::jsonb NOT NULL,
+    liked_by jsonb DEFAULT '[]'::jsonb NOT NULL
+);
+
+
+ALTER TABLE accountability_checkin OWNER TO postgres;
+
+--
+-- Name: accountability_partnership; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE accountability_partnership (
+    id uuid NOT NULL,
+    initiator_id uuid NOT NULL,
+    partner_id uuid NOT NULL,
+    friendship_id uuid,
+    initiator_goal text NOT NULL,
+    partner_goal text,
+    check_in_days integer DEFAULT 1 NOT NULL,
+    status accountabilitystatus DEFAULT 'pending'::accountabilitystatus NOT NULL,
+    started_at timestamp with time zone,
+    ended_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    deleted_at timestamp with time zone
+);
+
+
+ALTER TABLE accountability_partnership OWNER TO postgres;
 
 --
 -- Name: achievements; Type: TABLE; Schema: public; Owner: postgres
@@ -1804,6 +1863,28 @@ CREATE TABLE irt_item_parameters (
 
 
 ALTER TABLE irt_item_parameters OWNER TO postgres;
+
+--
+-- Name: item_similarities; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE item_similarities (
+    item_id_1 uuid NOT NULL,
+    item_type_1 character varying(50) NOT NULL,
+    item_id_2 uuid NOT NULL,
+    item_type_2 character varying(50) NOT NULL,
+    similarity_score double precision NOT NULL,
+    common_learners integer DEFAULT 0 NOT NULL,
+    last_calculated_at timestamp without time zone NOT NULL,
+    meta json,
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE item_similarities OWNER TO postgres;
 
 --
 -- Name: jobs; Type: TABLE; Schema: public; Owner: postgres
@@ -3932,6 +4013,28 @@ CREATE TABLE user_settings (
 ALTER TABLE user_settings OWNER TO postgres;
 
 --
+-- Name: user_similarities; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE user_similarities (
+    user_id_1 uuid NOT NULL,
+    user_id_2 uuid NOT NULL,
+    similarity_score double precision NOT NULL,
+    common_items_count integer DEFAULT 0 NOT NULL,
+    common_subjects json,
+    last_calculated_at timestamp without time zone NOT NULL,
+    calculation_version integer DEFAULT 1 NOT NULL,
+    meta json,
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE user_similarities OWNER TO postgres;
+
+--
 -- Name: user_state_snapshots; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -4288,6 +4391,22 @@ ALTER TABLE ONLY ab_experiment_variants
 
 ALTER TABLE ONLY ab_experiments
     ADD CONSTRAINT ab_experiments_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: accountability_checkin accountability_checkin_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY accountability_checkin
+    ADD CONSTRAINT accountability_checkin_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: accountability_partnership accountability_partnership_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY accountability_partnership
+    ADD CONSTRAINT accountability_partnership_pkey PRIMARY KEY (id);
 
 
 --
@@ -4720,6 +4839,14 @@ ALTER TABLE ONLY intervention_templates
 
 ALTER TABLE ONLY irt_item_parameters
     ADD CONSTRAINT irt_item_parameters_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: item_similarities item_similarities_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY item_similarities
+    ADD CONSTRAINT item_similarities_pkey PRIMARY KEY (id);
 
 
 --
@@ -5243,6 +5370,14 @@ ALTER TABLE ONLY tracking_events
 
 
 --
+-- Name: accountability_partnership uq_accountability_partnership_pair; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY accountability_partnership
+    ADD CONSTRAINT uq_accountability_partnership_pair UNIQUE (initiator_id, partner_id);
+
+
+--
 -- Name: capsule_favorites uq_capsule_favorite; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -5291,6 +5426,14 @@ ALTER TABLE ONLY intervention_feedback
 
 
 --
+-- Name: item_similarities uq_item_similarity_pair; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY item_similarities
+    ADD CONSTRAINT uq_item_similarity_pair UNIQUE (item_id_1, item_type_1, item_id_2, item_type_2);
+
+
+--
 -- Name: offline_message_queue uq_offline_queue_nonce; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -5336,6 +5479,14 @@ ALTER TABLE ONLY user_blocks
 
 ALTER TABLE ONLY user_daily_metrics
     ADD CONSTRAINT uq_user_daily_metric UNIQUE (user_id, date);
+
+
+--
+-- Name: user_similarities uq_user_similarity_pair; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY user_similarities
+    ADD CONSTRAINT uq_user_similarity_pair UNIQUE (user_id_1, user_id_2);
 
 
 --
@@ -5491,6 +5642,14 @@ ALTER TABLE ONLY user_settings
 
 
 --
+-- Name: user_similarities user_similarities_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY user_similarities
+    ADD CONSTRAINT user_similarities_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: user_state_snapshots user_state_snapshots_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -5584,6 +5743,34 @@ ALTER TABLE ONLY visual_elements
 
 ALTER TABLE ONLY word_books
     ADD CONSTRAINT word_books_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: idx_accountability_checkin_created_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_accountability_checkin_created_at ON accountability_checkin USING btree (created_at);
+
+
+--
+-- Name: idx_accountability_checkin_partnership_user; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_accountability_checkin_partnership_user ON accountability_checkin USING btree (partnership_id, user_id);
+
+
+--
+-- Name: idx_accountability_initiator_status; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_accountability_initiator_status ON accountability_partnership USING btree (initiator_id, status);
+
+
+--
+-- Name: idx_accountability_partner_status; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_accountability_partner_status ON accountability_partnership USING btree (partner_id, status);
 
 
 --
@@ -5885,6 +6072,27 @@ CREATE INDEX idx_group_type ON groups USING btree (type);
 --
 
 CREATE INDEX idx_idempotency_expires ON idempotency_keys USING btree (expires_at);
+
+
+--
+-- Name: idx_item_sim_item1; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_item_sim_item1 ON item_similarities USING btree (item_id_1);
+
+
+--
+-- Name: idx_item_sim_item2; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_item_sim_item2 ON item_similarities USING btree (item_id_2);
+
+
+--
+-- Name: idx_item_sim_score; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_item_sim_score ON item_similarities USING btree (similarity_score);
 
 
 --
@@ -6459,6 +6667,27 @@ CREATE INDEX idx_user_sessions_user_active ON user_sessions USING btree (user_id
 --
 
 CREATE UNIQUE INDEX idx_user_settings_user ON user_settings USING btree (user_id);
+
+
+--
+-- Name: idx_user_sim_score; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_user_sim_score ON user_similarities USING btree (similarity_score);
+
+
+--
+-- Name: idx_user_sim_user1; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_user_sim_user1 ON user_similarities USING btree (user_id_1);
+
+
+--
+-- Name: idx_user_sim_user2; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_user_sim_user2 ON user_similarities USING btree (user_id_2);
 
 
 --
@@ -7642,6 +7871,13 @@ CREATE INDEX ix_irt_item_parameters_question_id ON irt_item_parameters USING btr
 --
 
 CREATE INDEX ix_irt_item_parameters_subject_id ON irt_item_parameters USING btree (subject_id);
+
+
+--
+-- Name: ix_item_similarities_deleted_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_item_similarities_deleted_at ON item_similarities USING btree (deleted_at);
 
 
 --
@@ -9395,6 +9631,13 @@ CREATE UNIQUE INDEX ix_user_settings_user_id ON user_settings USING btree (user_
 
 
 --
+-- Name: ix_user_similarities_deleted_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_user_similarities_deleted_at ON user_similarities USING btree (deleted_at);
+
+
+--
 -- Name: ix_user_state_snapshots_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -9666,6 +9909,46 @@ ALTER TABLE ONLY ab_experiment_variants
 
 ALTER TABLE ONLY ab_experiments
     ADD CONSTRAINT ab_experiments_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: accountability_checkin accountability_checkin_partnership_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY accountability_checkin
+    ADD CONSTRAINT accountability_checkin_partnership_id_fkey FOREIGN KEY (partnership_id) REFERENCES accountability_partnership(id) ON DELETE CASCADE;
+
+
+--
+-- Name: accountability_checkin accountability_checkin_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY accountability_checkin
+    ADD CONSTRAINT accountability_checkin_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: accountability_partnership accountability_partnership_friendship_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY accountability_partnership
+    ADD CONSTRAINT accountability_partnership_friendship_id_fkey FOREIGN KEY (friendship_id) REFERENCES friendships(id) ON DELETE SET NULL;
+
+
+--
+-- Name: accountability_partnership accountability_partnership_initiator_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY accountability_partnership
+    ADD CONSTRAINT accountability_partnership_initiator_id_fkey FOREIGN KEY (initiator_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: accountability_partnership accountability_partnership_partner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY accountability_partnership
+    ADD CONSTRAINT accountability_partnership_partner_id_fkey FOREIGN KEY (partner_id) REFERENCES users(id) ON DELETE CASCADE;
 
 
 --
@@ -11122,6 +11405,22 @@ ALTER TABLE ONLY user_sessions
 
 ALTER TABLE ONLY user_settings
     ADD CONSTRAINT user_settings_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+
+
+--
+-- Name: user_similarities user_similarities_user_id_1_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY user_similarities
+    ADD CONSTRAINT user_similarities_user_id_1_fkey FOREIGN KEY (user_id_1) REFERENCES users(id);
+
+
+--
+-- Name: user_similarities user_similarities_user_id_2_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY user_similarities
+    ADD CONSTRAINT user_similarities_user_id_2_fkey FOREIGN KEY (user_id_2) REFERENCES users(id);
 
 
 --

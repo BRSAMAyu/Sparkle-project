@@ -4,6 +4,7 @@ Recommendations API
 
 提供协同过滤推荐接口
 """
+from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
@@ -274,7 +275,7 @@ async def get_recommendation_stats(
         - cache_hit_rate: 缓存命中率
     """
     try:
-        from datetime import UTC, datetime, timedelta
+        from datetime import timezone, datetime, timedelta
 
         from sqlalchemy import func, or_, select
 
@@ -289,7 +290,7 @@ async def get_recommendation_stats(
         total_interactions = interaction_result.scalar() or 0
 
         # 统计相似用户数量 (使用Python计算时间)
-        yesterday = datetime.now(UTC).replace(tzinfo=None) - timedelta(hours=24)
+        yesterday = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=24)
         similar_users_query = select(func.count(UserSimilarity.id)).where(
             UserSimilarity.last_calculated_at >= yesterday,
             or_(

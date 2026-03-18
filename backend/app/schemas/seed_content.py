@@ -2,6 +2,7 @@
 Seed Content Schemas
 种子内容库的 Pydantic Schema 定义
 """
+from __future__ import annotations
 from datetime import datetime
 from enum import Enum
 from typing import Any

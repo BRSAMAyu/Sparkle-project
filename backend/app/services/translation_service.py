@@ -3,6 +3,7 @@ Translation Service - Focus Translate v2
 
 Provides segment-based translation with caching, glossary support, and timeout handling.
 """
+from __future__ import annotations
 import asyncio
 import hashlib
 import json

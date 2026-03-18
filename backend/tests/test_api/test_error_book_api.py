@@ -1,5 +1,5 @@
 import pytest
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from httpx import AsyncClient, ASGITransport
 from uuid import uuid4
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,7 +8,7 @@ from fastapi import FastAPI
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 from app.api.v1.error_book import router

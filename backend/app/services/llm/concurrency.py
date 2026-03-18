@@ -7,6 +7,7 @@ LLM 并发控制模块
 3. 请求排队管理
 4. 支持根据用户等级动态调整并发数
 """
+from __future__ import annotations
 
 import asyncio
 import os

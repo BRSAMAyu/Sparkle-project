@@ -2,7 +2,8 @@
 Visual Element Service
 视觉元素服务 - 处理视觉元素的解锁、装备、查询等逻辑
 """
-from datetime import UTC, datetime
+from __future__ import annotations
+from datetime import timezone, datetime
 from typing import Any
 import uuid
 
@@ -174,7 +175,7 @@ class VisualElementService:
 
         # 获取或创建用户配置
         config = await self._get_or_create_user_config(user_id)
-        now = datetime.now(UTC).replace(tzinfo=None)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
 
         # 处理套装
         if element.element_type == VisualElementType.BUNDLE:
@@ -264,7 +265,7 @@ class VisualElementService:
             )
 
         # 创建解锁记录
-        now = datetime.now(UTC).replace(tzinfo=None)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         user_element = UserVisualElement(
             user_id=user_id,
             element_id=request.element_id,
@@ -336,7 +337,7 @@ class VisualElementService:
         # 获取默认元素
         defaults = await self.get_default_elements()
 
-        now = datetime.now(UTC).replace(tzinfo=None)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
 
         # 解锁所有默认元素
         for element in defaults:

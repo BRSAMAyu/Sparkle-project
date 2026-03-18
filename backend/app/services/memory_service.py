@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from datetime import UTC, date, datetime
+from datetime import timezone, date, datetime
 from typing import Any
 from uuid import UUID
 
@@ -38,7 +38,7 @@ SUMMARY_MAX_LEN = 48
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 def _truncate_summary(value: str) -> str:

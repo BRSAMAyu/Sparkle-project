@@ -6,12 +6,13 @@ Implements intelligent plan review with:
 - LLM-based deep review for complex plans
 - User confirmation workflow for high-risk plans
 """
+from __future__ import annotations
 import asyncio
 import json
 import time
 import uuid
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from enum import Enum
 from typing import Any
 from uuid import UUID
@@ -32,7 +33,7 @@ from app.services.self_evolution_service import StrategyCalibrationService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class ReviewDecision(Enum):

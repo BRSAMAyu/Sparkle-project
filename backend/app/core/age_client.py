@@ -3,6 +3,7 @@ Apache AGE 客户端封装
 
 提供异步 AGE 连接池和便捷的 Cypher 查询接口
 """
+from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass

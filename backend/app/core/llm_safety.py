@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 LLM 安全防护模块
 

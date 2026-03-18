@@ -2,6 +2,7 @@
 生词本与词典 API
 Vocabulary & Dictionary API
 """
+from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 

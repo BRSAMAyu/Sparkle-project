@@ -2,6 +2,7 @@
 Seed Libraries API Endpoints
 种子内容库 API 接口
 """
+from __future__ import annotations
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status

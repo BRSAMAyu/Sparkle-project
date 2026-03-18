@@ -2,11 +2,11 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock
 from uuid import uuid4
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 from app.services.error_book_service import ErrorBookService

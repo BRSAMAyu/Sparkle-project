@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 LLM 模型回退管理器 (Model Fallback Manager)
 

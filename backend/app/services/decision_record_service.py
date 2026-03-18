@@ -1,6 +1,8 @@
 """
 决策记录服务 - 记录系统决策及使用的偏好版本
 """
+from __future__ import annotations
+
 from typing import Any
 from uuid import UUID
 

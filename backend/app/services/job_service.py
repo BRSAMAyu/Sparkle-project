@@ -2,8 +2,9 @@
 异步任务服务
 Job Service - 管理异步任务的创建、状态查询和恢复 (v2.1 增强版)
 """
+from __future__ import annotations
 import asyncio
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from uuid import UUID, uuid4
 
 from loguru import logger
@@ -44,7 +45,7 @@ class JobService:
         for job in stale_jobs:
             job.status = JobStatus.FAILED
             job.error_message = "任务因服务重启而中断，请重试"
-            job.completed_at = datetime.now(UTC)
+            job.completed_at = datetime.now(timezone.utc)
             logger.warning(f"Reset stale job {job.id} to FAILED")
 
         await db.commit()
@@ -58,7 +59,7 @@ class JobService:
         params: dict
     ) -> Job:
         """创建异步任务"""
-        now = datetime.now(UTC)
+        now = datetime.now(timezone.utc)
 
         job = Job(
             id=uuid4(),
@@ -108,7 +109,7 @@ class JobService:
         # 🆕 检查是否超时
         if job.status == JobStatus.RUNNING and job.timeout_at:
             # 使用 timezone-aware datetime 进行比较
-            current_time = datetime.now(UTC)
+            current_time = datetime.now(timezone.utc)
             timeout_at = job.timeout_at
             # 如果数据库返回 naive datetime，假定它是 UTC
             if timeout_at.tzinfo is None:
@@ -117,7 +118,7 @@ class JobService:
             if current_time > timeout_at:
                 job.status = JobStatus.FAILED
                 job.error_message = "任务执行超时，请重试"
-                job.completed_at = datetime.now(UTC)
+                job.completed_at = datetime.now(timezone.utc)
                 await db.commit()
                 logger.warning(f"Job {job_id} marked as FAILED due to timeout")
 
@@ -136,7 +137,7 @@ class JobService:
                 job = result.scalar_one_or_none()
                 if job:
                     job.status = JobStatus.RUNNING
-                    job.started_at = datetime.now(UTC)
+                    job.started_at = datetime.now(timezone.utc)
                     await db.commit()
 
                     # 执行实际逻辑
@@ -147,7 +148,7 @@ class JobService:
                     await db.refresh(job)
                     if job.status == JobStatus.RUNNING:
                         job.status = JobStatus.COMPLETED
-                        job.completed_at = datetime.now(UTC)
+                        job.completed_at = datetime.now(timezone.utc)
                         job.progress = 100
                         await db.commit()
 
@@ -161,7 +162,7 @@ class JobService:
                     .values(
                         status=JobStatus.FAILED,
                         error_message=str(e)[:500],
-                        completed_at=datetime.now(UTC)
+                        completed_at=datetime.now(timezone.utc)
                     )
                 )
                 await db.commit()

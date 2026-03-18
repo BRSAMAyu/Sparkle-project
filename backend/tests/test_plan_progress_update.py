@@ -5,7 +5,7 @@ Verifies that completing a task automatically updates the associated plan's prog
 """
 import pytest
 from uuid import uuid4
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,7 +16,7 @@ from app.services.task_service import TaskService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 @pytest.mark.asyncio

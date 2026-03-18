@@ -8,7 +8,7 @@ Accountability Achievement Service
 - 协作成就
 """
 
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import timezone, datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
 
@@ -26,7 +26,7 @@ from app.services.notification_service import notification_service
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class AccountabilityAchievementService:

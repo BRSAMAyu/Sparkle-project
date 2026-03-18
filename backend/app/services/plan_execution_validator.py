@@ -3,8 +3,9 @@ PlanExecutionValidator - 方案执行验证服务
 
 负责验证方案执行结果是否符合预期
 """
+from __future__ import annotations
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import TYPE_CHECKING, Any, Optional
 from uuid import UUID
 
@@ -76,7 +77,7 @@ class ExecutionValidationResult:
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class PlanExecutionValidator:

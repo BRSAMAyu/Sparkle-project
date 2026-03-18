@@ -3,6 +3,7 @@
 
 实现 iFlytek 语音听写 WebSocket v2 协议。
 """
+from __future__ import annotations
 import asyncio
 import base64
 import hashlib

@@ -1,5 +1,17 @@
 """User Schemas - Registration, login, profile, etc."""
+from __future__ import annotations
 import enum
+
+
+# Python 3.9 compatible StrEnum
+class StrEnum(str, enum.Enum):
+    """String enum for Python 3.9 compatibility"""
+    def __new__(cls, value):
+        obj = str.__new__(cls, value)
+        obj._value_ = value
+        return obj
+
+
 from datetime import datetime
 from typing import Any, Optional
 from uuid import UUID
@@ -8,13 +20,13 @@ from pydantic import BaseModel, EmailStr, Field, model_validator
 
 # ========== Request Schemas ==========
 
-class UserStatusEnum(enum.StrEnum):
+class UserStatusEnum(StrEnum):
     ONLINE = "online"
     OFFLINE = "offline"
     INVISIBLE = "invisible"
 
 
-class AvatarStatus(enum.StrEnum):
+class AvatarStatus(StrEnum):
     """头像审核状态"""
     APPROVED = "approved"   # 审核通过
     PENDING = "pending"     # 待审核

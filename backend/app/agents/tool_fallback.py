@@ -3,6 +3,7 @@ Tool Execution Fallback Strategies - 工具执行降级策略
 
 P1 Improvement: Provides multi-level fallback strategies when tool execution fails.
 """
+from __future__ import annotations
 import json
 from typing import Any
 

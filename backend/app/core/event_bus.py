@@ -1,10 +1,11 @@
+from __future__ import annotations
 import asyncio
 import json
 import os
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from contextlib import suppress
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import Any
 
 import redis.asyncio as redis
@@ -28,7 +29,7 @@ class KnowledgeNodeUpdated(Event):
         self.user_id = user_id
         self.node_id = node_id
         self.new_mastery = new_mastery
-        self.timestamp = datetime.now(UTC)
+        self.timestamp = datetime.now(timezone.utc)
 
     def to_dict(self):
         return {
@@ -47,7 +48,7 @@ class NodeMasteryUpdatedEvent(Event):
         self.old_mastery = old_mastery
         self.new_mastery = new_mastery
         self.reason = reason
-        self.timestamp = datetime.now(UTC)
+        self.timestamp = datetime.now(timezone.utc)
 
     def to_dict(self):
         return {
@@ -66,7 +67,7 @@ class ErrorCreated(Event):
         self.user_id = user_id
         self.error_id = error_id
         self.linked_node_ids = linked_node_ids or []
-        self.timestamp = datetime.now(UTC)
+        self.timestamp = datetime.now(timezone.utc)
 
     def to_dict(self):
         return {
@@ -102,7 +103,7 @@ class TaskCompleted(Event):
         self.plan_id = plan_id
         self.source = source
         self.source_metadata = source_metadata or {}
-        self.timestamp = datetime.now(UTC)
+        self.timestamp = datetime.now(timezone.utc)
 
     def to_dict(self):
         return {
@@ -137,7 +138,7 @@ class TaskAbandoned(Event):
         self.estimated_minutes = estimated_minutes
         self.time_spent = time_spent
         self.plan_id = plan_id
-        self.timestamp = datetime.now(UTC)
+        self.timestamp = datetime.now(timezone.utc)
 
     def to_dict(self):
         return {
@@ -164,7 +165,7 @@ class ProfilePreferenceUpdated(Event):
         self.pref_keys = pref_keys
         self.preference_version = preference_version
         self.source = source
-        self.timestamp = datetime.now(UTC)
+        self.timestamp = datetime.now(timezone.utc)
 
     def to_dict(self):
         return {
@@ -187,7 +188,7 @@ class ProfilePreferenceDeleted(Event):
         self.user_id = user_id
         self.pref_key = pref_key
         self.preference_version = preference_version
-        self.timestamp = datetime.now(UTC)
+        self.timestamp = datetime.now(timezone.utc)
 
     def to_dict(self):
         return {
@@ -210,7 +211,7 @@ class UserSettingsUpdatedEvent(Event):
     ):
         self.user_id = user_id
         self.setting_keys = setting_keys
-        self.timestamp = timestamp or datetime.now(UTC).isoformat()
+        self.timestamp = timestamp or datetime.now(timezone.utc).isoformat()
 
     def to_dict(self):
         return {
@@ -237,7 +238,7 @@ class CalendarEventCreated(Event):
         self.title = title
         self.start_time = start_time
         self.source = source
-        self.timestamp = datetime.now(UTC)
+        self.timestamp = datetime.now(timezone.utc)
 
     def to_dict(self):
         return {
@@ -263,7 +264,7 @@ class CalendarEventUpdated(Event):
         self.user_id = user_id
         self.event_id = event_id
         self.changes = changes
-        self.timestamp = datetime.now(UTC)
+        self.timestamp = datetime.now(timezone.utc)
 
     def to_dict(self):
         return {
@@ -287,7 +288,7 @@ class CalendarEventDeleted(Event):
         self.user_id = user_id
         self.event_id = event_id
         self.hard_delete = hard_delete
-        self.timestamp = datetime.now(UTC)
+        self.timestamp = datetime.now(timezone.utc)
 
     def to_dict(self):
         return {
@@ -360,7 +361,7 @@ class EventBus:
             "consumer_name": consumer_name,
             "message_id": message_id,
             "retry_count": retry_count,
-            "failed_at": datetime.now(UTC).isoformat(),
+            "failed_at": datetime.now(timezone.utc).isoformat(),
         }
         await self.redis.xadd(
             self._dlq_stream(stream),
@@ -398,7 +399,7 @@ class EventBus:
         retry_payload["_last_error"] = str(error)
         retry_payload["_failed_consumer_group"] = group_name
         retry_payload["_failed_consumer_name"] = consumer_name
-        retry_payload["_failed_at"] = datetime.now(UTC).isoformat()
+        retry_payload["_failed_at"] = datetime.now(timezone.utc).isoformat()
         retry_payload["_original_message_id"] = parsed_data.get("_original_message_id", message_id)
 
         await self.redis.xadd(stream, self._serialize_stream_body(retry_payload))
@@ -669,7 +670,7 @@ class EventBus:
                 if first_entry:
                     message_id = first_entry[0][0]
                     timestamp_ms = int(message_id.split("-")[0])
-                    oldest_age_seconds = (datetime.now(UTC).timestamp() * 1000 - timestamp_ms) / 1000
+                    oldest_age_seconds = (datetime.now(timezone.utc).timestamp() * 1000 - timestamp_ms) / 1000
 
             return {
                 "dlq_stream": dlq_stream,

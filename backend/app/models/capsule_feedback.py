@@ -1,6 +1,9 @@
 """
 Capsule Feedback Model
 """
+from __future__ import annotations
+
+
 import enum
 
 from sqlalchemy import Boolean, Column, Float, ForeignKey, Integer, String, Text
@@ -11,6 +14,7 @@ from app.models.base import GUID, BaseModel
 
 class FeedbackCategory(enum.Enum):
     """反馈分类"""
+
     TOO_LONG = "too_long"
     TOO_SHORT = "too_short"
     JUST_RIGHT = "just_right"
@@ -26,6 +30,7 @@ class CapsuleFeedback(BaseModel):
 
     用于收集用户对胶囊的反馈，并据此更新用户推断偏好
     """
+
     __tablename__ = "capsule_feedbacks"
 
     user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
@@ -57,7 +62,9 @@ class CapsuleFeedback(BaseModel):
         if self.category:
             if self.category == FeedbackCategory.TOO_SHORT.value or self.category == FeedbackCategory.TOO_SIMPLE.value:
                 depth_delta = 0.1  # 希望更深入
-            elif self.category == FeedbackCategory.TOO_LONG.value or self.category == FeedbackCategory.TOO_COMPLEX.value:
+            elif (
+                self.category == FeedbackCategory.TOO_LONG.value or self.category == FeedbackCategory.TOO_COMPLEX.value
+            ):
                 depth_delta = -0.1  # 希望更浅显
 
         if self.rating is not None:

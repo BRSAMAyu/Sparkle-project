@@ -2,7 +2,8 @@
 用户设备服务
 User Device Service - 管理用户设备和推送令牌
 """
-from datetime import UTC, datetime
+from __future__ import annotations
+from datetime import timezone, datetime
 
 import redis.asyncio as redis
 from sqlalchemy import select
@@ -46,7 +47,7 @@ class DeviceService:
         )
         device = result.scalar_one_or_none()
 
-        now = datetime.now(UTC)
+        now = datetime.now(timezone.utc)
 
         if device:
             # 更新现有设备
@@ -201,7 +202,7 @@ class DeviceService:
         """
         from datetime import timedelta
 
-        threshold_date = datetime.now(UTC) - timedelta(days=days_threshold)
+        threshold_date = datetime.now(timezone.utc) - timedelta(days=days_threshold)
 
         result = await db.execute(
             select(UserDevice).where(

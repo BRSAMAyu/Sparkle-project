@@ -1,10 +1,10 @@
 import json
 import os
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from uuid import uuid4
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 import pytest

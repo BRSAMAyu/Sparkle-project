@@ -4,6 +4,7 @@ Multi-Intent Recognition Schemas
 
 用于识别和拆分用户输入中的多个意图
 """
+from __future__ import annotations
 from enum import Enum
 from typing import Any
 from uuid import UUID

@@ -2,9 +2,10 @@
 知识拓展服务 (Expansion Service)
 使用 LLM 自动拓展知识星图
 """
+from __future__ import annotations
 import asyncio
 import json
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from uuid import UUID
 
 from loguru import logger
@@ -21,7 +22,7 @@ from app.services.galaxy_feedback_signal_processor import GalaxyFeedbackSignalPr
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class ExpansionService:

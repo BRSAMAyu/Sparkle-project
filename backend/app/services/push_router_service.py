@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 Push Router Service
 
@@ -16,7 +17,7 @@ Features:
 - Unified interface for push notifications
 """
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from enum import Enum
 from typing import Any
 from uuid import UUID

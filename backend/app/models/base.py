@@ -2,8 +2,11 @@
 Base Model Classes
 所有数据库模型的基类
 """
+from __future__ import annotations
+
+
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from typing import TypeVar
 
 from sqlalchemy import Column, DateTime, select
@@ -15,7 +18,7 @@ from app.db.session import Base
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class GUID(TypeDecorator):

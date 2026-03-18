@@ -8,6 +8,7 @@
 4. ✅ 默认值和类型转换
 5. ✅ 配置分组 (核心、性能、安全)
 """
+from __future__ import annotations
 
 from typing import Any
 

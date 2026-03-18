@@ -12,6 +12,50 @@ import (
 	"github.com/pgvector/pgvector-go"
 )
 
+type Accountabilitystatus string
+
+const (
+	AccountabilitystatusPending Accountabilitystatus = "pending"
+	AccountabilitystatusActive  Accountabilitystatus = "active"
+	AccountabilitystatusPaused  Accountabilitystatus = "paused"
+	AccountabilitystatusEnded   Accountabilitystatus = "ended"
+)
+
+func (e *Accountabilitystatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = Accountabilitystatus(s)
+	case string:
+		*e = Accountabilitystatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for Accountabilitystatus: %T", src)
+	}
+	return nil
+}
+
+type NullAccountabilitystatus struct {
+	Accountabilitystatus Accountabilitystatus `json:"accountabilitystatus"`
+	Valid                bool                 `json:"valid"` // Valid is true if Accountabilitystatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullAccountabilitystatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.Accountabilitystatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.Accountabilitystatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullAccountabilitystatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.Accountabilitystatus), nil
+}
+
 type Achievementrarity string
 
 const (
@@ -1404,6 +1448,37 @@ type AbExperimentVariant struct {
 	DeletedAt                   pgtype.Timestamp `json:"deleted_at"`
 }
 
+type AccountabilityCheckin struct {
+	ID             pgtype.UUID        `json:"id"`
+	PartnershipID  pgtype.UUID        `json:"partnership_id"`
+	UserID         pgtype.UUID        `json:"user_id"`
+	Content        string             `json:"content"`
+	Mood           int32              `json:"mood"`
+	Minutes        int32              `json:"minutes"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt      pgtype.Timestamptz `json:"deleted_at"`
+	Likes          int32              `json:"likes"`
+	Encouragements []byte             `json:"encouragements"`
+	LikedBy        []byte             `json:"liked_by"`
+}
+
+type AccountabilityPartnership struct {
+	ID            pgtype.UUID          `json:"id"`
+	InitiatorID   pgtype.UUID          `json:"initiator_id"`
+	PartnerID     pgtype.UUID          `json:"partner_id"`
+	FriendshipID  pgtype.UUID          `json:"friendship_id"`
+	InitiatorGoal string               `json:"initiator_goal"`
+	PartnerGoal   pgtype.Text          `json:"partner_goal"`
+	CheckInDays   int32                `json:"check_in_days"`
+	Status        Accountabilitystatus `json:"status"`
+	StartedAt     pgtype.Timestamptz   `json:"started_at"`
+	EndedAt       pgtype.Timestamptz   `json:"ended_at"`
+	CreatedAt     pgtype.Timestamptz   `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz   `json:"updated_at"`
+	DeletedAt     pgtype.Timestamptz   `json:"deleted_at"`
+}
+
 type Achievement struct {
 	ID               string                `json:"id"`
 	Name             string                `json:"name"`
@@ -2239,6 +2314,21 @@ type IrtItemParameter struct {
 	CreatedAt  pgtype.Timestamp `json:"created_at"`
 	UpdatedAt  pgtype.Timestamp `json:"updated_at"`
 	DeletedAt  pgtype.Timestamp `json:"deleted_at"`
+}
+
+type ItemSimilarity struct {
+	ItemID1          pgtype.UUID      `json:"item_id_1"`
+	ItemType1        string           `json:"item_type_1"`
+	ItemID2          pgtype.UUID      `json:"item_id_2"`
+	ItemType2        string           `json:"item_type_2"`
+	SimilarityScore  float64          `json:"similarity_score"`
+	CommonLearners   int32            `json:"common_learners"`
+	LastCalculatedAt pgtype.Timestamp `json:"last_calculated_at"`
+	Meta             []byte           `json:"meta"`
+	ID               pgtype.UUID      `json:"id"`
+	CreatedAt        pgtype.Timestamp `json:"created_at"`
+	UpdatedAt        pgtype.Timestamp `json:"updated_at"`
+	DeletedAt        pgtype.Timestamp `json:"deleted_at"`
 }
 
 type Job struct {
@@ -3582,6 +3672,21 @@ type UserSetting struct {
 	CreatedAt            pgtype.Timestamp `json:"created_at"`
 	UpdatedAt            pgtype.Timestamp `json:"updated_at"`
 	DeletedAt            pgtype.Timestamp `json:"deleted_at"`
+}
+
+type UserSimilarity struct {
+	UserID1            pgtype.UUID      `json:"user_id_1"`
+	UserID2            pgtype.UUID      `json:"user_id_2"`
+	SimilarityScore    float64          `json:"similarity_score"`
+	CommonItemsCount   int32            `json:"common_items_count"`
+	CommonSubjects     []byte           `json:"common_subjects"`
+	LastCalculatedAt   pgtype.Timestamp `json:"last_calculated_at"`
+	CalculationVersion int32            `json:"calculation_version"`
+	Meta               []byte           `json:"meta"`
+	ID                 pgtype.UUID      `json:"id"`
+	CreatedAt          pgtype.Timestamp `json:"created_at"`
+	UpdatedAt          pgtype.Timestamp `json:"updated_at"`
+	DeletedAt          pgtype.Timestamp `json:"deleted_at"`
 }
 
 type UserStateSnapshot struct {

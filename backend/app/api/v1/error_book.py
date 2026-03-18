@@ -1,6 +1,7 @@
 """
 错题档案 API 路由
 """
+from __future__ import annotations
 
 from uuid import UUID
 

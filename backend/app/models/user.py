@@ -2,7 +2,19 @@
 用户模型
 User Model - 核心用户信息和个性化偏好
 """
+from __future__ import annotations
 import enum
+
+
+# Python 3.9 compatible StrEnum
+class StrEnum(str, enum.Enum):
+    """String enum for Python 3.9 compatibility"""
+    def __new__(cls, value):
+        obj = str.__new__(cls, value)
+        obj._value_ = value
+        return obj
+
+
 from datetime import datetime
 
 from sqlalchemy import JSON, Boolean, Column, DateTime, Enum, Float, ForeignKey, Index, Integer, String
@@ -15,21 +27,21 @@ from app.models.base import GUID, BaseModel
 __all__ = ['UserStatus', 'AvatarStatus', 'SearchVisibility', 'User', 'PushPreference', 'UserDevice', 'LoginAttempt']
 
 
-class UserStatus(enum.StrEnum):
+class UserStatus(StrEnum):
     """用户在线状态"""
     ONLINE = "online"
     OFFLINE = "offline"
     INVISIBLE = "invisible"
 
 
-class AvatarStatus(enum.StrEnum):
+class AvatarStatus(StrEnum):
     """头像审核状态"""
     APPROVED = "approved"   # 审核通过
     PENDING = "pending"     # 待审核
     REJECTED = "rejected"   # 审核驳回
 
 
-class SearchVisibility(enum.StrEnum):
+class SearchVisibility(StrEnum):
     """用户搜索可见性设置"""
     EVERYONE = "everyone"   # 所有人可搜索
     FRIENDS = "friends"     # 仅好友可搜索

@@ -9,7 +9,7 @@ Accountability Partnership Notification Service
 - 伙伴打卡通知
 - 连胜中断提醒
 """
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from enum import Enum
 from uuid import UUID
 
@@ -36,7 +36,7 @@ class AccountabilityNotificationType(str, Enum):
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class AccountabilityNotificationService:

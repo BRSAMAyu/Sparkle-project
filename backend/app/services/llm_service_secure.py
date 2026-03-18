@@ -7,6 +7,7 @@
 作者: Claude Code (Opus 4.5)
 创建时间: 2026-01-03
 """
+from __future__ import annotations
 
 import asyncio
 from collections.abc import AsyncGenerator

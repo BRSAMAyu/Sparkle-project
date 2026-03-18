@@ -7,6 +7,7 @@ TokenTracker - Token 使用量追踪器
 3. 生成使用统计和报表
 4. 异步持久化到数据库
 """
+from __future__ import annotations
 
 import json
 import time

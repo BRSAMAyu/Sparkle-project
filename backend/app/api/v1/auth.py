@@ -2,9 +2,10 @@
 Authentication API
 Login, Register, Refresh Token, Social Login
 """
+from __future__ import annotations
 import asyncio
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -99,7 +100,7 @@ def _apply_terms_acceptance(
     privacy_version: str | None,
     agreed_locale: str | None,
 ) -> None:
-    now = datetime.now(UTC).replace(tzinfo=None)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     user.agreed_to_tos_at = now
     user.agreed_to_privacy_at = now
     user.tos_version = tos_version or "v1"
@@ -682,7 +683,7 @@ async def reset_password(
 
     user.hashed_password = get_password_hash(data.new_password)
     user.password_login_enabled = True
-    user.token_revoked_before = datetime.now(UTC).replace(tzinfo=None)
+    user.token_revoked_before = datetime.now(timezone.utc).replace(tzinfo=None)
     db.add(user)
     await db.commit()
     await db.refresh(user)

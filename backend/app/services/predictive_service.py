@@ -7,9 +7,10 @@ Predictive Learning Intelligence Service - 预测学习智能服务
 - 最佳学习时间推荐
 - 辍学风险检测
 """
+from __future__ import annotations
 
 import statistics
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -88,7 +89,7 @@ class PredictiveService:
 
     @staticmethod
     def _get_current_time() -> datetime:
-        return datetime.now(UTC)
+        return datetime.now(timezone.utc)
 
     async def predict_engagement(self, user_id: UUID) -> EngagementForecast:
         """
@@ -180,7 +181,7 @@ class PredictiveService:
         except Exception as e:
             logger.error(f"参与度预测失败: {e}")
             return EngagementForecast(
-                next_active_time=datetime.now(UTC) + timedelta(days=1),
+                next_active_time=datetime.now(timezone.utc) + timedelta(days=1),
                 confidence=0.0,
                 recommended_intervention="预测失败",
                 risk_level="unknown"

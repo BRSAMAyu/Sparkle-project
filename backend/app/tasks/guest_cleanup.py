@@ -4,7 +4,7 @@ Guest User Cleanup Tasks
 
 定期清理长期未活跃的游客用户数据
 """
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 
 from celery import shared_task
 from celery.schedules import crontab
@@ -16,7 +16,7 @@ from app.models.user import User
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 @shared_task(name="tasks.cleanup_expired_guests")

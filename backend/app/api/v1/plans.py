@@ -1,8 +1,9 @@
 """
 Plans API Endpoints - Full CRUD operations
 """
+from __future__ import annotations
 
-from datetime import UTC, date, datetime
+from datetime import timezone, date, datetime
 from typing import Any
 from uuid import UUID
 
@@ -37,7 +38,7 @@ router = APIRouter()
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 @router.get("", response_model=dict[str, Any])

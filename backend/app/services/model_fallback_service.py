@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 Model Fallback Service - Phase 2d
 
@@ -13,7 +14,7 @@ Model Fallback Service - Phase 2d
 
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from enum import Enum
 from typing import Any
 
@@ -26,7 +27,7 @@ from app.core.agent_profiles import TaskType
 # ============================================
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class FallbackReason(str, Enum):

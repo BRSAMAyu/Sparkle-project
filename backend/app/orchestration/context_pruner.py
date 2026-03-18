@@ -8,6 +8,7 @@ ContextPruner - 上下文修剪器
 2. Summarization: 超过阈值时触发异步总结
 3. Token Counting: 精确计算 token 数量（可选）
 """
+from __future__ import annotations
 
 import json
 import time

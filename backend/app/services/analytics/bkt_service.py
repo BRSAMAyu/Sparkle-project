@@ -1,5 +1,6 @@
+from __future__ import annotations
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from uuid import UUID
 
 from sqlalchemy import select
@@ -17,7 +18,7 @@ class BKTParams:
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class BKTService:

@@ -1,10 +1,11 @@
 """
 错题档案服务层 - Phase 4 Optimized
 """
+from __future__ import annotations
 
 import json
 import random
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from uuid import UUID
 
 from loguru import logger
@@ -29,7 +30,7 @@ from app.services.semantic_memory_service import SemanticMemoryService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class ReviewSchedulerService:

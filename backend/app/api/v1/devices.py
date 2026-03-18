@@ -3,7 +3,8 @@ Device Registration API
 
 Handles registration and management of user device tokens for push notifications.
 """
-from datetime import UTC, datetime
+from __future__ import annotations
+from datetime import timezone, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status

@@ -6,6 +6,7 @@ Tool Registry - 统一工具注册表
 
 推荐使用: from app.orchestration.dynamic_tool_registry import dynamic_tool_registry
 """
+from __future__ import annotations
 from typing import Optional
 
 from .base import BaseTool, ToolCategory

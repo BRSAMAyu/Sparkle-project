@@ -6,6 +6,8 @@ P0修复验证测试脚本 - 简化版
 2. DecisionRecordService优雅处理None session
 3. FocusService正确使用TaskStatus枚举
 """
+from __future__ import annotations
+
 import asyncio
 from datetime import datetime, timedelta
 from uuid import uuid4

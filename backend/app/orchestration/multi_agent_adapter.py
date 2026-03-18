@@ -4,8 +4,8 @@ Multi-agent mode workflow adapter.
 This module upgrades non-standard chat modes from prompt-only behavior to
 full planning/execution workflows while keeping backward-compatible entrypoints.
 """
-
 from __future__ import annotations
+
 
 import uuid
 from collections.abc import AsyncGenerator

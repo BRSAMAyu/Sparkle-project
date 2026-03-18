@@ -2,10 +2,11 @@
 Task Service
 Handle task business logic
 """
+from __future__ import annotations
 import json
 import time
 import uuid
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from uuid import UUID
 
 from google.protobuf import json_format
@@ -26,7 +27,7 @@ from app.services.personalization import get_personalization_engine
 
 def _utcnow() -> datetime:
     """Return naive UTC datetime for compatibility with DB TIMESTAMP columns."""
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class TaskService:

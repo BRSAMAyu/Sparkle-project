@@ -7,6 +7,7 @@ Plan Matching Service
 - 考虑计划优先级和主计划状态
 - 支持关键词提取和主题匹配
 """
+from __future__ import annotations
 from typing import Any
 from uuid import UUID
 

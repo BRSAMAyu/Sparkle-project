@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 JPush Sender Service
 
@@ -15,7 +16,7 @@ Features:
 """
 import asyncio
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import Any, Literal
 from uuid import UUID
 
@@ -434,7 +435,7 @@ class JPushSenderService:
         extras["notification_type"] = payload.notification_type
 
         # Add timestamp
-        extras["sent_at"] = datetime.now(UTC).isoformat()
+        extras["sent_at"] = datetime.now(timezone.utc).isoformat()
 
         return extras
 

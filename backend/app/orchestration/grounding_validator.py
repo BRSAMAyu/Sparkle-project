@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 Grounding Validator - Phase 1, Phase 2 & Phase 3
 

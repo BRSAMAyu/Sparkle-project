@@ -1,5 +1,6 @@
+from __future__ import annotations
 import os
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import Any
 from uuid import uuid4
 
@@ -39,7 +40,7 @@ SESSION_TTL_SECONDS = settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
 
 
 def _utcnow_naive() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 def _linked_providers(user: User) -> list[str]:

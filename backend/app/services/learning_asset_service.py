@@ -8,8 +8,9 @@ Handles:
 - Event outbox integration for audit trail
 - Inbox expiry and status transitions
 """
+from __future__ import annotations
 import json
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -43,7 +44,7 @@ SESSION_TTL_HOURS = 2
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class LearningAssetService:

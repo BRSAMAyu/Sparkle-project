@@ -8,8 +8,9 @@ User Service - 生产级实现
 - 缓存失效: 用户更新时自动失效
 - 容错降级: 缓存/DB 故障时优雅降级
 """
+from __future__ import annotations
 import json
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import Any
 from uuid import UUID
 
@@ -26,7 +27,7 @@ from app.services.personalization.preference_service import PreferenceService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class UserService:
@@ -435,7 +436,7 @@ class UserService:
             if not user:
                 return False
 
-            from datetime import UTC, datetime
+            from datetime import timezone, datetime
             user.last_login_at = _utcnow()
             await self.db.commit()
             logger.debug(f"Updated last login for user {user_id}")

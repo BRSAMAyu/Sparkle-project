@@ -3,6 +3,8 @@ Sparkle AI Agent - gRPC Server
 Python 后端 gRPC 服务入口
 负责 AI 推理、RAG 检索、长期记忆管理
 """
+from __future__ import annotations
+
 import sys
 import os
 import asyncio

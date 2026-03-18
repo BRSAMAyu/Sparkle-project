@@ -1,8 +1,8 @@
 """
 Collaboration node with sequential, parallel, debate, and delegation modes.
 """
-
 from __future__ import annotations
+
 
 import asyncio
 import time

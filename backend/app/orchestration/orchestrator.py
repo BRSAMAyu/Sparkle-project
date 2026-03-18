@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 ChatOrchestrator — Modular orchestration engine for Sparkle AI.
 
@@ -18,7 +19,7 @@ import json
 import time
 import uuid
 from collections.abc import AsyncGenerator
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import Any
 
 from google.protobuf import struct_pb2  # noqa: F401 — kept for backward compat
@@ -178,7 +179,7 @@ SESSION_FEEDBACK_KEY_PREFIX = "session:feedback:"
 # ---------------------------------------------------------------------------
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 def get_agent_type_for_tool(tool_name: str) -> int:

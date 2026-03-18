@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 Push Sender Service
 
@@ -11,7 +12,7 @@ Features:
 - Deep link support for notification actions
 """
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import Any
 from uuid import UUID
 
@@ -341,7 +342,7 @@ class PushSenderService:
         data["notification_type"] = payload.notification_type
 
         # Add timestamp
-        data["sent_at"] = datetime.now(UTC).isoformat()
+        data["sent_at"] = datetime.now(timezone.utc).isoformat()
 
         return data
 
@@ -421,7 +422,7 @@ class PushSenderService:
             existing.push_token = push_token
             existing.token_type = token_type
             existing.is_active = True
-            existing.last_used_at = datetime.now(UTC)
+            existing.last_used_at = datetime.now(timezone.utc)
             if device_name:
                 existing.device_name = device_name
             if app_version:
@@ -448,7 +449,7 @@ class PushSenderService:
                 os_version=os_version,
                 device_metadata=metadata,
                 is_active=True,
-                last_used_at=datetime.now(UTC),
+                last_used_at=datetime.now(timezone.utc),
             )
             self.db.add(device)
             await self.db.commit()

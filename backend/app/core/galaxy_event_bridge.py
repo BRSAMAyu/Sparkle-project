@@ -2,6 +2,8 @@
 Galaxy Event Bridge - 将 EventBus 事件转发到 SSE Manager
 用于实现前端星图的实时更新动画
 """
+from __future__ import annotations
+
 import asyncio
 
 from loguru import logger

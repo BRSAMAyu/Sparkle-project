@@ -2,6 +2,7 @@
 Task Guide Service
 Generates AI guides for tasks using GLM model.
 """
+from __future__ import annotations
 
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession

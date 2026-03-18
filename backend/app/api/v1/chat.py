@@ -1,5 +1,6 @@
+from __future__ import annotations
 import json
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import Any
 from uuid import UUID
 
@@ -29,7 +30,7 @@ from app.tools.registry import tool_registry
 router = APIRouter()
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class ChatRequest(BaseModel):
@@ -596,7 +597,7 @@ async def get_user_context(db: AsyncSession, user_id: UUID, payload: dict[str, A
     获取用户上下文信息
     为 LLM 提供用户的学习状态，帮助其做出更个性化的决策
     """
-    from datetime import UTC, datetime, timedelta
+    from datetime import timezone, datetime, timedelta
 
     from app.models.galaxy import UserNodeStatus
     from app.models.plan import Plan

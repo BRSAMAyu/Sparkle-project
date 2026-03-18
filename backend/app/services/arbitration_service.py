@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 Arbitration Service - Phase 2g
 
@@ -13,7 +14,7 @@ Arbitration Service - Phase 2g
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from enum import Enum
 from typing import Any
 
@@ -39,7 +40,7 @@ from app.services.review_history_service import (
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 class ArbitratorRole(str, Enum):
     """仲裁员角色"""

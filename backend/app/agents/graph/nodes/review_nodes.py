@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 Review Nodes - LangGraph审查节点
 
@@ -15,7 +16,7 @@ Phase 2c: 集成审查历史和反馈学习
 """
 
 import time
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import Any
 
 from loguru import logger
@@ -55,7 +56,7 @@ _reviewer_agent: ReviewerAgent | None = None
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 def _get_reviewer() -> ReviewerAgent:

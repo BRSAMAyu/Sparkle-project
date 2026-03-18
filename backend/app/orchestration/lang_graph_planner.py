@@ -7,6 +7,7 @@ Responsibilities:
 3. Support re-plan mechanism for version conflicts
 4. Support multi-agent collaboration output (Phase 3)
 """
+from __future__ import annotations
 import uuid
 from typing import Any
 

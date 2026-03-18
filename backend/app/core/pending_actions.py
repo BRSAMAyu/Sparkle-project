@@ -2,16 +2,18 @@
 待确认操作管理
 用于存储需要用户二次确认的高风险操作
 """
+from __future__ import annotations
+
 import asyncio
 import json
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from typing import Any
 from uuid import uuid4
 
 
 def _utcnow() -> datetime:
     """Return naive UTC datetime for compatibility with existing DB columns."""
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class PendingActionsStore:

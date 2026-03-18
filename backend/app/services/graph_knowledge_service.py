@@ -3,10 +3,11 @@
 
 在原有 KnowledgeService 基础上增加图数据库支持
 """
+from __future__ import annotations
 
 import json
 import uuid
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import Any
 
 from loguru import logger
@@ -21,7 +22,7 @@ from app.services.knowledge_service import KnowledgeService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class GraphKnowledgeService:

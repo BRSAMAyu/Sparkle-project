@@ -6,9 +6,10 @@ Responsibilities:
 2. Trip to direct mode when failure rate exceeds threshold
 3. Auto-recovery mechanism (half-open state)
 """
+from __future__ import annotations
 import json
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from enum import Enum
 
 from loguru import logger
@@ -17,7 +18,7 @@ from app.orchestration.schemas import CircuitBreakerState
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class CircuitState(Enum):

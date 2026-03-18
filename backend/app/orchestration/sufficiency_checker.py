@@ -4,6 +4,7 @@ Sufficiency Checker
 
 检查LLM是否有足够信息执行用户请求，避免在没有必要信息时直接执行。
 """
+from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Literal

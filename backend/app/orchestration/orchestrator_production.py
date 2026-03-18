@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 ChatOrchestrator - 生产级实现
 
@@ -17,7 +18,7 @@ import json
 import time
 import uuid
 from collections.abc import AsyncGenerator
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import Any
 
 from loguru import logger
@@ -91,7 +92,7 @@ if PROMETHEUS_AVAILABLE:
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class CircuitBreaker:

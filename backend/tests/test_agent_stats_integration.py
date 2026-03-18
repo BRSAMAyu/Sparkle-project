@@ -7,7 +7,7 @@ Agent Stats Integration Test
 3. 验证数据准确性
 """
 import asyncio
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 import sys
@@ -21,7 +21,7 @@ from app.services.agent_stats_service import AgentStatsService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 async def test_agent_stats_integration():

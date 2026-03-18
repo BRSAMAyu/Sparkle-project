@@ -2,7 +2,8 @@
 Achievements API Endpoints
 成就系统 API 端点
 """
-from datetime import UTC, datetime
+from __future__ import annotations
+from datetime import timezone, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Path, Query
@@ -390,7 +391,7 @@ async def cancel_contract(
         raise HTTPException(status_code=404, detail="No active contract found")
 
     contract.status = ContractStatus.FAILED
-    contract.failed_at = datetime.now(UTC).replace(tzinfo=None)
+    contract.failed_at = datetime.now(timezone.utc).replace(tzinfo=None)
     contract.failure_reason = "User cancelled"
 
     await db.commit()

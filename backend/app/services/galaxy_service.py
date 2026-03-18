@@ -4,9 +4,10 @@ Refactored to delegate to specialized services:
 - KnowledgeRetrievalService: Search, Embedding
 - GalaxyStatsService: Spark, Stats, Prediction
 """
+from __future__ import annotations
 
 import json
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from uuid import UUID
 
 from loguru import logger
@@ -32,7 +33,7 @@ from app.services.galaxy.structure_service import GraphStructureService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class GalaxyService:
@@ -423,7 +424,7 @@ class GalaxyService:
             if dt is None:
                 return None
             if dt.tzinfo is not None:
-                return dt.astimezone(UTC).replace(tzinfo=None)
+                return dt.astimezone(timezone.utc).replace(tzinfo=None)
             return dt
 
         update_time = _to_utc_naive(version) or _utcnow()

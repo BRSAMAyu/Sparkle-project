@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 Feedback-Driven Generation Service - Phase 2f
 
@@ -14,7 +15,7 @@ Feedback-Driven Generation Service - Phase 2f
 import uuid
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from enum import Enum
 from typing import Any
 
@@ -33,7 +34,7 @@ from app.services.review_history_service import get_review_history_service
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 class FeedbackType(str, Enum):
     """反馈类型"""

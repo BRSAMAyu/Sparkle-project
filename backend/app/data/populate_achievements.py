@@ -4,7 +4,7 @@ Populate and sync achievement definitions to database
 """
 import asyncio
 import json
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from pathlib import Path
 from typing import Any
 
@@ -119,7 +119,7 @@ async def sync_achievement_definitions(db: AsyncSession) -> tuple[int, int]:
             achievement.name_i18n = i18n_entry.get("name_i18n", {})
             achievement.description_i18n = i18n_entry.get("description_i18n", {})
 
-        achievement.updated_at = datetime.now(UTC).replace(tzinfo=None)
+        achievement.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         synced_achievements += 1
 
     for data in INITIAL_GALAXY_SKINS:
@@ -131,7 +131,7 @@ async def sync_achievement_definitions(db: AsyncSession) -> tuple[int, int]:
 
         for field in GALAXY_SKIN_SYNC_FIELDS:
             setattr(skin, field, data.get(field))
-        skin.updated_at = datetime.now(UTC).replace(tzinfo=None)
+        skin.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         synced_skins += 1
 
     await db.commit()

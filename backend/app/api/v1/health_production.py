@@ -8,9 +8,10 @@
 - 性能指标
 - 业务指标
 """
+from __future__ import annotations
 
 import time
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status

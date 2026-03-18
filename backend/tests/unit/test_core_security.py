@@ -3,7 +3,7 @@ Unit tests for app.core.security module.
 Tests password hashing, JWT token generation and validation.
 """
 import pytest
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from unittest.mock import patch, MagicMock
 from jose import JWTError
 
@@ -114,11 +114,11 @@ class TestAccessTokenCreation:
         """Test that token expiration is set correctly"""
         data = {"sub": "00000000-0000-0000-0000-000000000123"}
         expiry = timedelta(minutes=15)
-        before_creation = datetime.now(UTC)
+        before_creation = datetime.now(timezone.utc)
 
         token = create_access_token(data, expires_delta=expiry)
 
-        after_creation = datetime.now(UTC)
+        after_creation = datetime.now(timezone.utc)
         payload = decode_token(token)
 
         # Check expiration is approximately 15 minutes from now (timestamp precision)
@@ -204,7 +204,7 @@ class TestTokenDecoding:
         from jose import jwt
 
         # Create token without 'sub' claim
-        now = datetime.now(UTC)
+        now = datetime.now(timezone.utc)
         token = jwt.encode(
             {
                 "exp": now + timedelta(hours=1),
@@ -248,11 +248,11 @@ class TestTokenSecurity:
     def test_token_iat_is_set(self):
         """Test that token has issued-at time"""
         data = {"sub": "00000000-0000-0000-0000-000000000123"}
-        before_creation = datetime.now(UTC)
+        before_creation = datetime.now(timezone.utc)
 
         token = create_access_token(data)
 
-        after_creation = datetime.now(UTC)
+        after_creation = datetime.now(timezone.utc)
         payload = decode_token(token)
 
         iat_ts = payload["iat"]

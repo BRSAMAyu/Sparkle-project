@@ -3,11 +3,12 @@ Redis Semantic Cache Service - 语义缓存服务
 
 用于缓存 GraphRAG 查询结果，基于语义相似度检索缓存
 """
+from __future__ import annotations
 
 import asyncio
 import hashlib
 import json
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import Any
 
 import numpy as np
@@ -24,7 +25,7 @@ from app.services.embedding_service import embedding_service
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class SemanticCacheService:

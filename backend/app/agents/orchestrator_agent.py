@@ -3,6 +3,7 @@ Orchestrator Agent - 协调者智能体
 
 负责路由查询到合适的专业智能体，并整合多个智能体的响应
 """
+from __future__ import annotations
 
 from typing import Any
 

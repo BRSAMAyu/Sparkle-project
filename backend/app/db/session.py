@@ -3,6 +3,9 @@ Database Session Management
 使用 SQLAlchemy 2.0 异步接口
 支持 PostgreSQL 连接池配置和 SQLite 开发模式
 """
+from __future__ import annotations
+
+
 import ssl
 
 from sqlalchemy.engine import make_url

@@ -2,6 +2,7 @@
 Token Revocation Service
 Manages JWT token revocation and blacklisting
 """
+from __future__ import annotations
 
 from loguru import logger
 

@@ -3,6 +3,7 @@ Capsule Favorite Service
 
 处理胶囊收藏功能
 """
+from __future__ import annotations
 from uuid import UUID
 
 from loguru import logger

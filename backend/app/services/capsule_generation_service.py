@@ -8,9 +8,10 @@ Capsule Generation Service
 - 模型降级策略
 - 指数退避重试
 """
+from __future__ import annotations
 import asyncio
 import random
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import Any
 from uuid import UUID
 
@@ -27,7 +28,7 @@ from app.services.llm_service import get_llm_service_for_task, llm_service
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class ModelSelectionStrategy:

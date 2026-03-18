@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 Prompt 管理系统 - 统一的Agent Prompt管理
 

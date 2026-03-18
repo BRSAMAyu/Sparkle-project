@@ -1,3 +1,4 @@
+from __future__ import annotations
 import asyncio
 from http import HTTPStatus
 from typing import Any

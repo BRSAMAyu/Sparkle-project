@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 Reflection Agent - 自我反思与修正Agent
 
@@ -16,7 +17,7 @@ Reflection Agent - 自我反思与修正Agent
 
 import uuid
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from enum import Enum
 from typing import Any
 
@@ -34,7 +35,7 @@ from app.agents.reviewer_agent import (
 # ============================================
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class ReflectionStrategy(str, Enum):

@@ -3,6 +3,7 @@ Enhanced Educational Agents - 教育导向的增强智能体
 
 基于 Sparkle 的知识星图、遗忘曲线和任务系统，提供深度个性化的学习支持
 """
+from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime

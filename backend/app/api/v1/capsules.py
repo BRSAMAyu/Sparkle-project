@@ -3,6 +3,7 @@ Curiosity Capsules API
 
 增强版API - 支持胶囊生成、反馈、收藏、分享等功能
 """
+from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 

@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 Reviewer Agent - AI内容质量审查系统
 

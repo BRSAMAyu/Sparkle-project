@@ -1,5 +1,6 @@
 """Task Schemas - Task creation, update, query, etc."""
 
+from __future__ import annotations
 from datetime import date, datetime
 from enum import Enum
 from uuid import UUID

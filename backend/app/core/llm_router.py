@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 LLM Router - 统一的LLM客户端获取入口
 

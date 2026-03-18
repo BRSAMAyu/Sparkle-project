@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import Any
 
 from app.config import settings
@@ -20,7 +20,7 @@ from app.orchestration.mode_workflow_config import get_workflow_config
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 WARM_TONE_KEYWORDS = {"warm", "gentle", "encouraging", "supportive", "温和", "鼓励", "陪伴", "柔和"}

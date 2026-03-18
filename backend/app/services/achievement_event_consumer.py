@@ -4,7 +4,7 @@ Closes event-bus paths for achievement progression without blocking request hand
 """
 
 import asyncio
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 
 from loguru import logger
 
@@ -14,7 +14,7 @@ from app.services.achievement_engine import AchievementEngine, AchievementEvent
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class AchievementEventConsumer:

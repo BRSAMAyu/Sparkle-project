@@ -3,6 +3,7 @@ Multi-Agent API - 多智能体协作API
 
 提供多专家智能体协作服务
 """
+from __future__ import annotations
 
 from typing import Any
 

@@ -1,4 +1,5 @@
 """Smart Schedule Service - 智能排程服务"""
+from __future__ import annotations
 import random
 from datetime import date, datetime, timedelta
 from uuid import UUID

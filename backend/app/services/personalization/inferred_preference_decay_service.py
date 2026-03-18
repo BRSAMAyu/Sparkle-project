@@ -1,7 +1,7 @@
 """
 推断偏好衰减服务 - 基于时间衰减推断偏好值
 """
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from uuid import UUID
 
 from loguru import logger
@@ -20,7 +20,7 @@ MAX_AGE_DAYS = 90               # 最大保留天数
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class InferredPreferenceDecayService:

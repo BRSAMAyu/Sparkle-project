@@ -7,7 +7,7 @@ Accountability Partnership Scheduled Tasks
 - 进度检查和成就评估
 - 里程碑庆祝
 """
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import timezone, datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
 
@@ -174,7 +174,7 @@ async def _send_daily_reminders(db: AsyncSession) -> dict[str, Any]:
     result = await db.execute(active_partnerships_query)
     partnerships = result.scalars().all()
 
-    # 获取今天的开始时间 (UTC)
+    # 获取今天的开始时间 (timezone.utc)
     today_start = _utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
 
     reminder_count = 0

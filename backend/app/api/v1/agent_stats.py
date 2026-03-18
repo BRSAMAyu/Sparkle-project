@@ -1,6 +1,7 @@
 """
 Agent Statistics API Endpoints
 """
+from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from loguru import logger

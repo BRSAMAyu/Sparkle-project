@@ -4,6 +4,17 @@ Authentication security models.
 from __future__ import annotations
 
 import enum
+
+
+# Python 3.9 compatible StrEnum
+class StrEnum(str, enum.Enum):
+    """String enum for Python 3.9 compatibility"""
+    def __new__(cls, value):
+        obj = str.__new__(cls, value)
+        obj._value_ = value
+        return obj
+
+
 from datetime import datetime
 
 from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, Index, String
@@ -11,7 +22,7 @@ from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, Index, Strin
 from app.models.base import GUID, BaseModel, HardDeleteBaseModel
 
 
-class AuthAuditAction(enum.StrEnum):
+class AuthAuditAction(StrEnum):
     LOGIN = "login"
     LOGIN_FAILED = "login_failed"
     LOGOUT = "logout"

@@ -2,6 +2,7 @@
 STT (Speech to Text) API
 语音转文字服务
 """
+from __future__ import annotations
 
 import os
 import uuid

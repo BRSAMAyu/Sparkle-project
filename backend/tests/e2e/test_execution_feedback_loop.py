@@ -15,7 +15,7 @@ Created: 2026-01-28
 """
 
 import pytest
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from uuid import uuid4
 from unittest.mock import AsyncMock, Mock, patch
 from sqlalchemy import select
@@ -46,7 +46,7 @@ from app.services.milestone_handler import MilestoneHandler
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 # =============================================================================

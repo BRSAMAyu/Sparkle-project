@@ -2,7 +2,21 @@
 Visual Element System Models
 视觉元素系统数据模型 - 包含视觉元素定义、用户解锁记录、用户视觉配置
 """
+from __future__ import annotations
+
+
 import enum
+
+
+# Python 3.9 compatible StrEnum
+class StrEnum(str, enum.Enum):
+    """String enum for Python 3.9 compatibility"""
+
+    def __new__(cls, value):
+        obj = str.__new__(cls, value)
+        obj._value_ = value
+        return obj
+
 
 from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Index, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
@@ -12,33 +26,37 @@ from app.db.session import Base
 from app.models.base import GUID, BaseModel
 
 
-class VisualElementType(enum.StrEnum):
+class VisualElementType(StrEnum):
     """视觉元素类型"""
+
     BACKGROUND = "background"  # 背景层
-    PARTICLE = "particle"      # 粒子层
-    EFFECT = "effect"          # 特效层
-    BUNDLE = "bundle"          # 套装（包含多个元素）
+    PARTICLE = "particle"  # 粒子层
+    EFFECT = "effect"  # 特效层
+    BUNDLE = "bundle"  # 套装（包含多个元素）
 
 
-class VisualElementRarity(enum.StrEnum):
+class VisualElementRarity(StrEnum):
     """视觉元素稀有度"""
-    COMMON = "common"         # 普通 (灰/白)
-    RARE = "rare"             # 稀有 (蓝)
-    EPIC = "epic"             # 史诗 (紫)
-    LEGENDARY = "legendary"   # 传说 (金/橙)
+
+    COMMON = "common"  # 普通 (灰/白)
+    RARE = "rare"  # 稀有 (蓝)
+    EPIC = "epic"  # 史诗 (紫)
+    LEGENDARY = "legendary"  # 传说 (金/橙)
 
 
-class VisualElementUnlockSource(enum.StrEnum):
+class VisualElementUnlockSource(StrEnum):
     """解锁来源"""
-    SYSTEM = "system"           # 系统默认
-    ACHIEVEMENT = "achievement" # 成就解锁
-    SHOP = "shop"               # 商城购买
-    EVENT = "event"             # 活动奖励
-    SEASON = "season"           # 季节限定
+
+    SYSTEM = "system"  # 系统默认
+    ACHIEVEMENT = "achievement"  # 成就解锁
+    SHOP = "shop"  # 商城购买
+    EVENT = "event"  # 活动奖励
+    SEASON = "season"  # 季节限定
 
 
 class VisualElement(BaseModel):
     """视觉元素定义表"""
+
     __tablename__ = "visual_elements"
 
     # 基础信息
@@ -49,11 +67,20 @@ class VisualElement(BaseModel):
     description_i18n = Column(JSONB, default=dict, nullable=True)
 
     # 类型与稀有度
-    element_type = Column(Enum(VisualElementType, values_callable=lambda obj: [e.value for e in obj]), nullable=False, index=True)
-    rarity = Column(Enum(VisualElementRarity, values_callable=lambda obj: [e.value for e in obj]), default=VisualElementRarity.COMMON, nullable=False)
+    element_type = Column(
+        Enum(VisualElementType, values_callable=lambda obj: [e.value for e in obj]), nullable=False, index=True
+    )
+    rarity = Column(
+        Enum(VisualElementRarity, values_callable=lambda obj: [e.value for e in obj]),
+        default=VisualElementRarity.COMMON,
+        nullable=False,
+    )
 
     # 解锁来源
-    unlock_source = Column(Enum(VisualElementUnlockSource, values_callable=lambda obj: [e.value for e in obj]), default=VisualElementUnlockSource.SYSTEM)
+    unlock_source = Column(
+        Enum(VisualElementUnlockSource, values_callable=lambda obj: [e.value for e in obj]),
+        default=VisualElementUnlockSource.SYSTEM,
+    )
     unlock_requirement = Column(JSONB, nullable=True)  # {"achievement_id": "streak_30"} 或 {"price_photons": 200}
 
     # 元素配置（根据 element_type 不同，配置内容不同）
@@ -77,7 +104,7 @@ class VisualElement(BaseModel):
 
     # 季节/时间限制
     season_start = Column(String(10), nullable=True)  # "03-01" 表示3月1日开始
-    season_end = Column(String(10), nullable=True)    # "05-31" 表示5月31日结束
+    season_end = Column(String(10), nullable=True)  # "05-31" 表示5月31日结束
 
     def __repr__(self):
         return f"<VisualElement(id={self.id}, name={self.name}, type={self.element_type})>"
@@ -113,6 +140,7 @@ class VisualElement(BaseModel):
 
 class UserVisualElement(BaseModel):
     """用户解锁的视觉元素记录"""
+
     __tablename__ = "user_visual_elements"
 
     user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
@@ -134,8 +162,9 @@ class UserVisualElement(BaseModel):
 
 class UserVisualConfig(Base):
     """用户当前视觉配置（装备状态）"""
+
     __tablename__ = "user_visual_configs"
-    __table_args__ = {'extend_existing': True}
+    __table_args__ = {"extend_existing": True}
 
     user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
 

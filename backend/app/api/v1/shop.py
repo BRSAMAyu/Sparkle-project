@@ -2,6 +2,7 @@
 Shop API Endpoints
 商城系统 API 端点
 """
+from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query

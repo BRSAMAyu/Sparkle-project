@@ -3,7 +3,7 @@ Subtasks API Endpoints
 """
 
 import logging
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import Any
 from uuid import UUID
 
@@ -22,7 +22,7 @@ router = APIRouter()
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 async def _verify_task_ownership(task_id: UUID, user_id: UUID, db: AsyncSession) -> Task:  # type: ignore

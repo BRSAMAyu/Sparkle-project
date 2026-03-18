@@ -1,5 +1,6 @@
+from __future__ import annotations
 import contextlib
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import Any
 from uuid import UUID
 
@@ -10,7 +11,7 @@ from .schemas import CreateKnowledgeNodeParams, LinkNodesParams, QueryKnowledgeP
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class CreateKnowledgeNodeTool(BaseTool):
@@ -107,7 +108,7 @@ class CreateKnowledgeNodeTool(BaseTool):
                 suggestion="创建知识节点失败，请检查参数"
             )
 
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 
 
 class QueryKnowledgeTool(BaseTool):

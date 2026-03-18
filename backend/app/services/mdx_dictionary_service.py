@@ -4,6 +4,7 @@ MDX/MDD Dictionary Query Service
 
 默认关闭。仅当 ENABLE_MDX_DICTIONARY=true 时才尝试加载 MDX 依赖。
 """
+from __future__ import annotations
 import html
 import logging
 import os

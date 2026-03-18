@@ -1,5 +1,6 @@
 """Plan Schemas - Plan creation, update, query, etc."""
 
+from __future__ import annotations
 from datetime import date
 from uuid import UUID
 

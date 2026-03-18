@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 Agent Profile Configuration - 统一的Agent配置管理
 

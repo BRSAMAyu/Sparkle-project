@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 LLM Fallback Utilities - 统一的LLM降级工具
 

@@ -2,6 +2,7 @@
 Knowledge Galaxy API
 知识星图相关接口
 """
+from __future__ import annotations
 
 from datetime import datetime
 from typing import Optional

@@ -6,6 +6,7 @@ v2.2 变更:
 - 使用 llm.py 中的增强版 coerce 函数
 - 增强意图检测，支持更多中文表达和否定词排除
 """
+from __future__ import annotations
 import json
 import re
 

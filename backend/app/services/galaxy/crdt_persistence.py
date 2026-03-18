@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 
 import y_py as Y
 from redis.asyncio import Redis
@@ -9,7 +9,7 @@ from app.models.galaxy import CRDTOperationLog, CRDTSnapshot
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class CRDTPersistenceManager:

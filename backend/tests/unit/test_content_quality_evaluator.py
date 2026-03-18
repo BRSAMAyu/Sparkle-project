@@ -4,12 +4,12 @@ Unit tests for Content Quality Evaluator
 """
 import pytest
 from unittest.mock import AsyncMock, Mock, patch
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from uuid import uuid4
 from sqlalchemy.ext.asyncio import AsyncSession
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 from app.services.content_quality_evaluator import ContentQualityEvaluator

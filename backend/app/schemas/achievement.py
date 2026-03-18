@@ -1,4 +1,5 @@
 """Achievement Schemas - Achievement system request/response models"""
+from __future__ import annotations
 from datetime import date, datetime
 from enum import StrEnum
 from typing import Any

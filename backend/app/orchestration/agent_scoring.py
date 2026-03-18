@@ -4,7 +4,7 @@ import json
 import random
 import time
 from dataclasses import asdict, dataclass, field
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import Any
 
 from loguru import logger
@@ -13,7 +13,7 @@ from app.orchestration.agent_memory import AgentMemoryService, extract_topics
 
 
 def _utcnow_iso() -> str:
-    return datetime.now(UTC).replace(tzinfo=None).isoformat()
+    return datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
 
 
 @dataclass

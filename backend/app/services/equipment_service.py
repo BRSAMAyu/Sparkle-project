@@ -2,7 +2,8 @@
 Equipment Service
 统一处理用户装备真源与派生字段同步
 """
-from datetime import UTC, datetime
+from __future__ import annotations
+from datetime import timezone, datetime
 from typing import Any
 
 from loguru import logger
@@ -16,7 +17,7 @@ from app.models.user import User
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class EquipmentSource:

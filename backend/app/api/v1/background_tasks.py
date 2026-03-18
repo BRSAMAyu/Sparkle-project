@@ -1,7 +1,8 @@
 """
 Background Tasks API Endpoints
 """
-from datetime import UTC, datetime, timedelta
+from __future__ import annotations
+from datetime import timezone, datetime, timedelta
 from typing import Any
 from uuid import UUID
 

@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 生词本与词典服务
 Vocabulary & Dictionary Service
@@ -14,7 +15,7 @@ import csv
 import io
 import json
 import re
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -26,7 +27,7 @@ from app.services.llm_service import llm_service
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class VocabularyService:
@@ -305,7 +306,7 @@ class VocabularyService:
 
     @staticmethod
     async def get_today_creation_count(db: AsyncSession, user_id: UUID) -> int:
-        """Get number of words added today (UTC)"""
+        """Get number of words added today (timezone.utc)"""
         today_start = _utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
 
         stmt = select(func.count()).select_from(WordBook).where(

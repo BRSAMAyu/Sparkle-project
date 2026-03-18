@@ -3,6 +3,7 @@ Base Agent - 智能体基类
 
 定义所有专业智能体的通用接口
 """
+from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass

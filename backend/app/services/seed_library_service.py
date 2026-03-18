@@ -2,8 +2,9 @@
 Seed Library Service
 种子内容库核心服务 - 管理库、内容项、订阅和查询
 """
+from __future__ import annotations
 import uuid
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import Any
 
 from loguru import logger
@@ -34,7 +35,7 @@ from app.services.embedding_service import embedding_service
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class SeedLibraryService:

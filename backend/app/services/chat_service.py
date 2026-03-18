@@ -2,6 +2,7 @@
 对话服务
 Chat Service - 管理用户对话和 LLM 交互
 """
+from __future__ import annotations
 import json
 import uuid
 from collections.abc import AsyncGenerator

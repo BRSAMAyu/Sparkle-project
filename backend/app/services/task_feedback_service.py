@@ -3,6 +3,7 @@ Task Feedback Service
 
 处理任务反馈，更新用户推断偏好
 """
+from __future__ import annotations
 from typing import Any
 from uuid import UUID
 

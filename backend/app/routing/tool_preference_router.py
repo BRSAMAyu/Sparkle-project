@@ -4,8 +4,9 @@ Tool Preference Router - 工具偏好路由
 基于工具执行历史，学习用户的工具偏好，
 优化后续工具选择和工作流路由
 """
+from __future__ import annotations
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 
 from loguru import logger
 from sqlalchemy import and_, desc, select
@@ -17,7 +18,7 @@ from app.services.tool_history_service import ToolHistoryService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class ToolPreferenceRouter:

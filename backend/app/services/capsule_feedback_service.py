@@ -3,6 +3,7 @@ Capsule Feedback Service
 
 处理胶囊反馈，更新用户推断偏好，重新计算胶囊质量分
 """
+from __future__ import annotations
 from typing import Any
 from uuid import UUID
 

@@ -3,7 +3,7 @@
 Calendar Event Model - 日历事件系统
 """
 
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 
 from sqlalchemy import (
     Boolean,

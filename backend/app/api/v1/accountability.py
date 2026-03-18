@@ -1,12 +1,14 @@
 """
 责任伙伴系统 API
 """
+from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Body, Depends, HTTPException, status
+from loguru import logger
 from pydantic import BaseModel, Field
 from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -329,8 +331,10 @@ async def daily_checkin(
     try:
         await accountability_achievement_service.check_streak_achievements(db, current_user.id, partnership_id)
         await accountability_achievement_service.check_partnership_achievements(db, current_user.id, partnership_id)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.error(
+            f"Failed to check achievements for user {current_user.id}, partnership {partnership_id}: {e}", exc_info=True
+        )
 
     return CheckinOut.model_validate(checkin)
 

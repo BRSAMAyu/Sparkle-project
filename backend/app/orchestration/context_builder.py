@@ -8,13 +8,13 @@ This is a *mixin* -- it relies on attributes that live on the concrete
 ``ChatOrchestrator`` instance (``self.redis``, ``self.context_pruner``,
 ``self.state_manager``, etc.).
 """
-
 from __future__ import annotations
+
 
 import contextlib
 import json
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from typing import Any
 
 from google.protobuf.json_format import MessageToDict
@@ -44,7 +44,7 @@ from app.services.user_service import UserService
 # ---------------------------------------------------------------------------
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 # ---------------------------------------------------------------------------

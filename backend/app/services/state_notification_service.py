@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 State Change Notification Service
 
@@ -9,7 +10,7 @@ Sends detailed notifications for major state changes:
 Integrates with WebSocket to deliver real-time notifications to clients.
 Also creates database records for notification center persistence.
 """
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -20,7 +21,7 @@ from app.core.websocket import get_ws_manager
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class StateNotificationService:

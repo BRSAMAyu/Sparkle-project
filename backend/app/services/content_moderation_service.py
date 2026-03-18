@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 内容审核服务
 Content Moderation Service - 敏感词过滤、内容审核、违规处理
@@ -11,7 +12,7 @@ Content Moderation Service - 敏感词过滤、内容审核、违规处理
 """
 import re
 import unicodedata
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import Any
 from uuid import UUID
 
@@ -33,7 +34,7 @@ from app.models.user import User
 
 def _utcnow() -> datetime:
     """Return naive UTC datetime."""
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 # ============ Unicode 正规化和清理 ============

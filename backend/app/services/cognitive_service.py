@@ -1,6 +1,7 @@
+from __future__ import annotations
 import asyncio
 import json
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from uuid import UUID, uuid4
 
 from loguru import logger
@@ -19,7 +20,7 @@ from app.services.system_update_service import SystemUpdateService, build_system
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class CognitiveService:

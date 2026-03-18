@@ -2,9 +2,11 @@
 Application Configuration Management
 使用 pydantic-settings 管理配置
 """
+
 import json
 import logging
 import os
+from typing import Dict, Optional, Union
 from urllib.parse import quote, unquote, urlparse, urlunparse
 
 from pydantic import AliasChoices, Field, field_validator, model_validator
@@ -20,6 +22,7 @@ repo_root = os.path.dirname(project_root)  # repo root
 repo_env_path = os.path.join(repo_root, ".env")
 service_env_path = os.path.join(project_root, ".env")
 backend_env_path = os.path.join(backend_dir, ".env")
+
 
 def _is_running_in_docker() -> bool:
     return os.path.exists("/.dockerenv") or os.getenv("IN_DOCKER") == "true"
@@ -58,13 +61,13 @@ def normalize_database_url(raw_url: str, *, prefer_async: bool = True) -> str:
         return ""
     url = raw_url.strip()
     if url.startswith("postgres://"):
-        url = "postgresql://" + url[len("postgres://"):]
+        url = "postgresql://" + url[len("postgres://") :]
     if prefer_async:
         for prefix in ("postgresql+psycopg://", "postgresql+psycopg2://"):
             if url.startswith(prefix):
-                url = "postgresql+asyncpg://" + url[len(prefix):]
+                url = "postgresql+asyncpg://" + url[len(prefix) :]
         if url.startswith("postgresql://"):
-            url = "postgresql+asyncpg://" + url[len("postgresql://"):]
+            url = "postgresql+asyncpg://" + url[len("postgresql://") :]
     host = urlparse(url).hostname
     if host:
         url = _replace_url_host(url, _normalize_local_docker_host(host))
@@ -76,13 +79,13 @@ def to_sync_database_url(raw_url: str) -> str:
         return ""
     url = raw_url.strip()
     if url.startswith("postgresql+asyncpg://"):
-        url = "postgresql://" + url[len("postgresql+asyncpg://"):]
+        url = "postgresql://" + url[len("postgresql+asyncpg://") :]
     if url.startswith("postgresql+psycopg://"):
-        url = "postgresql://" + url[len("postgresql+psycopg://"):]
+        url = "postgresql://" + url[len("postgresql+psycopg://") :]
     if url.startswith("postgresql+psycopg2://"):
-        url = "postgresql://" + url[len("postgresql+psycopg2://"):]
+        url = "postgresql://" + url[len("postgresql+psycopg2://") :]
     if url.startswith("postgres://"):
-        url = "postgresql://" + url[len("postgres://"):]
+        url = "postgresql://" + url[len("postgres://") :]
     return url
 
 
@@ -95,21 +98,23 @@ def normalize_redis_url(raw_url: str) -> str:
         url = _replace_url_host(url, _normalize_local_docker_host(host))
     return url
 
+
 class Settings(BaseSettings):
     """Application settings"""
+
     model_config = SettingsConfigDict(
         # Load repo root .env first, then backend/.env, then backend/app/.env
         env_file=[repo_env_path, service_env_path, backend_env_path],
-        env_file_encoding='utf-8',
+        env_file_encoding="utf-8",
         case_sensitive=True,
-        extra="ignore"
+        extra="ignore",
     )
 
     # Application
     APP_NAME: str = "Sparkle"
     APP_VERSION: str = "0.1.0"
     ENVIRONMENT: str = "development"
-    DEBUG: bool | None = None
+    DEBUG: Optional[bool] = None
     SERVICE_ROLE: str = "api"  # api | grpc
 
     # Security
@@ -180,7 +185,7 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     APPLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_ID: str = ""
-    WS_ALLOW_QUERY_TOKEN: bool | None = None
+    WS_ALLOW_QUERY_TOKEN: Optional[bool] = None
 
     # Email (SMTP)
     EMAIL_ENABLED: bool = False
@@ -393,9 +398,9 @@ class Settings(BaseSettings):
     TRANSPARENCY_STEP_DEBOUNCE_MS: int = 100  # Minimum time between step updates
 
     # Plan Quota Settings (并行计划数限制)
-    PLAN_QUOTA_DEFAULT: int = 3           # 免费用户默认3个活跃计划
-    PLAN_QUOTA_PREMIUM: int = 10          # 付费用户10个活跃计划
-    PLAN_QUOTA_UNLIMITED: int = -1        # 无限制 (特殊用户)
+    PLAN_QUOTA_DEFAULT: int = 3  # 免费用户默认3个活跃计划
+    PLAN_QUOTA_PREMIUM: int = 10  # 付费用户10个活跃计划
+    PLAN_QUOTA_UNLIMITED: int = -1  # 无限制 (特殊用户)
 
     # Event Retention
     EVENT_RETENTION_DAYS: int = 30
@@ -408,7 +413,7 @@ class Settings(BaseSettings):
     # MDX Dictionary Configuration
     MDX_DICTIONARY_ENABLED: bool = True
     MDX_DICTIONARY_PATH: str = ""
-    MDD_RESOURCES_PATH: str | None = None
+    MDD_RESOURCES_PATH: Optional[str] = None
 
     # Internal API
     INTERNAL_API_KEY: str = ""
@@ -458,7 +463,7 @@ class Settings(BaseSettings):
     # gRPC Server
     GRPC_PORT: int = 50051
     GRPC_ENABLE_REFLECTION: bool = False
-    GRPC_REQUIRE_TLS: bool | None = None
+    GRPC_REQUIRE_TLS: Optional[bool] = None
     GRPC_TLS_CERT_PATH: str = ""
     GRPC_TLS_KEY_PATH: str = ""
 
@@ -484,7 +489,7 @@ class Settings(BaseSettings):
         return v
 
     @property
-    def CONTEXT_SEMANTIC_GATING_RULES(self) -> dict[str, dict[str, float | int]]:
+    def CONTEXT_SEMANTIC_GATING_RULES(self) -> Dict[str, Dict[str, Union[float, int]]]:
         raw = str(self.CONTEXT_SEMANTIC_GATING_RULES_JSON or "").strip()
         if not raw:
             return {}
@@ -574,18 +579,14 @@ class Settings(BaseSettings):
         if env in ("prod", "production") and self.DEBUG:
             raise ValueError("DEBUG must be disabled in production")
 
-        if (
-            env in ("prod", "production")
-            and self.SERVICE_ROLE == "grpc"
-            and not self.GRPC_REQUIRE_TLS
-        ):
+        if env in ("prod", "production") and self.SERVICE_ROLE == "grpc" and not self.GRPC_REQUIRE_TLS:
             raise ValueError("GRPC_REQUIRE_TLS must be enabled in production")
 
         # C6 Security Fix: 强制所有环境设置 SECRET_KEY
         if not self.SECRET_KEY:
             raise ValueError(
                 "SECRET_KEY must be set in environment variables. "
-                "Generate a secure key with: python -c \"import secrets; print(secrets.token_urlsafe(32))\""
+                'Generate a secure key with: python -c "import secrets; print(secrets.token_urlsafe(32))"'
             )
 
         # 最小长度警告（不阻止启动）

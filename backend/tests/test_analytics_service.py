@@ -1,6 +1,6 @@
 import pytest
 import pytest_asyncio
-from datetime import UTC, date, datetime, timedelta
+from datetime import timezone, date, datetime, timedelta
 import uuid
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -18,7 +18,7 @@ TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 @pytest_asyncio.fixture(name="engine")
 async def engine_fixture():

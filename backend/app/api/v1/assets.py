@@ -7,6 +7,7 @@ Provides endpoints for managing learning assets:
 - List and filter assets
 - Record suggestion feedback
 """
+from __future__ import annotations
 import asyncio
 from uuid import UUID
 

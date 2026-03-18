@@ -4,7 +4,7 @@
 
 import asyncio
 import json
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from uuid import UUID
 
 from loguru import logger
@@ -15,7 +15,7 @@ from app.models.user_preferences import UserPreferencesCenter
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class PreferenceService:

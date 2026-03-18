@@ -1,4 +1,5 @@
-from datetime import UTC, datetime, timedelta
+from __future__ import annotations
+from datetime import timezone, datetime, timedelta
 from uuid import UUID
 
 from loguru import logger
@@ -13,7 +14,7 @@ from app.services.expansion_service import ExpansionService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class GalaxyStatsService:

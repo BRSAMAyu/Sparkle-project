@@ -2,6 +2,7 @@
 Knowledge Retrieval Service (RAG)
 Wraps GalaxyService to provide context for the AI Agent
 """
+from __future__ import annotations
 import asyncio
 import time
 import uuid

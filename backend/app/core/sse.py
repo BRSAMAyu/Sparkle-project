@@ -3,6 +3,7 @@ Server-Sent Events (SSE) Manager
 用于实时推送事件到前端
 支持断点续传和事件重放
 """
+from __future__ import annotations
 import asyncio
 import json
 import time

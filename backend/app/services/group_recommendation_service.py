@@ -8,7 +8,7 @@ from __future__ import annotations
 import math
 import random
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import desc, func, inspect, or_, select
@@ -28,7 +28,7 @@ from app.schemas.community import (
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 def _normalize_tag(tag: str) -> str:
