@@ -104,6 +104,26 @@ class ChatModeSelectorSheet extends ConsumerWidget {
                         isDark: isDark,
                       ),
                     ),
+                    // Custom team builder — positioned between modes and experts
+                    const SizedBox(height: DS.spacing8),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: DS.spacing20,
+                      ),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          context.l10n.chatModeCustomTeamLabel,
+                          style: TextStyle(
+                            fontSize: DS.fontSizeXs,
+                            fontWeight: DS.fontWeightSemibold,
+                            color: DS.neutral500,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: DS.spacing8),
+                    _TeamEntryTile(isDark: isDark),
                     if (expertModes.isNotEmpty) ...[
                       const SizedBox(height: DS.spacing8),
                       Padding(
@@ -131,25 +151,6 @@ class ChatModeSelectorSheet extends ConsumerWidget {
                         ),
                       ),
                     ],
-                    const SizedBox(height: DS.spacing8),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: DS.spacing20,
-                      ),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          context.l10n.chatModeCustomTeamLabel,
-                          style: TextStyle(
-                            fontSize: DS.fontSizeXs,
-                            fontWeight: DS.fontWeightSemibold,
-                            color: DS.neutral500,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: DS.spacing8),
-                    _TeamEntryTile(isDark: isDark),
                     const SizedBox(height: DS.spacing16),
                   ],
                 ),

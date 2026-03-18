@@ -136,6 +136,25 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	// NOTE: /goals and /reflections routes are intentionally omitted —
 	// no Python backend implementation exists yet. Add here when implemented.
 
+	// ==================== Capsules Routes ====================
+	capsules := api.Group("/capsules")
+	capsules.Use(authMiddleware)
+	{
+		capsules.GET("/today", h.proxyWithHeaders)
+		capsules.POST("/:id/read", h.proxyWithHeaders)
+		capsules.POST("/generate", h.proxyWithHeaders)
+		capsules.GET("/favorites", h.proxyWithHeaders)
+		capsules.POST("/:id/favorite", h.proxyWithHeaders)
+		capsules.POST("/:id/feedback", h.proxyWithHeaders)
+		capsules.POST("/:id/share", h.proxyWithHeaders)
+		capsules.GET("/generation/jobs", h.proxyWithHeaders)
+		capsules.POST("/generate/batch", h.proxyWithHeaders)
+		capsules.GET("/stats", h.proxyWithHeaders)
+		capsules.GET("/list/all", h.proxyWithHeaders)
+		capsules.GET("/:id", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered capsules proxy routes")
+
 	// ==================== Community Routes ====================
 	community := api.Group("/community")
 	community.Use(authMiddleware)
