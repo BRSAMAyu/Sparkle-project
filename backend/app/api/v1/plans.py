@@ -2,7 +2,7 @@
 Plans API Endpoints - Full CRUD operations
 """
 
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 from uuid import UUID
 
@@ -34,6 +34,10 @@ from app.services.plan_state_service import PlanStateService
 from app.services.state_notification_service import state_notification_service
 
 router = APIRouter()
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 @router.get("", response_model=dict[str, Any])

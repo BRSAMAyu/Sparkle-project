@@ -608,6 +608,132 @@ abstract class AppLocalizations {
   /// **'创建冲刺计划'**
   String get createSprintPlan;
 
+  /// No description provided for @planCreateTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建计划'**
+  String get planCreateTitle;
+
+  /// No description provided for @planCreateSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'计划创建成功'**
+  String get planCreateSuccess;
+
+  /// No description provided for @planCreateFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建计划失败: {error}'**
+  String planCreateFailed(Object error);
+
+  /// No description provided for @planNameLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'计划名称'**
+  String get planNameLabel;
+
+  /// No description provided for @planNameHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'输入计划名称...'**
+  String get planNameHint;
+
+  /// No description provided for @planNameRequired.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入计划名称'**
+  String get planNameRequired;
+
+  /// No description provided for @planDescLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'计划描述'**
+  String get planDescLabel;
+
+  /// No description provided for @planDescHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'描述你的计划目标...'**
+  String get planDescHint;
+
+  /// No description provided for @planSubjectLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'主题/学科'**
+  String get planSubjectLabel;
+
+  /// No description provided for @planSubjectHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'如：计算机科学、英语...'**
+  String get planSubjectHint;
+
+  /// No description provided for @planTargetDateLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'目标日期'**
+  String get planTargetDateLabel;
+
+  /// No description provided for @planTargetDateUnset.
+  ///
+  /// In zh, this message translates to:
+  /// **'未设置目标日期'**
+  String get planTargetDateUnset;
+
+  /// No description provided for @planDailyMinutesLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'每日可用时间'**
+  String get planDailyMinutesLabel;
+
+  /// No description provided for @planDailyMinutesHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'每天计划投入多少分钟'**
+  String get planDailyMinutesHint;
+
+  /// No description provided for @planPriorityLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'优先级'**
+  String get planPriorityLabel;
+
+  /// No description provided for @planPriorityCritical.
+  ///
+  /// In zh, this message translates to:
+  /// **'紧急'**
+  String get planPriorityCritical;
+
+  /// No description provided for @planPriorityHigh.
+  ///
+  /// In zh, this message translates to:
+  /// **'高'**
+  String get planPriorityHigh;
+
+  /// No description provided for @planPriorityNormal.
+  ///
+  /// In zh, this message translates to:
+  /// **'普通'**
+  String get planPriorityNormal;
+
+  /// No description provided for @planPriorityLow.
+  ///
+  /// In zh, this message translates to:
+  /// **'低'**
+  String get planPriorityLow;
+
+  /// No description provided for @planCreating.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建中...'**
+  String get planCreating;
+
+  /// No description provided for @planCreateAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建计划'**
+  String get planCreateAction;
+
   /// No description provided for @featureComingSoon.
   ///
   /// In zh, this message translates to:

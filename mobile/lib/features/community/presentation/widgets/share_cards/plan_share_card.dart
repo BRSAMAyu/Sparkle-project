@@ -9,6 +9,7 @@ class PlanShareCard extends StatelessWidget {
   const PlanShareCard({
     required this.planId,
     required this.planTitle,
+    this.sharedResourceId,
     this.progress,
     this.completedTasks,
     this.totalTasks,
@@ -16,11 +17,13 @@ class PlanShareCard extends StatelessWidget {
     this.deadline,
     this.isCompact = false,
     this.onTap,
+    this.onAdopt,
     super.key,
   });
 
   final String planId;
   final String planTitle;
+  final String? sharedResourceId;
   final double? progress; // 0.0 - 1.0
   final int? completedTasks;
   final int? totalTasks;
@@ -28,6 +31,7 @@ class PlanShareCard extends StatelessWidget {
   final DateTime? deadline;
   final bool isCompact;
   final VoidCallback? onTap;
+  final VoidCallback? onAdopt;
 
   @override
   Widget build(BuildContext context) {
@@ -232,6 +236,17 @@ class PlanShareCard extends StatelessWidget {
                         ],
                       ],
                     ),
+                    if (onAdopt != null) ...[
+                      SizedBox(height: DS.sm),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton.icon(
+                          icon: const Icon(Icons.add_task, size: DS.iconSizeSm),
+                          label: const Text('采纳计划'),
+                          onPressed: onAdopt,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -306,6 +321,8 @@ class PlanShareCardFactory {
     UniversalSharePayload payload, {
     bool isCompact = false,
     VoidCallback? onTap,
+    String? sharedResourceId,
+    VoidCallback? onAdopt,
   }) {
     final metadata = payload.metadata ?? {};
     final progress = metadata['progress'] as double? ??
@@ -316,6 +333,7 @@ class PlanShareCardFactory {
     return PlanShareCard(
       planId: payload.resourceId,
       planTitle: payload.title,
+      sharedResourceId: sharedResourceId,
       progress: progress,
       completedTasks: metadata['completed_tasks'] as int?,
       totalTasks: metadata['total_tasks'] as int?,
@@ -325,6 +343,7 @@ class PlanShareCardFactory {
           : null,
       isCompact: isCompact,
       onTap: onTap,
+      onAdopt: onAdopt,
     );
   }
 

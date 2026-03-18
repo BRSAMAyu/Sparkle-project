@@ -180,9 +180,10 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	{
 		// Friend System
 		community.POST("/friends/request", h.proxyWithHeaders)
-		community.POST("/friends/respond", h.proxyWithHeaders) // Python: POST /friends/respond with friendship_id in body
+		community.POST("/friends/respond", h.proxyWithHeaders)
 		community.GET("/friends", h.proxyWithHeaders)
 		community.GET("/friends/pending", h.proxyWithHeaders)
+		community.GET("/friends/recommendations", h.proxyWithHeaders)
 		community.DELETE("/friends/:friendshipId", h.proxyWithHeaders)
 		// Block System
 		community.POST("/users/block", h.proxyWithHeaders)
@@ -197,24 +198,84 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		// Group System
 		community.POST("/groups", h.proxyWithHeaders)
 		community.GET("/groups", h.proxyWithHeaders)
+		community.GET("/groups/recommendations", h.proxyWithHeaders)
+		community.POST("/groups/recommendations/feedback", h.proxyWithHeaders)
 		community.GET("/groups/:group_id", h.proxyWithHeaders)
+		community.DELETE("/groups/:group_id", h.proxyWithHeaders)
 		community.POST("/groups/:group_id/join", h.proxyWithHeaders)
 		community.DELETE("/groups/:group_id/leave", h.proxyWithHeaders)
+		community.POST("/groups/:group_id/transfer", h.proxyWithHeaders)
 		community.GET("/groups/:group_id/members", h.proxyWithHeaders)
+		// Group Messages
 		community.GET("/groups/:group_id/messages", h.proxyWithHeaders)
 		community.POST("/groups/:group_id/messages", h.proxyWithHeaders)
 		community.DELETE("/groups/:group_id/messages/:msg_id", h.proxyWithHeaders)
+		community.PATCH("/groups/:group_id/messages/:msg_id", h.proxyWithHeaders)
+		community.POST("/groups/:group_id/messages/:msg_id/revoke", h.proxyWithHeaders)
+		community.POST("/groups/:group_id/messages/:msg_id/reactions", h.proxyWithHeaders)
 		community.POST("/groups/:group_id/messages/read", h.proxyWithHeaders)
+		community.GET("/groups/:group_id/threads/:thread_root_id", h.proxyWithHeaders)
+		community.GET("/groups/:group_id/messages/search", h.proxyWithHeaders)
+		community.POST("/groups/:group_id/messages/search/advanced", h.proxyWithHeaders)
+		community.GET("/groups/:group_id/topics", h.proxyWithHeaders)
+		// Group Files
+		community.POST("/groups/:group_id/files/:file_id/share", h.proxyWithHeaders)
+		community.GET("/groups/:group_id/files", h.proxyWithHeaders)
+		community.PUT("/groups/:group_id/files/:file_id/permissions", h.proxyWithHeaders)
+		community.GET("/groups/:group_id/files/categories", h.proxyWithHeaders)
+		// Group Tasks
+		community.POST("/groups/:group_id/tasks", h.proxyWithHeaders)
+		community.GET("/groups/:group_id/tasks", h.proxyWithHeaders)
+		community.POST("/tasks/:task_id/claim", h.proxyWithHeaders)
+		// Group Flame
+		community.GET("/groups/:group_id/flame", h.proxyWithHeaders)
+		// Group Management
+		community.PUT("/groups/:group_id/announcement", h.proxyWithHeaders)
+		community.PUT("/groups/:group_id/moderation", h.proxyWithHeaders)
+		community.POST("/groups/:group_id/members/:user_id/mute", h.proxyWithHeaders)
+		community.DELETE("/groups/:group_id/members/:user_id/mute", h.proxyWithHeaders)
+		community.POST("/groups/:group_id/members/:user_id/warn", h.proxyWithHeaders)
+		community.GET("/groups/:group_id/reports", h.proxyWithHeaders)
+		community.GET("/groups/:group_id/resources", h.proxyWithHeaders)
 		// Private Messages
 		community.POST("/messages/private", h.proxyWithHeaders)
 		community.GET("/messages/private/:user_id", h.proxyWithHeaders)
 		community.DELETE("/messages/private/:msg_id", h.proxyWithHeaders)
+		community.PATCH("/messages/:message_id", h.proxyWithHeaders)
+		community.POST("/messages/:message_id/revoke", h.proxyWithHeaders)
+		community.POST("/messages/:message_id/reactions", h.proxyWithHeaders)
+		community.GET("/friends/:friend_id/messages", h.proxyWithHeaders)
+		community.GET("/friends/:friend_id/messages/search", h.proxyWithHeaders)
 		// Feed & Posts
+		community.GET("/feed", h.proxyWithHeaders)
 		community.POST("/posts", h.proxyWithHeaders)
 		community.POST("/posts/:post_id/like", h.proxyWithHeaders)
-		community.GET("/feed", h.proxyWithHeaders)
 		// Check-in
 		community.POST("/checkin", h.proxyWithHeaders)
+		// User Status
+		community.PUT("/status", h.proxyWithHeaders)
+		// Share Resources
+		community.POST("/share", h.proxyWithHeaders)
+		community.POST("/share/:share_id/adopt", h.proxyWithHeaders)
+		// Encryption
+		community.POST("/encryption/keys", h.proxyWithHeaders)
+		community.GET("/encryption/keys/:user_id", h.proxyWithHeaders)
+		community.DELETE("/encryption/keys/:key_id", h.proxyWithHeaders)
+		// Reports
+		community.POST("/reports", h.proxyWithHeaders)
+		community.PUT("/reports/:report_id", h.proxyWithHeaders)
+		// Favorites
+		community.POST("/favorites", h.proxyWithHeaders)
+		community.GET("/favorites", h.proxyWithHeaders)
+		community.DELETE("/favorites/:favorite_id", h.proxyWithHeaders)
+		// Forward
+		community.POST("/forward", h.proxyWithHeaders)
+		// Broadcast
+		community.POST("/broadcast", h.proxyWithHeaders)
+		// Offline Messages
+		community.GET("/offline/pending", h.proxyWithHeaders)
+		community.GET("/offline/failed", h.proxyWithHeaders)
+		community.POST("/offline/retry", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered community proxy routes")
 

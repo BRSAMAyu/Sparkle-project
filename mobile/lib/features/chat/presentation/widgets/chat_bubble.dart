@@ -3,7 +3,9 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -19,8 +21,12 @@ import 'package:sparkle/features/chat/presentation/widgets/message_detail_view.d
 import 'package:sparkle/features/chat/presentation/widgets/mode_suggestion_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/orchestration_trace_panel.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
+import 'package:sparkle/features/community/data/repositories/community_share_repository.dart';
 import 'package:sparkle/features/community/presentation/providers/community_agent_provider.dart';
 import 'package:sparkle/features/community/presentation/widgets/share_cards/share_cards.dart';
+import 'package:sparkle/features/task/data/repositories/task_repository.dart';
+import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
+import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 const _chatContentFontFallback = <String>[
@@ -38,7 +44,7 @@ const _chatContentFontFallback = <String>[
   'Segoe UI Emoji', // Windows
 ];
 
-class ChatBubble extends StatefulWidget {
+class ChatBubble extends ConsumerStatefulWidget {
   const ChatBubble({
     required this.message,
     super.key,
@@ -66,10 +72,11 @@ class ChatBubble extends StatefulWidget {
   final bool isLatestAssistantMessage;
 
   @override
-  State<ChatBubble> createState() => _ChatBubbleState();
+  ConsumerState<ChatBubble> createState() => _ChatBubbleState();
 }
 
-class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
+class _ChatBubbleState extends ConsumerState<ChatBubble>
+    with TickerProviderStateMixin {
   late AnimationController _entryController;
   late Animation<double> _scale;
   late Animation<Offset> _position;
@@ -651,6 +658,29 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                             widget.onActionDismiss != null
                                         ? () => widget.onActionDismiss!(w)
                                         : null,
+                                    onConfirmTasks: (toolResultId) async {
+                                      final planId = w.data['plan_id']
+                                              ?.toString() ??
+                                          w.data['planId']?.toString();
+                                      await _confirmGeneratedTasks(
+                                        toolResultId: toolResultId,
+                                        planId: planId,
+                                      );
+                                    },
+                                    onConfirmAllTasks: (toolResultId) async {
+                                      final planId = w.data['plan_id']
+                                              ?.toString() ??
+                                          w.data['planId']?.toString();
+                                      await _confirmGeneratedTasks(
+                                        toolResultId: toolResultId,
+                                        planId: planId,
+                                      );
+                                    },
+                                    onPlanNavigation: (planId) {
+                                      ref
+                                          .read(planListProvider.notifier)
+                                          .refresh();
+                                    },
                                     onWidgetAction: widget.onWidgetAction,
                                   ),
                                 );
@@ -1027,6 +1057,37 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
     );
   }
 
+  Future<void> _confirmGeneratedTasks({
+    required String toolResultId,
+    String? planId,
+  }) async {
+    try {
+      final result = await ref
+          .read(taskRepositoryProvider)
+          .confirmGeneratedTasks(toolResultId);
+      if (!mounted) return;
+      ref.read(taskListProvider.notifier).refreshTasks();
+      ref.read(planListProvider.notifier).refresh();
+
+      final countRaw = result['count'];
+      final count = countRaw is num
+          ? countRaw.toInt()
+          : int.tryParse(countRaw?.toString() ?? '') ?? 1;
+      final actionLabel = planId != null ? '查看计划' : '去任务列表';
+      final route = planId != null ? '/plans/$planId' : '/tasks';
+      AppFeedback.undoable(
+        context: context,
+        message: '已确认 $count 个任务，开始执行！',
+        actionLabel: actionLabel,
+        onAction: () => context.push(route),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      AppFeedback.error(context, '确认失败: $e');
+      rethrow;
+    }
+  }
+
   // ============================================================
   // Share Card Support for Private Messages
   // ============================================================
@@ -1059,18 +1120,55 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
     if (contentType == null) return null;
 
     final data = msg.contentData ?? {};
+    final sharedResourceId = data['shared_resource_id']?.toString();
+    // resource_meta contains task/plan specific fields (progress, estimated_minutes, etc.)
+    // Fall back to data itself for non-task/plan types (capsule, prism, achievement)
+    final meta = (data['resource_meta'] as Map<String, dynamic>?) ?? data;
     final payload = UniversalSharePayload(
       contentType: contentType,
       resourceId: _getResourceId(msg.messageType, data),
       title: _getShareTitle(msg.messageType, data, msg.content),
       subtitle: _getShareSubtitle(msg.messageType, data),
-      metadata: data,
+      metadata: meta,
     );
 
     return ShareCardFactory.fromPayload(
       payload,
       onTap: () => _handleShareCardTap(payload),
+      sharedResourceId: sharedResourceId,
+      onAdopt: sharedResourceId == null ||
+              (contentType != ShareableContentType.taskCompletion &&
+                  contentType != ShareableContentType.planProgress)
+          ? null
+          : () => _handleAdopt(
+                context,
+                sharedResourceId,
+                contentType == ShareableContentType.planProgress
+                    ? 'plan'
+                    : 'task',
+              ),
     );
+  }
+
+  Future<void> _handleAdopt(
+    BuildContext context,
+    String sharedResourceId,
+    String resourceType,
+  ) async {
+    try {
+      final result = await ref
+          .read(communityShareRepositoryProvider)
+          .adoptResource(sharedResourceId: sharedResourceId);
+      if (!context.mounted) return;
+      AppFeedback.success(context, '已采纳，跳转中...');
+      final newId = result['new_resource_id'] as String;
+      final route =
+          resourceType == 'plan' ? '/plans/$newId' : '/tasks/$newId';
+      unawaited(context.push(route));
+    } catch (e) {
+      if (!context.mounted) return;
+      AppFeedback.error(context, '采纳失败: $e');
+    }
   }
 
   /// Get resource ID from content data based on message type
@@ -1083,8 +1181,8 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
     }
 
     return switch (type) {
-      MessageType.taskShare => safeGetString(data['task_id']),
-      MessageType.planShare => safeGetString(data['plan_id']),
+      MessageType.taskShare => safeGetString(data['resource_id']),
+      MessageType.planShare => safeGetString(data['resource_id']),
       MessageType.capsuleShare => safeGetString(data['capsule_id']),
       MessageType.prismShare => safeGetString(data['prism_id']),
       MessageType.achievement => safeGetString(data['achievement_id']),
@@ -1106,10 +1204,10 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
     }
 
     final title = switch (type) {
-      MessageType.taskShare => safeGetString(data['title']),
-      MessageType.planShare => safeGetString(data['title']),
-      MessageType.capsuleShare => safeGetString(data['title']),
-      MessageType.prismShare => safeGetString(data['title']),
+      MessageType.taskShare => safeGetString(data['resource_title']),
+      MessageType.planShare => safeGetString(data['resource_title']),
+      MessageType.capsuleShare => safeGetString(data['resource_title']) ?? safeGetString(data['title']),
+      MessageType.prismShare => safeGetString(data['resource_title']) ?? safeGetString(data['title']),
       MessageType.achievement => safeGetString(data['name']),
       _ => null,
     };
@@ -1141,17 +1239,18 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
       return null;
     }
 
+    final meta = (data['resource_meta'] as Map<String, dynamic>?) ?? {};
     return switch (type) {
       MessageType.taskShare => () {
-        final duration = safeGetInt(data['duration']) ?? 0;
-        return '已完成 · $duration分钟';
+        final duration = safeGetInt(meta['estimated_minutes']) ?? 0;
+        return duration > 0 ? '已完成 · $duration分钟' : '已完成';
       }(),
       MessageType.planShare => () {
-        final progress = safeGetDouble(data['progress']);
+        final progress = safeGetDouble(meta['progress']);
         return progress != null ? '进度: ${(progress * 100).toStringAsFixed(0)}%' : null;
       }(),
-      MessageType.capsuleShare => safeGetString(data['summary']),
-      MessageType.prismShare => safeGetString(data['insight']),
+      MessageType.capsuleShare => safeGetString(data['resource_summary']) ?? safeGetString(data['summary']),
+      MessageType.prismShare => safeGetString(data['resource_summary']) ?? safeGetString(data['insight']),
       MessageType.achievement => safeGetString(data['description']),
       _ => null,
     };

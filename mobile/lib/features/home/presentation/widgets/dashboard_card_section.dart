@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/streak_indicator.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_card_config_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/calendar_heatmap_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/cognitive_tool_hub_card.dart';
@@ -14,6 +13,8 @@ import 'package:sparkle/features/home/presentation/widgets/dashboard_edit_sheet.
 import 'package:sparkle/features/home/presentation/widgets/focus_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/long_term_plan_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/next_actions_card.dart';
+import 'package:sparkle/features/home/presentation/widgets/seed_library_dashboard_card.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 class DashboardCardSection extends ConsumerWidget {
   const DashboardCardSection({super.key});
@@ -76,6 +77,8 @@ class DashboardCardSection extends ConsumerWidget {
         );
       case DashboardCardIds.curiosity:
         return DashboardCuriosityCard(compact: true, dense: isGridMode);
+      case DashboardCardIds.seedLibrary:
+        return SeedLibraryDashboardCard(compact: true, dense: isGridMode);
       case DashboardCardIds.longTermPlan:
         return LongTermPlanCard(compact: true, dense: isGridMode);
       default:

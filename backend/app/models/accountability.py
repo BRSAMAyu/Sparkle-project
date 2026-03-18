@@ -5,6 +5,7 @@ Models:
 - AccountabilityPartnership: 伙伴关系
 - AccountabilityCheckin: 每日打卡记录
 """
+
 import enum
 
 from sqlalchemy import (
@@ -66,12 +67,8 @@ class AccountabilityPartnership(BaseModel):
     ended_at = Column(DateTime(timezone=True), nullable=True)
 
     # Relationships
-    initiator = relationship(
-        "User", foreign_keys=[initiator_id], lazy="selectin"
-    )
-    partner = relationship(
-        "User", foreign_keys=[partner_id], lazy="selectin"
-    )
+    initiator = relationship("User", foreign_keys=[initiator_id], lazy="selectin")
+    partner = relationship("User", foreign_keys=[partner_id], lazy="selectin")
     checkins = relationship(
         "AccountabilityCheckin",
         back_populates="partnership",
@@ -120,12 +117,11 @@ class AccountabilityCheckin(BaseModel):
 
     # 互动字段
     likes = Column(Integer, nullable=False, default=0)  # 点赞数
+    liked_by = Column(JSONB, nullable=False, default=list)  # 点赞用户ID列表
     encouragements = Column(JSONB, nullable=False, default=list)  # 鼓励消息列表
 
     # Relationships
-    partnership = relationship(
-        "AccountabilityPartnership", back_populates="checkins"
-    )
+    partnership = relationship("AccountabilityPartnership", back_populates="checkins")
     user = relationship("User", lazy="selectin")
 
     __table_args__ = (

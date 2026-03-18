@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
@@ -12,6 +13,7 @@ import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/chat/presentation/widgets/file_message_bubble.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
+import 'package:sparkle/features/community/data/repositories/community_share_repository.dart';
 import 'package:sparkle/features/community/presentation/widgets/share_cards/share_cards.dart';
 import 'package:sparkle/features/community/presentation/providers/community_agent_provider.dart';
 import 'package:sparkle/features/file/file.dart';
@@ -750,16 +752,16 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
 
   Widget _buildTaskShareBubble(BuildContext context, bool isMe) {
     final data = widget.message.contentData ?? {};
+    final sharedResourceId = data['shared_resource_id']?.toString();
+    final meta = (data['resource_meta'] as Map<String, dynamic>?) ?? {};
     final payload = UniversalSharePayload(
       contentType: ShareableContentType.taskCompletion,
-      resourceId: data['task_id'] as String? ?? '',
-      title: data['title'] as String? ?? widget.message.content ?? '任务',
-      subtitle: data['description'] as String?,
+      resourceId: data['resource_id'] as String? ?? '',
+      title: data['resource_title'] as String? ?? widget.message.content ?? '任务',
+      subtitle: data['resource_summary'] as String?,
       metadata: {
-        'duration': data['duration'],
-        'points': data['points'],
-        'streak': data['streak'],
-        'completed_at': data['completed_at'],
+        'duration': meta['estimated_minutes'],
+        'completed_at': meta['completed_at'],
       },
     );
 
@@ -769,24 +771,27 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
         payload,
         isCompact: false,
         onTap: () => _handleSharedResourceTap(payload),
+        sharedResourceId: sharedResourceId,
+        onAdopt: sharedResourceId == null
+            ? null
+            : () => _handleAdopt(context, sharedResourceId, 'task'),
       ),
     );
   }
 
   Widget _buildPlanShareBubble(BuildContext context, bool isMe) {
     final data = widget.message.contentData ?? {};
-    final progress = data['progress'] as double?;
+    final sharedResourceId = data['shared_resource_id']?.toString();
+    final meta = (data['resource_meta'] as Map<String, dynamic>?) ?? {};
+    final progress = (meta['progress'] as num?)?.toDouble();
     final payload = UniversalSharePayload(
       contentType: ShareableContentType.planProgress,
-      resourceId: data['plan_id'] as String? ?? '',
-      title: data['title'] as String? ?? widget.message.content ?? '计划',
+      resourceId: data['resource_id'] as String? ?? '',
+      title: data['resource_title'] as String? ?? widget.message.content ?? '计划',
       subtitle: progress != null ? '进度: ${(progress * 100).toStringAsFixed(0)}%' : null,
       metadata: {
         'progress': progress,
-        'completed_tasks': data['completed_tasks'],
-        'total_tasks': data['total_tasks'],
-        'milestones': data['milestones'],
-        'deadline': data['deadline'],
+        'deadline': meta['target_date'],
       },
     );
 
@@ -796,6 +801,10 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
         payload,
         isCompact: false,
         onTap: () => _handleSharedResourceTap(payload),
+        sharedResourceId: sharedResourceId,
+        onAdopt: sharedResourceId == null
+            ? null
+            : () => _handleAdopt(context, sharedResourceId, 'plan'),
       ),
     );
   }
@@ -840,6 +849,27 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
       isMe: isMe,
       child: _buildAchievementPreviewCard(context, isMe, data),
     );
+  }
+
+  Future<void> _handleAdopt(
+    BuildContext context,
+    String sharedResourceId,
+    String resourceType,
+  ) async {
+    try {
+      final result = await ref
+          .read(communityShareRepositoryProvider)
+          .adoptResource(sharedResourceId: sharedResourceId);
+      if (!context.mounted) return;
+      AppFeedback.success(context, '已采纳，跳转中...');
+      final newId = result['new_resource_id'] as String;
+      final route =
+          resourceType == 'plan' ? '/plans/$newId' : '/tasks/$newId';
+      unawaited(context.push(route));
+    } catch (e) {
+      if (!context.mounted) return;
+      AppFeedback.error(context, '采纳失败: $e');
+    }
   }
 
   Widget _buildRichCardWrapper({

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
+import 'package:sparkle/core/network/response_parser.dart';
 
 final communityShareRepositoryProvider = Provider((ref) {
   final apiClient = ref.watch(apiClientProvider);
@@ -35,5 +36,14 @@ class CommunityShareRepository {
     if (response.statusCode != 200 && response.statusCode != 201) {
       throw Exception('Failed to share resource');
     }
+  }
+
+  Future<Map<String, dynamic>> adoptResource({
+    required String sharedResourceId,
+  }) async {
+    final response = await _apiClient.post<dynamic>(
+      ApiEndpoints.adoptSharedResource(sharedResourceId),
+    );
+    return ApiResponseParser.unwrapMap(response.data, action: 'adoptResource');
   }
 }

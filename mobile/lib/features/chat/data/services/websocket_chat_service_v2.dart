@@ -360,6 +360,15 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
       case 'tool_result':
         final toolResult = data['tool_result'] as Map<String, dynamic>?;
         if (toolResult != null) {
+          final widgetData = toolResult['widget_data'];
+          final toolCallId = toolResult['tool_call_id'] as String?;
+          if (widgetData is Map<String, dynamic> &&
+              toolCallId != null &&
+              (widgetData['tool_result_id'] == null ||
+                  widgetData['tool_result_id'].toString().isEmpty)) {
+            widgetData['tool_result_id'] = toolCallId;
+            toolResult['widget_data'] = widgetData;
+          }
           return ToolResultEvent(
             result: ToolResultModel.fromJson(toolResult),
             responseId: responseId,

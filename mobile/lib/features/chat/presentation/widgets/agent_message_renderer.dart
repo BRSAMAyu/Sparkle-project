@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
@@ -107,7 +108,12 @@ class AgentMessageRenderer extends StatelessWidget {
         );
 
       case 'plan_card':
-        return PlanCard(data: widget.data);
+        final planId =
+            widget.data['id']?.toString() ?? widget.data['plan_id']?.toString();
+        return GestureDetector(
+          onTap: planId != null ? () => context.push('/plans/$planId') : null,
+          child: PlanCard(data: widget.data),
+        );
 
       case 'plan_context_summary':
       case 'plan_state': // Legacy alias for compatibility

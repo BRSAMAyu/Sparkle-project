@@ -272,6 +272,71 @@ class AppLocalizationsEn extends AppLocalizations {
   String get createSprintPlan => 'Create Sprint Plan';
 
   @override
+  String get planCreateTitle => 'Create Plan';
+
+  @override
+  String get planCreateSuccess => 'Plan created successfully';
+
+  @override
+  String planCreateFailed(Object error) {
+    return 'Failed to create plan: $error';
+  }
+
+  @override
+  String get planNameLabel => 'Plan Name';
+
+  @override
+  String get planNameHint => 'Enter plan name...';
+
+  @override
+  String get planNameRequired => 'Please enter plan name';
+
+  @override
+  String get planDescLabel => 'Description';
+
+  @override
+  String get planDescHint => 'Describe your plan goals...';
+
+  @override
+  String get planSubjectLabel => 'Subject';
+
+  @override
+  String get planSubjectHint => 'e.g., Computer Science, English...';
+
+  @override
+  String get planTargetDateLabel => 'Target Date';
+
+  @override
+  String get planTargetDateUnset => 'No target date set';
+
+  @override
+  String get planDailyMinutesLabel => 'Daily Available Time';
+
+  @override
+  String get planDailyMinutesHint => 'How many minutes per day';
+
+  @override
+  String get planPriorityLabel => 'Priority';
+
+  @override
+  String get planPriorityCritical => 'Critical';
+
+  @override
+  String get planPriorityHigh => 'High';
+
+  @override
+  String get planPriorityNormal => 'Normal';
+
+  @override
+  String get planPriorityLow => 'Low';
+
+  @override
+  String get planCreating => 'Creating...';
+
+  @override
+  String get planCreateAction => 'Create Plan';
+
+  @override
   String get featureComingSoon => 'Exciting features are coming soon';
 
   @override

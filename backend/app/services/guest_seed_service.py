@@ -795,7 +795,7 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
             )
         )
 
-    await session.commit()
+    await session.flush()
 
     # Chat session + history
     chat_session = (await session.execute(
@@ -843,5 +843,5 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
         ])
         chat_session.last_message_at = now
 
-    await session.commit()
+    await session.flush()
     logger.info(f"Guest data seeded for user_id={user.id} username={user.username}")

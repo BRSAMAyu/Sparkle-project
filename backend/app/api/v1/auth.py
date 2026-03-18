@@ -804,16 +804,37 @@ async def guest_login(
             is_active=True,
         )
         db.add(user)
-        await db.commit()
-        await db.refresh(user)
+        await db.flush()  # 获取 user.id 但不 commit，保持事务
 
         # 为新游客播种演示数据，确保完整体验
+        # 整个 user 创建 + seed 在同一个事务中，失败全部回滚
         try:
             from app.services.guest_seed_service import seed_guest_user_data
             await seed_guest_user_data(db, user)
+            await db.commit()
             await db.refresh(user)
         except Exception as e:
-            logger.warning(f"Guest seed failed (non-fatal): {e}")
+            logger.error(f"Guest seed failed, rolling back: {e}")
+            await db.rollback()
+            raise HTTPException(
+                status_code=500,
+                detail="访客账号初始化失败，请稍后重试",
+            )
+    else:
+        # 已有访客账户 — 检查数据是否完整（seed 可能之前失败过）
+        from app.services.guest_seed_service import seed_guest_user_data
+        try:
+            await seed_guest_user_data(db, user)  # 幂等，已有数据会跳过
+            await db.commit()
+            await db.refresh(user)
+        except Exception as e:
+            logger.warning(f"Guest re-seed failed (non-fatal): {e}")
+            await db.rollback()
+            # rollback 后需要重新加载 user 对象（session 状态已重置）
+            result = await db.execute(select(User).where(User.username == guest_id))
+            user = result.scalars().first()
+            if not user:
+                raise HTTPException(status_code=500, detail="访客账号异常，请稍后重试")
 
     logger.info(f"Guest login: guest_id={guest_id}, user_id={user.id}, new={is_new_guest}")
 

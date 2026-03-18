@@ -124,6 +124,8 @@ class ApiEndpoints {
       '/community/friends/$friendId/messages/search';
   static const String sendPrivateMessage = '/community/messages';
   static const String communityShare = '/community/share';
+  static String adoptSharedResource(String id) =>
+      '/community/shared-resources/$id/adopt';
   static const String searchUsers = '/community/users/search';
   static const String userStatus = '/community/status';
 

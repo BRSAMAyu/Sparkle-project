@@ -324,6 +324,16 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
             variant: ButtonVariant.ghost,
           ),
           SparkleIconButton(
+            icon: const Icon(Icons.assignment_outlined),
+            onPressed: () => unawaited(
+              context.push(
+                CommunityRoutes.groupTasks.replaceFirst(':id', widget.groupId),
+              ),
+            ),
+            semanticLabel: '群组任务',
+            variant: ButtonVariant.ghost,
+          ),
+          SparkleIconButton(
             icon: Icon(Icons.local_fire_department, color: DS.brandPrimary),
             onPressed: _showCheckinDialog,
             semanticLabel: context.l10n.communityCheckInAction,

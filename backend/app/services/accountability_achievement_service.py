@@ -7,12 +7,13 @@ Accountability Achievement Service
 - 伙伴关系成就
 - 协作成就
 """
+
 from datetime import UTC, datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.accountability import (
@@ -138,7 +139,9 @@ class AccountabilityAchievementService:
             if streak_days >= required_days:
                 if await self._unlock_achievement(db, user_id, achievement_id):
                     unlocked.append(achievement_id)
-                    logger.info(f"Unlocked achievement {achievement_id} for user {user_id} with {streak_days} day streak")
+                    logger.info(
+                        f"Unlocked achievement {achievement_id} for user {user_id} with {streak_days} day streak"
+                    )
 
         return unlocked
 
@@ -165,11 +168,7 @@ class AccountabilityAchievementService:
         if not partnership:
             return unlocked
 
-        partner_id = (
-            partnership.partner_id
-            if user_id == partnership.initiator_id
-            else partnership.initiator_id
-        )
+        partner_id = partnership.partner_id if user_id == partnership.initiator_id else partnership.initiator_id
 
         # 检查首次伙伴关系
         if await self._is_first_partnership(db, user_id):
@@ -215,16 +214,10 @@ class AccountabilityAchievementService:
         if not partnership:
             return unlocked
 
-        partner_id = (
-            partnership.partner_id
-            if user_id == partnership.initiator_id
-            else partnership.initiator_id
-        )
+        partner_id = partnership.partner_id if user_id == partnership.initiator_id else partnership.initiator_id
 
         # 检查连续7天互相支持
-        mutual_days = await self._count_mutual_checkin_days(
-            db, partnership_id, user_id, partner_id, days=7
-        )
+        mutual_days = await self._count_mutual_checkin_days(db, partnership_id, user_id, partner_id, days=7)
 
         if mutual_days >= 7:
             if await self._unlock_achievement(db, user_id, "accountability_mutual_support"):
@@ -266,14 +259,11 @@ class AccountabilityAchievementService:
 
         # 获取上个月的天数
         import calendar
+
         days_in_month = calendar.monthrange(last_month_year, last_month)[1]
 
         # 检查双方是否每天都打卡
-        partner_id = (
-            partnership.partner_id
-            if user_id == partnership.initiator_id
-            else partnership.initiator_id
-        )
+        partner_id = partnership.partner_id if user_id == partnership.initiator_id else partnership.initiator_id
 
         for target_user_id in [user_id, partner_id]:
             perfect_month = await self._check_perfect_month_for_user(

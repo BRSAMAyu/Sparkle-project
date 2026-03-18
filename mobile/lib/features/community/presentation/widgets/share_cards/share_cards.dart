@@ -25,17 +25,23 @@ class ShareCardFactory {
     UniversalSharePayload payload, {
     bool isCompact = false,
     VoidCallback? onTap,
+    String? sharedResourceId,
+    VoidCallback? onAdopt,
   }) {
     return switch (payload.contentType) {
       ShareableContentType.taskCompletion => TaskShareCardFactory.fromPayload(
           payload,
           isCompact: isCompact,
           onTap: onTap,
+          sharedResourceId: sharedResourceId,
+          onAdopt: onAdopt,
         ),
       ShareableContentType.planProgress => PlanShareCardFactory.fromPayload(
           payload,
           isCompact: isCompact,
           onTap: onTap,
+          sharedResourceId: sharedResourceId,
+          onAdopt: onAdopt,
         ),
       ShareableContentType.capsule => CapsuleShareCardFactory.fromPayload(
           payload,

@@ -10,6 +10,7 @@ import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/focus_action_card.dart';
+import 'package:sparkle/features/plan/presentation/widgets/plan_card.dart';
 import 'package:sparkle/features/task/presentation/widgets/task_card.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
@@ -19,11 +20,17 @@ class ActionCard extends StatefulWidget {
     super.key,
     this.onConfirm,
     this.onDismiss,
+    this.onConfirmTasks,
+    this.onConfirmAllTasks,
+    this.onPlanNavigation,
     this.onWidgetAction,
   });
   final WidgetPayload action;
   final VoidCallback? onConfirm;
   final VoidCallback? onDismiss;
+  final Future<void> Function(String toolResultId)? onConfirmTasks;
+  final Future<void> Function(String toolResultId)? onConfirmAllTasks;
+  final void Function(String planId)? onPlanNavigation;
   final Future<void> Function(String actionType, Map<String, dynamic> payload)?
       onWidgetAction;
 
@@ -39,6 +46,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
   String? _selectedReflectionOption;
   bool _reflectionSubmitted = false;
   late bool _detailsExpanded;
+  bool _confirmingTasks = false;
+  bool _confirmedTasks = false;
 
   @override
   void initState() {
@@ -101,19 +110,63 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         data['updated_at'] ??= data['created_at'];
 
         final task = TaskModel.fromJson(data);
-        return TaskCard(
-          task: task,
-          onTap: () => context.push('/tasks/${task.id}'),
+        final status = data['status']?.toString();
+        final isAlreadyActive =
+            status == 'IN_PROGRESS' || status == 'COMPLETED';
+        final toolResultId = data['tool_result_id']?.toString();
+        final canConfirm =
+            toolResultId != null && toolResultId.trim().isNotEmpty;
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TaskCard(
+              task: task,
+              onTap: () => context.push('/tasks/${task.id}'),
+            ),
+            if (!isAlreadyActive &&
+                canConfirm &&
+                widget.onConfirmTasks != null &&
+                !_confirmedTasks)
+              Padding(
+                padding: const EdgeInsets.only(
+                  top: DS.spacing4,
+                  left: DS.spacing8,
+                  right: DS.spacing8,
+                ),
+                child: SparkleButton.primary(
+                  label: _confirmingTasks ? '确认中...' : '确认任务',
+                  onPressed: _confirmingTasks
+                      ? null
+                      : () async {
+                          setState(() => _confirmingTasks = true);
+                          try {
+                            await widget.onConfirmTasks!(toolResultId);
+                            widget.onConfirm?.call();
+                            if (mounted) {
+                              setState(() => _confirmedTasks = true);
+                            }
+                          } catch (_) {
+                            // Error feedback handled by caller
+                          } finally {
+                            if (mounted) {
+                              setState(() => _confirmingTasks = false);
+                            }
+                          }
+                        },
+                ),
+              ),
+          ],
         );
       } catch (e) {
         debugPrint('Error parsing task card data: $e');
       }
     }
 
-    final hasAction = widget.onConfirm != null || widget.onDismiss != null;
+    final resolvedType = _resolveActionType(widget.action);
+    final hasAction = (widget.onConfirm != null || widget.onDismiss != null) &&
+        !_usesCustomCta(resolvedType);
     final confirmLabel = _getConfirmLabel(widget.action.type);
     final dismissLabel = _getDismissLabel(widget.action.type);
-    final resolvedType = _resolveActionType(widget.action);
     final isCollapsible = _isCollapsedByDefault(resolvedType);
 
     return GestureDetector(
@@ -297,6 +350,9 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     }
     return action.type;
   }
+
+  bool _usesCustomCta(String type) =>
+      type == 'task_list' || type == 'plan_card';
 
   LinearGradient _getActionGradientFor(WidgetPayload action) =>
       _getActionGradient(_resolveActionType(action));
@@ -542,6 +598,9 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     if (action.type == 'reflection_card') {
       return _buildReflectionCard(context, action);
     }
+    if (action.type == 'plan_card') {
+      return _buildPlanCardContent(context, action);
+    }
     if (action.type == 'system_update') {
       final description = action.data['description']?.toString() ?? '';
       final category = action.data['category']?.toString() ?? '';
@@ -729,6 +788,11 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     final tasks = action.data['tasks'] as List<dynamic>? ?? [];
     if (tasks.isEmpty) return const SizedBox.shrink();
 
+    final toolResultId = action.data['tool_result_id']?.toString() ??
+        action.data['id']?.toString();
+    final canConfirm =
+        toolResultId != null && toolResultId.trim().isNotEmpty;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -801,6 +865,62 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                     color: DS.neutral500,
                     fontStyle: FontStyle.italic,
                   ),
+            ),
+          ),
+        if (canConfirm &&
+            widget.onConfirmAllTasks != null &&
+            !_confirmedTasks)
+          Padding(
+            padding: const EdgeInsets.only(top: DS.spacing12),
+            child: SparkleButton.primary(
+              label: _confirmingTasks ? '确认中...' : '确认全部任务',
+              icon: const Icon(Icons.check_circle_outline),
+              onPressed: _confirmingTasks
+                  ? null
+                  : () async {
+                      setState(() => _confirmingTasks = true);
+                      try {
+                        await widget.onConfirmAllTasks!(toolResultId);
+                        widget.onConfirm?.call();
+                        if (mounted) {
+                          setState(() => _confirmedTasks = true);
+                        }
+                      } catch (_) {
+                        // Error feedback handled by caller
+                      } finally {
+                        if (mounted) {
+                          setState(() => _confirmingTasks = false);
+                        }
+                      }
+                    },
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildPlanCardContent(BuildContext context, WidgetPayload action) {
+    final planId =
+        action.data['id']?.toString() ?? action.data['plan_id']?.toString();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        PlanCard(data: action.data),
+        if (planId != null)
+          Padding(
+            padding: const EdgeInsets.only(
+              top: DS.spacing4,
+              left: DS.spacing8,
+              right: DS.spacing8,
+            ),
+            child: TextButton.icon(
+              icon: const Icon(Icons.arrow_forward),
+              label: const Text('查看计划详情'),
+              onPressed: () {
+                context.push('/plans/$planId');
+                widget.onPlanNavigation?.call(planId);
+              },
             ),
           ),
       ],

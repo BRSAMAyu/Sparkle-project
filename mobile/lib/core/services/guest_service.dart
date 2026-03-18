@@ -1,7 +1,9 @@
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:uuid/uuid.dart';
 
 /// 访客服务 - 管理访客 ID 的持久化
+///
+/// 使用固定的访客 ID，这样所有设备的访客模式都共享同一个账户，
+/// 确保体验数据一致，方便全功能验收。
 class GuestService {
   GuestService(this._prefs) {
     // 初始化时从本地存储加载
@@ -11,24 +13,29 @@ class GuestService {
   static const String _guestIdKey = 'guest_id';
   static const String _guestNicknameKey = 'guest_nickname';
 
+  /// 固定的访客 ID，所有设备共享同一个访客账户
+  static const String _wellKnownGuestId = 'guest_sparkle_demo_visitor';
+
   final SharedPreferences _prefs;
   String? _cachedGuestId;
   String? _cachedNickname;
 
-  /// 获取或生成访客 ID
+  /// 获取访客 ID — 始终使用固定 ID，确保跨设备一致性
   Future<String> getGuestId() async {
+    // 迁移：如果之前存了随机 UUID 的 guest_id，替换为固定 ID
+    if (_cachedGuestId != null && _cachedGuestId != _wellKnownGuestId) {
+      await _prefs.setString(_guestIdKey, _wellKnownGuestId);
+      _cachedGuestId = _wellKnownGuestId;
+    }
+
     if (_cachedGuestId != null) {
       return _cachedGuestId!;
     }
 
-    // 生成新的访客 ID
-    const uuid = Uuid();
-    final guestId = 'guest_${uuid.v4()}';
+    await _prefs.setString(_guestIdKey, _wellKnownGuestId);
+    _cachedGuestId = _wellKnownGuestId;
 
-    await _prefs.setString(_guestIdKey, guestId);
-    _cachedGuestId = guestId;
-
-    return guestId;
+    return _wellKnownGuestId;
   }
 
   /// 获取访客昵称

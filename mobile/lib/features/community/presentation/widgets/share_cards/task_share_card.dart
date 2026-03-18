@@ -9,6 +9,7 @@ class TaskShareCard extends StatelessWidget {
   const TaskShareCard({
     required this.taskId,
     required this.taskTitle,
+    this.sharedResourceId,
     this.taskDescription,
     this.completedAt,
     this.duration,
@@ -16,11 +17,13 @@ class TaskShareCard extends StatelessWidget {
     this.streak,
     this.isCompact = false,
     this.onTap,
+    this.onAdopt,
     super.key,
   });
 
   final String taskId;
   final String taskTitle;
+  final String? sharedResourceId;
   final String? taskDescription;
   final DateTime? completedAt;
   final int? duration; // in minutes
@@ -28,6 +31,7 @@ class TaskShareCard extends StatelessWidget {
   final int? streak;
   final bool isCompact;
   final VoidCallback? onTap;
+  final VoidCallback? onAdopt;
 
   @override
   Widget build(BuildContext context) {
@@ -213,6 +217,17 @@ class TaskShareCard extends StatelessWidget {
                         ),
                       ),
                     ],
+                    if (onAdopt != null) ...[
+                      SizedBox(height: DS.sm),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton.icon(
+                          icon: const Icon(Icons.add_task, size: DS.iconSizeSm),
+                          label: const Text('采纳任务'),
+                          onPressed: onAdopt,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -265,12 +280,15 @@ class TaskShareCardFactory {
     UniversalSharePayload payload, {
     bool isCompact = false,
     VoidCallback? onTap,
+    String? sharedResourceId,
+    VoidCallback? onAdopt,
   }) {
     final metadata = payload.metadata ?? {};
 
     return TaskShareCard(
       taskId: payload.resourceId,
       taskTitle: payload.title,
+      sharedResourceId: sharedResourceId,
       taskDescription: payload.subtitle ?? payload.description,
       duration: metadata['duration'] as int?,
       points: metadata['points'] as int?,
@@ -280,6 +298,7 @@ class TaskShareCardFactory {
           : null,
       isCompact: isCompact,
       onTap: onTap,
+      onAdopt: onAdopt,
     );
   }
 }

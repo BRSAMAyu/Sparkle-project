@@ -5,18 +5,30 @@ import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// 任务列表组件
 /// 用于在聊天中批量显示 AI 生成的任务
-class TaskListWidget extends StatelessWidget {
+class TaskListWidget extends StatefulWidget {
   // List of Map<String, dynamic>
 
   const TaskListWidget({
     required this.tasks,
+    this.toolResultId,
+    this.onConfirmAll,
     super.key,
   });
   final List<Map<String, dynamic>> tasks;
+  final String? toolResultId;
+  final Future<void> Function(String toolResultId)? onConfirmAll;
+
+  @override
+  State<TaskListWidget> createState() => _TaskListWidgetState();
+}
+
+class _TaskListWidgetState extends State<TaskListWidget> {
+  bool _confirmed = false;
+  bool _isConfirming = false;
 
   @override
   Widget build(BuildContext context) {
-    if (tasks.isEmpty) {
+    if (widget.tasks.isEmpty) {
       return const SizedBox.shrink();
     }
 
@@ -29,30 +41,63 @@ class TaskListWidget extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              context.l10n.taskBatchCreateTitle(tasks.length),
+              context.l10n.taskBatchCreateTitle(widget.tasks.length),
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
             ),
             const SizedBox(height: 10),
-            ...tasks.map((taskData) => _buildTaskItem(context, taskData)),
+            ...widget.tasks.map((taskData) => _buildTaskItem(context, taskData)),
             const SizedBox(height: 10),
-            Align(
-              alignment: Alignment.bottomRight,
-              child: SparkleButton(
-                label: context.l10n.taskViewAll,
-                variant: ButtonVariant.ghost,
-                icon: const Icon(Icons.arrow_forward_ios, size: 16),
-                onPressed: () {
-                  // 导航到任务列表页面
-                  context.push('/tasks');
-                },
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                SparkleButton(
+                  label: context.l10n.taskViewAll,
+                  variant: ButtonVariant.ghost,
+                  icon: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onPressed: () {
+                    // 导航到任务列表页面
+                    context.push('/tasks');
+                  },
+                ),
+                if (widget.toolResultId != null &&
+                    widget.toolResultId!.trim().isNotEmpty &&
+                    widget.onConfirmAll != null &&
+                    !_confirmed)
+                  SparkleButton.primary(
+                    label: _isConfirming ? '确认中...' : '确认全部任务',
+                    icon: const Icon(Icons.check_circle_outline),
+                    onPressed: _isConfirming ? null : _handleConfirmAll,
+                  ),
+              ],
             ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _handleConfirmAll() async {
+    final toolResultId = widget.toolResultId;
+    final onConfirmAll = widget.onConfirmAll;
+    if (toolResultId == null ||
+        toolResultId.trim().isEmpty ||
+        onConfirmAll == null) {
+      return;
+    }
+    setState(() => _isConfirming = true);
+    try {
+      await onConfirmAll(toolResultId);
+      if (!mounted) return;
+      setState(() => _confirmed = true);
+    } catch (_) {
+      // Error feedback handled by caller
+    } finally {
+      if (mounted) {
+        setState(() => _isConfirming = false);
+      }
+    }
   }
 
   Widget _buildTaskItem(BuildContext context, Map<String, dynamic> taskData) {

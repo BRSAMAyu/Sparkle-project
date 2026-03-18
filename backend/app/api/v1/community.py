@@ -21,13 +21,23 @@ from app.core.security import decode_token
 from app.core.websocket import manager
 from app.db.session import AsyncSessionLocal, get_db
 from app.models.cognitive import BehaviorPattern, CognitiveFragment
-from app.models.community import GroupMember, GroupMessage, GroupRole, GroupType, PrivateMessage, SharedResourceType
+from app.models.community import (
+    GroupMember,
+    GroupMessage,
+    GroupRole,
+    GroupType,
+    PrivateMessage,
+    SharedResource,
+    SharedResourceType,
+)
 from app.models.curiosity_capsule import CuriosityCapsule
 from app.models.galaxy import KnowledgeNode
 from app.models.group_files import GroupFile
 from app.models.plan import Plan
 from app.models.task import Task
 from app.models.user import User, UserStatus
+from app.schemas.plan import PlanCreate
+from app.schemas.task import TaskCreate
 from app.schemas.community import (
     # 拉黑相关
     BlockUserRequest,
@@ -127,7 +137,9 @@ from app.services.community_service import (
     UserBlockService,
     UserSearchService,
 )
+from app.services.plan_service import PlanService
 from app.services.streak_signal_processor import StreakSignalProcessor
+from app.services.task_service import TaskService
 from app.services.group_file_service import GroupFileService
 from app.services.group_recommendation_service import GroupRecommendationService
 from app.models.community import Post, PostLike
@@ -2314,6 +2326,77 @@ async def get_group_resources(
             resource_summary=resource_summary
         ))
     return result
+
+
+@router.post(
+    "/shared-resources/{shared_resource_id}/adopt",
+    summary="采纳共享资源为个人任务/计划",
+)
+async def adopt_shared_resource(
+    shared_resource_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    shared = await db.get(SharedResource, shared_resource_id)
+    if not shared:
+        raise HTTPException(status_code=404, detail="共享资源不存在")
+
+    new_id: UUID | None = None
+    resource_type = ""
+
+    if shared.task_id:
+        original = await db.get(Task, shared.task_id)
+        if not original:
+            raise HTTPException(status_code=404, detail="原始任务不存在")
+        task_in = TaskCreate(
+            title=original.title,
+            type=original.type,
+            tags=original.tags or [],
+            estimated_minutes=original.estimated_minutes,
+            difficulty=original.difficulty,
+            energy_cost=original.energy_cost,
+            guide_content=original.guide_content,
+            priority=original.priority,
+        )
+        new_task = await TaskService.create(db, task_in, current_user.id)
+        new_id = new_task.id
+        resource_type = "task"
+    elif shared.plan_id:
+        original = await db.get(Plan, shared.plan_id)
+        if not original:
+            raise HTTPException(status_code=404, detail="原始计划不存在")
+        plan_in = PlanCreate(
+            name=original.name,
+            type=original.type,
+            description=original.description,
+            subject=original.subject,
+            target_date=original.target_date,
+            daily_available_minutes=original.daily_available_minutes,
+            total_estimated_hours=original.total_estimated_hours,
+            priority=original.priority,
+        )
+        new_plan = await PlanService.create(db, plan_in, current_user.id)
+        new_plan.source = "adopted"
+        new_plan.source_metadata = {
+            "original_id": str(original.id),
+            "shared_by": str(shared.shared_by),
+            "shared_resource_id": str(shared_resource_id),
+        }
+        db.add(new_plan)
+        new_id = new_plan.id
+        resource_type = "plan"
+    else:
+        raise HTTPException(status_code=400, detail="不支持采纳此类型资源")
+
+    shared.save_count = (shared.save_count or 0) + 1
+    db.add(shared)
+    await db.commit()
+
+    return {
+        "success": True,
+        "resource_type": resource_type,
+        "new_resource_id": str(new_id),
+    }
 
 
 # ============ 端到端加密 ============

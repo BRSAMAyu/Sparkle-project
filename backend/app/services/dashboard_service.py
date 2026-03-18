@@ -29,6 +29,9 @@ class DashboardService:
         # Get active sprint
         sprint = await self._get_active_sprint(user_id)
 
+        # Get active growth plan
+        growth = await self._get_active_growth(user_id)
+
         # Get weather (now includes cognitive data check)
         weather = await self._calculate_weather(user_id, user, sprint)
 
@@ -49,6 +52,7 @@ class DashboardService:
                 "today_focus_minutes": today_focus_minutes
             },
             "sprint": sprint,
+            "growth": growth,
             "next_actions": next_actions,
             "cognitive": cognitive
         }
@@ -100,6 +104,30 @@ class DashboardService:
                 "progress": plan.progress,
                 "days_left": max(0, days_left),
                 "total_estimated_hours": plan.total_estimated_hours
+            }
+        return None
+
+    async def _get_active_growth(self, user_id: UUID) -> dict | None:
+        """Get first active growth plan"""
+        query = (
+            select(Plan)
+            .where(and_(
+                Plan.user_id == user_id,
+                Plan.is_active,
+                Plan.type == PlanType.GROWTH
+            ))
+            .order_by(Plan.created_at.desc())
+            .limit(1)
+        )
+        result = await self.db.execute(query)
+        plan = result.scalar_one_or_none()
+
+        if plan:
+            return {
+                "id": str(plan.id),
+                "name": plan.name,
+                "progress": plan.progress,
+                "mastery_level": plan.mastery_level,
             }
         return None
 

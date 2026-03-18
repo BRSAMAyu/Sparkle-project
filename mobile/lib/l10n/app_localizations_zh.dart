@@ -264,6 +264,71 @@ class AppLocalizationsZh extends AppLocalizations {
   String get createSprintPlan => '创建冲刺计划';
 
   @override
+  String get planCreateTitle => '创建计划';
+
+  @override
+  String get planCreateSuccess => '计划创建成功';
+
+  @override
+  String planCreateFailed(Object error) {
+    return '创建计划失败: $error';
+  }
+
+  @override
+  String get planNameLabel => '计划名称';
+
+  @override
+  String get planNameHint => '输入计划名称...';
+
+  @override
+  String get planNameRequired => '请输入计划名称';
+
+  @override
+  String get planDescLabel => '计划描述';
+
+  @override
+  String get planDescHint => '描述你的计划目标...';
+
+  @override
+  String get planSubjectLabel => '主题/学科';
+
+  @override
+  String get planSubjectHint => '如：计算机科学、英语...';
+
+  @override
+  String get planTargetDateLabel => '目标日期';
+
+  @override
+  String get planTargetDateUnset => '未设置目标日期';
+
+  @override
+  String get planDailyMinutesLabel => '每日可用时间';
+
+  @override
+  String get planDailyMinutesHint => '每天计划投入多少分钟';
+
+  @override
+  String get planPriorityLabel => '优先级';
+
+  @override
+  String get planPriorityCritical => '紧急';
+
+  @override
+  String get planPriorityHigh => '高';
+
+  @override
+  String get planPriorityNormal => '普通';
+
+  @override
+  String get planPriorityLow => '低';
+
+  @override
+  String get planCreating => '创建中...';
+
+  @override
+  String get planCreateAction => '创建计划';
+
+  @override
   String get featureComingSoon => '精彩功能即将登场';
 
   @override

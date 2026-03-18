@@ -544,6 +544,24 @@ class TaskRepository {
       return;
     }
   }
+
+  Future<Map<String, dynamic>> confirmGeneratedTasks(String toolResultId) async {
+    final response = await _apiClient.post<dynamic>(
+      '/tasks/confirm-batch/$toolResultId',
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Failed to confirm tasks: ${response.data}');
+    }
+    final data = response.data;
+    if (data is Map<String, dynamic>) {
+      final wrapped = data['data'];
+      if (wrapped is Map<String, dynamic>) {
+        return wrapped;
+      }
+      return data;
+    }
+    throw Exception('Unexpected response format for confirmGeneratedTasks');
+  }
 }
 
 // Provider for TaskRepository

@@ -323,6 +323,20 @@ class ToolRegistry {
       },
       routeBuilder: (_) => '/curiosity-capsule',
     ),
+    ToolDefinition(
+      id: 'seed_library',
+      title: '种子库',
+      description: '浏览官方与社区知识库',
+      icon: Icons.auto_stories_rounded,
+      category: ToolCategory.study,
+      defaultOrder: 190,
+      searchTerms: const ['种子', '知识库', 'library', 'seed'],
+      supportedContexts: const {
+        ToolLaunchContext.home,
+        ToolLaunchContext.toolLibrary,
+      },
+      routeBuilder: (_) => '/seed-libraries',
+    ),
   ];
 
   static List<ToolDefinition> get all =>
