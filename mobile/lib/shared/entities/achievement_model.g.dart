@@ -307,7 +307,6 @@ Map<String, dynamic> _$GalaxySkinToJson(GalaxySkin instance) =>
     };
 
 UserTitle _$UserTitleFromJson(Map<String, dynamic> json) => UserTitle(
-      userId: json['user_id'] as String,
       titleId: json['title_id'] as String,
       titleName: json['title_name'] as String,
       titleDisplay: json['title_display'] as String,
@@ -317,7 +316,6 @@ UserTitle _$UserTitleFromJson(Map<String, dynamic> json) => UserTitle(
     );
 
 Map<String, dynamic> _$UserTitleToJson(UserTitle instance) => <String, dynamic>{
-      'user_id': instance.userId,
       'title_id': instance.titleId,
       'title_name': instance.titleName,
       'title_display': instance.titleDisplay,

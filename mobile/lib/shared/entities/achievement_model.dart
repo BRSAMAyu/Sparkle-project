@@ -499,7 +499,6 @@ class GalaxySkin {
 @JsonSerializable()
 class UserTitle {
   UserTitle({
-    required this.userId,
     required this.titleId,
     required this.titleName,
     required this.titleDisplay,
@@ -511,8 +510,6 @@ class UserTitle {
   factory UserTitle.fromJson(Map<String, dynamic> json) =>
       _$UserTitleFromJson(json);
 
-  @JsonKey(name: 'user_id')
-  final String userId;
   @JsonKey(name: 'title_id')
   final String titleId;
   @JsonKey(name: 'title_name')
