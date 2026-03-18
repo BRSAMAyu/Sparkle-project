@@ -454,12 +454,19 @@ class ChatOrchestrator(
         planning, execution, and response composition."""
         tracer = trace.get_tracer(__name__)
 
-        with tracer.start_as_current_span("orchestrator.process_stream") as span:
-            span.set_attribute("session_id", request.session_id)
-            span.set_attribute("user_id", request.user_id)
-            span.set_attribute("request_id", request.request_id)
-            trace_id = format(span.get_span_context().trace_id, "032x")
+        # NOTE: Do NOT use `with tracer.start_as_current_span(...)` wrapping the
+        # entire async generator body. An async generator yields across multiple
+        # coroutine contexts; the ContextVar token created by start_as_current_span
+        # is tied to the originating context and cannot be detached from a different
+        # one (raises "ValueError: Token was created in a different Context").
+        # Inner spans on individual await expressions are fine.
+        span = tracer.start_span("orchestrator.process_stream")
+        span.set_attribute("session_id", request.session_id)
+        span.set_attribute("user_id", request.user_id)
+        span.set_attribute("request_id", request.request_id)
+        trace_id = format(span.get_span_context().trace_id, "032x")
 
+        try:
             start_time = time.time()
             ACTIVE_SESSIONS.inc()
             request_id = request.request_id
@@ -471,14 +478,12 @@ class ChatOrchestrator(
             active_db = db_session or self.db_session
 
             # Step 1: Validation & idempotency (early exits)
-            with tracer.start_as_current_span("orchestrator.validate_request"):
-                if validation_error := await self._validate_request(request, response_id=response_id, request_id=request_id):
-                    yield validation_error
-                    return
-            with tracer.start_as_current_span("orchestrator.check_idempotency"):
-                if cached_resp := await self._check_idempotency_response(session_id=session_id, request_id=request_id, response_id=response_id):
-                    yield cached_resp
-                    return
+            if validation_error := await self._validate_request(request, response_id=response_id, request_id=request_id):
+                yield validation_error
+                return
+            if cached_resp := await self._check_idempotency_response(session_id=session_id, request_id=request_id, response_id=response_id):
+                yield cached_resp
+                return
 
             lock_acquired = False
             lock_renewal_task: asyncio.Task | None = None
@@ -490,8 +495,7 @@ class ChatOrchestrator(
 
             try:
                 # Step 2: Distributed lock
-                with tracer.start_as_current_span("redis.acquire_lock"):
-                    lock_acquired = await self._acquire_session_lock(session_id, request_id)
+                lock_acquired = await self._acquire_session_lock(session_id, request_id)
                 if not lock_acquired:
                     yield agent_service_pb2.ChatResponse(
                         response_id=response_id, created_at=int(datetime.now().timestamp()), request_id=request_id,
@@ -642,34 +646,32 @@ class ChatOrchestrator(
                     yield update_resp
 
                 # Step 5: Sufficiency check (may short-circuit)
-                with tracer.start_as_current_span("orchestrator.sufficiency_check"):
-                    sufficiency_handled, intent_type = await self._check_sufficiency(
-                        request=request,
-                        user_message=user_message,
-                        user_id=user_id,
-                        plan_id=plan_id,
-                        conversation_context=conversation_context,
-                        stream_callback=stream_callback,
-                        queue=queue,
-                    )
-                    if sufficiency_handled:
-                        async for queued in self._drain_queue(queue):
-                            yield queued
-                        return
-                with tracer.start_as_current_span("orchestrator.goal_quality_check"):
-                    if await self._check_goal_quality(
-                        intent_type=intent_type,
-                        user_message=user_message,
-                        user_id=user_id,
-                        plan_id=plan_id,
-                        active_db=active_db,
-                        conversation_context=conversation_context,
-                        stream_callback=stream_callback,
-                        state=state,
-                    ):
-                        async for queued in self._drain_queue(queue):
-                            yield queued
-                        return
+                sufficiency_handled, intent_type = await self._check_sufficiency(
+                    request=request,
+                    user_message=user_message,
+                    user_id=user_id,
+                    plan_id=plan_id,
+                    conversation_context=conversation_context,
+                    stream_callback=stream_callback,
+                    queue=queue,
+                )
+                if sufficiency_handled:
+                    async for queued in self._drain_queue(queue):
+                        yield queued
+                    return
+                if await self._check_goal_quality(
+                    intent_type=intent_type,
+                    user_message=user_message,
+                    user_id=user_id,
+                    plan_id=plan_id,
+                    active_db=active_db,
+                    conversation_context=conversation_context,
+                    stream_callback=stream_callback,
+                    state=state,
+                ):
+                    async for queued in self._drain_queue(queue):
+                        yield queued
+                    return
 
                 if chat_mode != CHAT_MODE_STANDARD and not settings.ENABLE_UNIFIED_GRAPH_ROUTING:
                     user_context_payload = await self._apply_context_focus_overlay(
@@ -774,8 +776,7 @@ class ChatOrchestrator(
                         yield resp
                     final_response_data = mode_result.get("final_response_data")
                     if isinstance(final_response_data, dict):
-                        with tracer.start_as_current_span("orchestrator.cache_mode_response"):
-                            await self._cache_response(session_id, request_id, final_response_data)
+                        await self._cache_response(session_id, request_id, final_response_data)
                         followup_updates, _, _, _, _, _ = await self._drain_system_updates(user_id)
                         for update_resp in followup_updates:
                             yield update_resp
@@ -965,25 +966,22 @@ class ChatOrchestrator(
 
                 # Step 13: Execute graph
                 result_holder: dict[str, Any] = {}
-                with tracer.start_as_current_span("agent_graph.invoke"):
-                    async for item in self._execute_graph(state=state, user_id=user_id, queue=queue, result_holder=result_holder):
-                        yield item
+                async for item in self._execute_graph(state=state, user_id=user_id, queue=queue, result_holder=result_holder):
+                    yield item
 
                 # Step 14: Build & yield final response
                 final_state = result_holder.get("final_state")
                 if final_state is not None:
                     total_prompt_tokens = result_holder.get("total_prompt_tokens", 0)
                     total_completion_tokens = result_holder.get("total_completion_tokens", 0)
-                    with tracer.start_as_current_span("orchestrator.build_final_response"):
-                        final_response, final_response_data = await self._build_final_response(
-                            final_state=final_state, executable_plan=executable_plan, active_db=active_db,
-                            user_id=user_id, session_id=session_id, response_id=response_id, request_id=request_id,
-                            trace_id=trace_id, workflow_id=workflow_id, prompt_version=prompt_version,
-                            route_decision=route_decision, plan_switched=plan_switched, plan_id=plan_id,
-                            user_context_payload=user_context_payload,
-                        )
-                    with tracer.start_as_current_span("orchestrator.cache_response"):
-                        await self._cache_response(session_id, request_id, final_response_data)
+                    final_response, final_response_data = await self._build_final_response(
+                        final_state=final_state, executable_plan=executable_plan, active_db=active_db,
+                        user_id=user_id, session_id=session_id, response_id=response_id, request_id=request_id,
+                        trace_id=trace_id, workflow_id=workflow_id, prompt_version=prompt_version,
+                        route_decision=route_decision, plan_switched=plan_switched, plan_id=plan_id,
+                        user_context_payload=user_context_payload,
+                    )
+                    await self._cache_response(session_id, request_id, final_response_data)
                     try:
                         turn_index = 1
                         if isinstance(conversation_context, dict):
@@ -1052,6 +1050,8 @@ class ChatOrchestrator(
                     session_id=session_id, request_id=request_id, start_time=start_time, user_id=user_id,
                     total_prompt_tokens=total_prompt_tokens, total_completion_tokens=total_completion_tokens,
                 )
+        finally:
+            span.end()
 
 
 # Backwards-compatible alias for benchmarks/tests

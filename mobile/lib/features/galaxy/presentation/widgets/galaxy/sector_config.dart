@@ -280,10 +280,20 @@ class SectorConfig {
     required bool isDarkMode,
   }) {
     final baseSector = node.sector;
-    final baseColor = getColor(baseSector, isDarkMode: isDarkMode);
+    // When sector is void (no subject assigned), generate a distinctive color
+    // based on the node's importance level so nodes are visually distinguishable.
     if (baseSector == SectorEnum.voidSector) {
-      return baseColor;
+      final imp = node.importance.clamp(1, 5);
+      // Map importance 1-5 to hues across the blue-violet spectrum (200–280°)
+      final hue = 200.0 + (imp - 1) * 20.0;
+      final saturation = isDarkMode ? 0.45 : 0.35;
+      final lightness = isDarkMode
+          ? 0.30 + (imp - 1) * 0.06
+          : 0.55 + (imp - 1) * 0.04;
+      return HSLColor.fromAHSL(1.0, hue, saturation, lightness.clamp(0.3, 0.75))
+          .toColor();
     }
+    final baseColor = getColor(baseSector, isDarkMode: isDarkMode);
 
     var totalNeighbors = 0;
     var crossNeighbors = 0;

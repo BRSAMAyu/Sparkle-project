@@ -54,6 +54,8 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
   final LunarService _lunarService = LunarService();
+  // Cached per-build: avoids redundant Theme.of(context) calls in helper methods
+  bool _isDark = false;
 
   String _formatMonthLabel(int month) => DateFormat.MMM(context.l10n.localeName)
       .format(DateTime(_focusedDay.year, month));
@@ -127,6 +129,9 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
   @override
   Widget build(BuildContext context) {
     final notifier = ref.read(calendarProvider.notifier);
+    // Cache isDark once per build so helper methods don't each call Theme.of(context),
+    // which would register multiple InheritedWidget listeners and cause redundant rebuilds.
+    _isDark = Theme.of(context).brightness == Brightness.dark;
     // For list below calendar (only shown in non-year mode)
     final selectedEvents =
         notifier.getEventsForDay(_selectedDay ?? _focusedDay);
@@ -203,7 +208,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
       );
 
   Widget _buildViewSwitcher() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDark = _isDark;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       width: double.infinity,
@@ -252,7 +257,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
   }
 
   Widget _buildYearView() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDark = _isDark;
     return LayoutBuilder(
       builder: (context, constraints) {
         // Responsive columns: 3 on mobile, 4 on tablet/desktop
@@ -332,7 +337,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
   Widget _buildMiniMonthGrid(DateTime monthDate) {
     final daysInMonth = DateTime(monthDate.year, monthDate.month + 1, 0).day;
     final firstWeekday = DateTime(monthDate.year, monthDate.month).weekday;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDark = _isDark;
     // Actually DateTime.weekday: Mon=1, Sun=7.
     // Let's assume Mon start for consistency with TableCalendar default.
     // If Mon start, offset for Mon(1) is 0. offset for Sun(7) is 6.
@@ -1090,6 +1095,8 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
   }
 
   void _saveEvent() {
+    // Dismiss keyboard and commit any pending IME composition before validation
+    FocusScope.of(context).unfocus();
     if (_titleController.text.isEmpty) {
       AppFeedback.info(context, context.l10n.calendarTitleRequired);
       return;

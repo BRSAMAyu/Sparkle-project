@@ -130,7 +130,7 @@ async def spark_node(
     )
 
 
-@router.get("/node/{node_id}", response_model=NodeDetailResponse)
+@router.get("/node/{node_id}")
 async def get_node_detail(
     node_id: UUID,
     user_id: str = Depends(get_current_user_id),
@@ -138,39 +138,106 @@ async def get_node_detail(
     galaxy_service: GalaxyService = Depends(get_galaxy_service),
 ):
     """
-    获取知识点详情
+    获取知识点详情 — Flutter KnowledgeDetailResponse format
 
     包含节点基础信息、用户状态和关系信息。
     """
-    # 获取节点
-    node = await db.get(KnowledgeNode, node_id)
+    from sqlalchemy.orm import joinedload
+
+    # 获取节点（eager-load subject）
+    result = await db.execute(
+        select(KnowledgeNode)
+        .options(joinedload(KnowledgeNode.subject))
+        .where(KnowledgeNode.id == node_id)
+    )
+    node = result.scalar_one_or_none()
     if not node:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Knowledge node not found")
 
     # 获取用户状态
-    user_status = await galaxy_service._get_user_status(UUID(user_id), node_id)
+    user_status = await galaxy_service.retrieval._get_user_status(UUID(user_id), node_id)
 
-    # 获取关系
-    relations_query = select(NodeRelation).where(
-        or_(NodeRelation.source_node_id == node_id, NodeRelation.target_node_id == node_id)
+    # 获取关系（含对端节点名称）
+    relations_query = (
+        select(NodeRelation)
+        .options(
+            joinedload(NodeRelation.source_node),
+            joinedload(NodeRelation.target_node),
+        )
+        .where(
+            or_(NodeRelation.source_node_id == node_id, NodeRelation.target_node_id == node_id)
+        )
     )
     relations_result = await db.execute(relations_query)
-    relations = relations_result.scalars().all()
+    relations = relations_result.unique().scalars().all()
 
-    from app.schemas.galaxy import NodeWithStatus
+    # 构建 sector_code
+    sector_code = "VOID"
+    if node.subject:
+        sector_code = node.subject.sector_code or "VOID"
 
-    return NodeDetailResponse(
-        node=NodeWithStatus.from_models(node, user_status),
-        relations=[
-            NodeRelationInfo(
-                source_node_id=rel.source_node_id,
-                target_node_id=rel.target_node_id,
-                relation_type=rel.relation_type,
-                strength=rel.strength,
-            )
-            for rel in relations
-        ],
-    )
+    # 构建 user_stats (top-level, matching Flutter KnowledgeUserStats)
+    if user_status:
+        user_stats = {
+            "mastery_score": float(user_status.mastery_score or 0),
+            "total_study_minutes": int(user_status.total_study_minutes or 0),
+            "study_count": int(user_status.study_count or 0),
+            "is_unlocked": bool(user_status.is_unlocked),
+            "is_favorite": bool(user_status.is_favorite),
+            "last_study_at": user_status.last_study_at.isoformat() if user_status.last_study_at else None,
+            "next_review_at": user_status.next_review_at.isoformat() if user_status.next_review_at else None,
+            "decay_paused": bool(user_status.decay_paused),
+        }
+    else:
+        user_stats = {
+            "mastery_score": 0.0,
+            "total_study_minutes": 0,
+            "study_count": 0,
+            "is_unlocked": False,
+            "is_favorite": False,
+            "last_study_at": None,
+            "next_review_at": None,
+            "decay_paused": False,
+        }
+
+    # 构建 node dict (matching Flutter KnowledgeNodeDetail)
+    node_dict = {
+        "id": str(node.id),
+        "name": node.name,
+        "name_en": node.name_en,
+        "description": node.description,
+        "keywords": node.keywords or [],
+        "importance_level": node.importance_level,
+        "sector_code": sector_code,
+        "is_seed": bool(node.is_seed),
+        "source_type": node.source_type or "seed",
+        "parent_id": str(node.parent_id) if node.parent_id else None,
+        "subject_id": node.subject_id,
+        "subject_name": node.subject.name if node.subject else None,
+        "created_at": node.created_at.isoformat() if node.created_at else None,
+    }
+
+    # 构建 relations list (matching Flutter NodeRelation)
+    relations_list = [
+        {
+            "id": str(rel.id),
+            "source_node_id": str(rel.source_node_id),
+            "target_node_id": str(rel.target_node_id),
+            "relation_type": rel.relation_type,
+            "strength": float(rel.strength or 0.5),
+            "source_node_name": rel.source_node.name if rel.source_node else None,
+            "target_node_name": rel.target_node.name if rel.target_node else None,
+        }
+        for rel in relations
+    ]
+
+    return {
+        "node": node_dict,
+        "userStats": user_stats,
+        "relations": relations_list,
+        "relatedTasks": [],
+        "relatedPlans": [],
+    }
 
 
 @router.post("/search", response_model=SearchResponse)

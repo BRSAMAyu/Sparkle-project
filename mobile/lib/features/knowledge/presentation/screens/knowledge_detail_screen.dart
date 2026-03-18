@@ -25,6 +25,11 @@ class KnowledgeDetailScreen extends ConsumerWidget {
       ),
       error: (error, stack) => GraphiteScaffold(
         role: SparklePageRole.content,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: BackButton(onPressed: () => context.pop()),
+        ),
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
