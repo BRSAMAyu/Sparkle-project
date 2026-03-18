@@ -15,45 +15,45 @@ import (
 )
 
 type Config struct {
-	Port                       string  `mapstructure:"PORT"`
-	DatabaseURL                string  `mapstructure:"DATABASE_URL"`
-	PostgresHost               string  `mapstructure:"POSTGRES_HOST"`
-	PostgresPort               int     `mapstructure:"POSTGRES_PORT"`
-	PostgresUser               string  `mapstructure:"POSTGRES_USER"`
-	PostgresPassword           string  `mapstructure:"POSTGRES_PASSWORD"`
-	PostgresDB                 string  `mapstructure:"POSTGRES_DB"`
-	AgentAddress               string  `mapstructure:"AGENT_ADDRESS"`
-	AgentTLSEnabled            bool    `mapstructure:"AGENT_TLS_ENABLED"`
-	AgentTLSCACertPath         string  `mapstructure:"AGENT_TLS_CA_CERT"`
-	AgentTLSServerName         string  `mapstructure:"AGENT_TLS_SERVER_NAME"`
-	AgentTLSInsecure           bool    `mapstructure:"AGENT_TLS_INSECURE"`
-	GRPCTimeoutSeconds         int     `mapstructure:"GRPC_TIMEOUT_SECONDS"`
-	JWTSecret                  string  `mapstructure:"JWT_SECRET"`
-	JWTIssuer                  string  `mapstructure:"JWT_ISSUER"`
-	JWTAudience                string  `mapstructure:"JWT_AUDIENCE"`
-	JWTAccessTokenExpireMinutes int    `mapstructure:"JWT_ACCESS_TOKEN_EXPIRE_MINUTES"`
-	JWTRefreshTokenExpireDays   int    `mapstructure:"JWT_REFRESH_TOKEN_EXPIRE_DAYS"`
-	AllowWsQueryToken  bool    `mapstructure:"ALLOW_WS_QUERY_TOKEN"`
-	WSTicketTTLSeconds int     `mapstructure:"WS_TICKET_TTL_SECONDS"`
-	WSTicketRateRPS    float64 `mapstructure:"WS_TICKET_RATE_RPS"`
-	WSTicketRateBurst  int     `mapstructure:"WS_TICKET_RATE_BURST"`
-	WSMaxMessageBytes  int64   `mapstructure:"WS_MAX_MESSAGE_BYTES"`
-	WSMessageRateRPS   float64 `mapstructure:"WS_MESSAGE_RATE_RPS"`
-	WSMessageRateBurst int     `mapstructure:"WS_MESSAGE_RATE_BURST"`
-	WSMaxConnections   int     `mapstructure:"WS_MAX_CONNECTIONS_PER_USER"`
-	RedisURL           string  `mapstructure:"REDIS_URL"`
-	RedisHost          string  `mapstructure:"REDIS_HOST"`
-	RedisPort          int     `mapstructure:"REDIS_PORT"`
-	RedisPassword      string  `mapstructure:"REDIS_PASSWORD"`
-	RedisFailClosed    bool    `mapstructure:"REDIS_FAIL_CLOSED"` // Security: reject tokens on Redis failure
-	BackendURL         string  `mapstructure:"BACKEND_URL"`
-	AppleClientID      string  `mapstructure:"APPLE_CLIENT_ID"`
-	AdminSecret        string  `mapstructure:"ADMIN_SECRET"`
-	RabbitMQURL        string  `mapstructure:"RABBITMQ_URL"`
-	InternalAPIKey     string  `mapstructure:"INTERNAL_API_KEY"`
-	ChaosEnabled       bool    `mapstructure:"CHAOS_ENABLED"`
-	ChaosAllowProd     bool    `mapstructure:"CHAOS_ALLOW_PROD"`
-	ToxiproxyURL       string  `mapstructure:"TOXIPROXY_URL"`
+	Port                        string  `mapstructure:"PORT"`
+	DatabaseURL                 string  `mapstructure:"DATABASE_URL"`
+	PostgresHost                string  `mapstructure:"POSTGRES_HOST"`
+	PostgresPort                int     `mapstructure:"POSTGRES_PORT"`
+	PostgresUser                string  `mapstructure:"POSTGRES_USER"`
+	PostgresPassword            string  `mapstructure:"POSTGRES_PASSWORD"`
+	PostgresDB                  string  `mapstructure:"POSTGRES_DB"`
+	AgentAddress                string  `mapstructure:"AGENT_ADDRESS"`
+	AgentTLSEnabled             bool    `mapstructure:"AGENT_TLS_ENABLED"`
+	AgentTLSCACertPath          string  `mapstructure:"AGENT_TLS_CA_CERT"`
+	AgentTLSServerName          string  `mapstructure:"AGENT_TLS_SERVER_NAME"`
+	AgentTLSInsecure            bool    `mapstructure:"AGENT_TLS_INSECURE"`
+	GRPCTimeoutSeconds          int     `mapstructure:"GRPC_TIMEOUT_SECONDS"`
+	JWTSecret                   string  `mapstructure:"JWT_SECRET"`
+	JWTIssuer                   string  `mapstructure:"JWT_ISSUER"`
+	JWTAudience                 string  `mapstructure:"JWT_AUDIENCE"`
+	JWTAccessTokenExpireMinutes int     `mapstructure:"JWT_ACCESS_TOKEN_EXPIRE_MINUTES"`
+	JWTRefreshTokenExpireDays   int     `mapstructure:"JWT_REFRESH_TOKEN_EXPIRE_DAYS"`
+	AllowWsQueryToken           bool    `mapstructure:"ALLOW_WS_QUERY_TOKEN"`
+	WSTicketTTLSeconds          int     `mapstructure:"WS_TICKET_TTL_SECONDS"`
+	WSTicketRateRPS             float64 `mapstructure:"WS_TICKET_RATE_RPS"`
+	WSTicketRateBurst           int     `mapstructure:"WS_TICKET_RATE_BURST"`
+	WSMaxMessageBytes           int64   `mapstructure:"WS_MAX_MESSAGE_BYTES"`
+	WSMessageRateRPS            float64 `mapstructure:"WS_MESSAGE_RATE_RPS"`
+	WSMessageRateBurst          int     `mapstructure:"WS_MESSAGE_RATE_BURST"`
+	WSMaxConnections            int     `mapstructure:"WS_MAX_CONNECTIONS_PER_USER"`
+	RedisURL                    string  `mapstructure:"REDIS_URL"`
+	RedisHost                   string  `mapstructure:"REDIS_HOST"`
+	RedisPort                   int     `mapstructure:"REDIS_PORT"`
+	RedisPassword               string  `mapstructure:"REDIS_PASSWORD"`
+	RedisFailClosed             bool    `mapstructure:"REDIS_FAIL_CLOSED"` // Security: reject tokens on Redis failure
+	BackendURL                  string  `mapstructure:"BACKEND_URL"`
+	AppleClientID               string  `mapstructure:"APPLE_CLIENT_ID"`
+	AdminSecret                 string  `mapstructure:"ADMIN_SECRET"`
+	RabbitMQURL                 string  `mapstructure:"RABBITMQ_URL"`
+	InternalAPIKey              string  `mapstructure:"INTERNAL_API_KEY"`
+	ChaosEnabled                bool    `mapstructure:"CHAOS_ENABLED"`
+	ChaosAllowProd              bool    `mapstructure:"CHAOS_ALLOW_PROD"`
+	ToxiproxyURL                string  `mapstructure:"TOXIPROXY_URL"`
 
 	// File storage (MinIO/S3)
 	MinioEndpoint         string `mapstructure:"MINIO_ENDPOINT"`
@@ -80,17 +80,17 @@ type Config struct {
 
 	// Health check and circuit breaker configuration
 	AgentHealthCheckInterval int `mapstructure:"AGENT_HEALTH_CHECK_INTERVAL"` // seconds, default 10
-	AgentHealthCheckTimeout  int    `mapstructure:"AGENT_HEALTH_CHECK_TIMEOUT"`  // seconds, default 5
-	CircuitBreakerThreshold  int    `mapstructure:"CIRCUIT_BREAKER_THRESHOLD"`  // default 5
+	AgentHealthCheckTimeout  int `mapstructure:"AGENT_HEALTH_CHECK_TIMEOUT"`  // seconds, default 5
+	CircuitBreakerThreshold  int `mapstructure:"CIRCUIT_BREAKER_THRESHOLD"`   // default 5
 
 	// Graceful shutdown
 	ShutdownTimeoutSeconds int `mapstructure:"SHUTDOWN_TIMEOUT_SECONDS"` // default 15
 
 	// WebSocket lifecycle
-	WSPongWaitSeconds    int `mapstructure:"WS_PONG_WAIT_SECONDS"`    // default 90
+	WSPongWaitSeconds     int `mapstructure:"WS_PONG_WAIT_SECONDS"`     // default 90
 	WSPingIntervalSeconds int `mapstructure:"WS_PING_INTERVAL_SECONDS"` // default 30
-	WSWriteWaitSeconds   int `mapstructure:"WS_WRITE_WAIT_SECONDS"`   // default 10
-	WSIdleTimeoutSeconds int `mapstructure:"WS_IDLE_TIMEOUT_SECONDS"` // default 300
+	WSWriteWaitSeconds    int `mapstructure:"WS_WRITE_WAIT_SECONDS"`    // default 10
+	WSIdleTimeoutSeconds  int `mapstructure:"WS_IDLE_TIMEOUT_SECONDS"`  // default 300
 
 	// Request timeout
 	RequestTimeoutSeconds int `mapstructure:"REQUEST_TIMEOUT_SECONDS"` // default 30
@@ -210,10 +210,10 @@ func isInsecureSecret(value string) bool {
 		return true
 	}
 	insecure := map[string]struct{}{
-		"dev-secret-key":                  {},
+		"dev-secret-key":                      {},
 		"dev_secret_key_change_in_production": {},
-		"change-me":                       {},
-		"CHANGE_ME_IN_PRODUCTION":         {},
+		"change-me":                           {},
+		"CHANGE_ME_IN_PRODUCTION":             {},
 	}
 	_, found := insecure[trimmed]
 	return found
@@ -339,6 +339,14 @@ func loadEnvFileIntoViper(path string) {
 	}
 }
 
+func applyEnvironmentOverrides(keys []string) {
+	for _, key := range keys {
+		if val, ok := os.LookupEnv(key); ok {
+			viper.Set(key, val)
+		}
+	}
+}
+
 func Load() *Config {
 	envKeys := []string{
 		"PORT",
@@ -425,8 +433,8 @@ func Load() *Config {
 	// JWT_SECRET has no default - must be set via environment variable or .env file
 	viper.SetDefault("JWT_ISSUER", "sparkle-gateway")
 	viper.SetDefault("JWT_AUDIENCE", "sparkle-app")
-	viper.SetDefault("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", 30)  // 30 minutes for access token
-	viper.SetDefault("JWT_REFRESH_TOKEN_EXPIRE_DAYS", 7)     // 7 days for refresh token
+	viper.SetDefault("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", 30) // 30 minutes for access token
+	viper.SetDefault("JWT_REFRESH_TOKEN_EXPIRE_DAYS", 7)    // 7 days for refresh token
 	viper.SetDefault("WS_TICKET_TTL_SECONDS", 120)
 	viper.SetDefault("WS_TICKET_RATE_RPS", 2.0)
 	viper.SetDefault("WS_TICKET_RATE_BURST", 5)
@@ -470,9 +478,9 @@ func Load() *Config {
 	viper.SetDefault("CORS_ENABLED", true)
 
 	// Health check and circuit breaker defaults
-	viper.SetDefault("AGENT_HEALTH_CHECK_INTERVAL", 10)    // 10 seconds
-	viper.SetDefault("AGENT_HEALTH_CHECK_TIMEOUT", 5)     // 5 seconds
-	viper.SetDefault("CIRCUIT_BREAKER_THRESHOLD", 5)      // 5 failures to trip
+	viper.SetDefault("AGENT_HEALTH_CHECK_INTERVAL", 10) // 10 seconds
+	viper.SetDefault("AGENT_HEALTH_CHECK_TIMEOUT", 5)   // 5 seconds
+	viper.SetDefault("CIRCUIT_BREAKER_THRESHOLD", 5)    // 5 failures to trip
 
 	// Graceful shutdown
 	viper.SetDefault("SHUTDOWN_TIMEOUT_SECONDS", 15)
@@ -513,6 +521,7 @@ func Load() *Config {
 	}
 
 	viper.AutomaticEnv()
+	applyEnvironmentOverrides(envKeys)
 
 	var cfg Config
 	if err := viper.Unmarshal(&cfg); err != nil {

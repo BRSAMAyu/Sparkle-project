@@ -197,11 +197,22 @@ async def generate_learning_path_plan(
             },
         ) from exc
 
+    plan.source = "learning_path"
+    plan.source_metadata = {
+        "target_node_id": str(target_node_id),
+        "path_node_ids": [node["id"] for node in path],
+        "total_nodes": len(path),
+    }
+    db.add(plan)
+    await db.commit()
+    await db.refresh(plan)
+    plan_id = str(plan.id)
+
     task_count = min(8, max(5, len(path)))
     tasks_tool = GenerateTasksForPlanTool()
     tool_result = await tasks_tool.execute(
         GenerateTasksForPlanParams(
-            plan_id=str(plan.id),
+            plan_id=plan_id,
             topic=target_name,
             difficulty="medium",
             task_count=task_count,
@@ -212,7 +223,7 @@ async def generate_learning_path_plan(
 
     if not tool_result.success:
         return {
-            "plan_id": str(plan.id),
+            "plan_id": plan_id,
             "plan_summary": plan_summary,
             "tasks": [],
             "retry": True,
@@ -224,14 +235,14 @@ async def generate_learning_path_plan(
         {
             **task,
             "status": task.get("status", "pending"),
-            "plan_id": str(plan.id),
+            "plan_id": plan_id,
         }
         for task in tasks
         if isinstance(task, dict)
     ]
 
     return {
-        "plan_id": str(plan.id),
+        "plan_id": plan_id,
         "plan_summary": plan_summary,
         "tasks": tasks_payload,
     }
@@ -252,6 +263,19 @@ async def generate_full_path_plan(
     path = await service.generate_learning_path(current_user.id, target_node_id)
     if not path:
         raise HTTPException(status_code=404, detail="未找到学习路径")
+    if _is_error_response(path):
+        error_code, message, details = _extract_error(path)
+        http_status = status.HTTP_400_BAD_REQUEST
+        if error_code == "TARGET_NOT_FOUND":
+            http_status = status.HTTP_404_NOT_FOUND
+        raise HTTPException(
+            status_code=http_status,
+            detail=LearningPathErrorResponse(
+                error_code=error_code,
+                message=message,
+                details=details,
+            ).model_dump(),
+        )
 
     active_nodes = [n for n in path if n.get("status") != "mastered"]
     if not active_nodes:

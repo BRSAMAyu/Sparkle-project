@@ -597,9 +597,10 @@ class LLMService:
         """
         Send a deep reasoning request to the LLM.
         """
-        model = model or self.reason_model
+        requested_model = model
+        resolved_model = model or self.reason_model
         with tracer.start_as_current_span("llm_reason") as span:
-            span.set_attribute("llm.model", model)
+            span.set_attribute("llm.model", resolved_model)
             span.set_attribute("llm.temperature", temperature)
             mock_response = self._check_demo_match(messages)
             if mock_response:
@@ -615,7 +616,7 @@ class LLMService:
 
             try:
                 await circuit_breaker_service.check("primary_llm")
-                if self.enable_dynamic_routing and model is None:
+                if self.enable_dynamic_routing and requested_model is None:
                     selection = llm_router.select_model(self.agent_role, TaskType.DEEP_REASONING)
 
                     async def _call_with_selection(current_selection: LLMSelection) -> str:
@@ -637,7 +638,12 @@ class LLMService:
                         operation_type="reason",
                     )
                 else:
-                    response = await self.provider.chat(messages, model=model, temperature=temperature, **kwargs)
+                    response = await self.provider.chat(
+                        messages,
+                        model=resolved_model,
+                        temperature=temperature,
+                        **kwargs,
+                    )
                 await circuit_breaker_service.record_success("primary_llm")
                 return response
             except CircuitBreakerOpenException:

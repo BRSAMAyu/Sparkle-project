@@ -129,6 +129,12 @@ async def _ensure_achievements(session: AsyncSession):
             continue
         session.add(Achievement(**item, created_at=now, updated_at=now))
 
+    from app.services.accountability_achievement_service import (
+        accountability_achievement_service,
+    )
+
+    await accountability_achievement_service.ensure_achievement_definitions(session)
+
 
 async def _ensure_galaxy_skins(session: AsyncSession):
     now = datetime.utcnow()

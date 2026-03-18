@@ -10,7 +10,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user_id, get_db
@@ -112,7 +112,7 @@ async def get_galaxy_graph(
 @router.post("/node/{node_id}/spark", response_model=SparkResult)
 async def spark_node(
     node_id: UUID,
-    request: SparkRequest,
+    request: SparkRequest | None = None,
     user_id: str = Depends(get_current_user_id),
     galaxy_service: GalaxyService = Depends(get_galaxy_service),
 ):
@@ -124,9 +124,9 @@ async def spark_node(
     return await galaxy_service.spark_node(
         user_id=UUID(user_id),
         node_id=node_id,
-        study_minutes=request.study_minutes,
-        task_id=request.task_id,
-        trigger_expansion=request.trigger_expansion,
+        study_minutes=request.study_minutes if request else 1,
+        task_id=request.task_id if request else None,
+        trigger_expansion=request.trigger_expansion if request else True,
     )
 
 
@@ -323,6 +323,41 @@ async def pause_node_decay(
     await decay_service.pause_decay(user_id=UUID(user_id), node_id=node_id, pause=pause)
 
     return {"status": "success", "node_id": str(node_id), "decay_paused": pause}
+
+
+@router.post("/node/{node_id}/favorite")
+async def toggle_node_favorite(
+    node_id: UUID,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """切换知识点收藏状态"""
+    node = await db.get(KnowledgeNode, node_id)
+    if not node:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Knowledge node not found")
+
+    user_uuid = UUID(user_id)
+    user_status = await db.get(UserNodeStatus, (user_uuid, node_id))
+
+    if not user_status:
+        user_status = UserNodeStatus(
+            user_id=user_uuid,
+            node_id=node_id,
+            is_unlocked=True,
+            is_favorite=True,
+            mastery_score=0,
+            total_minutes=0,
+            total_study_minutes=0,
+            study_count=0,
+        )
+    else:
+        user_status.is_favorite = not bool(user_status.is_favorite)
+
+    db.add(user_status)
+    await db.commit()
+    await db.refresh(user_status)
+
+    return {"status": "success", "node_id": str(node_id), "is_favorite": bool(user_status.is_favorite)}
 
 
 @router.post("/predict-next", response_model=Optional[NodeDetailResponse])

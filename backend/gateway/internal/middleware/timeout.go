@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -15,6 +16,10 @@ import (
 func TimeoutMiddleware(timeout time.Duration) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if timeout <= 0 {
+			c.Next()
+			return
+		}
+		if isLongRunningRoute(c.Request.URL.Path) {
 			c.Next()
 			return
 		}
@@ -33,4 +38,11 @@ func TimeoutMiddleware(timeout time.Duration) gin.HandlerFunc {
 			})
 		}
 	}
+}
+
+func isLongRunningRoute(path string) bool {
+	if strings.HasPrefix(path, "/api/v1/learning-paths/") {
+		return true
+	}
+	return strings.HasPrefix(path, "/api/v1/plans/") && strings.HasSuffix(path, "/generate-tasks")
 }

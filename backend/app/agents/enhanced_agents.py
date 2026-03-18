@@ -139,7 +139,7 @@ class StudyPlannerAgent(BaseAgent):
             )
 
         except Exception as e:
-            logger.error(f"[StudyPlannerAgent] Error: {e}", exc_info=True)
+            logger.opt(exception=e).error("[StudyPlannerAgent] Error")
             return self.format_response(
                 text=f"抱歉，生成学习计划时遇到错误：{str(e)}",
                 confidence=0.0,
@@ -419,7 +419,7 @@ class ProblemSolverAgent(BaseAgent):
             )
 
         except Exception as e:
-            logger.error(f"[ProblemSolverAgent] Error: {e}", exc_info=True)
+            logger.opt(exception=e).error("[ProblemSolverAgent] Error")
             return self.format_response(
                 text=f"抱歉，解答问题时遇到错误：{str(e)}",
                 confidence=0.0,

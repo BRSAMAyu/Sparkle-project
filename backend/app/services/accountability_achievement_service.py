@@ -21,7 +21,7 @@ from app.models.accountability import (
     AccountabilityPartnership,
     AccountabilityStatus,
 )
-from app.models.achievement import Achievement, AchievementType, UserAchievement
+from app.models.achievement import Achievement, AchievementRarity, AchievementType, UserAchievement
 from app.services.notification_service import notification_service
 
 
@@ -107,6 +107,41 @@ class AccountabilityAchievementService:
             "trigger_code": "MUTUAL_SUPPORT",
         },
     }
+
+    _RARITY_BY_ACHIEVEMENT = {
+        "accountability_first_partnership": AchievementRarity.COMMON,
+        "accountability_streak_7": AchievementRarity.RARE,
+        "accountability_streak_30": AchievementRarity.EPIC,
+        "accountability_streak_100": AchievementRarity.LEGENDARY,
+        "accountability_perfect_month": AchievementRarity.EPIC,
+        "accountability_partner_streak_7": AchievementRarity.RARE,
+        "accountability_50_checkins": AchievementRarity.RARE,
+        "accountability_mutual_support": AchievementRarity.EPIC,
+    }
+
+    async def ensure_achievement_definitions(self, db: AsyncSession) -> None:
+        for achievement_id, achievement_def in self.ACCOUNTABILITY_ACHIEVEMENTS.items():
+            existing = await db.get(Achievement, achievement_id)
+            if existing:
+                continue
+
+            db.add(
+                Achievement(
+                    id=achievement_id,
+                    name=achievement_def["name"],
+                    description=achievement_def["description"],
+                    icon_url=achievement_def.get("icon"),
+                    type=achievement_def["type"],
+                    rarity=self._RARITY_BY_ACHIEVEMENT.get(achievement_id, AchievementRarity.COMMON),
+                    trigger_code=achievement_def["trigger_code"],
+                    trigger_config={
+                        "points": achievement_def.get("points", 0),
+                        "source": "accountability",
+                    },
+                    category="accountability",
+                )
+            )
+        await db.flush()
 
     async def check_streak_achievements(
         self,
@@ -308,6 +343,8 @@ class AccountabilityAchievementService:
         )
         if existing.scalar_one_or_none():
             return {"status": "already_unlocked", "achievement_id": achievement_id}
+
+        await self.ensure_achievement_definitions(db)
 
         # 创建成就记录
         user_achievement = UserAchievement(
@@ -519,6 +556,8 @@ class AccountabilityAchievementService:
         )
         if existing.scalar_one_or_none():
             return False
+
+        await self.ensure_achievement_definitions(db)
 
         # 创建成就记录
         user_achievement = UserAchievement(

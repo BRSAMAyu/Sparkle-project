@@ -51,7 +51,7 @@ class AccountabilityPartnership(BaseModel):
     )
     friendship_id = Column(
         GUID(),
-        ForeignKey("friendship.id", ondelete="SET NULL"),
+        ForeignKey("friendships.id", ondelete="SET NULL"),
         nullable=True,
     )
     initiator_goal = Column(Text, nullable=False)

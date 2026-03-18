@@ -1377,6 +1377,7 @@ class GroupTaskService:
         # 获取群任务 (Use with_for_update to lock row)
         result = await db.execute(
             select(GroupTask)
+            .options(selectinload(GroupTask.group))
             .where(GroupTask.id == task_id)
             .with_for_update()
         )

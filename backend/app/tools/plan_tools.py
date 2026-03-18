@@ -1,11 +1,15 @@
 from __future__ import annotations
 import json
+from types import SimpleNamespace
 from typing import Any
 from uuid import UUID
 
 from loguru import logger
 from pydantic import BaseModel, Field, ValidationError
+from sqlalchemy import select
 
+from app.db.session import AsyncSessionLocal
+from app.models.galaxy import KnowledgeNode
 from app.models.plan import PlanStage as ModelPlanStage
 from app.models.plan import PlanType as ModelPlanType
 from app.models.task import TaskType as ModelTaskType
@@ -101,6 +105,24 @@ class GenerateTasksForPlanTool(BaseTool):
     parameters_schema = GenerateTasksForPlanParams
     requires_confirmation = True  # 需要用户确认才能创建
 
+    @staticmethod
+    def _resolve_max_session_minutes(persona_constraints: Any | None) -> int:
+        if persona_constraints is None:
+            return 45
+        return max(
+            15,
+            min(90, int(getattr(persona_constraints, "max_session_minutes", 45) or 45)),
+        )
+
+    @staticmethod
+    def _infer_difficulty(task_type: str, priority: int) -> int:
+        normalized_type = (task_type or "").lower()
+        if normalized_type in {"reflection"}:
+            return 1
+        if normalized_type in {"training", "error_fix"}:
+            return min(5, max(2, priority))
+        return min(4, max(1, priority - 1))
+
     async def execute(
         self,
         params: GenerateTasksForPlanParams,
@@ -113,7 +135,7 @@ class GenerateTasksForPlanTool(BaseTool):
             plan_uuid = UUID(params.plan_id)
 
             # 第一步: 验证计划存在
-            plan = await PlanService.get_by_id(db_session, plan_uuid)
+            plan = await PlanService.get_by_id(db_session, plan_uuid, user_uuid)
             if not plan or plan.user_id != user_uuid:
                 return ToolResult(
                     success=False,
@@ -121,6 +143,14 @@ class GenerateTasksForPlanTool(BaseTool):
                     error_message=f"计划 {params.plan_id} 不存在或无权访问",
                     suggestion="请检查计划 ID 是否正确"
                 )
+            plan_snapshot = SimpleNamespace(
+                id=plan.id,
+                name=plan.name,
+                description=plan.description,
+                subject=getattr(plan, "subject", None),
+                source=getattr(plan, "source", None),
+                source_metadata=getattr(plan, "source_metadata", None),
+            )
 
             # 第二步: 获取知识图谱上下文 (GraphRAG)
             knowledge_context = ""
@@ -134,12 +164,13 @@ class GenerateTasksForPlanTool(BaseTool):
             try:
                 from app.orchestration.graph_rag import GraphRAGRetriever
                 logger.info(f"Querying Knowledge Graph for context: {params.topic} ({params.difficulty})")
-                knowledge_service = KnowledgeService(db_session)
-                retriever = GraphRAGRetriever(knowledge_service)
+                async with AsyncSessionLocal() as rag_session:
+                    knowledge_service = KnowledgeService(rag_session)
+                    retriever = GraphRAGRetriever(knowledge_service)
 
-                # 构造查询：结合主题和难度，查询相关知识点和前置依赖
-                query = f"{params.topic} {params.difficulty} learning path prerequisites"
-                rag_result = await retriever.retrieve(query, str(user_uuid), depth=2)
+                    # 构造查询：结合主题和难度，查询相关知识点和前置依赖
+                    query = f"{params.topic} {params.difficulty} learning path prerequisites"
+                    rag_result = await retriever.retrieve(query, str(user_uuid), depth=2)
 
                 rag_context = getattr(rag_result, "fused_context", None)
                 if isinstance(rag_context, str) and rag_context.strip() and len(rag_context.strip()) >= 20:
@@ -163,8 +194,8 @@ class GenerateTasksForPlanTool(BaseTool):
 
             # 第三步: 调用 LLM 生成任务建议 (带知识上下文)
             task_list = await self._generate_tasks_with_llm(
-                plan_title=plan.name,
-                plan_description=plan.description,
+                plan_title=plan_snapshot.name,
+                plan_description=plan_snapshot.description,
                 topic=params.topic,
                 difficulty=params.difficulty,
                 task_count=params.task_count,
@@ -173,11 +204,16 @@ class GenerateTasksForPlanTool(BaseTool):
             )
 
             if not task_list:
-                return ToolResult(
-                    success=False,
-                    tool_name=self.name,
-                    error_message="LLM 生成任务失败",
-                    suggestion="请稍后重试或手动创建任务"
+                logger.warning(
+                    f"LLM task generation unavailable for plan {plan_uuid}, "
+                    "using deterministic fallback tasks"
+                )
+                task_list = await self._build_fallback_tasks(
+                    plan=plan_snapshot,
+                    topic=params.topic,
+                    task_count=params.task_count,
+                    persona_constraints=persona_constraints,
+                    db_session=db_session,
                 )
 
             # 第四步: 批量创建任务
@@ -190,6 +226,8 @@ class GenerateTasksForPlanTool(BaseTool):
                         description=validated.description,
                         type=ModelTaskType(validated.type.upper()),
                         estimated_minutes=validated.estimated_minutes,
+                        difficulty=self._infer_difficulty(validated.type, validated.priority),
+                        energy_cost=1,
                         priority=validated.priority,
                         plan_id=plan_uuid
                     )
@@ -206,7 +244,7 @@ class GenerateTasksForPlanTool(BaseTool):
                         "type": task.type.value,
                         "estimated_minutes": task.estimated_minutes,
                         "priority": task.priority,
-                        "description": task.description
+                        "description": validated.description
                     })
 
                     logger.debug(f"Created task: {task.id} for plan {plan_uuid}")
@@ -216,6 +254,7 @@ class GenerateTasksForPlanTool(BaseTool):
                     continue
                 except Exception as e:
                     logger.warning(f"Failed to create task: {e}, continuing...")
+                    await db_session.rollback()
                     continue
 
             if not created_tasks:
@@ -242,7 +281,7 @@ class GenerateTasksForPlanTool(BaseTool):
                 widget_type="task_list",
                 widget_data={
                     "tasks": created_tasks,
-                    "plan_title": plan.name,
+                    "plan_title": plan_snapshot.name,
                     "source": "graph_augmented_ai" if knowledge_context else "ai_generated",
                     "rag_quality": rag_quality,
                     "persona_applied": True,
@@ -272,6 +311,133 @@ class GenerateTasksForPlanTool(BaseTool):
                 suggestion="请检查参数或稍后重试"
             )
 
+    async def _build_fallback_tasks(
+        self,
+        plan: Any,
+        topic: str,
+        task_count: int,
+        persona_constraints: Any | None,
+        db_session: Any,
+    ) -> list[dict[str, Any]]:
+        """Deterministic fallback tasks when LLM output is unavailable or malformed."""
+        max_session_minutes = self._resolve_max_session_minutes(persona_constraints)
+        topic_name = (topic or getattr(plan, "subject", None) or getattr(plan, "name", None) or "当前主题").strip()
+        node_names = await self._get_learning_path_node_names(plan, db_session)
+        tasks: list[dict[str, Any]] = []
+
+        if node_names:
+            prerequisite_nodes = node_names[:-1]
+            target_node = node_names[-1]
+
+            for index, node_name in enumerate(prerequisite_nodes, start=1):
+                tasks.append(
+                    {
+                        "title": f"补齐前置知识：{node_name}",
+                        "description": f"用一轮短时学习梳理「{node_name}」的核心定义、关键公式与典型应用，为后续学习 {target_node} 做准备。",
+                        "type": "learning",
+                        "estimated_minutes": min(max_session_minutes, 25),
+                        "priority": min(index + 1, 3),
+                    }
+                )
+
+            tasks.extend(
+                [
+                    {
+                        "title": f"建立 {target_node} 核心概念框架",
+                        "description": f"整理 {target_node} 的核心概念、关键模型与常见场景，画出与前置知识的连接关系。",
+                        "type": "learning",
+                        "estimated_minutes": min(max_session_minutes, 35),
+                        "priority": 3,
+                    },
+                    {
+                        "title": f"完成 {target_node} 专项练习",
+                        "description": f"围绕 {target_node} 做一组由浅入深的练习，记录每道题使用的知识点与卡住的位置。",
+                        "type": "training",
+                        "estimated_minutes": min(max_session_minutes, 40),
+                        "priority": 4,
+                    },
+                    {
+                        "title": f"复盘 {target_node} 易错点",
+                        "description": f"回顾今天学习中的易错点，补写一份可复用的纠错清单，并确认是否真正理解 {target_node} 与前置知识的联系。",
+                        "type": "reflection",
+                        "estimated_minutes": min(max_session_minutes, 20),
+                        "priority": 4,
+                    },
+                ]
+            )
+        else:
+            tasks.extend(
+                [
+                    {
+                        "title": f"梳理 {topic_name} 核心概念",
+                        "description": f"阅读材料并提炼 {topic_name} 的核心概念、关键术语和基本结构，形成一页摘要。",
+                        "type": "learning",
+                        "estimated_minutes": min(max_session_minutes, 25),
+                        "priority": 2,
+                    },
+                    {
+                        "title": f"完成 {topic_name} 基础练习",
+                        "description": f"选择 3-5 道基础题或一个小练习，验证自己是否能正确应用 {topic_name} 的核心方法。",
+                        "type": "training",
+                        "estimated_minutes": min(max_session_minutes, 35),
+                        "priority": 3,
+                    },
+                    {
+                        "title": f"定位 {topic_name} 易错点",
+                        "description": f"回顾练习结果，记录最容易混淆的概念、公式或步骤，并补齐对应薄弱点。",
+                        "type": "error_fix",
+                        "estimated_minutes": min(max_session_minutes, 20),
+                        "priority": 4,
+                    },
+                    {
+                        "title": f"输出 {topic_name} 学习总结",
+                        "description": f"用自己的话总结 {topic_name} 的学习收获，整理下一次继续推进时要优先处理的问题。",
+                        "type": "reflection",
+                        "estimated_minutes": min(max_session_minutes, 15),
+                        "priority": 3,
+                    },
+                ]
+            )
+
+        if len(tasks) < task_count:
+            next_index = 1
+            while len(tasks) < task_count:
+                tasks.append(
+                    {
+                        "title": f"{topic_name} 巩固任务 {next_index}",
+                        "description": f"围绕 {topic_name} 再完成一轮针对性巩固，重点检查上一轮中尚未完全掌握的内容。",
+                        "type": "training",
+                        "estimated_minutes": min(max_session_minutes, 25),
+                        "priority": 3,
+                    }
+                )
+                next_index += 1
+
+        return tasks[:task_count]
+
+    async def _get_learning_path_node_names(self, plan: Any, db_session: Any) -> list[str]:
+        metadata = getattr(plan, "source_metadata", None)
+        if getattr(plan, "source", None) != "learning_path" or not isinstance(metadata, dict):
+            return []
+
+        raw_node_ids = metadata.get("path_node_ids", [])
+        ordered_node_ids: list[UUID] = []
+        for raw_node_id in raw_node_ids:
+            try:
+                ordered_node_ids.append(UUID(str(raw_node_id)))
+            except (TypeError, ValueError):
+                continue
+
+        if not ordered_node_ids:
+            return []
+
+        result = await db_session.execute(
+            select(KnowledgeNode.id, KnowledgeNode.name).where(KnowledgeNode.id.in_(ordered_node_ids))
+        )
+        rows = result.all()
+        names_by_id = {str(row.id): row.name for row in rows}
+        return [names_by_id[str(node_id)] for node_id in ordered_node_ids if str(node_id) in names_by_id]
+
     async def _generate_tasks_with_llm(
         self,
         plan_title: str,
@@ -300,13 +466,9 @@ class GenerateTasksForPlanTool(BaseTool):
 """
 
         persona_prompt = ""
-        max_session_minutes = 45
+        max_session_minutes = self._resolve_max_session_minutes(persona_constraints)
         if persona_constraints is not None and hasattr(persona_constraints, "to_prompt_block"):
             persona_prompt = persona_constraints.to_prompt_block()
-            max_session_minutes = max(
-                15,
-                min(90, int(getattr(persona_constraints, "max_session_minutes", 45) or 45)),
-            )
 
         prompt = f"""
 你是一个学习规划专家。根据以下学习计划信息，生成 {task_count} 个具体可执行的微任务。

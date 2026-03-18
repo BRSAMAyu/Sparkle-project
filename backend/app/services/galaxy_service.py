@@ -49,6 +49,73 @@ class GalaxyService:
         # Assuming GalaxyService is scoped or we rely on external worker.
         # For this task, we'll implement the handler method that can be registered.
 
+    async def _write_mastery_outbox_event(
+        self,
+        *,
+        aggregate_id: UUID,
+        event_type: str,
+        payload: dict[str, object],
+    ) -> None:
+        """Write mastery updates into the active CQRS outbox schema.
+
+        Prefer the current `event_outbox` table used by gateway/CQRS. Fall back to
+        the legacy `outbox_events` table only if that older schema is what's available.
+        """
+        event_outbox_exists = (
+            await self.db.execute(text("SELECT to_regclass('event_outbox')"))
+        ).scalar_one_or_none()
+        if event_outbox_exists:
+            seq_result = await self.db.execute(
+                text("""
+                    INSERT INTO event_sequence_counters (aggregate_type, aggregate_id, next_sequence)
+                    VALUES (:aggregate_type, :aggregate_id, 1)
+                    ON CONFLICT (aggregate_type, aggregate_id)
+                    DO UPDATE SET next_sequence = event_sequence_counters.next_sequence + 1
+                    RETURNING next_sequence
+                """),
+                {
+                    "aggregate_type": "galaxy_node_mastery",
+                    "aggregate_id": aggregate_id,
+                },
+            )
+            sequence_number = seq_result.scalar_one()
+
+            await self.db.execute(
+                text("""
+                    INSERT INTO event_outbox
+                    (aggregate_type, aggregate_id, event_type, event_version, sequence_number, payload, metadata)
+                    VALUES (:aggregate_type, :aggregate_id, :event_type, 1, :sequence_number, :payload, :metadata)
+                """),
+                {
+                    "aggregate_type": "galaxy_node_mastery",
+                    "aggregate_id": aggregate_id,
+                    "event_type": event_type,
+                    "sequence_number": sequence_number,
+                    "payload": json.dumps(payload),
+                    "metadata": json.dumps({"service": "galaxy_service"}),
+                },
+            )
+            return
+
+        legacy_outbox_exists = (
+            await self.db.execute(text("SELECT to_regclass('outbox_events')"))
+        ).scalar_one_or_none()
+        if legacy_outbox_exists:
+            await self.db.execute(
+                text("""
+                    INSERT INTO outbox_events (topic, payload, status, created_at, updated_at)
+                    VALUES (:topic, :payload, 'pending', :created_at, :created_at)
+                """),
+                {
+                    "topic": event_type,
+                    "payload": json.dumps(payload),
+                    "created_at": _utcnow(),
+                },
+            )
+            return
+
+        logger.warning("No compatible outbox table found; skipping mastery outbox event write")
+
     async def handle_error_created(self, event_data: dict):
         """
         Handle error.created event: reduce mastery for related nodes.
@@ -508,11 +575,48 @@ class GalaxyService:
                     current_revision = 0
 
                 new_revision = current_revision + 1
+                bkt_mastery_prob = max(0.0, min(float(new_mastery) / 100.0, 1.0))
 
                 # UPSERT pattern for non-revision cases
                 upsert_query = text("""
-                    INSERT INTO user_node_status (user_id, node_id, mastery_score, updated_at, last_study_at, is_unlocked, revision, total_minutes, total_study_minutes, last_interacted_at, created_at, study_count, is_collapsed, is_favorite, decay_paused)
-                    VALUES (:user_id, :node_id, :mastery, :updated_at, :updated_at, true, :revision, 0, 0, :updated_at, :updated_at, 0, false, false, false)
+                    INSERT INTO user_node_status (
+                        user_id,
+                        node_id,
+                        mastery_score,
+                        bkt_mastery_prob,
+                        bkt_last_updated_at,
+                        updated_at,
+                        last_study_at,
+                        is_unlocked,
+                        revision,
+                        total_minutes,
+                        total_study_minutes,
+                        last_interacted_at,
+                        created_at,
+                        study_count,
+                        is_collapsed,
+                        is_favorite,
+                        decay_paused
+                    )
+                    VALUES (
+                        :user_id,
+                        :node_id,
+                        :mastery,
+                        :bkt_mastery_prob,
+                        :updated_at,
+                        :updated_at,
+                        :updated_at,
+                        true,
+                        :revision,
+                        0,
+                        0,
+                        :updated_at,
+                        :updated_at,
+                        0,
+                        false,
+                        false,
+                        false
+                    )
                     ON CONFLICT (user_id, node_id) DO UPDATE SET
                         mastery_score = EXCLUDED.mastery_score,
                         updated_at = EXCLUDED.updated_at,
@@ -527,6 +631,7 @@ class GalaxyService:
                         "user_id": user_id,
                         "node_id": node_id,
                         "mastery": new_mastery,
+                        "bkt_mastery_prob": bkt_mastery_prob,
                         "updated_at": update_time,
                         "revision": new_revision,
                     },
@@ -574,25 +679,15 @@ class GalaxyService:
                 # Since status is re-fetched in hybrid_search, we might not need to invalidate nodes cache!
 
             # 5. Add to Outbox
-            outbox_query = text("""
-                INSERT INTO outbox_events (aggregate_id, event_type, payload, status, created_at)
-                VALUES (:aggregate_id, :event_type, :payload, 'pending', :created_at)
-            """)
-            await self.db.execute(
-                outbox_query,
-                {
-                    "aggregate_id": user_id,
-                    "event_type": "galaxy.node.mastery_updated",
-                    "payload": json.dumps(
-                        {
-                            "user_id": str(user_id),
-                            "node_id": str(node_id),
-                            "mastery_score": new_mastery,
-                            "revision": new_revision,
-                            "timestamp": _utcnow().isoformat(),
-                        }
-                    ),
-                    "created_at": _utcnow(),
+            await self._write_mastery_outbox_event(
+                aggregate_id=user_id,
+                event_type="galaxy.node.mastery_updated",
+                payload={
+                    "user_id": str(user_id),
+                    "node_id": str(node_id),
+                    "mastery_score": new_mastery,
+                    "revision": new_revision,
+                    "timestamp": _utcnow().isoformat(),
                 },
             )
 

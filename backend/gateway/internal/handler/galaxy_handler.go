@@ -1,7 +1,10 @@
 package handler
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"io"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -57,25 +60,30 @@ func (h *GalaxyHandler) RegisterRoutes(r *gin.RouterGroup, authMiddleware gin.Ha
 	galaxy.Use(authMiddleware)
 
 	{
-		// gRPC direct endpoints (high priority - for performance)
-		if rateLimit != nil {
-			galaxy.POST("/nodes/:id/spark", rateLimit, h.SparkNode)
-			galaxy.POST("/nodes/:id/mastery", rateLimit, h.UpdateMastery)
-		} else {
-			galaxy.POST("/nodes/:id/spark", h.SparkNode)
-			galaxy.POST("/nodes/:id/mastery", h.UpdateMastery)
-		}
+		// Core study interactions are part of the primary product loop.
+		// The shared global limiter was causing normal taps/updates to fail with 429,
+		// so keep these outside that narrow limiter and rely on auth/business checks.
+		galaxy.POST("/node/:id/spark", h.SparkNode)
+		galaxy.POST("/nodes/:id/spark", h.SparkNode)
+		galaxy.POST("/node/:id/mastery", h.UpdateMastery)
+		galaxy.POST("/nodes/:id/mastery", h.UpdateMastery)
 
 		// Read-heavy graph endpoints are used by page rendering and AI context hydration.
 		// Do not put them behind the tight shared rate limiter, or normal navigation can
 		// sporadically fail with 429 and break the knowledge graph experience.
 		galaxy.GET("/graph", h.ProxyToBackend)
 		galaxy.GET("/nodes", h.ProxyToBackend)
+		galaxy.GET("/node/:id", h.ProxyToBackend)
 		galaxy.GET("/nodes/:id", h.ProxyToBackend)
 		galaxy.GET("/search", h.ProxyToBackend)
 		galaxy.GET("/stats", h.ProxyToBackend)
 		galaxy.GET("/heatmap", h.ProxyToBackend)
 		galaxy.GET("/predict", h.ProxyToBackend)
+		galaxy.POST("/predict-next", h.ProxyToBackend)
+		galaxy.POST("/node/:id/favorite", h.ProxyToBackend)
+		galaxy.POST("/node/:id/decay/pause", h.ProxyToBackend)
+		galaxy.POST("/nodes/viewport", h.ProxyToBackend)
+		galaxy.POST("/nodes/positions", h.ProxyToBackend)
 		if rateLimit != nil {
 			galaxy.GET("/events", rateLimit, h.ProxyToBackend) // SSE stream for real-time galaxy updates
 			galaxy.POST("/sync", rateLimit, h.ProxyToBackend)
@@ -105,13 +113,25 @@ func (h *GalaxyHandler) SparkNode(c *gin.Context) {
 		StudyMinutes int    `json:"study_minutes"`
 		TaskID       string `json:"task_id"`
 	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	rawBody, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to read request body"})
 		return
+	}
+	c.Request.Body = io.NopCloser(bytes.NewReader(rawBody))
+	if len(bytes.TrimSpace(rawBody)) > 0 {
+		if err := json.Unmarshal(rawBody, &req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+	}
+	if req.StudyMinutes <= 0 {
+		req.StudyMinutes = 1
 	}
 
 	if h.galaxyClient == nil {
 		// Fallback to proxy if gRPC client not available
+		c.Request.Body = io.NopCloser(bytes.NewReader(rawBody))
 		h.ProxyToBackend(c)
 		return
 	}
@@ -129,6 +149,7 @@ func (h *GalaxyHandler) SparkNode(c *gin.Context) {
 	)
 	if err != nil {
 		log.Printf("Failed to spark node via gRPC, falling back to proxy: %v", err)
+		c.Request.Body = io.NopCloser(bytes.NewReader(rawBody))
 		h.ProxyToBackend(c)
 		return
 	}
@@ -167,12 +188,21 @@ func (h *GalaxyHandler) UpdateMastery(c *gin.Context) {
 		Mastery int    `json:"mastery"`
 		Reason  string `json:"reason"`
 	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	rawBody, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to read request body"})
 		return
+	}
+	c.Request.Body = io.NopCloser(bytes.NewReader(rawBody))
+	if len(bytes.TrimSpace(rawBody)) > 0 {
+		if err := json.Unmarshal(rawBody, &req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 	}
 
 	if h.galaxyClient == nil {
+		c.Request.Body = io.NopCloser(bytes.NewReader(rawBody))
 		h.ProxyToBackend(c)
 		return
 	}
@@ -190,6 +220,7 @@ func (h *GalaxyHandler) UpdateMastery(c *gin.Context) {
 	)
 	if err != nil {
 		log.Printf("Failed to update mastery via gRPC, falling back to proxy: %v", err)
+		c.Request.Body = io.NopCloser(bytes.NewReader(rawBody))
 		h.ProxyToBackend(c)
 		return
 	}

@@ -7,8 +7,9 @@ from datetime import timezone, date, datetime
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, status
 from loguru import logger
+from pydantic import BaseModel, Field
 from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -29,12 +30,19 @@ from app.schemas.plan import (
     PlanUpdate,
     SetPrimaryPlanRequest,
 )
+from app.schemas.task import TaskDetail
 from app.services.plan_quota_service import PlanQuotaService
 from app.services.plan_service import PlanService
 from app.services.plan_state_service import PlanStateService
 from app.services.state_notification_service import state_notification_service
+from app.tools.plan_tools import GenerateTasksForPlanTool
+from app.tools.schemas import GenerateTasksForPlanParams
 
 router = APIRouter()
+
+
+class GenerateTasksRequest(BaseModel):
+    count: int | None = Field(default=None, ge=1, le=20)
 
 
 def _utcnow() -> datetime:
@@ -212,6 +220,7 @@ async def get_plan(
     }
 
 
+@router.put("/{plan_id}", response_model=PlanDetail)
 @router.patch("/{plan_id}", response_model=PlanDetail)
 async def update_plan(
     plan_id: UUID = Path(..., description="Plan ID"),
@@ -259,6 +268,55 @@ async def update_plan(
         "created_at": plan.created_at,
         "updated_at": plan.updated_at,
     }
+
+
+@router.post("/{plan_id}/generate-tasks", response_model=list[TaskDetail])
+async def generate_tasks_for_plan(
+    plan_id: UUID = Path(..., description="Plan ID"),
+    count: int = Query(5, ge=1, le=20),
+    request_body: GenerateTasksRequest | None = Body(default=None),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """为计划生成任务，兼容移动端计划页调用。"""
+    plan = await PlanService.get_by_id(db=db, plan_id=plan_id, user_id=current_user.id)
+    if not plan:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Plan {plan_id} not found")
+
+    requested_count = request_body.count if request_body and request_body.count is not None else count
+
+    topic = plan.subject or plan.name
+    tool = GenerateTasksForPlanTool()
+    result = await tool.execute(
+        GenerateTasksForPlanParams(
+            plan_id=str(plan.id),
+            topic=topic,
+            difficulty="medium",
+            task_count=requested_count,
+        ),
+        user_id=str(current_user.id),
+        db_session=db,
+    )
+
+    if not result.success:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=result.error_message or "Failed to generate tasks for plan",
+        )
+
+    task_ids = []
+    tasks = result.data.get("tasks", []) if isinstance(result.data, dict) else []
+    for task in tasks:
+        if isinstance(task, dict) and task.get("id"):
+            task_ids.append(task["id"])
+
+    created_tasks_result = await db.execute(
+        select(Task)
+        .where(Task.user_id == current_user.id, Task.id.in_(task_ids))
+        .order_by(desc(Task.created_at))
+    )
+    created_tasks = created_tasks_result.scalars().all()
+    return [TaskDetail.model_validate(task) for task in created_tasks]
 
 
 @router.delete("/{plan_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -766,7 +824,7 @@ async def get_learning_path_progress(
                 "id": node_id_str,
                 "name": node.name,
                 "status": status,
-                "mastery": mastery_score,
+                "mastery": int(mastery_score),
                 "is_target": is_target,
             }
         )
@@ -778,10 +836,19 @@ async def get_learning_path_progress(
         target_node = nodes.get(str(target_node_id))
         target_status = user_statuses.get(str(target_node_id))
         if target_node:
+            target_mastery = target_status.mastery_score if target_status else 0
+            if target_mastery >= 80:
+                target_status_name = "mastered"
+            elif target_mastery > 0:
+                target_status_name = "unlocked"
+            else:
+                target_status_name = "locked"
             target_node_data = {
                 "id": str(target_node_id),
                 "name": target_node.name,
-                "mastery": target_status.mastery_score if target_status else 0,
+                "status": target_status_name,
+                "mastery": int(target_mastery),
+                "is_target": True,
             }
 
     return {

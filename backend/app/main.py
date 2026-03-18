@@ -94,6 +94,7 @@ async def lifespan(app: FastAPI):
     # Initialize WebSocket Redis
     await manager.init_redis()
 
+    event_bus = None
     preference_consumer_task = None
     if cache_service.redis:
         user_service = UserService(None, cache_service.redis)
@@ -138,9 +139,10 @@ async def lifespan(app: FastAPI):
         capsule_consumer_task = asyncio.create_task(capsule_consumer.start())
         app.state.capsule_consumer_task = capsule_consumer_task
 
-    nudge_consumer = NudgeEventConsumer(event_bus=event_bus)
-    nudge_consumer_task = asyncio.create_task(nudge_consumer.start())
-    app.state.nudge_consumer_task = nudge_consumer_task
+    if cache_service.redis and event_bus is not None:
+        nudge_consumer = NudgeEventConsumer(event_bus=event_bus)
+        nudge_consumer_task = asyncio.create_task(nudge_consumer.start())
+        app.state.nudge_consumer_task = nudge_consumer_task
 
     summarization_worker_task = None
     summarization_worker = None
@@ -158,7 +160,7 @@ async def lifespan(app: FastAPI):
             logger.error(f"Failed to start SummarizationWorker: {e}")
 
     # Start Galaxy Services (Phase 4)
-    if cache_service.redis:
+    if cache_service.redis and event_bus is not None:
         from app.services.galaxy.streaming_service import init_galaxy_streaming_service
         try:
             galaxy_streaming_service = await init_galaxy_streaming_service(manager, event_bus)

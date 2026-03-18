@@ -206,6 +206,20 @@ async def test_chat_with_tools_same_tier_fallback_on_429(fallback_router):
 
 
 @pytest.mark.asyncio
+async def test_reason_same_tier_fallback_on_429(fallback_router):
+    service = LLMService(agent_role=AgentRole.GENERATION, enable_dynamic_routing=True)
+
+    response = await service.reason([{"role": "user", "content": "think deeply"}])
+
+    assert response == "reply from https://secondary.test"
+    assert [call["base_url"] for call in FakeProvider.calls[:2]] == [
+        "https://primary.test",
+        "https://secondary.test",
+    ]
+    assert FakeProvider.calls[0]["kwargs"]["extra_body"] == {"clear_thinking": True}
+
+
+@pytest.mark.asyncio
 async def test_chat_stream_with_tools_skips_original_model_after_429(fallback_router):
     service = LLMService(agent_role=AgentRole.GENERATION, enable_dynamic_routing=True)
 

@@ -33,6 +33,25 @@ class LLMFallbackError(Exception):
     pass
 
 
+def _extract_json_payload(raw: str) -> str | None:
+    """Extract a likely JSON payload from plain text or fenced markdown."""
+    cleaned = (raw or "").strip().lstrip("\ufeff")
+    if not cleaned:
+        return None
+
+    fenced_match = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", cleaned, re.IGNORECASE)
+    if fenced_match:
+        cleaned = fenced_match.group(1).strip()
+
+    for start, end in (("[", "]"), ("{", "}")):
+        start_idx = cleaned.find(start)
+        end_idx = cleaned.rfind(end)
+        if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+            return cleaned[start_idx : end_idx + 1].strip()
+
+    return cleaned or None
+
+
 async def safe_llm_call(
     messages: list[dict[str, str]],
     fallback: str = "",
@@ -124,24 +143,14 @@ async def safe_llm_json_call(
     if not response:
         return fallback
 
+    json_payload = _extract_json_payload(response)
+    if not json_payload:
+        return fallback
+
     # 尝试解析JSON
     try:
-        # 清理可能的markdown代码块
-        cleaned = response.strip()
-        if cleaned.startswith("```"):
-            cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned)
-            cleaned = re.sub(r"\s*```$", "", cleaned)
-
-        return json.loads(cleaned)
+        return json.loads(json_payload)
     except json.JSONDecodeError:
-        # 尝试提取JSON对象
-        match = re.search(r"[\{\[].*[\}\]]", cleaned, re.DOTALL)
-        if match:
-            try:
-                return json.loads(match.group())
-            except json.JSONDecodeError:
-                pass
-
         logger.warning(f"[LLMFallback] Failed to parse JSON from response: {response[:100]}...")
         return fallback
 

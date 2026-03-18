@@ -39,6 +39,12 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
+def _user_display_name(user: User | None, default: str) -> str:
+    if not user:
+        return default
+    return user.nickname or user.full_name or user.username or default
+
+
 class AccountabilityNotificationService:
     """责任伙伴通知服务"""
 
@@ -65,7 +71,7 @@ class AccountabilityNotificationService:
         """
         # 获取发起人信息
         initiator = await db.get(User, initiator_id)
-        initiator_name = initiator.display_name if initiator else "好友"
+        initiator_name = _user_display_name(initiator, "好友")
 
         title = "🤝 责任伙伴邀请"
         content = f"{initiator_name} 邀请你成为责任伙伴\n目标: {initiator_goal}"
@@ -150,7 +156,7 @@ class AccountabilityNotificationService:
             创建的通知对象
         """
         partner = await db.get(User, partner_id)
-        partner_name = partner.display_name if partner else "好友"
+        partner_name = _user_display_name(partner, "好友")
 
         title = "责任伙伴邀请已 declined"
         content = f"{partner_name} 暂时无法接受你的责任伙伴邀请"
@@ -350,7 +356,7 @@ class AccountabilityNotificationService:
             创建的通知对象
         """
         partner = await db.get(User, partner_id)
-        partner_name = partner.display_name if partner else "伙伴"
+        partner_name = _user_display_name(partner, "伙伴")
 
         is_self = str(ended_by) == str(user_id)
         title = "👋 责任伙伴关系已结束"

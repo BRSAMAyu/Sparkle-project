@@ -30,6 +30,12 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
+def _user_display_name(user: User | None, default: str) -> str:
+    if not user:
+        return default
+    return user.nickname or user.full_name or user.username or default
+
+
 # ============================================================================
 # 任务定义
 # ============================================================================
@@ -217,7 +223,7 @@ async def _send_daily_reminders(db: AsyncSession) -> dict[str, Any]:
                 )
                 partner_result = await db.execute(select(User).where(User.id == partner_id))
                 partner = partner_result.scalar_one_or_none()
-                partner_name = partner.display_name if partner else "你的责任伙伴"
+                partner_name = _user_display_name(partner, "你的责任伙伴")
 
                 await accountability_notification_service.send_daily_reminder(
                     db, user_id, partnership.id, partner_name
@@ -409,7 +415,7 @@ async def _notify_partner_checkin(
     )
 
     await accountability_notification_service.send_partner_checked_in(
-        db, partner_id, partnership_id, checker.display_name if checker else "你的伙伴"
+        db, partner_id, partnership_id, _user_display_name(checker, "你的伙伴")
     )
 
     return {

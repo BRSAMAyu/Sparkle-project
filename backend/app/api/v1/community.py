@@ -379,6 +379,30 @@ def _build_group_member_info(member: GroupMember) -> GroupMemberInfo:
     )
 
 
+def _build_friendship_info(
+    friendship,
+    friend: User,
+    current_user_id: UUID,
+) -> FriendshipInfo:
+    return FriendshipInfo(
+        id=friendship.id,
+        created_at=friendship.created_at,
+        updated_at=friendship.updated_at,
+        friend=UserBrief(
+            id=friend.id,
+            username=friend.username,
+            nickname=friend.nickname,
+            avatar_url=friend.avatar_url,
+            flame_level=friend.flame_level,
+            flame_brightness=friend.flame_brightness,
+            status=friend.status,
+        ),
+        status=friendship.status,
+        match_reason=friendship.match_reason,
+        initiated_by_me=friendship.initiated_by == current_user_id,
+    )
+
+
 def _build_private_message_info(msg: PrivateMessage) -> PrivateMessageInfo:
     sender = UserBrief.model_validate(msg.sender)
     receiver = UserBrief.model_validate(msg.receiver)
@@ -685,35 +709,24 @@ async def get_friends(
 ):
     """获取当前用户的好友列表"""
     friends = await FriendshipService.get_friends(db, current_user.id, limit=limit, offset=offset)
-    result = []
-    for friendship, friend in friends:
-        result.append(FriendshipInfo(
-            id=friendship.id,
-            created_at=friendship.created_at,
-            updated_at=friendship.updated_at,
-            friend=UserBrief(
-                id=friend.id,
-                username=friend.username,
-                nickname=friend.nickname,
-                avatar_url=friend.avatar_url,
-                flame_level=friend.flame_level,
-                flame_brightness=friend.flame_brightness
-            ),
-            status=friendship.status,
-            match_reason=friendship.match_reason,
-            initiated_by_me=friendship.initiated_by == current_user.id
-        ))
-    return result
+    return [
+        _build_friendship_info(friendship, friend, current_user.id)
+        for friendship, friend in friends
+    ]
 
 
-@router.get("/friends/pending", summary="获取待处理的好友请求")
+@router.get("/friends/pending", response_model=list[FriendshipInfo], summary="获取待处理的好友请求")
 async def get_pending_requests(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """获取收到的待处理好友请求"""
     requests = await FriendshipService.get_pending_requests(db, current_user.id)
-    return requests
+    return [
+        _build_friendship_info(friendship, friendship.initiator, current_user.id)
+        for friendship in requests
+        if friendship.initiator is not None
+    ]
 
 
 @router.get("/users/search", response_model=list[UserBrief], summary="搜索用户")

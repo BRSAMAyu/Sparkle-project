@@ -118,12 +118,17 @@ func (s *CommunityCommandService) CreatePost(ctx context.Context, req CreatePost
 // LikePost creates a like for a post and publishes a PostLiked event atomically.
 func (s *CommunityCommandService) LikePost(ctx context.Context, userID, postID uuid.UUID) error {
 	return s.unitOfWork.ExecuteInTransaction(ctx, func(txCtx *outbox.TransactionContext) error {
+		likeID := uuid.New()
 		// Create like in transaction
 		_, err := txCtx.Tx().Exec(ctx, `
-			INSERT INTO post_likes (user_id, post_id, created_at)
-			VALUES ($1, $2, NOW())
+			INSERT INTO post_likes (id, user_id, post_id, created_at, updated_at)
+			VALUES ($1, $2, $3, NOW(), NOW())
 			ON CONFLICT DO NOTHING
-		`, pgtype.UUID{Bytes: userID, Valid: true}, pgtype.UUID{Bytes: postID, Valid: true})
+		`,
+			pgtype.UUID{Bytes: likeID, Valid: true},
+			pgtype.UUID{Bytes: userID, Valid: true},
+			pgtype.UUID{Bytes: postID, Valid: true},
+		)
 
 		if err != nil {
 			return fmt.Errorf("failed to create like: %w", err)

@@ -85,15 +85,27 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		plans.POST("/primary", h.proxyWithHeaders)
 		plans.GET("/archived", h.proxyWithHeaders)
 		plans.GET("/:id", h.proxyWithHeaders)
+		plans.PUT("/:id", h.proxyWithHeaders)
 		plans.PATCH("/:id", h.proxyWithHeaders) // Python uses PATCH (not PUT)
 		plans.DELETE("/:id", h.proxyWithHeaders)
 		plans.POST("/:id/archive", h.proxyWithHeaders)
 		plans.POST("/:id/restore", h.proxyWithHeaders)
+		plans.POST("/:id/generate-tasks", h.proxyWithHeaders)
 		plans.GET("/:id/progress", h.proxyWithHeaders)
 		plans.PATCH("/:id/priority", h.proxyWithHeaders)
 		plans.GET("/:id/learning-path-progress", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered plans proxy routes")
+
+	// ==================== Learning Paths Routes ====================
+	learningPaths := api.Group("/learning-paths")
+	learningPaths.Use(authMiddleware)
+	{
+		learningPaths.GET("/:target_node_id", h.proxyWithHeaders)
+		learningPaths.POST("/:target_node_id/plan", h.proxyWithHeaders)
+		learningPaths.POST("/:target_node_id/full-plan", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered learning paths proxy routes")
 
 	// ==================== Achievements Routes ====================
 	achievements := api.Group("/achievements")

@@ -1538,7 +1538,7 @@ Please review this plan and provide your assessment."""
             # Get a fresh database session
             async with get_db_session() as db:
                 # Fetch plan details
-                plan = await PlanService.get_by_id(db, UUID(plan_id))
+                plan = await db.get(Plan, UUID(plan_id))
                 if not plan:
                     logger.warning(f"Plan {plan_id} not found for task generation")
                     return

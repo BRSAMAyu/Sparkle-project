@@ -15,7 +15,7 @@ from uuid import UUID
 
 import networkx as nx
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import cache_service
@@ -42,7 +42,7 @@ class GraphReasoningService:
     """图推理服务，负责学习路径生成和图结构管理"""
 
     # Redis 缓存配置
-    CACHE_KEY = "galaxy:graph_structure:v1"
+    CACHE_KEY = "galaxy:graph_structure:v2"
     CACHE_TTL = 300  # 5分钟
 
     def __init__(self, db: AsyncSession):
@@ -88,9 +88,9 @@ class GraphReasoningService:
         for node in nodes:
             self.G.add_node(node.id, name=node.name, description=node.description)
 
-        # 加载 'PREREQUISITE' 类型的边
+        # 兼容历史数据里大小写不一致的 prerequisite 关系类型。
         edges_result = await self.db.execute(
-            select(NodeRelation).where(NodeRelation.relation_type == "PREREQUISITE")
+            select(NodeRelation).where(func.lower(NodeRelation.relation_type) == "prerequisite")
         )
         edges = edges_result.scalars().all()
 

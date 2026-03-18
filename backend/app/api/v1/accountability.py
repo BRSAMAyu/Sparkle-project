@@ -25,6 +25,10 @@ from app.models.community import Friendship, FriendshipStatus
 router = APIRouter()
 
 
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
 # ─── Schemas ─────────────────────────────────────────────────────────────────
 
 
@@ -189,12 +193,12 @@ async def respond_to_partnership(
 
     if body.accept:
         partnership.status = AccountabilityStatus.ACTIVE
-        partnership.started_at = datetime.now(timezone.utc)
+        partnership.started_at = _utcnow()
         if body.partner_goal:
             partnership.partner_goal = body.partner_goal
     else:
         partnership.status = AccountabilityStatus.ENDED
-        partnership.ended_at = datetime.now(timezone.utc)
+        partnership.ended_at = _utcnow()
 
     await partnership.save(db)
     await db.refresh(partnership)
@@ -254,7 +258,7 @@ async def end_partnership(
     )
 
     partnership.status = AccountabilityStatus.ENDED
-    partnership.ended_at = datetime.now(timezone.utc)
+    partnership.ended_at = _utcnow()
     await partnership.save(db)
 
     from app.services.accountability_notification_service import (
@@ -284,7 +288,7 @@ async def daily_checkin(
     if partnership.status != AccountabilityStatus.ACTIVE:
         raise HTTPException(status_code=400, detail="Partnership is not active")
 
-    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    today_start = _utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
 
     existing_checkin = await db.execute(
         select(AccountabilityCheckin).where(
@@ -360,8 +364,8 @@ async def get_partnership_stats(
     from datetime import date, timedelta
     from sqlalchemy import func as sql_func
 
-    today_utc = datetime.now(timezone.utc).date()
-    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    today_utc = _utcnow().date()
+    today_start = _utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
 
     async def _streak(user_id) -> int:
         """Calculate consecutive check-in days ending today or yesterday."""
@@ -457,10 +461,10 @@ async def get_partnership_heatmap(
 
     # 默认为当前年份
     if year is None:
-        year = datetime.now(timezone.utc).year
+        year = _utcnow().year
 
-    year_start = datetime(year, 1, 1, tzinfo=timezone.utc)
-    year_end = datetime(year, 12, 31, 23, 59, 59, tzinfo=timezone.utc)
+    year_start = datetime(year, 1, 1)
+    year_end = datetime(year, 12, 31, 23, 59, 59)
 
     # 获取当年的所有打卡记录
     result = await db.execute(
@@ -567,7 +571,7 @@ async def encourage_checkin(
         "id": str(uuid4()),
         "user_id": str(current_user.id),
         "message": body.message.strip(),
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": _utcnow().isoformat(),
     }
 
     encouragements_list = list(checkin.encouragements) if isinstance(checkin.encouragements, list) else []
