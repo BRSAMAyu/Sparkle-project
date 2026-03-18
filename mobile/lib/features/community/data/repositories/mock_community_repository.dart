@@ -6,6 +6,8 @@ import 'package:sparkle/features/community/data/repositories/community_repositor
 import 'package:sparkle/shared/entities/user_brief.dart';
 import 'package:uuid/uuid.dart';
 
+const Uuid _uuid = Uuid();
+
 class MockCommunityRepository implements CommunityRepository {
   MockCommunityRepository() : this._init();
 
@@ -1053,7 +1055,8 @@ class MockCommunityRepository implements CommunityRepository {
 
   @override
   Future<GroupModerationSettings> getModerationSettings(
-          String groupId,) async =>
+    String groupId,
+  ) async =>
       const GroupModerationSettings();
 
   @override
@@ -1092,5 +1095,195 @@ class MockCommunityRepository implements CommunityRepository {
   }) async {
     // Return empty list for mock
     return [];
+  }
+
+  // ── Privacy Settings ──────────────────────────────────────────────────────
+
+  @override
+  Future<UserPrivacySettings> getPrivacySettings() async {
+    return UserPrivacySettings(searchableBy: SearchVisibility.everyone);
+  }
+
+  @override
+  Future<void> updatePrivacySettings(UserPrivacySettings settings) async {
+    // Mock implementation - no-op
+  }
+
+  // ── Broadcast ──────────────────────────────────────────────────────────────
+
+  @override
+  Future<BroadcastMessageInfo> createBroadcast(
+    BroadcastMessageCreate request,
+  ) async {
+    return BroadcastMessageInfo(
+      id: const Uuid().v4(),
+      senderId: currentUserId,
+      content: request.content,
+      contentData: request.contentData,
+      targetGroupIds: request.targetGroupIds,
+      deliveredCount: request.targetGroupIds.length,
+      createdAt: DateTime.now(),
+    );
+  }
+
+  // ── Offline Queue ──────────────────────────────────────────────────────────
+
+  @override
+  Future<List<OfflineMessageInfo>> getPendingOfflineMessages() async {
+    return [];
+  }
+
+  @override
+  Future<List<OfflineMessageInfo>> getFailedOfflineMessages() async {
+    return [];
+  }
+
+  @override
+  Future<void> retryOfflineMessages(List<String> messageIds) async {
+    // Mock implementation - no-op
+  }
+
+  // ── Encryption Keys ────────────────────────────────────────────────────────
+
+  @override
+  Future<EncryptionKeyInfo> registerEncryptionKey(
+    EncryptionKeyCreate request,
+  ) async {
+    return EncryptionKeyInfo(
+      id: const Uuid().v4(),
+      userId: currentUserId,
+      publicKey: request.publicKey,
+      keyType: request.keyType,
+      deviceId: request.deviceId,
+      isActive: true,
+      createdAt: DateTime.now(),
+      expiresAt: request.expiresAt,
+    );
+  }
+
+  @override
+  Future<List<EncryptionKeyInfo>> getUserPublicKeys(String userId) async {
+    return [];
+  }
+
+  @override
+  Future<void> revokeEncryptionKey(String keyId) async {
+    // Mock implementation - no-op
+  }
+
+  // ── Group Files ────────────────────────────────────────────────────────────
+
+  @override
+  Future<List<GroupFileInfo>> getGroupFiles(
+    String groupId, {
+    String? category,
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    return [];
+  }
+
+  @override
+  Future<GroupFileInfo> shareFileToGroup(
+    String groupId,
+    GroupFileShareRequest request,
+  ) async {
+    return GroupFileInfo(
+      id: const Uuid().v4(),
+      groupId: groupId,
+      uploaderId: currentUserId,
+      fileName: 'mock_file.pdf',
+      fileSize: 1024,
+      mimeType: 'application/pdf',
+      fileUrl: 'https://example.com/mock_file.pdf',
+      description: request.description,
+      category: request.category,
+      tags: request.tags,
+      permissions: GroupFilePermissions(),
+      createdAt: DateTime.now(),
+    );
+  }
+
+  @override
+  Future<GroupFileInfo> updateGroupFilePermissions(
+    String groupId,
+    String fileId,
+    GroupFilePermissionUpdate permissions,
+  ) async {
+    return GroupFileInfo(
+      id: fileId,
+      groupId: groupId,
+      uploaderId: currentUserId,
+      fileName: 'mock_file.pdf',
+      fileSize: 1024,
+      mimeType: 'application/pdf',
+      fileUrl: 'https://example.com/mock_file.pdf',
+      permissions: GroupFilePermissions(
+        canView: permissions.canView ?? [],
+        canDownload: permissions.canDownload ?? [],
+        canDelete: permissions.canDelete ?? [],
+      ),
+      createdAt: DateTime.now(),
+    );
+  }
+
+  @override
+  Future<List<GroupFileCategoryStat>> getGroupFileCategories(
+    String groupId,
+  ) async {
+    return [];
+  }
+
+  // ── Shared Resources ───────────────────────────────────────────────────────
+
+  @override
+  Future<SharedResourceInfo> shareResource(SharedResourceCreate request) async {
+    return SharedResourceInfo(
+      id: const Uuid().v4(),
+      resourceType: request.resourceType,
+      resourceId: request.resourceId,
+      sharerId: currentUserId,
+      groupIds: request.groupIds,
+      createdAt: DateTime.now(),
+    );
+  }
+
+  @override
+  Future<List<SharedResourceInfo>> getGroupResources(
+    String groupId, {
+    SharedResourceType? type,
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    return [];
+  }
+
+  @override
+  Future<void> adoptSharedResource(String shareId) async {
+    // Mock implementation - no-op
+  }
+
+  // ── Message Reports Management ─────────────────────────────────────────────
+
+  @override
+  Future<List<MessageReportInfo>> getPendingReports(String groupId) async {
+    return [];
+  }
+
+  @override
+  Future<MessageReportInfo> reviewReport(
+    String reportId,
+    MessageReportReview review,
+  ) async {
+    return MessageReportInfo(
+      id: reportId,
+      reporterId: currentUserId,
+      reason: ReportReason.other,
+      status: review.status,
+      createdAt: DateTime.now(),
+      reviewedBy: currentUserId,
+      reviewedAt: DateTime.now(),
+      actionTaken: review.actionTaken,
+    );
   }
 }

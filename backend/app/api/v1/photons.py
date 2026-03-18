@@ -20,6 +20,9 @@ from app.services.photon_service import get_photon_service
 
 router = APIRouter()
 
+# 访客用户 ID（与 guest_seed_service.py 和 guest_service.dart 保持一致）
+GUEST_USER_ID = "guest_sparkle_demo_visitor"
+
 
 @router.get("/balance", response_model=dict[str, Any])
 async def get_photon_balance(
@@ -114,6 +117,13 @@ async def transfer_photons(
 
     Transfers photons from current user to another user.
     """
+    # 访客用户禁止转账
+    if str(current_user.id) == GUEST_USER_ID or current_user.username == GUEST_USER_ID:
+        raise HTTPException(
+            status_code=403,
+            detail="Guest users cannot transfer photons. Please register for a full account."
+        )
+
     photon_service = get_photon_service(db)
 
     try:

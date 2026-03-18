@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/motion.dart';
-import 'package:sparkle/core/design/widgets/custom_button.dart';
+import 'package:sparkle/core/design/widgets/custom_button.dart' show CustomButton, CustomButtonSize;
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
@@ -80,6 +80,40 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     super.dispose();
   }
 
+  Future<void> _handleConfirmTasks(String toolResultId) async {
+    setState(() => _confirmingTasks = true);
+    try {
+      await widget.onConfirmTasks!(toolResultId);
+      widget.onConfirm?.call();
+      if (mounted) {
+        setState(() => _confirmedTasks = true);
+      }
+    } catch (_) {
+      // Error feedback handled by caller
+    } finally {
+      if (mounted) {
+        setState(() => _confirmingTasks = false);
+      }
+    }
+  }
+
+  Future<void> _handleConfirmAllTasks(String toolResultId) async {
+    setState(() => _confirmingTasks = true);
+    try {
+      await widget.onConfirmAllTasks!(toolResultId);
+      widget.onConfirm?.call();
+      if (mounted) {
+        setState(() => _confirmedTasks = true);
+      }
+    } catch (_) {
+      // Error feedback handled by caller
+    } finally {
+      if (mounted) {
+        setState(() => _confirmingTasks = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // focus_card 类型直接使用 FocusActionCard，支持自动启动
@@ -133,25 +167,12 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                   left: DS.spacing8,
                   right: DS.spacing8,
                 ),
-                child: SparkleButton.primary(
+                child: SparkleButton(
                   label: _confirmingTasks ? '确认中...' : '确认任务',
                   onPressed: _confirmingTasks
                       ? null
-                      : () async {
-                          setState(() => _confirmingTasks = true);
-                          try {
-                            await widget.onConfirmTasks!(toolResultId);
-                            widget.onConfirm?.call();
-                            if (mounted) {
-                              setState(() => _confirmedTasks = true);
-                            }
-                          } catch (_) {
-                            // Error feedback handled by caller
-                          } finally {
-                            if (mounted) {
-                              setState(() => _confirmingTasks = false);
-                            }
-                          }
+                      : () {
+                          _handleConfirmTasks(toolResultId);
                         },
                 ),
               ),
@@ -872,26 +893,13 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             !_confirmedTasks)
           Padding(
             padding: const EdgeInsets.only(top: DS.spacing12),
-            child: SparkleButton.primary(
+            child: SparkleButton(
               label: _confirmingTasks ? '确认中...' : '确认全部任务',
               icon: const Icon(Icons.check_circle_outline),
               onPressed: _confirmingTasks
                   ? null
-                  : () async {
-                      setState(() => _confirmingTasks = true);
-                      try {
-                        await widget.onConfirmAllTasks!(toolResultId);
-                        widget.onConfirm?.call();
-                        if (mounted) {
-                          setState(() => _confirmedTasks = true);
-                        }
-                      } catch (_) {
-                        // Error feedback handled by caller
-                      } finally {
-                        if (mounted) {
-                          setState(() => _confirmingTasks = false);
-                        }
-                      }
+                  : () {
+                      _handleConfirmAllTasks(toolResultId);
                     },
             ),
           ),

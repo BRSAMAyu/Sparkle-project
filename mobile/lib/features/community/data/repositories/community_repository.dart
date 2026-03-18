@@ -29,8 +29,11 @@ class CommunityRepository {
       );
 
       if (response.statusCode == 200) {
-        final data = ApiResponseParser.unwrapList(response.data, action: 'getFeed');
-        return data.map((e) => Post.fromJson(e as Map<String, dynamic>)).toList();
+        final data =
+            ApiResponseParser.unwrapList(response.data, action: 'getFeed');
+        return data
+            .map((e) => Post.fromJson(e as Map<String, dynamic>))
+            .toList();
       }
       return [];
     } catch (e) {
@@ -46,7 +49,8 @@ class CommunityRepository {
     );
 
     if (response.statusCode == 201) {
-      final data = ApiResponseParser.unwrapMap(response.data, action: 'createPost');
+      final data =
+          ApiResponseParser.unwrapMap(response.data, action: 'createPost');
       return data['id'] as String;
     }
     throw Exception('Failed to create post');
@@ -59,14 +63,17 @@ class CommunityRepository {
     );
   }
 
-  Future<List<FriendshipInfo>> getFriends(
-      {int limit = 50, int offset = 0,}) async {
+  Future<List<FriendshipInfo>> getFriends({
+    int limit = 50,
+    int offset = 0,
+  }) async {
     final response = await _apiClient.get<dynamic>(
       ApiEndpoints.friends,
       queryParameters: {'limit': limit, 'offset': offset},
     );
     if (response.statusCode == 200) {
-      final data = ApiResponseParser.unwrapList(response.data, action: 'getFriends');
+      final data =
+          ApiResponseParser.unwrapList(response.data, action: 'getFriends');
       return data
           .map((e) => FriendshipInfo.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -77,7 +84,8 @@ class CommunityRepository {
   Future<List<FriendshipInfo>> getPendingRequests() async {
     final response = await _apiClient.get<dynamic>(ApiEndpoints.friendsPending);
     if (response.statusCode == 200) {
-      final data = ApiResponseParser.unwrapList(response.data, action: 'getPendingRequests');
+      final data = ApiResponseParser.unwrapList(response.data,
+          action: 'getPendingRequests');
       return data
           .map((e) => FriendshipInfo.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -85,14 +93,16 @@ class CommunityRepository {
     throw Exception('Failed to load pending requests');
   }
 
-  Future<List<FriendRecommendation>> getFriendRecommendations(
-      {int limit = 10,}) async {
+  Future<List<FriendRecommendation>> getFriendRecommendations({
+    int limit = 10,
+  }) async {
     final response = await _apiClient.get<dynamic>(
       ApiEndpoints.friendsRecommendations,
       queryParameters: {'limit': limit},
     );
     if (response.statusCode == 200) {
-      final data = ApiResponseParser.unwrapList(response.data, action: 'getFriendRecommendations');
+      final data = ApiResponseParser.unwrapList(response.data,
+          action: 'getFriendRecommendations');
       return data
           .map((e) => FriendRecommendation.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -126,7 +136,8 @@ class CommunityRepository {
       queryParameters: {'keyword': keyword, 'limit': limit},
     );
     if (response.statusCode == 200) {
-      final data = ApiResponseParser.unwrapList(response.data, action: 'searchUsers');
+      final data =
+          ApiResponseParser.unwrapList(response.data, action: 'searchUsers');
       return data
           .map((e) => UserBrief.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -137,7 +148,8 @@ class CommunityRepository {
   Future<List<GroupListItem>> getMyGroups() async {
     final response = await _apiClient.get<dynamic>(ApiEndpoints.groups);
     if (response.statusCode == 200) {
-      final data = ApiResponseParser.unwrapList(response.data, action: 'getMyGroups');
+      final data =
+          ApiResponseParser.unwrapList(response.data, action: 'getMyGroups');
       return data
           .map((e) => GroupListItem.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -148,7 +160,8 @@ class CommunityRepository {
   Future<GroupInfo> getGroup(String groupId) async {
     final response = await _apiClient.get<dynamic>(ApiEndpoints.group(groupId));
     if (response.statusCode == 200) {
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'getGroup');
+      final payload =
+          ApiResponseParser.unwrapMap(response.data, action: 'getGroup');
       return GroupInfo.fromJson(payload);
     }
     throw Exception('Failed to load group');
@@ -160,7 +173,8 @@ class CommunityRepository {
       data: group.toJson(),
     );
     if (response.statusCode == 200 || response.statusCode == 201) {
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'createGroup');
+      final payload =
+          ApiResponseParser.unwrapMap(response.data, action: 'createGroup');
       return GroupInfo.fromJson(payload);
     }
     throw Exception('Failed to create group');
@@ -191,8 +205,11 @@ class CommunityRepository {
       queryParameters: query,
     );
     if (response.statusCode == 200) {
-      final data = ApiResponseParser.unwrapList(response.data, action: 'searchGroups');
-      return data.map((e) => GroupListItem.fromJson(e as Map<String, dynamic>)).toList();
+      final data =
+          ApiResponseParser.unwrapList(response.data, action: 'searchGroups');
+      return data
+          .map((e) => GroupListItem.fromJson(e as Map<String, dynamic>))
+          .toList();
     }
     throw Exception('Failed to search groups');
   }
@@ -211,8 +228,11 @@ class CommunityRepository {
         action: 'getGroupRecommendations',
       );
       return data
-          .map((e) => GroupRecommendationItem.fromJson(
-              e as Map<String, dynamic>,),)
+          .map(
+            (e) => GroupRecommendationItem.fromJson(
+              e as Map<String, dynamic>,
+            ),
+          )
           .toList();
     }
     throw Exception('Failed to load group recommendations');
@@ -240,8 +260,11 @@ class CommunityRepository {
       ApiEndpoints.groupMembers(groupId),
     );
     if (response.statusCode == 200) {
-      final data = ApiResponseParser.unwrapList(response.data, action: 'getGroupMembers');
-      return data.map((e) => GroupMemberInfo.fromJson(e as Map<String, dynamic>)).toList();
+      final data = ApiResponseParser.unwrapList(response.data,
+          action: 'getGroupMembers');
+      return data
+          .map((e) => GroupMemberInfo.fromJson(e as Map<String, dynamic>))
+          .toList();
     }
     throw Exception('Failed to load group members');
   }
@@ -302,8 +325,11 @@ class CommunityRepository {
     }
   }
 
-  Future<List<MessageInfo>> getMessages(String groupId,
-      {String? beforeId, int limit = 50,}) async {
+  Future<List<MessageInfo>> getMessages(
+    String groupId, {
+    String? beforeId,
+    int limit = 50,
+  }) async {
     final response = await _apiClient.get<dynamic>(
       ApiEndpoints.groupMessages(groupId),
       queryParameters: {
@@ -312,8 +338,11 @@ class CommunityRepository {
       },
     );
     if (response.statusCode == 200) {
-      final data = ApiResponseParser.unwrapList(response.data, action: 'getMessages');
-      return data.map((e) => MessageInfo.fromJson(e as Map<String, dynamic>)).toList();
+      final data =
+          ApiResponseParser.unwrapList(response.data, action: 'getMessages');
+      return data
+          .map((e) => MessageInfo.fromJson(e as Map<String, dynamic>))
+          .toList();
     }
     throw Exception('Failed to load group messages');
   }
@@ -341,14 +370,16 @@ class CommunityRepository {
       },
     );
     if (response.statusCode == 200 || response.statusCode == 201) {
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'sendMessage');
+      final payload =
+          ApiResponseParser.unwrapMap(response.data, action: 'sendMessage');
       return MessageInfo.fromJson(payload);
     }
     throw Exception('Failed to send group message');
   }
 
   Future<void> revokeGroupMessage(String groupId, String messageId) async {
-    await _apiClient.post<dynamic>(ApiEndpoints.groupMessageRevoke(groupId, messageId));
+    await _apiClient
+        .post<dynamic>(ApiEndpoints.groupMessageRevoke(groupId, messageId));
   }
 
   Future<MessageInfo> editGroupMessage(
@@ -367,7 +398,8 @@ class CommunityRepository {
       },
     );
     if (response.statusCode == 200) {
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'editGroupMessage');
+      final payload = ApiResponseParser.unwrapMap(response.data,
+          action: 'editGroupMessage');
       return MessageInfo.fromJson(payload);
     }
     throw Exception('Failed to edit group message');
@@ -388,35 +420,47 @@ class CommunityRepository {
       },
     );
     if (response.statusCode == 200) {
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'updateGroupReaction');
+      final payload = ApiResponseParser.unwrapMap(response.data,
+          action: 'updateGroupReaction');
       return MessageInfo.fromJson(payload);
     }
     throw Exception('Failed to update group reaction');
   }
 
-  Future<List<MessageInfo>> searchGroupMessages(String groupId, String keyword,
-      {int limit = 50,}) async {
+  Future<List<MessageInfo>> searchGroupMessages(
+    String groupId,
+    String keyword, {
+    int limit = 50,
+  }) async {
     final response = await _apiClient.get<dynamic>(
       ApiEndpoints.groupMessagesSearch(groupId),
       queryParameters: {'keyword': keyword, 'limit': limit},
     );
     if (response.statusCode == 200) {
-      final data = ApiResponseParser.unwrapList(response.data, action: 'searchGroupMessages');
-      return data.map((e) => MessageInfo.fromJson(e as Map<String, dynamic>)).toList();
+      final data = ApiResponseParser.unwrapList(response.data,
+          action: 'searchGroupMessages');
+      return data
+          .map((e) => MessageInfo.fromJson(e as Map<String, dynamic>))
+          .toList();
     }
     throw Exception('Failed to search group messages');
   }
 
   Future<List<MessageInfo>> getThreadMessages(
-      String groupId, String threadRootId,
-      {int limit = 100,}) async {
+    String groupId,
+    String threadRootId, {
+    int limit = 100,
+  }) async {
     final response = await _apiClient.get<dynamic>(
       ApiEndpoints.groupThreadMessages(groupId, threadRootId),
       queryParameters: {'limit': limit},
     );
     if (response.statusCode == 200) {
-      final data = ApiResponseParser.unwrapList(response.data, action: 'getThreadMessages');
-      return data.map((e) => MessageInfo.fromJson(e as Map<String, dynamic>)).toList();
+      final data = ApiResponseParser.unwrapList(response.data,
+          action: 'getThreadMessages');
+      return data
+          .map((e) => MessageInfo.fromJson(e as Map<String, dynamic>))
+          .toList();
     }
     throw Exception('Failed to load thread messages');
   }
@@ -439,8 +483,11 @@ class CommunityRepository {
     throw Exception('Failed to mark group messages as read');
   }
 
-  Future<List<PrivateMessageInfo>> getPrivateMessages(String friendId,
-      {String? beforeId, int limit = 50,}) async {
+  Future<List<PrivateMessageInfo>> getPrivateMessages(
+    String friendId, {
+    String? beforeId,
+    int limit = 50,
+  }) async {
     final response = await _apiClient.get<dynamic>(
       ApiEndpoints.privateMessages(friendId),
       queryParameters: {
@@ -449,27 +496,33 @@ class CommunityRepository {
       },
     );
     if (response.statusCode == 200) {
-      final data = ApiResponseParser.unwrapList(response.data, action: 'getPrivateMessages');
-      return data.map((e) => PrivateMessageInfo.fromJson(e as Map<String, dynamic>)).toList();
+      final data = ApiResponseParser.unwrapList(response.data,
+          action: 'getPrivateMessages');
+      return data
+          .map((e) => PrivateMessageInfo.fromJson(e as Map<String, dynamic>))
+          .toList();
     }
     throw Exception('Failed to load private messages');
   }
 
   Future<PrivateMessageInfo> sendPrivateMessage(
-      PrivateMessageSend message,) async {
+    PrivateMessageSend message,
+  ) async {
     final response = await _apiClient.post<dynamic>(
       ApiEndpoints.sendPrivateMessage,
       data: message.toJson(),
     );
     if (response.statusCode == 200 || response.statusCode == 201) {
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'sendPrivateMessage');
+      final payload = ApiResponseParser.unwrapMap(response.data,
+          action: 'sendPrivateMessage');
       return PrivateMessageInfo.fromJson(payload);
     }
     throw Exception('Failed to send private message');
   }
 
   Future<void> revokePrivateMessage(String messageId) async {
-    await _apiClient.post<dynamic>(ApiEndpoints.revokePrivateMessage(messageId));
+    await _apiClient
+        .post<dynamic>(ApiEndpoints.revokePrivateMessage(messageId));
   }
 
   Future<PrivateMessageInfo> editPrivateMessage(
@@ -487,7 +540,8 @@ class CommunityRepository {
       },
     );
     if (response.statusCode == 200) {
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'editPrivateMessage');
+      final payload = ApiResponseParser.unwrapMap(response.data,
+          action: 'editPrivateMessage');
       return PrivateMessageInfo.fromJson(payload);
     }
     throw Exception('Failed to edit private message');
@@ -507,22 +561,28 @@ class CommunityRepository {
       },
     );
     if (response.statusCode == 200) {
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'updatePrivateReaction');
+      final payload = ApiResponseParser.unwrapMap(response.data,
+          action: 'updatePrivateReaction');
       return PrivateMessageInfo.fromJson(payload);
     }
     throw Exception('Failed to update private reaction');
   }
 
   Future<List<PrivateMessageInfo>> searchPrivateMessages(
-      String friendId, String keyword,
-      {int limit = 50,}) async {
+    String friendId,
+    String keyword, {
+    int limit = 50,
+  }) async {
     final response = await _apiClient.get<dynamic>(
       ApiEndpoints.privateMessagesSearch(friendId),
       queryParameters: {'keyword': keyword, 'limit': limit},
     );
     if (response.statusCode == 200) {
-      final data = ApiResponseParser.unwrapList(response.data, action: 'searchPrivateMessages');
-      return data.map((e) => PrivateMessageInfo.fromJson(e as Map<String, dynamic>)).toList();
+      final data = ApiResponseParser.unwrapList(response.data,
+          action: 'searchPrivateMessages');
+      return data
+          .map((e) => PrivateMessageInfo.fromJson(e as Map<String, dynamic>))
+          .toList();
     }
     throw Exception('Failed to search private messages');
   }
@@ -541,29 +601,37 @@ class CommunityRepository {
       },
     );
     if (response.statusCode == 200) {
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'checkin');
+      final payload =
+          ApiResponseParser.unwrapMap(response.data, action: 'checkin');
       return CheckinResponse.fromJson(payload);
     }
     throw Exception('Failed to check in');
   }
 
   Future<List<GroupTaskInfo>> getGroupTasks(String groupId) async {
-    final response = await _apiClient.get<dynamic>(ApiEndpoints.groupTasks(groupId));
+    final response =
+        await _apiClient.get<dynamic>(ApiEndpoints.groupTasks(groupId));
     if (response.statusCode == 200) {
-      final data = ApiResponseParser.unwrapList(response.data, action: 'getGroupTasks');
-      return data.map((e) => GroupTaskInfo.fromJson(e as Map<String, dynamic>)).toList();
+      final data =
+          ApiResponseParser.unwrapList(response.data, action: 'getGroupTasks');
+      return data
+          .map((e) => GroupTaskInfo.fromJson(e as Map<String, dynamic>))
+          .toList();
     }
     throw Exception('Failed to load group tasks');
   }
 
   Future<GroupTaskInfo> createGroupTask(
-      String groupId, GroupTaskCreate task,) async {
+    String groupId,
+    GroupTaskCreate task,
+  ) async {
     final response = await _apiClient.post<dynamic>(
       ApiEndpoints.groupTasks(groupId),
       data: task.toJson(),
     );
     if (response.statusCode == 200 || response.statusCode == 201) {
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'createGroupTask');
+      final payload =
+          ApiResponseParser.unwrapMap(response.data, action: 'createGroupTask');
       return GroupTaskInfo.fromJson(payload);
     }
     throw Exception('Failed to create group task');
@@ -574,9 +642,11 @@ class CommunityRepository {
   }
 
   Future<GroupFlameStatus> getFlameStatus(String groupId) async {
-    final response = await _apiClient.get<dynamic>(ApiEndpoints.groupFlame(groupId));
+    final response =
+        await _apiClient.get<dynamic>(ApiEndpoints.groupFlame(groupId));
     if (response.statusCode == 200) {
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'getFlameStatus');
+      final payload =
+          ApiResponseParser.unwrapMap(response.data, action: 'getFlameStatus');
       return GroupFlameStatus.fromJson(payload);
     }
     throw Exception('Failed to load flame status');
@@ -716,7 +786,9 @@ class CommunityRepository {
     );
     if (response.statusCode == 200) {
       final data = ApiResponseParser.unwrapMap(
-          response.data, action: 'getModerationSettings',);
+        response.data,
+        action: 'getModerationSettings',
+      );
       return GroupModerationSettings.fromJson(data);
     }
     throw Exception('Failed to load moderation settings');
@@ -824,5 +896,313 @@ class CommunityRepository {
           .toList();
     }
     throw Exception('Failed to load blocked users');
+  }
+
+  // ── Privacy Settings ──────────────────────────────────────────────────────
+
+  /// 获取隐私设置
+  Future<UserPrivacySettings> getPrivacySettings() async {
+    final response = await _apiClient.get<dynamic>(
+      ApiEndpoints.userPrivacy,
+    );
+    if (response.statusCode == 200) {
+      final data = ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'getPrivacySettings',
+      );
+      return UserPrivacySettings.fromJson(data);
+    }
+    throw Exception('Failed to load privacy settings');
+  }
+
+  /// 更新隐私设置
+  Future<void> updatePrivacySettings(UserPrivacySettings settings) async {
+    await _apiClient.put<dynamic>(
+      ApiEndpoints.userPrivacy,
+      data: settings.toJson(),
+    );
+  }
+
+  // ── Broadcast ──────────────────────────────────────────────────────────────
+
+  /// 发送跨群广播消息
+  Future<BroadcastMessageInfo> createBroadcast(
+    BroadcastMessageCreate request,
+  ) async {
+    final response = await _apiClient.post<dynamic>(
+      ApiEndpoints.broadcast,
+      data: request.toJson(),
+    );
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final data = ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'createBroadcast',
+      );
+      return BroadcastMessageInfo.fromJson(data);
+    }
+    throw Exception('Failed to create broadcast');
+  }
+
+  // ── Offline Queue ──────────────────────────────────────────────────────────
+
+  /// 获取待发送的离线消息
+  Future<List<OfflineMessageInfo>> getPendingOfflineMessages() async {
+    final response = await _apiClient.get<dynamic>(
+      ApiEndpoints.offlineQueuePending,
+    );
+    if (response.statusCode == 200) {
+      final data = ApiResponseParser.unwrapList(
+        response.data,
+        action: 'getPendingOfflineMessages',
+      );
+      return data
+          .map((e) => OfflineMessageInfo.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+    throw Exception('Failed to load pending offline messages');
+  }
+
+  /// 获取发送失败的离线消息
+  Future<List<OfflineMessageInfo>> getFailedOfflineMessages() async {
+    final response = await _apiClient.get<dynamic>(
+      ApiEndpoints.offlineQueueFailed,
+    );
+    if (response.statusCode == 200) {
+      final data = ApiResponseParser.unwrapList(
+        response.data,
+        action: 'getFailedOfflineMessages',
+      );
+      return data
+          .map((e) => OfflineMessageInfo.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+    throw Exception('Failed to load failed offline messages');
+  }
+
+  /// 重试发送失败的离线消息
+  Future<void> retryOfflineMessages(List<String> messageIds) async {
+    await _apiClient.post<dynamic>(
+      ApiEndpoints.offlineQueueRetry,
+      data: {'message_ids': messageIds},
+    );
+  }
+
+  // ── Encryption Keys ────────────────────────────────────────────────────────
+
+  /// 注册加密公钥
+  Future<EncryptionKeyInfo> registerEncryptionKey(
+    EncryptionKeyCreate request,
+  ) async {
+    final response = await _apiClient.post<dynamic>(
+      ApiEndpoints.encryptionKeys,
+      data: request.toJson(),
+    );
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final data = ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'registerEncryptionKey',
+      );
+      return EncryptionKeyInfo.fromJson(data);
+    }
+    throw Exception('Failed to register encryption key');
+  }
+
+  /// 获取用户公钥列表
+  Future<List<EncryptionKeyInfo>> getUserPublicKeys(String userId) async {
+    final response = await _apiClient.get<dynamic>(
+      ApiEndpoints.userPublicKey(userId),
+    );
+    if (response.statusCode == 200) {
+      final data = ApiResponseParser.unwrapList(
+        response.data,
+        action: 'getUserPublicKeys',
+      );
+      return data
+          .map((e) => EncryptionKeyInfo.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+    throw Exception('Failed to load user public keys');
+  }
+
+  /// 撤销加密密钥
+  Future<void> revokeEncryptionKey(String keyId) async {
+    await _apiClient.delete<dynamic>(ApiEndpoints.encryptionKey(keyId));
+  }
+
+  // ── Group Files ────────────────────────────────────────────────────────────
+
+  /// 获取群文件列表
+  Future<List<GroupFileInfo>> getGroupFiles(
+    String groupId, {
+    String? category,
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    final response = await _apiClient.get<dynamic>(
+      ApiEndpoints.groupFiles(groupId),
+      queryParameters: {
+        if (category != null) 'category': category,
+        'limit': limit,
+        'offset': offset,
+      },
+    );
+    if (response.statusCode == 200) {
+      final data = ApiResponseParser.unwrapList(
+        response.data,
+        action: 'getGroupFiles',
+      );
+      return data
+          .map((e) => GroupFileInfo.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+    throw Exception('Failed to load group files');
+  }
+
+  /// 分享文件到群组
+  Future<GroupFileInfo> shareFileToGroup(
+    String groupId,
+    GroupFileShareRequest request,
+  ) async {
+    final response = await _apiClient.post<dynamic>(
+      ApiEndpoints.groupFileShare(groupId, request.fileId),
+      data: request.toJson(),
+    );
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final data = ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'shareFileToGroup',
+      );
+      return GroupFileInfo.fromJson(data);
+    }
+    throw Exception('Failed to share file to group');
+  }
+
+  /// 更新群文件权限
+  Future<GroupFileInfo> updateGroupFilePermissions(
+    String groupId,
+    String fileId,
+    GroupFilePermissionUpdate permissions,
+  ) async {
+    final response = await _apiClient.put<dynamic>(
+      ApiEndpoints.groupFilePermissions(groupId, fileId),
+      data: permissions.toJson(),
+    );
+    if (response.statusCode == 200) {
+      final data = ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'updateGroupFilePermissions',
+      );
+      return GroupFileInfo.fromJson(data);
+    }
+    throw Exception('Failed to update file permissions');
+  }
+
+  /// 获取群文件分类统计
+  Future<List<GroupFileCategoryStat>> getGroupFileCategories(
+    String groupId,
+  ) async {
+    final response = await _apiClient.get<dynamic>(
+      ApiEndpoints.groupFileCategories(groupId),
+    );
+    if (response.statusCode == 200) {
+      final data = ApiResponseParser.unwrapList(
+        response.data,
+        action: 'getGroupFileCategories',
+      );
+      return data
+          .map((e) => GroupFileCategoryStat.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+    throw Exception('Failed to load file categories');
+  }
+
+  // ── Shared Resources ───────────────────────────────────────────────────────
+
+  /// 分享资源到群组
+  Future<SharedResourceInfo> shareResource(SharedResourceCreate request) async {
+    final response = await _apiClient.post<dynamic>(
+      ApiEndpoints.communityShare,
+      data: request.toJson(),
+    );
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final data = ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'shareResource',
+      );
+      return SharedResourceInfo.fromJson(data);
+    }
+    throw Exception('Failed to share resource');
+  }
+
+  /// 获取群组共享资源
+  Future<List<SharedResourceInfo>> getGroupResources(
+    String groupId, {
+    SharedResourceType? type,
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    final response = await _apiClient.get<dynamic>(
+      ApiEndpoints.groupResources(groupId),
+      queryParameters: {
+        if (type != null) 'resource_type': type.name,
+        'limit': limit,
+        'offset': offset,
+      },
+    );
+    if (response.statusCode == 200) {
+      final data = ApiResponseParser.unwrapList(
+        response.data,
+        action: 'getGroupResources',
+      );
+      return data
+          .map((e) => SharedResourceInfo.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+    throw Exception('Failed to load group resources');
+  }
+
+  /// 采纳共享资源
+  Future<void> adoptSharedResource(String shareId) async {
+    await _apiClient.post<dynamic>(
+      ApiEndpoints.adoptSharedResource(shareId),
+    );
+  }
+
+  // ── Message Reports Management ─────────────────────────────────────────────
+
+  /// 获取群组待处理举报
+  Future<List<MessageReportInfo>> getPendingReports(String groupId) async {
+    final response = await _apiClient.get<dynamic>(
+      ApiEndpoints.groupReports(groupId),
+    );
+    if (response.statusCode == 200) {
+      final data = ApiResponseParser.unwrapList(
+        response.data,
+        action: 'getPendingReports',
+      );
+      return data
+          .map((e) => MessageReportInfo.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+    throw Exception('Failed to load pending reports');
+  }
+
+  /// 审核举报
+  Future<MessageReportInfo> reviewReport(
+    String reportId,
+    MessageReportReview review,
+  ) async {
+    final response = await _apiClient.put<dynamic>(
+      ApiEndpoints.messageReportReview(reportId),
+      data: review.toJson(),
+    );
+    if (response.statusCode == 200) {
+      final data = ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'reviewReport',
+      );
+      return MessageReportInfo.fromJson(data);
+    }
+    throw Exception('Failed to review report');
   }
 }

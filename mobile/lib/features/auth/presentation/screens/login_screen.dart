@@ -270,21 +270,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           variant: ButtonVariant.ghost,
                           expand: true,
                         ),
-                        const SizedBox(height: DS.sm),
-                        SparkleButton(
-                          label: l10n.authDemoLogin,
-                          onPressed: authState.isLoading
-                              ? null
-                              : () async {
-                                  await ref
-                                      .read(authProvider.notifier)
-                                      .loginAsDemoAccount();
-                                },
-                          loading: authState.isLoading,
-                          disabled: authState.isLoading,
-                          variant: ButtonVariant.ghost,
-                          expand: true,
-                        ),
                         const SizedBox(height: DS.spacing12),
                       ],
                     ),

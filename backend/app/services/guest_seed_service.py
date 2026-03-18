@@ -178,6 +178,10 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
     user.curiosity_preference = 0.8
     user.avatar_url = f"https://api.dicebear.com/9.x/avataaars/png?seed={user.username}"
 
+    # 访客用户设置较高的初始积分（让访客能体验积分系统，但不能转账）
+    user.photon_balance = 1000
+    user.photon_updated_at = datetime.utcnow()
+
     # Achievements
     await _ensure_achievements(session)
     await session.flush()

@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
+import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/features/photon/presentation/providers/photon_provider.dart';
 
 /// Photon Transfer Screen
@@ -34,6 +36,7 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
   @override
   Widget build(BuildContext context) {
     final balanceState = ref.watch(photonBalanceProvider);
+    final isGuestMode = ref.watch(guestServiceProvider).isGuestMode;
     final currentBalance = balanceState.balance?.balance ?? 0;
 
     return SparklePageScaffold(
@@ -48,6 +51,30 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Guest mode warning banner
+              if (isGuestMode)
+                Container(
+                  margin: const EdgeInsets.only(bottom: DS.lg),
+                  padding: const EdgeInsets.all(DS.md),
+                  decoration: BoxDecoration(
+                    color: DS.warningLight,
+                    borderRadius: BorderRadius.circular(DS.radiusMd),
+                    border: Border.all(color: DS.warning.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline, color: DS.warning),
+                      const SizedBox(width: DS.sm),
+                      Expanded(
+                        child: Text(
+                          '访客模式不支持转账功能，请注册账户体验完整功能',
+                          style: TextStyle(color: DS.warning),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
               // Current Balance Card
               GraphiteCardSurface(
                 surfaceRole: SparkleSurfaceRole.accent,
@@ -183,7 +210,7 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
                 child: SparkleButton(
                   label: '确认转账',
                   expand: true,
-                  onPressed: _isTransferring
+                  onPressed: isGuestMode || _isTransferring
                       ? null
                       : () {
                           if (_formKey.currentState!.validate()) {
@@ -302,12 +329,19 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
     });
 
     try {
-      // TODO: Implement actual transfer API call
-      // For now, just simulate
-      await Future<void>.delayed(const Duration(seconds: 2));
+      final repository = ref.read(photonRepositoryProvider);
+      await repository.transferPhotons(
+        recipientId: _recipientIdController.text.trim(),
+        amount: int.parse(_amountController.text),
+        message: _messageController.text.trim().isNotEmpty
+            ? _messageController.text.trim()
+            : null,
+      );
 
       if (mounted) {
         AppFeedback.success(context, '转账成功');
+        // Refresh balance
+        ref.read(photonBalanceProvider.notifier).refreshBalance();
         Navigator.of(context).pop();
       }
     } catch (e) {

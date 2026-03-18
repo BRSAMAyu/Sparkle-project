@@ -198,35 +198,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  Future<void> loginAsDemoAccount() async {
-    state = state.copyWith(isLoading: true);
-    try {
-      // ✅ 演示账号登录：使用真实账户chat_test + 预设数据库数据
-      // 必须关闭DemoMode以确保从后端API读取真实数据
-      DemoDataService.isDemoMode = false;
-      await _ref
-          .read(sharedPreferencesProvider)
-          .setBool(_demoGuestModePreferenceKey, false);
-      debugPrint('🎬 Demo account login (real data from backend)');
-
-      final user = await _authRepository.login('chat_test', 'Chat123456');
-      state = state.copyWith(
-        isLoading: false,
-        isAuthenticated: true,
-        user: user,
-      );
-      debugPrint(
-        '✅ Demo account login successful, fetching real data from API',
-      );
-    } catch (e) {
-      debugPrint('⚠️ Demo account login failed: $e');
-      state = state.copyWith(
-        isLoading: false,
-        isAuthenticated: false,
-        error: e.toString(),
-      );
-    }
-  }
 
   Future<void> refreshUser() async {
     if (state.isAuthenticated) {

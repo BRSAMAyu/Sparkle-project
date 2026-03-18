@@ -1228,3 +1228,206 @@ Map<String, dynamic> _$BlockUserInfoToJson(BlockUserInfo instance) =>
       'blocked_user': instance.blockedUser,
       'reason': instance.reason,
     };
+
+UserPrivacySettings _$UserPrivacySettingsFromJson(Map<String, dynamic> json) =>
+    UserPrivacySettings(
+      searchableBy:
+          $enumDecode(_$SearchVisibilityEnumMap, json['searchable_by']),
+    );
+
+Map<String, dynamic> _$UserPrivacySettingsToJson(
+        UserPrivacySettings instance) =>
+    <String, dynamic>{
+      'searchable_by': _$SearchVisibilityEnumMap[instance.searchableBy]!,
+    };
+
+const _$SearchVisibilityEnumMap = {
+  SearchVisibility.everyone: 'everyone',
+  SearchVisibility.friends: 'friends',
+  SearchVisibility.nobody: 'nobody',
+};
+
+GroupFileInfo _$GroupFileInfoFromJson(Map<String, dynamic> json) =>
+    GroupFileInfo(
+      id: json['id'] as String,
+      groupId: json['group_id'] as String,
+      uploaderId: json['uploader_id'] as String,
+      fileName: json['file_name'] as String,
+      fileSize: (json['file_size'] as num).toInt(),
+      mimeType: json['mime_type'] as String,
+      fileUrl: json['file_url'] as String,
+      permissions: GroupFilePermissions.fromJson(
+          json['permissions'] as Map<String, dynamic>),
+      createdAt: DateTime.parse(json['created_at'] as String),
+      description: json['description'] as String?,
+      category: json['category'] as String?,
+      tags: (json['tags'] as List<dynamic>?)?.map((e) => e as String).toList(),
+      uploader: json['uploader'] == null
+          ? null
+          : UserBrief.fromJson(json['uploader'] as Map<String, dynamic>),
+    );
+
+Map<String, dynamic> _$GroupFileInfoToJson(GroupFileInfo instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'group_id': instance.groupId,
+      'uploader_id': instance.uploaderId,
+      'file_name': instance.fileName,
+      'file_size': instance.fileSize,
+      'mime_type': instance.mimeType,
+      'file_url': instance.fileUrl,
+      'description': instance.description,
+      'category': instance.category,
+      'tags': instance.tags,
+      'permissions': instance.permissions,
+      'created_at': instance.createdAt.toIso8601String(),
+      'uploader': instance.uploader,
+    };
+
+GroupFilePermissions _$GroupFilePermissionsFromJson(
+        Map<String, dynamic> json) =>
+    GroupFilePermissions(
+      canView: (json['can_view'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+      canDownload: (json['can_download'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+      canDelete: (json['can_delete'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+    );
+
+Map<String, dynamic> _$GroupFilePermissionsToJson(
+        GroupFilePermissions instance) =>
+    <String, dynamic>{
+      'can_view': instance.canView,
+      'can_download': instance.canDownload,
+      'can_delete': instance.canDelete,
+    };
+
+GroupFilePermissionUpdate _$GroupFilePermissionUpdateFromJson(
+        Map<String, dynamic> json) =>
+    GroupFilePermissionUpdate(
+      canView: (json['can_view'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
+      canDownload: (json['can_download'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
+      canDelete: (json['can_delete'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
+    );
+
+Map<String, dynamic> _$GroupFilePermissionUpdateToJson(
+        GroupFilePermissionUpdate instance) =>
+    <String, dynamic>{
+      'can_view': instance.canView,
+      'can_download': instance.canDownload,
+      'can_delete': instance.canDelete,
+    };
+
+GroupFileCategoryStat _$GroupFileCategoryStatFromJson(
+        Map<String, dynamic> json) =>
+    GroupFileCategoryStat(
+      category: json['category'] as String,
+      count: (json['count'] as num).toInt(),
+      totalSize: (json['total_size'] as num).toInt(),
+    );
+
+Map<String, dynamic> _$GroupFileCategoryStatToJson(
+        GroupFileCategoryStat instance) =>
+    <String, dynamic>{
+      'category': instance.category,
+      'count': instance.count,
+      'total_size': instance.totalSize,
+    };
+
+GroupFileShareRequest _$GroupFileShareRequestFromJson(
+        Map<String, dynamic> json) =>
+    GroupFileShareRequest(
+      fileId: json['file_id'] as String,
+      description: json['description'] as String?,
+      category: json['category'] as String?,
+      tags: (json['tags'] as List<dynamic>?)?.map((e) => e as String).toList(),
+    );
+
+Map<String, dynamic> _$GroupFileShareRequestToJson(
+        GroupFileShareRequest instance) =>
+    <String, dynamic>{
+      'file_id': instance.fileId,
+      'description': instance.description,
+      'category': instance.category,
+      'tags': instance.tags,
+    };
+
+SharedResourceInfo _$SharedResourceInfoFromJson(Map<String, dynamic> json) =>
+    SharedResourceInfo(
+      id: json['id'] as String,
+      resourceType:
+          $enumDecode(_$SharedResourceTypeEnumMap, json['resource_type']),
+      resourceId: json['resource_id'] as String,
+      sharerId: json['sharer_id'] as String,
+      groupIds:
+          (json['group_ids'] as List<dynamic>).map((e) => e as String).toList(),
+      createdAt: DateTime.parse(json['created_at'] as String),
+      resourceData: json['resource_data'] as Map<String, dynamic>?,
+      sharer: json['sharer'] == null
+          ? null
+          : UserBrief.fromJson(json['sharer'] as Map<String, dynamic>),
+      adoptCount: (json['adopt_count'] as num?)?.toInt(),
+    );
+
+Map<String, dynamic> _$SharedResourceInfoToJson(SharedResourceInfo instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'resource_type': _$SharedResourceTypeEnumMap[instance.resourceType]!,
+      'resource_id': instance.resourceId,
+      'sharer_id': instance.sharerId,
+      'resource_data': instance.resourceData,
+      'group_ids': instance.groupIds,
+      'created_at': instance.createdAt.toIso8601String(),
+      'sharer': instance.sharer,
+      'adopt_count': instance.adoptCount,
+    };
+
+const _$SharedResourceTypeEnumMap = {
+  SharedResourceType.task: 'task',
+  SharedResourceType.plan: 'plan',
+  SharedResourceType.fragment: 'fragment',
+  SharedResourceType.capsule: 'capsule',
+  SharedResourceType.achievement: 'achievement',
+  SharedResourceType.file: 'file',
+};
+
+SharedResourceCreate _$SharedResourceCreateFromJson(
+        Map<String, dynamic> json) =>
+    SharedResourceCreate(
+      resourceType:
+          $enumDecode(_$SharedResourceTypeEnumMap, json['resource_type']),
+      resourceId: json['resource_id'] as String,
+      groupIds:
+          (json['group_ids'] as List<dynamic>).map((e) => e as String).toList(),
+    );
+
+Map<String, dynamic> _$SharedResourceCreateToJson(
+        SharedResourceCreate instance) =>
+    <String, dynamic>{
+      'resource_type': _$SharedResourceTypeEnumMap[instance.resourceType]!,
+      'resource_id': instance.resourceId,
+      'group_ids': instance.groupIds,
+    };
+
+UserStatusUpdate _$UserStatusUpdateFromJson(Map<String, dynamic> json) =>
+    UserStatusUpdate(
+      status: json['status'] as String,
+    );
+
+Map<String, dynamic> _$UserStatusUpdateToJson(UserStatusUpdate instance) =>
+    <String, dynamic>{
+      'status': instance.status,
+    };

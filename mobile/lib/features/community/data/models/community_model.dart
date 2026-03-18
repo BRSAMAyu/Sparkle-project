@@ -1295,3 +1295,229 @@ class BlockUserInfo {
   final String? reason;
   Map<String, dynamic> toJson() => _$BlockUserInfoToJson(this);
 }
+
+// ============ 隐私设置 ============
+
+enum SearchVisibility {
+  @JsonValue('everyone')
+  everyone,
+  @JsonValue('friends')
+  friends,
+  @JsonValue('nobody')
+  nobody,
+}
+
+@JsonSerializable()
+class UserPrivacySettings {
+  UserPrivacySettings({
+    required this.searchableBy,
+  });
+
+  factory UserPrivacySettings.fromJson(Map<String, dynamic> json) =>
+      _$UserPrivacySettingsFromJson(json);
+  @JsonKey(name: 'searchable_by')
+  final SearchVisibility searchableBy;
+  Map<String, dynamic> toJson() => _$UserPrivacySettingsToJson(this);
+}
+
+// ============ 群文件 ============
+
+@JsonSerializable()
+class GroupFileInfo {
+  GroupFileInfo({
+    required this.id,
+    required this.groupId,
+    required this.uploaderId,
+    required this.fileName,
+    required this.fileSize,
+    required this.mimeType,
+    required this.fileUrl,
+    required this.permissions,
+    required this.createdAt,
+    this.description,
+    this.category,
+    this.tags,
+    this.uploader,
+  });
+
+  factory GroupFileInfo.fromJson(Map<String, dynamic> json) =>
+      _$GroupFileInfoFromJson(json);
+  final String id;
+  @JsonKey(name: 'group_id')
+  final String groupId;
+  @JsonKey(name: 'uploader_id')
+  final String uploaderId;
+  @JsonKey(name: 'file_name')
+  final String fileName;
+  @JsonKey(name: 'file_size')
+  final int fileSize;
+  @JsonKey(name: 'mime_type')
+  final String mimeType;
+  @JsonKey(name: 'file_url')
+  final String fileUrl;
+  final String? description;
+  final String? category;
+  final List<String>? tags;
+  final GroupFilePermissions permissions;
+  @JsonKey(name: 'created_at')
+  final DateTime createdAt;
+  final UserBrief? uploader;
+  Map<String, dynamic> toJson() => _$GroupFileInfoToJson(this);
+}
+
+@JsonSerializable()
+class GroupFilePermissions {
+  GroupFilePermissions({
+    this.canView = const [],
+    this.canDownload = const [],
+    this.canDelete = const [],
+  });
+
+  factory GroupFilePermissions.fromJson(Map<String, dynamic> json) =>
+      _$GroupFilePermissionsFromJson(json);
+  @JsonKey(name: 'can_view')
+  final List<String> canView;
+  @JsonKey(name: 'can_download')
+  final List<String> canDownload;
+  @JsonKey(name: 'can_delete')
+  final List<String> canDelete;
+  Map<String, dynamic> toJson() => _$GroupFilePermissionsToJson(this);
+}
+
+@JsonSerializable()
+class GroupFilePermissionUpdate {
+  GroupFilePermissionUpdate({
+    this.canView,
+    this.canDownload,
+    this.canDelete,
+  });
+
+  factory GroupFilePermissionUpdate.fromJson(Map<String, dynamic> json) =>
+      _$GroupFilePermissionUpdateFromJson(json);
+  @JsonKey(name: 'can_view')
+  final List<String>? canView;
+  @JsonKey(name: 'can_download')
+  final List<String>? canDownload;
+  @JsonKey(name: 'can_delete')
+  final List<String>? canDelete;
+  Map<String, dynamic> toJson() => _$GroupFilePermissionUpdateToJson(this);
+}
+
+@JsonSerializable()
+class GroupFileCategoryStat {
+  GroupFileCategoryStat({
+    required this.category,
+    required this.count,
+    required this.totalSize,
+  });
+
+  factory GroupFileCategoryStat.fromJson(Map<String, dynamic> json) =>
+      _$GroupFileCategoryStatFromJson(json);
+  final String category;
+  final int count;
+  @JsonKey(name: 'total_size')
+  final int totalSize;
+  Map<String, dynamic> toJson() => _$GroupFileCategoryStatToJson(this);
+}
+
+@JsonSerializable()
+class GroupFileShareRequest {
+  GroupFileShareRequest({
+    required this.fileId,
+    this.description,
+    this.category,
+    this.tags,
+  });
+
+  factory GroupFileShareRequest.fromJson(Map<String, dynamic> json) =>
+      _$GroupFileShareRequestFromJson(json);
+  @JsonKey(name: 'file_id')
+  final String fileId;
+  final String? description;
+  final String? category;
+  final List<String>? tags;
+  Map<String, dynamic> toJson() => _$GroupFileShareRequestToJson(this);
+}
+
+// ============ 共享资源 ============
+
+enum SharedResourceType {
+  @JsonValue('task')
+  task,
+  @JsonValue('plan')
+  plan,
+  @JsonValue('fragment')
+  fragment,
+  @JsonValue('capsule')
+  capsule,
+  @JsonValue('achievement')
+  achievement,
+  @JsonValue('file')
+  file,
+}
+
+@JsonSerializable()
+class SharedResourceInfo {
+  SharedResourceInfo({
+    required this.id,
+    required this.resourceType,
+    required this.resourceId,
+    required this.sharerId,
+    required this.groupIds,
+    required this.createdAt,
+    this.resourceData,
+    this.sharer,
+    this.adoptCount,
+  });
+
+  factory SharedResourceInfo.fromJson(Map<String, dynamic> json) =>
+      _$SharedResourceInfoFromJson(json);
+  final String id;
+  @JsonKey(name: 'resource_type')
+  final SharedResourceType resourceType;
+  @JsonKey(name: 'resource_id')
+  final String resourceId;
+  @JsonKey(name: 'sharer_id')
+  final String sharerId;
+  @JsonKey(name: 'resource_data')
+  final Map<String, dynamic>? resourceData;
+  @JsonKey(name: 'group_ids')
+  final List<String> groupIds;
+  @JsonKey(name: 'created_at')
+  final DateTime createdAt;
+  final UserBrief? sharer;
+  @JsonKey(name: 'adopt_count')
+  final int? adoptCount;
+  Map<String, dynamic> toJson() => _$SharedResourceInfoToJson(this);
+}
+
+@JsonSerializable()
+class SharedResourceCreate {
+  SharedResourceCreate({
+    required this.resourceType,
+    required this.resourceId,
+    required this.groupIds,
+  });
+
+  factory SharedResourceCreate.fromJson(Map<String, dynamic> json) =>
+      _$SharedResourceCreateFromJson(json);
+  @JsonKey(name: 'resource_type')
+  final SharedResourceType resourceType;
+  @JsonKey(name: 'resource_id')
+  final String resourceId;
+  @JsonKey(name: 'group_ids')
+  final List<String> groupIds;
+  Map<String, dynamic> toJson() => _$SharedResourceCreateToJson(this);
+}
+
+@JsonSerializable()
+class UserStatusUpdate {
+  UserStatusUpdate({
+    required this.status,
+  });
+
+  factory UserStatusUpdate.fromJson(Map<String, dynamic> json) =>
+      _$UserStatusUpdateFromJson(json);
+  final String status;
+  Map<String, dynamic> toJson() => _$UserStatusUpdateToJson(this);
+}

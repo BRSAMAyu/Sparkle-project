@@ -196,6 +196,8 @@ class ApiEndpoints {
       '/community/groups/$groupId/members/$userId/unmute';
   static String groupMemberWarn(String groupId, String userId) =>
       '/community/groups/$groupId/members/$userId/warn';
+  static String groupReports(String groupId) =>
+      '/community/groups/$groupId/reports';
 
   // Community - Message Reports
   static const String messageReports = '/community/reports';
@@ -214,9 +216,17 @@ class ApiEndpoints {
 
   // Community - Friend Management (Phase 4)
   static const String friendsBlocked = '/community/users/blocked';
-  static String friendDelete(String friendshipId) => '/community/friends/$friendshipId';
+  static String friendDelete(String friendshipId) =>
+      '/community/friends/$friendshipId';
   static const String userBlock = '/community/users/block';
   static String userUnblock(String userId) => '/community/users/block/$userId';
+
+  // Community - Privacy Settings
+  static const String userPrivacy = '/community/users/privacy';
+
+  // Community - Shared Resources
+  static String groupResources(String groupId) =>
+      '/community/groups/$groupId/resources';
 
   // Community - Broadcast
   static const String broadcast = '/community/broadcast';
@@ -274,7 +284,8 @@ class ApiEndpoints {
   static const String achievementsStats = '/achievements/stats';
   static const String achievementsMap = '/achievements/map';
   static const String achievementsStreak = '/achievements/streak';
-  static const String achievementsStreakHistory = '/achievements/streak/history';
+  static const String achievementsStreakHistory =
+      '/achievements/streak/history';
   static String achievementDetail(String id) => '/achievements/$id';
   static String achievementShare(String id) => '/achievements/$id/share';
   static String achievementPin(String id) => '/achievements/$id/pin';
@@ -392,7 +403,8 @@ class ApiEndpoints {
       '/accountability/checkin/$id/like';
   static String accountabilityCheckinEncourage(String id) =>
       '/accountability/checkin/$id/encourage';
-  static const String accountabilityAchievements = '/accountability/achievements';
+  static const String accountabilityAchievements =
+      '/accountability/achievements';
   static String accountabilityPartnershipAchievements(String id) =>
       '/accountability/$id/achievements';
 

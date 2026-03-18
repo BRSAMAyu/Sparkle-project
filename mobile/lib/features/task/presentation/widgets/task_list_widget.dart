@@ -65,7 +65,7 @@ class _TaskListWidgetState extends State<TaskListWidget> {
                     widget.toolResultId!.trim().isNotEmpty &&
                     widget.onConfirmAll != null &&
                     !_confirmed)
-                  SparkleButton.primary(
+                  SparkleButton(
                     label: _isConfirming ? '确认中...' : '确认全部任务',
                     icon: const Icon(Icons.check_circle_outline),
                     onPressed: _isConfirming ? null : _handleConfirmAll,
