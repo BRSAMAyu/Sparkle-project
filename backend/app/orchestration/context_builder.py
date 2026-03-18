@@ -218,6 +218,35 @@ class ContextBuilderMixin:
         return {"has_cognitive_patterns": False}
 
     # ------------------------------------------------------------------
+    # _get_seed_library_context
+    # ------------------------------------------------------------------
+
+    async def _get_seed_library_context(
+        self, user_id: str, db_session: AsyncSession, subject: str | None = None
+    ) -> dict[str, Any]:
+        """获取用户已订阅种子库的 few-shot 示例，注入 LLM 上下文。"""
+        try:
+            from app.services.seed_library_service import SeedLibraryService
+
+            service = SeedLibraryService()
+            examples = await service.get_few_shot_examples(
+                db=db_session,
+                user_id=uuid.UUID(user_id),
+                subject=subject,
+                count=3,
+            )
+            if examples:
+                return {
+                    "has_seed_library": True,
+                    "few_shot_examples": examples,
+                    "example_count": len(examples),
+                }
+        except Exception as e:
+            logger.warning(f"Failed to get seed library context for {user_id}: {e}")
+
+        return {"has_seed_library": False}
+
+    # ------------------------------------------------------------------
     # _get_recent_sentiment_distribution
     # ------------------------------------------------------------------
 
@@ -382,6 +411,9 @@ class ContextBuilderMixin:
                 # P0: 认知棱镜上下文注入
                 cognitive_insights = await self._get_cognitive_insights(user_id, db_session)
 
+                # P1: 种子库 few-shot 示例注入
+                seed_library_context = await self._get_seed_library_context(user_id, db_session)
+
                 profile_payload = self._build_profile_payload(
                     user_context_data=user_context_data,
                     preferences=cognitive_context.preferences,
@@ -417,7 +449,10 @@ class ContextBuilderMixin:
                     "cognitive_context": cognitive_context.model_dump(exclude={'user_id', 'timestamp'}),
 
                     # 认知棱镜数据
-                    "cognitive_insights": cognitive_insights
+                    "cognitive_insights": cognitive_insights,
+
+                    # 种子库 few-shot 示例
+                    "seed_library": seed_library_context,
                 }
 
             # Fallback to legacy logic if new orchestrator returns None (shouldn't happen)

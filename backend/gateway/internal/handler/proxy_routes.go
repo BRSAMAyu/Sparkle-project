@@ -155,6 +155,25 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	}
 	h.logger.Info("Registered capsules proxy routes")
 
+	// ==================== Seed Libraries Routes ====================
+	seedLibs := api.Group("/seed-libraries")
+	seedLibs.Use(authMiddleware)
+	{
+		seedLibs.GET("", h.proxyWithHeaders)
+		seedLibs.POST("", h.proxyWithHeaders)
+		seedLibs.GET("/subscriptions/me", h.proxyWithHeaders)
+		seedLibs.GET("/examples/few-shot", h.proxyWithHeaders)
+		seedLibs.POST("/query", h.proxyWithHeaders)
+		seedLibs.POST("/subscribe/:id", h.proxyWithHeaders)
+		seedLibs.DELETE("/subscribe/:id", h.proxyWithHeaders)
+		seedLibs.GET("/:id", h.proxyWithHeaders)
+		seedLibs.PUT("/:id", h.proxyWithHeaders)
+		seedLibs.DELETE("/:id", h.proxyWithHeaders)
+		seedLibs.POST("/:id/items", h.proxyWithHeaders)
+		seedLibs.GET("/:id/items", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered seed-libraries proxy routes")
+
 	// ==================== Community Routes ====================
 	community := api.Group("/community")
 	community.Use(authMiddleware)

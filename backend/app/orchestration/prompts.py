@@ -836,6 +836,25 @@ def build_system_prompt(
     # 2.7 格式化认知棱镜指令
     cognitive_prism_section = _format_cognitive_prism_section(user_context, context_focus=context_focus)
 
+    # 2.8 格式化种子库 few-shot 示例
+    seed_library_section = ""
+    seed_lib = user_context.get("seed_library") if isinstance(user_context, dict) else None
+    if isinstance(seed_lib, dict) and seed_lib.get("has_seed_library"):
+        examples = seed_lib.get("few_shot_examples", [])
+        if examples:
+            example_lines = []
+            for ex in examples[:3]:
+                inp = str(ex.get("input", "")).strip()
+                out = str(ex.get("output", "")).strip()
+                if inp and out:
+                    example_lines.append(f"- 问: {inp}\n  答: {out}")
+            if example_lines:
+                seed_library_section = (
+                    "\n## 参考示例（来自用户订阅的种子库） [L3 背景]\n"
+                    "以下是该学科/领域的高质量问答示例，请参考其风格和深度：\n"
+                    + "\n".join(example_lines)
+                )
+
     context_briefing_section = ""
     if context_briefing_note:
         context_briefing_section = f"## 本轮关键上下文摘要 [L0 简报]\n{context_briefing_note}"
@@ -907,6 +926,7 @@ def build_system_prompt(
         "persona_section": persona_section,
         "agent_memory_section": agent_memory_section,
         "cognitive_prism_section": cognitive_prism_section,
+        "seed_library_section": seed_library_section,
         "conversation_history_section": f"[优先级：L3 背景]\n{conversation_history_section}".strip() if conversation_history_section else "",
         "task_awareness_section": f"[优先级：L3 背景]\n{TASK_AWARENESS_SECTION}".strip(),
     }
@@ -924,6 +944,7 @@ def build_system_prompt(
             "persona_section": 2,
             "agent_memory_section": 2,
             "cognitive_prism_section": cognitive_priority,
+            "seed_library_section": 3,
             "conversation_history_section": 3,
             "task_awareness_section": 3,
         },
