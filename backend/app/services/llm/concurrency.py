@@ -2,57 +2,69 @@
 LLM 并发控制模块
 
 功能：
-1. Semaphore 控制并发请求数，避免 API 限流
-2. 按提供商分组限制
-3. 请求排队管理
-4. 支持根据用户等级动态调整并发数
+1. 按提供商分组限制并发，避免 API 限流
+2. 对 GLM batch 使用按时段自适应的动态并发
+3. 在 429 后立即退避，并逐步恢复到更优并发
+4. 提供可观测的运行时状态，供 batch 分发决策使用
 """
 from __future__ import annotations
 
 import asyncio
 import os
-from dataclasses import dataclass
+import time
+from dataclasses import dataclass, field
+from datetime import datetime
 from enum import Enum
+from zoneinfo import ZoneInfo
 
 from loguru import logger
+
+from app.config import settings
+from app.core.cache import cache_service
 
 
 class ProviderType(str, Enum):
     """LLM 提供商类型"""
-    ZHIPU = "zhipu"          # GLM API
-    ZHIPU_CODING = "zhipu_coding"  # GLM Coding / Batch API
-    DEEPSEEK = "deepseek"    # DeepSeek
-    XIAOMI = "xiaomi"        # XiaoMi MIMO
-    DASHSCOPE = "dashscope"  # Aliyun
-    SILICONFLOW = "siliconflow"  # SiliconFlow
+
+    ZHIPU = "zhipu"
+    ZHIPU_CODING = "zhipu_coding"
+    DEEPSEEK = "deepseek"
+    XIAOMI = "xiaomi"
+    DASHSCOPE = "dashscope"
+    SILICONFLOW = "siliconflow"
 
 
 @dataclass
 class ConcurrencyConfig:
     """并发配置"""
-    max_concurrent: int = 3    # 最大并发数（默认3，适合 GLM 限制）
-    queue_timeout: float = 30.0  # 排队超时（秒）
+
+    max_concurrent: int = 3
+    queue_timeout: float = 30.0
+    adaptive: bool = False
+    min_concurrent: int = 1
+
+
+@dataclass
+class ProviderRuntimeState:
+    """运行时并发状态"""
+
+    config: ConcurrencyConfig
+    current_limit: int
+    active: int = 0
+    waiting: int = 0
+    consecutive_successes: int = 0
+    total_successes: int = 0
+    total_rate_limits: int = 0
+    cooldown_until: float = 0.0
+    last_adjustment_at: float = 0.0
+    last_rate_limit_at: float = 0.0
+    last_bucket: str = ""
+    hydrated: bool = False
+    condition: asyncio.Condition = field(default_factory=asyncio.Condition)
 
 
 def _get_zhipu_concurrent_limit() -> int:
-    """
-    根据 GLM 用户等级获取并发限制
-
-    参考：https://www.bigmodel.cn/dev/howuse/rate-limits
-    - Free: 5 并发
-    - Level 1 (50-500元/月): 10 并发
-    - Level 2 (500-5000元/月): 20 并发
-    - Level 3 (5000-10000元/月): 30 并发
-    - Level 4 (1万-3万/月): 100 并发
-    - Level 5 (3万+/月): 200 并发
-
-    对于 GLM-4-Flash 模型有更高限制：
-    - Level 2: 50 并发
-    - Level 3: 100 并发
-    - Level 4: 200 并发
-    - Level 5: 300 并发
-    """
-    # 支持通过环境变量覆盖
+    """根据智谱套餐等级获取普通 API 并发限制。"""
     env_limit = os.getenv("ZHIPU_CONCURRENT_LIMIT")
     if env_limit:
         try:
@@ -60,40 +72,36 @@ def _get_zhipu_concurrent_limit() -> int:
         except ValueError:
             logger.warning(f"Invalid ZHIPU_CONCURRENT_LIMIT: {env_limit}")
 
-    # 检查用户等级配置
     env_level = os.getenv("ZHIPU_USER_LEVEL", "0").lower()
-
-    # 根据用户等级返回对应的并发数
     level_limits = {
         "free": 5,
-        "0": 5,      # Free
-        "1": 10,     # Level 1
-        "2": 20,     # Level 2 (50 for Flash models)
-        "3": 30,     # Level 3 (100 for Flash models)
-        "4": 100,    # Level 4 (200 for Flash models)
-        "5": 200,    # Level 5 (300 for Flash models)
-        "pro": 30,   # Pro 订阅默认对应 Level 3
+        "0": 5,
+        "1": 10,
+        "2": 20,
+        "3": 30,
+        "4": 100,
+        "5": 200,
+        "pro": 30,
     }
 
-    limit = level_limits.get(env_level, 30)  # 默认 Level 3 (Pro)
+    limit = level_limits.get(env_level, 30)
     logger.info(f"ZHIPU concurrent limit: {limit} (user_level={env_level})")
     return limit
 
 
-# 各提供商的并发限制配置
 PROVIDER_CONFIGS: dict[ProviderType, ConcurrencyConfig] = {
-    # GLM API - 根据 Pro 订阅等级动态设置
-    # Level 3 (Pro): 30 并发，Level 4+: 100-200 并发
     ProviderType.ZHIPU: ConcurrencyConfig(
         max_concurrent=_get_zhipu_concurrent_limit(),
         queue_timeout=30.0,
     ),
     ProviderType.ZHIPU_CODING: ConcurrencyConfig(
-        max_concurrent=min(int(os.getenv("GLM_BATCH_MAX_CONCURRENCY", "2")), 2),
+        max_concurrent=settings.GLM_BATCH_MAX_CONCURRENCY,
+        min_concurrent=settings.GLM_BATCH_MIN_CONCURRENCY,
         queue_timeout=120.0,
+        adaptive=True,
     ),
     ProviderType.DEEPSEEK: ConcurrencyConfig(
-        max_concurrent=10,  # DeepSeek Pro 支持更高并发
+        max_concurrent=10,
         queue_timeout=30.0,
     ),
     ProviderType.XIAOMI: ConcurrencyConfig(
@@ -112,121 +120,290 @@ PROVIDER_CONFIGS: dict[ProviderType, ConcurrencyConfig] = {
 
 
 class LLMConcurrencyManager:
-    """
-    LLM 并发管理器
+    """LLM 并发管理器。"""
 
-    使用 semaphore 限制对 LLM API 的并发请求数，避免触发 429 限流。
-
-    使用方式：
-        # 方式1: 使用 with 语句
-        async with llm_concurrency.acquire("zhipu"):
-            await llm_service.chat(...)
-
-        # 方式2: 使用装饰器
-        @llm_concurrency.limit("zhipu")
-        async def my_llm_call():
-            ...
-    """
+    _ADAPTIVE_LIMIT_KEY = "glm_batch:adaptive:hour:{bucket}:limit"
+    _DEFAULT_TIMEZONE = ZoneInfo("Asia/Shanghai")
 
     def __init__(self):
-        self._semaphores: dict[ProviderType, asyncio.Semaphore] = {}
-        self._waiters: dict[ProviderType, int] = {}  # 当前等待的请求数
+        self._runtime: dict[ProviderType, ProviderRuntimeState] = {}
         self._lock = asyncio.Lock()
-        self._initialize_semaphores()
+        self._initialize_runtime()
 
-    def _initialize_semaphores(self):
-        """初始化所有 semaphore"""
+    def _initialize_runtime(self):
         for provider_type, config in PROVIDER_CONFIGS.items():
-            self._semaphores[provider_type] = asyncio.Semaphore(config.max_concurrent)
-            self._waiters[provider_type] = 0
-        logger.info(f"LLMConcurrencyManager initialized with {len(self._semaphores)} providers")
+            initial_limit = min(config.max_concurrent, max(config.min_concurrent, config.max_concurrent))
+            if provider_type == ProviderType.ZHIPU_CODING:
+                initial_limit = self._default_glm_limit()
+            self._runtime[provider_type] = ProviderRuntimeState(
+                config=config,
+                current_limit=initial_limit,
+            )
+        logger.info(f"LLMConcurrencyManager initialized with {len(self._runtime)} providers")
 
     def _get_provider_type(self, provider: str) -> ProviderType:
-        """根据 provider 名称获取 ProviderType"""
         provider_lower = provider.lower()
         if provider_lower == ProviderType.ZHIPU_CODING.value:
             return ProviderType.ZHIPU_CODING
         for pt in ProviderType:
             if pt.value in provider_lower or provider_lower in pt.value:
                 return pt
-        # 默认返回 ZHIPU（最严格的限制）
         return ProviderType.ZHIPU
 
+    def _now(self) -> datetime:
+        return datetime.now(self._DEFAULT_TIMEZONE)
+
+    def _is_peak_hour(self, now: datetime | None = None) -> bool:
+        current = now or self._now()
+        start = int(settings.GLM_BATCH_PEAK_START_HOUR)
+        end = int(settings.GLM_BATCH_PEAK_END_HOUR)
+        hour = current.hour
+        if start == end:
+            return False
+        if start < end:
+            return start <= hour < end
+        return hour >= start or hour < end
+
+    def _bucket_for(self, now: datetime | None = None) -> str:
+        current = now or self._now()
+        return f"{current.hour:02d}"
+
+    def _adaptive_key(self, bucket: str) -> str:
+        return self._ADAPTIVE_LIMIT_KEY.format(bucket=bucket)
+
+    def _default_glm_limit(self, now: datetime | None = None) -> int:
+        current = now or self._now()
+        if self._is_peak_hour(current):
+            return settings.GLM_BATCH_PEAK_CONCURRENCY
+        return min(
+            settings.GLM_BATCH_MAX_CONCURRENCY,
+            max(settings.GLM_BATCH_PEAK_CONCURRENCY, settings.GLM_BATCH_OFFPEAK_DEFAULT_CONCURRENCY),
+        )
+
+    async def _hydrate_runtime_if_needed(self, provider_type: ProviderType) -> None:
+        state = self._runtime[provider_type]
+        if not state.config.adaptive or state.hydrated:
+            return
+
+        bucket = self._bucket_for()
+        learned_limit = await self._load_learned_limit(bucket)
+        default_limit = self._default_glm_limit()
+        async with state.condition:
+            state.last_bucket = bucket
+            state.current_limit = self._clamp_glm_limit(
+                learned_limit if learned_limit is not None else default_limit
+            )
+            state.hydrated = True
+            state.condition.notify_all()
+
+    async def _load_learned_limit(self, bucket: str) -> int | None:
+        redis_client = cache_service.redis
+        if redis_client is None:
+            return None
+        raw_value = await redis_client.get(self._adaptive_key(bucket))
+        if raw_value is None:
+            return None
+        try:
+            return int(raw_value)
+        except (TypeError, ValueError):
+            return None
+
+    async def _persist_learned_limit(self, bucket: str, limit: int) -> None:
+        redis_client = cache_service.redis
+        if redis_client is None:
+            return
+        await redis_client.set(self._adaptive_key(bucket), str(limit), ex=86400 * 14)
+
+    def _clamp_glm_limit(self, limit: int, now: datetime | None = None) -> int:
+        current = now or self._now()
+        min_limit = settings.GLM_BATCH_MIN_CONCURRENCY
+        max_limit = settings.GLM_BATCH_MAX_CONCURRENCY
+        if self._is_peak_hour(current):
+            max_limit = min(max_limit, settings.GLM_BATCH_PEAK_CONCURRENCY)
+        return max(min_limit, min(int(limit), max_limit))
+
+    async def _maybe_roll_bucket(self, provider_type: ProviderType) -> None:
+        state = self._runtime[provider_type]
+        if not state.config.adaptive:
+            return
+
+        bucket = self._bucket_for()
+        current_time = time.time()
+        if bucket == state.last_bucket:
+            if self._is_peak_hour():
+                peak_limit = self._clamp_glm_limit(settings.GLM_BATCH_PEAK_CONCURRENCY)
+                async with state.condition:
+                    if state.current_limit > peak_limit:
+                        state.current_limit = peak_limit
+                        state.last_adjustment_at = current_time
+                        state.condition.notify_all()
+            return
+
+        learned_limit = await self._load_learned_limit(bucket)
+        next_limit = self._clamp_glm_limit(
+            learned_limit if learned_limit is not None else self._default_glm_limit()
+        )
+        async with state.condition:
+            state.last_bucket = bucket
+            if current_time >= state.cooldown_until:
+                state.current_limit = next_limit
+            else:
+                state.current_limit = min(state.current_limit, next_limit)
+            state.consecutive_successes = 0
+            state.condition.notify_all()
+
+    async def _acquire_slot(self, provider_type: ProviderType, timeout: float) -> None:
+        state = self._runtime[provider_type]
+        await self._hydrate_runtime_if_needed(provider_type)
+        await self._maybe_roll_bucket(provider_type)
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + timeout
+
+        async with state.condition:
+            state.waiting += 1
+            try:
+                while state.active >= state.current_limit:
+                    remaining = deadline - loop.time()
+                    if remaining <= 0:
+                        raise TimeoutError(
+                            f"LLM API {provider_type.value} is busy. Please try again later."
+                        )
+                    await asyncio.wait_for(state.condition.wait(), timeout=remaining)
+                state.active += 1
+            finally:
+                state.waiting = max(0, state.waiting - 1)
+
+    async def _release_slot(self, provider_type: ProviderType) -> None:
+        state = self._runtime[provider_type]
+        async with state.condition:
+            state.active = max(0, state.active - 1)
+            state.condition.notify_all()
+
     def acquire(self, provider: str, timeout: float | None = None):
-        """
-        获取并发许可
-
-        Args:
-            provider: 提供商名称（如 "zhipu", "deepseek"）
-            timeout: 超时时间（秒），None 使用配置默认值
-
-        Returns:
-            AsyncContextManager，使用 async with 进入
-
-        Example:
-            async with llm_concurrency.acquire("zhipu"):
-                await llm_api_call()
-        """
         provider_type = self._get_provider_type(provider)
         config = PROVIDER_CONFIGS.get(provider_type, ConcurrencyConfig())
         queue_timeout = timeout if timeout is not None else config.queue_timeout
-
         return _ConcurrencyLimiter(
             manager=self,
             provider_type=provider_type,
-            semaphore=self._semaphores[provider_type],
             timeout=queue_timeout,
         )
 
     def limit(self, provider: str, timeout: float | None = None):
-        """
-        并发限制装饰器
-
-        Args:
-            provider: 提供商名称
-            timeout: 超时时间（秒）
-
-        Example:
-            @llm_concurrency.limit("zhipu")
-            async def my_llm_function():
-                return await llm_service.chat(...)
-        """
         import functools
 
         def decorator(func):
             @functools.wraps(func)
             async def wrapper(*args, **kwargs):
-                provider_type = self._get_provider_type(provider)
-                config = PROVIDER_CONFIGS.get(provider_type, ConcurrencyConfig())
-                queue_timeout = timeout if timeout is not None else config.queue_timeout
-
-                async with _ConcurrencyLimiter(
-                    manager=self,
-                    provider_type=provider_type,
-                    semaphore=self._semaphores[provider_type],
-                    timeout=queue_timeout,
-                ):
+                async with self.acquire(provider, timeout=timeout):
                     return await func(*args, **kwargs)
+
             return wrapper
+
         return decorator
 
-    async def _increment_waiters(self, provider_type: ProviderType):
-        async with self._lock:
-            self._waiters[provider_type] += 1
+    async def report_success(self, provider: str) -> None:
+        provider_type = self._get_provider_type(provider)
+        state = self._runtime[provider_type]
+        if not state.config.adaptive:
+            return
 
-    async def _decrement_waiters(self, provider_type: ProviderType):
-        async with self._lock:
-            self._waiters[provider_type] = max(0, self._waiters[provider_type] - 1)
+        await self._hydrate_runtime_if_needed(provider_type)
+        await self._maybe_roll_bucket(provider_type)
+        now = time.time()
+        bucket = self._bucket_for()
+
+        async with state.condition:
+            state.total_successes += 1
+            state.consecutive_successes += 1
+            should_try_increase = (
+                settings.GLM_BATCH_ADAPTIVE_ENABLED
+                and not self._is_peak_hour()
+                and now >= state.cooldown_until
+                and (state.waiting > 0 or state.active >= max(1, state.current_limit - 1))
+                and state.current_limit < settings.GLM_BATCH_MAX_CONCURRENCY
+                and state.consecutive_successes >= settings.GLM_BATCH_ADAPTIVE_SUCCESS_THRESHOLD
+                and (now - state.last_adjustment_at) >= settings.GLM_BATCH_ADAPTIVE_INCREASE_COOLDOWN_SECONDS
+            )
+            if should_try_increase:
+                state.current_limit = self._clamp_glm_limit(state.current_limit + 1)
+                state.last_adjustment_at = now
+                state.consecutive_successes = 0
+                logger.info(
+                    "[GLMBatchConcurrency] Increased adaptive limit to {} for bucket={}".format(
+                        state.current_limit,
+                        bucket,
+                    )
+                )
+                await self._persist_learned_limit(bucket, state.current_limit)
+                state.condition.notify_all()
+
+    async def report_rate_limit(self, provider: str) -> None:
+        provider_type = self._get_provider_type(provider)
+        state = self._runtime[provider_type]
+        if not state.config.adaptive:
+            return
+
+        await self._hydrate_runtime_if_needed(provider_type)
+        await self._maybe_roll_bucket(provider_type)
+        now = time.time()
+        bucket = self._bucket_for()
+        cooldown_seconds = settings.GLM_BATCH_ADAPTIVE_RATE_LIMIT_COOLDOWN_SECONDS
+
+        async with state.condition:
+            state.total_rate_limits += 1
+            state.last_rate_limit_at = now
+            state.consecutive_successes = 0
+            state.current_limit = self._clamp_glm_limit(state.current_limit - 1)
+            state.cooldown_until = max(state.cooldown_until, now + cooldown_seconds)
+            state.last_adjustment_at = now
+            logger.warning(
+                "[GLMBatchConcurrency] Rate limited, reduced adaptive limit to {} until {:.0f}".format(
+                    state.current_limit,
+                    state.cooldown_until,
+                )
+            )
+            await self._persist_learned_limit(bucket, state.current_limit)
+            state.condition.notify_all()
+
+    def get_provider_runtime_state(self, provider: str) -> dict[str, int | float | bool | str]:
+        provider_type = self._get_provider_type(provider)
+        state = self._runtime[provider_type]
+        peak_mode = provider_type == ProviderType.ZHIPU_CODING and self._is_peak_hour()
+        current_limit = self.get_runtime_limit(provider)
+        return {
+            "provider": provider_type.value,
+            "current_limit": current_limit,
+            "configured_max_limit": state.config.max_concurrent,
+            "active": state.active,
+            "waiting": state.waiting,
+            "cooldown_until": state.cooldown_until,
+            "cooldown_active": bool(state.cooldown_until and time.time() < state.cooldown_until),
+            "total_successes": state.total_successes,
+            "total_rate_limits": state.total_rate_limits,
+            "peak_mode": peak_mode,
+            "time_bucket": self._bucket_for(),
+        }
+
+    def get_runtime_limit(self, provider: str) -> int:
+        provider_type = self._get_provider_type(provider)
+        state = self._runtime[provider_type]
+        if provider_type == ProviderType.ZHIPU_CODING and self._is_peak_hour():
+            return min(state.current_limit, settings.GLM_BATCH_PEAK_CONCURRENCY)
+        return state.current_limit
 
     def get_stats(self) -> dict[str, dict]:
-        """获取当前统计信息"""
-        stats = {}
-        for pt, sem in self._semaphores.items():
-            config = PROVIDER_CONFIGS.get(pt, ConcurrencyConfig())
-            stats[pt.value] = {
-                "max_concurrent": config.max_concurrent,
-                "current_active": config.max_concurrent - sem._value,
-                "current_waiting": self._waiters.get(pt, 0),
+        stats: dict[str, dict] = {}
+        for provider_type, state in self._runtime.items():
+            stats[provider_type.value] = {
+                "max_concurrent": state.config.max_concurrent,
+                "current_limit": state.current_limit,
+                "current_active": state.active,
+                "current_waiting": state.waiting,
+                "cooldown_until": state.cooldown_until,
+                "cooldown_active": bool(state.cooldown_until and time.time() < state.cooldown_until),
+                "adaptive": state.config.adaptive,
+                "peak_mode": provider_type == ProviderType.ZHIPU_CODING and self._is_peak_hour(),
             }
         return stats
 
@@ -238,38 +415,28 @@ class _ConcurrencyLimiter:
         self,
         manager: LLMConcurrencyManager,
         provider_type: ProviderType,
-        semaphore: asyncio.Semaphore,
         timeout: float,
     ):
         self.manager = manager
         self.provider_type = provider_type
-        self.semaphore = semaphore
         self.timeout = timeout
         self._acquired = False
 
     async def __aenter__(self):
-        await self.manager._increment_waiters(self.provider_type)
-
         try:
-            # 使用 asyncio.wait_for 添加超时控制
-            await asyncio.wait_for(self.semaphore.acquire(), timeout=self.timeout)
+            await self.manager._acquire_slot(self.provider_type, self.timeout)
             self._acquired = True
             return self
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning(
                 f"[LLMConcurrency] Timeout waiting for {self.provider_type.value} "
-                f"(timeout={self.timeout}s, waiting={self.manager._waiters.get(self.provider_type, 0)})"
+                f"(timeout={self.timeout}s)"
             )
-            raise TimeoutError(
-                f"LLM API {self.provider_type.value} is busy. Please try again later."
-            )
-        finally:
-            await self.manager._decrement_waiters(self.provider_type)
+            raise
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         if self._acquired:
-            self.semaphore.release()
+            await self.manager._release_slot(self.provider_type)
 
 
-# 全局单例
 llm_concurrency = LLMConcurrencyManager()

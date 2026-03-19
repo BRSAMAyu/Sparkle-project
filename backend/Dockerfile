@@ -16,7 +16,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libc6-dev \
     libpq-dev \
+    liblzo2-dev \
     && rm -rf /var/lib/apt/lists/*
+
+# python-lzo can fail under uv's isolated wheel build on aarch64; prebuild it with pip first.
+RUN pip install --no-cache-dir python-lzo==1.15
 
 # Copy dependency files
 COPY pyproject.toml .
@@ -57,6 +61,7 @@ RUN groupadd -r sparkle && useradd -r -g sparkle sparkle
 # Install runtime dependencies (libpq5 for PostgreSQL, curl for healthchecks)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
+    liblzo2-2 \
     libglib2.0-0 \
     libcairo2 \
     libpango-1.0-0 \

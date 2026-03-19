@@ -14,7 +14,8 @@ LLM Router - 统一的LLM客户端获取入口
 - 可降级：主模型失败时自动降级
 """
 
-from dataclasses import dataclass
+import time
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
@@ -22,6 +23,7 @@ from loguru import logger
 
 from app.config import settings
 from app.core.agent_profiles import TASK_TO_AGENT_PROFILE, AgentRole, ModelTier, TaskType, agent_profile_registry
+from app.core import complexity_analyzer as _cx
 
 
 class ModelProvider(str, Enum):
@@ -55,14 +57,47 @@ class ModelConfig:
 
 
 @dataclass
+class ModelHealthState:
+    """模型健康状态（内存缓存，无持久化）"""
+    consecutive_failures: int = 0
+    last_failure_at: float | None = None
+    is_healthy: bool = True
+
+    # 5次连续失败 → 标记不健康；300秒无失败 → 自动恢复
+    FAILURE_THRESHOLD: int = field(default=5, init=False, repr=False)
+    RECOVERY_SECONDS: float = field(default=300.0, init=False, repr=False)
+
+    def record_failure(self) -> None:
+        self.consecutive_failures += 1
+        self.last_failure_at = time.monotonic()
+        if self.consecutive_failures >= self.FAILURE_THRESHOLD:
+            self.is_healthy = False
+            logger.warning(f"Model marked unhealthy after {self.consecutive_failures} consecutive failures")
+
+    def record_success(self) -> None:
+        self.consecutive_failures = 0
+        self.is_healthy = True
+
+    def check_recovery(self) -> None:
+        """检查是否应该自动恢复（300s 无新失败）"""
+        if not self.is_healthy and self.last_failure_at is not None:
+            if time.monotonic() - self.last_failure_at >= self.RECOVERY_SECONDS:
+                self.is_healthy = True
+                self.consecutive_failures = 0
+                logger.info("Model recovered after cooldown period")
+
+
+@dataclass
 class LLMSelection:
     """LLM选择结果（可观测）"""
     model_key: str
     config: ModelConfig
     agent_role: AgentRole
     task_type: TaskType | None
-    reason: str  # 选择此模型的原因
+    reason: str  # 选择此模型的原因（含成本信息）
     is_fallback: bool = False
+    estimated_cost_per_1k: float = 0.0
+    tier_used: str = ""
 
 
 class LLMRouter:
@@ -73,9 +108,18 @@ class LLMRouter:
     同时兼容主系统（llm_service）和 LangGraph（llm_factory）。
     """
 
+    # Tier 降级顺序（从高到低成本）
+    _FALLBACK_TIER_ORDER: list[ModelTier] = [
+        ModelTier.REASONING,
+        ModelTier.STANDARD,
+        ModelTier.FAST,
+        ModelTier.FREE_FAST,
+    ]
+
     def __init__(self):
         self._available_models: dict[str, ModelConfig] = {}
         self._tier_mapping: dict[ModelTier, list[str]] = {}
+        self._model_health: dict[str, ModelHealthState] = {}
         self._load_model_configs()
 
     def register_model_configs(self, configs: dict[str, ModelConfig], tier_mapping: dict[ModelTier, list[str]] | None = None):
@@ -390,6 +434,7 @@ class LLMRouter:
         agent_role: AgentRole | str | Any,
         task_type: TaskType | str | Any | None = None,
         force_tier: ModelTier | None = None,
+        user_message: str | None = None,
     ) -> LLMSelection:
         """
         选择最合适的模型
@@ -398,6 +443,7 @@ class LLMRouter:
             agent_role: Agent角色
             task_type: 任务类型（可选，用于更细粒度的选择）
             force_tier: 强制指定层级（用于测试或降级）
+            user_message: 用户原始消息（用于复杂度感知路由）
 
         Returns:
             LLMSelection: 选择结果
@@ -439,11 +485,34 @@ class LLMRouter:
             target_tier = profile.model_tier
             reason = f"Agent角色={agent_role.value}, 默认tier={target_tier.value}"
 
-        # 3. 从tier中选择具体模型
-        candidates = self._tier_mapping.get(target_tier, [])
+        # 2.5 复杂度感知调整（仅当复杂度路由开关打开且有 user_message）
+        if user_message and getattr(settings, "COMPLEXITY_ROUTING_ENABLED", True):
+            assessment = _cx.assess(user_message)
+            delta = assessment.suggested_tier_delta
+            if delta != 0:
+                allow_down = delta < 0 and getattr(settings, "COMPLEXITY_DOWNGRADE_ENABLED", True)
+                allow_up = delta > 0 and getattr(settings, "COMPLEXITY_UPGRADE_ENABLED", True)
+                if allow_down or allow_up:
+                    try:
+                        idx = self._FALLBACK_TIER_ORDER.index(target_tier)
+                        new_idx = max(0, min(len(self._FALLBACK_TIER_ORDER) - 1, idx - delta))
+                        # FALLBACK_TIER_ORDER 从高到低，delta>0 升级(idx减小)，delta<0 降级(idx增大)
+                        target_tier = self._FALLBACK_TIER_ORDER[new_idx]
+                        reason += f" → complexity={assessment.level.value}(delta={delta:+d})"
+                    except ValueError:
+                        pass  # target_tier 不在标准链中，跳过复杂度调整
+
+        # 3. 从tier中选择具体模型（跳过不健康模型）
+        candidates = [
+            k for k in self._tier_mapping.get(target_tier, [])
+            if self._is_model_healthy(k)
+        ]
         if not candidates:
-            logger.warning(f"No models for tier {target_tier}, falling back to standard")
-            candidates = self._tier_mapping.get(ModelTier.STANDARD, ["deepseek_chat"])
+            logger.warning(f"No healthy models for tier {target_tier}, falling back to standard")
+            candidates = [
+                k for k in self._tier_mapping.get(ModelTier.STANDARD, ["deepseek_chat"])
+                if self._is_model_healthy(k)
+            ] or ["deepseek_chat"]
             reason += " → 降级到standard"
 
         # 优先使用第一个候选
@@ -451,6 +520,87 @@ class LLMRouter:
         model_config = self._available_models.get(model_key, self._available_models["default"])
 
         return self._create_selection(model_key, model_config, agent_role, task_type, reason)
+
+    def resolve_candidate_models(
+        self,
+        agent_role: AgentRole | str | Any,
+        task_type: TaskType | str | Any | None = None,
+        force_tier: ModelTier | None = None,
+    ) -> list[str]:
+        """返回某个 agent 在当前配置下的候选模型顺序。"""
+        agent_role = self._normalize_agent_role(agent_role)
+        task_type = self._normalize_task_type(task_type)
+        profile = agent_profile_registry.get_profile(agent_role)
+
+        if force_tier:
+            return list(self._tier_mapping.get(force_tier, []))
+        if profile.specific_model:
+            return [profile.specific_model]
+
+        candidates: list[str] = []
+        blocked = set(profile.model_policy.blocked_models or []) if profile.model_policy else set()
+
+        def _append(model_key: str) -> None:
+            if not model_key or model_key in blocked or model_key not in self._available_models:
+                return
+            if model_key not in candidates:
+                candidates.append(model_key)
+
+        if profile.model_policy:
+            for model_key in profile.model_policy.preferred_models or []:
+                _append(model_key)
+
+            tiers: list[ModelTier] = []
+            if profile.model_policy.preferred_tier is not None:
+                tiers.append(profile.model_policy.preferred_tier)
+            elif task_type is not None and not getattr(profile.model_policy, "lock_to_policy", True):
+                task_config = TASK_TO_AGENT_PROFILE.get(task_type, {})
+                task_tier = task_config.get("model_tier")
+                if isinstance(task_tier, ModelTier):
+                    tiers.append(task_tier)
+            if profile.model_tier not in tiers:
+                tiers.append(profile.model_tier)
+            for tier in profile.model_policy.fallback_tiers or []:
+                if tier not in tiers:
+                    tiers.append(tier)
+            for tier in tiers:
+                for model_key in self._tier_mapping.get(tier, []):
+                    _append(model_key)
+        else:
+            target_tier = profile.model_tier
+            if task_type:
+                task_config = TASK_TO_AGENT_PROFILE.get(task_type, {})
+                target_tier = task_config.get("model_tier", target_tier)
+            for model_key in self._tier_mapping.get(target_tier, []):
+                _append(model_key)
+
+        if not candidates:
+            return ["default"]
+        return candidates
+
+    def describe_agent_routing(
+        self,
+        agent_role: AgentRole | str | Any,
+        task_type: TaskType | str | Any | None = None,
+        force_tier: ModelTier | None = None,
+    ) -> dict[str, Any]:
+        """提供 agent 当前模型编排的可观测摘要。"""
+        candidates = self.resolve_candidate_models(
+            agent_role=agent_role,
+            task_type=task_type,
+            force_tier=force_tier,
+        )
+        selection = self.select_model(
+            agent_role=agent_role,
+            task_type=task_type,
+            force_tier=force_tier,
+        )
+        return {
+            "selected_model_key": selection.model_key,
+            "selected_tier": selection.config.tier.value,
+            "selection_reason": selection.reason,
+            "candidate_models": candidates,
+        }
 
     def _select_by_policy(
         self,
@@ -468,6 +618,9 @@ class LLMRouter:
 
         def _append(model_key: str) -> None:
             if not model_key or model_key in blocked or model_key not in self._available_models:
+                return
+            if not self._is_model_healthy(model_key):
+                logger.debug(f"Skipping unhealthy model: {model_key}")
                 return
             if model_key not in candidates:
                 candidates.append(model_key)
@@ -525,14 +678,42 @@ class LLMRouter:
         task_type: TaskType | None,
         reason: str,
     ) -> LLMSelection:
-        """创建LLMSelection对象"""
+        """创建LLMSelection对象，含成本可观测字段"""
+        cost = config.cost_per_1k_tokens if hasattr(config, "cost_per_1k_tokens") else 0.0
+        tier_str = config.tier.value if hasattr(config, "tier") and config.tier else ""
+        rich_reason = f"{reason} [${cost:.4f}/1k, tier={tier_str}]"
         return LLMSelection(
             model_key=model_key,
             config=config,
             agent_role=agent_role,
             task_type=task_type,
-            reason=reason,
+            reason=rich_reason,
+            estimated_cost_per_1k=cost,
+            tier_used=tier_str,
         )
+
+    # ============================================
+    # 模型健康上报
+    # ============================================
+
+    def report_model_failure(self, model_key: str) -> None:
+        """上报模型调用失败（由 providers.py 调用）"""
+        if model_key not in self._model_health:
+            self._model_health[model_key] = ModelHealthState()
+        self._model_health[model_key].record_failure()
+
+    def report_model_success(self, model_key: str) -> None:
+        """上报模型调用成功"""
+        if model_key in self._model_health:
+            self._model_health[model_key].record_success()
+
+    def _is_model_healthy(self, model_key: str) -> bool:
+        """检查模型是否健康（含自动恢复检测）"""
+        if model_key not in self._model_health:
+            return True
+        state = self._model_health[model_key]
+        state.check_recovery()
+        return state.is_healthy
 
     @staticmethod
     def _normalize_agent_role(agent_role: AgentRole | str | Any) -> AgentRole:
@@ -614,28 +795,34 @@ class LLMRouter:
         """
         获取降级模型
 
-        降级路径：
-        REASONING → STANDARD → FAST
+        降级路径：REASONING → STANDARD → FAST → FREE_FAST
+        FREE_REASONING → FREE_FAST → FAST
         """
         current_tier = failed_selection.config.tier
 
-        if current_tier == ModelTier.REASONING:
-            next_tier = ModelTier.STANDARD
-            reason = f"主模型失败，从{current_tier.value}降级到{next_tier.value}"
-        elif current_tier == ModelTier.STANDARD:
-            next_tier = ModelTier.FAST
-            reason = f"主模型失败，从{current_tier.value}降级到{next_tier.value}"
+        # 免费推理降级路径
+        if current_tier == ModelTier.FREE_REASONING:
+            next_tier = ModelTier.FREE_FAST
         else:
-            # 已经是最快的了
-            reason = "已是最快模型，无法再降级"
-            return failed_selection
+            # 标准降级链
+            try:
+                idx = self._FALLBACK_TIER_ORDER.index(current_tier)
+            except ValueError:
+                return failed_selection
+            if idx >= len(self._FALLBACK_TIER_ORDER) - 1:
+                return failed_selection
+            next_tier = self._FALLBACK_TIER_ORDER[idx + 1]
 
-        candidates = self._tier_mapping.get(next_tier, [])
+        candidates = [
+            k for k in self._tier_mapping.get(next_tier, [])
+            if self._is_model_healthy(k)
+        ]
         if not candidates:
             return failed_selection
 
         fallback_key = candidates[0]
         fallback_config = self._available_models.get(fallback_key, self._available_models["default"])
+        reason = f"主模型失败，从{current_tier.value}降级到{next_tier.value}"
 
         return LLMSelection(
             model_key=fallback_key,
@@ -644,6 +831,8 @@ class LLMRouter:
             task_type=failed_selection.task_type,
             reason=reason,
             is_fallback=True,
+            estimated_cost_per_1k=fallback_config.cost_per_1k_tokens,
+            tier_used=next_tier.value,
         )
 
     # ============================================

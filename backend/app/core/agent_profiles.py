@@ -196,11 +196,11 @@ DEFAULT_AGENT_PROFILES: dict[AgentRole, AgentProfile] = {
         role=AgentRole.RETRIEVAL,
         display_name="检索器",
         description="负责知识检索",
-        model_tier=ModelTier.FAST,
+        model_tier=ModelTier.FREE_FAST,
         model_policy=AgentModelPolicy(
-            preferred_models=["dashscope_fast", "xiaomi_chat"],
-            preferred_tier=ModelTier.FAST,
-            fallback_tiers=[ModelTier.STANDARD],
+            preferred_models=["glm_4_7_flash_no_thinking", "dashscope_fast", "xiaomi_chat"],
+            preferred_tier=ModelTier.FREE_FAST,
+            fallback_tiers=[ModelTier.FAST, ModelTier.STANDARD],
         ),
         temperature=0.2,
         system_prompt_template="你是知识检索专家，负责从知识图谱中查找相关信息。"
@@ -211,19 +211,31 @@ DEFAULT_AGENT_PROFILES: dict[AgentRole, AgentProfile] = {
         role=AgentRole.ROUTER,
         display_name="路由器",
         description="意图识别与路由分发",
-        model_tier=ModelTier.FAST,
+        model_tier=ModelTier.FREE_FAST,
+        model_policy=AgentModelPolicy(
+            preferred_models=["glm_4_7_flash_no_thinking", "dashscope_fast"],
+            preferred_tier=ModelTier.FREE_FAST,
+            fallback_tiers=[ModelTier.FAST],
+        ),
         temperature=0.1,
         support_structured_output=True,
-        system_prompt_template="""You are the Dispatcher for Sparkle AI.
+        system_prompt_template="""You are the Dispatcher for Sparkle AI. Output JSON only, no explanation.
 
-Route the query to the best specialist:
-- galaxy_guide: Knowledge graph, concepts, prerequisites, learning paths
-- time_tutor: Scheduling, tasks, planning, deadlines, tomato timer
-- exam_oracle: Exam predictions, mock tests, past paper analysis
-- study_buddy: General chat, emotional support, simple Q&A
-- human_assist: User asks for human help or system cannot handle
+Specialists:
+- galaxy_guide: knowledge graph, concepts, prerequisites, learning paths
+- time_tutor: scheduling, tasks, planning, deadlines, focus timer
+- exam_oracle: exam predictions, mock tests, past paper analysis
+- study_buddy: general chat, emotional support, simple Q&A
+- human_assist: user requests human help or system cannot handle
 
-Query: {query}"""
+Examples:
+{{"query": "微积分求导怎么做", "route": "galaxy_guide", "confidence": 0.9}}
+{{"query": "帮我安排明天学习时间", "route": "time_tutor", "confidence": 0.95}}
+{{"query": "你好啊", "route": "study_buddy", "confidence": 0.85}}
+{{"query": "预测期末考重点", "route": "exam_oracle", "confidence": 0.9}}
+
+Query: {query}
+Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
     ),
 
     AgentRole.GALAXY_GUIDE: AgentProfile(
@@ -263,7 +275,7 @@ Query: {query}"""
         entry_tags=["exam", "strategy", "mock"],
         model_tier=ModelTier.REASONING,
         model_policy=AgentModelPolicy(
-            preferred_models=["deepseek_reason", "mimo_pro", "dashscope_reason"],
+            preferred_models=["dashscope_reason", "mimo_pro", "deepseek_reason"],
             preferred_tier=ModelTier.REASONING,
             fallback_tiers=[ModelTier.STANDARD],
         ),
@@ -319,7 +331,7 @@ Query: {query}"""
         entry_tags=["analysis", "reasoning", "evidence"],
         model_tier=ModelTier.REASONING,
         model_policy=AgentModelPolicy(
-            preferred_models=["mimo_pro", "deepseek_reason", "dashscope_reason"],
+            preferred_models=["dashscope_reason", "mimo_pro", "deepseek_reason"],
             preferred_tier=ModelTier.REASONING,
             fallback_tiers=[ModelTier.STANDARD],
         ),
@@ -343,7 +355,7 @@ Query: {query}"""
         entry_tags=["error-diagnosis", "remediation", "root-cause"],
         model_tier=ModelTier.REASONING,
         model_policy=AgentModelPolicy(
-            preferred_models=["deepseek_reason", "dashscope_reason", "mimo_pro"],
+            preferred_models=["dashscope_reason", "deepseek_reason", "mimo_pro"],
             preferred_tier=ModelTier.REASONING,
             fallback_tiers=[ModelTier.STANDARD],
         ),
@@ -351,10 +363,14 @@ Query: {query}"""
         allowed_tools=["query_error_history", "record_error", "query_knowledge", "create_task"],
         system_prompt_template="""你是错题分析师，负责识别错误类型并输出补救策略。
 
-你的职责：
-1. 分类错误并解释根因
-2. 对齐正确解法路径
-3. 设计针对性训练建议"""
+诊断格式（必须严格遵守）：
+① 错误类型（知识性/理解性/计算性/粗心）
+② 根因定位：具体指出哪个步骤、哪个概念存在偏差
+③ 正确解法对齐：给出完整的正确思路
+④ 同类题变式：设计1道针对性练习题
+
+[DO] 具体定位到步骤和概念
+[DON'T] 只说"注意审题"等泛泛建议"""
     ),
 
     # ==================== 协作工作流 Agents ====================
@@ -396,12 +412,18 @@ Query: {query}"""
         entry_tags=["math", "practice", "derivation"],
         model_tier=ModelTier.STANDARD,
         model_policy=AgentModelPolicy(
-            preferred_models=["dashscope_chat", "mimo_pro", "deepseek_chat"],
+            preferred_models=["deepseek_chat", "dashscope_reason", "dashscope_chat"],
             preferred_tier=ModelTier.STANDARD,
             fallback_tiers=[ModelTier.REASONING],
         ),
         temperature=0.4,
-        system_prompt_template="""你是数学专家，负责生成数学练习和讲解数学概念。"""
+        system_prompt_template="""你是数学专家，负责生成数学练习和讲解数学概念。
+
+解题规范：
+1. 必须写出完整步骤，每步标注所用定理/公式名称
+2. 计算题先列公式，再代入数值
+3. 答案必须包含单位（适用时）
+4. 结尾给出验证方法或同类题提示"""
     ),
 
     AgentRole.CODE_AGENT: AgentProfile(
@@ -414,9 +436,9 @@ Query: {query}"""
         entry_tags=["code", "debugging", "projects"],
         model_tier=ModelTier.STANDARD,
         model_policy=AgentModelPolicy(
-            preferred_models=["mimo_pro", "dashscope_chat", "deepseek_chat"],
+            preferred_models=["deepseek_chat", "dashscope_chat", "mimo_pro"],
             preferred_tier=ModelTier.STANDARD,
-            fallback_tiers=[ModelTier.REASONING],
+            fallback_tiers=[ModelTier.REASONING, ModelTier.GLM_BATCH],
         ),
         temperature=0.4,
         system_prompt_template="""你是编程专家，负责设计编程项目和讲解代码概念。"""
@@ -430,11 +452,11 @@ Query: {query}"""
         entry_enabled=True,
         entry_rank=90,
         entry_tags=["search", "evidence", "retrieval"],
-        model_tier=ModelTier.FAST,
+        model_tier=ModelTier.FREE_FAST,
         model_policy=AgentModelPolicy(
-            preferred_models=["dashscope_fast", "xiaomi_chat", "dashscope_chat"],
-            preferred_tier=ModelTier.FAST,
-            fallback_tiers=[ModelTier.STANDARD],
+            preferred_models=["glm_4_7_flash_no_thinking", "dashscope_fast", "xiaomi_chat"],
+            preferred_tier=ModelTier.FREE_FAST,
+            fallback_tiers=[ModelTier.FAST, ModelTier.STANDARD],
         ),
         temperature=0.2,
         system_prompt_template="""你是搜索专家，负责检索背景知识和收集证据。"""
@@ -485,15 +507,22 @@ Query: {query}"""
         entry_enabled=True,
         entry_rank=80,
         entry_tags=["chat", "coaching", "support"],
-        specific_model="xiaomi_chat",
+        model_tier=ModelTier.FREE_FAST,
+        model_policy=AgentModelPolicy(
+            preferred_models=["glm_4_7_flash_no_thinking", "xiaomi_chat", "dashscope_fast"],
+            preferred_tier=ModelTier.FREE_FAST,
+            fallback_tiers=[ModelTier.FAST, ModelTier.STANDARD],
+        ),
         temperature=0.7,
         system_prompt_template="""你是学习伙伴，一个友好、轻松的AI助手。
 
-你的职责：
-1. 陪伴用户日常学习
-2. 提供情感支持
-3. 回答简单问题
-4. 保持对话轻松有趣"""
+[DO] 回复控制在3句话以内，使用口语化表达，像朋友而非老师
+[DO] 遇到简单问题直接回答；遇到情绪问题先共情再建议
+[DON'T] 主动展开学术话题，除非用户明确提问
+[DON'T] 给出冗长的解释和列表
+
+遇到复杂学术问题时，简单回应后建议："这个问题我帮你转给专家模式~"
+"""
     ),
 
     AgentRole.WRITING_AGENT: AgentProfile(
@@ -504,7 +533,12 @@ Query: {query}"""
         entry_enabled=True,
         entry_rank=100,
         entry_tags=["writing", "editing", "expression"],
-        specific_model="deepseek_chat",
+        model_tier=ModelTier.STANDARD,
+        model_policy=AgentModelPolicy(
+            preferred_models=["deepseek_chat", "dashscope_chat", "mimo_pro"],
+            preferred_tier=ModelTier.STANDARD,
+            fallback_tiers=[ModelTier.REASONING, ModelTier.FAST],
+        ),
         temperature=0.8,
         system_prompt_template="""你是写作专家，负责指导写作和优化文本。
 

@@ -280,6 +280,11 @@ class CustomExpertService:
                     "provider": config.provider.value,
                     "model_name": config.model_name,
                     "tier": config.tier.value,
+                    "thinking_capable": bool(
+                        config.clear_thinking is False or config.thinking_mode == "enabled"
+                    ),
+                    "supports_batch": config.tier == ModelTier.GLM_BATCH,
+                    "selection_label": f"{config.model_name} ({config.provider.value}/{config.tier.value})",
                 }
             )
         return options

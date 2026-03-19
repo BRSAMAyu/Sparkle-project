@@ -328,19 +328,18 @@ async def request_batch_generation(
     返回任务ID，可以通过 /generation/jobs 查询状态
     """
     celery_status = get_celery_queue_status(settings.GLM_BATCH_QUEUE)
-    queue_saturated = (
-        int(celery_status.get("queue_active_tasks") or 0) >= int(settings.GLM_BATCH_MAX_CONCURRENCY or 2)
-        or int(celery_status.get("queue_reserved_tasks") or 0) > 0
+    dispatch = glm_batch_service.decide_capsule_dispatch(
+        depth_preference=request.depth_preference,
+        curiosity_preference=request.curiosity_preference,
+        requested_count=request.requested_count or 1,
+        generation_type="manual",
+        celery_status=celery_status,
     )
-    should_fallback_sync = (
-        celery_status.get("status") != "healthy"
-        or int(celery_status.get("queue_worker_count") or 0) <= 0
-        or queue_saturated
-    )
+    should_fallback_sync = not dispatch.should_enqueue
 
     if should_fallback_sync:
         logger.warning(
-            f"Capsule batch generation falling back to sync mode: celery_status={celery_status}"
+            f"Capsule batch generation falling back to sync mode: decision={dispatch} celery_status={celery_status}"
         )
         job = await curiosity_capsule_service.generate_batch(
             user_id=current_user.id,
@@ -349,13 +348,8 @@ async def request_batch_generation(
             curiosity_preference=request.curiosity_preference,
             generation_type="manual",
             requested_count=request.requested_count,
-            model_key=glm_batch_service.plan_capsule_generation(
-                depth_preference=request.depth_preference,
-                curiosity_preference=request.curiosity_preference,
-                requested_count=request.requested_count or 1,
-                generation_type="manual",
-            ).model_key if settings.GLM_BATCH_ENABLED and settings.GLM_BATCH_CAPSULES_ENABLED else None,
-            execution_mode="sync_fallback",
+            model_key=dispatch.spillover_model_key,
+            execution_mode=dispatch.execution_mode,
         )
         return {
             "success": True,
@@ -368,13 +362,7 @@ async def request_batch_generation(
 
     pending_job = None
     try:
-        if settings.GLM_BATCH_ENABLED and settings.GLM_BATCH_CAPSULES_ENABLED:
-            plan = glm_batch_service.plan_capsule_generation(
-                depth_preference=request.depth_preference,
-                curiosity_preference=request.curiosity_preference,
-                requested_count=request.requested_count or 1,
-                generation_type="manual",
-            )
+        if settings.GLM_BATCH_ENABLED and settings.GLM_BATCH_CAPSULES_ENABLED and dispatch.should_enqueue:
             pending_job = await capsule_generation_service.create_generation_job(
                 user_id=current_user.id,
                 db=db,
@@ -382,7 +370,7 @@ async def request_batch_generation(
                 curiosity_preference=request.curiosity_preference,
                 generation_type="manual",
                 requested_count=request.requested_count or 1,
-                model_used=plan.model_key,
+                model_used=dispatch.batch_model_key,
             )
             task = glm_batch_service.enqueue_capsule_generation(
                 user_id=current_user.id,
@@ -426,12 +414,7 @@ async def request_batch_generation(
             curiosity_preference=request.curiosity_preference,
             generation_type="manual",
             requested_count=request.requested_count,
-            model_key=glm_batch_service.plan_capsule_generation(
-                depth_preference=request.depth_preference,
-                curiosity_preference=request.curiosity_preference,
-                requested_count=request.requested_count or 1,
-                generation_type="manual",
-            ).model_key if settings.GLM_BATCH_ENABLED and settings.GLM_BATCH_CAPSULES_ENABLED else None,
+            model_key=dispatch.spillover_model_key or dispatch.batch_model_key,
             execution_mode="sync_fallback",
         )
         return {

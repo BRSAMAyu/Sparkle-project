@@ -16,6 +16,7 @@ from app.agents.orchestrator_agent import create_multi_agent_workflow
 from app.api.deps import get_current_user
 from app.config import settings
 from app.core.agent_profiles import get_public_agent_catalog, get_public_mode_catalog
+from app.core.llm_router import llm_router
 from app.db.session import get_db
 from app.models.user import User
 from app.services.custom_expert_service import CustomExpertService
@@ -233,7 +234,14 @@ async def get_multi_agent_catalog(
             "model_options": [],
             "total_experts": 0,
         }
-    experts = get_public_agent_catalog()
+    experts = []
+    for item in get_public_agent_catalog():
+        enriched = dict(item)
+        try:
+            enriched["routing_preview"] = llm_router.describe_agent_routing(item["id"])
+        except Exception:
+            enriched["routing_preview"] = None
+        experts.append(enriched)
     service = CustomExpertService(db)
     custom_payload = await service.build_catalog_payload(str(current_user.id))
     return {

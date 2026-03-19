@@ -304,7 +304,18 @@ class Settings(BaseSettings):
     # GLM Batch
     GLM_BATCH_ENABLED: bool = True
     GLM_BATCH_QUEUE: str = "glm_batch"
-    GLM_BATCH_MAX_CONCURRENCY: int = 2
+    GLM_BATCH_MIN_CONCURRENCY: int = 1
+    GLM_BATCH_MAX_CONCURRENCY: int = 6
+    GLM_BATCH_PEAK_START_HOUR: int = 14
+    GLM_BATCH_PEAK_END_HOUR: int = 18
+    GLM_BATCH_PEAK_CONCURRENCY: int = 2
+    GLM_BATCH_OFFPEAK_DEFAULT_CONCURRENCY: int = 3
+    GLM_BATCH_ADAPTIVE_ENABLED: bool = True
+    GLM_BATCH_ADAPTIVE_SUCCESS_THRESHOLD: int = 8
+    GLM_BATCH_ADAPTIVE_INCREASE_COOLDOWN_SECONDS: int = 180
+    GLM_BATCH_ADAPTIVE_RATE_LIMIT_COOLDOWN_SECONDS: int = 300
+    GLM_BATCH_SPILLOVER_ENABLED: bool = True
+    GLM_BATCH_SPILLOVER_BACKLOG_FACTOR: int = 2
     GLM_BATCH_CAPSULES_ENABLED: bool = True
     GLM_BATCH_COGNITIVE_ANALYSIS_ENABLED: bool = True
     GLM_BATCH_THINKING_DEPTH_THRESHOLD: float = 0.72
@@ -360,6 +371,11 @@ class Settings(BaseSettings):
     NEXT_STEP_MAX_RECOMMENDATIONS: int = 3  # 最多推荐数量
     NEXT_STEP_DEFAULT_DURATION: int = 15  # 默认推荐时长
     NEXT_STEP_DEFAULT_ENERGY: int = 2  # 默认精力消耗
+
+    # Complexity-Aware Routing (P3)
+    COMPLEXITY_ROUTING_ENABLED: bool = True    # 总开关
+    COMPLEXITY_DOWNGRADE_ENABLED: bool = True  # 允许简单消息降级到更便宜模型
+    COMPLEXITY_UPGRADE_ENABLED: bool = True    # 允许复杂消息升级到更强模型
 
     # Feature Flags
     USE_CONTEXT_PACK: bool = True
@@ -646,6 +662,30 @@ class Settings(BaseSettings):
             and (not self.GRPC_TLS_CERT_PATH or not self.GRPC_TLS_KEY_PATH)
         ):
             raise ValueError("GRPC TLS is required but cert/key are not configured")
+
+        self.GLM_BATCH_MIN_CONCURRENCY = max(1, int(self.GLM_BATCH_MIN_CONCURRENCY or 1))
+        self.GLM_BATCH_MAX_CONCURRENCY = max(
+            self.GLM_BATCH_MIN_CONCURRENCY,
+            min(int(self.GLM_BATCH_MAX_CONCURRENCY or 6), 6),
+        )
+        self.GLM_BATCH_PEAK_CONCURRENCY = max(
+            self.GLM_BATCH_MIN_CONCURRENCY,
+            min(int(self.GLM_BATCH_PEAK_CONCURRENCY or 2), self.GLM_BATCH_MAX_CONCURRENCY),
+        )
+        self.GLM_BATCH_OFFPEAK_DEFAULT_CONCURRENCY = max(
+            self.GLM_BATCH_PEAK_CONCURRENCY,
+            min(int(self.GLM_BATCH_OFFPEAK_DEFAULT_CONCURRENCY or 3), self.GLM_BATCH_MAX_CONCURRENCY),
+        )
+        self.GLM_BATCH_ADAPTIVE_SUCCESS_THRESHOLD = max(1, int(self.GLM_BATCH_ADAPTIVE_SUCCESS_THRESHOLD or 8))
+        self.GLM_BATCH_ADAPTIVE_INCREASE_COOLDOWN_SECONDS = max(
+            30,
+            int(self.GLM_BATCH_ADAPTIVE_INCREASE_COOLDOWN_SECONDS or 180),
+        )
+        self.GLM_BATCH_ADAPTIVE_RATE_LIMIT_COOLDOWN_SECONDS = max(
+            30,
+            int(self.GLM_BATCH_ADAPTIVE_RATE_LIMIT_COOLDOWN_SECONDS or 300),
+        )
+        self.GLM_BATCH_SPILLOVER_BACKLOG_FACTOR = max(1, int(self.GLM_BATCH_SPILLOVER_BACKLOG_FACTOR or 2))
 
         return self
 

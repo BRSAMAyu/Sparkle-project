@@ -37,6 +37,16 @@ class _SafeFormatDict(dict):
 
 PROMPT_SECTION_SOFT_LIMIT_TOKENS = 2800
 
+# 各 tier 的 prompt token 预算（与 ModelTier 对应但避免循环导入，用字符串 key）
+_TIER_PROMPT_BUDGET: dict[str, int] = {
+    "free_fast": 1500,
+    "fast": 2000,
+    "standard": 2800,
+    "reasoning": 4000,
+    "free_reasoning": 3000,
+    "glm_batch": 2800,
+}
+
 
 def _estimate_prompt_tokens(text: str) -> int:
     return max(1, len(str(text or "")) // 4)
@@ -82,9 +92,15 @@ def _truncate_section(content: str, *, target_tokens: int) -> str:
     return "\n".join(kept)
 
 
-def _apply_prompt_budget(section_map: dict[str, str], *, priority_map: dict[str, int]) -> dict[str, str]:
+def _apply_prompt_budget(
+    section_map: dict[str, str],
+    *,
+    priority_map: dict[str, int],
+    budget_tokens: int | None = None,
+) -> dict[str, str]:
+    limit = budget_tokens if budget_tokens is not None else PROMPT_SECTION_SOFT_LIMIT_TOKENS
     total_tokens = sum(_estimate_prompt_tokens(content) for content in section_map.values() if str(content or "").strip())
-    if total_tokens <= PROMPT_SECTION_SOFT_LIMIT_TOKENS:
+    if total_tokens <= limit:
         return section_map
 
     min_tokens = {
@@ -112,7 +128,7 @@ def _apply_prompt_budget(section_map: dict[str, str], *, priority_map: dict[str,
                 for item in adjusted.values()
                 if str(item or "").strip()
             )
-            if total_tokens <= PROMPT_SECTION_SOFT_LIMIT_TOKENS:
+            if total_tokens <= limit:
                 return adjusted
     return adjusted
 
@@ -598,6 +614,8 @@ def build_system_prompt(
 
     chat_mode: str = "standard",
 
+    model_key: str | None = None,  # P2: model-aware prompt budget
+
 ) -> str:
 
     """
@@ -931,6 +949,18 @@ def build_system_prompt(
         "conversation_history_section": f"[优先级：L3 背景]\n{conversation_history_section}".strip() if conversation_history_section else "",
         "task_awareness_section": f"[优先级：L3 背景]\n{TASK_AWARENESS_SECTION}".strip(),
     }
+    # P2: 根据 model_key 的 tier 动态调整 prompt token 预算
+    _model_tier_str: str | None = None
+    if model_key:
+        try:
+            from app.core.llm_router import llm_router as _lr
+            _mc = _lr._available_models.get(model_key)
+            if _mc and hasattr(_mc, "tier"):
+                _model_tier_str = _mc.tier.value
+        except Exception:
+            pass
+    _prompt_budget = _TIER_PROMPT_BUDGET.get(_model_tier_str or "", PROMPT_SECTION_SOFT_LIMIT_TOKENS)
+
     section_map = _apply_prompt_budget(
         section_map,
         priority_map={
@@ -949,6 +979,7 @@ def build_system_prompt(
             "conversation_history_section": 3,
             "task_awareness_section": 3,
         },
+        budget_tokens=_prompt_budget,
     )
     formatted_user_context = section_map["user_context"]
     preference_instructions = section_map["preference_instructions"]

@@ -57,16 +57,16 @@ async def create_fragment(
     )
 
     celery_status = get_celery_queue_status(settings.GLM_BATCH_QUEUE)
-    queue_saturated = (
-        int(celery_status.get("queue_active_tasks") or 0) >= int(settings.GLM_BATCH_MAX_CONCURRENCY or 2)
-        or int(celery_status.get("queue_reserved_tasks") or 0) > 0
+    dispatch = glm_batch_service.decide_cognitive_dispatch(
+        severity=fragment.severity,
+        context_tags=fragment.context_tags,
+        error_tags=fragment.error_tags,
+        celery_status=celery_status,
     )
     should_enqueue_glm_batch = (
         settings.GLM_BATCH_ENABLED
         and settings.GLM_BATCH_COGNITIVE_ANALYSIS_ENABLED
-        and celery_status.get("status") == "healthy"
-        and int(celery_status.get("queue_worker_count") or 0) > 0
-        and not queue_saturated
+        and dispatch.should_enqueue
     )
 
     if should_enqueue_glm_batch:

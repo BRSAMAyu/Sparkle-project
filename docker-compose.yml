@@ -198,7 +198,7 @@ services:
       dockerfile: Dockerfile
     env_file:
       - .env
-    command: celery -A app.core.celery_app worker -l info -Q glm_batch --concurrency=2 --hostname=glm-batch@%h
+    command: celery -A app.core.celery_app worker -l info -Q glm_batch --autoscale=6,2 --hostname=glm-batch@%h
     environment:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sparkle_db:5432/${POSTGRES_DB}
       - REDIS_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/0
@@ -208,7 +208,7 @@ services:
       - POSTGRES_PORT=5432
       - REDIS_HOST=sparkle_redis
       - SERVICE_ROLE=celery-glm-batch
-      - GLM_BATCH_MAX_CONCURRENCY=2
+      - GLM_BATCH_MAX_CONCURRENCY=6
     depends_on:
       sparkle_db:
         condition: service_healthy
