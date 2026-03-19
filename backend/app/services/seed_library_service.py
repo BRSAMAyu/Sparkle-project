@@ -1241,6 +1241,8 @@ class SeedLibraryService:
         subject: str | None = None,
         difficulty_level: str | None = None,
         task_type: str | None = None,
+        tags: list[str] | None = None,
+        match_all_tags: bool = False,
         count: int = 3,
     ) -> list[dict[str, Any]]:
         """
@@ -1252,6 +1254,8 @@ class SeedLibraryService:
             subject: 学科筛选
             difficulty_level: 难度筛选
             task_type: 任务类型筛选
+            tags: 标签筛选（优先用于 workflow/mode/role/stage）
+            match_all_tags: 是否要求命中全部 tags
             count: 需要的示例数量
 
         Returns:
@@ -1283,6 +1287,15 @@ class SeedLibraryService:
         # 任务类型筛选 (通过标签)
         if task_type:
             conditions.append(SeedItem.tags.contains([task_type]))
+
+        if tags:
+            cleaned_tags = [str(tag).strip() for tag in tags if str(tag).strip()]
+            if cleaned_tags:
+                if match_all_tags:
+                    conditions.append(SeedItem.tags.contains(cleaned_tags))
+                else:
+                    tag_filters = [SeedItem.tags.contains([tag]) for tag in cleaned_tags]
+                    conditions.append(or_(*tag_filters))
 
         # 查询示例
         result = await db.execute(

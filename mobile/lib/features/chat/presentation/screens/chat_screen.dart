@@ -3,12 +3,12 @@ import 'dart:math';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/widgets/ai_rich_text.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.dart';
@@ -22,7 +22,7 @@ import 'package:sparkle/features/chat/presentation/widgets/chat_input.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_mode_selector_pill.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_review_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_selector_pill.dart';
-import 'package:sparkle/features/chat/presentation/widgets/transparency_panel.dart';
+import 'package:sparkle/features/chat/presentation/widgets/transparency_floating_capsule.dart';
 import 'package:sparkle/features/file/file.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
 import 'package:sparkle/features/home/presentation/providers/intent_prediction_provider.dart';
@@ -31,22 +31,14 @@ import 'package:sparkle/features/plan/presentation/providers/active_plan_provide
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 import 'package:sparkle/features/settings/presentation/screens/transparency_settings_screen.dart';
 
-const _chatContentFontFallback = <String>[
-  'PingFang SC',
-  'Hiragino Sans GB',
-  'Heiti SC',
-  'Noto Sans SC',
-  'Noto Sans CJK SC',
-  'Source Han Sans SC',
-  'Microsoft YaHei',
-  'Arial Unicode MS',
-];
-
 const _defaultAiSystemPreferences = TransparencyPreferences(
   enabled: true,
   showTokenUsage: true,
   showAgentSwitching: true,
   showReasoningSteps: true,
+  displayMode: TransparencyDisplayMode.collapsedFloating,
+  autoCollapseOnComplete: true,
+  allowPerTurnDismiss: true,
 );
 
 class ChatScreen extends ConsumerStatefulWidget {
@@ -305,8 +297,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     Expanded(
                       child: messages.isEmpty &&
                               chatState.streamingContent.isEmpty &&
-                              chatState.aiStatus == null &&
-                              !chatState.isReasoningActive
+                              !chatState.shouldShowStatusIndicator &&
+                              !chatState.shouldShowReasoningIndicator
                           ? _buildQuickActions(context)
                           : ListView.builder(
                               controller: _scrollController,
@@ -325,10 +317,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                               itemCount: chatState.listItemCount,
                               itemBuilder: (context, index) {
                                 final isStatusShowing =
-                                    chatState.aiStatus != null;
+                                    chatState.shouldShowStatusIndicator;
                                 final isReasoningShowing =
-                                    chatState.isReasoningActive;
-                                final isSendingShowing = chatState.isSending;
+                                    chatState.shouldShowReasoningIndicator;
+                                final isSendingShowing =
+                                    chatState.shouldShowStreamingBubble;
 
                                 if (isStatusShowing && index == 0) {
                                   return Padding(
@@ -971,7 +964,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         : DS.touchTargetMinSize - DS.spacing4;
 
     // IntentPredictionBar height (when visible)
-    if (chatState.aiStatus != null) {
+    if (chatState.shouldShowStatusIndicator) {
       padding += isSmallScreen
           ? DS.touchTargetMinSize
           : DS.touchTargetMinSize + DS.spacing8;
@@ -980,11 +973,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     // ChatInput base height + expansion buffer
     padding += isSmallScreen ? 80.0 : 100.0;
 
-    // TransparencyPanel (conditional)
-    if (aiSystemPreferences.enabled) {
-      padding += isSmallScreen
-          ? DS.spacing64 + DS.spacing64 + DS.spacing12
-          : DS.spacing64 + DS.spacing64 + DS.spacing32;
+    if (aiSystemPreferences.enabled &&
+        aiSystemPreferences.displayMode != TransparencyDisplayMode.detailOnly &&
+        !chatState.transparencyPresentationState.isDismissed) {
+      padding += isSmallScreen ? 56.0 : DS.spacing64;
     }
 
     // GraphRAG visualizer
@@ -1049,10 +1041,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 },
               ),
             ),
-          if (showAiSystemPanel)
+          if (showAiSystemPanel &&
+              aiSystemPreferences.displayMode !=
+                  TransparencyDisplayMode.detailOnly)
             Padding(
               padding: const EdgeInsets.only(bottom: DS.spacing12),
-              child: TransparencyPanel(
+              child: TransparencyFloatingCapsule(
+                preferences: aiSystemPreferences,
+                runPhase: chatState.runPhase,
+                presentationState: chatState.transparencyPresentationState,
                 status: chatState.aiStatus,
                 details: chatState.aiStatusDetails,
                 promptTokens: chatState.lastPromptTokens,
@@ -1067,9 +1064,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 transparencyData: chatState.transparencyData,
                 runLedgerSummary: chatState.runLedgerSummary,
                 currentStepIndex: chatState.currentStepIndex,
-                showTokenUsageDetails: aiSystemPreferences.showTokenUsage,
-                showAgentCollaboration: aiSystemPreferences.showAgentSwitching,
-                showReasoningTimeline: aiSystemPreferences.showReasoningSteps,
+                onDismiss: aiSystemPreferences.allowPerTurnDismiss
+                    ? () => ref
+                        .read(chatProvider.notifier)
+                        .dismissTransparencyForCurrentRun()
+                    : null,
+                onExpandedChanged: (expanded) => ref
+                    .read(chatProvider.notifier)
+                    .setTransparencyExpanded(expanded),
               ),
             ),
           if (showExpandedContext) ...[
@@ -1079,7 +1081,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ],
           if (showExpandedContext) const IntentPredictionBar(showIdle: false),
           if (showExpandedContext &&
-              !chatState.isSending &&
+              !chatState.hasActiveRun &&
               dynamicPrompts.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(
@@ -1103,7 +1105,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               ),
             ),
           ChatInput(
-            enabled: !chatState.isSending,
+            enabled: !chatState.hasActiveRun,
             onTextChanged: (text) {
               if (mounted) {
                 ref
@@ -1524,27 +1526,11 @@ class _StreamingBubble extends StatelessWidget {
   const _StreamingBubble({required this.content});
   final String content;
 
-  /// 检测内容是否包含 Markdown 语法
-  bool _hasMarkdownSyntax(String text) {
-    if (text.isEmpty) return false;
-    final patterns = <RegExp>[
-      RegExp(r'(^|\n)#{1,6}\s', multiLine: true), // 标题
-      RegExp('```'), // 代码块
-      RegExp(r'`[^`\n]+`'), // 行内代码
-      RegExp(r'(^|\n)[-*+]\s', multiLine: true), // 无序列表
-      RegExp(r'(^|\n)\d+\.\s', multiLine: true), // 有序列表
-      RegExp(r'\*\*[^*]+\*\*'), // 粗体
-      RegExp(r'\[[^\]]+\]\([^)]+\)'), // 链接
-    ];
-    return patterns.any((p) => p.hasMatch(text));
-  }
-
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bubbleColor = DS.chatBubbleOther;
     final textColor = DS.chatBubbleOtherText;
-    final shouldUseMarkdown = _hasMarkdownSyntax(content);
 
     return Align(
       alignment: Alignment.centerLeft,
@@ -1572,78 +1558,16 @@ class _StreamingBubble extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Flexible(
-              child: shouldUseMarkdown
-                  ? MarkdownBody(
-                      key: ValueKey('stream_$content'),
-                      data: content,
-                      styleSheet: MarkdownStyleSheet(
-                        p: TextStyle(
-                          color: textColor,
-                          fontSize: DS.fontSizeBase,
-                          fontFamilyFallback: _chatContentFontFallback,
-                        ),
-                        strong: TextStyle(
-                          color: textColor,
-                          fontWeight: FontWeight.w700,
-                          fontFamilyFallback: _chatContentFontFallback,
-                        ),
-                        em: TextStyle(
-                          color: textColor,
-                          fontStyle: FontStyle.italic,
-                          fontFamilyFallback: _chatContentFontFallback,
-                        ),
-                        code: TextStyle(
-                          backgroundColor: isDark
-                              ? DS.neutral700
-                              : DS.chatBubbleOtherText.withValues(alpha: 0.08),
-                          color: textColor,
-                          fontFamily: 'monospace',
-                          fontFamilyFallback: _chatContentFontFallback,
-                          fontSize: 13,
-                        ),
-                        codeblockDecoration: BoxDecoration(
-                          color: isDark
-                              ? DS.neutral700
-                              : DS.chatBubbleOtherText.withValues(alpha: 0.06),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        listBullet: TextStyle(
-                          color: textColor,
-                          fontFamilyFallback: _chatContentFontFallback,
-                        ),
-                        h1: TextStyle(
-                          color: textColor,
-                          fontSize: DS.fontSizeBase + 6,
-                          fontWeight: FontWeight.bold,
-                          fontFamilyFallback: _chatContentFontFallback,
-                        ),
-                        h2: TextStyle(
-                          color: textColor,
-                          fontSize: DS.fontSizeBase + 4,
-                          fontWeight: FontWeight.bold,
-                          fontFamilyFallback: _chatContentFontFallback,
-                        ),
-                        h3: TextStyle(
-                          color: textColor,
-                          fontSize: DS.fontSizeBase + 2,
-                          fontWeight: FontWeight.w600,
-                          fontFamilyFallback: _chatContentFontFallback,
-                        ),
-                        a: TextStyle(
-                          color: DS.brandPrimary,
-                          decoration: TextDecoration.underline,
-                          fontFamilyFallback: _chatContentFontFallback,
-                        ),
-                      ),
-                    )
-                  : Text(
-                      content,
-                      style: TextStyle(
-                        color: textColor,
-                        fontSize: DS.fontSizeBase,
-                        fontFamilyFallback: _chatContentFontFallback,
-                      ),
-                    ),
+              child: AiRichText(
+                key: ValueKey('stream_$content'),
+                content: content,
+                textColor: textColor,
+                codeBackgroundColor: isDark
+                    ? DS.neutral700
+                    : DS.chatBubbleOtherText.withValues(alpha: 0.06),
+                linkColor: DS.brandPrimary,
+                fontSize: DS.fontSizeBase,
+              ),
             ),
             const SizedBox(width: DS.xs),
             _BlinkingCursor(color: textColor),

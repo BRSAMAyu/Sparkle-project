@@ -1159,57 +1159,69 @@ class DemoDataService {
     var edgeId = 0;
 
     // 数学 -> 算法（前置知识）
-    edges.add(GalaxyEdgeModel(
-      id: 'edge_${edgeId++}',
-      sourceId: 'node_0', // 高等数学
-      targetId: 'node_13', // 算法设计
-      relationType: EdgeRelationType.prerequisite,
-      strength: 0.9,
-    ),);
+    edges.add(
+      GalaxyEdgeModel(
+        id: 'edge_${edgeId++}',
+        sourceId: 'node_0', // 高等数学
+        targetId: 'node_13', // 算法设计
+        relationType: EdgeRelationType.prerequisite,
+        strength: 0.9,
+      ),
+    );
 
     // 概率论 -> 机器学习（前置知识）
-    edges.add(GalaxyEdgeModel(
-      id: 'edge_${edgeId++}',
-      sourceId: 'node_2', // 概率论
-      targetId: 'node_21', // 机器学习
-      relationType: EdgeRelationType.prerequisite,
-      strength: 0.9,
-    ),);
+    edges.add(
+      GalaxyEdgeModel(
+        id: 'edge_${edgeId++}',
+        sourceId: 'node_2', // 概率论
+        targetId: 'node_21', // 机器学习
+        relationType: EdgeRelationType.prerequisite,
+        strength: 0.9,
+      ),
+    );
 
     // 线性代数 -> 机器学习（前置知识）
-    edges.add(GalaxyEdgeModel(
-      id: 'edge_${edgeId++}',
-      sourceId: 'node_1', // 线性代数
-      targetId: 'node_21', // 机器学习
-      relationType: EdgeRelationType.prerequisite,
-      strength: 0.8,
-    ),);
+    edges.add(
+      GalaxyEdgeModel(
+        id: 'edge_${edgeId++}',
+        sourceId: 'node_1', // 线性代数
+        targetId: 'node_21', // 机器学习
+        relationType: EdgeRelationType.prerequisite,
+        strength: 0.8,
+      ),
+    );
 
     // 心理学 -> 设计思维（相关知识）
-    edges.add(GalaxyEdgeModel(
-      id: 'edge_${edgeId++}',
-      sourceId: 'node_${23 + 5}', // 心理学导论
-      targetId: 'node_27', // 设计思维
-      strength: 0.7,
-    ),);
+    edges.add(
+      GalaxyEdgeModel(
+        id: 'edge_${edgeId++}',
+        sourceId: 'node_${23 + 5}', // 心理学导论
+        targetId: 'node_27', // 设计思维
+        strength: 0.7,
+      ),
+    );
 
     // 批判性思维 -> 编程（应用）
-    edges.add(GalaxyEdgeModel(
-      id: 'edge_${edgeId++}',
-      sourceId: 'node_${30 + 3}', // 批判性思维
-      targetId: 'node_9', // 程序设计
-      relationType: EdgeRelationType.application,
-      strength: 0.6,
-    ),);
+    edges.add(
+      GalaxyEdgeModel(
+        id: 'edge_${edgeId++}',
+        sourceId: 'node_${30 + 3}', // 批判性思维
+        targetId: 'node_9', // 程序设计
+        relationType: EdgeRelationType.application,
+        strength: 0.6,
+      ),
+    );
 
     // 经济学 -> 管理学（衍生知识）
-    edges.add(GalaxyEdgeModel(
-      id: 'edge_${edgeId++}',
-      sourceId: 'node_${23 + 3}', // 经济学
-      targetId: 'node_${23 + 4}', // 管理学
-      relationType: EdgeRelationType.derived,
-      strength: 0.8,
-    ),);
+    edges.add(
+      GalaxyEdgeModel(
+        id: 'edge_${edgeId++}',
+        sourceId: 'node_${23 + 3}', // 经济学
+        targetId: 'node_${23 + 4}', // 管理学
+        relationType: EdgeRelationType.derived,
+        strength: 0.8,
+      ),
+    );
 
     return edges;
   }
@@ -1342,47 +1354,6 @@ class DemoDataService {
         tags: const ['Network', 'Prerequisites'],
       ),
     ];
-    final systemDesignTasks = [
-      _buildPlanTask(
-        id: 'plan_growth_system_task_1',
-        title: '阅读高可用系统案例并提炼取舍',
-        planId: 'plan_growth_2',
-        createdAt: now.subtract(const Duration(days: 7)),
-        updatedAt: now.subtract(const Duration(days: 1)),
-        estimatedMinutes: 45,
-        difficulty: 3,
-        type: TaskType.learning,
-        status: TaskStatus.completed,
-        actualMinutes: 48,
-        tags: const ['System Design', 'Case Study'],
-      ),
-      _buildPlanTask(
-        id: 'plan_growth_system_task_2',
-        title: '设计消息队列削峰填谷方案',
-        planId: 'plan_growth_2',
-        createdAt: now.subtract(const Duration(days: 3)),
-        updatedAt: now.subtract(const Duration(hours: 10)),
-        estimatedMinutes: 60,
-        difficulty: 4,
-        type: TaskType.training,
-        status: TaskStatus.pending,
-        dueDate: now.add(const Duration(days: 3)),
-        tags: const ['MQ', 'Scalability'],
-      ),
-      _buildPlanTask(
-        id: 'plan_growth_system_task_3',
-        title: '复盘缓存一致性常见失效场景',
-        planId: 'plan_growth_2',
-        createdAt: now.subtract(const Duration(days: 1)),
-        updatedAt: now.subtract(const Duration(hours: 4)),
-        estimatedMinutes: 30,
-        difficulty: 3,
-        type: TaskType.reflection,
-        status: TaskStatus.pending,
-        dueDate: now.add(const Duration(days: 5)),
-        tags: const ['Cache', 'Reflection'],
-      ),
-    ];
     final archivedGrowthTasks = [
       _buildPlanTask(
         id: 'plan_growth_archived_task_1',
@@ -1413,7 +1384,11 @@ class DemoDataService {
         targetDate: now.add(const Duration(days: 7)),
         description: '集中攻克链表、栈、队列和二叉树，准备期中考试。',
         totalEstimatedHours: 20,
-        tasks: demoTasks.where((task) => task.title.contains('数据结构') || task.title.contains('算法设计')).take(3).toList(),
+        tasks: demoTasks
+            .where((task) =>
+                task.title.contains('数据结构') || task.title.contains('算法设计'))
+            .take(3)
+            .toList(),
       ),
       PlanModel(
         id: 'plan_growth_1',
@@ -1432,31 +1407,6 @@ class DemoDataService {
         planStage: PlanStage.daily,
         priority: PlanPriority.high,
         tasks: growthCoreTasks,
-      ),
-      PlanModel(
-        id: 'plan_growth_2',
-        userId: 'CS_Sophomore_12345',
-        name: '分布式系统设计进阶',
-        type: PlanType.growth,
-        dailyAvailableMinutes: 50,
-        masteryLevel: 0.42,
-        progress: 0.58,
-        isActive: true,
-        createdAt: now.subtract(const Duration(days: 18)),
-        updatedAt: now.subtract(const Duration(hours: 8)),
-        targetDate: now.add(const Duration(days: 120)),
-        description: '围绕高并发、高可用和一致性，建立系统设计完整方法论。',
-        totalEstimatedHours: 72,
-        subject: '系统设计',
-        planStage: PlanStage.review,
-        priority: PlanPriority.critical,
-        isPrimary: true,
-        source: 'learning_path',
-        sourceMetadata: {
-          'target_node_id': 'demo_target',
-          'path_node_ids': ['demo_1', 'demo_2', 'demo_target'],
-        },
-        tasks: systemDesignTasks,
       ),
       PlanModel(
         id: 'plan_growth_archived',
@@ -1548,9 +1498,10 @@ class DemoDataService {
           createdAt: DateTime.now().subtract(const Duration(minutes: 29)),
           toolResults: [
             ToolResultModel(
-                success: true,
-                toolName: 'generate_plan',
-                data: {'status': 'completed'},),
+              success: true,
+              toolName: 'generate_plan',
+              data: {'status': 'completed'},
+            ),
           ],
         ),
         ChatMessageModel(
@@ -2096,7 +2047,8 @@ main  →  [A] → [B] → [C]
       Post(
         id: 'post_1',
         userId: 'user_alice',
-        content: '今天终于搞懂了快速排序的partition过程！感觉打开了新世界的大门🎉 分享一下我的理解：选一个pivot，比它小的放左边，大的放右边，然后递归处理两边。关键是理解"分治"的思想！',
+        content:
+            '今天终于搞懂了快速排序的partition过程！感觉打开了新世界的大门🎉 分享一下我的理解：选一个pivot，比它小的放左边，大的放右边，然后递归处理两边。关键是理解"分治"的思想！',
         createdAt: now.subtract(const Duration(hours: 2)),
         user: const PostUser(
           id: 'user_alice',
@@ -2122,7 +2074,8 @@ main  →  [A] → [B] → [C]
       Post(
         id: 'post_3',
         userId: 'user_carol',
-        content: '分享一个学习技巧：用费曼学习法复习知识点效果超好！试着把今天学的内容讲给室友听，结果发现自己还有很多不懂的地方😅 教是最好的学！',
+        content:
+            '分享一个学习技巧：用费曼学习法复习知识点效果超好！试着把今天学的内容讲给室友听，结果发现自己还有很多不懂的地方😅 教是最好的学！',
         createdAt: now.subtract(const Duration(hours: 8)),
         user: const PostUser(
           id: 'user_carol',
@@ -2148,7 +2101,8 @@ main  →  [A] → [B] → [C]
       Post(
         id: 'post_5',
         userId: 'user_emma',
-        content: '今天用Sparkle的认知棱镜发现了自己的学习模式：我在下午3-5点效率最高！以后要把难题放在这个时间段解决✨ 数据驱动真的有用！',
+        content:
+            '今天用Sparkle的认知棱镜发现了自己的学习模式：我在下午3-5点效率最高！以后要把难题放在这个时间段解决✨ 数据驱动真的有用！',
         createdAt: now.subtract(const Duration(days: 1)),
         user: const PostUser(
           id: 'user_emma',
@@ -2174,7 +2128,8 @@ main  →  [A] → [B] → [C]
       Post(
         id: 'post_7',
         userId: 'user_grace',
-        content: '分享一个Git技巧：用git stash暂存当前修改，切换分支处理紧急bug，然后git stash pop恢复。再也不用到处commit了！',
+        content:
+            '分享一个Git技巧：用git stash暂存当前修改，切换分支处理紧急bug，然后git stash pop恢复。再也不用到处commit了！',
         createdAt: now.subtract(const Duration(days: 2)),
         user: const PostUser(
           id: 'user_grace',
@@ -2233,7 +2188,9 @@ main  →  [A] → [B] → [C]
       {
         'id': 'session_1',
         'start_time': now.subtract(const Duration(hours: 2)).toIso8601String(),
-        'end_time': now.subtract(const Duration(hours: 1, minutes: 30)).toIso8601String(),
+        'end_time': now
+            .subtract(const Duration(hours: 1, minutes: 30))
+            .toIso8601String(),
         'duration_minutes': 30,
         'focus_type': 'pomodoro',
         'status': 'completed',
@@ -2242,8 +2199,11 @@ main  →  [A] → [B] → [C]
       },
       {
         'id': 'session_2',
-        'start_time': now.subtract(const Duration(days: 1, hours: 3)).toIso8601String(),
-        'end_time': now.subtract(const Duration(days: 1, hours: 1, minutes: 30)).toIso8601String(),
+        'start_time':
+            now.subtract(const Duration(days: 1, hours: 3)).toIso8601String(),
+        'end_time': now
+            .subtract(const Duration(days: 1, hours: 1, minutes: 30))
+            .toIso8601String(),
         'duration_minutes': 90,
         'focus_type': 'deep_work',
         'status': 'completed',
@@ -2252,8 +2212,11 @@ main  →  [A] → [B] → [C]
       },
       {
         'id': 'session_3',
-        'start_time': now.subtract(const Duration(days: 1, hours: 15)).toIso8601String(),
-        'end_time': now.subtract(const Duration(days: 1, hours: 14, minutes: 35)).toIso8601String(),
+        'start_time':
+            now.subtract(const Duration(days: 1, hours: 15)).toIso8601String(),
+        'end_time': now
+            .subtract(const Duration(days: 1, hours: 14, minutes: 35))
+            .toIso8601String(),
         'duration_minutes': 25,
         'focus_type': 'pomodoro',
         'status': 'completed',
@@ -2261,8 +2224,10 @@ main  →  [A] → [B] → [C]
       },
       {
         'id': 'session_4',
-        'start_time': now.subtract(const Duration(days: 2, hours: 4)).toIso8601String(),
-        'end_time': now.subtract(const Duration(days: 2, hours: 2)).toIso8601String(),
+        'start_time':
+            now.subtract(const Duration(days: 2, hours: 4)).toIso8601String(),
+        'end_time':
+            now.subtract(const Duration(days: 2, hours: 2)).toIso8601String(),
         'duration_minutes': 120,
         'focus_type': 'deep_work',
         'status': 'completed',
@@ -2270,8 +2235,11 @@ main  →  [A] → [B] → [C]
       },
       {
         'id': 'session_5',
-        'start_time': now.subtract(const Duration(days: 3, hours: 5)).toIso8601String(),
-        'end_time': now.subtract(const Duration(days: 3, hours: 4, minutes: 20)).toIso8601String(),
+        'start_time':
+            now.subtract(const Duration(days: 3, hours: 5)).toIso8601String(),
+        'end_time': now
+            .subtract(const Duration(days: 3, hours: 4, minutes: 20))
+            .toIso8601String(),
         'duration_minutes': 40,
         'focus_type': 'pomodoro',
         'status': 'completed',
@@ -2297,7 +2265,8 @@ main  →  [A] → [B] → [C]
         'chapter': '排序算法',
         'difficulty': 3,
         'next_review_at': now.add(const Duration(days: 2)).toIso8601String(),
-        'ai_analysis_summary': '你对partition过程的理解基本正确，但需要注意不同实现方式（Lomuto vs Hoare）会影响结果。建议画图模拟完整过程。',
+        'ai_analysis_summary':
+            '你对partition过程的理解基本正确，但需要注意不同实现方式（Lomuto vs Hoare）会影响结果。建议画图模拟完整过程。',
       },
       {
         'id': 'error_2',
@@ -2312,7 +2281,8 @@ main  →  [A] → [B] → [C]
         'chapter': 'TCP协议',
         'difficulty': 4,
         'next_review_at': now.add(const Duration(days: 3)).toIso8601String(),
-        'ai_analysis_summary': '这是一个经典的边界情况问题。关键是理解TCP的状态机：客户端进入ESTABLISHED，服务器仍在SYN_RCVD。',
+        'ai_analysis_summary':
+            '这是一个经典的边界情况问题。关键是理解TCP的状态机：客户端进入ESTABLISHED，服务器仍在SYN_RCVD。',
       },
       {
         'id': 'error_3',
@@ -2478,25 +2448,35 @@ main  →  [A] → [B] → [C]
           'id': 'partner_1',
           'partner_id': 'friend_1',
           'partner_name': 'Alice_Codes',
-          'partner_avatar': 'https://api.dicebear.com/9.x/avataaars/png?seed=Alice',
+          'partner_avatar':
+              'https://api.dicebear.com/9.x/avataaars/png?seed=Alice',
           'status': 'active',
-          'started_at': DateTime.now().subtract(const Duration(days: 14)).toIso8601String(),
+          'started_at': DateTime.now()
+              .subtract(const Duration(days: 14))
+              .toIso8601String(),
           'my_streak': 7,
           'partner_streak': 5,
           'total_checkins': 12,
-          'last_checkin': DateTime.now().subtract(const Duration(hours: 3)).toIso8601String(),
+          'last_checkin': DateTime.now()
+              .subtract(const Duration(hours: 3))
+              .toIso8601String(),
         },
         {
           'id': 'partner_2',
           'partner_id': 'friend_3',
           'partner_name': 'Carol_学习',
-          'partner_avatar': 'https://api.dicebear.com/9.x/avataaars/png?seed=Carol',
+          'partner_avatar':
+              'https://api.dicebear.com/9.x/avataaars/png?seed=Carol',
           'status': 'active',
-          'started_at': DateTime.now().subtract(const Duration(days: 7)).toIso8601String(),
+          'started_at': DateTime.now()
+              .subtract(const Duration(days: 7))
+              .toIso8601String(),
           'my_streak': 3,
           'partner_streak': 4,
           'total_checkins': 8,
-          'last_checkin': DateTime.now().subtract(const Duration(hours: 1)).toIso8601String(),
+          'last_checkin': DateTime.now()
+              .subtract(const Duration(hours: 1))
+              .toIso8601String(),
         },
       ];
 
@@ -2510,8 +2490,12 @@ main  →  [A] → [B] → [C]
           'member_count': 15,
           'is_member': true,
           'is_public': true,
-          'created_at': DateTime.now().subtract(const Duration(days: 30)).toIso8601String(),
-          'last_activity': DateTime.now().subtract(const Duration(hours: 1)).toIso8601String(),
+          'created_at': DateTime.now()
+              .subtract(const Duration(days: 30))
+              .toIso8601String(),
+          'last_activity': DateTime.now()
+              .subtract(const Duration(hours: 1))
+              .toIso8601String(),
         },
         {
           'id': 'group_2',
@@ -2521,8 +2505,12 @@ main  →  [A] → [B] → [C]
           'member_count': 42,
           'is_member': true,
           'is_public': true,
-          'created_at': DateTime.now().subtract(const Duration(days: 60)).toIso8601String(),
-          'last_activity': DateTime.now().subtract(const Duration(minutes: 30)).toIso8601String(),
+          'created_at': DateTime.now()
+              .subtract(const Duration(days: 60))
+              .toIso8601String(),
+          'last_activity': DateTime.now()
+              .subtract(const Duration(minutes: 30))
+              .toIso8601String(),
         },
         {
           'id': 'group_3',
@@ -2532,8 +2520,12 @@ main  →  [A] → [B] → [C]
           'member_count': 28,
           'is_member': false,
           'is_public': true,
-          'created_at': DateTime.now().subtract(const Duration(days: 15)).toIso8601String(),
-          'last_activity': DateTime.now().subtract(const Duration(hours: 2)).toIso8601String(),
+          'created_at': DateTime.now()
+              .subtract(const Duration(days: 15))
+              .toIso8601String(),
+          'last_activity': DateTime.now()
+              .subtract(const Duration(hours: 2))
+              .toIso8601String(),
         },
       ];
 
@@ -2544,29 +2536,42 @@ main  →  [A] → [B] → [C]
           'group_id': 'group_1',
           'sender_id': 'friend_1',
           'sender_name': 'Alice_Codes',
-          'sender_avatar': 'https://api.dicebear.com/9.x/avataaars/png?seed=Alice',
+          'sender_avatar':
+              'https://api.dicebear.com/9.x/avataaars/png?seed=Alice',
           'content': '今天有人一起刷动态规划吗？',
-          'created_at': DateTime.now().subtract(const Duration(minutes: 30)).toIso8601String(),
-          'reactions': [{'emoji': '👍', 'count': 3}],
+          'created_at': DateTime.now()
+              .subtract(const Duration(minutes: 30))
+              .toIso8601String(),
+          'reactions': [
+            {'emoji': '👍', 'count': 3}
+          ],
         },
         {
           'id': 'msg_2',
           'group_id': 'group_1',
           'sender_id': 'friend_2',
           'sender_name': 'Bob_Dev',
-          'sender_avatar': 'https://api.dicebear.com/9.x/avataaars/png?seed=Bob',
+          'sender_avatar':
+              'https://api.dicebear.com/9.x/avataaars/png?seed=Bob',
           'content': '我来！正好要做背包问题的练习',
-          'created_at': DateTime.now().subtract(const Duration(minutes: 25)).toIso8601String(),
-          'reactions': [{'emoji': '💪', 'count': 2}],
+          'created_at': DateTime.now()
+              .subtract(const Duration(minutes: 25))
+              .toIso8601String(),
+          'reactions': [
+            {'emoji': '💪', 'count': 2}
+          ],
         },
         {
           'id': 'msg_3',
           'group_id': 'group_1',
           'sender_id': 'friend_3',
           'sender_name': 'Carol_学习',
-          'sender_avatar': 'https://api.dicebear.com/9.x/avataaars/png?seed=Carol',
+          'sender_avatar':
+              'https://api.dicebear.com/9.x/avataaars/png?seed=Carol',
           'content': '加油！动态规划确实需要多练 💯',
-          'created_at': DateTime.now().subtract(const Duration(minutes: 20)).toIso8601String(),
+          'created_at': DateTime.now()
+              .subtract(const Duration(minutes: 20))
+              .toIso8601String(),
           'reactions': [],
         },
       ];
@@ -2580,14 +2585,17 @@ main  →  [A] → [B] → [C]
     for (int i = 0; i < 365; i++) {
       final date = now.subtract(Duration(days: i));
       // 随机生成打卡强度 (0-4)
-      final intensity = i < 30 ? (date.weekday % 3 == 0 ? 2 : 0) : (i % 7 == 0 ? 3 : (i % 3));
+      final intensity =
+          i < 30 ? (date.weekday % 3 == 0 ? 2 : 0) : (i % 7 == 0 ? 3 : (i % 3));
       heatmap.add({
         'date': date.toIso8601String().split('T')[0],
         'intensity': intensity,
-        'checkins': intensity > 0 ? [
-          {'time': '09:00', 'content': '早起学习一小时！'},
-          if (intensity > 2) {'time': '21:00', 'content': '晚上复习总结'},
-        ] : [],
+        'checkins': intensity > 0
+            ? [
+                {'time': '09:00', 'content': '早起学习一小时！'},
+                if (intensity > 2) {'time': '21:00', 'content': '晚上复习总结'},
+              ]
+            : [],
       });
     }
     return heatmap;
@@ -2600,7 +2608,9 @@ main  →  [A] → [B] → [C]
           'partnership_id': 'partner_1',
           'user_id': 'CS_Sophomore_12345',
           'content': '今天完成了算法 chapter 3 的学习，理解了递归的核心思想！',
-          'created_at': DateTime.now().subtract(const Duration(hours: 3)).toIso8601String(),
+          'created_at': DateTime.now()
+              .subtract(const Duration(hours: 3))
+              .toIso8601String(),
           'likes_count': 2,
           'encouragements': [
             {'user_id': 'friend_1', 'message': '太棒了！递归确实需要多练习 💪'},
@@ -2611,7 +2621,9 @@ main  →  [A] → [B] → [C]
           'partnership_id': 'partner_1',
           'user_id': 'friend_1',
           'content': '早起完成了 React Hooks 的复习，感觉理解更深了',
-          'created_at': DateTime.now().subtract(const Duration(hours: 5)).toIso8601String(),
+          'created_at': DateTime.now()
+              .subtract(const Duration(hours: 5))
+              .toIso8601String(),
           'likes_count': 3,
           'encouragements': [],
         },
@@ -2629,7 +2641,8 @@ main  →  [A] → [B] → [C]
           'is_unlocked': true,
           'is_equipped': true,
           'unlock_condition': '默认解锁',
-          'preview_url': 'https://images.unsplash.com/photo-1419248682-f54b?w=200',
+          'preview_url':
+              'https://images.unsplash.com/photo-1419248682-f54b?w=200',
         },
         {
           'id': 've_bg_2',
@@ -2641,7 +2654,8 @@ main  →  [A] → [B] → [C]
           'is_unlocked': true,
           'is_equipped': false,
           'unlock_condition': '连续学习7天',
-          'preview_url': 'https://images.unsplash.com/photo-1486402638-b5b?w=200',
+          'preview_url':
+              'https://images.unsplash.com/photo-1486402638-b5b?w=200',
         },
         {
           'id': 've_bg_3',
@@ -2653,7 +2667,8 @@ main  →  [A] → [B] → [C]
           'is_unlocked': false,
           'is_equipped': false,
           'unlock_condition': '完成10个任务',
-          'preview_url': 'https://images.unsplash.com/photo-1550751827-f584?w=200',
+          'preview_url':
+              'https://images.unsplash.com/photo-1550751827-f584?w=200',
         },
         {
           'id': 've_particle_1',
@@ -2703,7 +2718,9 @@ main  →  [A] → [B] → [C]
           'rarity': 'common',
           'icon_url': '🎯',
           'is_unlocked': true,
-          'unlocked_at': DateTime.now().subtract(const Duration(days: 30)).toIso8601String(),
+          'unlocked_at': DateTime.now()
+              .subtract(const Duration(days: 30))
+              .toIso8601String(),
           'progress': {'current': 1, 'target': 1},
         },
         {
@@ -2714,7 +2731,9 @@ main  →  [A] → [B] → [C]
           'rarity': 'rare',
           'icon_url': '🔥',
           'is_unlocked': true,
-          'unlocked_at': DateTime.now().subtract(const Duration(days: 10)).toIso8601String(),
+          'unlocked_at': DateTime.now()
+              .subtract(const Duration(days: 10))
+              .toIso8601String(),
           'progress': {'current': 7, 'target': 7},
         },
         {

@@ -85,6 +85,24 @@ class VisualElementModel {
   final DateTime? unlockedAt;
   final bool isEquipped;
 
+  String get displaySlot =>
+      config['display_slot']?.toString() ?? elementType.name;
+
+  String? get setId => config['set_id']?.toString();
+
+  int get visibilityWeight =>
+      (config['visibility_weight'] as num?)?.toInt() ?? 0;
+
+  String? get prestigeLabel => config['prestige_label']?.toString();
+
+  String? get sourceAchievementId =>
+      unlockRequirement?['achievement_id']?.toString() ??
+      config['source_achievement_id']?.toString();
+
+  bool get isBundle => elementType == VisualElementType.bundle;
+
+  bool get isPrestigeHighlight => visibilityWeight >= 85;
+
   Map<String, dynamic> toJson() => _$VisualElementModelToJson(this);
 
   /// 获取稀有度对应的颜色

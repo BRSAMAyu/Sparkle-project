@@ -29,6 +29,7 @@ from app.agents.reviewer_agent import (
     ReviewerAgent,
     ReviewResult,
 )
+from app.agents.workflow_experience import build_reflection_system_prompt, get_review_profile
 from app.core.llm_router import ModelProvider
 
 # ============================================
@@ -87,6 +88,11 @@ class ReflectionResult:
     success: bool
     final_content: str
     reasoning: str                      # 总体推理说明
+    early_stop_reason: str | None = None
+    best_round_number: int = 0
+    issue_delta: int = 0
+    review_profile_id: str = "default_response"
+    best_review_result: dict[str, Any] | None = None
 
 
 # ============================================
@@ -233,7 +239,9 @@ class ReflectionAgent:
         user_query: str,
         original_content: str,
         review_result: ReviewResult,
-        context: dict[str, Any] | None = None
+        context: dict[str, Any] | None = None,
+        review_profile_id: str | None = None,
+        workflow_context: dict[str, Any] | None = None,
     ) -> ReflectionResult:
         """
         基于审查结果进行反思和修正
@@ -250,9 +258,20 @@ class ReflectionAgent:
         reflection_id = f"reflection_{uuid.uuid4().hex[:12]}"
         logger.info(f"[ReflectionAgent] Starting reflection {reflection_id}")
 
+        profile = get_review_profile(
+            review_profile_id=review_profile_id or review_result.review_profile_id,
+            workflow_context=workflow_context or review_result.workflow_context,
+            target_type=review_result.target_type,
+        )
         rounds_history: list[ReflectionRound] = []
+        initial_review = review_result
+        initial_score = review_result.overall_score
         current_content = original_content
         current_score = review_result.overall_score
+        best_content = original_content
+        best_review = review_result
+        best_round_number = 0
+        early_stop_reason: str | None = None
 
         for round_num in range(1, self.max_rounds + 1):
             logger.info(
@@ -273,7 +292,13 @@ class ReflectionAgent:
                 current_content=current_content,
                 review_result=review_result,
                 strategy=strategy,
-                context=context or {}
+                context={
+                    **(context or {}),
+                    "review_profile_id": profile.id,
+                    "workflow_context": workflow_context or review_result.workflow_context or {},
+                },
+                review_profile_id=profile.id,
+                workflow_context=workflow_context or review_result.workflow_context or {},
             )
 
             # 3. 重新审查
@@ -283,7 +308,9 @@ class ReflectionAgent:
                 context={
                     **(context or {}),
                     "timestamp": _utcnow().isoformat()
-                }
+                },
+                review_profile_id=profile.id,
+                workflow_context=workflow_context or review_result.workflow_context or {},
             )
 
             # 4. 评估本轮结果
@@ -310,6 +337,11 @@ class ReflectionAgent:
             )
             rounds_history.append(round_record)
 
+            if self._is_better_review(new_review, best_review):
+                best_review = new_review
+                best_content = fixed_content
+                best_round_number = round_num
+
             logger.info(
                 f"[ReflectionAgent] Round {round_num} complete: "
                 f"{outcome.value}, {current_score:.2f} -> {new_review.overall_score:.2f}"
@@ -318,16 +350,33 @@ class ReflectionAgent:
             # 6. 决定是否继续
             if new_review.passed or new_review.overall_score >= self.target_score:
                 logger.info("[ReflectionAgent] Target achieved, stopping")
+                best_review = new_review
+                best_content = fixed_content
+                best_round_number = round_num
+                early_stop_reason = "target_achieved"
                 current_content = fixed_content
                 current_score = new_review.overall_score
                 break
 
-            if outcome == ReflectionOutcome.NO_CHANGE:
-                logger.warning("[ReflectionAgent] No improvement, stopping")
-                break
-
             if outcome == ReflectionOutcome.DEGRADED:
                 logger.warning("[ReflectionAgent] Content degraded, reverting")
+                early_stop_reason = "degraded_reverted_to_best"
+                current_content = best_content
+                current_score = best_review.overall_score
+                review_result = best_review
+                break
+
+            if self._should_early_stop(round_num, review_result, new_review):
+                logger.info("[ReflectionAgent] Early stop triggered after marginal improvement")
+                early_stop_reason = "low_marginal_gain"
+                current_content = best_content
+                current_score = best_review.overall_score
+                review_result = best_review
+                break
+
+            if outcome == ReflectionOutcome.NO_CHANGE:
+                logger.warning("[ReflectionAgent] No improvement, stopping")
+                early_stop_reason = "no_change"
                 break
 
             # 继续下一轮
@@ -337,22 +386,37 @@ class ReflectionAgent:
 
         # 7. 构建最终结果
         success = (
-            current_score >= self.target_score or
-            rounds_history[-1].outcome == ReflectionOutcome.FIXED
+            best_review.overall_score >= self.target_score or
+            best_review.passed
         )
+        final_score = best_review.overall_score
+        final_outcome = rounds_history[-1].outcome if rounds_history else ReflectionOutcome.FAILED
+        if success:
+            final_outcome = ReflectionOutcome.FIXED if final_score > initial_score else ReflectionOutcome.IMPROVED
+        elif final_score > initial_score:
+            final_outcome = ReflectionOutcome.IMPROVED
+        elif final_score < initial_score:
+            final_outcome = ReflectionOutcome.DEGRADED
+        elif early_stop_reason == "no_change":
+            final_outcome = ReflectionOutcome.NO_CHANGE
 
         result = ReflectionResult(
             reflection_id=reflection_id,
-            target_id=review_result.review_id,
+            target_id=initial_review.review_id,
             total_rounds=len(rounds_history),
-            final_outcome=rounds_history[-1].outcome if rounds_history else ReflectionOutcome.FAILED,
-            initial_score=original_content and review_result.overall_score or 0,
-            final_score=current_score,
-            score_delta=current_score - (review_result.overall_score if original_content else 0),
+            final_outcome=final_outcome,
+            initial_score=initial_score,
+            final_score=final_score,
+            score_delta=final_score - initial_score,
             rounds=rounds_history,
             success=success,
-            final_content=current_content,
-            reasoning=self._generate_summary_reasoning(rounds_history)
+            final_content=best_content,
+            reasoning=self._generate_summary_reasoning(rounds_history),
+            early_stop_reason=early_stop_reason,
+            best_round_number=best_round_number,
+            issue_delta=len(best_review.issues) - len(initial_review.issues),
+            review_profile_id=profile.id,
+            best_review_result=best_review.to_dict(),
         )
 
         logger.info(
@@ -422,7 +486,9 @@ class ReflectionAgent:
         current_content: str,
         review_result: ReviewResult,
         strategy: ReflectionStrategy,
-        context: dict[str, Any]
+        context: dict[str, Any],
+        review_profile_id: str,
+        workflow_context: dict[str, Any],
     ) -> tuple[str, str]:
         """
         执行修正
@@ -469,7 +535,13 @@ class ReflectionAgent:
 
         try:
             fixed_content = await self.generator.chat(
-                system_prompt=REFLECTION_SYSTEM_PROMPT,
+                system_prompt=build_reflection_system_prompt(
+                    get_review_profile(
+                        review_profile_id=review_profile_id,
+                        workflow_context=workflow_context,
+                        target_type=review_result.target_type,
+                    )
+                ),
                 user_message=prompt,
                 temperature=0.6  # 略低于原始生成，保持一致性
             )
@@ -568,6 +640,28 @@ class ReflectionAgent:
             return ReflectionOutcome.IMPROVED
 
         return ReflectionOutcome.NO_CHANGE
+
+    def _should_early_stop(
+        self,
+        round_num: int,
+        old_review: ReviewResult,
+        new_review: ReviewResult,
+    ) -> bool:
+        if round_num < 2:
+            return False
+        score_delta = new_review.overall_score - old_review.overall_score
+        critical_reduced = len(new_review.critical_issues) < len(old_review.critical_issues)
+        issues_reduced = len(new_review.issues) < len(old_review.issues)
+        return score_delta < self.min_improvement and not critical_reduced and not issues_reduced
+
+    def _is_better_review(self, candidate: ReviewResult, baseline: ReviewResult) -> bool:
+        if candidate.passed and not baseline.passed:
+            return True
+        if candidate.overall_score > baseline.overall_score + 1e-9:
+            return True
+        if len(candidate.critical_issues) < len(baseline.critical_issues):
+            return True
+        return len(candidate.issues) < len(baseline.issues)
 
     def _generate_summary_reasoning(self, rounds: list[ReflectionRound]) -> str:
         """生成总体推理说明"""

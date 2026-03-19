@@ -33,6 +33,11 @@ class _GeneratedPlanTaskSchema(BaseModel):
     priority: int = Field(ge=1, le=5, default=2)
 
 
+class _LearningPathNodeRef(BaseModel):
+    id: UUID
+    name: str
+
+
 class CreatePlanTool(BaseTool):
     """创建学习计划"""
     name = "create_plan"
@@ -218,9 +223,15 @@ class GenerateTasksForPlanTool(BaseTool):
 
             # 第四步: 批量创建任务
             created_tasks = []
+            learning_path_node_refs = await self._get_learning_path_node_refs(plan_snapshot, db_session)
             for task_data in task_list:
                 try:
                     validated = _GeneratedPlanTaskSchema.model_validate(task_data)
+                    knowledge_node_id = self._match_learning_path_node_id(
+                        validated=validated,
+                        node_refs=learning_path_node_refs,
+                        task_index=len(created_tasks),
+                    )
                     task_create = TaskCreate(
                         title=validated.title,
                         description=validated.description,
@@ -229,7 +240,8 @@ class GenerateTasksForPlanTool(BaseTool):
                         difficulty=self._infer_difficulty(validated.type, validated.priority),
                         energy_cost=1,
                         priority=validated.priority,
-                        plan_id=plan_uuid
+                        plan_id=plan_uuid,
+                        knowledge_node_id=knowledge_node_id,
                     )
 
                     task = await TaskService.create(
@@ -244,7 +256,12 @@ class GenerateTasksForPlanTool(BaseTool):
                         "type": task.type.value,
                         "estimated_minutes": task.estimated_minutes,
                         "priority": task.priority,
-                        "description": validated.description
+                        "description": validated.description,
+                        "knowledge_node_id": (
+                            str(task.knowledge_node_id)
+                            if getattr(task, "knowledge_node_id", None)
+                            else None
+                        ),
                     })
 
                     logger.debug(f"Created task: {task.id} for plan {plan_uuid}")
@@ -416,6 +433,14 @@ class GenerateTasksForPlanTool(BaseTool):
         return tasks[:task_count]
 
     async def _get_learning_path_node_names(self, plan: Any, db_session: Any) -> list[str]:
+        node_refs = await self._get_learning_path_node_refs(plan, db_session)
+        return [node_ref.name for node_ref in node_refs]
+
+    async def _get_learning_path_node_refs(
+        self,
+        plan: Any,
+        db_session: Any,
+    ) -> list[_LearningPathNodeRef]:
         metadata = getattr(plan, "source_metadata", None)
         if getattr(plan, "source", None) != "learning_path" or not isinstance(metadata, dict):
             return []
@@ -435,8 +460,34 @@ class GenerateTasksForPlanTool(BaseTool):
             select(KnowledgeNode.id, KnowledgeNode.name).where(KnowledgeNode.id.in_(ordered_node_ids))
         )
         rows = result.all()
-        names_by_id = {str(row.id): row.name for row in rows}
-        return [names_by_id[str(node_id)] for node_id in ordered_node_ids if str(node_id) in names_by_id]
+        refs_by_id = {
+            str(row.id): _LearningPathNodeRef(id=row.id, name=row.name)
+            for row in rows
+        }
+        return [refs_by_id[str(node_id)] for node_id in ordered_node_ids if str(node_id) in refs_by_id]
+
+    def _match_learning_path_node_id(
+        self,
+        *,
+        validated: _GeneratedPlanTaskSchema,
+        node_refs: list[_LearningPathNodeRef],
+        task_index: int,
+    ) -> UUID | None:
+        if not node_refs:
+            return None
+
+        haystack = f"{validated.title} {validated.description}".lower()
+        for node_ref in node_refs:
+            if node_ref.name.lower() in haystack:
+                return node_ref.id
+
+        if len(node_refs) == 1:
+            return node_refs[0].id
+
+        if task_index < len(node_refs) - 1:
+            return node_refs[task_index].id
+
+        return node_refs[-1].id
 
     async def _generate_tasks_with_llm(
         self,

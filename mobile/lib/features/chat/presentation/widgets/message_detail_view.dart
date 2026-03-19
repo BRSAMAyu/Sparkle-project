@@ -1,23 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/widgets/ai_rich_text.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
-import 'package:url_launcher/url_launcher.dart';
-
-const _detailContentFontFallback = <String>[
-  'PingFang SC',
-  'Hiragino Sans GB',
-  'Heiti SC',
-  'Noto Sans SC',
-  'Noto Sans CJK SC',
-  'Source Han Sans SC',
-  'Microsoft YaHei',
-  'Arial Unicode MS',
-];
 
 /// 消息详情放大视图
 /// 全屏显示消息内容，支持滚动和复制
@@ -224,133 +212,20 @@ class MessageDetailView extends StatelessWidget {
           fontSize: 16,
           height: 1.6,
           color: DS.textPrimary,
-          fontFamilyFallback: _detailContentFontFallback,
+          fontFamilyFallback: aiContentFontFallback,
         ),
       );
     }
 
-    if (!_hasStrongMarkdownSyntax(message.content)) {
-      return SelectableText(
-        message.content,
-        style: TextStyle(
-          fontSize: 16,
-          height: 1.6,
-          color: DS.textPrimary,
-          fontFamilyFallback: _detailContentFontFallback,
-        ),
-      );
-    }
-
-    // AI消息使用Markdown渲染
-    return MarkdownBody(
-      data: message.content,
-      selectable: false,
-      styleSheet: MarkdownStyleSheet(
-        p: TextStyle(
-          fontSize: 16,
-          height: 1.6,
-          color: DS.textPrimary,
-          fontFamilyFallback: _detailContentFontFallback,
-        ),
-        h1: TextStyle(
-          fontSize: 24,
-          fontWeight: FontWeight.bold,
-          color: DS.textPrimary,
-          height: 1.4,
-          fontFamilyFallback: _detailContentFontFallback,
-        ),
-        h2: TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-          color: DS.textPrimary,
-          height: 1.4,
-          fontFamilyFallback: _detailContentFontFallback,
-        ),
-        h3: TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-          color: DS.textPrimary,
-          height: 1.4,
-          fontFamilyFallback: _detailContentFontFallback,
-        ),
-        code: TextStyle(
-          fontSize: 14,
-          backgroundColor: DS.surfaceTertiary.withValues(
-            alpha: 0.5,
-          ),
-          color: DS.primaryBase,
-          fontFamily: 'monospace',
-          fontFamilyFallback: _detailContentFontFallback,
-        ),
-        codeblockDecoration: BoxDecoration(
-          color: DS.surfaceTertiary.withValues(alpha: 0.35),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: DS.border.withValues(alpha: 0.6),
-          ),
-        ),
-        blockquote: TextStyle(
-          color: DS.textSecondary,
-          fontStyle: FontStyle.italic,
-          fontFamilyFallback: _detailContentFontFallback,
-        ),
-        blockquoteDecoration: BoxDecoration(
-          color: DS.surfaceTertiary.withValues(alpha: 0.35),
-          borderRadius: BorderRadius.circular(4),
-          border: Border(
-            left: BorderSide(
-              color: DS.primaryBase,
-              width: 3,
-            ),
-          ),
-        ),
-        listBullet: TextStyle(
-          color: DS.textPrimary,
-          fontFamilyFallback: _detailContentFontFallback,
-        ),
-        a: TextStyle(
-          color: DS.primaryBase,
-          decoration: TextDecoration.underline,
-          fontFamilyFallback: _detailContentFontFallback,
-        ),
-        strong: TextStyle(
-          color: DS.textPrimary,
-          fontWeight: FontWeight.w700,
-          fontFamilyFallback: _detailContentFontFallback,
-        ),
-        em: TextStyle(
-          color: DS.textPrimary,
-          fontStyle: FontStyle.italic,
-          fontFamilyFallback: _detailContentFontFallback,
-        ),
-      ),
-      onTapLink: (text, href, title) {
-        if (href != null) {
-          launchUrl(Uri.parse(href), mode: LaunchMode.externalApplication);
-        }
-      },
+    return AiRichText(
+      content: message.content,
+      textColor: DS.textPrimary,
+      codeBackgroundColor: DS.surfaceTertiary.withValues(alpha: 0.35),
+      linkColor: DS.primaryBase,
+      fontSize: 16,
+      height: 1.6,
+      selectablePlainText: true,
     );
-  }
-
-  bool _hasStrongMarkdownSyntax(String content) {
-    if (content.isEmpty) {
-      return false;
-    }
-
-    final trimmed = content.trim();
-    final strongPatterns = <RegExp>[
-      RegExp(r'(^|\n)#{1,6}\s', multiLine: true), // 标题
-      RegExp('```'), // 代码块
-      RegExp(r'`[^`\n]+`'), // 行内代码
-      RegExp(r'\[[^\]]+\]\([^)]+\)'), // 链接
-      RegExp(r'(^|\n)>\s', multiLine: true), // 引用
-      RegExp(r'(^|\n)\|.+\|', multiLine: true), // 表格
-      RegExp(r'(\*\*|__)[^*_]+(\*\*|__)'), // 粗体
-      RegExp(r'(^|\n)[-*+]\s', multiLine: true), // 无序列表
-      RegExp(r'(^|\n)\d+\.\s', multiLine: true), // 有序列表
-    ];
-
-    return strongPatterns.any((pattern) => pattern.hasMatch(trimmed));
   }
 
   Widget _buildActions(BuildContext context) {

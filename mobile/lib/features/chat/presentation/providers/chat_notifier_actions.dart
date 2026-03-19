@@ -1,6 +1,23 @@
 part of 'chat_provider.dart';
 
 extension ChatNotifierActions on ChatNotifier {
+  void setTransparencyExpanded(bool expanded) {
+    state = state.copyWith(
+      transparencyPresentationState: state.transparencyPresentationState
+          .copyWith(isExpanded: expanded),
+    );
+  }
+
+  void dismissTransparencyForCurrentRun() {
+    state = state.copyWith(
+      transparencyPresentationState: state.transparencyPresentationState
+          .copyWith(
+            isDismissed: true,
+            isExpanded: false,
+          ),
+    );
+  }
+
   Map<String, dynamic> _actionPayload(Map<String, dynamic> payload) {
     final nested = payload['payload'];
     if (nested is Map<String, dynamic>) {
@@ -110,9 +127,11 @@ extension ChatNotifierActions on ChatNotifier {
   }
 
   void startNewSession() {
+    cancelActiveRun(reason: 'new_session');
     state = state.copyWith(
       clearConversation: true,
       messages: [],
+      clearError: true,
       agentActivities: const [],
     );
     if (DemoDataService.isDemoMode) {
@@ -121,7 +140,9 @@ extension ChatNotifierActions on ChatNotifier {
     }
   }
 
-  Future<void> switchPlanSession(String? planId, {BuildContext? context}) async {
+  Future<void> switchPlanSession(String? planId,
+      {BuildContext? context}) async {
+    cancelActiveRun(reason: 'switch_plan');
     if (planId == null) {
       // 🔧 修复：即使没有活跃计划，也尝试加载当前会话历史
       final currentSessionId = state.conversationId;
@@ -131,6 +152,7 @@ extension ChatNotifierActions on ChatNotifier {
         state = state.copyWith(
           clearConversation: true,
           messages: [],
+          clearError: true,
           agentActivities: const [],
         );
       }
@@ -180,6 +202,7 @@ extension ChatNotifierActions on ChatNotifier {
       state = state.copyWith(
         conversationId: sessionId,
         messages: [],
+        isSending: false,
         clearError: true,
         streamingContent: '',
         clearAiStatus: true,
@@ -194,7 +217,8 @@ extension ChatNotifierActions on ChatNotifier {
 
     // Show feedback after successful switch
     if (context != null && context.mounted) {
-      AppFeedback.success(context, I18nService.instance.l10n.chatPlanContextSwitched);
+      AppFeedback.success(
+          context, I18nService.instance.l10n.chatPlanContextSwitched);
     }
   }
 
@@ -368,19 +392,21 @@ extension ChatNotifierActions on ChatNotifier {
     debugPrint('🏆 Achievement unlocked: ${event.name}');
 
     // Delegate to achievement_provider for combo queue management
-    final result = _ref.read(achievementProvider.notifier).handleAchievementUnlock(event);
+    final result =
+        _ref.read(achievementProvider.notifier).handleAchievementUnlock(event);
 
     if (result != null) {
       // Write to global provider so any screen can show the dialog
       _ref.read(pendingAchievementUnlockProvider.notifier).setPending(
-        event: result.event,
-        comboCount: result.comboCount,
-      );
+            event: result.event,
+            comboCount: result.comboCount,
+          );
 
       // Show toast feedback
       state = state.copyWith(
         lastActionStatus: 'achievement_unlocked',
-        lastActionMessage: I18nService.instance.l10n.chatAchievementUnlocked(event.name),
+        lastActionMessage:
+            I18nService.instance.l10n.chatAchievementUnlocked(event.name),
       );
       Future.delayed(const Duration(seconds: 3), () {
         if (mounted) state = state.copyWith(clearActionFeedback: true);
@@ -435,7 +461,8 @@ extension ChatNotifierActions on ChatNotifier {
         notificationData: event.fullNotificationData,
         notificationType: event.notificationType,
       );
-      debugPrint('✅ Notification added to notification center: ${event.notificationId}');
+      debugPrint(
+          '✅ Notification added to notification center: ${event.notificationId}');
     } catch (e) {
       debugPrint('⚠️ Failed to add notification to center: $e');
     }

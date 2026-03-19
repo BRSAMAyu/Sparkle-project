@@ -17,17 +17,23 @@ from app.models.accountability import (
     AccountabilityPartnership,
     AccountabilityStatus,
 )
+from app.models.cognitive import AnalysisStatus
 from app.models import (
     Achievement,
     AchievementRarity,
     AchievementType,
+    BehaviorPattern,
     CapsuleFeedback,
     CapsuleFavorite,
     CapsuleGenerationJob,
+    CognitiveFragment,
     CuriosityCapsule,
     DepthLevel,
     Friendship,
     FriendshipStatus,
+    FocusSession,
+    FocusStatus,
+    FocusType,
     GalaxySkin,
     GenerationType,
     Group,
@@ -38,9 +44,15 @@ from app.models import (
     GroupTask,
     GroupTaskClaim,
     GroupType,
+    InterventionAuditLog,
+    InterventionFeedback,
+    InterventionRequest,
     KnowledgeNode,
     MessageRole,
     MessageType,
+    Notification,
+    NotificationInteraction,
+    NotificationPreferences,
     Plan,
     PlanType,
     Post,
@@ -52,9 +64,12 @@ from app.models import (
     User,
     UserAchievement,
     UserGalaxySkin,
+    UserInterventionSettings,
     UserNodeStatus,
     UserStreakStats,
     UserTitle,
+    UserVisualConfig,
+    UserVisualElement,
     ChatMessage,
     ChatSession,
 )
@@ -676,6 +691,709 @@ async def _ensure_accountability_checkin(
     return checkin
 
 
+async def _ensure_user_achievement(
+    session: AsyncSession,
+    *,
+    user_id,
+    achievement_id: str,
+    progress: float,
+    value: int,
+    target: int,
+    unlocked_at: datetime | None,
+    is_pinned: bool = False,
+) -> UserAchievement:
+    achievement = (
+        await session.execute(
+            select(UserAchievement).where(
+                UserAchievement.user_id == user_id,
+                UserAchievement.achievement_id == achievement_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if achievement:
+        achievement.progress = progress
+        achievement.progress_value = value
+        achievement.progress_target = target
+        achievement.unlocked_at = unlocked_at
+        achievement.is_pinned = is_pinned
+        achievement.last_progress_update = datetime.utcnow()
+        return achievement
+
+    achievement = UserAchievement(
+        user_id=user_id,
+        achievement_id=achievement_id,
+        progress=progress,
+        progress_value=value,
+        progress_target=target,
+        unlocked_at=unlocked_at,
+        is_pinned=is_pinned,
+        last_progress_update=datetime.utcnow(),
+    )
+    session.add(achievement)
+    await session.flush()
+    return achievement
+
+
+async def _ensure_user_streak_stats(
+    session: AsyncSession,
+    *,
+    user_id,
+    current_streak: int,
+    max_streak: int,
+    total_checkin_days: int,
+    last_activity_date: datetime,
+    longest_streak_start: datetime | None = None,
+    longest_streak_end: datetime | None = None,
+    freeze_charges: int = 0,
+    max_freeze_charges: int = 3,
+) -> UserStreakStats:
+    stats = (
+        await session.execute(
+            select(UserStreakStats).where(UserStreakStats.user_id == user_id)
+        )
+    ).scalar_one_or_none()
+    if stats:
+        stats.current_streak = current_streak
+        stats.max_streak = max_streak
+        stats.longest_streak = max_streak
+        stats.total_checkin_days = total_checkin_days
+        stats.last_activity_date = last_activity_date
+        stats.longest_streak_start = longest_streak_start
+        stats.longest_streak_end = longest_streak_end
+        stats.freeze_charges = freeze_charges
+        stats.max_freeze_charges = max_freeze_charges
+        return stats
+
+    stats = UserStreakStats(
+        user_id=user_id,
+        current_streak=current_streak,
+        max_streak=max_streak,
+        longest_streak=max_streak,
+        total_checkin_days=total_checkin_days,
+        last_activity_date=last_activity_date,
+        longest_streak_start=longest_streak_start,
+        longest_streak_end=longest_streak_end,
+        freeze_charges=freeze_charges,
+        max_freeze_charges=max_freeze_charges,
+    )
+    session.add(stats)
+    await session.flush()
+    return stats
+
+
+async def _ensure_user_node_status(
+    session: AsyncSession,
+    *,
+    user_id,
+    node_id,
+    mastery_score: int,
+    total_study_minutes: int,
+    study_count: int,
+    first_unlock_at: datetime,
+    last_study_at: datetime,
+) -> UserNodeStatus:
+    status = (
+        await session.execute(
+            select(UserNodeStatus).where(
+                UserNodeStatus.user_id == user_id,
+                UserNodeStatus.node_id == node_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if status:
+        status.is_unlocked = True
+        status.mastery_score = mastery_score
+        status.total_study_minutes = total_study_minutes
+        status.study_count = study_count
+        status.first_unlock_at = first_unlock_at
+        status.last_study_at = last_study_at
+        return status
+
+    status = UserNodeStatus(
+        user_id=user_id,
+        node_id=node_id,
+        is_unlocked=True,
+        mastery_score=mastery_score,
+        total_study_minutes=total_study_minutes,
+        study_count=study_count,
+        first_unlock_at=first_unlock_at,
+        last_study_at=last_study_at,
+    )
+    session.add(status)
+    await session.flush()
+    return status
+
+
+async def _ensure_focus_session(
+    session: AsyncSession,
+    *,
+    user_id,
+    start_time: datetime,
+    end_time: datetime,
+    duration_minutes: int,
+    focus_type: FocusType,
+    status: FocusStatus,
+    task_id=None,
+    white_noise_type: int | None = None,
+) -> FocusSession:
+    focus_session = (
+        await session.execute(
+            select(FocusSession).where(
+                FocusSession.user_id == user_id,
+                FocusSession.start_time == start_time,
+                FocusSession.end_time == end_time,
+            )
+        )
+    ).scalar_one_or_none()
+    if focus_session:
+        focus_session.duration_minutes = duration_minutes
+        focus_session.focus_type = focus_type
+        focus_session.status = status
+        focus_session.task_id = task_id
+        focus_session.white_noise_type = white_noise_type
+        return focus_session
+
+    focus_session = FocusSession(
+        user_id=user_id,
+        task_id=task_id,
+        start_time=start_time,
+        end_time=end_time,
+        duration_minutes=duration_minutes,
+        focus_type=focus_type,
+        status=status,
+        white_noise_type=white_noise_type,
+    )
+    session.add(focus_session)
+    await session.flush()
+    return focus_session
+
+
+async def _ensure_notification(
+    session: AsyncSession,
+    *,
+    user_id,
+    title: str,
+    content: str,
+    notification_type: str,
+    created_at: datetime,
+    is_read: bool,
+    data: dict | None = None,
+    read_at: datetime | None = None,
+) -> Notification:
+    notification = (
+        await session.execute(
+            select(Notification).where(
+                Notification.user_id == user_id,
+                Notification.title == title,
+                Notification.content == content,
+            )
+        )
+    ).scalar_one_or_none()
+    if notification:
+        notification.type = notification_type
+        notification.data = data
+        notification.is_read = is_read
+        notification.read_at = read_at
+        return notification
+
+    notification = Notification(
+        user_id=user_id,
+        title=title,
+        content=content,
+        type=notification_type,
+        data=data,
+        is_read=is_read,
+        read_at=read_at,
+        created_at=created_at,
+        updated_at=created_at,
+    )
+    session.add(notification)
+    await session.flush()
+    return notification
+
+
+async def _ensure_notification_interaction(
+    session: AsyncSession,
+    *,
+    user_id,
+    notification_type: str,
+    notification_id,
+    action_type: str,
+    action_time: datetime,
+    time_to_action: int | None,
+) -> NotificationInteraction:
+    interaction = (
+        await session.execute(
+            select(NotificationInteraction).where(
+                NotificationInteraction.user_id == user_id,
+                NotificationInteraction.notification_type == notification_type,
+                NotificationInteraction.notification_id == notification_id,
+                NotificationInteraction.action_type == action_type,
+            )
+        )
+    ).scalar_one_or_none()
+    if interaction:
+        interaction.action_time = action_time
+        interaction.time_to_action = time_to_action
+        return interaction
+
+    interaction = NotificationInteraction(
+        id=uuid.uuid4(),
+        user_id=user_id,
+        notification_type=notification_type,
+        notification_id=notification_id,
+        action_type=action_type,
+        action_time=action_time,
+        time_to_action=time_to_action,
+        created_at=action_time,
+    )
+    session.add(interaction)
+    await session.flush()
+    return interaction
+
+
+async def _ensure_notification_preferences(
+    session: AsyncSession,
+    *,
+    user_id,
+    enable_system: bool,
+    enable_interventions: bool,
+    notification_level: str,
+    quiet_hours_enabled: bool,
+    quiet_hours_start: str | None,
+    quiet_hours_end: str | None,
+    updated_at: datetime,
+) -> NotificationPreferences:
+    preferences = (
+        await session.execute(
+            select(NotificationPreferences).where(
+                NotificationPreferences.user_id == user_id
+            )
+        )
+    ).scalar_one_or_none()
+    if preferences:
+        preferences.enable_system = enable_system
+        preferences.enable_interventions = enable_interventions
+        preferences.notification_level = notification_level
+        preferences.quiet_hours_enabled = quiet_hours_enabled
+        preferences.quiet_hours_start = quiet_hours_start
+        preferences.quiet_hours_end = quiet_hours_end
+        preferences.updated_at = updated_at
+        return preferences
+
+    preferences = NotificationPreferences(
+        user_id=user_id,
+        enable_system=enable_system,
+        enable_interventions=enable_interventions,
+        notification_level=notification_level,
+        quiet_hours_enabled=quiet_hours_enabled,
+        quiet_hours_start=quiet_hours_start,
+        quiet_hours_end=quiet_hours_end,
+        updated_at=updated_at,
+    )
+    session.add(preferences)
+    await session.flush()
+    return preferences
+
+
+async def _ensure_cognitive_fragment(
+    session: AsyncSession,
+    *,
+    user_id,
+    source_type: str,
+    resource_type: str,
+    content: str,
+    created_at: datetime,
+    sentiment: str | None = None,
+    severity: int = 1,
+    tags: list[str] | None = None,
+    error_tags: list[str] | None = None,
+    context_tags: dict | None = None,
+    task_id=None,
+) -> CognitiveFragment:
+    fragment = (
+        await session.execute(
+            select(CognitiveFragment).where(
+                CognitiveFragment.user_id == user_id,
+                CognitiveFragment.source_type == source_type,
+                CognitiveFragment.content == content,
+            )
+        )
+    ).scalar_one_or_none()
+    if fragment:
+        fragment.resource_type = resource_type
+        fragment.sentiment = sentiment
+        fragment.severity = severity
+        fragment.tags = tags
+        fragment.error_tags = error_tags
+        fragment.context_tags = context_tags
+        fragment.task_id = task_id
+        fragment.analysis_status = AnalysisStatus.COMPLETED
+        return fragment
+
+    fragment = CognitiveFragment(
+        user_id=user_id,
+        task_id=task_id,
+        analysis_status=AnalysisStatus.COMPLETED,
+        source_type=source_type,
+        resource_type=resource_type,
+        content=content,
+        sentiment=sentiment,
+        tags=tags,
+        error_tags=error_tags,
+        context_tags=context_tags,
+        severity=severity,
+        created_at=created_at,
+        updated_at=created_at,
+    )
+    session.add(fragment)
+    await session.flush()
+    return fragment
+
+
+async def _ensure_behavior_pattern(
+    session: AsyncSession,
+    *,
+    user_id,
+    pattern_name: str,
+    pattern_type: str,
+    description: str,
+    solution_text: str,
+    evidence_ids: list[str] | None,
+    confidence_score: float,
+    frequency: int,
+    is_archived: bool,
+    last_observed_at: datetime | None,
+    last_decay_at: datetime | None = None,
+) -> BehaviorPattern:
+    pattern = (
+        await session.execute(
+            select(BehaviorPattern).where(
+                BehaviorPattern.user_id == user_id,
+                BehaviorPattern.pattern_name == pattern_name,
+                BehaviorPattern.is_archived == is_archived,
+            )
+        )
+    ).scalar_one_or_none()
+    if pattern:
+        pattern.pattern_type = pattern_type
+        pattern.description = description
+        pattern.solution_text = solution_text
+        pattern.evidence_ids = evidence_ids
+        pattern.confidence_score = confidence_score
+        pattern.frequency = frequency
+        pattern.last_observed_at = last_observed_at
+        pattern.last_decay_at = last_decay_at
+        return pattern
+
+    pattern = BehaviorPattern(
+        user_id=user_id,
+        pattern_name=pattern_name,
+        pattern_type=pattern_type,
+        description=description,
+        solution_text=solution_text,
+        evidence_ids=evidence_ids,
+        confidence_score=confidence_score,
+        frequency=frequency,
+        is_archived=is_archived,
+        last_observed_at=last_observed_at,
+        last_decay_at=last_decay_at,
+        created_at=last_observed_at or datetime.utcnow(),
+        updated_at=last_observed_at or datetime.utcnow(),
+    )
+    session.add(pattern)
+    await session.flush()
+    return pattern
+
+
+async def _ensure_intervention_request(
+    session: AsyncSession,
+    *,
+    user_id,
+    dedupe_key: str,
+    topic: str,
+    requested_level: str,
+    final_level: str,
+    status: str,
+    reason: dict | None,
+    content: dict | None,
+    cooldown_policy: dict | None,
+    delivery_method: str | None,
+    template_id: str | None,
+    template_variant_id: str | None,
+    scaffolding_level: int | None,
+    intent_type: str | None,
+    schema_version: str,
+    policy_version: str | None,
+    model_version: str | None,
+    expires_at: datetime | None,
+    is_retractable: bool,
+    created_at: datetime,
+    supersedes_id=None,
+) -> InterventionRequest:
+    request = (
+        await session.execute(
+            select(InterventionRequest).where(
+                InterventionRequest.user_id == user_id,
+                InterventionRequest.dedupe_key == dedupe_key,
+            )
+        )
+    ).scalar_one_or_none()
+    if request:
+        request.topic = topic
+        request.requested_level = requested_level
+        request.final_level = final_level
+        request.status = status
+        request.reason = reason
+        request.content = content
+        request.cooldown_policy = cooldown_policy
+        request.delivery_method = delivery_method
+        request.template_id = template_id
+        request.template_variant_id = template_variant_id
+        request.scaffolding_level = scaffolding_level
+        request.intent_type = intent_type
+        request.schema_version = schema_version
+        request.policy_version = policy_version
+        request.model_version = model_version
+        request.expires_at = expires_at
+        request.is_retractable = is_retractable
+        request.supersedes_id = supersedes_id
+        return request
+
+    request = InterventionRequest(
+        user_id=user_id,
+        dedupe_key=dedupe_key,
+        topic=topic,
+        requested_level=requested_level,
+        final_level=final_level,
+        status=status,
+        reason=reason,
+        content=content,
+        cooldown_policy=cooldown_policy,
+        delivery_method=delivery_method,
+        template_id=template_id,
+        template_variant_id=template_variant_id,
+        scaffolding_level=scaffolding_level,
+        intent_type=intent_type,
+        schema_version=schema_version,
+        policy_version=policy_version,
+        model_version=model_version,
+        expires_at=expires_at,
+        is_retractable=is_retractable,
+        supersedes_id=supersedes_id,
+        created_at=created_at,
+        updated_at=created_at,
+    )
+    session.add(request)
+    await session.flush()
+    return request
+
+
+async def _ensure_intervention_audit(
+    session: AsyncSession,
+    *,
+    request_id,
+    user_id,
+    action: str,
+    guardrail_result: dict | None,
+    decision_trace: dict | None,
+    evidence_refs: list[str] | None,
+    requested_level: str,
+    final_level: str,
+    policy_version: str | None,
+    model_version: str | None,
+    schema_version: str | None,
+    occurred_at: datetime,
+) -> InterventionAuditLog:
+    audit = (
+        await session.execute(
+            select(InterventionAuditLog).where(
+                InterventionAuditLog.request_id == request_id,
+                InterventionAuditLog.action == action,
+            )
+        )
+    ).scalar_one_or_none()
+    if audit:
+        audit.guardrail_result = guardrail_result
+        audit.decision_trace = decision_trace
+        audit.evidence_refs = evidence_refs
+        audit.requested_level = requested_level
+        audit.final_level = final_level
+        audit.policy_version = policy_version
+        audit.model_version = model_version
+        audit.schema_version = schema_version
+        audit.occurred_at = occurred_at
+        return audit
+
+    audit = InterventionAuditLog(
+        request_id=request_id,
+        user_id=user_id,
+        action=action,
+        guardrail_result=guardrail_result,
+        decision_trace=decision_trace,
+        evidence_refs=evidence_refs,
+        requested_level=requested_level,
+        final_level=final_level,
+        policy_version=policy_version,
+        model_version=model_version,
+        schema_version=schema_version,
+        occurred_at=occurred_at,
+        created_at=occurred_at,
+        updated_at=occurred_at,
+    )
+    session.add(audit)
+    await session.flush()
+    return audit
+
+
+async def _ensure_intervention_feedback(
+    session: AsyncSession,
+    *,
+    request_id,
+    user_id,
+    feedback_type: str,
+    extra_data: dict | None,
+    idempotency_key: str,
+    created_at: datetime,
+) -> InterventionFeedback:
+    feedback = (
+        await session.execute(
+            select(InterventionFeedback).where(
+                InterventionFeedback.request_id == request_id,
+                InterventionFeedback.user_id == user_id,
+                InterventionFeedback.feedback_type == feedback_type,
+                InterventionFeedback.idempotency_key == idempotency_key,
+            )
+        )
+    ).scalar_one_or_none()
+    if feedback:
+        feedback.extra_data = extra_data
+        return feedback
+
+    feedback = InterventionFeedback(
+        request_id=request_id,
+        user_id=user_id,
+        feedback_type=feedback_type,
+        extra_data=extra_data,
+        idempotency_key=idempotency_key,
+        created_at=created_at,
+        updated_at=created_at,
+    )
+    session.add(feedback)
+    await session.flush()
+    return feedback
+
+
+async def _ensure_intervention_settings(
+    session: AsyncSession,
+    *,
+    user_id,
+    interrupt_threshold: float,
+    daily_interrupt_budget: int,
+    cooldown_minutes: int,
+    quiet_hours: dict | None,
+    topic_allowlist: list[str] | None,
+    topic_blocklist: list[str] | None,
+    do_not_disturb: bool,
+) -> UserInterventionSettings:
+    settings = (
+        await session.execute(
+            select(UserInterventionSettings).where(
+                UserInterventionSettings.user_id == user_id
+            )
+        )
+    ).scalar_one_or_none()
+    if settings:
+        settings.interrupt_threshold = interrupt_threshold
+        settings.daily_interrupt_budget = daily_interrupt_budget
+        settings.cooldown_minutes = cooldown_minutes
+        settings.quiet_hours = quiet_hours
+        settings.topic_allowlist = topic_allowlist
+        settings.topic_blocklist = topic_blocklist
+        settings.do_not_disturb = do_not_disturb
+        return settings
+
+    settings = UserInterventionSettings(
+        user_id=user_id,
+        interrupt_threshold=interrupt_threshold,
+        daily_interrupt_budget=daily_interrupt_budget,
+        cooldown_minutes=cooldown_minutes,
+        quiet_hours=quiet_hours,
+        topic_allowlist=topic_allowlist,
+        topic_blocklist=topic_blocklist,
+        do_not_disturb=do_not_disturb,
+    )
+    session.add(settings)
+    await session.flush()
+    return settings
+
+
+async def _ensure_user_visual_element(
+    session: AsyncSession,
+    *,
+    user_id,
+    element_id: str,
+    unlocked_at: datetime,
+    unlock_source: str,
+    source_id: str | None = None,
+) -> UserVisualElement:
+    unlocked = (
+        await session.execute(
+            select(UserVisualElement).where(
+                UserVisualElement.user_id == user_id,
+                UserVisualElement.element_id == element_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if unlocked:
+        unlocked.unlocked_at = unlocked_at
+        unlocked.unlock_source = unlock_source
+        unlocked.source_id = source_id
+        return unlocked
+
+    unlocked = UserVisualElement(
+        user_id=user_id,
+        element_id=element_id,
+        unlocked_at=unlocked_at,
+        unlock_source=unlock_source,
+        source_id=source_id,
+        created_at=unlocked_at,
+        updated_at=unlocked_at,
+    )
+    session.add(unlocked)
+    await session.flush()
+    return unlocked
+
+
+async def _ensure_user_visual_config(
+    session: AsyncSession,
+    *,
+    user_id,
+    equipped_background_id: str | None,
+    equipped_particle_id: str | None,
+    equipped_effect_id: str | None,
+    equipped_at: datetime,
+) -> UserVisualConfig:
+    config = (
+        await session.execute(
+            select(UserVisualConfig).where(UserVisualConfig.user_id == user_id)
+        )
+    ).scalar_one_or_none()
+    if not config:
+        config = UserVisualConfig(user_id=user_id, created_at=equipped_at, updated_at=equipped_at)
+        session.add(config)
+        await session.flush()
+
+    config.equipped_background_id = equipped_background_id
+    config.equipped_particle_id = equipped_particle_id
+    config.equipped_effect_id = equipped_effect_id
+    config.background_equipped_at = equipped_at if equipped_background_id else None
+    config.particle_equipped_at = equipped_at if equipped_particle_id else None
+    config.effect_equipped_at = equipped_at if equipped_effect_id else None
+    config.updated_at = equipped_at
+    return config
+
+
 async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
     """
     Seed demo data for a new guest user.
@@ -1220,6 +1938,202 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
         )
     ).scalar_one()
 
+    user_review_task = await _ensure_task(
+        session,
+        owner_id=user.id,
+        title="操作系统 - 线程同步错题回顾",
+        defaults=dict(
+            type=TaskType.LEARNING,
+            tags=["OS", "线程同步", "错题"],
+            estimated_minutes=45,
+            difficulty=3,
+            energy_cost=3,
+            status=TaskStatus.COMPLETED,
+            priority=2,
+            due_date=date.today() - timedelta(days=1),
+            completed_at=now - timedelta(days=1, hours=2),
+            actual_minutes=55,
+            user_note="把锁、信号量、条件变量的易混点重新过了一遍。",
+            plan_id=growth_plan.id,
+        ),
+    )
+    user_english_task = await _ensure_task(
+        session,
+        owner_id=user.id,
+        title="英语口语 - 晨读复述 15 分钟",
+        defaults=dict(
+            type=TaskType.LEARNING,
+            tags=["English", "Speaking", "Checkin"],
+            estimated_minutes=20,
+            difficulty=2,
+            energy_cost=2,
+            status=TaskStatus.COMPLETED,
+            priority=2,
+            due_date=date.today(),
+            completed_at=now - timedelta(hours=1, minutes=5),
+            actual_minutes=30,
+            user_note="把昨天群里提到的微反馈模板顺口复述了一遍。",
+            plan_id=growth_plan.id,
+        ),
+    )
+
+    default_visual_unlock_at = now - timedelta(days=30)
+    for element_id in [
+        "background_origin_chamber",
+        "particle_origin_sparks",
+        "effect_origin_aura",
+    ]:
+        await _ensure_user_visual_element(
+            session,
+            user_id=user.id,
+            element_id=element_id,
+            unlocked_at=default_visual_unlock_at,
+            unlock_source="system",
+        )
+    await _ensure_user_visual_element(
+        session,
+        user_id=user.id,
+        element_id="particle_streak_embers",
+        unlocked_at=now - timedelta(days=7),
+        unlock_source="achievement",
+        source_id="streak_7",
+    )
+    await _ensure_user_visual_config(
+        session,
+        user_id=user.id,
+        equipped_background_id="background_origin_chamber",
+        equipped_particle_id="particle_streak_embers",
+        equipped_effect_id="effect_origin_aura",
+        equipped_at=now - timedelta(days=5),
+    )
+
+    focus_seed_rows = [
+        (now - timedelta(days=9, hours=3), 50, FocusType.POMODORO, FocusStatus.COMPLETED, user_primary_task.id, 1),
+        (now - timedelta(days=8, hours=8), 35, FocusType.STOPWATCH, FocusStatus.INTERRUPTED, None, 2),
+        (now - timedelta(days=8, hours=2), 40, FocusType.POMODORO, FocusStatus.COMPLETED, user_review_task.id, 1),
+        (now - timedelta(days=7, hours=5), 65, FocusType.STOPWATCH, FocusStatus.COMPLETED, user_network_task.id, 3),
+        (now - timedelta(days=6, hours=1), 25, FocusType.POMODORO, FocusStatus.COMPLETED, user_primary_task.id, 1),
+        (now - timedelta(days=5, hours=6), 30, FocusType.POMODORO, FocusStatus.COMPLETED, user_review_task.id, 2),
+        (now - timedelta(days=4, hours=2), 55, FocusType.STOPWATCH, FocusStatus.COMPLETED, user_primary_task.id, 3),
+        (now - timedelta(days=3, hours=7), 20, FocusType.POMODORO, FocusStatus.INTERRUPTED, user_network_task.id, None),
+        (now - timedelta(days=3, hours=1), 45, FocusType.POMODORO, FocusStatus.COMPLETED, user_review_task.id, 1),
+        (now - timedelta(days=2, hours=4), 60, FocusType.STOPWATCH, FocusStatus.COMPLETED, user_primary_task.id, 2),
+        (now - timedelta(days=1, hours=2), 35, FocusType.POMODORO, FocusStatus.COMPLETED, user_english_task.id, 1),
+        (now - timedelta(hours=6), 25, FocusType.POMODORO, FocusStatus.COMPLETED, user_primary_task.id, 1),
+        (now - timedelta(hours=2, minutes=20), 30, FocusType.STOPWATCH, FocusStatus.COMPLETED, user_english_task.id, 2),
+    ]
+    for start_time, duration, focus_type, status, task_id, noise in focus_seed_rows:
+        await _ensure_focus_session(
+            session,
+            user_id=user.id,
+            start_time=start_time,
+            end_time=start_time + timedelta(minutes=duration),
+            duration_minutes=duration,
+            focus_type=focus_type,
+            status=status,
+            task_id=task_id,
+            white_noise_type=noise,
+        )
+
+    fragment_1 = await _ensure_cognitive_fragment(
+        session,
+        user_id=user.id,
+        task_id=user_primary_task.id,
+        source_type="behavior",
+        resource_type="text",
+        content="准备只测社群收藏，结果一会儿去翻任务卡，一会儿又切去看计划卡展示。",
+        created_at=now - timedelta(days=4, hours=5),
+        sentiment="neutral",
+        severity=2,
+        tags=["验收", "上下文切换"],
+        error_tags=["execution.context_switch"],
+        context_tags={"scene": "community_testing", "location": "dorm"},
+    )
+    fragment_2 = await _ensure_cognitive_fragment(
+        session,
+        user_id=user.id,
+        task_id=user_review_task.id,
+        source_type="capsule",
+        resource_type="text",
+        content="明明以为 20 分钟能复盘完线程同步，结果一展开就比预想复杂。",
+        created_at=now - timedelta(days=3, hours=2),
+        sentiment="anxious",
+        severity=3,
+        tags=["复盘", "计划评估"],
+        error_tags=["planning.underestimate"],
+        context_tags={"scene": "task_review", "energy": "medium"},
+    )
+    fragment_3 = await _ensure_cognitive_fragment(
+        session,
+        user_id=user.id,
+        task_id=user_network_task.id,
+        source_type="interceptor",
+        resource_type="text",
+        content="测试到一半想直接跳去改接口，说明我还是会在临近完成时提前收缩范围。",
+        created_at=now - timedelta(days=2, hours=6),
+        sentiment="neutral",
+        severity=2,
+        tags=["范围控制", "验收"],
+        error_tags=["planning.scope_shrink"],
+        context_tags={"scene": "api_validation", "device": "mobile"},
+    )
+    fragment_4 = await _ensure_cognitive_fragment(
+        session,
+        user_id=user.id,
+        task_id=user_english_task.id,
+        source_type="behavior",
+        resource_type="text",
+        content="晨读的时候把微反馈说短以后，反而更容易连续坚持。",
+        created_at=now - timedelta(days=1, hours=3),
+        sentiment="focused",
+        severity=1,
+        tags=["微反馈", "正向强化"],
+        error_tags=[],
+        context_tags={"scene": "morning_reading", "mood": "steady"},
+    )
+    fragment_5 = await _ensure_cognitive_fragment(
+        session,
+        user_id=user.id,
+        task_id=user_primary_task.id,
+        source_type="behavior",
+        resource_type="text",
+        content="今晚群里和私聊都走通之后，注意力明显比前几天更稳了。",
+        created_at=now - timedelta(hours=4),
+        sentiment="positive",
+        severity=1,
+        tags=["社群", "验收完成感"],
+        error_tags=[],
+        context_tags={"scene": "post_review", "mood": "relieved"},
+    )
+
+    await _ensure_behavior_pattern(
+        session,
+        user_id=user.id,
+        pattern_name="计划谬误",
+        pattern_type="cognitive",
+        description="你在进入复盘或验收任务前，往往会低估梳理细节所需的时间，导致中途压缩范围。",
+        solution_text="开始前先写出“最小可验收闭环”，把时间估计乘以 1.5，再决定是否继续扩展。",
+        evidence_ids=[str(fragment_2.id), str(fragment_3.id)],
+        confidence_score=0.84,
+        frequency=4,
+        is_archived=False,
+        last_observed_at=now - timedelta(hours=12),
+    )
+    await _ensure_behavior_pattern(
+        session,
+        user_id=user.id,
+        pattern_name="临时切任务",
+        pattern_type="execution",
+        description="过去一周你常常在快完成前切去修细节，导致主线进度被打断。",
+        solution_text="先把当前页面的成功标准勾完，再去新页面找问题。",
+        evidence_ids=[str(fragment_1.id)],
+        confidence_score=0.67,
+        frequency=3,
+        is_archived=True,
+        last_observed_at=now - timedelta(days=4),
+        last_decay_at=now - timedelta(days=1),
+    )
+
     # Community: seed a richer guest social graph, shared resources, task boards,
     # favorites, and accountability history so the simulator has realistic data.
     friend_specs = [
@@ -1355,6 +2269,124 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
     mia = friend_by_name["Mia"]
     ethan = friend_by_name["Ethan"]
     susu = friend_by_name["苏苏"]
+
+    friend_learning_profiles = [
+        (
+            aze,
+            dict(
+                streak=(8, 21, 38),
+                achievements=[
+                    ("streak_7", 1.0, 7, 7, now - timedelta(days=14)),
+                    ("sprint_first", 1.0, 1, 1, now - timedelta(days=10)),
+                ],
+                nodes=[
+                    ("程序设计基础", 82, 9),
+                    ("数据结构", 88, 11),
+                    ("算法设计与分析", 76, 7),
+                    ("高等数学", 68, 6),
+                ],
+            ),
+        ),
+        (
+            xiaolin,
+            dict(
+                streak=(6, 16, 29),
+                achievements=[
+                    ("streak_7", 1.0, 7, 7, now - timedelta(days=9)),
+                    ("night_owl", 1.0, 10, 10, now - timedelta(days=7)),
+                ],
+                nodes=[
+                    ("离散数学", 73, 8),
+                    ("算法设计与分析", 79, 9),
+                    ("数据结构", 71, 7),
+                    ("概率论与数理统计", 58, 5),
+                ],
+            ),
+        ),
+        (
+            nora,
+            dict(
+                streak=(11, 25, 52),
+                achievements=[
+                    ("streak_7", 1.0, 7, 7, now - timedelta(days=18)),
+                    ("sprint_first", 1.0, 1, 1, now - timedelta(days=16)),
+                ],
+                nodes=[
+                    ("写作技巧", 74, 7),
+                    ("心理学导论", 66, 6),
+                    ("学习科学", 72, 8),
+                    ("时间管理", 70, 7),
+                ],
+            ),
+        ),
+        (
+            ethan,
+            dict(
+                streak=(5, 13, 24),
+                achievements=[
+                    ("night_owl", 1.0, 10, 10, now - timedelta(days=8)),
+                ],
+                nodes=[
+                    ("计算机网络", 69, 6),
+                    ("数据库系统", 64, 6),
+                    ("Web后端开发", 55, 4),
+                ],
+            ),
+        ),
+        (
+            susu,
+            dict(
+                streak=(9, 15, 33),
+                achievements=[
+                    ("streak_7", 1.0, 7, 7, now - timedelta(days=12)),
+                ],
+                nodes=[
+                    ("学习科学", 61, 5),
+                    ("时间管理", 63, 6),
+                    ("写作技巧", 54, 4),
+                ],
+            ),
+        ),
+    ]
+    for friend, profile in friend_learning_profiles:
+        current_streak, max_streak, total_days = profile["streak"]
+        await _ensure_user_streak_stats(
+            session,
+            user_id=friend.id,
+            current_streak=current_streak,
+            max_streak=max_streak,
+            total_checkin_days=total_days,
+            last_activity_date=now - timedelta(hours=2),
+            longest_streak_start=now - timedelta(days=max_streak + 4),
+            longest_streak_end=now - timedelta(days=4),
+            freeze_charges=1,
+            max_freeze_charges=3,
+        )
+        for achievement_id, progress, value, target, unlocked_at in profile["achievements"]:
+            await _ensure_user_achievement(
+                session,
+                user_id=friend.id,
+                achievement_id=achievement_id,
+                progress=progress,
+                value=value,
+                target=target,
+                unlocked_at=unlocked_at,
+                is_pinned=True,
+            )
+        for idx, (node_name, mastery, study_count) in enumerate(profile["nodes"]):
+            node = created_nodes.get(node_name)
+            if not node:
+                continue
+            await _ensure_user_node_status(
+                session,
+                user_id=friend.id,
+                node_id=node.id,
+                mastery_score=mastery,
+                total_study_minutes=study_count * 18,
+                study_count=study_count,
+                first_unlock_at=now - timedelta(days=18 + idx),
+                last_study_at=now - timedelta(hours=8 + idx),
+            )
 
     aze_plan = await _ensure_plan(
         session,
@@ -1852,6 +2884,15 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
             "comment": "这条更适合看信息卡折叠后的效果。",
         },
     )
+    await _ensure_group_message(
+        session,
+        group_id=study_group.id,
+        sender_id=user.id,
+        message_type=MessageType.TEXT,
+        content="我把算法群里那条“语音复盘 + 微反馈”说明转到自习室，顺手测一下群内转发展示。",
+        created_at=now - timedelta(hours=2, minutes=45),
+        forwarded_from_id=algo_msg_6.id,
+    )
 
     for message, readers in [
         (algo_msg_6, [user.id, xiaolin.id, nora.id]),
@@ -2038,6 +3079,17 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
         is_read=True,
         read_at=now - timedelta(days=2, minutes=40),
     )
+    await _ensure_private_message(
+        session,
+        sender_id=user.id,
+        receiver_id=aze.id,
+        message_type=MessageType.TEXT,
+        content="我把你刚才那条收藏说明也转存一下，测试私聊内转发预览。",
+        created_at=now - timedelta(hours=2, minutes=5),
+        is_read=True,
+        read_at=now - timedelta(hours=1, minutes=58),
+        forwarded_from_id=private_aze_3.id,
+    )
 
     await _ensure_message_favorite(
         session,
@@ -2132,6 +3184,212 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
             liked_by=liked_by,
             encouragements=encouragements,
         )
+
+    reminder_notification = await _ensure_notification(
+        session,
+        user_id=user.id,
+        title="责任伙伴提醒",
+        content="阿泽刚完成今晚复盘，等你补一句微反馈并打卡。",
+        notification_type="reminder",
+        created_at=now - timedelta(minutes=45),
+        is_read=False,
+        data={
+            "partnership_id": str(active_partnership.id),
+            "group_id": str(algorithm_group.id),
+            "message_id": str(algo_msg_6.id),
+        },
+    )
+    favorite_notification = await _ensure_notification(
+        session,
+        user_id=user.id,
+        title="收藏夹已更新",
+        content="你收藏的 2 条关键消息现在可以从收藏页继续回看和删除。",
+        notification_type="system",
+        created_at=now - timedelta(hours=3, minutes=15),
+        is_read=True,
+        read_at=now - timedelta(hours=2, minutes=58),
+        data={
+            "favorite_count": 2,
+            "route": "/community/favorites",
+            "latest_message_id": str(private_aze_3.id),
+        },
+    )
+    task_notification = await _ensure_notification(
+        session,
+        user_id=user.id,
+        title="群任务进度有更新",
+        content="英语口语晨读营里你认领的任务已记录为完成，可继续验收群任务池刷新。",
+        notification_type="task",
+        created_at=now - timedelta(hours=6, minutes=20),
+        is_read=True,
+        read_at=now - timedelta(hours=6, minutes=2),
+        data={
+            "group_id": str(english_group.id),
+            "group_task_id": str(english_task_1.id),
+            "task_id": str(user_network_task.id),
+        },
+    )
+    achievement_notification = await _ensure_notification(
+        session,
+        user_id=user.id,
+        title="连胜火苗仍在延续",
+        content="你已连续 7 天保持活跃，粒子装扮“连胜余烬”已可使用。",
+        notification_type="achievement",
+        created_at=now - timedelta(days=1, hours=1),
+        is_read=True,
+        read_at=now - timedelta(days=1, minutes=40),
+        data={
+            "achievement_id": "streak_7",
+            "unlocked_element_id": "particle_streak_embers",
+        },
+    )
+    await _ensure_notification_preferences(
+        session,
+        user_id=user.id,
+        enable_system=True,
+        enable_interventions=True,
+        notification_level="focused",
+        quiet_hours_enabled=True,
+        quiet_hours_start="23:30",
+        quiet_hours_end="07:30",
+        updated_at=now - timedelta(hours=2),
+    )
+    for notification, action_type, action_time in [
+        (favorite_notification, "viewed", now - timedelta(hours=2, minutes=58)),
+        (favorite_notification, "clicked", now - timedelta(hours=2, minutes=54)),
+        (task_notification, "viewed", now - timedelta(hours=6, minutes=2)),
+        (achievement_notification, "viewed", now - timedelta(days=1, minutes=40)),
+        (achievement_notification, "clicked", now - timedelta(days=1, minutes=35)),
+    ]:
+        await _ensure_notification_interaction(
+            session,
+            user_id=user.id,
+            notification_type="system",
+            notification_id=notification.id,
+            action_type=action_type,
+            action_time=action_time,
+            time_to_action=max(int((action_time - notification.created_at).total_seconds()), 0),
+        )
+
+    await _ensure_intervention_settings(
+        session,
+        user_id=user.id,
+        interrupt_threshold=0.62,
+        daily_interrupt_budget=3,
+        cooldown_minutes=90,
+        quiet_hours={"start": "23:30", "end": "07:30"},
+        topic_allowlist=["focus", "accountability", "review"],
+        topic_blocklist=["marketing"],
+        do_not_disturb=False,
+    )
+    pending_intervention = await _ensure_intervention_request(
+        session,
+        user_id=user.id,
+        dedupe_key="guest-demo-focus-reset",
+        topic="专注状态提醒",
+        requested_level="card",
+        final_level="card",
+        status="pending",
+        reason={
+            "signal": "context_switch",
+            "recent_focus_interruptions": 2,
+            "scene": "community_acceptance",
+        },
+        content={
+            "message": "你已经在 30 分钟内来回切了 3 个验收入口，先把当前闭环收口再扩展。",
+            "suggested_action": "先完成收藏页验收",
+        },
+        cooldown_policy={"minutes": 90, "scope": "focus"},
+        delivery_method="in_app",
+        template_id="focus_reset_card",
+        template_variant_id="guest_demo_v2",
+        scaffolding_level=2,
+        intent_type="focus_reset",
+        schema_version="v1",
+        policy_version="2026-03",
+        model_version="demo-seed",
+        expires_at=now + timedelta(hours=2),
+        is_retractable=True,
+        created_at=now - timedelta(minutes=30),
+    )
+    approved_intervention = await _ensure_intervention_request(
+        session,
+        user_id=user.id,
+        dedupe_key="guest-demo-accountability-nudge",
+        topic="责任伙伴助推",
+        requested_level="modal",
+        final_level="card",
+        status="approved",
+        reason={
+            "signal": "checkin_gap",
+            "hours_since_last_checkin": 22,
+            "partnership_id": str(active_partnership.id),
+        },
+        content={
+            "message": "距离你和阿泽的上一次互评已经接近一天，发一句微反馈就能保持节奏。",
+            "cta": "去责任伙伴页",
+        },
+        cooldown_policy={"minutes": 180, "scope": "accountability"},
+        delivery_method="in_app",
+        template_id="accountability_prompt",
+        template_variant_id="micro_feedback_short",
+        scaffolding_level=1,
+        intent_type="accountability_nudge",
+        schema_version="v1",
+        policy_version="2026-03",
+        model_version="demo-seed",
+        expires_at=now + timedelta(days=1),
+        is_retractable=True,
+        created_at=now - timedelta(hours=5, minutes=10),
+    )
+    await _ensure_intervention_audit(
+        session,
+        request_id=pending_intervention.id,
+        user_id=user.id,
+        action="created",
+        guardrail_result={"allowed": True, "risk_level": "low"},
+        decision_trace={"source": "guest_seed", "variant": "focus_reset_card"},
+        evidence_refs=[str(fragment_1.id), str(fragment_3.id)],
+        requested_level="card",
+        final_level="card",
+        policy_version="2026-03",
+        model_version="demo-seed",
+        schema_version="v1",
+        occurred_at=now - timedelta(minutes=30),
+    )
+    await _ensure_intervention_audit(
+        session,
+        request_id=approved_intervention.id,
+        user_id=user.id,
+        action="approved",
+        guardrail_result={"allowed": True, "risk_level": "low"},
+        decision_trace={"source": "guest_seed", "variant": "micro_feedback_short"},
+        evidence_refs=[str(fragment_4.id)],
+        requested_level="modal",
+        final_level="card",
+        policy_version="2026-03",
+        model_version="demo-seed",
+        schema_version="v1",
+        occurred_at=now - timedelta(hours=5, minutes=9),
+    )
+    await _ensure_intervention_feedback(
+        session,
+        request_id=approved_intervention.id,
+        user_id=user.id,
+        feedback_type="accepted",
+        extra_data={"action": "opened_accountability_detail"},
+        idempotency_key="guest-demo-accountability-accepted",
+        created_at=now - timedelta(hours=4, minutes=48),
+    )
+    await _ensure_notification_interaction(
+        session,
+        user_id=user.id,
+        notification_type="intervention",
+        notification_id=approved_intervention.id,
+        action_type="clicked",
+        action_time=now - timedelta(hours=4, minutes=48),
+        time_to_action=max(int((now - timedelta(hours=4, minutes=48) - approved_intervention.created_at).total_seconds()), 0),
+    )
 
     await session.flush()
 

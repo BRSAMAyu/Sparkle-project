@@ -4,12 +4,14 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
+import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/achievement/achievement_routes.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/user/user_routes.dart';
 import 'package:sparkle/features/visual_elements/visual_elements_routes.dart';
 import 'package:sparkle/features/user/presentation/widgets/statistics_card.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+import 'package:sparkle/shared/providers/visual_element_provider.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -18,6 +20,8 @@ class ProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
+    final achievementState = ref.watch(achievementProvider);
+    final visualState = ref.watch(visualElementProvider);
     final l10n = AppLocalizations.of(context)!;
     final screenHeight = MediaQuery.of(context).size.height;
     final headerHeight = screenHeight < 720 ? 248.0 : 320.0;
@@ -39,6 +43,12 @@ class ProfileScreen extends ConsumerWidget {
                   children: [
                     const SizedBox(height: DS.spacing24),
                     const StatisticsCard(),
+                    const SizedBox(height: DS.spacing20),
+                    _buildPrestigeShowcase(
+                      context,
+                      achievementState,
+                      visualState,
+                    ),
                     const SizedBox(height: DS.spacing24),
                     _buildSettingsSection(context, ref, l10n, user),
                     const SizedBox(height: 100), // Bottom padding
@@ -50,6 +60,220 @@ class ProfileScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Widget _buildPrestigeShowcase(
+    BuildContext context,
+    AchievementState achievementState,
+    VisualElementState visualState,
+  ) {
+    final unlockedAchievements = achievementState.achievements
+        .where((item) => item.isUnlocked)
+        .toList()
+      ..sort((a, b) {
+        final rarityCompare =
+            b.achievement.rarity.index.compareTo(a.achievement.rarity.index);
+        if (rarityCompare != 0) return rarityCompare;
+        final aTime = a.userProgress?.unlockedAt;
+        final bTime = b.userProgress?.unlockedAt;
+        if (aTime == null || bTime == null) return 0;
+        return bTime.compareTo(aTime);
+      });
+
+    final featured = unlockedAchievements.take(3).toList();
+    final equippedTitle =
+        achievementState.titles.where((title) => title.isEquipped).firstOrNull;
+    final equippedBackground = visualState.config?.equippedBackground;
+    final equippedEffect = visualState.config?.equippedEffect;
+    final equippedParticle = visualState.config?.equippedParticle;
+    final prestigeColor = equippedBackground != null
+        ? _colorFromElement(equippedBackground)
+        : DS.brandPrimary;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(DS.spacing18),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            prestigeColor.withValues(alpha: 0.16),
+            DS.surfaceSecondary,
+          ],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: prestigeColor.withValues(alpha: 0.24)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.workspace_premium_rounded, color: prestigeColor),
+              const SizedBox(width: DS.spacing8),
+              Text(
+                '荣耀身份',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: DS.fontWeightBold,
+                          color: DS.textPrimary,
+                        ) ??
+                    TextStyle(
+                      fontSize: DS.fontSizeBase,
+                      fontWeight: DS.fontWeightBold,
+                      color: DS.textPrimary,
+                    ),
+              ),
+            ],
+          ),
+          const SizedBox(height: DS.spacing12),
+          Wrap(
+            spacing: DS.spacing8,
+            runSpacing: DS.spacing8,
+            children: [
+              _buildIdentityChip(
+                label: equippedTitle?.titleDisplay ?? '未装备称号',
+                color: prestigeColor,
+              ),
+              if (equippedBackground != null)
+                _buildIdentityChip(
+                  label: equippedBackground.prestigeLabel ??
+                      equippedBackground.name,
+                  color: _colorFromElement(equippedBackground),
+                ),
+              if (equippedEffect != null)
+                _buildIdentityChip(
+                  label: equippedEffect.prestigeLabel ?? equippedEffect.name,
+                  color: _colorFromElement(equippedEffect),
+                ),
+              if (equippedParticle != null)
+                _buildIdentityChip(
+                  label:
+                      equippedParticle.prestigeLabel ?? equippedParticle.name,
+                  color: _colorFromElement(equippedParticle),
+                ),
+            ],
+          ),
+          const SizedBox(height: DS.spacing16),
+          Text(
+            '近期高光成就',
+            style: DS.labelLarge.copyWith(
+              fontWeight: DS.fontWeightSemibold,
+              color: DS.textPrimary,
+            ),
+          ),
+          const SizedBox(height: DS.spacing10),
+          if (featured.isEmpty)
+            Text(
+              '继续完成学习与冲刺，你的荣耀陈列柜会在这里逐步点亮。',
+              style: DS.bodySmall.copyWith(color: DS.textSecondary),
+            )
+          else
+            ...featured.map(
+              (item) => Padding(
+                padding: const EdgeInsets.only(bottom: DS.spacing8),
+                child: Container(
+                  padding: const EdgeInsets.all(DS.spacing12),
+                  decoration: BoxDecoration(
+                    color: DS.surfacePrimary.withValues(alpha: 0.9),
+                    borderRadius: DS.borderRadius16,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.auto_awesome,
+                        size: 16,
+                        color: _rarityColor(item.achievement.rarity),
+                      ),
+                      const SizedBox(width: DS.spacing8),
+                      Expanded(
+                        child: Text(
+                          item.achievement.name,
+                          style: DS.bodySmall.copyWith(
+                            color: DS.textPrimary,
+                            fontWeight: DS.fontWeightSemibold,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        _rarityLabel(item.achievement.rarity),
+                        style: DS.labelSmall.copyWith(
+                          color: _rarityColor(item.achievement.rarity),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIdentityChip({
+    required String label,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: DS.spacing10,
+        vertical: DS.spacing6,
+      ),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: DS.borderRadius12,
+      ),
+      child: Text(
+        label,
+        style: DS.labelSmall.copyWith(
+          color: color,
+          fontWeight: DS.fontWeightMedium,
+        ),
+      ),
+    );
+  }
+
+  Color _colorFromElement(dynamic element) {
+    final colors = (element.config['colors'] as List<dynamic>?) ??
+        (element.config['gradient'] as List<dynamic>?);
+    if (colors != null && colors.isNotEmpty) {
+      final value = colors.first.toString().replaceFirst('#', '');
+      final hex = value.length == 6 ? 'FF$value' : value;
+      final parsed = int.tryParse(hex, radix: 16);
+      if (parsed != null) {
+        return Color(parsed);
+      }
+    }
+    return DS.brandPrimary;
+  }
+
+  Color _rarityColor(dynamic rarity) {
+    final key = rarity.toString().split('.').last;
+    switch (key) {
+      case 'legendary':
+        return const Color(0xFFFFA726);
+      case 'epic':
+        return const Color(0xFFAB47BC);
+      case 'rare':
+        return const Color(0xFF42A5F5);
+      default:
+        return const Color(0xFFB0BEC5);
+    }
+  }
+
+  String _rarityLabel(dynamic rarity) {
+    final key = rarity.toString().split('.').last;
+    switch (key) {
+      case 'legendary':
+        return '传奇';
+      case 'epic':
+        return '史诗';
+      case 'rare':
+        return '稀有';
+      default:
+        return '普通';
+    }
   }
 
   Widget _buildHeader(
@@ -68,7 +292,10 @@ class ProfileScreen extends ConsumerWidget {
             child: CustomPaint(
               painter: _WaveHeaderPainter(
                 startColor: Color.lerp(
-                    DS.surfacePrimaryElevated, DS.brandPrimary, 0.04,)!,
+                  DS.surfacePrimaryElevated,
+                  DS.brandPrimary,
+                  0.04,
+                )!,
                 middleColor:
                     Color.lerp(DS.surfaceCanvas, DS.surfaceSecondary, 0.54)!,
                 endColor:

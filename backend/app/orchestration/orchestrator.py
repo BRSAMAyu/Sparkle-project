@@ -373,6 +373,52 @@ class ChatOrchestrator(
         self._ensure_tools_registered()
         self.multi_agent_adapter = MultiAgentWorkflowAdapter(self)
 
+    async def _emit_early_ack_progress(
+        self,
+        *,
+        stream_callback,
+        chat_mode: str,
+    ) -> None:
+        if not getattr(settings, "EARLY_ACK_PROGRESS_ENABLED", True):
+            return
+        if stream_callback is None:
+            return
+
+        normalized_mode = normalize_chat_mode(chat_mode)
+        headline = "已收到，正在快速组织首轮回复。"
+        stage = "intake"
+        detail = "Sparkle Flash 已开始接管首屏交互。"
+
+        if normalized_mode != CHAT_MODE_STANDARD:
+            headline = "已收到，正在拉起协作链路并准备首轮反馈。"
+            stage = "handoff"
+            detail = "我会先快速回应你，再进入更深入的协作流程。"
+
+        try:
+            await stream_callback(
+                agent_service_pb2.ChatResponse(
+                    status_update=agent_service_pb2.AgentStatus(
+                        state=agent_service_pb2.AgentStatus.THINKING,
+                        details=headline,
+                        current_agent_name="Sparkle Flash",
+                    ),
+                    metadata={
+                        "ux_progress": json.dumps(
+                            {
+                                "stage": stage,
+                                "headline": headline,
+                                "detail": detail,
+                                "is_blocked": False,
+                            },
+                            ensure_ascii=False,
+                        ),
+                        "early_ack": "true",
+                    },
+                )
+            )
+        except Exception as exc:
+            logger.debug(f"Failed to emit early ack progress: {exc}")
+
     def _coerce_session_uuid(self, session_id: str) -> uuid.UUID:
         raw = str(session_id).strip()
         try:
@@ -656,6 +702,10 @@ class ChatOrchestrator(
                         "prompt_version": prompt_version,
                     },
                     emit_snapshot=False,
+                )
+                await self._emit_early_ack_progress(
+                    stream_callback=stream_callback,
+                    chat_mode=chat_mode,
                 )
 
                 # Step 4.5: Proactively emit unread evolution/system updates at session start

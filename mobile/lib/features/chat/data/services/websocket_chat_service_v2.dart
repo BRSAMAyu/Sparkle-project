@@ -948,11 +948,13 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     WebSocketChannelFactory? channelFactory,
     bool enableReconnect = true,
     bool autoConnect = true,
+    Duration terminalDoneFallbackDelay = const Duration(seconds: 2),
   })  : _container = container,
         baseUrl = baseUrl ?? ApiConstants.wsBaseUrl,
         _channelFactory = channelFactory,
         _enableReconnect = enableReconnect,
-        _autoConnect = autoConnect {
+        _autoConnect = autoConnect,
+        _terminalDoneFallbackDelay = terminalDoneFallbackDelay {
     WidgetsBinding.instance.addObserver(this);
   }
 
@@ -960,6 +962,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
   final WebSocketChannelFactory? _channelFactory;
   final bool _enableReconnect;
   final bool _autoConnect;
+  final Duration _terminalDoneFallbackDelay;
   final ProviderContainer _container;
 
   // WebSocket 连接
@@ -968,8 +971,9 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
   bool _disposed = false;
   int _connGen = 0;
 
-  // 消息流（广播模式，支持多个监听者）
-  StreamController<ChatStreamEvent>? _messageStreamController;
+  // 每个请求独立的消息流，避免不同 run 之间事件串流
+  final Map<String, StreamController<ChatStreamEvent>> _requestControllers = {};
+  final Map<String, Timer> _terminalFallbackTimers = {};
 
   // 连接状态流
   final StreamController<WsConnectionState> _connectionStateController =
@@ -1058,8 +1062,18 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     // 更新 session ID
     _currentSessionId = sessionId ?? _currentSessionId ?? _generateSessionId();
 
-    // 创建消息流（如果不存在）
-    _messageStreamController ??= StreamController<ChatStreamEvent>.broadcast();
+    final resolvedRequestId = requestId ?? _generateRequestId();
+    late final StreamController<ChatStreamEvent> controller;
+    controller = StreamController<ChatStreamEvent>(
+      onCancel: () {
+        final existing = _requestControllers[resolvedRequestId];
+        if (identical(existing, controller)) {
+          _requestControllers.remove(resolvedRequestId);
+        }
+        _cancelTerminalFallback(resolvedRequestId);
+      },
+    );
+    _requestControllers[resolvedRequestId] = controller;
 
     // 检查是否需要建立连接
     if (_autoConnect && _shouldConnect(userId, token)) {
@@ -1070,7 +1084,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     final messagePayload = {
       'message': message,
       'session_id': _currentSessionId,
-      'request_id': requestId ?? _generateRequestId(),
+      'request_id': resolvedRequestId,
       if (nickname != null) 'nickname': nickname,
       if (extraContext != null) 'extra_context': extraContext,
       if (fileIds != null && fileIds.isNotEmpty) 'file_ids': fileIds,
@@ -1090,7 +1104,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       _pendingMessages.add(messagePayload);
     }
 
-    return _messageStreamController!.stream;
+    return controller.stream;
   }
 
   /// 发送行动反馈（确认/拒绝）
@@ -1327,6 +1341,94 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     controller.add(event);
   }
 
+  void _safeClose<T>(StreamController<T> controller) {
+    if (_disposed || controller.isClosed) return;
+    unawaited(controller.close());
+  }
+
+  void _cancelTerminalFallback(String requestId) {
+    final timer = _terminalFallbackTimers.remove(requestId);
+    timer?.cancel();
+  }
+
+  void _scheduleTerminalFallback(String requestId) {
+    if (_terminalDoneFallbackDelay <= Duration.zero) {
+      return;
+    }
+    _cancelTerminalFallback(requestId);
+    _terminalFallbackTimers[requestId] = Timer(
+      _terminalDoneFallbackDelay,
+      () {
+        final controller = _requestControllers[requestId];
+        if (controller == null || controller.isClosed || _disposed) {
+          _terminalFallbackTimers.remove(requestId);
+          return;
+        }
+        _safeAdd(
+          controller,
+          DoneEvent(
+            finishReason: 'full_text_idle_fallback',
+          ),
+        );
+        _requestControllers.remove(requestId);
+        _terminalFallbackTimers.remove(requestId);
+        _safeClose(controller);
+        _isStreamActive = false;
+      },
+    );
+  }
+
+  String? _extractRequestIdFromRawMessage(String data) {
+    try {
+      final jsonData = json.decode(data) as Map<String, dynamic>;
+      final requestId = jsonData['request_id'] as String?;
+      if (requestId != null && requestId.isNotEmpty) {
+        return requestId;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  void _routeEventToRequest(String? requestId, ChatStreamEvent event) {
+    String? targetRequestId = requestId;
+    if ((targetRequestId == null || targetRequestId.isEmpty) &&
+        _requestControllers.length == 1) {
+      targetRequestId = _requestControllers.keys.first;
+    }
+    if (targetRequestId == null || targetRequestId.isEmpty) {
+      return;
+    }
+    final controller = _requestControllers[targetRequestId];
+    if (controller == null) {
+      return;
+    }
+    _safeAdd(controller, event);
+    if (event is FullTextEvent) {
+      _scheduleTerminalFallback(targetRequestId);
+      return;
+    }
+    if (_terminalFallbackTimers.containsKey(targetRequestId) &&
+        event is! DoneEvent &&
+        event is! ErrorEvent) {
+      _scheduleTerminalFallback(targetRequestId);
+    }
+    if (event is DoneEvent || event is ErrorEvent) {
+      _cancelTerminalFallback(targetRequestId);
+      _requestControllers.remove(targetRequestId);
+      _safeClose(controller);
+    }
+  }
+
+  void _broadcastErrorToActiveRequests(ErrorEvent event) {
+    final activeEntries = _requestControllers.entries.toList();
+    for (final entry in activeEntries) {
+      _cancelTerminalFallback(entry.key);
+      _safeAdd(entry.value, event);
+      _safeClose(entry.value);
+      _requestControllers.remove(entry.key);
+    }
+  }
+
   /// 处理接收到的消息
   Future<void> _handleIncomingMessage(dynamic data) async {
     if (_disposed) return;
@@ -1352,44 +1454,14 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
 
       // Parse event in isolate to avoid blocking main thread
       final event = await compute(_parseChatEvent, data);
+      final requestId = _extractRequestIdFromRawMessage(data);
 
       // 🔧 P0修复：标记流活跃状态，抑制心跳超时触发的假性重连
       _lastStreamDataTime = DateTime.now();
       if (event is! DoneEvent) {
         _isStreamActive = true;
       }
-
-      if (_messageStreamController != null) {
-        _safeAdd(_messageStreamController!, event);
-
-        // 🔧 修复：检查原始消息中的 finish_reason，如果存在则额外发送 DoneEvent
-        // 这是因为某些消息类型（如delta）在解析时会忽略 finish_reason
-        try {
-          final jsonData = json.decode(data) as Map<String, dynamic>;
-          final finishReason = jsonData['finish_reason'] as String?;
-          if (finishReason != null &&
-              finishReason != 'NULL' &&
-              finishReason.isNotEmpty) {
-            _log(
-              '📌 Detected finish_reason in raw message: $finishReason, sending DoneEvent',
-            );
-            _safeAdd(
-              _messageStreamController!,
-              DoneEvent(
-                finishReason: finishReason,
-                responseId: jsonData['response_id'] as String?,
-                traceId: jsonData['trace_id'] as String?,
-                workflowId: jsonData['workflow_id'] as String?,
-                promptVersion: jsonData['prompt_version'] as String?,
-              ),
-            );
-            _isStreamActive = false;
-          }
-        } catch (e) {
-          // 忽略解析错误，因为这是额外的检查
-          _log('⚠️ Failed to check finish_reason: $e');
-        }
-      }
+      _routeEventToRequest(requestId, event);
 
       // DoneEvent 到达时清除流活跃标记
       if (event is DoneEvent) {
@@ -1426,16 +1498,13 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       _log('❌ Max 401 retry attempts exceeded, logging out...');
 
       // 发送友好错误提示
-      if (_messageStreamController != null) {
-        _safeAdd(
-          _messageStreamController!,
-          ErrorEvent(
-            code: 'AUTH_FAILED',
-            message: l10n.chatAuthExpired,
-            retryable: false,
-          ),
-        );
-      }
+      _broadcastErrorToActiveRequests(
+        ErrorEvent(
+          code: 'AUTH_FAILED',
+          message: l10n.chatAuthExpired,
+          retryable: false,
+        ),
+      );
 
       // 执行登出
       try {
@@ -1455,18 +1524,15 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
         _log(
           '⚠️ Discarding ${_pendingMessages.length} pending messages due to auth failure',
         );
-        if (_messageStreamController != null) {
-          _safeAdd(
-            _messageStreamController!,
-            ErrorEvent(
-              code: 'MESSAGES_LOST',
-              message: l10n.chatPendingMessagesFailed(
-                _pendingMessages.length,
-              ),
-              retryable: false,
+        _broadcastErrorToActiveRequests(
+          ErrorEvent(
+            code: 'MESSAGES_LOST',
+            message: l10n.chatPendingMessagesFailed(
+              _pendingMessages.length,
             ),
-          );
-        }
+            retryable: false,
+          ),
+        );
       }
       _pendingMessages.clear();
       return;
@@ -1481,16 +1547,13 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
 
     try {
       // 发送刷新中的提示
-      if (_messageStreamController != null) {
-        _safeAdd(
-          _messageStreamController!,
-          ErrorEvent(
-            code: 'TOKEN_REFRESHING',
-            message: l10n.chatAuthRefreshing,
-            retryable: false,
-          ),
-        );
-      }
+      _broadcastErrorToActiveRequests(
+        ErrorEvent(
+          code: 'TOKEN_REFRESHING',
+          message: l10n.chatAuthRefreshing,
+          retryable: false,
+        ),
+      );
 
       // 刷新Token
       final authRepo = _container.read(authRepositoryProvider);
@@ -1504,16 +1567,13 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       _log('❌ Token refresh failed: $e');
 
       // Token刷新失败，发送友好错误并登出
-      if (_messageStreamController != null) {
-        _safeAdd(
-          _messageStreamController!,
-          ErrorEvent(
-            code: 'AUTH_FAILED',
-            message: l10n.chatAuthExpired,
-            retryable: false,
-          ),
-        );
-      }
+      _broadcastErrorToActiveRequests(
+        ErrorEvent(
+          code: 'AUTH_FAILED',
+          message: l10n.chatAuthExpired,
+          retryable: false,
+        ),
+      );
 
       // 执行登出
       try {
@@ -1533,18 +1593,15 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
         _log(
           '⚠️ Discarding ${_pendingMessages.length} pending messages due to token refresh failure',
         );
-        if (_messageStreamController != null) {
-          _safeAdd(
-            _messageStreamController!,
-            ErrorEvent(
-              code: 'MESSAGES_LOST',
-              message: l10n.chatPendingMessagesFailed(
-                _pendingMessages.length,
-              ),
-              retryable: false,
+        _broadcastErrorToActiveRequests(
+          ErrorEvent(
+            code: 'MESSAGES_LOST',
+            message: l10n.chatPendingMessagesFailed(
+              _pendingMessages.length,
             ),
-          );
-        }
+            retryable: false,
+          ),
+        );
       }
       _pendingMessages.clear();
     } finally {
@@ -1595,16 +1652,13 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     }
 
     // 普通连接错误，发送错误事件给消息流
-    if (_messageStreamController != null) {
-      _safeAdd(
-        _messageStreamController!,
-        ErrorEvent(
-          code: 'CONNECTION_ERROR',
-          message: 'Network connection failed',
-          retryable: true,
-        ),
-      );
-    }
+    _broadcastErrorToActiveRequests(
+      ErrorEvent(
+        code: 'CONNECTION_ERROR',
+        message: 'Network connection failed',
+        retryable: true,
+      ),
+    );
 
     _triggerReconnect();
   }
@@ -1613,6 +1667,16 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
   void _handleConnectionClosed() {
     _log('🔌 Connection closed');
     _stopHeartbeat();
+
+    if (_requestControllers.isNotEmpty) {
+      _broadcastErrorToActiveRequests(
+        ErrorEvent(
+          code: 'CONNECTION_CLOSED',
+          message: 'Connection closed while generating response',
+          retryable: true,
+        ),
+      );
+    }
 
     // 非主动关闭时尝试重连
     if (_connectionState != WsConnectionState.disconnected) {
@@ -1636,16 +1700,13 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       // TODO-A7: Clear pending
       _pendingMessages.clear();
 
-      if (_messageStreamController != null) {
-        _safeAdd(
-          _messageStreamController!,
-          ErrorEvent(
-            code: 'MAX_RETRIES_EXCEEDED',
-            message: 'Unable to connect after $_maxReconnectAttempts attempts',
-            retryable: false,
-          ),
-        );
-      }
+      _broadcastErrorToActiveRequests(
+        ErrorEvent(
+          code: 'MAX_RETRIES_EXCEEDED',
+          message: 'Unable to connect after $_maxReconnectAttempts attempts',
+          retryable: false,
+        ),
+      );
       return;
     }
 
@@ -1970,10 +2031,14 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
 
     _closeConnection();
 
-    if (_messageStreamController != null &&
-        !_messageStreamController!.isClosed) {
-      unawaited(_messageStreamController!.close());
+    for (final timer in _terminalFallbackTimers.values) {
+      timer.cancel();
     }
+    _terminalFallbackTimers.clear();
+    for (final controller in _requestControllers.values) {
+      _safeClose(controller);
+    }
+    _requestControllers.clear();
     if (!_connectionStateController.isClosed) {
       unawaited(_connectionStateController.close());
     }

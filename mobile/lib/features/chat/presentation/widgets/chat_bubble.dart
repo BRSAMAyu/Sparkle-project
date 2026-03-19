@@ -4,15 +4,15 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/utils/grapheme_utils.dart';
 import 'package:sparkle/core/services/deep_link_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
+import 'package:sparkle/core/utils/grapheme_utils.dart';
+import 'package:sparkle/core/widgets/ai_rich_text.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/action_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart';
@@ -28,22 +28,6 @@ import 'package:sparkle/features/community/presentation/widgets/share_cards/shar
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
-import 'package:url_launcher/url_launcher.dart';
-
-const _chatContentFontFallback = <String>[
-  'PingFang SC',
-  'Hiragino Sans GB',
-  'Heiti SC',
-  'Noto Sans SC',
-  'Noto Sans CJK SC',
-  'Source Han Sans SC',
-  'Microsoft YaHei',
-  'Arial Unicode MS',
-  // Emoji fonts for proper rendering
-  'Apple Color Emoji', // iOS/macOS
-  'Noto Color Emoji', // Android/Linux
-  'Segoe UI Emoji', // Windows
-];
 
 class ChatBubble extends ConsumerStatefulWidget {
   const ChatBubble({
@@ -166,8 +150,6 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
   String? get _responseId => (widget.message is ChatMessageModel)
       ? (widget.message as ChatMessageModel).responseId
       : null;
-
-  bool get _shouldUseMarkdown => _hasStrongMarkdownSyntax(_content);
 
   List<WidgetPayload> get _widgets => widget.message is ChatMessageModel
       ? (widget.message as ChatMessageModel).widgets ?? const []
@@ -485,66 +467,19 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                                       .size
                                                       .height *
                                                   0.5;
-                                          final contentWidget =
-                                              _shouldUseMarkdown
-                                                  ? MarkdownBody(
-                                                      data: _content,
-                                                      styleSheet:
-                                                          _getMarkdownStyle(
-                                                        context,
-                                                        isUser,
-                                                      ),
-                                                      onTapLink: (text, href,
-                                                          title) async {
-                                                        if (href == null)
-                                                          return;
-                                                        final uri =
-                                                            Uri.tryParse(href);
-                                                        if (uri == null) return;
-
-                                                        final scheme = uri
-                                                            .scheme
-                                                            .toLowerCase();
-                                                        const allowedSchemes = [
-                                                          'http',
-                                                          'https',
-                                                        ];
-                                                        if (!allowedSchemes
-                                                            .contains(scheme)) {
-                                                          return;
-                                                        }
-
-                                                        try {
-                                                          if (await canLaunchUrl(
-                                                            uri,
-                                                          )) {
-                                                            unawaited(
-                                                              launchUrl(
-                                                                uri,
-                                                                mode: LaunchMode
-                                                                    .externalApplication,
-                                                              ),
-                                                            );
-                                                          }
-                                                        } catch (e) {
-                                                          debugPrint(
-                                                            'Failed to launch URL: $e',
-                                                          );
-                                                        }
-                                                      },
-                                                    )
-                                                  : Text(
-                                                      _content,
-                                                      style: TextStyle(
-                                                        color: isUser
-                                                            ? DS.chatBubbleUserText
-                                                            : DS.chatBubbleOtherText,
-                                                        fontSize: 16,
-                                                        height: 1.5,
-                                                        fontFamilyFallback:
-                                                            _chatContentFontFallback,
-                                                      ),
-                                                    );
+                                          final contentWidget = AiRichText(
+                                            content: _content,
+                                            textColor: isUser
+                                                ? DS.chatBubbleUserText
+                                                : DS.chatBubbleOtherText,
+                                            codeBackgroundColor: isUser
+                                                ? DS.chatBubbleUserText
+                                                    .withValues(alpha: 0.12)
+                                                : DS.surfaceTertiary,
+                                            linkColor: isUser
+                                                ? DS.chatBubbleUserText
+                                                : DS.brandPrimary,
+                                          );
 
                                           // Try to estimate content height and decide if scrolling is needed
                                           // For long content (heuristic: >500 chars), use constrained scrollable
@@ -930,112 +865,6 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
         ),
       ),
     );
-  }
-
-  MarkdownStyleSheet _getMarkdownStyle(BuildContext context, bool isUser) =>
-      MarkdownStyleSheet(
-        p: TextStyle(
-          color: isUser ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
-          fontSize: 16,
-          height: 1.4,
-          fontFamilyFallback: _chatContentFontFallback,
-        ),
-        h1: TextStyle(
-          color: isUser ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
-          fontSize: 24,
-          fontWeight: FontWeight.bold,
-          fontFamilyFallback: _chatContentFontFallback,
-        ),
-        h2: TextStyle(
-          color: isUser ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
-          fontSize: 22,
-          fontWeight: FontWeight.bold,
-          fontFamilyFallback: _chatContentFontFallback,
-        ),
-        h3: TextStyle(
-          color: isUser ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
-          fontSize: 20,
-          fontWeight: FontWeight.w600,
-          fontFamilyFallback: _chatContentFontFallback,
-        ),
-        h4: TextStyle(
-          color: isUser ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-          fontFamilyFallback: _chatContentFontFallback,
-        ),
-        h5: TextStyle(
-          color: isUser ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
-          fontSize: 17,
-          fontWeight: FontWeight.w600,
-          fontFamilyFallback: _chatContentFontFallback,
-        ),
-        h6: TextStyle(
-          color: isUser ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-          fontFamilyFallback: _chatContentFontFallback,
-        ),
-        strong: TextStyle(
-          color: isUser ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
-          fontWeight: FontWeight.w700,
-          fontFamilyFallback: _chatContentFontFallback,
-        ),
-        em: TextStyle(
-          color: isUser ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
-          fontStyle: FontStyle.italic,
-          fontFamilyFallback: _chatContentFontFallback,
-        ),
-        code: TextStyle(
-          backgroundColor: isUser
-              ? DS.chatBubbleUserText.withValues(alpha: 0.2)
-              : DS.surfaceTertiary,
-          fontFamily: 'monospace',
-          fontFamilyFallback: _chatContentFontFallback,
-          fontSize: 14,
-          color: isUser ? DS.chatBubbleUserText : DS.brandSecondary,
-        ),
-        codeblockDecoration: BoxDecoration(
-          color: isUser
-              ? DS.chatBubbleUserText.withValues(alpha: 0.1)
-              : DS.surfaceTertiary,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        a: TextStyle(
-          color: isUser ? DS.chatBubbleUserText : DS.brandPrimary,
-          decoration: TextDecoration.underline,
-          fontFamilyFallback: _chatContentFontFallback,
-        ),
-        listBullet: TextStyle(
-          color: isUser ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
-          fontFamilyFallback: _chatContentFontFallback,
-        ),
-        blockquote: TextStyle(
-          color: isUser ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
-          fontStyle: FontStyle.italic,
-          fontFamilyFallback: _chatContentFontFallback,
-        ),
-      );
-
-  bool _hasStrongMarkdownSyntax(String content) {
-    if (content.isEmpty) {
-      return false;
-    }
-
-    final trimmed = content.trim();
-    final strongPatterns = <RegExp>[
-      RegExp(r'(^|\n)#{1,6}\s', multiLine: true), // 标题
-      RegExp('```'), // 代码块
-      RegExp(r'`[^`\n]+`'), // 行内代码
-      RegExp(r'\[[^\]]+\]\([^)]+\)'), // 链接
-      RegExp(r'(^|\n)>\s', multiLine: true), // 引用
-      RegExp(r'(^|\n)\|.+\|', multiLine: true), // 表格
-      RegExp(r'(\*\*|__)[^*_]+(\*\*|__)'), // 粗体
-      RegExp(r'(^|\n)[-*+]\s', multiLine: true), // 无序列表
-      RegExp(r'(^|\n)\d+\.\s', multiLine: true), // 有序列表
-    ];
-
-    return strongPatterns.any((pattern) => pattern.hasMatch(trimmed));
   }
 
   int? _calculateReasoningDuration(ChatMessageModel message) {

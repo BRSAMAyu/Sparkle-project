@@ -581,11 +581,20 @@ class AchievementMapNode {
     required this.name,
     required this.rarity,
     required this.category,
+    this.lane = 'prestige_lane',
+    this.laneLabel = '声望进阶线',
     required this.position,
     required this.isUnlocked,
     this.isHidden = false,
     this.prerequisites = const [],
     this.parentId,
+    this.displayState = 'blocked',
+    this.isRecommendedTarget = false,
+    this.rewardPreview = const [],
+    this.progressPercentage = 0,
+    this.progressValue = 0,
+    this.progressTarget = 1,
+    this.unlockHint,
   });
 
   factory AchievementMapNode.fromJson(Map<String, dynamic> json) =>
@@ -595,6 +604,9 @@ class AchievementMapNode {
   final String name;
   final AchievementRarity rarity;
   final String category;
+  final String lane;
+  @JsonKey(name: 'lane_label')
+  final String laneLabel;
   final Map<String, double> position;
   @JsonKey(name: 'is_unlocked')
   final bool isUnlocked;
@@ -603,6 +615,20 @@ class AchievementMapNode {
   final List<String> prerequisites;
   @JsonKey(name: 'parent_id')
   final String? parentId;
+  @JsonKey(name: 'display_state')
+  final String displayState;
+  @JsonKey(name: 'is_recommended_target')
+  final bool isRecommendedTarget;
+  @JsonKey(name: 'reward_preview')
+  final List<String> rewardPreview;
+  @JsonKey(name: 'progress_percentage')
+  final int progressPercentage;
+  @JsonKey(name: 'progress_value')
+  final int progressValue;
+  @JsonKey(name: 'progress_target')
+  final int progressTarget;
+  @JsonKey(name: 'unlock_hint')
+  final String? unlockHint;
 
   Map<String, dynamic> toJson() => _$AchievementMapNodeToJson(this);
 }
@@ -640,6 +666,9 @@ class AchievementUnlockEvent {
     this.visualEffectType,
     this.rewards,
     this.isFirst = false,
+    this.rewardPreview = const [],
+    this.surfacePreview = const [],
+    this.gloryLines = const [],
   });
 
   factory AchievementUnlockEvent.fromJson(Map<String, dynamic> json) =>
@@ -658,6 +687,12 @@ class AchievementUnlockEvent {
   final List<Map<String, dynamic>>? rewards;
   @JsonKey(name: 'is_first')
   final bool isFirst;
+  @JsonKey(name: 'reward_preview')
+  final List<String> rewardPreview;
+  @JsonKey(name: 'surface_preview')
+  final List<String> surfacePreview;
+  @JsonKey(name: 'glory_lines')
+  final List<String> gloryLines;
 
   Map<String, dynamic> toJson() => _$AchievementUnlockEventToJson(this);
 }

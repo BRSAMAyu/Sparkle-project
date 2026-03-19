@@ -8,7 +8,6 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/animation_lifecycle_mixin.dart';
 import 'package:sparkle/core/design/widgets/global_particle_counter.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/features/achievement/achievement_routes.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/achievement_milestone_badge.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/rarity_badge.dart';
@@ -79,9 +78,8 @@ class _AchievementMapScreenState extends ConsumerState<AchievementMapScreen> {
                       const SizedBox(height: DS.spacing8),
                       SparkleButton.outline(
                         label: l10n.retry,
-                        onPressed: () => ref
-                            .read(achievementMapProvider.notifier)
-                            .refresh(),
+                        onPressed: () =>
+                            ref.read(achievementMapProvider.notifier).refresh(),
                       ),
                     ],
                   ),
@@ -90,37 +88,19 @@ class _AchievementMapScreenState extends ConsumerState<AchievementMapScreen> {
                   nodes: state.nodes,
                   connections: state.connections,
                   progressById: progressById,
+                  onNodeTap: (node) => _showNodePreview(context, node),
                 ),
     );
   }
 
   /// Find and navigate to the nearest unlocked achievement
   void _showFocusTooltip(BuildContext context, List<AchievementMapNode> nodes) {
-    // Find the first locked node that has unlocked prerequisites
-    AchievementMapNode? targetNode;
-
-    for (final node in nodes) {
-      if (!node.isUnlocked && !node.isHidden) {
-        // Check if any prerequisite is unlocked
-        final hasUnlockedPrereq = node.prerequisites.isEmpty ||
-            node.prerequisites.any((prereq) {
-              final prereqNode = nodes.firstWhere(
-                (n) => n.id == prereq,
-                orElse: () => node,
-              );
-              return prereqNode.isUnlocked;
-            });
-        if (hasUnlockedPrereq) {
-          targetNode = node;
-          break;
-        }
-      }
-    }
-
-    // If no accessible locked node, pick the first locked one
-    targetNode ??= nodes.firstWhere(
-      (n) => !n.isUnlocked && !n.isHidden,
-      orElse: () => nodes.first,
+    final targetNode = nodes.firstWhere(
+      (n) => n.isRecommendedTarget,
+      orElse: () => nodes.firstWhere(
+        (n) => !n.isUnlocked && !n.isHidden,
+        orElse: () => nodes.first,
+      ),
     );
 
     if (mounted) {
@@ -133,6 +113,199 @@ class _AchievementMapScreenState extends ConsumerState<AchievementMapScreen> {
       );
     }
   }
+
+  void _showNodePreview(BuildContext context, AchievementMapNode node) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => _AchievementNodeBottomSheet(node: node),
+    );
+  }
+}
+
+class _AchievementNodeBottomSheet extends StatelessWidget {
+  const _AchievementNodeBottomSheet({required this.node});
+
+  final AchievementMapNode node;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = RarityColorProvider.getColor(node.rarity);
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(DS.spacing12),
+        child: Container(
+          padding: const EdgeInsets.all(DS.spacing20),
+          decoration: BoxDecoration(
+            color: DS.deepSpaceStart.withValues(alpha: 0.96),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: color.withValues(alpha: 0.28)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      node.name,
+                      style: TextStyle(
+                        fontSize: DS.fontSizeLg,
+                        fontWeight: DS.fontWeightBold,
+                        color: DS.textPrimary,
+                      ),
+                    ),
+                  ),
+                  if (node.isRecommendedTarget)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: DS.spacing10,
+                        vertical: DS.spacing6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.18),
+                        borderRadius: DS.borderRadius12,
+                      ),
+                      child: Text(
+                        '下一枚高价值目标',
+                        style: TextStyle(
+                          fontSize: DS.fontSizeXs,
+                          fontWeight: DS.fontWeightSemibold,
+                          color: color,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: DS.spacing10),
+              Wrap(
+                spacing: DS.spacing8,
+                runSpacing: DS.spacing8,
+                children: [
+                  _MetaChip(label: node.laneLabel, color: color),
+                  _MetaChip(
+                      label: _displayStateLabel(node.displayState),
+                      color: Colors.white70),
+                  _MetaChip(
+                      label: '${node.progressPercentage}%', color: DS.info),
+                ],
+              ),
+              if (node.unlockHint != null) ...[
+                const SizedBox(height: DS.spacing16),
+                Text(
+                  node.unlockHint!,
+                  style: TextStyle(
+                    fontSize: DS.fontSizeSm,
+                    color: DS.textSecondary,
+                  ),
+                ),
+              ],
+              if (node.rewardPreview.isNotEmpty) ...[
+                const SizedBox(height: DS.spacing16),
+                Text(
+                  '解锁后你会获得',
+                  style: TextStyle(
+                    fontSize: DS.fontSizeSm,
+                    fontWeight: DS.fontWeightBold,
+                    color: DS.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: DS.spacing8),
+                ...node.rewardPreview.map(
+                  (item) => Padding(
+                    padding: const EdgeInsets.only(bottom: DS.spacing6),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.auto_awesome, size: 14, color: color),
+                        const SizedBox(width: DS.spacing6),
+                        Expanded(
+                          child: Text(
+                            item,
+                            style: TextStyle(
+                              fontSize: DS.fontSizeXs,
+                              color: DS.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(height: DS.spacing18),
+              Row(
+                children: [
+                  Expanded(
+                    child: SparkleButton.outline(
+                      label: '关闭',
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ),
+                  const SizedBox(width: DS.spacing12),
+                  Expanded(
+                    child: SparkleButton.primary(
+                      label: '查看详情',
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        context.push('/achievements/${node.id}');
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _displayStateLabel(String state) {
+    switch (state) {
+      case 'unlocked':
+        return '已解锁';
+      case 'ready_to_pursue':
+        return '可冲刺';
+      case 'close_to_unlock':
+        return '接近解锁';
+      case 'hidden_unrevealed':
+        return '隐藏中';
+      default:
+        return '前置阻塞';
+    }
+  }
+}
+
+class _MetaChip extends StatelessWidget {
+  const _MetaChip({required this.label, required this.color});
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: DS.spacing10,
+        vertical: DS.spacing6,
+      ),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: DS.borderRadius12,
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: DS.fontSizeXs,
+          color: color,
+          fontWeight: DS.fontWeightMedium,
+        ),
+      ),
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -144,26 +317,28 @@ class _CosmicConstellationCanvas extends StatefulWidget {
     required this.nodes,
     required this.connections,
     required this.progressById,
+    required this.onNodeTap,
   });
 
   final List<AchievementMapNode> nodes;
   final List<Map<String, dynamic>> connections;
   final Map<String, double> progressById;
+  final ValueChanged<AchievementMapNode> onNodeTap;
 
   @override
   State<_CosmicConstellationCanvas> createState() =>
       _CosmicConstellationCanvasState();
 }
 
-class _CosmicConstellationCanvasState
-    extends State<_CosmicConstellationCanvas>
+class _CosmicConstellationCanvasState extends State<_CosmicConstellationCanvas>
     with TickerProviderStateMixin, AnimationLifecycleMixin {
   late final AnimationController _twinkleController;
   late final AnimationController _pulseController;
   late final AnimationController _nodeEntranceController;
 
   /// Controller for InteractiveViewer
-  final TransformationController _transformationController = TransformationController();
+  final TransformationController _transformationController =
+      TransformationController();
 
   /// Cached star positions generated once with a seeded random.
   late List<_Star> _stars;
@@ -256,8 +431,13 @@ class _CosmicConstellationCanvasState
       // Calculate translation to center content
       final scaledContentWidth = contentWidth * scale;
       final scaledContentHeight = contentHeight * scale;
-      final offsetX = (screenSize.width - scaledContentWidth) / 2 - minX * scale + padding * scale;
-      final offsetY = appBarHeight + (availableHeight - scaledContentHeight) / 2 - minY * scale + padding * scale;
+      final offsetX = (screenSize.width - scaledContentWidth) / 2 -
+          minX * scale +
+          padding * scale;
+      final offsetY = appBarHeight +
+          (availableHeight - scaledContentHeight) / 2 -
+          minY * scale +
+          padding * scale;
 
       _transformationController.value = Matrix4.identity()
         ..translate(offsetX, offsetY)
@@ -333,8 +513,7 @@ class _CosmicConstellationCanvasState
   }
 
   void _updateOrbitalParticleRegistration({bool force = false}) {
-    final desiredCount =
-        _reduceMotion ? 0 : _calculateOrbitalParticleCount();
+    final desiredCount = _reduceMotion ? 0 : _calculateOrbitalParticleCount();
 
     if (!force && desiredCount == _registeredParticleCount) return;
     _releaseOrbitalParticles();
@@ -494,8 +673,7 @@ class _CosmicConstellationCanvasState
 
               // Staggered entrance timing.
               final delayMs = index * 40;
-              final totalMs =
-                  _nodeEntranceController.duration!.inMilliseconds;
+              final totalMs = _nodeEntranceController.duration!.inMilliseconds;
               final start = delayMs / totalMs;
               final end = math.min((delayMs + 600) / totalMs, 1.0);
 
@@ -509,6 +687,7 @@ class _CosmicConstellationCanvasState
                 progress: progress,
                 reduceMotion: reduceMotion,
                 pulseController: _pulseController,
+                onTap: widget.onNodeTap,
               );
 
               return Positioned(
@@ -646,8 +825,7 @@ class _ConstellationLinesPainter extends CustomPainter {
       final bothUnlocked = fromNode.isUnlocked && toNode.isUnlocked;
       final fromProgress =
           progressById[fromId] ?? (fromNode.isUnlocked ? 1.0 : 0.0);
-      final toProgress =
-          progressById[toId] ?? (toNode.isUnlocked ? 1.0 : 0.0);
+      final toProgress = progressById[toId] ?? (toNode.isUnlocked ? 1.0 : 0.0);
       final isCompleted = fromProgress >= 1.0 && toProgress >= 1.0;
       final fromColor = RarityColorProvider.getColor(fromNode.rarity);
       final toColor = RarityColorProvider.getColor(toNode.rarity);
@@ -851,12 +1029,14 @@ class _CosmicNodeWidget extends StatelessWidget {
     required this.pulseController,
     required this.progress,
     required this.reduceMotion,
+    required this.onTap,
   });
 
   final AchievementMapNode node;
   final AnimationController pulseController;
   final double progress;
   final bool reduceMotion;
+  final ValueChanged<AchievementMapNode> onTap;
 
   IconData _iconForCategory(String category) {
     switch (category.toLowerCase()) {
@@ -889,10 +1069,12 @@ class _CosmicNodeWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = RarityColorProvider.getColor(node.rarity);
     const nodeSize = 52.0;
-    final isNearCompletion = progress >= 0.75;
+    final isNearCompletion =
+        progress >= 0.75 || node.displayState == 'close_to_unlock';
+    final isRecommended = node.isRecommendedTarget;
 
     return GestureDetector(
-      onTap: () => context.push('${AchievementRoutes.basePath}/${node.id}'),
+      onTap: () => onTap(node),
       child: SizedBox(
         width: 88,
         child: Column(
@@ -906,7 +1088,7 @@ class _CosmicNodeWidget extends StatelessWidget {
                 alignment: Alignment.center,
                 children: [
                   // Animated outer glow ring (unlocked only).
-                  if (node.isUnlocked)
+                  if (node.isUnlocked || isRecommended)
                     reduceMotion
                         ? Container(
                             width: 66,
@@ -915,17 +1097,27 @@ class _CosmicNodeWidget extends StatelessWidget {
                               shape: BoxShape.circle,
                               border: Border.all(
                                 color: color.withValues(
-                                  alpha: isNearCompletion ? 0.5 : 0.3,
+                                  alpha: isRecommended
+                                      ? 0.75
+                                      : (isNearCompletion ? 0.5 : 0.3),
                                 ),
-                                width: isNearCompletion ? 2.6 : 2.0,
+                                width: isRecommended
+                                    ? 3.0
+                                    : (isNearCompletion ? 2.6 : 2.0),
                               ),
                               boxShadow: [
                                 BoxShadow(
                                   color: color.withValues(
-                                    alpha: isNearCompletion ? 0.3 : 0.18,
+                                    alpha: isRecommended
+                                        ? 0.38
+                                        : (isNearCompletion ? 0.3 : 0.18),
                                   ),
-                                  blurRadius: isNearCompletion ? 16 : 12,
-                                  spreadRadius: isNearCompletion ? 3 : 2,
+                                  blurRadius: isRecommended
+                                      ? 20
+                                      : (isNearCompletion ? 16 : 12),
+                                  spreadRadius: isRecommended
+                                      ? 4
+                                      : (isNearCompletion ? 3 : 2),
                                 ),
                               ],
                             ),
@@ -933,28 +1125,38 @@ class _CosmicNodeWidget extends StatelessWidget {
                         : AnimatedBuilder(
                             animation: pulseController,
                             builder: (context, _) {
-                              final pulseOpacity =
-                                  (isNearCompletion ? 0.4 : 0.3) +
-                                      (isNearCompletion ? 0.25 : 0.2) *
-                                          math.sin(
-                                            pulseController.value * math.pi * 2,
-                                          );
+                              final pulseOpacity = (isRecommended
+                                      ? 0.55
+                                      : (isNearCompletion ? 0.4 : 0.3)) +
+                                  (isRecommended
+                                          ? 0.3
+                                          : (isNearCompletion ? 0.25 : 0.2)) *
+                                      math.sin(
+                                        pulseController.value * math.pi * 2,
+                                      );
                               return Container(
                                 width: 66,
                                 height: 66,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
                                   border: Border.all(
-                                    color: color.withValues(alpha: pulseOpacity),
-                                    width: isNearCompletion ? 2.6 : 2.0,
+                                    color:
+                                        color.withValues(alpha: pulseOpacity),
+                                    width: isRecommended
+                                        ? 3.0
+                                        : (isNearCompletion ? 2.6 : 2.0),
                                   ),
                                   boxShadow: [
                                     BoxShadow(
                                       color: color.withValues(
                                         alpha: pulseOpacity * 0.5,
                                       ),
-                                      blurRadius: isNearCompletion ? 16 : 12,
-                                      spreadRadius: isNearCompletion ? 3 : 2,
+                                      blurRadius: isRecommended
+                                          ? 20
+                                          : (isNearCompletion ? 16 : 12),
+                                      spreadRadius: isRecommended
+                                          ? 4
+                                          : (isNearCompletion ? 3 : 2),
                                     ),
                                   ],
                                 ),
@@ -1011,6 +1213,30 @@ class _CosmicNodeWidget extends StatelessWidget {
                           ),
                   ),
 
+                  if (isRecommended)
+                    Positioned(
+                      bottom: -2,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: DS.spacing6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.92),
+                          borderRadius: DS.borderRadius8,
+                        ),
+                        child: Text(
+                          'NEXT',
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: DS.fontWeightBold,
+                            color: DS.neutral0,
+                            letterSpacing: 0.6,
+                          ),
+                        ),
+                      ),
+                    ),
+
                   // Milestone overlay badge.
                   Positioned(
                     top: -4,
@@ -1033,8 +1259,13 @@ class _CosmicNodeWidget extends StatelessWidget {
                 vertical: DS.spacing4,
               ),
               decoration: BoxDecoration(
-                color: DS.deepSpaceStart.withValues(alpha: 0.75),
+                color: isRecommended
+                    ? color.withValues(alpha: 0.26)
+                    : DS.deepSpaceStart.withValues(alpha: 0.75),
                 borderRadius: DS.borderRadius8,
+                border: isRecommended
+                    ? Border.all(color: color.withValues(alpha: 0.45))
+                    : null,
               ),
               child: Text(
                 node.name,

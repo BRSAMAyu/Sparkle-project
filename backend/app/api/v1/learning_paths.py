@@ -8,6 +8,7 @@ from typing import Any, Union
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from loguru import logger
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,7 +21,7 @@ from app.models.plan import PlanType
 from app.models.task import SubTaskStatus
 from app.models.user import User
 from app.schemas.plan import PlanCreate
-from app.schemas.task import SubTaskCreate, TaskCreate
+from app.schemas.task import TaskCreate
 from app.services.graph_reasoning_service import GraphReasoningService
 from app.services.plan_service import PlanService
 from app.services.task_service import TaskService
@@ -61,6 +62,58 @@ def _extract_error(path: list[dict[str, Any]]) -> tuple[str, str, dict | None]:
     message = error_data.get("message", "未知错误")
     details = error_data.get("details")
     return error_code, message, details
+
+
+def _build_fallback_plan_summary(target_name: str, path: list[dict[str, Any]]) -> str:
+    steps: list[str] = []
+    active_path = path or []
+    target_step_index = len(active_path)
+
+    for index, node in enumerate(active_path, start=1):
+        name = str(node.get("name", "未知节点"))
+        status = str(node.get("status", "locked"))
+        is_target = bool(node.get("is_target"))
+        if is_target:
+            target_step_index = index
+        if status == "mastered":
+            steps.append(f"{index}. 快速复盘 {name}，确认前置知识仍然稳固。")
+        elif is_target:
+            steps.append(f"{index}. 聚焦攻克目标节点 {name}，完成理解、练习和应用闭环。")
+        else:
+            steps.append(f"{index}. 先补齐 {name} 的核心概念、关键方法和典型练习。")
+
+    if not steps:
+        steps.append("1. 直接进入目标主题学习，先建立基础认知框架。")
+
+    return "\n".join(
+        [
+            f"学习目标：{target_name}",
+            "",
+            "建议节奏：",
+            *steps,
+            "",
+            f"完成标志：能够独立解释 {target_name}，并把第 {target_step_index} 步涉及的关键知识串联起来。",
+        ]
+    )
+
+
+async def _generate_plan_summary(
+    *,
+    user_query: str,
+    enhanced_context: EnhancedAgentContext,
+    target_name: str,
+    path: list[dict[str, Any]],
+) -> tuple[str, bool]:
+    try:
+        workflow = TaskDecompositionWorkflow(None)
+        collaboration_result = await workflow.execute(user_query, enhanced_context)
+        plan_summary = (collaboration_result.final_response or "").strip()
+        if plan_summary:
+            return plan_summary, False
+    except Exception as exc:
+        logger.warning(f"Learning path plan workflow failed for {target_name}: {exc}")
+
+    return _build_fallback_plan_summary(target_name, path), True
 
 
 # ============ Endpoints ============
@@ -166,9 +219,12 @@ async def generate_learning_path_plan(
         db_session=db,
     )
 
-    workflow = TaskDecompositionWorkflow(None)
-    collaboration_result = await workflow.execute(user_query, enhanced_context)
-    plan_summary = collaboration_result.final_response
+    plan_summary, summary_fallback_used = await _generate_plan_summary(
+        user_query=user_query,
+        enhanced_context=enhanced_context,
+        target_name=target_name,
+        path=path,
+    )
     plan_description = _truncate_text(plan_summary, 1200)
 
     plan_create = PlanCreate(
@@ -245,6 +301,8 @@ async def generate_learning_path_plan(
         "plan_id": plan_id,
         "plan_summary": plan_summary,
         "tasks": tasks_payload,
+        "retry": summary_fallback_used,
+        "message": "已使用稳定兜底方案生成学习计划" if summary_fallback_used else None,
     }
 
 
@@ -296,24 +354,38 @@ async def generate_full_path_plan(
         knowledge_context=path_summary,
         db_session=db,
     )
-    workflow = TaskDecompositionWorkflow(None)
-    result = await workflow.execute(user_query, context)
-    plan_summary = result.final_response
+    plan_summary, summary_fallback_used = await _generate_plan_summary(
+        user_query=user_query,
+        enhanced_context=context,
+        target_name=str(target_name),
+        path=active_nodes,
+    )
 
     # 3. 创建 Plan
     plan_description = _truncate_text(plan_summary, 1200)
-    plan = await PlanService.create(
-        db=db,
-        obj_in=PlanCreate(
-            name=f"学习路径：{target_name}",
-            type=PlanType.GROWTH,
-            description=plan_description,
-            subject=target_name,
-            daily_available_minutes=60,
-        ),
-        user_id=current_user.id,  # type: ignore
-        redis_client=cache_service.redis,
-    )
+    try:
+        plan = await PlanService.create(
+            db=db,
+            obj_in=PlanCreate(
+                name=f"学习路径：{target_name}",
+                type=PlanType.GROWTH,
+                description=plan_description,
+                subject=target_name,
+                daily_available_minutes=60,
+            ),
+            user_id=current_user.id,  # type: ignore
+            redis_client=cache_service.redis,
+        )
+    except QuotaExceededError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "message": exc.message,
+                "current_count": exc.current_count,
+                "max_quota": exc.max_quota,
+                "error_code": "QUOTA_EXCEEDED",
+            },
+        ) from exc
 
     # Phase 4: 设置学习路径来源信息
     plan.source = "learning_path"
@@ -425,6 +497,7 @@ async def generate_full_path_plan(
         "plan_summary": plan_summary,
         "parent_task_id": str(parent_task.id),
         "subtask_count": order - 1,
+        "fallback_used": summary_fallback_used,
     }
 
 

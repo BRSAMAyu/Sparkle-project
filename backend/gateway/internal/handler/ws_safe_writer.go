@@ -54,3 +54,9 @@ func (w *wsSafeWriter) WriteControl(messageType int, data []byte) error {
 		return w.conn.WriteControl(messageType, data, time.Now().Add(w.writeWait))
 	})
 }
+
+func (w *wsSafeWriter) Close() error {
+	return w.withLock(func() error {
+		return w.conn.Close()
+	})
+}

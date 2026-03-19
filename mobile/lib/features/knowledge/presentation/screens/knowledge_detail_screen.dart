@@ -77,15 +77,18 @@ class KnowledgeDetailScreen extends ConsumerWidget {
         label: l10n.knowledgeGeneratePath,
         icon: const Icon(Icons.timeline),
         onPressed: () {
-          showModalBottomSheet<void>(
-            context: context,
-            isScrollControlled: true,
-            backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
-            builder: (context) => GraphiteModalSurface(
-              title: l10n.knowledgeGeneratePath,
-              child: LearningPathDialog(
-                targetNodeId: nodeId,
-                targetNodeName: detail.node.name,
+          unawaited(
+            showModalBottomSheet<void>(
+              context: context,
+              useRootNavigator: true,
+              isScrollControlled: true,
+              backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
+              builder: (context) => GraphiteModalSurface(
+                title: l10n.knowledgeGeneratePath,
+                child: LearningPathDialog(
+                  targetNodeId: nodeId,
+                  targetNodeName: detail.node.name,
+                ),
               ),
             ),
           );

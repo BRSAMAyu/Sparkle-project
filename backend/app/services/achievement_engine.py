@@ -86,6 +86,22 @@ class AchievementEngine:
         "WEEKEND_WARRIOR",
     }
     SUPPORTED_REWARD_TYPES = {"freeze_charge", "galaxy_skin", "photon", "title", "visual_element"}
+    PRESTIGE_LANES = {
+        "streak": {"id": "streak_lane", "label": "连胜王者线", "color": "#FF8A3D", "x": 120},
+        "sprint": {"id": "sprint_lane", "label": "冲刺战绩线", "color": "#2FB6FF", "x": 390},
+        "conquest": {"id": "conquest_lane", "label": "探索征服线", "color": "#63E6BE", "x": 660},
+        "hidden": {"id": "hidden_lane", "label": "隐藏猎人线", "color": "#B197FC", "x": 930},
+        "prestige": {"id": "prestige_lane", "label": "声望进阶线", "color": "#FFD43B", "x": 1200},
+    }
+    CATEGORY_TO_LANE = {
+        "streak": "streak",
+        "sprint": "sprint",
+        "exploration": "conquest",
+        "mastery": "conquest",
+        "study_time": "conquest",
+        "hidden": "hidden",
+        "tasks": "prestige",
+    }
 
     # 成就定义缓存（内存缓存）
     _achievement_cache: dict[str, Achievement] = {}
@@ -757,6 +773,8 @@ class AchievementEngine:
 
         # 处理奖励
         await self._grant_rewards(user_id, achievement)
+        reward_preview = self._build_reward_preview(achievement.reward_config)
+        surface_preview = self._surface_preview_for_rewards(achievement.reward_config)
         unlock_payload = {
             "achievement_id": achievement.id,
             "name": achievement.name,
@@ -764,6 +782,8 @@ class AchievementEngine:
             "visual_effect": achievement.visual_config,
             "visual_effect_type": achievement.visual_effect_type,
             "rewards": achievement.reward_config,
+            "reward_preview": reward_preview,
+            "surface_preview": surface_preview,
             "is_first": is_first,
             "unlocked_at": now,
         }
@@ -959,6 +979,7 @@ class AchievementEngine:
                     if reward.get("type") == "photon":
                         photon_granted = reward.get("quantity", 0)
                         break
+            glory_lines = self._build_glory_lines(unlock)
 
             # 通过 WebSocket 发送成就解锁事件
             message = {
@@ -970,10 +991,13 @@ class AchievementEngine:
                     "visual_effect": unlock.get("visual_effect"),
                     "visual_effect_type": unlock.get("visual_effect_type"),
                     "rewards": unlock.get("rewards"),
+                    "reward_preview": unlock.get("reward_preview"),
+                    "surface_preview": unlock.get("surface_preview"),
                     "is_first": unlock.get("is_first", False),
                     "unlocked_at": unlock["unlocked_at"].isoformat() if isinstance(unlock["unlocked_at"], datetime) else unlock["unlocked_at"],
                     # 添加连击信息
                     "combo_info": unlock.get("combo_info"),
+                    "glory_lines": glory_lines,
                     # 显式添加光子奖励信息
                     "photon_granted": photon_granted,
                     "has_photon_reward": photon_granted > 0
@@ -1140,6 +1164,80 @@ class AchievementEngine:
 
         return stats
 
+    def _lane_config_for_achievement(self, achievement: Achievement) -> dict[str, Any]:
+        lane_key = self.CATEGORY_TO_LANE.get(achievement.category or "", "prestige")
+        return self.PRESTIGE_LANES[lane_key]
+
+    def _build_reward_preview(self, reward_config: Any) -> list[str]:
+        rewards = reward_config if isinstance(reward_config, list) else (reward_config or {}).get("rewards", [])
+        preview: list[str] = []
+        for reward in rewards:
+            reward_type = reward.get("type")
+            if reward_type == "title":
+                preview.append(f"称号 · {reward.get('display') or reward.get('value') or '荣耀称号'}")
+            elif reward_type == "galaxy_skin":
+                preview.append(f"星图皮肤 · {reward.get('skin_id')}")
+            elif reward_type == "visual_element":
+                preview.append(f"荣耀装扮 · {reward.get('element_id')}")
+            elif reward_type == "freeze_charge":
+                preview.append(f"连胜保护 · x{reward.get('quantity', 1)}")
+            elif reward_type == "photon":
+                preview.append(f"光子积分 · x{reward.get('quantity', 0)}")
+        return preview[:4]
+
+    def _surface_preview_for_rewards(self, reward_config: Any) -> list[str]:
+        rewards = reward_config if isinstance(reward_config, list) else (reward_config or {}).get("rewards", [])
+        surfaces: list[str] = []
+        for reward in rewards:
+            reward_type = reward.get("type")
+            if reward_type == "title" and "个人主页身份条" not in surfaces:
+                surfaces.append("个人主页身份条")
+            elif reward_type == "galaxy_skin" and "星图主题" not in surfaces:
+                surfaces.append("星图主题")
+            elif reward_type == "visual_element":
+                if "首页氛围" not in surfaces:
+                    surfaces.append("首页氛围")
+                if "个人主页荣耀位" not in surfaces:
+                    surfaces.append("个人主页荣耀位")
+        return surfaces
+
+    def _build_unlock_hint(
+        self,
+        achievement: Achievement,
+        progress_value: int,
+        progress_target: int,
+        display_state: str,
+    ) -> str | None:
+        if display_state == "hidden_unrevealed":
+            return achievement.hint or "继续探索，也许下一次会被看见。"
+        if display_state == "blocked" and achievement.prerequisites:
+            return f"先完成前置成就：{len(achievement.prerequisites)} 项"
+        if progress_target > 0 and progress_value < progress_target:
+            return f"还差 {max(progress_target - progress_value, 0)} 即可解锁"
+        return achievement.description
+
+    def _build_glory_lines(self, unlock_payload: dict[str, Any]) -> list[str]:
+        lines: list[str] = []
+        combo_info = unlock_payload.get("combo_info") or {}
+        combo = combo_info.get("combo")
+        if combo and combo > 1:
+            lines.append(f"{combo} 连成就")
+        rarity = unlock_payload.get("rarity")
+        rarity_value = rarity.value if hasattr(rarity, "value") else str(rarity)
+        percentile_map = {
+            "common": "击败了 50% 的普通解锁节奏",
+            "rare": "击败了 82% 的普通解锁节奏",
+            "epic": "击败了 95% 的普通解锁节奏",
+            "legendary": "击败了 99% 的普通解锁节奏",
+        }
+        if rarity_value in percentile_map:
+            lines.append(percentile_map[rarity_value])
+        if unlock_payload.get("is_first"):
+            lines.append("你是首批解锁者之一")
+        for surface in unlock_payload.get("surface_preview", [])[:2]:
+            lines.append(f"将显眼展示在{surface}")
+        return lines[:4]
+
     def _build_achievement_detail(
         self,
         achievement: Achievement,
@@ -1264,51 +1362,114 @@ class AchievementEngine:
     ) -> dict[str, Any]:
         """获取成就地图数据"""
         all_achievements = await self._get_all_achievements()
+        progress_result = await self.db.execute(
+            select(UserAchievement).where(UserAchievement.user_id == user_id)
+        )
+        progress_map = {
+            item.achievement_id: item
+            for item in progress_result.scalars().all()
+        }
 
-        # 按类别分组获取位置
-        categories = {}
-        positions = {}
-        _x, _y = 0, 0
-        row_width = 5
+        lane_groups: dict[str, list[Achievement]] = {}
+        positions: dict[str, dict[str, float]] = {}
+        sorted_achievements = sorted(
+            all_achievements,
+            key=lambda item: (
+                self._lane_config_for_achievement(item)["x"],
+                item.sort_order,
+                item.id,
+            ),
+        )
+        for achievement in sorted_achievements:
+            lane = self._lane_config_for_achievement(achievement)
+            lane_groups.setdefault(lane["id"], []).append(achievement)
 
-        for achievement in all_achievements:
-            cat = achievement.category or "other"
-            if cat not in categories:
-                categories[cat] = []
-            categories[cat].append(achievement)
-
-        # 计算位置（简单的网格布局）
-        for cat, achievements in categories.items():
-            for i, achievement in enumerate(achievements):
-                positions[achievement.id] = {
-                    "x": (i % row_width) * 100 + (len(cat) * 50),
-                    "y": (i // row_width) * 100
-                }
+        for lane_id, achievements in lane_groups.items():
+            lane = next(value for value in self.PRESTIGE_LANES.values() if value["id"] == lane_id)
+            ordered = sorted(achievements, key=lambda item: (item.sort_order, item.id))
+            for index, achievement in enumerate(ordered):
+                y = 130 + index * 156
+                x = lane["x"] + (18 if index % 2 == 0 else -18)
+                positions[achievement.id] = {"x": float(x), "y": float(y)}
 
         # 生成节点
         from app.schemas.achievement import AchievementMapNode
 
         nodes = []
         connections = []
+        recommended_candidates: list[tuple[int, int, int, int, str]] = []
 
         for achievement in all_achievements:
-            is_unlocked = await self._is_unlocked(user_id, achievement.id)
+            progress = progress_map.get(achievement.id)
+            is_unlocked = bool(progress and progress.unlocked_at is not None)
+            progress_percentage = int((progress.progress if progress else 0) * 100)
+            progress_value = progress.progress_value if progress else 0
+            progress_target = progress.progress_target if progress else 1
+            prerequisites = achievement.prerequisites or []
+            prerequisites_ready = all(
+                bool(progress_map.get(prereq) and progress_map[prereq].unlocked_at is not None)
+                for prereq in prerequisites
+            )
+            if achievement.is_hidden and not is_unlocked:
+                display_state = "hidden_unrevealed"
+            elif is_unlocked:
+                display_state = "unlocked"
+            elif progress_percentage >= 75:
+                display_state = "close_to_unlock"
+            elif prerequisites_ready:
+                display_state = "ready_to_pursue"
+            else:
+                display_state = "blocked"
+
+            if not is_unlocked and display_state in {"close_to_unlock", "ready_to_pursue"}:
+                rarity_score = {
+                    AchievementRarity.COMMON: 1,
+                    AchievementRarity.RARE: 2,
+                    AchievementRarity.EPIC: 3,
+                    AchievementRarity.LEGENDARY: 4,
+                }.get(achievement.rarity, 0)
+                recommended_candidates.append(
+                    (
+                        0 if display_state == "close_to_unlock" else 1,
+                        -progress_percentage,
+                        -rarity_score,
+                        achievement.sort_order,
+                        achievement.id,
+                    )
+                )
+
+            lane = self._lane_config_for_achievement(achievement)
+            reward_preview = self._build_reward_preview(achievement.reward_config)
+            unlock_hint = self._build_unlock_hint(
+                achievement,
+                progress_value=progress_value,
+                progress_target=progress_target,
+                display_state=display_state,
+            )
 
             nodes.append(AchievementMapNode(
                 id=achievement.id,
                 name=achievement.get_localized_name(locale),
                 rarity=achievement.rarity,
                 category=achievement.category or "other",
+                lane=lane["id"],
+                lane_label=lane["label"],
                 position=positions.get(achievement.id, {"x": 0, "y": 0}),
                 is_unlocked=is_unlocked,
                 is_hidden=achievement.is_hidden,
-                prerequisites=achievement.prerequisites or [],
-                parent_id=achievement.parent_id
+                prerequisites=prerequisites,
+                parent_id=achievement.parent_id,
+                display_state=display_state,
+                reward_preview=reward_preview,
+                progress_percentage=progress_percentage,
+                progress_value=progress_value,
+                progress_target=progress_target,
+                unlock_hint=unlock_hint,
             ))
 
             # 生成连接线
-            if achievement.prerequisites:
-                for prereq in achievement.prerequisites:
+            if prerequisites:
+                for prereq in prerequisites:
                     connections.append({
                         "from": prereq,
                         "to": achievement.id,
@@ -1322,14 +1483,27 @@ class AchievementEngine:
                     "type": "parent"
                 })
 
-        # 分类信息
+        recommended_candidates.sort()
+        recommended_target_id = recommended_candidates[0][4] if recommended_candidates else None
+
+        node_payloads = []
+        for node in nodes:
+            payload = node.model_dump()
+            payload["is_recommended_target"] = node.id == recommended_target_id
+            node_payloads.append(payload)
+
         category_info = [
-            {"id": cat, "name": cat, "count": len(achievements)}
-            for cat, achievements in categories.items()
+            {
+                "id": lane["id"],
+                "name": lane["label"],
+                "count": len(lane_groups.get(lane["id"], [])),
+                "color": lane["color"],
+            }
+            for lane in self.PRESTIGE_LANES.values()
         ]
 
         return {
-            "nodes": [n.model_dump() for n in nodes],
+            "nodes": node_payloads,
             "connections": connections,
             "categories": category_info
         }

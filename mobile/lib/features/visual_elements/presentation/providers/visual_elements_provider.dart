@@ -6,6 +6,8 @@ import 'package:sparkle/shared/entities/visual_element_model.dart';
 
 /// 排序选项
 enum VisualElementSortBy {
+  prestige,
+  set,
   name,
   rarity,
   unlockDate,
@@ -94,8 +96,7 @@ class VisualElementsState {
   final VisualElementFilterOptions filterOptions;
 
   /// 获取已解锁的元素 ID 集合
-  Set<String> get unlockedIds =>
-      unlockedElements.map((e) => e.id).toSet();
+  Set<String> get unlockedIds => unlockedElements.map((e) => e.id).toSet();
 
   /// 获取已装备的元素 ID 集合
   Set<String> get equippedIds {
@@ -135,63 +136,64 @@ class VisualElementsState {
     var filtered = allElements;
 
     if (filterOptions.type != null) {
-      filtered = filtered
-          .where((e) => e.elementType == filterOptions.type)
-          .toList();
+      filtered =
+          filtered.where((e) => e.elementType == filterOptions.type).toList();
     }
 
     if (filterOptions.rarity != null) {
-      filtered = filtered
-          .where((e) => e.rarity == filterOptions.rarity)
-          .toList();
+      filtered =
+          filtered.where((e) => e.rarity == filterOptions.rarity).toList();
     }
 
     if (filterOptions.category != null) {
-      filtered = filtered
-          .where((e) => e.category == filterOptions.category)
-          .toList();
+      filtered =
+          filtered.where((e) => e.category == filterOptions.category).toList();
     }
 
     if (filterOptions.showUnlockedOnly) {
       final unlockedIdSet = unlockedIds;
-      filtered = filtered
-          .where((e) => unlockedIdSet.contains(e.id))
-          .toList();
+      filtered = filtered.where((e) => unlockedIdSet.contains(e.id)).toList();
     }
 
     if (filterOptions.showEquippedOnly) {
       final equippedIdSet = equippedIds;
-      filtered = filtered
-          .where((e) => equippedIdSet.contains(e.id))
-          .toList();
+      filtered = filtered.where((e) => equippedIdSet.contains(e.id)).toList();
     }
 
     // 排序
-    return filtered..sort((a, b) {
-      switch (filterOptions.sortBy) {
-        case VisualElementSortBy.name:
-          return a.name.compareTo(b.name);
-        case VisualElementSortBy.rarity:
-          // legendary > epic > rare > common
-          final rarityOrder = {
-            VisualElementRarity.legendary: 4,
-            VisualElementRarity.epic: 3,
-            VisualElementRarity.rare: 2,
-            VisualElementRarity.common: 1,
-          };
-          return rarityOrder[b.rarity]!.compareTo(rarityOrder[a.rarity]!);
-        case VisualElementSortBy.unlockDate:
-          // 按解锁时间排序（已解锁的排前面）
-          final aUnlocked = unlockedIds.contains(a.id);
-          final bUnlocked = unlockedIds.contains(b.id);
-          if (aUnlocked && !bUnlocked) return -1;
-          if (!aUnlocked && bUnlocked) return 1;
-          return a.sortOrder.compareTo(b.sortOrder);
-        case VisualElementSortBy.sortOrder:
-        default:
-          return a.sortOrder.compareTo(b.sortOrder);
-      }
-    });
+    return filtered
+      ..sort((a, b) {
+        switch (filterOptions.sortBy) {
+          case VisualElementSortBy.prestige:
+            final visibility = b.visibilityWeight.compareTo(a.visibilityWeight);
+            if (visibility != 0) return visibility;
+            return a.sortOrder.compareTo(b.sortOrder);
+          case VisualElementSortBy.set:
+            final setCompare = (a.setId ?? 'zzzz').compareTo(b.setId ?? 'zzzz');
+            if (setCompare != 0) return setCompare;
+            return b.visibilityWeight.compareTo(a.visibilityWeight);
+          case VisualElementSortBy.name:
+            return a.name.compareTo(b.name);
+          case VisualElementSortBy.rarity:
+            // legendary > epic > rare > common
+            final rarityOrder = {
+              VisualElementRarity.legendary: 4,
+              VisualElementRarity.epic: 3,
+              VisualElementRarity.rare: 2,
+              VisualElementRarity.common: 1,
+            };
+            return rarityOrder[b.rarity]!.compareTo(rarityOrder[a.rarity]!);
+          case VisualElementSortBy.unlockDate:
+            // 按解锁时间排序（已解锁的排前面）
+            final aUnlocked = unlockedIds.contains(a.id);
+            final bUnlocked = unlockedIds.contains(b.id);
+            if (aUnlocked && !bUnlocked) return -1;
+            if (!aUnlocked && bUnlocked) return 1;
+            return a.sortOrder.compareTo(b.sortOrder);
+          case VisualElementSortBy.sortOrder:
+            return a.sortOrder.compareTo(b.sortOrder);
+        }
+      });
   }
 
   /// 获取所有分类

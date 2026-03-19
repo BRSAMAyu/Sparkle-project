@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -11,6 +10,7 @@ import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/deep_link_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
+import 'package:sparkle/core/widgets/ai_rich_text.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/chat/presentation/widgets/file_message_bubble.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
@@ -18,22 +18,6 @@ import 'package:sparkle/features/community/data/repositories/community_share_rep
 import 'package:sparkle/features/community/presentation/widgets/share_cards/share_cards.dart';
 import 'package:sparkle/features/community/presentation/providers/community_agent_provider.dart';
 import 'package:sparkle/features/file/file.dart';
-
-/// Font fallback list for chat content, including emoji support
-const _chatContentFontFallback = <String>[
-  'PingFang SC',
-  'Hiragino Sans GB',
-  'Heiti SC',
-  'Noto Sans SC',
-  'Noto Sans CJK SC',
-  'Source Han Sans SC',
-  'Microsoft YaHei',
-  'Arial Unicode MS',
-  // Emoji fonts for proper rendering
-  'Apple Color Emoji',
-  'Noto Color Emoji',
-  'Segoe UI Emoji',
-];
 
 class GroupChatBubble extends ConsumerStatefulWidget {
   const GroupChatBubble({
@@ -537,96 +521,15 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
         ? normalizeCommunityAgentOutput(widget.message.content ?? '')
         : widget.message.content ?? '';
     final textColor = isMe ? DS.chatBubbleUserText : DS.chatBubbleOtherText;
-
-    if (!_hasMarkdownSyntax(rawContent)) {
-      return Text(
-        rawContent,
-        style: TextStyle(
-          color: textColor,
-          fontSize: 16,
-          height: 1.4,
-          fontFamilyFallback: _chatContentFontFallback,
-        ),
-      );
-    }
-
-    return MarkdownBody(
-      data: rawContent,
-      styleSheet: MarkdownStyleSheet(
-        p: TextStyle(
-          color: textColor,
-          fontSize: 16,
-          height: 1.4,
-          fontFamilyFallback: _chatContentFontFallback,
-        ),
-        h1: TextStyle(
-          color: textColor,
-          fontSize: 22,
-          fontWeight: FontWeight.bold,
-          fontFamilyFallback: _chatContentFontFallback,
-        ),
-        h2: TextStyle(
-          color: textColor,
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-          fontFamilyFallback: _chatContentFontFallback,
-        ),
-        h3: TextStyle(
-          color: textColor,
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-          fontFamilyFallback: _chatContentFontFallback,
-        ),
-        strong: TextStyle(
-          color: textColor,
-          fontWeight: FontWeight.w700,
-          fontFamilyFallback: _chatContentFontFallback,
-        ),
-        em: TextStyle(
-          color: textColor,
-          fontStyle: FontStyle.italic,
-          fontFamilyFallback: _chatContentFontFallback,
-        ),
-        code: TextStyle(
-          fontSize: 14,
-          color: textColor,
-          fontFamily: 'monospace',
-          fontFamilyFallback: _chatContentFontFallback,
-          backgroundColor:
-              isMe ? Colors.white.withValues(alpha: 0.14) : DS.surfaceTertiary,
-        ),
-        codeblockDecoration: BoxDecoration(
-          color:
-              isMe ? Colors.white.withValues(alpha: 0.12) : DS.surfaceTertiary,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        listBullet: TextStyle(
-          color: textColor,
-          fontFamilyFallback: _chatContentFontFallback,
-        ),
-        a: TextStyle(
-          color: isMe ? Colors.white : DS.brandPrimary,
-          decoration: TextDecoration.underline,
-          fontFamilyFallback: _chatContentFontFallback,
-        ),
-      ),
+    return AiRichText(
+      content: rawContent,
+      textColor: textColor,
+      codeBackgroundColor:
+          isMe ? Colors.white.withValues(alpha: 0.12) : DS.surfaceTertiary,
+      linkColor: isMe ? Colors.white : DS.brandPrimary,
+      fontSize: 16,
+      height: 1.4,
     );
-  }
-
-  bool _hasMarkdownSyntax(String content) {
-    if (content.trim().isEmpty) {
-      return false;
-    }
-
-    return <RegExp>[
-      RegExp(r'(^|\n)#{1,6}\s', multiLine: true),
-      RegExp(r'(^|\n)[-*+]\s', multiLine: true),
-      RegExp(r'(^|\n)\d+\.\s', multiLine: true),
-      RegExp(r'`[^`\n]+`'),
-      RegExp('```'),
-      RegExp(r'\[[^\]]+\]\([^)]+\)'),
-      RegExp(r'(\*\*|__)[^*_]+(\*\*|__)'),
-    ].any((pattern) => pattern.hasMatch(content));
   }
 
   Widget _buildQuotePreview(BuildContext context, bool isMe) {

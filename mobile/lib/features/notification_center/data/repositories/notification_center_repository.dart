@@ -53,8 +53,8 @@ class NotificationCenterRepository {
       final queryParams = <String, dynamic>{
         'skip': skip,
         'limit': limit,
-        if (unreadOnly) 'unreadOnly': true,
-        if (sourceType != null) 'sourceType': sourceType,
+        if (unreadOnly) 'unread_only': true,
+        if (sourceType != null) 'source_type': sourceType,
       };
 
       final response = await _client.get<dynamic>(

@@ -1,13 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/features/insights/data/models/learning_path_node.dart';
 import 'package:sparkle/features/insights/data/repositories/learning_path_repository.dart';
 import 'package:sparkle/features/insights/presentation/providers/learning_path_provider.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
-import 'dart:async';
-
 import 'package:sparkle/shared/entities/task_model.dart';
 
 class LearningPathDialog extends ConsumerWidget {
@@ -25,8 +26,10 @@ class LearningPathDialog extends ConsumerWidget {
     final mediaQuery = MediaQuery.of(context);
     // Cap list height so the bottom sheet never overflows the screen.
     // Subtract viewPadding + approximate modal chrome (handle + title + padding).
-    final maxListHeight =
-        (mediaQuery.size.height - mediaQuery.viewPadding.top - mediaQuery.viewPadding.bottom) * 0.55;
+    final maxListHeight = (mediaQuery.size.height -
+            mediaQuery.viewPadding.top -
+            mediaQuery.viewPadding.bottom) *
+        0.55;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -121,7 +124,8 @@ class LearningPathDialog extends ConsumerWidget {
                       child: Container(
                         width: 2,
                         color: DS.brandPrimary.withValues(alpha: 0.3),
-                        margin: const EdgeInsets.symmetric(vertical: DS.spacing4),
+                        margin:
+                            const EdgeInsets.symmetric(vertical: DS.spacing4),
                       ),
                     ),
                 ],
@@ -137,12 +141,13 @@ class LearningPathDialog extends ConsumerWidget {
                         node.name,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: node.isTarget
-                                  ? Theme.of(context).primaryColor
-                                  : null,
-                            ),
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: node.isTarget
+                                      ? Theme.of(context).primaryColor
+                                      : null,
+                                ),
                       ),
                       const SizedBox(height: DS.xs),
                       Text(
@@ -167,51 +172,53 @@ class LearningPathDialog extends ConsumerWidget {
     WidgetRef ref,
     LearningPathNode node,
   ) {
-    showModalBottomSheet<void>(
-      context: parentContext,
-      useRootNavigator: true,
-      isScrollControlled: true,
-      backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
-      builder: (sheetContext) => GraphiteModalSurface(
-        title: node.name,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SparkleButton.primary(
-              label: '查看详情',
-              icon: const Icon(Icons.open_in_new),
-              expand: true,
-              onPressed: () => _handleOpenNode(
-                parentContext,
-                sheetContext,
-                node,
+    unawaited(
+      showModalBottomSheet<void>(
+        context: parentContext,
+        useRootNavigator: true,
+        isScrollControlled: true,
+        backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
+        builder: (sheetContext) => GraphiteModalSurface(
+          title: node.name,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SparkleButton.primary(
+                label: '查看详情',
+                icon: const Icon(Icons.open_in_new),
+                expand: true,
+                onPressed: () => _handleOpenNode(
+                  parentContext,
+                  sheetContext,
+                  node,
+                ),
               ),
-            ),
-            const SizedBox(height: DS.sm),
-            SparkleButton.secondary(
-              label: '生成任务卡',
-              icon: const Icon(Icons.task_alt),
-              expand: true,
-              onPressed: () => _handleCreateTask(
-                parentContext,
-                sheetContext,
-                ref,
-                node,
+              const SizedBox(height: DS.sm),
+              SparkleButton.secondary(
+                label: '生成任务卡',
+                icon: const Icon(Icons.task_alt),
+                expand: true,
+                onPressed: () => _handleCreateTask(
+                  parentContext,
+                  sheetContext,
+                  ref,
+                  node,
+                ),
               ),
-            ),
-            const SizedBox(height: DS.sm),
-            SparkleButton.ghost(
-              label: '生成学习计划',
-              icon: const Icon(Icons.event_note),
-              expand: true,
-              onPressed: () => _handleCreatePlan(
-                parentContext,
-                sheetContext,
-                ref,
-                node,
+              const SizedBox(height: DS.sm),
+              SparkleButton.ghost(
+                label: '生成学习计划',
+                icon: const Icon(Icons.event_note),
+                expand: true,
+                onPressed: () => _handleCreatePlan(
+                  parentContext,
+                  sheetContext,
+                  ref,
+                  node,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -224,7 +231,7 @@ class LearningPathDialog extends ConsumerWidget {
   ) {
     Navigator.of(sheetContext).pop(); // close action sheet
     Navigator.of(parentContext).pop(); // close learning path dialog
-    parentContext.push('/galaxy/node/${node.id}');
+    _pushFromRoot('/galaxy/node/${node.id}', fallbackContext: parentContext);
   }
 
   Future<void> _handleCreateTask(
@@ -233,8 +240,9 @@ class LearningPathDialog extends ConsumerWidget {
     WidgetRef ref,
     LearningPathNode node,
   ) async {
+    final feedbackContext = _feedbackContext(parentContext);
     Navigator.of(sheetContext).pop(); // close action sheet
-    AppFeedback.loading(parentContext, '正在创建任务卡...');
+    AppFeedback.loading(feedbackContext, '正在创建任务卡...');
     try {
       final task = await ref.read(taskRepositoryProvider).createTask(
             TaskCreate(
@@ -245,13 +253,13 @@ class LearningPathDialog extends ConsumerWidget {
               knowledgeNodeId: node.id,
             ),
           );
-      if (!parentContext.mounted) return;
-      AppFeedback.success(parentContext, '任务卡已创建');
+      if (!feedbackContext.mounted) return;
+      AppFeedback.success(feedbackContext, '任务卡已创建');
       Navigator.of(parentContext).pop(); // close learning path dialog
-      parentContext.push('/tasks/${task.id}');
+      _pushFromRoot('/tasks/${task.id}', fallbackContext: feedbackContext);
     } catch (e) {
-      if (!parentContext.mounted) return;
-      AppFeedback.error(parentContext, '创建失败: $e');
+      if (!feedbackContext.mounted) return;
+      AppFeedback.error(feedbackContext, '创建失败: $e');
     }
   }
 
@@ -261,41 +269,63 @@ class LearningPathDialog extends ConsumerWidget {
     WidgetRef ref,
     LearningPathNode node,
   ) async {
+    final feedbackContext = _feedbackContext(parentContext);
     Navigator.of(sheetContext).pop(); // close action sheet
-    AppFeedback.loading(parentContext, '正在生成学习计划（可能需要几秒）...');
+    AppFeedback.loading(feedbackContext, '正在生成学习计划（可能需要几秒）...');
     try {
       final response = await ref
           .read(learningPathRepositoryProvider)
           .generateLearningPlan(node.id);
-      if (!parentContext.mounted) return;
+      if (!feedbackContext.mounted) return;
       final message = response.message ?? '学习计划已生成';
       if (response.retry ?? false) {
-        AppFeedback.warning(parentContext, message);
+        AppFeedback.warning(feedbackContext, message);
       } else {
-        AppFeedback.success(parentContext, message);
+        AppFeedback.success(feedbackContext, message);
       }
       Navigator.of(parentContext).pop(); // close learning path dialog
-      parentContext.push('/plans/${response.planId}');
+      _pushFromRoot(
+        '/plans/${response.planId}',
+        fallbackContext: feedbackContext,
+      );
     } catch (e) {
-      if (!parentContext.mounted) return;
-      AppFeedback.error(parentContext, '生成失败: $e');
+      if (!feedbackContext.mounted) return;
+      AppFeedback.error(feedbackContext, '生成失败: $e');
     }
   }
 
-  Future<void> _handleCreateFullPlan(BuildContext context, WidgetRef ref) async {
-    AppFeedback.loading(context, '正在生成全路径计划...');
+  Future<void> _handleCreateFullPlan(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final feedbackContext = _feedbackContext(context);
+    AppFeedback.loading(feedbackContext, '正在生成全路径计划...');
     try {
       final response = await ref
           .read(learningPathRepositoryProvider)
           .generateFullPathPlan(targetNodeId);
-      if (!context.mounted) return;
-      AppFeedback.success(context, '学习计划已生成');
+      if (!feedbackContext.mounted) return;
+      AppFeedback.success(feedbackContext, '学习计划已生成');
       Navigator.of(context).pop();
-      unawaited(context.push('/plans/${response.planId}'));
+      _pushFromRoot(
+        '/plans/${response.planId}',
+        fallbackContext: feedbackContext,
+      );
     } catch (e) {
-      if (!context.mounted) return;
-      AppFeedback.error(context, '生成失败: $e');
+      if (!feedbackContext.mounted) return;
+      AppFeedback.error(feedbackContext, '生成失败: $e');
     }
+  }
+
+  BuildContext _feedbackContext(BuildContext fallbackContext) =>
+      navigatorKey.currentContext ?? fallbackContext;
+
+  void _pushFromRoot(String location, {required BuildContext fallbackContext}) {
+    final navigationContext = navigatorKey.currentContext ?? fallbackContext;
+    if (!navigationContext.mounted) {
+      return;
+    }
+    unawaited(navigationContext.push(location));
   }
 
   static String _statusLabel(String status) {

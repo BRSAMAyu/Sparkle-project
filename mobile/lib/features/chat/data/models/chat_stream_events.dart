@@ -840,6 +840,24 @@ class AchievementUnlockEvent extends ChatStreamEvent {
   List<Map<String, dynamic>>? get rewards =>
       achievementData['rewards'] as List<Map<String, dynamic>>?;
 
+  List<String> get rewardPreview =>
+      (achievementData['reward_preview'] as List<dynamic>?)
+          ?.map((e) => '$e')
+          .toList() ??
+      const [];
+
+  List<String> get surfacePreview =>
+      (achievementData['surface_preview'] as List<dynamic>?)
+          ?.map((e) => '$e')
+          .toList() ??
+      const [];
+
+  List<String> get gloryLines =>
+      (achievementData['glory_lines'] as List<dynamic>?)
+          ?.map((e) => '$e')
+          .toList() ??
+      const [];
+
   /// 转换为AchievementUnlockEvent模型用于弹窗显示
   AchievementUnlockModel toUnlockModel() => AchievementUnlockModel(
         achievementId: achievementId,
@@ -850,6 +868,9 @@ class AchievementUnlockEvent extends ChatStreamEvent {
         visualEffect: visualEffect,
         visualEffectType: visualEffectType,
         rewards: rewards,
+        rewardPreview: rewardPreview,
+        surfacePreview: surfacePreview,
+        gloryLines: gloryLines,
       );
 }
 
@@ -864,6 +885,9 @@ class AchievementUnlockModel {
     this.visualEffect,
     this.visualEffectType,
     this.rewards,
+    this.rewardPreview = const [],
+    this.surfacePreview = const [],
+    this.gloryLines = const [],
   });
 
   final String achievementId;
@@ -874,6 +898,9 @@ class AchievementUnlockModel {
   final Map<String, dynamic>? visualEffect;
   final VisualEffectType? visualEffectType;
   final List<Map<String, dynamic>>? rewards;
+  final List<String> rewardPreview;
+  final List<String> surfacePreview;
+  final List<String> gloryLines;
 }
 
 /// ============================================

@@ -9,6 +9,7 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.core.agent_profiles import AgentRole, ModelTier, TaskType
 from app.core.business_metrics import EVIDENCE_BACKED_VISIBLE_UPDATE_TOTAL
 from app.gen.agent.v1 import agent_service_pb2
 from app.orchestration.schemas import ExecutablePlan
@@ -19,6 +20,7 @@ from app.orchestration.statechart_engine import WorkflowState
 from app.services.plan_execution_record_service import PlanExecutionRecordService
 from app.services.plan_execution_validator import PlanExecutionValidator
 from app.services.perceptible_intelligence_service import ProgressComparisonService
+from app.services.llm_service import get_configured_llm_service_for_tier
 from app.services.system_update_service import SystemUpdateService, build_system_update
 
 
@@ -34,6 +36,51 @@ class ValidationEngineMixin:
     # ------------------------------------------------------------------
     # Proto request validation
     # ------------------------------------------------------------------
+
+    async def _compose_fast_interaction_copy(
+        self,
+        *,
+        user_message: str,
+        interaction_type: str,
+        fallback_text: str,
+        prompts: list[str] | None = None,
+    ) -> str:
+        if not getattr(settings, "FAST_INTERACTION_COPY_ENABLED", True):
+            return fallback_text
+
+        prompt_lines = "\n".join(f"- {item}" for item in (prompts or []) if item)
+        prompt = (
+            "你是 Sparkle 的快响交互助手。"
+            "请用中文输出一段简洁、自然、专业的用户交互文案。"
+            "要求：1. 先确认系统已开始处理；2. 明确当前还需要用户提供或确认什么；"
+            "3. 语气减少等待焦虑；4. 直接输出正文，不加标题。\n\n"
+            f"交互类型：{interaction_type}\n"
+            f"用户原话：{user_message}\n"
+            f"需要确认/补充的信息：\n{prompt_lines or '- 无'}\n\n"
+            f"兜底文案：{fallback_text}"
+        )
+
+        try:
+            llm = await get_configured_llm_service_for_tier(
+                AgentRole.ORCHESTRATOR,
+                ModelTier.FAST,
+                task_type=TaskType.ROUTING,
+            )
+            response = await llm.chat(
+                [
+                    {
+                        "role": "system",
+                        "content": "你是 Sparkle 的快响交互助手，只输出用户可见的简洁中文文案。",
+                    },
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=0.3,
+            )
+            cleaned = str(response or "").strip()
+            return cleaned or fallback_text
+        except Exception as exc:
+            logger.debug(f"Fast interaction copy fallback triggered: {exc}")
+            return fallback_text
 
     async def _validate_request(
         self,
@@ -132,8 +179,20 @@ class ValidationEngineMixin:
                 if check_result.clarification_text:
                     questions = [check_result.clarification_text]
                 question_text = "\n".join([f"- {q}" for q in questions if q]) if questions else "- 请补充更多关键信息"
+                fallback_text = f"我需要更多信息来帮您：\n\n{question_text}\n\n请提供以上信息，我将为您处理。"
+                interaction_text = await self._compose_fast_interaction_copy(
+                    user_message=user_message,
+                    interaction_type="clarification",
+                    fallback_text=fallback_text,
+                    prompts=questions or check_result.missing_fields,
+                )
                 await stream_callback(agent_service_pb2.ChatResponse(
-                    delta=f"我需要更多信息来帮您：\n\n{question_text}\n\n请提供以上信息，我将为您处理。",
+                    delta=interaction_text,
+                    status_update=agent_service_pb2.AgentStatus(
+                        state=agent_service_pb2.AgentStatus.THINKING,
+                        details="我先快速确认缺失信息，再继续帮你推进。",
+                        current_agent_name="Sparkle Flash",
+                    ),
                     metadata={
                         "requires_clarification": "true",
                         "missing_fields": ",".join(check_result.missing_fields),
@@ -143,8 +202,19 @@ class ValidationEngineMixin:
                 return True, intent_type
 
             if check_result.status == SufficiencyStatus.NEED_CONFIRMATION:
+                interaction_text = await self._compose_fast_interaction_copy(
+                    user_message=user_message,
+                    interaction_type="confirmation",
+                    fallback_text=check_result.confirmation_message,
+                    prompts=[check_result.confirmation_message],
+                )
                 await stream_callback(agent_service_pb2.ChatResponse(
-                    delta=check_result.confirmation_message,
+                    delta=interaction_text,
+                    status_update=agent_service_pb2.AgentStatus(
+                        state=agent_service_pb2.AgentStatus.THINKING,
+                        details="我先和你确认方向，再继续后面的协作。",
+                        current_agent_name="Sparkle Flash",
+                    ),
                     metadata={"requires_confirmation": "true"},
                 ))
                 await stream_callback(agent_service_pb2.ChatResponse(finish_reason=agent_service_pb2.STOP))
@@ -234,12 +304,24 @@ class ValidationEngineMixin:
             question_text = "\n".join(
                 f"- {question}" for question in evaluation.clarification_questions if question
             ) or "- 请把目标再说具体一点"
+            fallback_text = (
+                "我想先把目标收紧到足够可执行，再开始做计划：\n\n"
+                f"{question_text}\n\n"
+                "你补充这些信息后，我就能给你更靠谱的阶段方案。"
+            )
+            interaction_text = await self._compose_fast_interaction_copy(
+                user_message=user_message,
+                interaction_type="goal_clarification",
+                fallback_text=fallback_text,
+                prompts=evaluation.clarification_questions,
+            )
             await stream_callback(
                 agent_service_pb2.ChatResponse(
-                    delta=(
-                        "我想先把目标收紧到足够可执行，再开始做计划：\n\n"
-                        f"{question_text}\n\n"
-                        "你补充这些信息后，我就能给你更靠谱的阶段方案。"
+                    delta=interaction_text,
+                    status_update=agent_service_pb2.AgentStatus(
+                        state=agent_service_pb2.AgentStatus.THINKING,
+                        details="我先快速把目标边界确认清楚，再进入规划。",
+                        current_agent_name="Sparkle Flash",
                     ),
                     metadata={
                         "requires_goal_clarification": "true",

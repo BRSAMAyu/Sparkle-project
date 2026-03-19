@@ -8,6 +8,89 @@ import 'package:sparkle/features/chat/presentation/widgets/plan_review_card.dart
 import 'package:sparkle/features/file/file.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
 
+enum ChatRunPhase {
+  idle,
+  sending,
+  streaming,
+  finalizing,
+  completed,
+  cancelled,
+  failed,
+}
+
+extension ChatRunPhaseX on ChatRunPhase {
+  bool get isActive =>
+      this == ChatRunPhase.sending ||
+      this == ChatRunPhase.streaming ||
+      this == ChatRunPhase.finalizing;
+
+  bool get isTerminal =>
+      this == ChatRunPhase.completed ||
+      this == ChatRunPhase.cancelled ||
+      this == ChatRunPhase.failed;
+}
+
+class ActiveRunSummary {
+  const ActiveRunSummary({
+    this.status,
+    this.details,
+    this.agentName,
+    this.toolCount = 0,
+    this.currentStepIndex,
+    this.totalSteps,
+  });
+
+  final String? status;
+  final String? details;
+  final String? agentName;
+  final int toolCount;
+  final int? currentStepIndex;
+  final int? totalSteps;
+
+  ActiveRunSummary copyWith({
+    String? status,
+    String? details,
+    String? agentName,
+    int? toolCount,
+    int? currentStepIndex,
+    int? totalSteps,
+  }) =>
+      ActiveRunSummary(
+        status: status ?? this.status,
+        details: details ?? this.details,
+        agentName: agentName ?? this.agentName,
+        toolCount: toolCount ?? this.toolCount,
+        currentStepIndex: currentStepIndex ?? this.currentStepIndex,
+        totalSteps: totalSteps ?? this.totalSteps,
+      );
+}
+
+class TransparencyPresentationState {
+  const TransparencyPresentationState({
+    this.isExpanded = false,
+    this.isDismissed = false,
+    this.lastCompletedLabel,
+  });
+
+  final bool isExpanded;
+  final bool isDismissed;
+  final String? lastCompletedLabel;
+
+  TransparencyPresentationState copyWith({
+    bool? isExpanded,
+    bool? isDismissed,
+    String? lastCompletedLabel,
+    bool clearLastCompletedLabel = false,
+  }) =>
+      TransparencyPresentationState(
+        isExpanded: isExpanded ?? this.isExpanded,
+        isDismissed: isDismissed ?? this.isDismissed,
+        lastCompletedLabel: clearLastCompletedLabel
+            ? null
+            : lastCompletedLabel ?? this.lastCompletedLabel,
+      );
+}
+
 class ChatState {
   ChatState({
     this.isLoading = false,
@@ -49,6 +132,11 @@ class ChatState {
     this.currentStepId,
     this.currentStepIndex,
     this.dagExecutionSignal,
+    this.activeRunId,
+    this.runPhase = ChatRunPhase.idle,
+    this.activeRunSummary,
+    this.transparencyPresentationState =
+        const TransparencyPresentationState(),
   });
 
   final bool isLoading;
@@ -90,12 +178,21 @@ class ChatState {
   final int? currentStepId;
   final int? currentStepIndex;
   final DagExecutionSignal? dagExecutionSignal;
+  final String? activeRunId;
+  final ChatRunPhase runPhase;
+  final ActiveRunSummary? activeRunSummary;
+  final TransparencyPresentationState transparencyPresentationState;
+
+  bool get hasActiveRun => activeRunId != null && runPhase.isActive;
+  bool get shouldShowStatusIndicator => hasActiveRun && aiStatus != null;
+  bool get shouldShowReasoningIndicator => hasActiveRun && isReasoningActive;
+  bool get shouldShowStreamingBubble => hasActiveRun && isSending;
 
   int get listItemCount =>
       messages.length +
-      (isSending ? 1 : 0) +
-      (aiStatus != null ? 1 : 0) +
-      (isReasoningActive ? 1 : 0);
+      (shouldShowStreamingBubble ? 1 : 0) +
+      (shouldShowStatusIndicator ? 1 : 0) +
+      (shouldShowReasoningIndicator ? 1 : 0);
 
   ChatState copyWith({
     bool? isLoading,
@@ -148,6 +245,12 @@ class ChatState {
     bool clearTransparency = false,
     DagExecutionSignal? dagExecutionSignal,
     bool clearDagExecution = false,
+    String? activeRunId,
+    bool clearActiveRunId = false,
+    ChatRunPhase? runPhase,
+    ActiveRunSummary? activeRunSummary,
+    bool clearActiveRunSummary = false,
+    TransparencyPresentationState? transparencyPresentationState,
   }) =>
       ChatState(
         isLoading: isLoading ?? this.isLoading,
@@ -218,5 +321,13 @@ class ChatState {
         dagExecutionSignal: clearDagExecution
             ? null
             : dagExecutionSignal ?? this.dagExecutionSignal,
+        activeRunId:
+            clearActiveRunId ? null : activeRunId ?? this.activeRunId,
+        runPhase: runPhase ?? this.runPhase,
+        activeRunSummary: clearActiveRunSummary
+            ? null
+            : activeRunSummary ?? this.activeRunSummary,
+        transparencyPresentationState: transparencyPresentationState ??
+            this.transparencyPresentationState,
       );
 }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,9 +8,11 @@ import 'package:sparkle/features/achievement/presentation/providers/achievement_
 import 'package:sparkle/features/achievement/presentation/widgets/achievement_progress_banner.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/achievement_share_bottom_sheet.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/achievement_unlock_dialog.dart';
-import 'package:sparkle/features/chat/data/models/chat_stream_events.dart' as chat;
+import 'package:sparkle/features/chat/data/models/chat_stream_events.dart'
+    as chat;
 import 'package:sparkle/features/chat/data/services/message_notification_service.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+import 'package:sparkle/shared/providers/visual_element_provider.dart';
 
 /// Main navigation shell for StatefulShellRoute
 ///
@@ -42,6 +46,7 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
   }
 
   void _setupAchievementListener() {
+    unawaited(ref.read(visualElementProvider.notifier).refresh());
     ref.listenManual(
       pendingAchievementUnlockProvider,
       (previous, next) {
@@ -73,6 +78,10 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
             achievementId: event.achievementId,
             achievementName: event.name,
           );
+        },
+        onViewRewards: () {
+          Navigator.of(context).pop();
+          context.push('/achievements/${event.achievementId}');
         },
       );
     } finally {

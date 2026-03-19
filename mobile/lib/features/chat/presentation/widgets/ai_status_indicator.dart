@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/components/atoms/ai_status_capsule.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/utils/ai_status_mapper.dart';
 
 /// AI 状态指示器
@@ -21,9 +22,13 @@ class AiStatusIndicator extends StatelessWidget {
 
     final tone = AiStatusMapper.tone(status!);
     final color = AiStatusMapper.toneToColor(tone, context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final trimmedDetails = details?.trim();
     final hasDetails = trimmedDetails != null && trimmedDetails.isNotEmpty;
+    final detailsColor = isDark
+        ? DS.chatBubbleOtherText.withValues(alpha: 0.88)
+        : color.withValues(alpha: 0.9);
 
     if (!hasDetails) {
       return AiStatusCapsule(
@@ -43,7 +48,7 @@ class AiStatusIndicator extends StatelessWidget {
         Text(
           trimmedDetails,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: color.withValues(alpha: 0.9),
+                color: detailsColor,
               ),
         ),
       ],

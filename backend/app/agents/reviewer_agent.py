@@ -12,6 +12,7 @@ Reviewer Agent - AI内容质量审查系统
 创建时间: 2026-01-25
 """
 
+import asyncio
 import json
 import uuid
 from dataclasses import dataclass
@@ -20,8 +21,15 @@ from typing import Any
 
 from loguru import logger
 
+from app.agents.workflow_experience import (
+    build_plan_review_prompt,
+    build_response_review_prompt,
+    build_reviewer_system_prompt,
+    get_review_profile,
+)
 from app.core.agent_profiles import TaskType
 from app.core.llm_router import ModelProvider
+from app.config.settings import settings
 from app.services.llm_service import get_llm_service_for_task
 
 # ============================================
@@ -128,6 +136,8 @@ class ReviewResult:
     requires_reflection: bool           # 是否需要自我反思修正
     reviewer_model: str                 # 审查使用的模型
     review_timestamp: str               # 审查时间戳
+    review_profile_id: str = "default_response"
+    workflow_context: dict[str, Any] | None = None
 
     @property
     def passed(self) -> bool:
@@ -183,7 +193,9 @@ class ReviewResult:
             "improvement_suggestions": self.improvement_suggestions,
             "requires_reflection": self.requires_reflection,
             "reviewer_model": self.reviewer_model,
-            "review_timestamp": self.review_timestamp
+            "review_timestamp": self.review_timestamp,
+            "review_profile_id": self.review_profile_id,
+            "workflow_context": self.workflow_context or {},
         }
 
     @classmethod
@@ -212,7 +224,9 @@ class ReviewResult:
             improvement_suggestions=data.get("improvement_suggestions", []),
             requires_reflection=data.get("requires_reflection", False),
             reviewer_model=data.get("reviewer_model", "unknown"),
-            review_timestamp=data.get("review_timestamp", "")
+            review_timestamp=data.get("review_timestamp", ""),
+            review_profile_id=data.get("review_profile_id", "default_response"),
+            workflow_context=data.get("workflow_context") or {},
         )
 
 
@@ -333,6 +347,7 @@ class ReviewerAgent:
     # 默认阈值配置
     DEFAULT_OVERALL_THRESHOLD = 0.7
     DEFAULT_METRIC_THRESHOLD = 0.7
+    DEFAULT_LLM_TIMEOUT_SECONDS = 45
 
     def __init__(
         self,
@@ -358,11 +373,32 @@ class ReviewerAgent:
         self.reviewer_model = getattr(self.llm, 'default_model', 'reviewer_model')
         logger.info(f"[ReviewerAgent] Initialized with model: {self.reviewer_model}")
 
+    @property
+    def llm_timeout_seconds(self) -> float:
+        raw_timeout = getattr(settings, "REVIEWER_LLM_TIMEOUT_SECONDS", self.DEFAULT_LLM_TIMEOUT_SECONDS)
+        try:
+            timeout = float(raw_timeout)
+        except (TypeError, ValueError):
+            timeout = float(self.DEFAULT_LLM_TIMEOUT_SECONDS)
+        return max(timeout, 0.01)
+
+    async def _chat_json_with_timeout(self, *, messages: list[dict[str, str]], temperature: float = 0.2) -> Any:
+        timeout_seconds = self.llm_timeout_seconds
+        return await asyncio.wait_for(
+            self.llm.chat_json(
+                messages=messages,
+                temperature=temperature,
+            ),
+            timeout=timeout_seconds,
+        )
+
     async def review_llm_response(
         self,
         user_query: str,
         llm_response: str,
-        context: dict[str, Any] | None = None
+        context: dict[str, Any] | None = None,
+        review_profile_id: str | None = None,
+        workflow_context: dict[str, Any] | None = None,
     ) -> ReviewResult:
         """
         审查LLM生成的响应
@@ -381,29 +417,38 @@ class ReviewerAgent:
         # 构建审查提示词
         conversation_history = context.get("conversation_history", []) if context else []
         tool_calls = context.get("tool_calls", []) if context else []
+        profile = get_review_profile(
+            review_profile_id=review_profile_id,
+            workflow_context=workflow_context,
+            target_type="response",
+        )
 
-        prompt = RESPONSE_REVIEW_PROMPT.format(
+        prompt = build_response_review_prompt(
+            profile=profile,
             user_query=user_query,
-            llm_response=llm_response[:2000],  # 限制长度避免token超限
+            llm_response=llm_response[:2000],
             turn_count=len(conversation_history) // 2,
-            has_tools="是" if tool_calls else "否",
-            tool_list=[tc.get("name", "unknown") for tc in tool_calls] if tool_calls else "无"
+            has_tools=bool(tool_calls),
+            tool_list=[tc.get("name", "unknown") for tc in tool_calls] if tool_calls else "无",
+            workflow_context=workflow_context,
         )
 
         try:
             # 调用LLM进行审查
-            response = await self.llm.chat_json(
+            response = await self._chat_json_with_timeout(
                 messages=[
-                    {"role": "system", "content": REVIEWER_SYSTEM_PROMPT},
+                    {"role": "system", "content": build_reviewer_system_prompt(profile)},
                     {"role": "user", "content": prompt},
                 ],
-                temperature=0.2
+                temperature=0.2,
             )
 
             return self._parse_review_result(
                 response=response,
                 target_type="response",
-                target_id=review_id
+                target_id=review_id,
+                review_profile_id=profile.id,
+                workflow_context=workflow_context,
             )
 
         except Exception as e:
@@ -432,14 +477,18 @@ class ReviewerAgent:
                 improvement_suggestions=["审查系统出现错误，建议人工复核"],
                 requires_reflection=False,
                 reviewer_model=self.reviewer_model,
-                review_timestamp=context.get("timestamp", "") if context else ""
+                review_timestamp=context.get("timestamp", "") if context else "",
+                review_profile_id=profile.id,
+                workflow_context=workflow_context or {},
             )
 
     async def review_plan(
         self,
         plan: dict[str, Any],
         user_query: str,
-        context: dict[str, Any] | None = None
+        context: dict[str, Any] | None = None,
+        review_profile_id: str | None = None,
+        workflow_context: dict[str, Any] | None = None,
     ) -> ReviewResult:
         """
         审查执行计划
@@ -468,27 +517,36 @@ class ReviewerAgent:
             params = tc.get("params") if isinstance(tc, dict) else getattr(tc, "params", {})
             tool_summary.append(f"- {name}: {json.dumps(params, ensure_ascii=False)[:100]}")
 
-        prompt = PLAN_REVIEW_PROMPT.format(
+        profile = get_review_profile(
+            review_profile_id=review_profile_id,
+            workflow_context=workflow_context,
+            target_type="plan",
+        )
+        prompt = build_plan_review_prompt(
+            profile=profile,
             user_query=user_query,
             plan_content=f"**理由**: {rationale}\n\n**工具调用**:\n" + "\n".join(tool_summary),
             confidence=f"{confidence:.1%}",
             tool_count=len(tool_calls),
-            risk_flags=", ".join(risk_flags) if risk_flags else "无"
+            risk_flags=", ".join(risk_flags) if risk_flags else "无",
+            workflow_context=workflow_context,
         )
 
         try:
-            response = await self.llm.chat_json(
+            response = await self._chat_json_with_timeout(
                 messages=[
-                    {"role": "system", "content": REVIEWER_SYSTEM_PROMPT},
+                    {"role": "system", "content": build_reviewer_system_prompt(profile)},
                     {"role": "user", "content": prompt},
                 ],
-                temperature=0.2
+                temperature=0.2,
             )
 
             return self._parse_review_result(
                 response=response,
                 target_type="plan",
-                target_id=review_id
+                target_id=review_id,
+                review_profile_id=profile.id,
+                workflow_context=workflow_context,
             )
 
         except Exception as e:
@@ -507,7 +565,9 @@ class ReviewerAgent:
                 improvement_suggestions=[f"计划审查出错: {str(e)}"],
                 requires_reflection=False,
                 reviewer_model=self.reviewer_model,
-                review_timestamp=""
+                review_timestamp="",
+                review_profile_id=profile.id,
+                workflow_context=workflow_context or {},
             )
 
     async def review_tool_result(
@@ -569,7 +629,9 @@ class ReviewerAgent:
         self,
         response: dict[str, Any],
         target_type: str,
-        target_id: str
+        target_id: str,
+        review_profile_id: str = "default_response",
+        workflow_context: dict[str, Any] | None = None,
     ) -> ReviewResult:
         """
         解析LLM审查响应
@@ -635,7 +697,9 @@ class ReviewerAgent:
                 improvement_suggestions=response.get("improvement_suggestions", []),
                 requires_reflection=requires_reflection,
                 reviewer_model=self.reviewer_model,
-                review_timestamp=response.get("timestamp", "")
+                review_timestamp=response.get("timestamp", ""),
+                review_profile_id=review_profile_id,
+                workflow_context=workflow_context or {},
             )
 
         except Exception as e:
@@ -655,7 +719,9 @@ class ReviewerAgent:
                 improvement_suggestions=[f"解析审查结果时出错: {str(e)}"],
                 requires_reflection=False,
                 reviewer_model=self.reviewer_model,
-                review_timestamp=""
+                review_timestamp="",
+                review_profile_id=review_profile_id,
+                workflow_context=workflow_context or {},
             )
 
 

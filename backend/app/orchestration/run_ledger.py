@@ -86,12 +86,16 @@ class RunLedgerStore:
                 "review_decision": "",
                 "reviewer_model_key": "",
                 "reviewer_provider": "",
+                "review_profile_id": "",
                 "reflection_triggered": False,
                 "reflection_completed": False,
                 "reflection_rounds": 0,
                 "reflection_delta": 0.0,
                 "reflection_model_key": "",
                 "reflection_provider": "",
+                "reflection_profile_id": "",
+                "reflection_early_stop_reason": "",
+                "reflection_best_round_number": 0,
                 "tool_review_issue_count": 0,
             },
             "evidence": {
@@ -194,6 +198,7 @@ class RunLedgerStore:
                         "review_decision": metadata.get("decision") or "",
                         "reviewer_model_key": metadata.get("model_key") or "",
                         "reviewer_provider": metadata.get("provider") or "",
+                        "review_profile_id": metadata.get("review_profile_id") or "",
                     }
                 )
                 updated["quality"] = quality
@@ -207,6 +212,9 @@ class RunLedgerStore:
                         "reflection_delta": float(metadata.get("score_delta") or 0.0),
                         "reflection_model_key": metadata.get("model_key") or "",
                         "reflection_provider": metadata.get("provider") or "",
+                        "reflection_profile_id": metadata.get("review_profile_id") or "",
+                        "reflection_early_stop_reason": metadata.get("early_stop_reason") or "",
+                        "reflection_best_round_number": int(metadata.get("best_round_number") or 0),
                     }
                 )
                 updated["quality"] = quality

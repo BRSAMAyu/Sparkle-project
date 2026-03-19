@@ -362,6 +362,8 @@ AchievementMapNode _$AchievementMapNodeFromJson(Map<String, dynamic> json) =>
       name: json['name'] as String,
       rarity: $enumDecode(_$AchievementRarityEnumMap, json['rarity']),
       category: json['category'] as String,
+      lane: json['lane'] as String? ?? 'prestige_lane',
+      laneLabel: json['lane_label'] as String? ?? '声望进阶线',
       position: (json['position'] as Map<String, dynamic>).map(
         (k, e) => MapEntry(k, (e as num).toDouble()),
       ),
@@ -372,6 +374,16 @@ AchievementMapNode _$AchievementMapNodeFromJson(Map<String, dynamic> json) =>
               .toList() ??
           const [],
       parentId: json['parent_id'] as String?,
+      displayState: json['display_state'] as String? ?? 'blocked',
+      isRecommendedTarget: json['is_recommended_target'] as bool? ?? false,
+      rewardPreview: (json['reward_preview'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+      progressPercentage: (json['progress_percentage'] as num?)?.toInt() ?? 0,
+      progressValue: (json['progress_value'] as num?)?.toInt() ?? 0,
+      progressTarget: (json['progress_target'] as num?)?.toInt() ?? 1,
+      unlockHint: json['unlock_hint'] as String?,
     );
 
 Map<String, dynamic> _$AchievementMapNodeToJson(AchievementMapNode instance) =>
@@ -380,11 +392,20 @@ Map<String, dynamic> _$AchievementMapNodeToJson(AchievementMapNode instance) =>
       'name': instance.name,
       'rarity': _$AchievementRarityEnumMap[instance.rarity]!,
       'category': instance.category,
+      'lane': instance.lane,
+      'lane_label': instance.laneLabel,
       'position': instance.position,
       'is_unlocked': instance.isUnlocked,
       'is_hidden': instance.isHidden,
       'prerequisites': instance.prerequisites,
       'parent_id': instance.parentId,
+      'display_state': instance.displayState,
+      'is_recommended_target': instance.isRecommendedTarget,
+      'reward_preview': instance.rewardPreview,
+      'progress_percentage': instance.progressPercentage,
+      'progress_value': instance.progressValue,
+      'progress_target': instance.progressTarget,
+      'unlock_hint': instance.unlockHint,
     };
 
 AchievementMapData _$AchievementMapDataFromJson(Map<String, dynamic> json) =>

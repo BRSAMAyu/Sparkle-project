@@ -27,7 +27,8 @@ class VisualElementsScreen extends ConsumerStatefulWidget {
 class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  VisualElementFilterOptions _filterOptions = const VisualElementFilterOptions();
+  VisualElementFilterOptions _filterOptions =
+      const VisualElementFilterOptions();
 
   @override
   void initState() {
@@ -118,7 +119,8 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
     VisualElementsState state,
   ) {
     final eventElements = state.allElements
-        .where((element) => element.unlockSource == VisualElementUnlockSource.event)
+        .where((element) =>
+            element.unlockSource == VisualElementUnlockSource.event)
         .toList();
 
     return SliverToBoxAdapter(
@@ -270,6 +272,211 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
     );
   }
 
+  Widget _buildCurrentShowcase(VisualElementsState state) {
+    final equipped = [
+      state.config?.equippedBackground,
+      state.config?.equippedParticle,
+      state.config?.equippedEffect,
+    ].whereType<VisualElementModel>().toList();
+
+    if (equipped.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(DS.spacing16),
+        decoration: BoxDecoration(
+          color: DS.surfaceSecondary,
+          borderRadius: DS.borderRadius16,
+          border: Border.all(color: DS.border.withValues(alpha: 0.5)),
+        ),
+        child: Text(
+          '当前还没有成型的荣耀套装，去解锁并装备一组更有存在感的外观吧。',
+          style: TextStyle(
+            fontSize: DS.fontSizeSm,
+            color: DS.textSecondary,
+          ),
+        ),
+      );
+    }
+
+    final primary = equipped.first;
+    final title = equipped
+        .map((element) => element.prestigeLabel ?? element.name)
+        .join(' · ');
+    final setName = equipped
+        .map((element) => element.setId)
+        .whereType<String>()
+        .fold<Map<String, int>>({}, (acc, setId) {
+          acc[setId] = (acc[setId] ?? 0) + 1;
+          return acc;
+        })
+        .entries
+        .toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(DS.spacing18),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            _elementAccent(primary).withValues(alpha: 0.18),
+            DS.surfaceSecondary,
+          ],
+        ),
+        borderRadius: DS.borderRadius16,
+        border:
+            Border.all(color: _elementAccent(primary).withValues(alpha: 0.26)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '当前荣耀套装',
+            style: TextStyle(
+              fontSize: DS.fontSizeBase,
+              fontWeight: DS.fontWeightBold,
+              color: DS.textPrimary,
+            ),
+          ),
+          const SizedBox(height: DS.spacing8),
+          Text(
+            setName.isNotEmpty ? setName.first.key : '自由搭配',
+            style: TextStyle(
+              fontSize: DS.fontSizeLg,
+              fontWeight: DS.fontWeightBold,
+              color: _elementAccent(primary),
+            ),
+          ),
+          const SizedBox(height: DS.spacing8),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: DS.fontSizeSm,
+              color: DS.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPrestigeSetShowcase(VisualElementsState state) {
+    final bundles = state.allElements
+        .where((element) => element.isBundle)
+        .toList()
+      ..sort((a, b) => b.visibilityWeight.compareTo(a.visibilityWeight));
+
+    if (bundles.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return SizedBox(
+      height: 112,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: bundles.length > 6 ? 6 : bundles.length,
+        separatorBuilder: (_, __) => const SizedBox(width: DS.spacing12),
+        itemBuilder: (context, index) {
+          final element = bundles[index];
+          final isUnlocked = state.unlockedIds.contains(element.id);
+          return GestureDetector(
+            onTap: () => _showElementPreview(
+              element,
+              isUnlocked,
+              state.equippedIds.contains(element.id),
+            ),
+            child: Container(
+              width: 220,
+              padding: const EdgeInsets.all(DS.spacing16),
+              decoration: BoxDecoration(
+                color: DS.surfaceSecondary,
+                borderRadius: DS.borderRadius16,
+                border: Border.all(
+                  color: _elementAccent(element).withValues(alpha: 0.24),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Wrap(
+                    spacing: DS.spacing6,
+                    runSpacing: DS.spacing6,
+                    children: [
+                      _miniChip(
+                        element.prestigeLabel ?? element.name,
+                        _elementAccent(element),
+                      ),
+                      _miniChip(
+                        isUnlocked ? '已解锁' : '待征服',
+                        isUnlocked ? DS.success : DS.warning,
+                      ),
+                    ],
+                  ),
+                  const Spacer(),
+                  Text(
+                    element.name,
+                    style: TextStyle(
+                      fontSize: DS.fontSizeBase,
+                      fontWeight: DS.fontWeightBold,
+                      color: DS.textPrimary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: DS.spacing4),
+                  Text(
+                    element.description ?? '高曝光荣耀装扮套组',
+                    style: TextStyle(
+                      fontSize: DS.fontSizeXs,
+                      color: DS.textSecondary,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _miniChip(String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: DS.spacing8,
+        vertical: DS.spacing4,
+      ),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: DS.borderRadius12,
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: DS.fontSizeXs,
+          color: color,
+          fontWeight: DS.fontWeightMedium,
+        ),
+      ),
+    );
+  }
+
+  Color _elementAccent(VisualElementModel element) {
+    final gradient = element.config['gradient'] as List<dynamic>?;
+    final colors = element.config['colors'] as List<dynamic>?;
+    final raw = (gradient != null && gradient.isNotEmpty)
+        ? gradient.first
+        : (colors != null && colors.isNotEmpty ? colors.first : '#7B68EE');
+    final hex = raw.toString().replaceFirst('#', '');
+    final normalized = hex.length == 6 ? 'FF$hex' : hex;
+    final value = int.tryParse(normalized, radix: 16);
+    return value == null ? DS.brandPrimary : Color(value);
+  }
+
   Widget _buildTabBar(BuildContext context, AppLocalizations l10n) {
     return SliverPersistentHeader(
       pinned: true,
@@ -334,6 +541,23 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
           ref.read(visualElementsNotifierProvider.notifier).refresh(),
       child: CustomScrollView(
         slivers: [
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                DS.spacing16,
+                DS.spacing16,
+                DS.spacing16,
+                0,
+              ),
+              child: Column(
+                children: [
+                  _buildCurrentShowcase(state),
+                  const SizedBox(height: DS.spacing12),
+                  _buildPrestigeSetShowcase(state),
+                ],
+              ),
+            ),
+          ),
           SliverPadding(
             padding: const EdgeInsets.all(DS.spacing16),
             sliver: SliverLayoutBuilder(
@@ -406,9 +630,8 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
     return _VisualElementCard(
       element: resolvedElement,
       onTap: () => _showElementPreview(element, isUnlocked, isEquipped),
-      onLongPress: isUnlocked && !isEquipped
-          ? () => _equipElement(element.id)
-          : null,
+      onLongPress:
+          isUnlocked && !isEquipped ? () => _equipElement(element.id) : null,
     );
   }
 
@@ -424,9 +647,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
       isUnlocked: isUnlocked,
       isEquipped: isEquipped,
       onEquip: isUnlocked ? () => _equipElement(element.id) : null,
-      onUnequip: isEquipped
-          ? () => _unequipElement(element.elementType)
-          : null,
+      onUnequip: isEquipped ? () => _unequipElement(element.elementType) : null,
     );
   }
 
@@ -667,9 +888,8 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
     AppLocalizations l10n,
   ) {
     final endAt = _getEventEndAt(eventElements);
-    final countdownText = endAt == null
-        ? null
-        : _formatEventCountdown(endAt, l10n);
+    final countdownText =
+        endAt == null ? null : _formatEventCountdown(endAt, l10n);
 
     return Container(
       padding: const EdgeInsets.all(DS.spacing16),
@@ -1006,6 +1226,28 @@ class _FilterSheetState extends State<_FilterSheet> {
           spacing: DS.spacing8,
           runSpacing: DS.spacing8,
           children: [
+            _buildFilterChip(
+              '最值得炫耀',
+              _options.sortBy == VisualElementSortBy.prestige,
+              onTap: () {
+                setState(() {
+                  _options = _options.copyWith(
+                    sortBy: VisualElementSortBy.prestige,
+                  );
+                });
+              },
+            ),
+            _buildFilterChip(
+              '按套装',
+              _options.sortBy == VisualElementSortBy.set,
+              onTap: () {
+                setState(() {
+                  _options = _options.copyWith(
+                    sortBy: VisualElementSortBy.set,
+                  );
+                });
+              },
+            ),
             _buildFilterChip(
               l10n.visualElementSortDefault,
               _options.sortBy == VisualElementSortBy.sortOrder,

@@ -2,32 +2,35 @@ package service
 
 import (
 	"sync"
-
-	"github.com/gorilla/websocket"
 )
+
+type JSONWriteCloser interface {
+	WriteJSON(payload interface{}) error
+	Close() error
+}
 
 type SignalHub struct {
 	mu          sync.RWMutex
-	connections map[string]map[*websocket.Conn]struct{}
+	connections map[string]map[JSONWriteCloser]struct{}
 }
 
 func NewSignalHub() *SignalHub {
 	return &SignalHub{
-		connections: make(map[string]map[*websocket.Conn]struct{}),
+		connections: make(map[string]map[JSONWriteCloser]struct{}),
 	}
 }
 
-func (h *SignalHub) Register(userID string, conn *websocket.Conn) {
+func (h *SignalHub) Register(userID string, conn JSONWriteCloser) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
 	if h.connections[userID] == nil {
-		h.connections[userID] = make(map[*websocket.Conn]struct{})
+		h.connections[userID] = make(map[JSONWriteCloser]struct{})
 	}
 	h.connections[userID][conn] = struct{}{}
 }
 
-func (h *SignalHub) Unregister(userID string, conn *websocket.Conn) {
+func (h *SignalHub) Unregister(userID string, conn JSONWriteCloser) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 

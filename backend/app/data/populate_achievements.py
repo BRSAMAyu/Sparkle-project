@@ -11,11 +11,16 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.data.achievement_seeds import INITIAL_ACHIEVEMENTS, INITIAL_GALAXY_SKINS
+from app.data.achievement_seeds import (
+    INITIAL_ACHIEVEMENTS,
+    INITIAL_GALAXY_SKINS,
+    INITIAL_VISUAL_ELEMENTS,
+)
 from app.db.session import AsyncSessionLocal
 from app.models.achievement import Achievement, GalaxySkin
+from app.models.visual_element import VisualElement
 
-SUPPORTED_REWARD_TYPES = {"photon", "title", "galaxy_skin", "freeze_charge"}
+SUPPORTED_REWARD_TYPES = {"photon", "title", "galaxy_skin", "freeze_charge", "visual_element"}
 ACHIEVEMENT_I18N_DIR = Path(__file__).resolve().parent / "achievement_i18n"
 SUPPORTED_ACHIEVEMENT_LOCALES = ("zh", "en")
 ACHIEVEMENT_SYNC_FIELDS = [
@@ -53,6 +58,28 @@ GALAXY_SKIN_SYNC_FIELDS = [
     "rarity",
     "sort_order",
 ]
+VISUAL_ELEMENT_SYNC_FIELDS = [
+    "name",
+    "description",
+    "element_type",
+    "rarity",
+    "unlock_source",
+    "unlock_requirement",
+    "config",
+    "preview_url",
+    "icon_url",
+    "is_active",
+    "is_default",
+    "sort_order",
+    "category",
+]
+VISUAL_ELEMENT_FIELD_DEFAULTS = {
+    "unlock_requirement": None,
+    "config": {},
+    "is_active": True,
+    "is_default": False,
+    "sort_order": 0,
+}
 
 
 def _load_achievement_i18n() -> dict[str, dict[str, dict[str, str]]]:
@@ -90,6 +117,7 @@ def _normalize_rewards(reward_config: Any) -> list[dict[str, Any]]:
 
 def validate_achievement_seed_data() -> None:
     skin_ids = {skin["id"] for skin in INITIAL_GALAXY_SKINS}
+    visual_element_ids = {element["id"] for element in INITIAL_VISUAL_ELEMENTS}
 
     for achievement in INITIAL_ACHIEVEMENTS:
         for reward in _normalize_rewards(achievement.get("reward_config")):
@@ -104,11 +132,18 @@ def validate_achievement_seed_data() -> None:
                     raise ValueError(
                         f"Achievement '{achievement['id']}' references unknown galaxy skin '{skin_id}'"
                     )
+            if reward_type == "visual_element":
+                element_id = reward.get("element_id")
+                if element_id not in visual_element_ids:
+                    raise ValueError(
+                        f"Achievement '{achievement['id']}' references unknown visual element '{element_id}'"
+                    )
 
 
-async def sync_achievement_definitions(db: AsyncSession) -> tuple[int, int]:
+async def sync_achievement_definitions(db: AsyncSession) -> tuple[int, int, int]:
     synced_achievements = 0
     synced_skins = 0
+    synced_visual_elements = 0
     i18n_map = _load_achievement_i18n()
 
     for data in INITIAL_ACHIEVEMENTS:
@@ -145,23 +180,47 @@ async def sync_achievement_definitions(db: AsyncSession) -> tuple[int, int]:
         skin.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         synced_skins += 1
 
+    for data in INITIAL_VISUAL_ELEMENTS:
+        element = await db.get(VisualElement, data["id"])
+
+        if element is None:
+            element = VisualElement(id=data["id"])
+            db.add(element)
+
+        for field in VISUAL_ELEMENT_SYNC_FIELDS:
+            if field in data:
+                value = data[field]
+            else:
+                value = VISUAL_ELEMENT_FIELD_DEFAULTS.get(field)
+            setattr(element, field, value)
+        unlock_source_value = getattr(element.unlock_source, "value", element.unlock_source)
+        if unlock_source_value == "achievement" and not element.unlock_requirement:
+            source_achievement_id = element.config.get("source_achievement_id")
+            if source_achievement_id:
+                element.unlock_requirement = {"achievement_id": source_achievement_id}
+        element.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        synced_visual_elements += 1
+
     await db.commit()
-    return synced_achievements, synced_skins
+    return synced_achievements, synced_skins, synced_visual_elements
 
 
-async def _upsert_achievement_definitions() -> tuple[int, int]:
+async def _upsert_achievement_definitions() -> tuple[int, int, int]:
     async with AsyncSessionLocal() as db:
         return await sync_achievement_definitions(db)
 
 
-async def populate_achievements() -> tuple[int, int]:
-    """幂等同步成就和星系皮肤定义"""
+async def populate_achievements() -> tuple[int, int, int]:
+    """幂等同步成就、星系皮肤和荣耀装扮定义"""
     validate_achievement_seed_data()
-    synced_achievements, synced_skins = await _upsert_achievement_definitions()
+    synced_achievements, synced_skins, synced_visual_elements = await _upsert_achievement_definitions()
     print(
-        f"Synchronized {synced_achievements} achievements and {synced_skins} galaxy skins"
+        "Synchronized "
+        f"{synced_achievements} achievements, "
+        f"{synced_skins} galaxy skins and "
+        f"{synced_visual_elements} visual elements"
     )
-    return synced_achievements, synced_skins
+    return synced_achievements, synced_skins, synced_visual_elements
 
 
 async def show_achievement_summary() -> None:

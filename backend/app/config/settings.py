@@ -268,6 +268,7 @@ class Settings(BaseSettings):
     TRANSLATION_PRIMARY_PROVIDER: str = "hunyuan"  # hunyuan | siliconflow
     TRANSLATION_BACKUP_PROVIDER: str = "siliconflow"  # hunyuan | siliconflow
     TRANSLATION_PROVIDER_TIMEOUT_SECONDS: int = 30
+    REVIEWER_LLM_TIMEOUT_SECONDS: int = 45
 
     # OCR / Document Cleaning
     OCR_PROVIDER: str = "zhipu"  # zhipu | siliconflow
@@ -377,6 +378,9 @@ class Settings(BaseSettings):
     COMPLEXITY_ROUTING_ENABLED: bool = True    # 总开关
     COMPLEXITY_DOWNGRADE_ENABLED: bool = True  # 允许简单消息降级到更便宜模型
     COMPLEXITY_UPGRADE_ENABLED: bool = True    # 允许复杂消息升级到更强模型
+    STANDARD_CHAT_FORCE_FAST_TIER: bool = True  # 标准对话首答强制走 FAST/Flash 层
+    FAST_INTERACTION_COPY_ENABLED: bool = True  # 澄清/确认文案优先由 FAST 模型生成
+    EARLY_ACK_PROGRESS_ENABLED: bool = True     # 编排开始前先推送即时状态确认
 
     # Feature Flags
     USE_CONTEXT_PACK: bool = True

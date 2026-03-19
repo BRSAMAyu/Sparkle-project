@@ -17,6 +17,15 @@ from app.agents.collaboration_workflows import (
     _build_timeline_step,
 )
 from app.agents.enhanced_agents import EnhancedAgentContext
+from app.agents.workflow_experience import (
+    build_collaboration_user_query,
+    build_handoff_packet,
+    format_handoff_packets,
+    inject_examples_into_user_context,
+    resolve_few_shot_examples,
+    should_inject_few_shot,
+)
+from app.config import settings
 
 # Phase 1: Review System
 from app.agents.graph.nodes.review_nodes import (
@@ -80,6 +89,22 @@ def _resolve_generation_task_type(state: WorkflowState) -> TaskType:
     if chat_mode == "error_diagnosis":
         return TaskType.ERROR_DIAGNOSIS
     return TaskType.STANDARD_RESPONSE
+
+
+def _should_force_fast_first_touch(
+    state: WorkflowState,
+    *,
+    explicit_runtime: dict[str, Any] | None = None,
+    task_type: TaskType | None = None,
+) -> bool:
+    if not getattr(settings, "STANDARD_CHAT_FORCE_FAST_TIER", True):
+        return False
+    if explicit_runtime is not None:
+        return False
+    if task_type is not TaskType.STANDARD_RESPONSE:
+        return False
+    chat_mode = str(state.context_data.get("chat_mode", "standard")).strip().lower()
+    return chat_mode == "standard"
 
 
 def _coerce_agent_role(role: str | None) -> AgentRole:
@@ -220,22 +245,49 @@ async def _execute_explicit_expert_collaboration(state: WorkflowState) -> Collab
     task_type = _resolve_generation_task_type(state)
 
     expert_outputs: list[dict[str, Any]] = []
+    handoff_packets: list[dict[str, Any]] = []
     timeline: list[dict[str, Any]] = []
+    few_shot_total = 0
 
     for expert_id in selected:
         started_at = time.time()
         runtime = await _resolve_llm_for_expert(expert_id=expert_id, state=state, task_type=task_type)
+        few_shot_examples: list[dict[str, Any]] = []
+        if (
+            few_shot_total < 3
+            and should_inject_few_shot(
+                workflow_type="explicit_expert_collaboration",
+                stage="collaboration",
+                agent_role=expert_id,
+                is_final_target=expert_id in answer_targets,
+            )
+        ):
+            few_shot_examples = await resolve_few_shot_examples(
+                db_session=state.context_data.get("db_session"),
+                user_id=state.context_data.get("user_id") or getattr(state, "user_id", None),
+                workflow_type="explicit_expert_collaboration",
+                chat_mode=str(state.context_data.get("chat_mode", "standard") or "standard"),
+                agent_role=expert_id,
+                stage="collaboration",
+                count=1,
+            )
+            few_shot_total += len(few_shot_examples[:1])
         system_prompt = _build_expert_collaboration_system_prompt(
             state=state,
             runtime=runtime,
-            user_context=user_context,
+            user_context=inject_examples_into_user_context(user_context, few_shot_examples),
             conversation_context=conversation_context,
             prompt_version=prompt_version,
         )
-        expert_request = (
-            "请用你的专业视角回答下面的问题。"
-            "回答必须保留你的独特判断，不要假装代表其他专家。\n\n"
-            f"用户问题：{user_message}"
+        expert_request = build_collaboration_user_query(
+            base_query=user_message,
+            workflow_type="explicit_expert_collaboration",
+            handoff_packets=handoff_packets,
+            few_shot_examples=few_shot_examples,
+            extra_instruction=(
+                "请用你的专业视角回答下面的问题。"
+                "必须保留你的独特判断，不要假装代表其他专家。"
+            ),
         )
         response = await runtime["service"].chat(
             messages=[
@@ -250,8 +302,15 @@ async def _execute_explicit_expert_collaboration(state: WorkflowState) -> Collab
                 "display_name": runtime["display_name"],
                 "agent_role": runtime["agent_role"].value,
                 "response": response,
+                "few_shot_examples": few_shot_examples,
             }
         )
+        handoff_packet = await build_handoff_packet(
+            agent=runtime["display_name"],
+            response_text=response,
+            workflow_type="explicit_expert_collaboration",
+        )
+        handoff_packets.append(handoff_packet.to_dict())
         timeline.append(
             _build_timeline_step(
                 runtime["display_name"],
@@ -275,16 +334,33 @@ async def _execute_explicit_expert_collaboration(state: WorkflowState) -> Collab
         "expert_id": synthesis_target,
         "is_custom": False,
     }
+    synthesis_examples: list[dict[str, Any]] = []
+    if few_shot_total < 3 and should_inject_few_shot(
+        workflow_type="explicit_expert_collaboration",
+        stage="synthesis",
+        agent_role="synthesis",
+    ):
+        synthesis_examples = await resolve_few_shot_examples(
+            db_session=state.context_data.get("db_session"),
+            user_id=state.context_data.get("user_id") or getattr(state, "user_id", None),
+            workflow_type="explicit_expert_collaboration",
+            chat_mode=str(state.context_data.get("chat_mode", "standard") or "standard"),
+            agent_role="synthesis",
+            stage="synthesis",
+            count=1,
+        )
     synthesis_prompt = _build_expert_collaboration_system_prompt(
         state=state,
         runtime=synthesis_runtime,
-        user_context=user_context,
+        user_context=inject_examples_into_user_context(user_context, synthesis_examples),
         conversation_context=conversation_context,
         prompt_version=prompt_version,
     )
-    synthesis_input = "\n\n".join(
-        f"### {item['display_name']} ({item['agent_role']})\n{item['response']}"
+    synthesis_input = format_handoff_packets(handoff_packets, title="专家桥接摘要包")
+    synthesis_raw_excerpt = "\n\n".join(
+        f"### {item['display_name']} 原文片段\n{item['response'][:220]}"
         for item in expert_outputs
+        if item["expert_id"] in answer_targets
     )
     answer_names = "、".join(
         item["display_name"] for item in expert_outputs if item["expert_id"] in answer_targets
@@ -304,8 +380,9 @@ async def _execute_explicit_expert_collaboration(state: WorkflowState) -> Collab
             {
                 "role": "user",
                 "content": (
-                    f"用户问题：{user_message}\n\n"
-                    f"专家观点汇总：\n{synthesis_input}"
+                    f"{build_collaboration_user_query(base_query=user_message, workflow_type='explicit_expert_collaboration', handoff_packets=handoff_packets, few_shot_examples=synthesis_examples)}\n\n"
+                    f"专家观点汇总：\n{synthesis_input}\n\n"
+                    f"必要原文片段：\n{synthesis_raw_excerpt}"
                 ),
             },
         ],
@@ -330,6 +407,8 @@ async def _execute_explicit_expert_collaboration(state: WorkflowState) -> Collab
             "selected_experts": list(selected),
             "answer_experts": list(answer_targets),
             "expert_outputs": expert_outputs,
+            "handoff_packets": handoff_packets,
+            "few_shot_total": few_shot_total + len(synthesis_examples[:1]),
         },
         timeline=timeline,
         confidence=0.85,
@@ -695,6 +774,23 @@ async def generation_node(state: WorkflowState) -> WorkflowState:
     agent_role = _resolve_generation_agent_role(state)
     task_type = _resolve_generation_task_type(state)
     explicit_runtime = None
+    user_message = state.messages[-1]["content"] or ""
+    memory_answer = _resolve_recent_memory_answer(conversation_context, user_message)
+
+    if memory_answer:
+        if stream_callback:
+            await stream_callback(agent_service_pb2.ChatResponse(
+                delta=memory_answer,
+                status_update=agent_service_pb2.AgentStatus(
+                    state=agent_service_pb2.AgentStatus.GENERATING,
+                    details="正在根据最近对话补全答案...",
+                    current_agent_name="Sparkle AI"
+                )
+            ))
+        state.context_data["generation_shortcut"] = "recent_memory"
+        state.append_message("assistant", memory_answer)
+        state.next_step = "__end__"
+        return state
 
     try:
         explicit_expert_id = _single_explicit_expert_id(state)
@@ -707,7 +803,19 @@ async def generation_node(state: WorkflowState) -> WorkflowState:
             generation_llm = explicit_runtime["service"]
             agent_role = explicit_runtime["agent_role"].value
         else:
-            generation_llm = await get_configured_llm_service(agent_role, task_type)
+            if _should_force_fast_first_touch(
+                state,
+                explicit_runtime=explicit_runtime,
+                task_type=task_type,
+            ):
+                generation_llm = await get_configured_llm_service_for_tier(
+                    agent_role,
+                    ModelTier.FAST,
+                    task_type=task_type,
+                )
+                state.context_data["first_touch_model_tier"] = ModelTier.FAST.value
+            else:
+                generation_llm = await get_configured_llm_service(agent_role, task_type)
     except Exception as e:
         logger.warning(f"Failed to configure role-scoped LLM for {agent_role}/{task_type.value}: {e}")
         generation_llm = llm_service
@@ -772,24 +880,27 @@ Ask about their available time and current tasks if needed.
     if document_context:
         system_prompt += f"\n\n## Retrieved Documents\n{document_context}"
 
-    user_message = state.messages[-1]["content"] or ""
     tools = state.context_data.get("tools_schema", [])
-    memory_answer = _resolve_recent_memory_answer(conversation_context, user_message)
 
-    if memory_answer:
-        if stream_callback:
-            await stream_callback(agent_service_pb2.ChatResponse(
-                delta=memory_answer,
-                status_update=agent_service_pb2.AgentStatus(
-                    state=agent_service_pb2.AgentStatus.GENERATING,
-                    details="正在根据最近对话补全答案...",
-                    current_agent_name="Sparkle AI"
-                )
-            ))
-        state.context_data["generation_shortcut"] = "recent_memory"
-        state.append_message("assistant", memory_answer)
-        state.next_step = "__end__"
-        return state
+    if (
+        stream_callback
+        and _should_force_fast_first_touch(
+            state,
+            explicit_runtime=explicit_runtime,
+            task_type=task_type,
+        )
+    ):
+        await stream_callback(agent_service_pb2.ChatResponse(
+            status_update=agent_service_pb2.AgentStatus(
+                state=agent_service_pb2.AgentStatus.THINKING,
+                details="已收到，Flash 快响层正在组织首轮回复...",
+                current_agent_name="Sparkle Flash",
+            ),
+            metadata={
+                "fast_first_touch": "true",
+                "first_touch_tier": ModelTier.FAST.value,
+            },
+        ))
 
     # 检查是否使用思考模式，如果是则发送状态更新
     # 这会让前端显示"思考中"提示
@@ -1366,6 +1477,7 @@ async def collaboration_node(state: WorkflowState) -> WorkflowState:
             logger.info(f"Executing explicit expert collaboration with experts={selected_experts}")
             result = await _execute_explicit_expert_collaboration(state)
             state.context_data["collaboration_result"] = result
+            state.context_data["workflow_type"] = result.workflow_type
             state.next_step = "collaboration_post_process"
             return state
         except Exception as e:
@@ -1387,14 +1499,21 @@ async def collaboration_node(state: WorkflowState) -> WorkflowState:
         return state
 
     try:
+        learning_status = state.context_data.get("learning_status") or {}
+        if not isinstance(learning_status, dict):
+            learning_status = {}
         # Build enhanced context
         context = EnhancedAgentContext(
             user_id=user_id,
+            session_id=state.context_data.get("session_id") or getattr(state, "session_id", ""),
             user_query=user_message,
             conversation_history=state.messages[:-1],
+            knowledge_context=state.context_data.get("knowledge_context"),
+            user_preferences=state.context_data.get("user_preferences"),
             knowledge_graph=state.context_data.get("knowledge_graph"),
-            learning_status=state.context_data.get("learning_status"),
-            focus_stats=state.context_data.get("focus_stats"),
+            mastery_levels=learning_status.get("mastery_levels"),
+            weak_concepts=learning_status.get("weak_points"),
+            forgetting_risks=learning_status.get("forgetting_risks"),
             db_session=db_session,
         )
 
@@ -1420,6 +1539,7 @@ async def collaboration_node(state: WorkflowState) -> WorkflowState:
 
         # Store result for generation node
         state.context_data["collaboration_result"] = validated_result
+        state.context_data["workflow_type"] = validated_result.workflow_type
 
         # Emit collaboration timeline metadata for clients
         if stream_callback and hasattr(validated_result, 'timeline'):
@@ -1778,7 +1898,10 @@ def create_standard_chat_graph() -> StateGraph:
     # - failed → __end__
     def reflection_condition(state: WorkflowState) -> str:
         next_step = state.next_step or "__end__"
-        reflection_round = state.context_data.get("review_context", {}).get("reflection_round", 0)
+        review_context = getattr(state, "review_context", None)
+        if review_context is None and isinstance(state, dict):
+            review_context = state.get("review_context")
+        reflection_round = (review_context or {}).get("reflection_round", 0)
         MAX_ROUNDS = 3
 
         # 检查是否超过最大轮次

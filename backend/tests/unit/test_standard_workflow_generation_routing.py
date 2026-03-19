@@ -10,7 +10,7 @@ from app.agents.standard_workflow import (
     generation_node,
     router_node,
 )
-from app.core.agent_profiles import AgentRole, TaskType
+from app.core.agent_profiles import AgentRole, ModelTier, TaskType
 from app.orchestration.statechart_engine import WorkflowState
 
 
@@ -22,7 +22,16 @@ class _FakeGenerationLLM:
         return False
 
     def get_current_selection(self):
-        return SimpleNamespace(config=SimpleNamespace(model_name="deep-analyst-model"))
+        return SimpleNamespace(
+            model_key="dashscope_fast",
+            is_fallback=False,
+            estimated_cost_per_1k=0.0001,
+            config=SimpleNamespace(
+                model_name="deep-analyst-model",
+                provider=SimpleNamespace(value="dashscope"),
+                tier=SimpleNamespace(value="fast"),
+            ),
+        )
 
     async def chat_stream_with_tools(self, system_prompt, user_message, tools, user_context):
         yield SimpleNamespace(type="text", content="分析完成")
@@ -72,6 +81,36 @@ async def test_generation_node_uses_role_and_task_scoped_llm(monkeypatch):
     assert new_state.context_data["active_generation_agent_role"] == "deep_analyst"
     assert new_state.context_data["active_generation_model"] == "deep-analyst-model"
     assert new_state.messages[-1]["role"] == "assistant"
+    assert new_state.messages[-1]["content"] == "分析完成"
+
+
+@pytest.mark.asyncio
+async def test_generation_node_forces_fast_tier_for_standard_chat(monkeypatch):
+    fake_llm = _FakeGenerationLLM()
+    get_tier_mock = AsyncMock(return_value=fake_llm)
+    get_llm_mock = AsyncMock(side_effect=AssertionError("standard chat should use fast tier helper"))
+    monkeypatch.setattr("app.agents.standard_workflow.get_configured_llm_service_for_tier", get_tier_mock)
+    monkeypatch.setattr("app.agents.standard_workflow.get_configured_llm_service", get_llm_mock)
+    monkeypatch.setattr("app.agents.standard_workflow.build_system_prompt", lambda *args, **kwargs: "SYSTEM")
+
+    state = WorkflowState(
+        messages=[{"role": "user", "content": "帮我快速看一下这段话怎么优化"}],
+        context_data={
+            "chat_mode": "standard",
+            "user_context": {},
+            "conversation_context": {"messages": []},
+            "tools_schema": [],
+        },
+    )
+
+    new_state = await generation_node(state)
+
+    get_tier_mock.assert_awaited_once_with(
+        "generation",
+        ModelTier.FAST,
+        task_type=TaskType.STANDARD_RESPONSE,
+    )
+    assert new_state.context_data["first_touch_model_tier"] == ModelTier.FAST.value
     assert new_state.messages[-1]["content"] == "分析完成"
 
 
@@ -185,7 +224,9 @@ def test_exam_fact_query_does_not_trigger_exam_preparation():
 @pytest.mark.asyncio
 async def test_generation_node_answers_recent_memory_question_without_llm(monkeypatch):
     get_llm_mock = AsyncMock(return_value=_FailIfCalledLLM())
+    get_tier_mock = AsyncMock(return_value=_FailIfCalledLLM())
     monkeypatch.setattr("app.agents.standard_workflow.get_configured_llm_service", get_llm_mock)
+    monkeypatch.setattr("app.agents.standard_workflow.get_configured_llm_service_for_tier", get_tier_mock)
     monkeypatch.setattr("app.agents.standard_workflow.build_system_prompt", lambda *args, **kwargs: "SYSTEM")
 
     state = WorkflowState(
@@ -210,13 +251,16 @@ async def test_generation_node_answers_recent_memory_question_without_llm(monkey
 
     assert new_state.context_data["generation_shortcut"] == "recent_memory"
     assert new_state.messages[-1]["content"] == "海王星"
-    get_llm_mock.assert_awaited_once()
+    get_llm_mock.assert_not_awaited()
+    get_tier_mock.assert_not_awaited()
 
 
 @pytest.mark.asyncio
 async def test_generation_node_replaces_low_information_reply_with_retrieval_fact(monkeypatch):
     get_llm_mock = AsyncMock(return_value=_LowInfoLLM())
+    get_tier_mock = AsyncMock(return_value=_LowInfoLLM())
     monkeypatch.setattr("app.agents.standard_workflow.get_configured_llm_service", get_llm_mock)
+    monkeypatch.setattr("app.agents.standard_workflow.get_configured_llm_service_for_tier", get_tier_mock)
     monkeypatch.setattr("app.agents.standard_workflow.build_system_prompt", lambda *args, **kwargs: "SYSTEM")
 
     state = WorkflowState(
@@ -241,7 +285,9 @@ async def test_generation_node_replaces_low_information_reply_with_retrieval_fac
 @pytest.mark.asyncio
 async def test_generation_node_replaces_low_information_private_agent_reply(monkeypatch):
     get_llm_mock = AsyncMock(return_value=_LowInfoPrivateAgentLLM())
+    get_tier_mock = AsyncMock(return_value=_LowInfoPrivateAgentLLM())
     monkeypatch.setattr("app.agents.standard_workflow.get_configured_llm_service", get_llm_mock)
+    monkeypatch.setattr("app.agents.standard_workflow.get_configured_llm_service_for_tier", get_tier_mock)
     monkeypatch.setattr("app.agents.standard_workflow.build_system_prompt", lambda *args, **kwargs: "SYSTEM")
 
     state = WorkflowState(
@@ -287,7 +333,9 @@ def test_sanitize_community_sendable_response_removes_explanatory_lead_in():
 @pytest.mark.asyncio
 async def test_generation_node_sanitizes_group_reply_lead_in(monkeypatch):
     get_llm_mock = AsyncMock(return_value=_LeadInGroupAgentLLM())
+    get_tier_mock = AsyncMock(return_value=_LeadInGroupAgentLLM())
     monkeypatch.setattr("app.agents.standard_workflow.get_configured_llm_service", get_llm_mock)
+    monkeypatch.setattr("app.agents.standard_workflow.get_configured_llm_service_for_tier", get_tier_mock)
     monkeypatch.setattr("app.agents.standard_workflow.build_system_prompt", lambda *args, **kwargs: "SYSTEM")
 
     state = WorkflowState(

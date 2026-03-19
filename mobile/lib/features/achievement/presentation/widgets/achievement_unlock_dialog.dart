@@ -17,6 +17,7 @@ class AchievementUnlockDialog extends StatefulWidget {
     required this.event,
     super.key,
     this.onShare,
+    this.onViewRewards,
     this.onClose,
     this.comboCount,
     this.milestoneInfo,
@@ -25,6 +26,7 @@ class AchievementUnlockDialog extends StatefulWidget {
   /// 接受AchievementUnlockEvent (来自achievement_model.dart)
   final AchievementUnlockEvent event;
   final VoidCallback? onShare;
+  final VoidCallback? onViewRewards;
   final VoidCallback? onClose;
 
   /// 成就连击数量 (P1功能)
@@ -38,6 +40,7 @@ class AchievementUnlockDialog extends StatefulWidget {
     BuildContext context,
     chat.AchievementUnlockEvent wsEvent, {
     VoidCallback? onShare,
+    VoidCallback? onViewRewards,
     bool barrierDismissible = true,
     int? comboCount,
     MilestoneInfo? milestoneInfo,
@@ -54,8 +57,12 @@ class AchievementUnlockDialog extends StatefulWidget {
         visualEffect: event.visualEffect,
         visualEffectType: event.visualEffectType,
         rewards: event.rewards,
+        rewardPreview: event.rewardPreview,
+        surfacePreview: event.surfacePreview,
+        gloryLines: event.gloryLines,
       ),
       onShare: onShare,
+      onViewRewards: onViewRewards,
       barrierDismissible: barrierDismissible,
       comboCount: comboCount,
       milestoneInfo: milestoneInfo,
@@ -71,6 +78,7 @@ class AchievementUnlockDialog extends StatefulWidget {
     BuildContext context,
     AchievementUnlockEvent event, {
     VoidCallback? onShare,
+    VoidCallback? onViewRewards,
     bool barrierDismissible = true,
     int? comboCount,
     MilestoneInfo? milestoneInfo,
@@ -85,6 +93,7 @@ class AchievementUnlockDialog extends StatefulWidget {
             AchievementUnlockDialog(
           event: event,
           onShare: onShare,
+          onViewRewards: onViewRewards,
           comboCount: comboCount,
           milestoneInfo: milestoneInfo,
         ),
@@ -368,6 +377,21 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                   if (widget.milestoneInfo != null)
                     _buildMilestoneSection(widget.milestoneInfo!),
 
+                  if (widget.event.rewardPreview.isNotEmpty) ...[
+                    const SizedBox(height: DS.spacing12),
+                    _buildRewardPreviewSection(),
+                  ],
+
+                  if (widget.event.gloryLines.isNotEmpty) ...[
+                    const SizedBox(height: DS.spacing12),
+                    _buildGloryLinesSection(),
+                  ],
+
+                  if (widget.event.surfacePreview.isNotEmpty) ...[
+                    const SizedBox(height: DS.spacing12),
+                    _buildSurfacePreviewSection(),
+                  ],
+
                   // 视觉元素奖励预览
                   if (_hasVisualElementRewards())
                     _VisualElementPreviewSection(
@@ -382,6 +406,15 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        if (widget.onViewRewards != null) ...[
+                          _buildActionButton(
+                            icon: Icons.workspace_premium_outlined,
+                            label: '查看奖励',
+                            isPrimary: true,
+                            onPressed: widget.onViewRewards!,
+                          ),
+                          const SizedBox(height: DS.spacing12),
+                        ],
                         _buildActionButton(
                           icon: Icons.close,
                           label: '关闭',
@@ -405,6 +438,17 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                   else
                     Row(
                       children: [
+                        if (widget.onViewRewards != null) ...[
+                          Expanded(
+                            child: _buildActionButton(
+                              icon: Icons.workspace_premium_outlined,
+                              label: '查看奖励',
+                              isPrimary: true,
+                              onPressed: widget.onViewRewards!,
+                            ),
+                          ),
+                          const SizedBox(width: DS.spacing12),
+                        ],
                         Expanded(
                           child: _buildActionButton(
                             icon: Icons.close,
@@ -607,6 +651,138 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildRewardPreviewSection() {
+    final colors = _getRarityColors();
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(DS.spacing12),
+      decoration: BoxDecoration(
+        color: colors.background.withValues(alpha: 0.72),
+        borderRadius: DS.borderRadius12,
+        border: Border.all(color: colors.border.withValues(alpha: 0.45)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '荣耀收获',
+            style: TextStyle(
+              fontSize: DS.fontSizeSm,
+              fontWeight: DS.fontWeightBold,
+              color: colors.text,
+            ),
+          ),
+          const SizedBox(height: DS.spacing8),
+          ...widget.event.rewardPreview.map(
+            (line) => Padding(
+              padding: const EdgeInsets.only(bottom: DS.spacing6),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.check_circle, size: 14, color: colors.border),
+                  const SizedBox(width: DS.spacing6),
+                  Expanded(
+                    child: Text(
+                      line,
+                      style: TextStyle(
+                        fontSize: DS.fontSizeXs,
+                        color: colors.text.withValues(alpha: 0.88),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGloryLinesSection() {
+    final colors = _getRarityColors();
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(DS.spacing12),
+      decoration: BoxDecoration(
+        color: colors.primary.withValues(alpha: 0.18),
+        borderRadius: DS.borderRadius12,
+        border: Border.all(color: colors.border.withValues(alpha: 0.35)),
+      ),
+      child: Wrap(
+        spacing: DS.spacing8,
+        runSpacing: DS.spacing8,
+        children: widget.event.gloryLines
+            .map(
+              (line) => Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: DS.spacing10,
+                  vertical: DS.spacing6,
+                ),
+                decoration: BoxDecoration(
+                  color: colors.background.withValues(alpha: 0.8),
+                  borderRadius: DS.borderRadius12,
+                ),
+                child: Text(
+                  line,
+                  style: TextStyle(
+                    fontSize: DS.fontSizeXs,
+                    fontWeight: DS.fontWeightMedium,
+                    color: colors.text,
+                  ),
+                ),
+              ),
+            )
+            .toList(),
+      ),
+    );
+  }
+
+  Widget _buildSurfacePreviewSection() {
+    final colors = _getRarityColors();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '身份变化会出现在',
+          style: TextStyle(
+            fontSize: DS.fontSizeSm,
+            fontWeight: DS.fontWeightBold,
+            color: colors.text,
+          ),
+        ),
+        const SizedBox(height: DS.spacing8),
+        Wrap(
+          spacing: DS.spacing8,
+          runSpacing: DS.spacing8,
+          children: widget.event.surfacePreview
+              .map(
+                (surface) => Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: DS.spacing10,
+                    vertical: DS.spacing6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: colors.background.withValues(alpha: 0.82),
+                    borderRadius: DS.borderRadius12,
+                    border:
+                        Border.all(color: colors.border.withValues(alpha: 0.3)),
+                  ),
+                  child: Text(
+                    surface,
+                    style: TextStyle(
+                      fontSize: DS.fontSizeXs,
+                      color: colors.text,
+                    ),
+                  ),
+                ),
+              )
+              .toList(),
+        ),
+      ],
     );
   }
 
@@ -907,7 +1083,8 @@ class _VisualElementPreviewSection extends StatelessWidget {
                   color: DS.surfaceHigh.withValues(alpha: 0.9),
                   borderRadius: DS.borderRadius12,
                   border: Border.all(
-                    color: DS.warning.withValues(alpha: 0.4 * glowAnimation.value),
+                    color:
+                        DS.warning.withValues(alpha: 0.4 * glowAnimation.value),
                   ),
                 ),
                 child: Row(

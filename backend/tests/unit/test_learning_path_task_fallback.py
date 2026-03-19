@@ -6,6 +6,7 @@ from uuid import uuid4
 
 import pytest
 
+from app.api.v1.learning_paths import _build_fallback_plan_summary
 from app.services.llm_fallback_utils import safe_llm_json_call
 from app.tools.plan_tools import GenerateTasksForPlanTool
 from app.tools.schemas import GenerateTasksForPlanParams
@@ -75,25 +76,20 @@ async def test_generate_tasks_tool_uses_deterministic_fallback_when_llm_returns_
         AsyncMock(return_value=fake_rag_result),
     )
 
-    created_tasks = [
-        SimpleNamespace(
+    created_payloads = []
+
+    async def _fake_create(*, db, obj_in, user_id):
+        created_payloads.append(obj_in)
+        return SimpleNamespace(
             id=uuid4(),
-            title="补齐前置知识：大学物理",
-            type=SimpleNamespace(value="LEARNING"),
-            estimated_minutes=25,
-            priority=2,
-            description="desc",
-        ),
-        SimpleNamespace(
-            id=uuid4(),
-            title="建立 经典力学 核心概念框架",
-            type=SimpleNamespace(value="LEARNING"),
-            estimated_minutes=35,
-            priority=3,
-            description="desc",
-        ),
-    ]
-    monkeypatch.setattr("app.tools.plan_tools.TaskService.create", AsyncMock(side_effect=created_tasks))
+            title=obj_in.title,
+            type=SimpleNamespace(value=obj_in.type.value),
+            estimated_minutes=obj_in.estimated_minutes,
+            priority=obj_in.priority,
+            knowledge_node_id=obj_in.knowledge_node_id,
+        )
+
+    monkeypatch.setattr("app.tools.plan_tools.TaskService.create", AsyncMock(side_effect=_fake_create))
 
     tool = GenerateTasksForPlanTool()
     monkeypatch.setattr(tool, "_generate_tasks_with_llm", AsyncMock(return_value=None))
@@ -112,4 +108,23 @@ async def test_generate_tasks_tool_uses_deterministic_fallback_when_llm_returns_
     assert result.success is True
     assert len(result.data["tasks"]) == 2
     assert result.data["tasks"][0]["title"].startswith("补齐前置知识")
+    assert created_payloads[0].knowledge_node_id == prerequisite_id
+    assert created_payloads[1].knowledge_node_id == target_id
+    assert result.data["tasks"][0]["knowledge_node_id"] == str(prerequisite_id)
     assert fake_db.execute.await_count >= 1
+
+
+def test_build_fallback_plan_summary_keeps_learning_order_and_target():
+    summary = _build_fallback_plan_summary(
+        "经典力学",
+        [
+            {"name": "大学物理", "status": "mastered", "is_target": False},
+            {"name": "微积分", "status": "locked", "is_target": False},
+            {"name": "经典力学", "status": "locked", "is_target": True},
+        ],
+    )
+
+    assert "学习目标：经典力学" in summary
+    assert "1. 快速复盘 大学物理" in summary
+    assert "2. 先补齐 微积分" in summary
+    assert "3. 聚焦攻克目标节点 经典力学" in summary

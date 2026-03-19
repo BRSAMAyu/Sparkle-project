@@ -10,7 +10,7 @@ func TestConnectionRegistryRegisterGetUnregister(t *testing.T) {
 	registry := NewConnectionRegistry(nil, nil)
 	conn := &websocket.Conn{}
 
-	registry.Register("user-1", conn)
+	registry.Register("user-1", conn, nil)
 	got, ok := registry.Get("user-1")
 	if !ok {
 		t.Fatalf("expected connection to be registered")
@@ -36,11 +36,11 @@ func TestConnectionRegistryUnregisterGuardsAgainstReconnectRace(t *testing.T) {
 	// Simulate: connA registered, then replaced by connB directly in the map
 	// (bypassing Register to avoid calling Close on a zero-value Conn).
 	registry.mu.Lock()
-	registry.connections["user-1"] = connA
+	registry.connections["user-1"] = &connectionEntry{conn: connA}
 	registry.mu.Unlock()
 
 	registry.mu.Lock()
-	registry.connections["user-1"] = connB
+	registry.connections["user-1"] = &connectionEntry{conn: connB}
 	registry.mu.Unlock()
 
 	// connA's goroutine fires its deferred Unregister — must NOT evict connB.

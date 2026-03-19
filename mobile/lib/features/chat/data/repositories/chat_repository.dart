@@ -166,6 +166,7 @@ class ChatRepository {
     String message,
     String? conversationId, {
     String? userId,
+    String? requestId,
     String? nickname,
     Map<String, dynamic>? extraContext,
     String? token,
@@ -180,6 +181,7 @@ class ChatRepository {
       message: message,
       userId: userId ?? 'anonymous',
       sessionId: conversationId,
+      requestId: requestId,
       nickname: nickname,
       extraContext: extraContext,
       token: token,

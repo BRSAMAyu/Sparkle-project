@@ -39,10 +39,12 @@ type DistributedRateLimiter struct {
 // NewDistributedRateLimiter creates a Redis-backed rate limiter using Token Bucket algorithm
 func NewDistributedRateLimiter(rdb *redis.Client, rate float64, burst int, keyPrefix string) *DistributedRateLimiter {
 	return &DistributedRateLimiter{
-		rdb:           rdb,
-		rate:          rate,
-		burst:         burst,
-		initialTokens: 0, // Default: start with 0 tokens to prevent burst abuse
+		rdb:   rdb,
+		rate:  rate,
+		burst: burst,
+		// Start full like a standard token bucket. Starting at 0 causes fresh
+		// sessions and low-frequency pages to get sporadic first-request 429s.
+		initialTokens: burst,
 		keyPrefix:     keyPrefix,
 	}
 }
@@ -206,11 +208,11 @@ func HybridRateLimitMiddlewareSimple(
 	burst int,
 ) gin.HandlerFunc {
 	config := HybridRateLimiterConfig{
-		Backend:         "redis",
-		Rate:            requestsPerSecond,
-		Burst:           burst,
-		Window:          time.Minute,
-		CleanupInterval: time.Minute,
+		Backend:          "redis",
+		Rate:             requestsPerSecond,
+		Burst:            burst,
+		Window:           time.Minute,
+		CleanupInterval:  time.Minute,
 		UseSlidingWindow: false,
 	}
 	localRL := NewRateLimiterWithCleanup(rate.Limit(requestsPerSecond), burst, config.CleanupInterval)
@@ -225,11 +227,11 @@ func HybridSlidingWindowMiddleware(
 	limit int,
 ) gin.HandlerFunc {
 	config := HybridRateLimiterConfig{
-		Backend:         "redis",
-		Rate:            float64(limit) / window.Seconds(),
-		Burst:           limit,
-		Window:          window,
-		CleanupInterval: time.Minute,
+		Backend:          "redis",
+		Rate:             float64(limit) / window.Seconds(),
+		Burst:            limit,
+		Window:           window,
+		CleanupInterval:  time.Minute,
 		UseSlidingWindow: true,
 	}
 	localRL := NewRateLimiterWithCleanup(rate.Limit(config.Rate), config.Burst, config.CleanupInterval)

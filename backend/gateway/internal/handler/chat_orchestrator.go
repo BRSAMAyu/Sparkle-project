@@ -207,7 +207,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 		for {
 			select {
 			case <-pingTicker.C:
-				if err := writer.WriteMessage(websocket.PingMessage, nil); err != nil {
+				if err := writer.WriteControl(websocket.PingMessage, nil); err != nil {
 					return
 				}
 			case <-pingDone:
@@ -281,7 +281,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 		}
 	}
 	metrics.WSConnectionSuccess.WithLabelValues("/ws/chat", authMethod).Inc()
-	h.registerConnection(userID, conn)
+	h.registerConnection(userID, conn, writer)
 	defer h.unregisterConnection(userID, conn)
 
 	readLimit := int64(0)
@@ -547,7 +547,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 
 // PushIntervention sends an intervention push message to a connected WebSocket client.
 func (h *ChatOrchestrator) PushIntervention(userID string, intervention *pbws.InterventionPushMessage) error {
-	conn, exists := h.getConnection(userID)
+	writer, exists := h.getConnectionWriter(userID)
 	if !exists {
 		return fmt.Errorf("no active WebSocket connection for user %s", userID)
 	}
@@ -567,9 +567,10 @@ func (h *ChatOrchestrator) PushIntervention(userID string, intervention *pbws.In
 		"expires_at": intervention.ExpiresAt,
 	}
 
-	_ = conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
-	if err := conn.WriteJSON(message); err != nil {
-		h.unregisterConnection(userID, conn)
+	if err := writer.WriteJSON(message); err != nil {
+		if conn, ok := h.getConnection(userID); ok {
+			h.unregisterConnection(userID, conn)
+		}
 		return fmt.Errorf("failed to send intervention: %w", err)
 	}
 	return nil

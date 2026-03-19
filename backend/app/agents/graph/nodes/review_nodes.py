@@ -31,6 +31,7 @@ from app.agents.graph.state import (
 )
 from app.agents.reflection_agent import get_reflection_agent
 from app.agents.reviewer_agent import ReviewerAgent, ReviewResult, get_reviewer_agent
+from app.agents.workflow_experience import build_workflow_context, resolve_review_profile_id
 from app.core.agent_profiles import TaskType
 from app.core.llm_router import ModelProvider, llm_router
 
@@ -140,6 +141,8 @@ async def _record_review_to_history(
             requires_reflection=review_result.requires_reflection,
             content_snapshot=content_snapshot,
             user_query=user_query,
+            review_profile_id=review_result.review_profile_id,
+            workflow_context=review_result.workflow_context or {},
         )
     except Exception as e:
         logger.warning(f"[ReviewNode] Failed to record review history: {e}")
@@ -292,6 +295,30 @@ def _message_attr(message: Any, key: str, default=None):
     return getattr(message, key, default)
 
 
+def _resolve_workflow_context(state: SparkleState, *, target_type: str = "response") -> dict[str, str]:
+    context_data = _state_get(state, "context_data", {}) or {}
+    workflow_type = str(context_data.get("workflow_type") or "").strip().lower()
+    chat_mode = str(context_data.get("chat_mode") or "standard").strip().lower()
+    collaboration_mode = str(_state_get(state, "collaboration_mode") or context_data.get("collaboration_mode") or "").strip().lower()
+
+    if not workflow_type:
+        if context_data.get("selected_experts"):
+            workflow_type = "explicit_expert_collaboration"
+        elif chat_mode == "study_plan":
+            workflow_type = "task_decomposition"
+        elif chat_mode == "deep_analysis":
+            workflow_type = "progressive_exploration"
+        elif chat_mode == "error_diagnosis":
+            workflow_type = "error_diagnosis"
+
+    return build_workflow_context(
+        workflow_type=workflow_type,
+        chat_mode=chat_mode,
+        collaboration_mode=collaboration_mode,
+        target_type=target_type,
+    )
+
+
 def _should_skip_review(state: SparkleState) -> bool:
     """
     判断是否应该跳过审查
@@ -415,6 +442,8 @@ async def generation_review_node(state: SparkleState) -> dict[str, Any]:
     generation_model_key = str(context_data.get("generation_model_key") or "")
     generation_provider = llm_router.get_model_provider(generation_model_key) if generation_model_key else None
     run_ledger = context_data.get("run_ledger")
+    workflow_context = _resolve_workflow_context(state, target_type="response")
+    review_profile_id = resolve_review_profile_id(workflow_context=workflow_context, target_type="response")
     reviewer = _get_reviewer(
         avoid_providers=[generation_provider] if generation_provider is not None else None,
     )
@@ -426,7 +455,9 @@ async def generation_review_node(state: SparkleState) -> dict[str, Any]:
             "session_id": _state_get(state, "session_id"),
             "conversation_history": messages[:last_assistant_idx],
             "timestamp": _utcnow().isoformat()
-        }
+        },
+        review_profile_id=review_profile_id,
+        workflow_context=workflow_context,
     )
 
     logger.info(
@@ -447,6 +478,9 @@ async def generation_review_node(state: SparkleState) -> dict[str, Any]:
                 "critical_count": len(review_result.critical_issues),
                 "warning_count": len(review_result.warning_issues),
                 "requires_reflection": review_result.requires_reflection,
+                "review_profile_id": review_result.review_profile_id,
+                "workflow_type": workflow_context.get("workflow_type", ""),
+                "chat_mode": workflow_context.get("chat_mode", ""),
                 "model_key": getattr(reviewer, "model_key", ""),
                 "provider": getattr(reviewer, "provider_name", ""),
                 "tier": getattr(getattr(reviewer, "get_current_selection", lambda: None)(), "tier_used", ""),
@@ -507,6 +541,7 @@ async def generation_review_node(state: SparkleState) -> dict[str, Any]:
                 "critical_count": str(len(review_result.critical_issues)),
                 "warning_count": str(len(review_result.warning_issues)),
                 "requires_reflection": "true" if review_result.requires_reflection else "false",
+                "review_profile_id": review_result.review_profile_id,
             }
 
             # Format review message for display
@@ -538,6 +573,8 @@ async def generation_review_node(state: SparkleState) -> dict[str, Any]:
         "reviewer_provider": getattr(reviewer, "provider_name", ""),
         "original_content": llm_response,
         "reviewed_content": None,
+        "review_profile_id": review_result.review_profile_id,
+        "workflow_context": workflow_context,
     }
 
     # 6. 记录审查历史
@@ -735,6 +772,10 @@ async def reflection_node(state: SparkleState) -> dict[str, Any]:
 
     # 重建ReviewResult对象
     review_result = ReviewResult.from_dict(review_result_dict)
+    workflow_context = review_context.get("workflow_context") or _resolve_workflow_context(state, target_type="response")
+    review_profile_id = str(review_context.get("review_profile_id") or review_result.review_profile_id or "").strip()
+    if not review_profile_id:
+        review_profile_id = resolve_review_profile_id(workflow_context=workflow_context, target_type="response")
 
     # Phase 2d: 获取生成模型名称
     context_data = _state_get(state, "context_data", {})
@@ -787,7 +828,9 @@ async def reflection_node(state: SparkleState) -> dict[str, Any]:
                 "user_id": _state_get(state, "user_id"),
                 "session_id": _state_get(state, "session_id"),
                 "messages": messages,
-            }
+            },
+            review_profile_id=review_profile_id,
+            workflow_context=workflow_context,
         )
 
         logger.info(
@@ -809,6 +852,10 @@ async def reflection_node(state: SparkleState) -> dict[str, Any]:
                     "rounds": reflection_result.total_rounds,
                     "initial_score": reflection_result.initial_score,
                     "final_score": reflection_result.final_score,
+                    "review_profile_id": reflection_result.review_profile_id,
+                    "early_stop_reason": reflection_result.early_stop_reason or "",
+                    "best_round_number": reflection_result.best_round_number,
+                    "issue_delta": reflection_result.issue_delta,
                     "model_key": getattr(reflector.generator, "model_key", ""),
                     "provider": getattr(reflector.generator, "provider_name", ""),
                     "tier": getattr(reflection_selection, "tier_used", ""),
@@ -835,11 +882,18 @@ async def reflection_node(state: SparkleState) -> dict[str, Any]:
             **review_context,
             "reflection_round": reflection_round + reflection_result.total_rounds,
             "result": {
-                **review_result_dict,
+                **(reflection_result.best_review_result or review_result_dict),
                 "overall_score": reflection_result.final_score,
                 "decision": "passed" if reflection_result.success else "needs_refinement",
+                "review_profile_id": reflection_result.review_profile_id,
+                "workflow_context": workflow_context,
             },
             "reviewed_content": reflection_result.final_content,
+            "best_review_score": reflection_result.final_score,
+            "best_content": reflection_result.final_content,
+            "early_stop_reason": reflection_result.early_stop_reason,
+            "reflection_profile_id": reflection_result.review_profile_id,
+            "workflow_context": workflow_context,
         }
 
         # 决定下一步
@@ -868,6 +922,8 @@ async def reflection_node(state: SparkleState) -> dict[str, Any]:
                             "initial_score": str(reflection_result.initial_score),
                             "final_score": str(reflection_result.final_score),
                             "success": "true" if reflection_result.success else "false",
+                            "review_profile_id": reflection_result.review_profile_id,
+                            "early_stop_reason": str(reflection_result.early_stop_reason or ""),
                         }
                     ))
                 except Exception as e:
@@ -913,6 +969,8 @@ async def reflection_node(state: SparkleState) -> dict[str, Any]:
                 "reflection_result": reflection_result.final_outcome.value,
                 "reflection_completed": reflection_result.success,
                 "reflection_score_delta": reflection_result.score_delta,
+                "reflection_profile_id": reflection_result.review_profile_id,
+                "reflection_early_stop_reason": reflection_result.early_stop_reason,
             }
         }
 

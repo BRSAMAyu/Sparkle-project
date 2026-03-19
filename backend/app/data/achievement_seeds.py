@@ -109,7 +109,8 @@ INITIAL_ACHIEVEMENTS = [
         "category": "exploration",
         "sort_order": 10,
         "reward_config": [
-            {"type": "photon", "quantity": 10}
+            {"type": "photon", "quantity": 10},
+            {"type": "title", "value": "first_light", "display": "初次点亮"},
         ]
     },
     {
@@ -125,7 +126,8 @@ INITIAL_ACHIEVEMENTS = [
         "category": "exploration",
         "sort_order": 11,
         "reward_config": [
-            {"type": "photon", "quantity": 30}
+            {"type": "photon", "quantity": 30},
+            {"type": "title", "value": "spark_scout", "display": "星火侦察兵"},
         ]
     },
     {
@@ -141,7 +143,8 @@ INITIAL_ACHIEVEMENTS = [
         "category": "exploration",
         "sort_order": 12,
         "reward_config": [
-            {"type": "photon", "quantity": 100}
+            {"type": "photon", "quantity": 100},
+            {"type": "title", "value": "galaxy_riser", "display": "星图新秀"},
         ]
     },
     {
@@ -158,7 +161,8 @@ INITIAL_ACHIEVEMENTS = [
         "sort_order": 13,
         "reward_config": [
             {"type": "photon", "quantity": 200},
-            {"type": "title", "value": "galaxy_explorer", "display": "星图探索者"}
+            {"type": "title", "value": "galaxy_explorer", "display": "星图探索者"},
+            {"type": "visual_element", "element_id": "bundle_explorer_command"},
         ]
     },
     {
@@ -180,7 +184,8 @@ INITIAL_ACHIEVEMENTS = [
         },
         "reward_config": [
             {"type": "photon", "quantity": 1000},
-            {"type": "title", "value": "knowledge_navigator", "display": "知识领航员"}
+            {"type": "title", "value": "knowledge_navigator", "display": "知识领航员"},
+            {"type": "visual_element", "element_id": "effect_explorer_orbit"},
         ]
     },
     {
@@ -253,6 +258,7 @@ INITIAL_ACHIEVEMENTS = [
         "sort_order": 30,
         "reward_config": [
             {"type": "photon", "quantity": 20}
+            ,{"type": "title", "value": "one_hour_learner", "display": "一小时学者"}
         ]
     },
     {
@@ -268,7 +274,8 @@ INITIAL_ACHIEVEMENTS = [
         "category": "study_time",
         "sort_order": 31,
         "reward_config": [
-            {"type": "photon", "quantity": 100}
+            {"type": "photon", "quantity": 100},
+            {"type": "title", "value": "ten_hour_focus", "display": "十小时专注者"},
         ]
     },
     {
@@ -285,7 +292,8 @@ INITIAL_ACHIEVEMENTS = [
         "sort_order": 32,
         "reward_config": [
             {"type": "photon", "quantity": 500},
-            {"type": "title", "value": "dedicated_learner", "display": "勤奋学习者"}
+            {"type": "title", "value": "dedicated_learner", "display": "勤奋学习者"},
+            {"type": "visual_element", "element_id": "background_mastery_halo"},
         ]
     },
     {
@@ -303,7 +311,8 @@ INITIAL_ACHIEVEMENTS = [
         "visual_effect_type": "black_hole",
         "reward_config": [
             {"type": "photon", "quantity": 5000},
-            {"type": "title", "value": "thousand_hour_master", "display": "千小时大师"}
+            {"type": "title", "value": "thousand_hour_master", "display": "千小时大师"},
+            {"type": "visual_element", "element_id": "bundle_legendary_ascension"},
         ]
     },
 
@@ -320,7 +329,8 @@ INITIAL_ACHIEVEMENTS = [
         "category": "tasks",
         "sort_order": 40,
         "reward_config": [
-            {"type": "photon", "quantity": 10}
+            {"type": "photon", "quantity": 10},
+            {"type": "title", "value": "task_rookie", "display": "任务新兵"},
         ]
     },
     {
@@ -336,7 +346,8 @@ INITIAL_ACHIEVEMENTS = [
         "category": "tasks",
         "sort_order": 41,
         "reward_config": [
-            {"type": "photon", "quantity": 50}
+            {"type": "photon", "quantity": 50},
+            {"type": "title", "value": "task_runner", "display": "任务执行者"},
         ]
     },
     {
@@ -353,7 +364,8 @@ INITIAL_ACHIEVEMENTS = [
         "sort_order": 42,
         "reward_config": [
             {"type": "photon", "quantity": 300},
-            {"type": "title", "value": "task_expert", "display": "任务专家"}
+            {"type": "title", "value": "task_expert", "display": "任务专家"},
+            {"type": "visual_element", "element_id": "effect_mastery_crown"},
         ]
     },
 
@@ -372,7 +384,8 @@ INITIAL_ACHIEVEMENTS = [
         "category": "hidden",
         "sort_order": 100,
         "reward_config": [
-            {"type": "title", "value": "night_owl", "display": "深夜学者"}
+            {"type": "title", "value": "night_owl", "display": "深夜学者"},
+            {"type": "visual_element", "element_id": "effect_hidden_hunter_mask"},
         ]
     },
     {
@@ -389,7 +402,8 @@ INITIAL_ACHIEVEMENTS = [
         "category": "hidden",
         "sort_order": 101,
         "reward_config": [
-            {"type": "title", "value": "early_bird", "display": "早起鸟儿"}
+            {"type": "title", "value": "early_bird", "display": "早起鸟儿"},
+            {"type": "visual_element", "element_id": "particle_streak_embers"},
         ]
     },
     {
@@ -428,7 +442,8 @@ INITIAL_ACHIEVEMENTS = [
             "expansion_speed": 2.0
         },
         "reward_config": [
-            {"type": "title", "value": "speed_learner", "display": "速通大师"}
+            {"type": "title", "value": "speed_learner", "display": "速通大师"},
+            {"type": "visual_element", "element_id": "bundle_hidden_hunter"},
         ]
     },
     {
@@ -479,7 +494,8 @@ INITIAL_ACHIEVEMENTS = [
         "category": "sprint",
         "sort_order": 51,
         "reward_config": [
-            {"type": "photon", "quantity": 100}
+            {"type": "photon", "quantity": 100},
+            {"type": "title", "value": "sprint_runner", "display": "冲刺执行者"},
         ]
     },
     {
@@ -502,7 +518,8 @@ INITIAL_ACHIEVEMENTS = [
         },
         "reward_config": [
             {"type": "photon", "quantity": 200},
-            {"type": "title", "value": "sprint_master", "display": "冲刺大师"}
+            {"type": "title", "value": "sprint_master", "display": "冲刺大师"},
+            {"type": "visual_element", "element_id": "bundle_sprint_elite"},
         ]
     },
     {
@@ -546,7 +563,8 @@ INITIAL_ACHIEVEMENTS = [
         "reward_config": [
             {"type": "photon", "quantity": 500},
             {"type": "title", "value": "perfectionist", "display": "完美主义者"},
-            {"type": "freeze_charge", "quantity": 1}
+            {"type": "freeze_charge", "quantity": 1},
+            {"type": "visual_element", "element_id": "effect_sprint_victory_frame"},
         ]
     },
     {
@@ -593,7 +611,8 @@ INITIAL_ACHIEVEMENTS = [
         "reward_config": [
             {"type": "photon", "quantity": 2000},
             {"type": "title", "value": "sprint_legend", "display": "冲刺传奇"},
-            {"type": "freeze_charge", "quantity": 3}
+            {"type": "freeze_charge", "quantity": 3},
+            {"type": "visual_element", "element_id": "bundle_legendary_ascension"},
         ]
     },
     {
@@ -614,7 +633,8 @@ INITIAL_ACHIEVEMENTS = [
         },
         "reward_config": [
             {"type": "photon", "quantity": 300},
-            {"type": "title", "value": "ahead_runner", "display": "领跑者"}
+            {"type": "title", "value": "ahead_runner", "display": "领跑者"},
+            {"type": "visual_element", "element_id": "particle_sprint_velocity"},
         ]
     },
 ]
@@ -711,5 +731,517 @@ INITIAL_GALAXY_SKINS = [
             "grid_style": "circular",
             "special_effects": ["anniversary_confetti", "rainbow_trail"]
         }
+    },
+]
+
+
+INITIAL_VISUAL_ELEMENTS = [
+    {
+        "id": "background_origin_chamber",
+        "name": "起源荣光",
+        "description": "默认荣耀背景，保留星火最初的仪式感。",
+        "element_type": "background",
+        "rarity": "common",
+        "unlock_source": "system",
+        "is_default": True,
+        "sort_order": 0,
+        "category": "default",
+        "config": {
+            "gradient": ["#101726", "#1C2740", "#24314D"],
+            "display_slot": "profile_banner",
+            "set_id": "origin_core",
+            "visibility_weight": 24,
+            "prestige_label": "起源",
+        },
+    },
+    {
+        "id": "particle_origin_sparks",
+        "name": "星火粒子",
+        "description": "默认粒子轨迹，轻微强调成长势能。",
+        "element_type": "particle",
+        "rarity": "common",
+        "unlock_source": "system",
+        "is_default": True,
+        "sort_order": 1,
+        "category": "default",
+        "config": {
+            "count": 22,
+            "shape": "spark",
+            "colors": ["#F5B971", "#FFE6AA"],
+            "display_slot": "home_particle",
+            "set_id": "origin_core",
+            "visibility_weight": 20,
+            "prestige_label": "星火",
+        },
+    },
+    {
+        "id": "effect_origin_aura",
+        "name": "启明星环",
+        "description": "默认柔光光环，可作为主页身份底色。",
+        "element_type": "effect",
+        "rarity": "common",
+        "unlock_source": "system",
+        "is_default": True,
+        "sort_order": 2,
+        "category": "default",
+        "config": {
+            "effect_type": "pulse_glow",
+            "intensity": 0.28,
+            "color": "#E6EEF9",
+            "display_slot": "avatar_frame",
+            "set_id": "origin_core",
+            "visibility_weight": 28,
+            "prestige_label": "启明",
+        },
+    },
+    {
+        "id": "background_streak_throne",
+        "name": "连胜王座",
+        "description": "高热渐变横幅，强化连胜带来的身份压迫感。",
+        "element_type": "background",
+        "rarity": "rare",
+        "unlock_source": "achievement",
+        "is_default": False,
+        "sort_order": 10,
+        "category": "streak",
+        "unlock_requirement": {"achievement_id": "streak_30"},
+        "config": {
+            "gradient": ["#34140F", "#7A2F17", "#E66A22"],
+            "display_slot": "profile_banner",
+            "set_id": "streak_champion",
+            "visibility_weight": 84,
+            "prestige_label": "连胜王者",
+        },
+    },
+    {
+        "id": "particle_streak_embers",
+        "name": "连胜余烬",
+        "description": "火焰碎屑从头像边缘跃迁而出。",
+        "element_type": "particle",
+        "rarity": "rare",
+        "unlock_source": "achievement",
+        "is_default": False,
+        "sort_order": 11,
+        "category": "streak",
+        "unlock_requirement": {"achievement_id": "streak_7"},
+        "config": {
+            "count": 36,
+            "shape": "ember",
+            "colors": ["#FFB347", "#FF6B35", "#FFD166"],
+            "display_slot": "streak_flame",
+            "set_id": "streak_champion",
+            "visibility_weight": 76,
+            "prestige_label": "余烬连胜",
+        },
+    },
+    {
+        "id": "effect_streak_champion_frame",
+        "name": "王座边框",
+        "description": "金红边框与脉冲辉光结合，适合作为头像荣耀框。",
+        "element_type": "effect",
+        "rarity": "epic",
+        "unlock_source": "achievement",
+        "is_default": False,
+        "sort_order": 12,
+        "category": "streak",
+        "unlock_requirement": {"achievement_id": "streak_30"},
+        "config": {
+            "effect_type": "pulse_ring",
+            "intensity": 0.78,
+            "color": "#FFB347",
+            "display_slot": "avatar_frame",
+            "set_id": "streak_champion",
+            "visibility_weight": 88,
+            "prestige_label": "王座边框",
+        },
+    },
+    {
+        "id": "bundle_streak_champion",
+        "name": "连胜王者套装",
+        "description": "头像框、横幅、连胜余烬一键成型。",
+        "element_type": "bundle",
+        "rarity": "epic",
+        "unlock_source": "achievement",
+        "is_default": False,
+        "sort_order": 13,
+        "category": "streak",
+        "unlock_requirement": {"achievement_id": "streak_100"},
+        "config": {
+            "background_id": "background_streak_throne",
+            "particle_id": "particle_streak_embers",
+            "effect_id": "effect_streak_champion_frame",
+            "display_slot": "prestige_bundle",
+            "set_id": "streak_champion",
+            "visibility_weight": 92,
+            "prestige_label": "连胜王者套装",
+        },
+    },
+    {
+        "id": "background_sprint_command",
+        "name": "冲刺司令台",
+        "description": "适合高强度执行者的霓虹战绩横幅。",
+        "element_type": "background",
+        "rarity": "rare",
+        "unlock_source": "achievement",
+        "is_default": False,
+        "sort_order": 20,
+        "category": "sprint",
+        "unlock_requirement": {"achievement_id": "sprint_10"},
+        "config": {
+            "gradient": ["#081629", "#0C3A73", "#17A0FF"],
+            "display_slot": "profile_banner",
+            "set_id": "sprint_elite",
+            "visibility_weight": 82,
+            "prestige_label": "冲刺战绩",
+        },
+    },
+    {
+        "id": "particle_sprint_velocity",
+        "name": "速度航迹",
+        "description": "高速粒子拖尾，用于强调领跑者气质。",
+        "element_type": "particle",
+        "rarity": "rare",
+        "unlock_source": "achievement",
+        "is_default": False,
+        "sort_order": 21,
+        "category": "sprint",
+        "unlock_requirement": {"achievement_id": "sprint_ahead"},
+        "config": {
+            "count": 40,
+            "shape": "trail",
+            "colors": ["#8BE9FD", "#4CC9F0", "#4361EE"],
+            "display_slot": "conquest_trail",
+            "set_id": "sprint_elite",
+            "visibility_weight": 78,
+            "prestige_label": "领跑航迹",
+        },
+    },
+    {
+        "id": "effect_sprint_victory_frame",
+        "name": "胜者王冠",
+        "description": "专为完美冲刺用户准备的王冠光环。",
+        "element_type": "effect",
+        "rarity": "epic",
+        "unlock_source": "achievement",
+        "is_default": False,
+        "sort_order": 22,
+        "category": "sprint",
+        "unlock_requirement": {"achievement_id": "sprint_perfect_5"},
+        "config": {
+            "effect_type": "pulse_glow",
+            "intensity": 0.82,
+            "color": "#80D8FF",
+            "display_slot": "avatar_frame",
+            "set_id": "sprint_elite",
+            "visibility_weight": 90,
+            "prestige_label": "冲刺王冠",
+        },
+    },
+    {
+        "id": "bundle_sprint_elite",
+        "name": "冲刺精英套装",
+        "description": "把战绩、领跑和头像荣耀感一次穿满。",
+        "element_type": "bundle",
+        "rarity": "epic",
+        "unlock_source": "achievement",
+        "is_default": False,
+        "sort_order": 23,
+        "category": "sprint",
+        "unlock_requirement": {"achievement_id": "sprint_10"},
+        "config": {
+            "background_id": "background_sprint_command",
+            "particle_id": "particle_sprint_velocity",
+            "effect_id": "effect_sprint_victory_frame",
+            "display_slot": "prestige_bundle",
+            "set_id": "sprint_elite",
+            "visibility_weight": 93,
+            "prestige_label": "冲刺精英套装",
+        },
+    },
+    {
+        "id": "background_explorer_command",
+        "name": "征服者星图",
+        "description": "为探索型用户准备的蓝金成就横幅。",
+        "element_type": "background",
+        "rarity": "rare",
+        "unlock_source": "achievement",
+        "is_default": False,
+        "sort_order": 30,
+        "category": "exploration",
+        "unlock_requirement": {"achievement_id": "nodes_100"},
+        "config": {
+            "gradient": ["#071E3D", "#0F4C75", "#3282B8"],
+            "display_slot": "profile_banner",
+            "set_id": "explorer_command",
+            "visibility_weight": 80,
+            "prestige_label": "征服星图",
+        },
+    },
+    {
+        "id": "particle_explorer_trail",
+        "name": "探索航迹",
+        "description": "小型星轨粒子让主页更有征途感。",
+        "element_type": "particle",
+        "rarity": "rare",
+        "unlock_source": "achievement",
+        "is_default": False,
+        "sort_order": 31,
+        "category": "exploration",
+        "unlock_requirement": {"achievement_id": "nodes_100"},
+        "config": {
+            "count": 34,
+            "shape": "star",
+            "colors": ["#BBE1FA", "#3282B8", "#F9ED69"],
+            "display_slot": "home_particle",
+            "set_id": "explorer_command",
+            "visibility_weight": 74,
+            "prestige_label": "探索航迹",
+        },
+    },
+    {
+        "id": "effect_explorer_orbit",
+        "name": "轨道勋环",
+        "description": "围绕头像的知识轨道，适合长期探索者。",
+        "element_type": "effect",
+        "rarity": "epic",
+        "unlock_source": "achievement",
+        "is_default": False,
+        "sort_order": 32,
+        "category": "exploration",
+        "unlock_requirement": {"achievement_id": "nodes_500"},
+        "config": {
+            "effect_type": "gravity_wave",
+            "intensity": 0.72,
+            "color": "#7FDBFF",
+            "display_slot": "avatar_frame",
+            "set_id": "explorer_command",
+            "visibility_weight": 88,
+            "prestige_label": "轨道勋环",
+        },
+    },
+    {
+        "id": "bundle_explorer_command",
+        "name": "探索统御套装",
+        "description": "把征服星图、轨道勋环和探索航迹串成整套身份。",
+        "element_type": "bundle",
+        "rarity": "epic",
+        "unlock_source": "achievement",
+        "is_default": False,
+        "sort_order": 33,
+        "category": "exploration",
+        "unlock_requirement": {"achievement_id": "nodes_100"},
+        "config": {
+            "background_id": "background_explorer_command",
+            "particle_id": "particle_explorer_trail",
+            "effect_id": "effect_explorer_orbit",
+            "display_slot": "prestige_bundle",
+            "set_id": "explorer_command",
+            "visibility_weight": 91,
+            "prestige_label": "探索统御套装",
+        },
+    },
+    {
+        "id": "background_hidden_hunter",
+        "name": "隐匿猎场",
+        "description": "低照度横幅配合高亮边框，适合隐藏成就猎人。",
+        "element_type": "background",
+        "rarity": "epic",
+        "unlock_source": "achievement",
+        "is_default": False,
+        "sort_order": 40,
+        "category": "hidden",
+        "unlock_requirement": {"achievement_id": "speed_learner"},
+        "config": {
+            "gradient": ["#08070D", "#1D1836", "#5C527F"],
+            "display_slot": "profile_banner",
+            "set_id": "hidden_hunter",
+            "visibility_weight": 86,
+            "prestige_label": "隐藏猎场",
+        },
+    },
+    {
+        "id": "particle_hidden_shards",
+        "name": "暗域碎星",
+        "description": "细碎银紫粒子，强化神秘感。",
+        "element_type": "particle",
+        "rarity": "epic",
+        "unlock_source": "achievement",
+        "is_default": False,
+        "sort_order": 41,
+        "category": "hidden",
+        "unlock_requirement": {"achievement_id": "night_owl"},
+        "config": {
+            "count": 28,
+            "shape": "diamond",
+            "colors": ["#C3ACD0", "#674188", "#F7EFE5"],
+            "display_slot": "home_particle",
+            "set_id": "hidden_hunter",
+            "visibility_weight": 79,
+            "prestige_label": "暗域碎星",
+        },
+    },
+    {
+        "id": "effect_hidden_hunter_mask",
+        "name": "猎影面甲",
+        "description": "头像外侧的神秘遮罩光环，强调隐藏猎人身份。",
+        "element_type": "effect",
+        "rarity": "epic",
+        "unlock_source": "achievement",
+        "is_default": False,
+        "sort_order": 42,
+        "category": "hidden",
+        "unlock_requirement": {"achievement_id": "speed_learner"},
+        "config": {
+            "effect_type": "pulse_ring",
+            "intensity": 0.84,
+            "color": "#A855F7",
+            "display_slot": "avatar_frame",
+            "set_id": "hidden_hunter",
+            "visibility_weight": 90,
+            "prestige_label": "猎影面甲",
+        },
+    },
+    {
+        "id": "bundle_hidden_hunter",
+        "name": "隐藏猎人套装",
+        "description": "给隐藏成就玩家的完整炫耀外观。",
+        "element_type": "bundle",
+        "rarity": "legendary",
+        "unlock_source": "achievement",
+        "is_default": False,
+        "sort_order": 43,
+        "category": "hidden",
+        "unlock_requirement": {"achievement_id": "speed_learner"},
+        "config": {
+            "background_id": "background_hidden_hunter",
+            "particle_id": "particle_hidden_shards",
+            "effect_id": "effect_hidden_hunter_mask",
+            "display_slot": "prestige_bundle",
+            "set_id": "hidden_hunter",
+            "visibility_weight": 96,
+            "prestige_label": "隐藏猎人套装",
+        },
+    },
+    {
+        "id": "background_mastery_halo",
+        "name": "掌控之幕",
+        "description": "蓝金渐变横幅，适合作为高完成度用户身份墙。",
+        "element_type": "background",
+        "rarity": "epic",
+        "unlock_source": "achievement",
+        "is_default": False,
+        "sort_order": 50,
+        "category": "mastery",
+        "unlock_requirement": {"achievement_id": "study_100hours"},
+        "config": {
+            "gradient": ["#0B132B", "#1C2541", "#3A506B"],
+            "display_slot": "profile_banner",
+            "set_id": "mastery_paragon",
+            "visibility_weight": 83,
+            "prestige_label": "掌控之幕",
+        },
+    },
+    {
+        "id": "effect_mastery_crown",
+        "name": "掌控徽冠",
+        "description": "中高强度徽冠效果，适合任务专家与高完成率用户。",
+        "element_type": "effect",
+        "rarity": "epic",
+        "unlock_source": "achievement",
+        "is_default": False,
+        "sort_order": 51,
+        "category": "mastery",
+        "unlock_requirement": {"achievement_id": "tasks_100"},
+        "config": {
+            "effect_type": "pulse_glow",
+            "intensity": 0.74,
+            "color": "#F6C90E",
+            "display_slot": "avatar_frame",
+            "set_id": "mastery_paragon",
+            "visibility_weight": 87,
+            "prestige_label": "掌控徽冠",
+        },
+    },
+    {
+        "id": "background_legendary_podium",
+        "name": "传奇颁奖台",
+        "description": "极高曝光的传奇横幅，用于宣告长期统治力。",
+        "element_type": "background",
+        "rarity": "legendary",
+        "unlock_source": "achievement",
+        "is_default": False,
+        "sort_order": 60,
+        "category": "prestige",
+        "unlock_requirement": {"achievement_id": "streak_365"},
+        "config": {
+            "gradient": ["#1A0900", "#5A2A00", "#C97C00"],
+            "display_slot": "profile_banner",
+            "set_id": "legendary_ascension",
+            "visibility_weight": 98,
+            "prestige_label": "传奇颁奖台",
+        },
+    },
+    {
+        "id": "particle_legendary_confetti",
+        "name": "传奇礼花",
+        "description": "专为传奇成就打造的高能礼花粒子。",
+        "element_type": "particle",
+        "rarity": "legendary",
+        "unlock_source": "achievement",
+        "is_default": False,
+        "sort_order": 61,
+        "category": "prestige",
+        "unlock_requirement": {"achievement_id": "sprint_streak_10"},
+        "config": {
+            "count": 48,
+            "shape": "burst",
+            "colors": ["#FFD700", "#FF7B00", "#FFF3B0"],
+            "display_slot": "home_particle",
+            "set_id": "legendary_ascension",
+            "visibility_weight": 97,
+            "prestige_label": "传奇礼花",
+        },
+    },
+    {
+        "id": "effect_legendary_frame",
+        "name": "王者圣环",
+        "description": "双层辉光边框，用于所有高价值炫耀场景。",
+        "element_type": "effect",
+        "rarity": "legendary",
+        "unlock_source": "achievement",
+        "is_default": False,
+        "sort_order": 62,
+        "category": "prestige",
+        "unlock_requirement": {"achievement_id": "streak_365"},
+        "config": {
+            "effect_type": "dual_ring",
+            "intensity": 0.92,
+            "color": "#FFD700",
+            "display_slot": "avatar_frame",
+            "set_id": "legendary_ascension",
+            "visibility_weight": 99,
+            "prestige_label": "王者圣环",
+        },
+    },
+    {
+        "id": "bundle_legendary_ascension",
+        "name": "传奇登阶套装",
+        "description": "专属于顶级成就玩家的终局身份套装。",
+        "element_type": "bundle",
+        "rarity": "legendary",
+        "unlock_source": "achievement",
+        "is_default": False,
+        "sort_order": 63,
+        "category": "prestige",
+        "unlock_requirement": {"achievement_id": "streak_365"},
+        "config": {
+            "background_id": "background_legendary_podium",
+            "particle_id": "particle_legendary_confetti",
+            "effect_id": "effect_legendary_frame",
+            "display_slot": "prestige_bundle",
+            "set_id": "legendary_ascension",
+            "visibility_weight": 100,
+            "prestige_label": "传奇登阶套装",
+        },
     },
 ]

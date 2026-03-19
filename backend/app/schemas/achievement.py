@@ -100,11 +100,20 @@ class AchievementMapNode(BaseModel):
     name: str = Field(description="Achievement name")
     rarity: AchievementRarity = Field(description="Achievement rarity")
     category: str = Field(description="Category")
+    lane: str = Field(default="prestige_lane", description="Prestige lane identifier")
+    lane_label: str = Field(default="声望进阶线", description="Prestige lane label")
     position: dict[str, float] = Field(description="Position {x, y}")
     is_unlocked: bool = Field(default=False, description="Is unlocked")
     is_hidden: bool = Field(default=False, description="Is hidden")
     prerequisites: list[str] = Field(default_factory=list, description="Prerequisites")
     parent_id: str | None = Field(default=None, description="Parent achievement ID")
+    display_state: str = Field(default="blocked", description="unlocked | ready_to_pursue | close_to_unlock | blocked | hidden_unrevealed")
+    is_recommended_target: bool = Field(default=False, description="Is the current best next target")
+    reward_preview: list[str] = Field(default_factory=list, description="Reward summary for the node")
+    progress_percentage: int = Field(default=0, description="User progress percentage")
+    progress_value: int = Field(default=0, description="User progress current value")
+    progress_target: int = Field(default=1, description="User progress target value")
+    unlock_hint: str | None = Field(default=None, description="What the user still needs to do")
 
 
 class AchievementMapResponse(BaseModel):
