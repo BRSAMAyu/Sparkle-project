@@ -259,7 +259,7 @@ class _ToolShellState extends State<ToolShell> {
         if (widget.fillHeight)
           Expanded(child: widget.body)
         else if (_isSheet)
-          Flexible(child: widget.body)
+          Flexible(child: SingleChildScrollView(child: widget.body))
         else
           widget.body,
         if (widget.footer != null) ...[
@@ -625,6 +625,39 @@ class ToolHeroChip extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class ToolMetricRow extends StatelessWidget {
+  const ToolMetricRow({
+    required this.children,
+    super.key,
+  });
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final useWrap = screenWidth < 360 || children.length > 3;
+
+    if (useWrap) {
+      return Wrap(
+        spacing: DS.spacing12,
+        runSpacing: DS.spacing12,
+        children: children,
+      );
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var i = 0; i < children.length; i++) ...[
+          if (i > 0) const SizedBox(width: DS.spacing12),
+          Expanded(child: children[i]),
+        ],
+      ],
     );
   }
 }

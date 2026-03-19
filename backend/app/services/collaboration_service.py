@@ -78,6 +78,10 @@ class CollaborationService:
             shared.task_id = resource_id
         elif resource_type == SharedResourceType.KNOWLEDGE_NODE:
             shared.knowledge_node_id = resource_id
+        elif resource_type == SharedResourceType.SEED_LIBRARY:
+            shared.seed_library_id = resource_id
+        elif resource_type == SharedResourceType.SEED_ITEM:
+            shared.seed_item_id = resource_id
         elif resource_type == SharedResourceType.COGNITIVE_FRAGMENT:
             shared.cognitive_fragment_id = resource_id
         elif resource_type == SharedResourceType.CURIOSITY_CAPSULE:
@@ -120,6 +124,10 @@ class CollaborationService:
                 stmt = stmt.where(SharedResource.task_id.isnot(None))
             elif resource_type == SharedResourceType.KNOWLEDGE_NODE:
                 stmt = stmt.where(SharedResource.knowledge_node_id.isnot(None))
+            elif resource_type == SharedResourceType.SEED_LIBRARY:
+                stmt = stmt.where(SharedResource.seed_library_id.isnot(None))
+            elif resource_type == SharedResourceType.SEED_ITEM:
+                stmt = stmt.where(SharedResource.seed_item_id.isnot(None))
             elif resource_type == SharedResourceType.COGNITIVE_FRAGMENT:
                 stmt = stmt.where(SharedResource.cognitive_fragment_id.isnot(None))
             elif resource_type == SharedResourceType.CURIOSITY_CAPSULE:
@@ -135,6 +143,8 @@ class CollaborationService:
             joinedload(SharedResource.plan),
             joinedload(SharedResource.task),
             joinedload(SharedResource.knowledge_node),
+            joinedload(SharedResource.seed_library),
+            joinedload(SharedResource.seed_item),
             joinedload(SharedResource.cognitive_fragment),
             joinedload(SharedResource.curiosity_capsule),
             joinedload(SharedResource.behavior_pattern),

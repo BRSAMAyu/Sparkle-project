@@ -13,6 +13,8 @@ from app.db.session import get_db
 from app.models.user import User
 from app.schemas.common import PaginationMeta
 from app.schemas.seed_content import (
+    BatchItemImportRequest,
+    BatchItemImportResponse,
     FewShotExample,
     ItemCreate,
     ItemInfo,
@@ -144,7 +146,7 @@ async def get_library(
     db: AsyncSession = Depends(get_db),
 ):
     """获取库详情"""
-    library = await service.get_library(db, library_id, include_items=False)
+    library = await service.get_library_for_user(db, library_id, current_user.id, include_items=False)
     if not library:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Library not found")
 
@@ -244,6 +246,44 @@ async def add_item(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
+@router.post(
+    "/seed-libraries/{library_id}/items/import",
+    response_model=BatchItemImportResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="批量导入内容项",
+    description="向指定种子库批量导入内容项，适用于用户上传和迁移场景"
+)
+async def import_items(
+    library_id: UUID,
+    import_data: BatchItemImportRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        is_superuser = getattr(current_user, "is_superuser", False)
+        created_items, errors = await service.batch_add_items(
+            db,
+            library_id,
+            import_data.items,
+            current_user.id,
+            is_superuser,
+        )
+        await db.commit()
+        return BatchItemImportResponse(
+            data=[ItemInfo.model_validate(item) for item in created_items],
+            imported_count=len(created_items),
+            failed_count=len(errors),
+            errors=errors,
+            message="Import completed" if not errors else "Import completed with partial failures",
+        )
+    except PermissionError as e:
+        await db.rollback()
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
 @router.get(
     "/seed-libraries/{library_id}/items",
     response_model=ItemListResponse,
@@ -266,6 +306,10 @@ async def get_items(
     db: AsyncSession = Depends(get_db),
 ):
     """获取库内容项"""
+    library = await service.get_library_for_user(db, library_id, current_user.id)
+    if not library:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Library not found")
+
     params = ItemListParams(
         library_id=library_id,
         item_type=item_type,
@@ -280,7 +324,7 @@ async def get_items(
         sort_order=sort_order,
     )
 
-    items, total = await service.get_items(db, params)
+    items, total = await service.get_items(db, params, user_id=current_user.id)
 
     total_pages = (total + page_size - 1) // page_size if total > 0 else 0
     meta = PaginationMeta(
@@ -318,6 +362,26 @@ async def update_item(
         return ItemResponse(data=ItemInfo.model_validate(item))
     except PermissionError as e:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.put(
+    "/seed-libraries/{library_id}/items/{item_id}",
+    response_model=ItemResponse,
+    summary="更新内容项（嵌套路径）",
+    description="兼容移动端与 REST 风格的嵌套内容项更新路径"
+)
+async def update_item_nested(
+    library_id: UUID,
+    item_id: UUID,
+    update_data: ItemUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    del library_id
+    return await update_item(item_id, update_data, current_user, db)
 
 
 @router.delete(
@@ -341,6 +405,25 @@ async def delete_item(
         return None
     except PermissionError as e:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.delete(
+    "/seed-libraries/{library_id}/items/{item_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="删除内容项（嵌套路径）",
+    description="兼容移动端与 REST 风格的嵌套内容项删除路径"
+)
+async def delete_item_nested(
+    library_id: UUID,
+    item_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    del library_id
+    return await delete_item(item_id, current_user, db)
 
 
 # ============ 订阅管理接口 ============
@@ -401,6 +484,47 @@ async def unsubscribe_library(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
     await db.commit()
     return None
+
+
+@router.post(
+    "/seed-libraries/{library_id}/subscribe",
+    response_model=SubscriptionResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="订阅库（兼容路径）",
+)
+async def subscribe_library_alias(
+    library_id: UUID,
+    subscription_data: SubscriptionCreate = SubscriptionCreate(),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await subscribe_library(library_id, subscription_data, current_user, db)
+
+
+@router.delete(
+    "/seed-libraries/{library_id}/unsubscribe",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="取消订阅（兼容路径）",
+)
+async def unsubscribe_library_alias(
+    library_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await unsubscribe_library(library_id, current_user, db)
+
+
+@router.get(
+    "/seed-libraries/my-subscriptions",
+    response_model=SubscriptionListResponse,
+    summary="我的订阅（兼容路径）",
+)
+async def get_my_subscriptions_alias(
+    is_enabled: bool | None = Query(None, description="仅返回启用的订阅"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await get_my_subscriptions(is_enabled, current_user, db)
 
 
 @router.get(
@@ -495,6 +619,29 @@ async def get_few_shot_examples(
         )
         for ex in examples
     ]
+
+
+@router.get(
+    "/seed-libraries/query/few-shot",
+    response_model=list[FewShotExample],
+    summary="获取 Few-shot 示例（兼容路径）",
+)
+async def get_few_shot_examples_alias(
+    subject: str | None = Query(None, description="学科筛选"),
+    difficulty_level: str | None = Query(None, description="难度筛选"),
+    task_type: str | None = Query(None, description="任务类型筛选"),
+    count: int = Query(3, ge=1, le=10, description="需要的示例数量"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await get_few_shot_examples(
+        subject=subject,
+        difficulty_level=difficulty_level,
+        task_type=task_type,
+        count=count,
+        current_user=current_user,
+        db=db,
+    )
 
 
 # ============ 管理员接口 ============

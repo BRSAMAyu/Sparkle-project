@@ -37,9 +37,10 @@ async def create_fragment(
     创建一个新的认知碎片 (闪念/拦截)
     """
     service = CognitiveService(db)
+    user_id = current_user.id
 
     fragment = await service.create_fragment(
-        user_id=current_user.id,
+        user_id=user_id,
         content=fragment_in.content,
         source_type=fragment_in.source_type,
         resource_type=fragment_in.resource_type,
@@ -55,7 +56,7 @@ async def create_fragment(
     # Trigger AI Analysis via Background Task
     background_tasks.add_task(
         _analyze_fragment_task,
-        current_user.id,
+        user_id,
         fragment.id,
         AsyncSessionLocal
     )

@@ -410,7 +410,7 @@ void main() {
 
       expect(transaction.isIncome, isFalse);
       expect(transaction.isExpense, isTrue);
-      expect(transaction.transactionTypeName, '商城购买');
+      expect(transaction.transactionTypeName, '购买');
     });
 
     test('returns correct display name for all transaction types', () {
@@ -423,7 +423,7 @@ void main() {
           balanceAfter: 30,
           createdAt: DateTime(2024, 1, 28),
         ).transactionTypeName,
-        '每日首胜',
+        '每日首成奖励',
       );
 
       expect(
@@ -435,7 +435,7 @@ void main() {
           balanceAfter: 400,
           createdAt: DateTime(2024, 1, 28),
         ).transactionTypeName,
-        '转账-转出',
+        '转出',
       );
 
       expect(
@@ -447,7 +447,7 @@ void main() {
           balanceAfter: 100,
           createdAt: DateTime(2024, 1, 28),
         ).transactionTypeName,
-        '转账-转入',
+        '转入',
       );
     });
   });

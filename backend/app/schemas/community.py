@@ -435,6 +435,8 @@ class SharedResourceTypeEnum(str, Enum):
     PLAN = "plan"
     TASK = "task"
     KNOWLEDGE_NODE = "knowledge_node"
+    SEED_LIBRARY = "seed_library"
+    SEED_ITEM = "seed_item"
     COGNITIVE_FRAGMENT = "cognitive_fragment"
     CURIOSITY_CAPSULE = "curiosity_capsule"
     COGNITIVE_PRISM_PATTERN = "cognitive_prism_pattern"
@@ -462,6 +464,8 @@ class SharedResourceInfo(BaseSchema):
     plan_id: UUID | None = None
     task_id: UUID | None = None
     knowledge_node_id: UUID | None = None
+    seed_library_id: UUID | None = None
+    seed_item_id: UUID | None = None
     cognitive_fragment_id: UUID | None = None
     curiosity_capsule_id: UUID | None = None
     behavior_pattern_id: UUID | None = None

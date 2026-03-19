@@ -5,7 +5,7 @@ from datetime import timezone, datetime
 from uuid import UUID, uuid4
 
 from loguru import logger
-from sqlalchemy import desc, select
+from sqlalchemy import desc, insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -23,10 +23,32 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
+_VECTOR_RUNTIME_ENABLED = True
+
+
 class CognitiveService:
     def __init__(self, db: AsyncSession):
         self.db = db
         self.analytics_service = AnalyticsService(db)
+
+    @staticmethod
+    def _is_vector_runtime_error(exc: Exception) -> bool:
+        lowered = str(exc).lower()
+        markers = (
+            "vector.so",
+            "pgvector",
+            'type "vector" does not exist',
+            "could not load library",
+            "operator does not exist: vector",
+        )
+        return any(marker in lowered for marker in markers)
+
+    @staticmethod
+    def _disable_vector_runtime(reason: str) -> None:
+        global _VECTOR_RUNTIME_ENABLED
+        if _VECTOR_RUNTIME_ENABLED:
+            logger.warning(f"Disabling cognitive vector runtime fallback: {reason}")
+        _VECTOR_RUNTIME_ENABLED = False
 
     def _sanitize_content(self, content: str) -> str:
         """Sanitize user content for logging."""
@@ -38,6 +60,37 @@ class CognitiveService:
         if not content:
             return ""
         return content if len(content) <= limit else f"{content[:limit - 1]}…"
+
+    async def _insert_fragment_without_embedding(self, fragment: CognitiveFragment) -> CognitiveFragment:
+        values = {
+            "id": fragment.id,
+            "user_id": fragment.user_id,
+            "task_id": fragment.task_id,
+            "analysis_status": fragment.analysis_status,
+            "error_message": fragment.error_message,
+            "source_type": fragment.source_type,
+            "resource_type": fragment.resource_type,
+            "resource_url": fragment.resource_url,
+            "content": fragment.content,
+            "sentiment": fragment.sentiment,
+            "persona_version": fragment.persona_version,
+            "source_event_id": fragment.source_event_id,
+            "sensitive_tags_encrypted": fragment.sensitive_tags_encrypted,
+            "sensitive_tags_version": fragment.sensitive_tags_version,
+            "sensitive_tags_key_id": fragment.sensitive_tags_key_id,
+            "tags": fragment.tags,
+            "error_tags": fragment.error_tags,
+            "context_tags": fragment.context_tags,
+            "severity": fragment.severity,
+            "created_at": fragment.created_at,
+            "updated_at": _utcnow(),
+            "deleted_at": fragment.deleted_at,
+        }
+        await self.db.execute(insert(CognitiveFragment.__table__).values(**values))
+        await self.db.commit()
+        result = await self.db.execute(select(CognitiveFragment).where(CognitiveFragment.id == fragment.id))
+        stored = result.scalar_one()
+        return stored
 
     async def create_fragment(
         self,
@@ -95,17 +148,27 @@ class CognitiveService:
         logger.info(f"Creating fragment {fragment.id} for user {user_id}: {self._sanitize_content(content)}")
 
         # 2. Generate Embedding
-        try:
-            embedding = await embedding_service.get_embedding(content)
-            fragment.embedding = embedding
-        except Exception as e:
-            logger.error(f"Failed to generate embedding for fragment: {e}")
-            # We continue without embedding, but RAG won't work for this item until updated
+        if _VECTOR_RUNTIME_ENABLED:
+            try:
+                embedding = await embedding_service.get_embedding(content)
+                fragment.embedding = embedding
+            except Exception as e:
+                logger.error(f"Failed to generate embedding for fragment: {e}")
+                # We continue without embedding, but RAG won't work for this item until updated
 
-        self.db.add(fragment)
-        await self.db.commit()
-        await self.db.refresh(fragment)
-        
+        try:
+            self.db.add(fragment)
+            await self.db.commit()
+            await self.db.refresh(fragment)
+        except Exception as exc:
+            await self.db.rollback()
+            if not self._is_vector_runtime_error(exc):
+                raise
+
+            self._disable_vector_runtime(str(exc))
+            fragment.embedding = None
+            fragment = await self._insert_fragment_without_embedding(fragment)
+
         # Publish cognitive fragment created event
         await event_bus.publish(
             "cognitive.fragment.created",
@@ -187,21 +250,46 @@ class CognitiveService:
             else:
                 # 2. RAG: Retrieve Similar Fragments (Raw + HyDE)
                 similar_fragments: list[CognitiveFragment] = []
-                if fragment.embedding is not None:
-                    rag_query = (
-                        select(CognitiveFragment)
-                        .where(CognitiveFragment.user_id == user_id)
-                        .where(CognitiveFragment.id != fragment_id)
-                        .where(CognitiveFragment.embedding.isnot(None))
-                        .order_by(CognitiveFragment.embedding.cosine_distance(fragment.embedding))
-                        .limit(phase5_config.RAG_RAW_RETRIEVAL_LIMIT)
-                    )
-                    rag_result = await self.db.execute(rag_query)
-                    similar_fragments = rag_result.scalars().all()
+                fragment_embedding = None
+                if _VECTOR_RUNTIME_ENABLED:
+                    fragment_embedding = fragment.__dict__.get("embedding")
+                    if fragment_embedding is None:
+                        try:
+                            embedding_result = await self.db.execute(
+                                select(CognitiveFragment.embedding).where(CognitiveFragment.id == fragment_id)
+                            )
+                            fragment_embedding = embedding_result.scalar_one_or_none()
+                        except Exception as exc:
+                            if self._is_vector_runtime_error(exc):
+                                self._disable_vector_runtime(str(exc))
+                                fragment_embedding = None
+                            else:
+                                raise
+
+                if _VECTOR_RUNTIME_ENABLED and fragment_embedding is not None:
+                    try:
+                        rag_query = (
+                            select(CognitiveFragment)
+                            .where(CognitiveFragment.user_id == user_id)
+                            .where(CognitiveFragment.id != fragment_id)
+                            .where(CognitiveFragment.embedding.isnot(None))
+                            .order_by(CognitiveFragment.embedding.cosine_distance(fragment_embedding))
+                            .limit(phase5_config.RAG_RAW_RETRIEVAL_LIMIT)
+                        )
+                        rag_result = await self.db.execute(rag_query)
+                        similar_fragments = rag_result.scalars().all()
+                    except Exception as exc:
+                        if self._is_vector_runtime_error(exc):
+                            self._disable_vector_runtime(str(exc))
+                            similar_fragments = []
+                        else:
+                            raise
 
                 # HyDE: only for short queries
                 hyde_fragments: list[CognitiveFragment] = []
                 use_hyde = (
+                    _VECTOR_RUNTIME_ENABLED
+                    and
                     phase5_config.HYDE_ENABLED
                     and fragment.content
                     and len(fragment.content) < phase5_config.HYDE_QUERY_LENGTH_THRESHOLD
@@ -214,16 +302,23 @@ class CognitiveService:
                         )
                         if hyde_doc:
                             hyde_embedding = await embedding_service.get_embedding(hyde_doc)
-                            hyde_query = (
-                                select(CognitiveFragment)
-                                .where(CognitiveFragment.user_id == user_id)
-                                .where(CognitiveFragment.id != fragment_id)
-                                .where(CognitiveFragment.embedding.isnot(None))
-                                .order_by(CognitiveFragment.embedding.cosine_distance(hyde_embedding))
-                                .limit(phase5_config.RAG_HYDE_RETRIEVAL_LIMIT)
-                            )
-                            hyde_result = await self.db.execute(hyde_query)
-                            hyde_fragments = hyde_result.scalars().all()
+                            try:
+                                hyde_query = (
+                                    select(CognitiveFragment)
+                                    .where(CognitiveFragment.user_id == user_id)
+                                    .where(CognitiveFragment.id != fragment_id)
+                                    .where(CognitiveFragment.embedding.isnot(None))
+                                    .order_by(CognitiveFragment.embedding.cosine_distance(hyde_embedding))
+                                    .limit(phase5_config.RAG_HYDE_RETRIEVAL_LIMIT)
+                                )
+                                hyde_result = await self.db.execute(hyde_query)
+                                hyde_fragments = hyde_result.scalars().all()
+                            except Exception as exc:
+                                if self._is_vector_runtime_error(exc):
+                                    self._disable_vector_runtime(str(exc))
+                                    hyde_fragments = []
+                                else:
+                                    raise
                     except asyncio.TimeoutError:
                         hyde_cancelled = True
                     except Exception as e:

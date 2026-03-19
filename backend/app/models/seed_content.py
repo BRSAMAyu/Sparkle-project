@@ -8,7 +8,7 @@ from enum import Enum
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import JSON, Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import deferred, relationship
 
 from app.models.base import GUID, BaseModel
 
@@ -203,10 +203,12 @@ class SeedItem(BaseModel):
     tags = Column(JSONBCompat, nullable=True, doc="标签数组，用于分类和搜索")
 
     # 向量嵌入 (用于语义搜索)
-    embedding = Column(
-        VectorCompat,
-        nullable=True,
-        doc="内容向量嵌入，用于语义相似度搜索"
+    embedding = deferred(
+        Column(
+            VectorCompat,
+            nullable=True,
+            doc="内容向量嵌入，用于语义相似度搜索"
+        )
     )
 
     # 排序与状态

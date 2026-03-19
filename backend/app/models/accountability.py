@@ -9,6 +9,7 @@ Models:
 import enum
 
 from sqlalchemy import (
+    JSON,
     Column,
     DateTime,
     Enum,
@@ -23,6 +24,8 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
 from app.models.base import GUID, BaseModel
+
+JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 
 
 class AccountabilityStatus(str, enum.Enum):
@@ -117,8 +120,8 @@ class AccountabilityCheckin(BaseModel):
 
     # 互动字段
     likes = Column(Integer, nullable=False, default=0)  # 点赞数
-    liked_by = Column(JSONB, nullable=False, default=list)  # 点赞用户ID列表
-    encouragements = Column(JSONB, nullable=False, default=list)  # 鼓励消息列表
+    liked_by = Column(JSONBCompat, nullable=False, default=list)  # 点赞用户ID列表
+    encouragements = Column(JSONBCompat, nullable=False, default=list)  # 鼓励消息列表
 
     # Relationships
     partnership = relationship("AccountabilityPartnership", back_populates="checkins")

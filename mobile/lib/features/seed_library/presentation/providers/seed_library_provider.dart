@@ -161,10 +161,15 @@ class SeedLibraryDetailNotifier extends StateNotifier<SeedLibraryDetailState> {
 
     try {
       final library = await _repository.getLibrary(libraryId);
+      final subscriptions = await _repository.getMySubscriptions();
+      final matchedSubscription = subscriptions.items.cast<UserLibrarySubscription?>().firstWhere(
+            (sub) => sub?.libraryId == libraryId,
+            orElse: () => null,
+          );
       state = state.copyWith(
         library: library,
         isLoadingLibrary: false,
-        isSubscribed: library.isSubscribed ?? false,
+        isSubscribed: matchedSubscription != null,
       );
     } catch (e) {
       state = state.copyWith(
@@ -269,6 +274,25 @@ class SeedLibraryDetailNotifier extends StateNotifier<SeedLibraryDetailState> {
       }
 
       return item;
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> importItems(
+    List<Map<String, dynamic>> items, {
+    bool continueOnError = true,
+  }) async {
+    try {
+      final result = await _repository.importItems(
+        libraryId,
+        items: items,
+        continueOnError: continueOnError,
+      );
+      await loadLibrary();
+      await loadItems(refresh: true);
+      return result;
     } catch (e) {
       state = state.copyWith(error: e.toString());
       rethrow;

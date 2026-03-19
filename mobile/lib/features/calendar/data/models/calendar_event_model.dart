@@ -25,31 +25,31 @@ class CalendarEventModel {
       CalendarEventModel(
         id: json['id'] as String,
         title: json['title'] as String,
-        description: json['description'] as String?,
-        startTime: DateTime.parse(json['startTime'] as String),
-        endTime: DateTime.parse(json['endTime'] as String),
-        isAllDay: json['isAllDay'] as bool? ?? false,
-        location: json['location'] as String?,
-        colorValue: (json['colorValue'] as int?) ??
-            (json['color'] != null
-                ? _parseColor(json['color'])
+        description: _stringOrNull(json['description']),
+        startTime: _parseDateTime(_valueForKeys(json, ['startTime', 'start_time'])),
+        endTime: _parseDateTime(_valueForKeys(json, ['endTime', 'end_time'])),
+        isAllDay: (_valueForKeys(json, ['isAllDay', 'is_all_day']) as bool?) ?? false,
+        location: _stringOrNull(json['location']),
+        colorValue: (_valueForKeys(json, ['colorValue', 'color_value']) as int?) ??
+            (_valueForKeys(json, ['color']) != null
+                ? _parseColor(_valueForKeys(json, ['color']))
                 : 0xFF2196F3),
-        reminderMinutes: (json['reminderMinutes'] as List<dynamic>?)
+        reminderMinutes: (_valueForKeys(json, ['reminderMinutes', 'reminder_minutes']) as List<dynamic>?)
                 ?.map((e) => e as int)
                 .toList() ??
             [],
-        recurrenceRule: json['recurrenceRule'] as String?,
-        recurrenceEndDate: json['recurrenceEndDate'] != null
-            ? DateTime.parse(json['recurrenceEndDate'] as String)
+        recurrenceRule: _stringOrNull(_valueForKeys(json, ['recurrenceRule', 'recurrence_rule'])),
+        recurrenceEndDate: _valueForKeys(json, ['recurrenceEndDate', 'recurrence_end_date']) != null
+            ? _parseDateTime(_valueForKeys(json, ['recurrenceEndDate', 'recurrence_end_date']))
             : null,
-        source: json['source'] as String? ?? 'manual',
-        sourceMetadata: json['sourceMetadata'] as Map<String, dynamic>?,
-        taskId: json['taskId'] as String?,
-        planId: json['planId'] as String?,
-        isSynced: json['isSynced'] as bool? ?? false,
-        isDeleted: json['isDeleted'] as bool? ?? false,
-        createdAt: DateTime.parse(json['createdAt'] as String),
-        updatedAt: DateTime.parse(json['updatedAt'] as String),
+        source: _stringOrNull(json['source']) ?? 'manual',
+        sourceMetadata: _mapOrNull(_valueForKeys(json, ['sourceMetadata', 'source_metadata'])),
+        taskId: _stringOrNull(_valueForKeys(json, ['taskId', 'task_id'])),
+        planId: _stringOrNull(_valueForKeys(json, ['planId', 'plan_id'])),
+        isSynced: (_valueForKeys(json, ['isSynced', 'is_synced']) as bool?) ?? false,
+        isDeleted: (_valueForKeys(json, ['isDeleted', 'is_deleted']) as bool?) ?? false,
+        createdAt: _parseDateTime(_valueForKeys(json, ['createdAt', 'created_at'])),
+        updatedAt: _parseDateTime(_valueForKeys(json, ['updatedAt', 'updated_at'])),
       );
 
   final String id;
@@ -167,6 +167,34 @@ class CalendarEventModel {
       return _namedColorToValue(color) ?? 0xFF2196F3;
     }
     return 0xFF2196F3;
+  }
+
+  static dynamic _valueForKeys(Map<String, dynamic> json, List<String> keys) {
+    for (final key in keys) {
+      if (json.containsKey(key)) {
+        return json[key];
+      }
+    }
+    return null;
+  }
+
+  static DateTime _parseDateTime(dynamic value) {
+    if (value is String) {
+      return DateTime.parse(value);
+    }
+    throw FormatException('Invalid datetime payload: $value');
+  }
+
+  static String? _stringOrNull(dynamic value) => value is String ? value : null;
+
+  static Map<String, dynamic>? _mapOrNull(dynamic value) {
+    if (value is Map<String, dynamic>) {
+      return value;
+    }
+    if (value is Map) {
+      return value.map((key, entry) => MapEntry('$key', entry));
+    }
+    return null;
   }
 
   static String _colorToHex(int colorValue) {

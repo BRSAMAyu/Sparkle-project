@@ -811,11 +811,25 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
 
   Widget _buildCapsuleShareBubble(BuildContext context, bool isMe) {
     final data = widget.message.contentData ?? {};
+    final sharedResourceType = data['resource_type'] as String?;
+    if (sharedResourceType == 'seed_library' || sharedResourceType == 'seed_item') {
+      return _buildRichCardWrapper(
+        isMe: isMe,
+        child: _buildGenericSeedShareCard(isMe, data),
+      );
+    }
+
     final payload = UniversalSharePayload(
       contentType: ShareableContentType.capsule,
-      resourceId: data['capsule_id'] as String? ?? '',
-      title: data['title'] as String? ?? widget.message.content ?? '时光胶囊',
-      subtitle: data['summary'] as String?,
+      resourceId:
+          data['resource_id'] as String? ?? data['capsule_id'] as String? ?? '',
+      title:
+          data['resource_title'] as String? ??
+          data['title'] as String? ??
+          widget.message.content ??
+          '时光胶囊',
+      subtitle:
+          data['resource_summary'] as String? ?? data['summary'] as String?,
       metadata: {
         'type': data['type'],
         'depth': data['depth'],
@@ -831,6 +845,81 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
         payload,
         isCompact: false,
         onTap: () => _handleSharedResourceTap(payload),
+      ),
+    );
+  }
+
+  Widget _buildGenericSeedShareCard(bool isMe, Map<String, dynamic> data) {
+    final resourceType = data['resource_type'] as String? ?? 'seed_item';
+    final title =
+        data['resource_title'] as String? ??
+        widget.message.content ??
+        (resourceType == 'seed_library' ? '种子库' : '种子内容');
+    final summary = data['resource_summary'] as String?;
+
+    return Container(
+      padding: const EdgeInsets.all(DS.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(DS.sm),
+                decoration: BoxDecoration(
+                  color: DS.brandPrimary.withValues(alpha: 0.15),
+                  borderRadius: DS.borderRadius8,
+                ),
+                child: Icon(
+                  resourceType == 'seed_library' ? Icons.inventory_2 : Icons.auto_stories,
+                  color: isMe ? Colors.white : DS.brandPrimary,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: DS.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: isMe ? Colors.white : DS.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      resourceType == 'seed_library' ? '种子库分享' : '种子内容分享',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color:
+                            isMe
+                                ? Colors.white.withValues(alpha: 0.72)
+                                : DS.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (summary != null && summary.isNotEmpty) ...[
+            const SizedBox(height: DS.sm),
+            Text(
+              summary,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 13,
+                color:
+                    isMe ? Colors.white.withValues(alpha: 0.92) : DS.textSecondary,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

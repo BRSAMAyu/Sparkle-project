@@ -857,7 +857,9 @@ class AchievementEngine:
                             amount=quantity,
                             source=f"achievement:{achievement.id}",
                             transaction_type=PhotonTransactionType.GRANT_ACHIEVEMENT,
-                            metadata={"achievement_name": achievement.name}
+                            metadata={"achievement_name": achievement.name},
+                            related_item_id=achievement.id,
+                            record_history=True,
                         )
 
                         logger.info(f"Granted {quantity} photons to user {user_id} for achievement {achievement.id}")
@@ -1730,7 +1732,9 @@ class ContractService:
                     "contract_id": contract.id,
                     "stake": contract.photon_stake,
                     "multiplier": contract.reward_multiplier
-                }
+                },
+                related_item_id=str(contract.id),
+                record_history=True,
             )
 
             logger.info(f"Contract rewards granted: {reward_amount} photons to user {contract.user_id}")
@@ -1752,7 +1756,9 @@ class ContractService:
                 metadata={
                     "contract_id": contract.id,
                     "failure_reason": contract.failure_reason
-                }
+                },
+                related_item_id=str(contract.id),
+                record_history=True,
             )
 
             logger.info(f"Contract photons deducted: {contract.photon_stake} from user {contract.user_id}")

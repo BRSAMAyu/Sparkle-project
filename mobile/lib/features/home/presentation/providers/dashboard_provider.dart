@@ -254,6 +254,7 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
       );
     } catch (e) {
       debugPrint('Error loading dashboard: $e');
+      state = DashboardState.error(e.toString());
     }
   }
 

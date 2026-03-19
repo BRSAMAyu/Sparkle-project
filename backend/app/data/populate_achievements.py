@@ -36,6 +36,13 @@ ACHIEVEMENT_SYNC_FIELDS = [
     "category",
     "parent_id",
 ]
+ACHIEVEMENT_FIELD_DEFAULTS = {
+    "trigger_config": {},
+    "is_hidden": False,
+    "visual_effect_type": "none",
+    "reward_config": [],
+    "is_limited": False,
+}
 GALAXY_SKIN_SYNC_FIELDS = [
     "name",
     "description",
@@ -112,7 +119,11 @@ async def sync_achievement_definitions(db: AsyncSession) -> tuple[int, int]:
             db.add(achievement)
 
         for field in ACHIEVEMENT_SYNC_FIELDS:
-            setattr(achievement, field, data.get(field))
+            if field in data:
+                value = data[field]
+            else:
+                value = ACHIEVEMENT_FIELD_DEFAULTS.get(field)
+            setattr(achievement, field, value)
 
         i18n_entry = i18n_map.get(data["id"])
         if i18n_entry:

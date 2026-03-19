@@ -6,11 +6,13 @@ from __future__ import annotations
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.config import settings
 from app.db.session import get_db
+from app.models.achievement import UserAchievement
 from app.models.user import User
 from app.models.visual_element import VisualElementRarity, VisualElementType
 from app.schemas.visual_element import (
@@ -193,6 +195,7 @@ async def unlock_element_internal(
     request: UnlockElementRequest,
     locale: str | None = Query(None, description="语言偏好"),
     accept_language: str | None = Header(None),
+    _: None = Depends(verify_internal_token),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> UnlockElementResponse:
@@ -226,6 +229,18 @@ async def unlock_by_achievement(
     """
     service = VisualElementService(db)
     resolved_locale = _resolve_locale(locale, accept_language)
+
+    achievement_result = await db.execute(
+        select(UserAchievement).where(
+            and_(
+                UserAchievement.user_id == current_user.id,
+                UserAchievement.achievement_id == achievement_id,
+            )
+        )
+    )
+    achievement = achievement_result.scalar_one_or_none()
+    if achievement is None or achievement.unlocked_at is None:
+        raise HTTPException(status_code=403, detail="Achievement not unlocked")
 
     return await service.unlock_element_by_achievement(
         current_user.id, achievement_id, resolved_locale

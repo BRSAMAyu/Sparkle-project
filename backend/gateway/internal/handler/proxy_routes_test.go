@@ -101,8 +101,11 @@ func TestProxyRoutesHandler_RegisterProxyRoutes(t *testing.T) {
 		"POST /api/v1/tasks",
 		"GET /api/v1/tasks/today",
 		"GET /api/v1/tasks/:id",
+		"GET /api/v1/tasks/:id/resources",
 		"PUT /api/v1/tasks/:id",
 		"DELETE /api/v1/tasks/:id",
+		"POST /api/v1/tasks/:id/resources",
+		"DELETE /api/v1/tasks/:id/resources/:resourceId",
 	}
 
 	// Expected route patterns for plans (Python uses PATCH, not PUT)
@@ -147,4 +150,3 @@ func TestProxyRoutesHandler_RegisterProxyRoutes(t *testing.T) {
 		t.Errorf("Expected at least 50 routes to be registered, got %d", len(routes))
 	}
 }
-

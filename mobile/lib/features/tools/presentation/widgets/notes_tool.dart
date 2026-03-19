@@ -123,14 +123,11 @@ class _NotesToolState extends State<NotesTool> {
           ? Center(child: CircularProgressIndicator(color: accent))
           : LayoutBuilder(
               builder: (context, constraints) {
-                final compact = constraints.maxWidth < 620;
-                final editorHeight = compact ? 260.0 : 320.0;
+                final editorHeight = (MediaQuery.sizeOf(context).height * 0.3).clamp(180.0, 360.0);
 
                 return Column(
                   children: [
-                    Wrap(
-                      spacing: DS.spacing12,
-                      runSpacing: DS.spacing12,
+                    ToolMetricRow(
                       children: [
                         ToolMetricCard(
                           label: '字数',

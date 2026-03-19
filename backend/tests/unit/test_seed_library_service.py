@@ -13,7 +13,7 @@ from typing import List, Tuple
 import pytest
 
 from app.services.seed_library_service import SeedLibraryService
-from app.models.seed_content import SeedItem, SeedLibrary
+from app.models.seed_content import LibraryVisibility, SeedItem, SeedLibrary
 
 
 # ============ Test Fixtures ============
@@ -256,6 +256,108 @@ class TestHybridSearchTotalCalculation:
         # 语义搜索为空（0 < 20），所以 total = len(item_map) = 5
         assert total == 5
         assert len(items) == 5
+
+
+class TestSeedLibraryAccessAndPromptContext:
+    """测试种子库权限与 AI 上下文接入。"""
+
+    @pytest.mark.asyncio
+    async def test_can_access_library_allows_owner_and_subscription(self, mock_db, service):
+        owner_id = uuid.uuid4()
+        library = MagicMock(spec=SeedLibrary)
+        library.id = uuid.uuid4()
+        library.owner_id = owner_id
+        library.deleted_at = None
+        library.visibility = LibraryVisibility.PRIVATE.value
+        library.is_official = False
+
+        assert await service.can_access_library(mock_db, library, owner_id) is True
+
+        mock_db.execute.return_value.scalar_one_or_none.return_value = object()
+        assert await service.can_access_library(mock_db, library, uuid.uuid4()) is True
+
+    @pytest.mark.asyncio
+    async def test_get_library_for_user_hides_inaccessible_private_library(self, mock_db, service):
+        library = MagicMock(spec=SeedLibrary)
+        library.id = uuid.uuid4()
+        library.owner_id = uuid.uuid4()
+        library.deleted_at = None
+        library.visibility = LibraryVisibility.PRIVATE.value
+        library.is_official = False
+
+        with patch.object(service, "get_library", AsyncMock(return_value=library)), patch.object(
+            service, "can_access_library", AsyncMock(return_value=False)
+        ):
+            result = await service.get_library_for_user(mock_db, library.id, uuid.uuid4())
+
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_get_items_returns_empty_for_inaccessible_library(self, mock_db, service):
+        library_id = uuid.uuid4()
+        params = SimpleNamespace(
+            library_id=library_id,
+            item_type=None,
+            subject=None,
+            difficulty_level=None,
+            tags=None,
+            is_active=True,
+            search=None,
+            page=1,
+            page_size=20,
+            sort_by="order_index",
+            sort_order="asc",
+        )
+
+        with patch.object(service, "get_library", AsyncMock(return_value=MagicMock(spec=SeedLibrary))), patch.object(
+            service, "can_access_library", AsyncMock(return_value=False)
+        ):
+            items, total = await service.get_items(mock_db, params, user_id=uuid.uuid4())
+
+        assert items == []
+        assert total == 0
+
+    @pytest.mark.asyncio
+    async def test_get_few_shot_examples_uses_accessible_library_ids(self, mock_db, service):
+        library_id = uuid.uuid4()
+        user_id = uuid.uuid4()
+
+        item = MagicMock(spec=SeedItem)
+        item.subject = "math"
+        item.difficulty_level = "beginner"
+        item.content = None
+        item.content_data = {
+            "input": "1+1=?",
+            "output": "2",
+            "explanation": "基础加法",
+        }
+
+        execute_result = MagicMock()
+        execute_result.scalars.return_value.all.return_value = [item]
+        mock_db.execute.return_value = execute_result
+
+        with patch.object(
+            service,
+            "_get_accessible_library_ids",
+            AsyncMock(return_value=[library_id]),
+        ) as accessible_mock:
+            examples = await service.get_few_shot_examples(
+                mock_db,
+                user_id=user_id,
+                subject="math",
+                count=1,
+            )
+
+        accessible_mock.assert_awaited_once()
+        assert examples == [
+            {
+                "input": "1+1=?",
+                "output": "2",
+                "explanation": "基础加法",
+                "subject": "math",
+                "difficulty_level": "beginner",
+            }
+        ]
 
 
 # ============ P0 #1: Backfill Embeddings Commit Tests ============

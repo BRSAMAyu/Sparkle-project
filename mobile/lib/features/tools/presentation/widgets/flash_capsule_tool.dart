@@ -216,9 +216,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
             ),
           ),
           const SizedBox(height: DS.spacing16),
-          Wrap(
-            spacing: DS.spacing12,
-            runSpacing: DS.spacing12,
+          ToolMetricRow(
             children: [
               ToolMetricCard(
                 label: '知识点长度',

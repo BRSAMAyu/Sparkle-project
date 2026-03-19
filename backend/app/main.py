@@ -181,13 +181,15 @@ async def lifespan(app: FastAPI):
                     _ensure_achievements,
                     _ensure_galaxy_skins,
                 )
+                from app.data.seed_content_initial import initialize_seed_libraries
                 await _ensure_achievements(db)
                 await _ensure_galaxy_skins(db)
+                await initialize_seed_libraries(db)
                 await db.commit()
-                logger.info("Global achievements & galaxy skins ensured")
+                logger.info("Global achievements, galaxy skins, and official seed libraries ensured")
             except Exception as e:
                 await db.rollback()
-                logger.warning(f"Failed to ensure global achievements (non-fatal): {e}")
+                logger.warning(f"Failed to ensure startup reference data (non-fatal): {e}")
 
             # 1. 恢复中断的 Job
             job_service = JobService()

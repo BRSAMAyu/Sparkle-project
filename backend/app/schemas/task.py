@@ -159,6 +159,37 @@ class TaskDetail(TaskBase):
     tool_result_id: str | None = Field(description="Tool result ID")
 
 
+class TaskResourceLinkCreate(BaseModel):
+    """Attach a resource to a task."""
+
+    resource_type: str = Field(
+        ...,
+        pattern="^(seed_library|seed_item|knowledge_node|external_url|file|note)$",
+        description="Resource type",
+    )
+    resource_id: UUID | None = Field(default=None, description="Referenced resource ID")
+    title: str | None = Field(default=None, max_length=255, description="Display title")
+    url: str | None = Field(default=None, max_length=500, description="External URL")
+    summary: str | None = Field(default=None, description="Short summary")
+    resource_metadata: dict | None = Field(default=None, description="Extra metadata")
+    order_index: int | None = Field(default=None, ge=0, description="Display order")
+    is_primary: bool = Field(default=False, description="Primary resource flag")
+
+
+class TaskResourceLinkInfo(BaseSchema):
+    """Attached task resource."""
+
+    task_id: UUID = Field(description="Task ID")
+    resource_type: str = Field(description="Resource type")
+    resource_id: UUID | None = Field(default=None, description="Referenced resource ID")
+    title: str | None = Field(default=None, description="Display title")
+    url: str | None = Field(default=None, description="External URL")
+    summary: str | None = Field(default=None, description="Short summary")
+    resource_metadata: dict | None = Field(default=None, description="Extra metadata")
+    order_index: int = Field(default=0, description="Display order")
+    is_primary: bool = Field(default=False, description="Primary resource flag")
+
+
 class TaskSummary(BaseModel):
     """Task summary statistics"""
 

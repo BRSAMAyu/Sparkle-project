@@ -181,7 +181,7 @@ class BehaviorPatternService:
         query = select(BehaviorPattern).where(
             BehaviorPattern.user_id == user_id,
             BehaviorPattern.pattern_name == pattern_name,
-            not BehaviorPattern.is_archived
+            BehaviorPattern.is_archived.is_(False),
         )
         result = await self.db.execute(query)
         pattern = result.scalars().first()

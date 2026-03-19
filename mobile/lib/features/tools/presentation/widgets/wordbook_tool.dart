@@ -209,9 +209,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
             ],
             body: Column(
               children: [
-                Wrap(
-                  spacing: DS.spacing12,
-                  runSpacing: DS.spacing12,
+                ToolMetricRow(
                   children: [
                     ToolMetricCard(
                       label: '总词条',
@@ -291,7 +289,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                 ),
                 const SizedBox(height: DS.spacing16),
                 SizedBox(
-                  height: 420,
+                  height: (MediaQuery.sizeOf(context).height * 0.4).clamp(280, 420),
                   child: TabBarView(
                     controller: _tabController,
                     children: [
@@ -414,7 +412,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
       body: Column(
         children: [
           SizedBox(
-            height: 360,
+            height: (MediaQuery.sizeOf(context).height * 0.35).clamp(240, 360),
             child: ToolSectionCard(
               accentColor: _showAnswer ? DS.success : DS.warning,
               title: word['word'] as String? ?? '',

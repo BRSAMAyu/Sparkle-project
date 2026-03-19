@@ -79,7 +79,7 @@ class ProfileSnapshotService:
     async def _collect_tags(self, user_id: UUID) -> list[str]:
         pattern_stmt = select(BehaviorPattern.pattern_name).where(
             BehaviorPattern.user_id == user_id,
-            not BehaviorPattern.is_archived
+            BehaviorPattern.is_archived.is_(False),
         ).order_by(desc(BehaviorPattern.confidence_score)).limit(5)
         pattern_result = await self.db.execute(pattern_stmt)
         pattern_tags = [row[0] for row in pattern_result.all()]

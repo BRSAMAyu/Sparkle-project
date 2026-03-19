@@ -53,6 +53,18 @@ class MemoryService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
+    @staticmethod
+    def _is_vector_runtime_error(exc: Exception) -> bool:
+        lowered = str(exc).lower()
+        markers = (
+            "vector.so",
+            "pgvector",
+            'type "vector" does not exist',
+            "could not load library",
+            "operator does not exist: vector",
+        )
+        return any(marker in lowered for marker in markers)
+
     async def upsert_preference(
         self,
         user_id: UUID,
@@ -574,8 +586,16 @@ class MemoryService:
             correction_count=0,
         )
         self.db.add(record)
-        await self.db.commit()
-        await self.db.refresh(record)
+        try:
+            await self.db.commit()
+            await self.db.refresh(record)
+        except Exception as exc:
+            await self.db.rollback()
+            if not self._is_vector_runtime_error(exc):
+                raise
+            logger.warning(f"Skipping episodic memory write because vector runtime is unavailable: {exc}")
+            MEMORY_WRITE_TOTAL.labels(type="episodic", status="degraded").inc()
+            return None
         await SystemUpdateService().enqueue(
             user_id,
             build_system_update(

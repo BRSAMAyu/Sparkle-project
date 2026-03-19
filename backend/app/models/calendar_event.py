@@ -6,6 +6,7 @@ Calendar Event Model - 日历事件系统
 from datetime import timezone, datetime
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     Column,
     DateTime,
@@ -19,7 +20,7 @@ from sqlalchemy.orm import relationship
 
 from app.models.base import GUID, BaseModel
 
-JSONBCompat = JSONB()
+JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 
 
 class EventSource:

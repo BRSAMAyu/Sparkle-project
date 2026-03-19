@@ -23,6 +23,7 @@ class DemoDataService {
   final _uuid = const Uuid();
 
   String? _currentAvatarUrl;
+  List<PlanModel>? _demoPlansCache;
 
   // --- User Data ---
   UserModel get demoUser => UserModel(
@@ -44,6 +45,11 @@ class DemoDataService {
 
   void updateDemoAvatar(String url) {
     _currentAvatarUrl = url;
+  }
+
+  void resetDemoState() {
+    _currentAvatarUrl = null;
+    _demoPlansCache = null;
   }
 
   // --- Task Data ---
@@ -1290,8 +1296,108 @@ class DemoDataService {
   }
 
   // --- Plan Data ---
-  List<PlanModel> get demoPlans {
+  List<PlanModel> get demoPlans => _demoPlansCache ??= _buildDemoPlans();
+
+  List<PlanModel> _buildDemoPlans() {
     final now = DateTime.now();
+    final growthCoreTasks = [
+      _buildPlanTask(
+        id: 'plan_growth_core_task_1',
+        title: '梳理计算机组成原理知识地图',
+        planId: 'plan_growth_1',
+        createdAt: now.subtract(const Duration(days: 9)),
+        updatedAt: now.subtract(const Duration(days: 2)),
+        estimatedMinutes: 50,
+        difficulty: 3,
+        type: TaskType.learning,
+        status: TaskStatus.completed,
+        actualMinutes: 55,
+        userNote: '把 CPU、内存层次和总线的关联重新串起来了。',
+        tags: const ['Architecture', 'Knowledge Map'],
+      ),
+      _buildPlanTask(
+        id: 'plan_growth_core_task_2',
+        title: '完成操作系统并发专题错题回看',
+        planId: 'plan_growth_1',
+        createdAt: now.subtract(const Duration(days: 5)),
+        updatedAt: now.subtract(const Duration(hours: 12)),
+        estimatedMinutes: 40,
+        difficulty: 4,
+        type: TaskType.training,
+        status: TaskStatus.inProgress,
+        dueDate: now.add(const Duration(days: 2)),
+        tags: const ['OS', 'Concurrency'],
+      ),
+      _buildPlanTask(
+        id: 'plan_growth_core_task_3',
+        title: '补齐网络层与传输层前置概念',
+        planId: 'plan_growth_1',
+        createdAt: now.subtract(const Duration(days: 2)),
+        updatedAt: now.subtract(const Duration(hours: 6)),
+        estimatedMinutes: 35,
+        difficulty: 2,
+        type: TaskType.learning,
+        status: TaskStatus.pending,
+        dueDate: now.add(const Duration(days: 4)),
+        tags: const ['Network', 'Prerequisites'],
+      ),
+    ];
+    final systemDesignTasks = [
+      _buildPlanTask(
+        id: 'plan_growth_system_task_1',
+        title: '阅读高可用系统案例并提炼取舍',
+        planId: 'plan_growth_2',
+        createdAt: now.subtract(const Duration(days: 7)),
+        updatedAt: now.subtract(const Duration(days: 1)),
+        estimatedMinutes: 45,
+        difficulty: 3,
+        type: TaskType.learning,
+        status: TaskStatus.completed,
+        actualMinutes: 48,
+        tags: const ['System Design', 'Case Study'],
+      ),
+      _buildPlanTask(
+        id: 'plan_growth_system_task_2',
+        title: '设计消息队列削峰填谷方案',
+        planId: 'plan_growth_2',
+        createdAt: now.subtract(const Duration(days: 3)),
+        updatedAt: now.subtract(const Duration(hours: 10)),
+        estimatedMinutes: 60,
+        difficulty: 4,
+        type: TaskType.training,
+        status: TaskStatus.pending,
+        dueDate: now.add(const Duration(days: 3)),
+        tags: const ['MQ', 'Scalability'],
+      ),
+      _buildPlanTask(
+        id: 'plan_growth_system_task_3',
+        title: '复盘缓存一致性常见失效场景',
+        planId: 'plan_growth_2',
+        createdAt: now.subtract(const Duration(days: 1)),
+        updatedAt: now.subtract(const Duration(hours: 4)),
+        estimatedMinutes: 30,
+        difficulty: 3,
+        type: TaskType.reflection,
+        status: TaskStatus.pending,
+        dueDate: now.add(const Duration(days: 5)),
+        tags: const ['Cache', 'Reflection'],
+      ),
+    ];
+    final archivedGrowthTasks = [
+      _buildPlanTask(
+        id: 'plan_growth_archived_task_1',
+        title: '完成数据库索引策略练习',
+        planId: 'plan_growth_archived',
+        createdAt: now.subtract(const Duration(days: 40)),
+        updatedAt: now.subtract(const Duration(days: 20)),
+        estimatedMinutes: 35,
+        difficulty: 2,
+        type: TaskType.training,
+        status: TaskStatus.completed,
+        actualMinutes: 32,
+        tags: const ['Database', 'Index'],
+      ),
+    ];
     return [
       PlanModel(
         id: 'plan_sprint_1',
@@ -1307,6 +1413,7 @@ class DemoDataService {
         targetDate: now.add(const Duration(days: 7)),
         description: '集中攻克链表、栈、队列和二叉树，准备期中考试。',
         totalEstimatedHours: 20,
+        tasks: demoTasks.where((task) => task.title.contains('数据结构') || task.title.contains('算法设计')).take(3).toList(),
       ),
       PlanModel(
         id: 'plan_growth_1',
@@ -1322,9 +1429,90 @@ class DemoDataService {
         targetDate: now.add(const Duration(days: 90)), // 3 months
         description: '系统性复习CS基础四大件，构建完整的知识体系。',
         totalEstimatedHours: 100,
+        planStage: PlanStage.daily,
+        priority: PlanPriority.high,
+        tasks: growthCoreTasks,
+      ),
+      PlanModel(
+        id: 'plan_growth_2',
+        userId: 'CS_Sophomore_12345',
+        name: '分布式系统设计进阶',
+        type: PlanType.growth,
+        dailyAvailableMinutes: 50,
+        masteryLevel: 0.42,
+        progress: 0.58,
+        isActive: true,
+        createdAt: now.subtract(const Duration(days: 18)),
+        updatedAt: now.subtract(const Duration(hours: 8)),
+        targetDate: now.add(const Duration(days: 120)),
+        description: '围绕高并发、高可用和一致性，建立系统设计完整方法论。',
+        totalEstimatedHours: 72,
+        subject: '系统设计',
+        planStage: PlanStage.review,
+        priority: PlanPriority.critical,
+        isPrimary: true,
+        source: 'learning_path',
+        sourceMetadata: {
+          'target_node_id': 'demo_target',
+          'path_node_ids': ['demo_1', 'demo_2', 'demo_target'],
+        },
+        tasks: systemDesignTasks,
+      ),
+      PlanModel(
+        id: 'plan_growth_archived',
+        userId: 'CS_Sophomore_12345',
+        name: '数据库基础补强',
+        type: PlanType.growth,
+        dailyAvailableMinutes: 35,
+        masteryLevel: 0.8,
+        progress: 1.0,
+        isActive: false,
+        createdAt: now.subtract(const Duration(days: 60)),
+        updatedAt: now.subtract(const Duration(days: 15)),
+        targetDate: now.subtract(const Duration(days: 3)),
+        description: '已完成的数据库基础回炉计划，可在历史记录中查看。',
+        totalEstimatedHours: 24,
+        subject: '数据库系统',
+        planStage: PlanStage.review,
+        priority: PlanPriority.normal,
+        tasks: archivedGrowthTasks,
       ),
     ];
   }
+
+  TaskModel _buildPlanTask({
+    required String id,
+    required String title,
+    required String planId,
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    required int estimatedMinutes,
+    required int difficulty,
+    required TaskType type,
+    required TaskStatus status,
+    List<String> tags = const [],
+    DateTime? dueDate,
+    int? actualMinutes,
+    String? userNote,
+  }) =>
+      TaskModel(
+        id: id,
+        userId: demoUser.id,
+        planId: planId,
+        title: title,
+        type: type,
+        tags: tags,
+        estimatedMinutes: estimatedMinutes,
+        difficulty: difficulty,
+        energyCost: difficulty >= 4 ? 4 : 2,
+        status: status,
+        priority: difficulty >= 4 ? 3 : 2,
+        createdAt: createdAt,
+        updatedAt: updatedAt,
+        dueDate: dueDate,
+        actualMinutes: actualMinutes,
+        userNote: userNote,
+      );
 
   // --- Chat Data (保留真实LLM功能，只展示历史记录) ---
   List<ChatMessageModel> get demoChatHistory => [

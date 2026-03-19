@@ -49,6 +49,41 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
+def _serialize_plan(
+    plan: Plan,
+    *,
+    task_count: int,
+    completed_task_count: int,
+    tasks: list[Task] | None = None,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "id": plan.id,
+        "name": plan.name,
+        "type": plan.type.value,
+        "description": plan.description,
+        "subject": plan.subject,
+        "target_date": plan.target_date,
+        "progress": plan.progress,
+        "mastery_level": plan.mastery_level,
+        "daily_available_minutes": plan.daily_available_minutes,
+        "total_estimated_hours": plan.total_estimated_hours,
+        "is_active": plan.is_active,
+        "priority": plan.priority.value if plan.priority else "normal",
+        "is_primary": bool(getattr(plan, "is_primary", False)),
+        "plan_stage": plan.plan_stage.value if plan.plan_stage else "daily",
+        "user_id": plan.user_id,
+        "task_count": task_count,
+        "completed_task_count": completed_task_count,
+        "created_at": plan.created_at,
+        "updated_at": plan.updated_at,
+        "source": plan.source,
+        "source_metadata": plan.source_metadata,
+    }
+    if tasks is not None:
+        payload["tasks"] = [TaskDetail.model_validate(task).model_dump(mode="json") for task in tasks]
+    return payload
+
+
 @router.get("", response_model=dict[str, Any])
 async def list_plans(
     type: PlanType | None = Query(None, description="Filter by plan type"),
@@ -96,23 +131,13 @@ async def list_plans(
         )
         completed_count = (await db.execute(completed_query)).scalar() or 0
 
-        plan_dict = {
-            "id": plan.id,
-            "name": plan.name,
-            "type": plan.type.value,
-            "description": plan.description,
-            "subject": plan.subject,
-            "target_date": plan.target_date,
-            "progress": plan.progress,
-            "mastery_level": plan.mastery_level,
-            "is_active": plan.is_active,
-            "priority": plan.priority.value if plan.priority else "normal",
-            "is_primary": plan.is_primary if hasattr(plan, "is_primary") else False,
-            "task_count": task_count,
-            "completed_task_count": completed_count,
-            "created_at": plan.created_at,
-        }
-        plans_data.append(plan_dict)
+        plans_data.append(
+            _serialize_plan(
+                plan,
+                task_count=task_count,
+                completed_task_count=completed_count,
+            )
+        )
 
     return {
         "data": plans_data,
@@ -151,30 +176,14 @@ async def create_plan(
     task_query = select(func.count(Task.id)).where(Task.plan_id == plan.id)
     task_count = (await db.execute(task_query)).scalar() or 0
 
-    return {
-        "id": plan.id,
-        "name": plan.name,
-        "type": plan.type.value,
-        "description": plan.description,
-        "subject": plan.subject,
-        "target_date": plan.target_date,
-        "progress": plan.progress,
-        "mastery_level": plan.mastery_level,
-        "daily_available_minutes": plan.daily_available_minutes,
-        "total_estimated_hours": plan.total_estimated_hours,
-        "is_active": plan.is_active,
-        "plan_stage": plan.plan_stage.value if plan.plan_stage else "daily",
-        "priority": plan.priority.value if plan.priority else "normal",
-        "is_primary": plan.is_primary if hasattr(plan, "is_primary") else False,
-        "user_id": plan.user_id,
-        "task_count": task_count,
-        "completed_task_count": 0,
-        "created_at": plan.created_at,
-        "updated_at": plan.updated_at,
-    }
+    return _serialize_plan(
+        plan,
+        task_count=task_count,
+        completed_task_count=0,
+    )
 
 
-@router.get("/{plan_id}", response_model=PlanDetail)
+@router.get("/{plan_id:uuid}", response_model=PlanDetail)
 async def get_plan(
     plan_id: UUID = Path(..., description="Plan ID"),
     current_user: User = Depends(get_current_user),
@@ -188,7 +197,7 @@ async def get_plan(
     if not plan:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Plan {plan_id} not found")
 
-    # Get task counts
+    # Get task counts and related tasks for detail view
     task_query = select(func.count(Task.id)).where(Task.plan_id == plan.id)
     task_count = (await db.execute(task_query)).scalar() or 0
 
@@ -196,32 +205,19 @@ async def get_plan(
         and_(Task.plan_id == plan.id, Task.status == TaskStatus.COMPLETED)
     )
     completed_count = (await db.execute(completed_query)).scalar() or 0
+    tasks_result = await db.execute(select(Task).where(Task.plan_id == plan.id).order_by(desc(Task.created_at)))
+    tasks = tasks_result.scalars().all()
 
-    return {
-        "id": plan.id,
-        "name": plan.name,
-        "type": plan.type.value,
-        "description": plan.description,
-        "subject": plan.subject,
-        "target_date": plan.target_date,
-        "progress": plan.progress,
-        "mastery_level": plan.mastery_level,
-        "daily_available_minutes": plan.daily_available_minutes,
-        "total_estimated_hours": plan.total_estimated_hours,
-        "is_active": plan.is_active,
-        "plan_stage": plan.plan_stage.value if plan.plan_stage else "daily",
-        "priority": plan.priority.value if plan.priority else "normal",
-        "is_primary": plan.is_primary if hasattr(plan, "is_primary") else False,
-        "user_id": plan.user_id,
-        "task_count": task_count,
-        "completed_task_count": completed_count,
-        "created_at": plan.created_at,
-        "updated_at": plan.updated_at,
-    }
+    return _serialize_plan(
+        plan,
+        task_count=task_count,
+        completed_task_count=completed_count,
+        tasks=list(tasks),
+    )
 
 
-@router.put("/{plan_id}", response_model=PlanDetail)
-@router.patch("/{plan_id}", response_model=PlanDetail)
+@router.put("/{plan_id:uuid}", response_model=PlanDetail)
+@router.patch("/{plan_id:uuid}", response_model=PlanDetail)
 async def update_plan(
     plan_id: UUID = Path(..., description="Plan ID"),
     plan_in: PlanUpdate = None,
@@ -247,30 +243,14 @@ async def update_plan(
     )
     completed_count = (await db.execute(completed_query)).scalar() or 0
 
-    return {
-        "id": plan.id,
-        "name": plan.name,
-        "type": plan.type.value,
-        "description": plan.description,
-        "subject": plan.subject,
-        "target_date": plan.target_date,
-        "progress": plan.progress,
-        "mastery_level": plan.mastery_level,
-        "daily_available_minutes": plan.daily_available_minutes,
-        "total_estimated_hours": plan.total_estimated_hours,
-        "is_active": plan.is_active,
-        "plan_stage": plan.plan_stage.value if plan.plan_stage else "daily",
-        "priority": plan.priority.value if plan.priority else "normal",
-        "is_primary": plan.is_primary if hasattr(plan, "is_primary") else False,
-        "user_id": plan.user_id,
-        "task_count": task_count,
-        "completed_task_count": completed_count,
-        "created_at": plan.created_at,
-        "updated_at": plan.updated_at,
-    }
+    return _serialize_plan(
+        plan,
+        task_count=task_count,
+        completed_task_count=completed_count,
+    )
 
 
-@router.post("/{plan_id}/generate-tasks", response_model=list[TaskDetail])
+@router.post("/{plan_id:uuid}/generate-tasks", response_model=list[TaskDetail])
 async def generate_tasks_for_plan(
     plan_id: UUID = Path(..., description="Plan ID"),
     count: int = Query(5, ge=1, le=20),
@@ -319,7 +299,7 @@ async def generate_tasks_for_plan(
     return [TaskDetail.model_validate(task) for task in created_tasks]
 
 
-@router.delete("/{plan_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{plan_id:uuid}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_plan(
     plan_id: UUID = Path(..., description="Plan ID"),
     current_user: User = Depends(get_current_user),
@@ -357,7 +337,7 @@ async def delete_plan(
         # Don't fail the request if notification fails
 
 
-@router.post("/{plan_id}/archive", response_model=dict[str, Any])
+@router.post("/{plan_id:uuid}/archive", response_model=dict[str, Any])
 async def archive_plan_state(
     plan_id: UUID = Path(..., description="Plan ID"),
     current_user: User = Depends(get_current_user),
@@ -390,6 +370,7 @@ async def archive_plan_state(
     )
 
     # Trigger sprint achievement events if this is a sprint plan
+    daily_first_reward = None
     if plan.type == PlanType.SPRINT:
         from app.services.achievement_engine import AchievementEngine, AchievementEvent
 
@@ -403,7 +384,6 @@ async def archive_plan_state(
             days_ahead = (plan.target_date - today).days if completion_rate >= 1.0 else 0
 
         # Check if sprint meets completion threshold (80%+)
-        daily_first_reward = None
         if completion_rate >= 0.8:
             # Check for daily first win reward
             daily_first_reward = await engine.check_daily_first(str(current_user.id), db)
@@ -481,7 +461,7 @@ async def archive_plan_state(
     return response
 
 
-@router.post("/{plan_id}/restore", response_model=dict[str, Any])
+@router.post("/{plan_id:uuid}/restore", response_model=dict[str, Any])
 async def restore_plan_state(
     plan_id: UUID = Path(..., description="Plan ID"),
     current_user: User = Depends(get_current_user),
@@ -543,7 +523,7 @@ async def restore_plan_state(
     }
 
 
-@router.get("/{plan_id}/progress", response_model=PlanProgress)
+@router.get("/{plan_id:uuid}/progress", response_model=PlanProgress)
 async def get_plan_progress(
     plan_id: UUID = Path(..., description="Plan ID"),
     current_user: User = Depends(get_current_user),
@@ -648,20 +628,11 @@ async def get_primary_plan(current_user: User = Depends(get_current_user), db: A
     completed_count = (await db.execute(completed_query)).scalar() or 0
 
     return {
-        "plan": {
-            "id": plan.id,
-            "name": plan.name,
-            "type": plan.type.value,
-            "description": plan.description,
-            "subject": plan.subject,
-            "target_date": plan.target_date,
-            "progress": plan.progress,
-            "priority": plan.priority.value if plan.priority else "normal",
-            "is_primary": True,
-            "task_count": task_count,
-            "completed_task_count": completed_count,
-            "created_at": plan.created_at,
-        }
+        "plan": _serialize_plan(
+            plan,
+            task_count=task_count,
+            completed_task_count=completed_count,
+        )
     }
 
 
@@ -687,7 +658,7 @@ async def set_primary_plan(
     return {"success": True, "primary_plan_id": str(request.plan_id), "message": "Primary plan updated successfully"}
 
 
-@router.patch("/{plan_id}/priority", response_model=dict[str, Any])
+@router.patch("/{plan_id:uuid}/priority", response_model=dict[str, Any])
 async def update_plan_priority(
     plan_id: UUID = Path(..., description="Plan ID"),
     request: PlanPriorityUpdate = None,
@@ -732,26 +703,17 @@ async def list_archived_plans(
         completed_count = (await db.execute(completed_query)).scalar() or 0
 
         plans_data.append(
-            {
-                "id": plan.id,
-                "name": plan.name,
-                "type": plan.type.value,
-                "description": plan.description,
-                "subject": plan.subject,
-                "target_date": plan.target_date,
-                "progress": plan.progress,
-                "priority": plan.priority.value if plan.priority else "normal",
-                "task_count": task_count,
-                "completed_task_count": completed_count,
-                "created_at": plan.created_at,
-                "updated_at": plan.updated_at,
-            }
+            _serialize_plan(
+                plan,
+                task_count=task_count,
+                completed_task_count=completed_count,
+            )
         )
 
     return {"data": plans_data, "total": len(plans_data), "page": page, "page_size": page_size}
 
 
-@router.get("/{plan_id}/learning-path-progress")
+@router.get("/{plan_id:uuid}/learning-path-progress")
 async def get_learning_path_progress(
     plan_id: UUID = Path(..., description="Plan ID"),
     current_user: User = Depends(get_current_user),

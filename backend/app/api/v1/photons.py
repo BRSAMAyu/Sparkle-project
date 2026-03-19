@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_active_superuser, get_current_user
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.photon import (
@@ -163,7 +163,7 @@ async def transfer_photons(
 @router.post("/adjust", response_model=dict[str, Any])
 async def adjust_photons(
     request: PhotonAdjustmentRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_superuser),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -171,10 +171,6 @@ async def adjust_photons(
 
     Adjusts a user's photon balance. Admin only.
     """
-    # TODO: Add admin check
-    # if not current_user.is_superuser:
-    #     raise HTTPException(status_code=403, detail="Admin access required")
-
     photon_service = get_photon_service(db)
 
     try:
@@ -184,7 +180,7 @@ async def adjust_photons(
                 amount=request.amount,
                 source=request.reason,
                 transaction_type=request.transaction_type.value,
-                metadata=request.metadata
+                metadata=request.extra_data
             )
         else:
             result = await photon_service.deduct_photons(
@@ -192,7 +188,7 @@ async def adjust_photons(
                 amount=abs(request.amount),
                 reason=request.reason,
                 transaction_type=request.transaction_type.value,
-                metadata=request.metadata
+                metadata=request.extra_data
             )
 
         # Record transaction history
@@ -204,7 +200,7 @@ async def adjust_photons(
             balance_after=result["new_balance"],
             source=request.reason,
             related_item_id=request.related_item_id,
-            metadata=request.metadata
+            metadata=request.extra_data
         )
 
         return {

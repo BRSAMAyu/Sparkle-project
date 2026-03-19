@@ -179,3 +179,12 @@ def test_process_achievement_event_accepts_internal_token_and_user_id(achievemen
     assert body["unlocked_count"] == 1
     assert body["unlocked"][0]["achievement_id"] == "task_master"
     mocked_process.assert_awaited_once()
+
+
+def test_share_templates_route_is_not_shadowed_by_dynamic_achievement_route(achievement_client):
+    response = achievement_client.get("/achievements/share-templates?locale=zh")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["templates"]
+    assert body["templates"][0]["id"]

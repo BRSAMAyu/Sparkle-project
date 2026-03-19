@@ -158,25 +158,24 @@ class CapsuleFeedbackService:
 
         pref_service = PreferenceService(db)
         prefs_center = await pref_service.get_preferences(user_id)
-
-        # 更新推断偏好
         inferred = prefs_center.inferred or {}
+        updates: dict[str, float] = {}
 
         if depth_delta is not None:
             current_depth = inferred.get("depth_preference", 0.5)
             # 平滑更新，避免剧烈波动
             new_depth = max(0.0, min(1.0, current_depth + (depth_delta * 0.1)))
-            inferred["depth_preference"] = new_depth
+            updates["depth_preference"] = new_depth
             logger.debug(f"[Feedback] Updated depth_preference: {current_depth} -> {new_depth}")
 
         if curiosity_delta is not None:
             current_curiosity = inferred.get("curiosity_preference", 0.5)
             new_curiosity = max(0.0, min(1.0, current_curiosity + (curiosity_delta * 0.1)))
-            inferred["curiosity_preference"] = new_curiosity
+            updates["curiosity_preference"] = new_curiosity
             logger.debug(f"[Feedback] Updated curiosity_preference: {current_curiosity} -> {new_curiosity}")
 
-        prefs_center.inferred = inferred
-        await pref_service.save_preferences(user_id, prefs_center)
+        if updates:
+            await pref_service.update_inferred(user_id, updates)
 
     async def _recalculate_capsule_quality(
         self,

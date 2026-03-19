@@ -252,9 +252,7 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
       ],
       body: Column(
         children: [
-          Wrap(
-            spacing: DS.spacing12,
-            runSpacing: DS.spacing12,
+          ToolMetricRow(
             children: [
               ToolMetricCard(
                 label: '输入长度',
@@ -338,7 +336,7 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
                   icon: const Icon(Icons.close_rounded),
                 ),
                 child: SizedBox(
-                  height: compact ? 220 : 250,
+                  height: (MediaQuery.sizeOf(context).height * 0.2).clamp(140.0, 250.0),
                   child: TextField(
                     controller: _inputController,
                     maxLines: null,
@@ -387,8 +385,8 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
                             : Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  SizedBox(
-                                    height: 160,
+                                  ConstrainedBox(
+                                    constraints: const BoxConstraints(maxHeight: 200),
                                     child: SingleChildScrollView(
                                       child: SelectableText(
                                         _output,
@@ -426,18 +424,33 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
                   children: [
                     inputCard,
                     const SizedBox(height: DS.spacing16),
-                    SizedBox(height: 360, child: outputCard),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(minHeight: 200),
+                      child: outputCard,
+                    ),
                   ],
                 );
               }
 
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(child: SizedBox(height: 410, child: inputCard)),
-                  const SizedBox(width: DS.spacing16),
-                  Expanded(child: SizedBox(height: 410, child: outputCard)),
-                ],
+              return IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: 300),
+                        child: inputCard,
+                      ),
+                    ),
+                    const SizedBox(width: DS.spacing16),
+                    Expanded(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: 300),
+                        child: outputCard,
+                      ),
+                    ),
+                  ],
+                ),
               );
             },
           ),

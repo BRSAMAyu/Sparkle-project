@@ -44,5 +44,11 @@ func isLongRunningRoute(path string) bool {
 	if strings.HasPrefix(path, "/api/v1/learning-paths/") {
 		return true
 	}
+	if path == "/api/v1/stt/transcribe" {
+		return true
+	}
+	if path == "/api/v1/capsules/generate" || path == "/api/v1/capsules/generate/batch" {
+		return true
+	}
 	return strings.HasPrefix(path, "/api/v1/plans/") && strings.HasSuffix(path, "/generate-tasks")
 }

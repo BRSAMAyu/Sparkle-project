@@ -35,6 +35,7 @@ from app.models.curiosity_capsule import CuriosityCapsule
 from app.models.galaxy import KnowledgeNode
 from app.models.group_files import GroupFile
 from app.models.plan import Plan
+from app.models.seed_content import SeedItem, SeedLibrary
 from app.models.task import Task
 from app.models.user import User, UserStatus
 from app.schemas.plan import PlanCreate
@@ -118,6 +119,7 @@ from app.schemas.community import (
     UserStatusUpdate,
 )
 from app.services.collaboration_service import collaboration_service
+from app.services.seed_library_service import SeedLibraryService
 from app.services.community_signal_bridge import CommunitySignalBridge
 from app.services.community_advanced_service import (
     BroadcastService,
@@ -516,6 +518,24 @@ def _build_share_meta(resource_type: SharedResourceType, resource: object) -> di
             "keywords": node.keywords or [],
             "source_type": node.source_type,
         })
+    if resource_type == SharedResourceType.SEED_LIBRARY:
+        library = resource
+        return _compact_dict({
+            "category": library.category,
+            "visibility": library.visibility,
+            "language": library.language,
+            "tags": library.tags or [],
+            "is_official": library.is_official,
+        })
+    if resource_type == SharedResourceType.SEED_ITEM:
+        item = resource
+        return _compact_dict({
+            "item_type": item.item_type,
+            "subject": item.subject,
+            "difficulty_level": item.difficulty_level,
+            "tags": item.tags or [],
+            "library_id": str(item.library_id),
+        })
     if resource_type == SharedResourceType.CURIOSITY_CAPSULE:
         capsule = resource
         return _compact_dict({
@@ -552,6 +572,14 @@ def _build_share_brief(resource_type: SharedResourceType, resource: object) -> d
         node = resource
         title = node.name
         summary = node.description
+    elif resource_type == SharedResourceType.SEED_LIBRARY:
+        library = resource
+        title = library.name
+        summary = library.description or f"{library.category} library"
+    elif resource_type == SharedResourceType.SEED_ITEM:
+        item = resource
+        title = item.title or "Seed Item"
+        summary = item.content
     elif resource_type == SharedResourceType.CURIOSITY_CAPSULE:
         capsule = resource
         title = capsule.title
@@ -578,6 +606,10 @@ def _share_message_type(resource_type: SharedResourceType) -> MessageTypeEnum:
         return MessageTypeEnum.TASK_SHARE
     if resource_type == SharedResourceType.KNOWLEDGE_NODE:
         return MessageTypeEnum.CAPSULE_SHARE
+    if resource_type == SharedResourceType.SEED_LIBRARY:
+        return MessageTypeEnum.CAPSULE_SHARE
+    if resource_type == SharedResourceType.SEED_ITEM:
+        return MessageTypeEnum.CAPSULE_SHARE
     if resource_type == SharedResourceType.CURIOSITY_CAPSULE:
         return MessageTypeEnum.CAPSULE_SHARE
     if resource_type == SharedResourceType.COGNITIVE_PRISM_PATTERN:
@@ -590,6 +622,7 @@ async def _get_share_resource(
     resource_id: UUID,
     owner_id: UUID
 ):
+    seed_service = SeedLibraryService()
     if resource_type == SharedResourceType.PLAN:
         plan = await db.get(Plan, resource_id)
         if not plan:
@@ -609,6 +642,18 @@ async def _get_share_resource(
         if not node:
             raise HTTPException(status_code=404, detail="没有找到这个知识节点")
         return node
+    if resource_type == SharedResourceType.SEED_LIBRARY:
+        library = await seed_service.get_library(db, resource_id)
+        if not library:
+            raise HTTPException(status_code=404, detail="没有找到这个种子库")
+        if not await seed_service.can_access_library(db, library, owner_id):
+            raise HTTPException(status_code=403, detail="您没有权限分享这个种子库")
+        return library
+    if resource_type == SharedResourceType.SEED_ITEM:
+        item = await seed_service.get_item_for_user(db, resource_id, owner_id)
+        if not item:
+            raise HTTPException(status_code=404, detail="没有找到这个种子内容")
+        return item
     if resource_type == SharedResourceType.CURIOSITY_CAPSULE:
         capsule = await db.get(CuriosityCapsule, resource_id)
         if not capsule:
@@ -2363,6 +2408,9 @@ async def share_resource(
             resource_type=data.resource_type.value,
             plan_id=shared.plan_id,
             task_id=shared.task_id,
+            knowledge_node_id=shared.knowledge_node_id,
+            seed_library_id=shared.seed_library_id,
+            seed_item_id=shared.seed_item_id,
             cognitive_fragment_id=shared.cognitive_fragment_id,
             curiosity_capsule_id=shared.curiosity_capsule_id,
             behavior_pattern_id=shared.behavior_pattern_id,
@@ -2423,6 +2471,16 @@ async def get_group_resources(
             brief = _build_share_brief(SharedResourceType.KNOWLEDGE_NODE, res.knowledge_node)
             resource_title = brief["title"]
             resource_summary = brief["summary"]
+        elif res.seed_library_id and res.seed_library:
+            r_type_str = "seed_library"
+            brief = _build_share_brief(SharedResourceType.SEED_LIBRARY, res.seed_library)
+            resource_title = brief["title"]
+            resource_summary = brief["summary"]
+        elif res.seed_item_id and res.seed_item:
+            r_type_str = "seed_item"
+            brief = _build_share_brief(SharedResourceType.SEED_ITEM, res.seed_item)
+            resource_title = brief["title"]
+            resource_summary = brief["summary"]
         elif res.cognitive_fragment_id and res.cognitive_fragment:
             r_type_str = "cognitive_fragment"
             brief = _build_share_brief(SharedResourceType.COGNITIVE_FRAGMENT, res.cognitive_fragment)
@@ -2447,6 +2505,8 @@ async def get_group_resources(
             plan_id=res.plan_id,
             task_id=res.task_id,
             knowledge_node_id=res.knowledge_node_id,
+            seed_library_id=res.seed_library_id,
+            seed_item_id=res.seed_item_id,
             cognitive_fragment_id=res.cognitive_fragment_id,
             curiosity_capsule_id=res.curiosity_capsule_id,
             behavior_pattern_id=res.behavior_pattern_id,

@@ -232,8 +232,8 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
             ),
           ),
           const SizedBox(height: DS.spacing16),
-          SizedBox(
-            height: 360,
+          ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 200),
             child: ToolSectionCard(
               accentColor: accent,
               title: '查询结果',

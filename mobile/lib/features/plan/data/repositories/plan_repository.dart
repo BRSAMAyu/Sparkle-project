@@ -68,9 +68,10 @@ class PlanRepository {
 
   Future<PlanModel> createPlan(PlanCreate plan) async {
     if (DemoDataService.isDemoMode) {
+      final demoService = DemoDataService();
       final newPlan = PlanModel(
         id: 'mock_plan_${DateTime.now().millisecondsSinceEpoch}',
-        userId: DemoDataService().demoUser.id,
+        userId: demoService.demoUser.id,
         name: plan.name,
         type: plan.type,
         dailyAvailableMinutes: plan.dailyAvailableMinutes,
@@ -81,8 +82,11 @@ class PlanRepository {
         updatedAt: DateTime.now(),
         description: plan.description,
         targetDate: plan.targetDate,
+        subject: plan.subject,
+        priority: plan.priority,
+        planStage: plan.type == PlanType.growth ? PlanStage.daily : PlanStage.sprint,
       );
-      DemoDataService().demoPlans.add(newPlan);
+      demoService.demoPlans.add(newPlan);
       return newPlan;
     }
     try {
@@ -100,12 +104,35 @@ class PlanRepository {
 
   Future<PlanModel> updatePlan(String id, PlanUpdate plan) async {
     if (DemoDataService.isDemoMode) {
-      final index = DemoDataService().demoPlans.indexWhere((p) => p.id == id);
+      final demoPlans = DemoDataService().demoPlans;
+      final index = demoPlans.indexWhere((p) => p.id == id);
       if (index != -1) {
-        // shallow update
-        final existing = DemoDataService().demoPlans[index];
-        // ... implementation skipped for brevity, return existing
-        return existing;
+        final existing = demoPlans[index];
+        final updated = PlanModel(
+          id: existing.id,
+          userId: existing.userId,
+          name: plan.name ?? existing.name,
+          type: existing.type,
+          dailyAvailableMinutes:
+              plan.dailyAvailableMinutes ?? existing.dailyAvailableMinutes,
+          masteryLevel: existing.masteryLevel,
+          progress: existing.progress,
+          isActive: plan.isActive ?? existing.isActive,
+          createdAt: existing.createdAt,
+          updatedAt: DateTime.now(),
+          description: plan.description ?? existing.description,
+          targetDate: plan.targetDate ?? existing.targetDate,
+          subject: existing.subject,
+          totalEstimatedHours: existing.totalEstimatedHours,
+          tasks: existing.tasks,
+          source: existing.source,
+          sourceMetadata: existing.sourceMetadata,
+          priority: plan.priority ?? existing.priority,
+          planStage: plan.planStage ?? existing.planStage,
+          isPrimary: existing.isPrimary,
+        );
+        demoPlans[index] = updated;
+        return updated;
       }
     }
     try {
@@ -135,11 +162,34 @@ class PlanRepository {
 
   Future<PlanModel> _updateActivation(String id, bool activate) async {
     if (DemoDataService.isDemoMode) {
-      // mock implementation
-      final index = DemoDataService().demoPlans.indexWhere((p) => p.id == id);
+      final demoPlans = DemoDataService().demoPlans;
+      final index = demoPlans.indexWhere((p) => p.id == id);
       if (index != -1) {
-        // ...
-        return DemoDataService().demoPlans[index];
+        final existing = demoPlans[index];
+        final updated = PlanModel(
+          id: existing.id,
+          userId: existing.userId,
+          name: existing.name,
+          type: existing.type,
+          dailyAvailableMinutes: existing.dailyAvailableMinutes,
+          masteryLevel: existing.masteryLevel,
+          progress: existing.progress,
+          isActive: activate,
+          createdAt: existing.createdAt,
+          updatedAt: DateTime.now(),
+          description: existing.description,
+          targetDate: existing.targetDate,
+          subject: existing.subject,
+          totalEstimatedHours: existing.totalEstimatedHours,
+          tasks: existing.tasks,
+          source: existing.source,
+          sourceMetadata: existing.sourceMetadata,
+          priority: existing.priority,
+          planStage: existing.planStage,
+          isPrimary: activate ? existing.isPrimary : false,
+        );
+        demoPlans[index] = updated;
+        return updated;
       }
     }
     try {
@@ -164,23 +214,58 @@ class PlanRepository {
 
   Future<List<TaskModel>> generateTasks(String planId, {int count = 5}) async {
     if (DemoDataService.isDemoMode) {
-      // Return some random tasks
-      return [
-        TaskModel(
-          id: 'gen_task_1',
-          userId: DemoDataService().demoUser.id,
-          title: 'Generated Task 1',
-          type: TaskType.learning,
-          tags: ['Generated'],
-          estimatedMinutes: 30,
-          difficulty: 1,
-          energyCost: 1,
+      final demoService = DemoDataService();
+      final demoPlans = demoService.demoPlans;
+      final index = demoPlans.indexWhere((p) => p.id == planId);
+      if (index == -1) {
+        return const [];
+      }
+
+      final plan = demoPlans[index];
+      final now = DateTime.now();
+      final generatedTasks = List.generate(count, (taskIndex) {
+        final taskNumber = taskIndex + 1;
+        return TaskModel(
+                id: 'demo_plan_task_${planId}_${taskNumber}_${now.millisecondsSinceEpoch}',
+          userId: demoService.demoUser.id,
+          planId: planId,
+          title: '${plan.name} - 第$taskNumber阶段任务',
+          type: taskIndex.isEven ? TaskType.learning : TaskType.training,
+          tags: [plan.subject ?? plan.name, 'Generated'],
+          estimatedMinutes: 25 + (taskIndex * 10),
+          difficulty: 2 + (taskIndex % 3),
+          energyCost: 2 + (taskIndex % 2),
           status: TaskStatus.pending,
-          priority: 1,
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        ),
-      ];
+          priority: taskIndex == 0 ? 3 : 2,
+          createdAt: now,
+          updatedAt: now,
+          dueDate: now.add(Duration(days: taskNumber * 2)),
+        );
+      });
+
+      demoPlans[index] = PlanModel(
+        id: plan.id,
+        userId: plan.userId,
+        name: plan.name,
+        type: plan.type,
+        dailyAvailableMinutes: plan.dailyAvailableMinutes,
+        masteryLevel: plan.masteryLevel,
+        progress: plan.progress,
+        isActive: plan.isActive,
+        createdAt: plan.createdAt,
+        updatedAt: now,
+        description: plan.description,
+        targetDate: plan.targetDate,
+        subject: plan.subject,
+        totalEstimatedHours: plan.totalEstimatedHours,
+        tasks: [...?plan.tasks, ...generatedTasks],
+        source: plan.source,
+        sourceMetadata: plan.sourceMetadata,
+        priority: plan.priority,
+        planStage: plan.planStage,
+        isPrimary: plan.isPrimary,
+      );
+      return generatedTasks;
     }
     try {
       final response = await _apiClient.post<dynamic>(
@@ -199,10 +284,11 @@ class PlanRepository {
 
   Future<void> archivePlan(String id) async {
     if (DemoDataService.isDemoMode) {
-      final index = DemoDataService().demoPlans.indexWhere((p) => p.id == id);
+      final demoPlans = DemoDataService().demoPlans;
+      final index = demoPlans.indexWhere((p) => p.id == id);
       if (index != -1) {
-        final existing = DemoDataService().demoPlans[index];
-        DemoDataService().demoPlans[index] = PlanModel(
+        final existing = demoPlans[index];
+        demoPlans[index] = PlanModel(
           id: existing.id,
           userId: existing.userId,
           name: existing.name,
@@ -218,6 +304,11 @@ class PlanRepository {
           subject: existing.subject,
           totalEstimatedHours: existing.totalEstimatedHours,
           tasks: existing.tasks,
+          source: existing.source,
+          sourceMetadata: existing.sourceMetadata,
+          priority: existing.priority,
+          planStage: existing.planStage,
+          isPrimary: false,
         );
       }
       return;
@@ -231,10 +322,11 @@ class PlanRepository {
 
   Future<void> restorePlan(String id) async {
     if (DemoDataService.isDemoMode) {
-      final index = DemoDataService().demoPlans.indexWhere((p) => p.id == id);
+      final demoPlans = DemoDataService().demoPlans;
+      final index = demoPlans.indexWhere((p) => p.id == id);
       if (index != -1) {
-        final existing = DemoDataService().demoPlans[index];
-        DemoDataService().demoPlans[index] = PlanModel(
+        final existing = demoPlans[index];
+        demoPlans[index] = PlanModel(
           id: existing.id,
           userId: existing.userId,
           name: existing.name,
@@ -250,6 +342,11 @@ class PlanRepository {
           subject: existing.subject,
           totalEstimatedHours: existing.totalEstimatedHours,
           tasks: existing.tasks,
+          source: existing.source,
+          sourceMetadata: existing.sourceMetadata,
+          priority: existing.priority,
+          planStage: existing.planStage,
+          isPrimary: existing.isPrimary,
         );
       }
       return;

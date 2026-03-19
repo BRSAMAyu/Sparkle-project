@@ -128,9 +128,7 @@ class _FocusTimerToolState extends State<FocusTimerTool> {
             ),
           ),
           const SizedBox(height: DS.spacing16),
-          Wrap(
-            spacing: DS.spacing12,
-            runSpacing: DS.spacing12,
+          ToolMetricRow(
             children: [
               ToolMetricCard(
                 label: '当前时长',

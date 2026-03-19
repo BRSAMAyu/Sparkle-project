@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/features/chat/presentation/widgets/attachment_picker_sheet.dart';
 import 'package:sparkle/features/chat/presentation/widgets/voice_input_button.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/document/document.dart';
@@ -46,25 +47,38 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   bool _isFocusChanging = false;
 
   void _showAttachmentSheet() {
-    if (widget.onFileUploaded != null) {
-      unawaited(
-        showModalBottomSheet<void>(
-          context: context,
-          isScrollControlled: true,
-          backgroundColor: Colors.transparent,
-          builder: (context) => FilePickerWithPresignedUpload(
-            groupId: widget.fileUploadGroupId,
-            onUploaded: (file) {
-              Navigator.pop(context);
-              widget.onFileUploaded?.call(file);
-            },
-            onError: (message) => AppFeedback.error(context, message),
-          ),
+    unawaited(
+      showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (sheetContext) => AttachmentPickerSheet(
+          onDirectUpload: _openFileUpload,
+          onDocumentClean: _openDocumentCleaner,
         ),
-      );
-      return;
-    }
+      ),
+    );
+  }
 
+  void _openFileUpload() {
+    unawaited(
+      showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => FilePickerWithPresignedUpload(
+          groupId: widget.fileUploadGroupId,
+          onUploaded: (file) {
+            Navigator.pop(context);
+            widget.onFileUploaded?.call(file);
+          },
+          onError: (message) => AppFeedback.error(context, message),
+        ),
+      ),
+    );
+  }
+
+  void _openDocumentCleaner() {
     unawaited(
       showModalBottomSheet<void>(
         context: context,

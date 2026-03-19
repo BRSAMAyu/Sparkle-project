@@ -275,7 +275,7 @@ async def delete_event(
     if hard_delete:
         await db.delete(event)
     else:
-        event.deleted_at = datetime.now(UTC)
+        event.soft_delete()
         db.add(event)
 
     await db.commit()
@@ -355,7 +355,7 @@ async def batch_operations(
                 if not event or event.user_id != current_user.id:
                     raise ValueError("Event not found")
 
-                event.deleted_at = datetime.now(UTC)
+                event.soft_delete()
                 db.add(event)
 
                 results.append(BatchOperationResult(
@@ -403,7 +403,7 @@ async def restore_event(
     if not event.deleted_at:
         raise HTTPException(status_code=400, detail="事件未被删除")
 
-    event.deleted_at = None
+    event.restore()
     db.add(event)
     await db.commit()
 

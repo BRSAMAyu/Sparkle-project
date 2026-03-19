@@ -19,6 +19,7 @@ from app.models.achievement import (
     VisualEffectType,
 )
 from app.models.plan import Plan, PlanType
+from app.models.shop import PhotonTransactionHistory
 from app.models.task import Task, TaskStatus, TaskType
 from app.services.achievement_engine import AchievementEngine, AchievementEvent
 
@@ -117,6 +118,36 @@ async def test_grant_rewards_unlocks_titles_skins_and_freeze_charges(db_session,
     assert title_result.scalar_one_or_none() is not None
     assert skin_result.scalar_one_or_none() is not None
     assert stats_result.scalar_one().freeze_charges == 2
+
+
+@pytest.mark.asyncio
+async def test_grant_rewards_records_photon_balance_and_history(db_session, test_user):
+    achievement = _achievement(
+        "reward_photons",
+        reward_config=[
+            {"type": "photon", "quantity": 88},
+        ],
+    )
+    db_session.add(achievement)
+    await db_session.commit()
+
+    engine = AchievementEngine(db_session)
+    await engine._grant_rewards(test_user.id, achievement)
+    await db_session.commit()
+    await db_session.refresh(test_user)
+
+    transaction_result = await db_session.execute(
+        select(PhotonTransactionHistory).where(
+            PhotonTransactionHistory.user_id == test_user.id
+        )
+    )
+    transaction = transaction_result.scalar_one_or_none()
+
+    assert test_user.photon_balance == 88
+    assert transaction is not None
+    assert transaction.transaction_type == "grant_achievement"
+    assert transaction.amount == 88
+    assert transaction.related_item_id == achievement.id
 
 
 @pytest.mark.asyncio

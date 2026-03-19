@@ -5,13 +5,13 @@ Plan Model - 冲刺计划和成长计划
 
 import enum
 
-from sqlalchemy import Boolean, Column, Date, Enum, Float, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import JSON, Boolean, Column, Date, Enum, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
 from app.models.base import GUID, BaseModel
 
-JSONBCompat = JSONB()
+JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 
 
 class PlanType(str, enum.Enum):

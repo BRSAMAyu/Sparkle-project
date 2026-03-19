@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 
 from app.models.plan import PlanPriority, PlanStage, PlanType
 from app.schemas.common import BaseSchema
+from app.schemas.task import TaskDetail
 
 # ========== Request Schemas ==========
 
@@ -81,6 +82,7 @@ class PlanDetail(PlanBase):
     completed_task_count: int = Field(default=0, description="Completed tasks")
     source: str | None = Field(default=None, description="Plan source (e.g., 'learning_path')")
     source_metadata: dict | None = Field(default=None, description="Source-specific metadata")
+    tasks: list[TaskDetail] | None = Field(default=None, description="Related tasks for the plan")
 
 
 class PlanProgress(BaseModel):

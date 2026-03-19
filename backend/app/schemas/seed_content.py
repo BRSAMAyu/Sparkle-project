@@ -142,6 +142,12 @@ class ItemUpdate(BaseModel):
     is_active: bool | None = Field(None, description="是否启用")
 
 
+class BatchItemImportRequest(BaseModel):
+    """批量导入内容项请求"""
+    items: list[ItemCreate] = Field(default_factory=list, min_length=1, description="待导入内容项列表")
+    continue_on_error: bool = Field(default=True, description="单条失败时是否继续导入后续条目")
+
+
 class ItemInfo(BaseModel):
     """内容项信息响应"""
     id: UUID = Field(..., description="内容项ID")
@@ -309,6 +315,16 @@ class ItemResponse(BaseModel):
     success: bool = Field(default=True)
     message: str = Field(default="Success")
     data: ItemInfo | None = Field(None)
+
+
+class BatchItemImportResponse(BaseModel):
+    """批量导入内容项响应"""
+    success: bool = Field(default=True)
+    message: str = Field(default="Success")
+    data: list[ItemInfo] = Field(default_factory=list)
+    imported_count: int = Field(default=0)
+    failed_count: int = Field(default=0)
+    errors: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class SubscriptionListResponse(BaseModel):

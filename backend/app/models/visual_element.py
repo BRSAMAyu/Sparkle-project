@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import enum
 
+from sqlalchemy import JSON
 
 # Python 3.9 compatible StrEnum
 class StrEnum(str, enum.Enum):
@@ -24,6 +25,9 @@ from sqlalchemy.orm import relationship, declared_attr
 
 from app.db.session import Base
 from app.models.base import GUID, BaseModel
+
+
+JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 
 
 class VisualElementType(StrEnum):
@@ -63,8 +67,8 @@ class VisualElement(BaseModel):
     id = Column(String(50), primary_key=True)  # 如：bg_aurora_001
     name = Column(String(100), nullable=False)
     description = Column(Text, nullable=True)
-    name_i18n = Column(JSONB, default=dict, nullable=True)
-    description_i18n = Column(JSONB, default=dict, nullable=True)
+    name_i18n = Column(JSONBCompat, default=dict, nullable=True)
+    description_i18n = Column(JSONBCompat, default=dict, nullable=True)
 
     # 类型与稀有度
     element_type = Column(
@@ -81,14 +85,14 @@ class VisualElement(BaseModel):
         Enum(VisualElementUnlockSource, values_callable=lambda obj: [e.value for e in obj]),
         default=VisualElementUnlockSource.SYSTEM,
     )
-    unlock_requirement = Column(JSONB, nullable=True)  # {"achievement_id": "streak_30"} 或 {"price_photons": 200}
+    unlock_requirement = Column(JSONBCompat, nullable=True)  # {"achievement_id": "streak_30"} 或 {"price_photons": 200}
 
     # 元素配置（根据 element_type 不同，配置内容不同）
     # background: {"gradient": {...}, "texture": "stars", "texture_opacity": 0.3}
     # particle: {"count": 50, "shape": "star", "colors": [...], "speed": 1.0}
     # effect: {"effect_type": "pulse_glow", "intensity": 0.8, "color": "#FF6B6B"}
     # bundle: {"background_id": "bg_aurora", "particle_id": "particle_star", "effect_id": "effect_glow"}
-    config = Column(JSONB, nullable=False, default=dict)
+    config = Column(JSONBCompat, nullable=False, default=dict)
 
     # 预览图
     preview_url = Column(String(500), nullable=True)
@@ -138,10 +142,11 @@ class VisualElement(BaseModel):
         return self.description
 
 
-class UserVisualElement(BaseModel):
+class UserVisualElement(Base):
     """用户解锁的视觉元素记录"""
 
     __tablename__ = "user_visual_elements"
+    __table_args__ = {"extend_existing": True}
 
     user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     element_id = Column(String(50), ForeignKey("visual_elements.id", ondelete="CASCADE"), primary_key=True)
@@ -152,6 +157,11 @@ class UserVisualElement(BaseModel):
 
     # 关联的成就/购买记录
     source_id = Column(String(100), nullable=True)  # achievement_id 或 purchase_id
+
+    # Timestamps (手动定义，不继承BaseModel)
+    created_at = Column(DateTime, default=func.now(), nullable=False)
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
+    deleted_at = Column(DateTime, nullable=True, index=True)
 
     # 关系
     element = relationship("VisualElement")

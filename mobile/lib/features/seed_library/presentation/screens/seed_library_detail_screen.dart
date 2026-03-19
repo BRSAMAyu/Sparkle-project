@@ -1,7 +1,12 @@
+import 'dart:convert';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
+import 'package:sparkle/features/community/presentation/widgets/share_resource_sheet.dart';
 import 'package:sparkle/features/seed_library/data/models/seed_library_model.dart';
 import 'package:sparkle/features/seed_library/presentation/providers/seed_library_provider.dart';
 import 'package:sparkle/features/seed_library/presentation/widgets/seed_item_card.dart';
@@ -26,14 +31,40 @@ class _SeedLibraryDetailScreenState
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(seedLibraryDetailProvider(widget.libraryId));
+    final currentUser = ref.watch(currentUserProvider);
+    final canManageLibrary =
+        state.library != null && currentUser?.id == state.library!.ownerId;
 
     return SparklePageScaffold(
       role: SparklePageRole.content,
       appBar: AppBar(
         title: Text(state.library?.name ?? context.l10n.seedLibraryDetail),
         actions: [
-          if (state.library != null &&
-              state.library!.ownerId == null) // Editable check
+          if (state.library != null)
+            SparkleIconButton(
+              variant: ButtonVariant.ghost,
+              icon: const Icon(Icons.share_outlined),
+              onPressed: () => showShareResourceSheet(
+                context,
+                resourceType: 'seed_library',
+                resourceId: state.library!.id,
+                title: state.library!.name,
+                subtitle: state.library!.description,
+              ),
+            ),
+          if (canManageLibrary)
+            SparkleIconButton(
+              variant: ButtonVariant.ghost,
+              icon: const Icon(Icons.playlist_add),
+              onPressed: () => _showAddItemSheet(context),
+            ),
+          if (canManageLibrary)
+            SparkleIconButton(
+              variant: ButtonVariant.ghost,
+              icon: const Icon(Icons.upload_file_outlined),
+              onPressed: _importJsonItems,
+            ),
+          if (canManageLibrary)
             SparkleIconButton(
               variant: ButtonVariant.ghost,
               icon: const Icon(Icons.edit),
@@ -41,7 +72,7 @@ class _SeedLibraryDetailScreenState
                 // TODO: Implement edit
               },
             ),
-          if (state.library != null && state.library!.ownerId == null)
+          if (canManageLibrary)
             SparkleIconButton(
               variant: ButtonVariant.ghost,
               icon: const Icon(Icons.delete),
@@ -285,7 +316,16 @@ class _SeedLibraryDetailScreenState
                     }
 
                     final item = state.items[index];
-                    return SeedItemCard(item: item);
+                    return SeedItemCard(
+                      item: item,
+                      onShare: () => showShareResourceSheet(
+                        context,
+                        resourceType: 'seed_item',
+                        resourceId: item.id,
+                        title: item.title ?? item.itemTypeDisplayName,
+                        subtitle: item.content,
+                      ),
+                    );
                   },
                   childCount: state.items.length + (state.hasMoreItems ? 1 : 0),
                 ),
@@ -357,5 +397,215 @@ class _SeedLibraryDetailScreenState
         ],
       ),
     );
+  }
+
+  Future<void> _showAddItemSheet(BuildContext context) async {
+    final formKey = GlobalKey<FormState>();
+    final titleController = TextEditingController();
+    final contentController = TextEditingController();
+    final subjectController = TextEditingController();
+    final tagsController = TextEditingController();
+    ItemType itemType = ItemType.example;
+    DifficultyLevel? difficultyLevel = DifficultyLevel.beginner;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: DS.spacing16,
+            right: DS.spacing16,
+            top: DS.spacing16,
+            bottom: MediaQuery.of(context).viewInsets.bottom + DS.spacing16,
+          ),
+          child: StatefulBuilder(
+            builder: (context, setModalState) {
+              return Form(
+                key: formKey,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '添加种子内容',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: DS.spacing16),
+                      DropdownButtonFormField<ItemType>(
+                        value: itemType,
+                        decoration: const InputDecoration(
+                          labelText: '内容类型',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: ItemType.values
+                            .map(
+                              (type) => DropdownMenuItem(
+                                value: type,
+                                child: Text(type.displayName),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (value) {
+                          if (value != null) {
+                            setModalState(() => itemType = value);
+                          }
+                        },
+                      ),
+                      const SizedBox(height: DS.spacing12),
+                      TextFormField(
+                        controller: titleController,
+                        decoration: const InputDecoration(
+                          labelText: '标题',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: DS.spacing12),
+                      TextFormField(
+                        controller: contentController,
+                        decoration: const InputDecoration(
+                          labelText: '内容',
+                          border: OutlineInputBorder(),
+                        ),
+                        minLines: 3,
+                        maxLines: 6,
+                      ),
+                      const SizedBox(height: DS.spacing12),
+                      TextFormField(
+                        controller: subjectController,
+                        decoration: const InputDecoration(
+                          labelText: '主题/学科',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: DS.spacing12),
+                      DropdownButtonFormField<DifficultyLevel?>(
+                        value: difficultyLevel,
+                        decoration: const InputDecoration(
+                          labelText: '难度',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: [
+                          const DropdownMenuItem<DifficultyLevel?>(
+                            value: null,
+                            child: Text('未设置'),
+                          ),
+                          ...DifficultyLevel.values.map(
+                            (level) => DropdownMenuItem(
+                              value: level,
+                              child: Text(level.displayName),
+                            ),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          setModalState(() => difficultyLevel = value);
+                        },
+                      ),
+                      const SizedBox(height: DS.spacing12),
+                      TextFormField(
+                        controller: tagsController,
+                        decoration: const InputDecoration(
+                          labelText: '标签（逗号分隔）',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: DS.spacing16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: SparkleButton(
+                          label: '保存内容',
+                          onPressed: () async {
+                            try {
+                              final tags = tagsController.text
+                                  .split(',')
+                                  .map((item) => item.trim())
+                                  .where((item) => item.isNotEmpty)
+                                  .toList();
+                              await ref
+                                  .read(seedLibraryDetailProvider(widget.libraryId).notifier)
+                                  .addItem(
+                                    itemType: itemType,
+                                    title: titleController.text.trim().isEmpty
+                                        ? null
+                                        : titleController.text.trim(),
+                                    content: contentController.text.trim().isEmpty
+                                        ? null
+                                        : contentController.text.trim(),
+                                    subject: subjectController.text.trim().isEmpty
+                                        ? null
+                                        : subjectController.text.trim(),
+                                    difficultyLevel: difficultyLevel,
+                                    tags: tags.isEmpty ? null : tags,
+                                  );
+                              if (!context.mounted) return;
+                              Navigator.pop(context);
+                              AppFeedback.success(context, '种子内容已添加');
+                            } catch (e) {
+                              if (!context.mounted) return;
+                              AppFeedback.error(context, '添加失败：$e');
+                            }
+                          },
+                          expand: true,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _importJsonItems() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: const ['json'],
+        withData: true,
+      );
+      if (result == null || result.files.isEmpty) {
+        return;
+      }
+      final file = result.files.single;
+      final bytes = file.bytes;
+      if (bytes == null) {
+        AppFeedback.error(context, '无法读取文件内容');
+        return;
+      }
+      final decoded = jsonDecode(utf8.decode(bytes));
+      final dynamic rawItems =
+          decoded is Map<String, dynamic> ? decoded['items'] : decoded;
+      if (rawItems is! List) {
+        AppFeedback.error(context, 'JSON 格式无效，需为数组或 {items:[...]}');
+        return;
+      }
+
+      final items = rawItems
+          .whereType<Map>()
+          .map((item) => Map<String, dynamic>.from(item.cast<String, dynamic>()))
+          .toList();
+      if (items.isEmpty) {
+        AppFeedback.info(context, '文件中没有可导入的内容项');
+        return;
+      }
+
+      final resultData = await ref
+          .read(seedLibraryDetailProvider(widget.libraryId).notifier)
+          .importItems(items);
+      if (!mounted) return;
+      final importedCount = resultData['imported_count'] ?? 0;
+      final failedCount = resultData['failed_count'] ?? 0;
+      AppFeedback.success(
+        context,
+        '导入完成：成功 $importedCount 条，失败 $failedCount 条',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      AppFeedback.error(context, '导入失败：$e');
+    }
   }
 }

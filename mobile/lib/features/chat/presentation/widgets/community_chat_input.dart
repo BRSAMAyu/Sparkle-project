@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
+import 'package:sparkle/features/chat/presentation/widgets/attachment_picker_sheet.dart';
 import 'package:sparkle/features/chat/presentation/widgets/voice_input_button.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/presentation/widgets/quick_share_picker_sheet.dart';
@@ -57,51 +58,38 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
   bool _toolbarExpanded = false;
 
   void _showAttachmentSheet() {
-    if (widget.onFileUploaded != null) {
-      unawaited(
-        showModalBottomSheet<void>(
-          context: context,
-          isScrollControlled: true,
-          backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
-          builder: (context) => FilePickerWithPresignedUpload(
-            groupId: widget.fileUploadGroupId,
-            onUploaded: (file) {
-              Navigator.pop(context);
-              widget.onFileUploaded?.call(file);
-            },
-            onError: (message) => AppFeedback.error(context, message),
-            secondaryActionLabel: context.l10n.chatInputDocumentClean,
-            onSecondaryAction: () {
-              Navigator.pop(context);
-              unawaited(
-                launchTool(
-                  this.context,
-                  ref,
-                  'document_cleaner',
-                  launchContext: ToolLaunchContext.chatInput,
-                  preference: ToolOpenPreference.sheet,
-                  onTextResult: (result) {
-                    if (!mounted) return;
-                    setState(() => _controller.text = result);
-                    if (!_isFocusChanging) {
-                      _isFocusChanging = true;
-                      Future.delayed(const Duration(milliseconds: 150), () {
-                        if (mounted && _focusNode.canRequestFocus) {
-                          _focusNode.requestFocus();
-                        }
-                        _isFocusChanging = false;
-                      });
-                    }
-                  },
-                ),
-              );
-            },
-          ),
+    unawaited(
+      showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (sheetContext) => AttachmentPickerSheet(
+          onDirectUpload: _openFileUpload,
+          onDocumentClean: _openDocumentCleaner,
         ),
-      );
-      return;
-    }
+      ),
+    );
+  }
 
+  void _openFileUpload() {
+    unawaited(
+      showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
+        builder: (context) => FilePickerWithPresignedUpload(
+          groupId: widget.fileUploadGroupId,
+          onUploaded: (file) {
+            Navigator.pop(context);
+            widget.onFileUploaded?.call(file);
+          },
+          onError: (message) => AppFeedback.error(context, message),
+        ),
+      ),
+    );
+  }
+
+  void _openDocumentCleaner() {
     unawaited(
       launchTool(
         context,

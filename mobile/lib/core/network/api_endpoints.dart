@@ -345,13 +345,15 @@ class ApiEndpoints {
   static String seedLibraryItems(String id) => '/seed-libraries/$id/items';
   static String seedLibraryItem(String libraryId, String itemId) =>
       '/seed-libraries/$libraryId/items/$itemId';
+  static String seedLibraryImportItems(String id) =>
+      '/seed-libraries/$id/items/import';
   static String seedLibrarySubscribe(String id) =>
-      '/seed-libraries/$id/subscribe';
+      '/seed-libraries/subscribe/$id';
   static String seedLibraryUnsubscribe(String id) =>
-      '/seed-libraries/$id/unsubscribe';
-  static String seedLibrarySubscriptions = '/seed-libraries/my-subscriptions';
+      '/seed-libraries/subscribe/$id';
+  static String seedLibrarySubscriptions = '/seed-libraries/subscriptions/me';
   static String seedLibraryCrossQuery = '/seed-libraries/query';
-  static String seedLibraryFewShot = '/seed-libraries/query/few-shot';
+  static String seedLibraryFewShot = '/seed-libraries/examples/few-shot';
   static String seedLibraryReplyTemplate =
       '/seed-libraries/query/reply-template';
 

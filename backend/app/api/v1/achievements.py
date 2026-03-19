@@ -604,24 +604,6 @@ async def get_close_to_unlock_achievements(
     }
 
 
-@router.get("/{achievement_id}", response_model=AchievementDetailResponse)
-async def get_achievement_detail_canonical(
-    achievement_id: str = Path(..., description="Achievement ID"),
-    locale: str | None = Query(None, description="Locale for localized fields"),
-    accept_language: str | None = Header(None),
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Canonical achievement detail endpoint."""
-    resolved_locale = _resolve_locale(locale, accept_language)
-    return await _build_achievement_detail_response(
-        achievement_id,
-        current_user,
-        db,
-        locale=resolved_locale,
-    )
-
-
 @router.get("/share-templates", response_model=ShareTemplateListResponse)
 async def get_share_templates(
     locale: str | None = Query(None, description="Locale for template names"),
@@ -670,6 +652,24 @@ async def get_share_templates(
         )
 
     return ShareTemplateListResponse(templates=template_infos)
+
+
+@router.get("/{achievement_id}", response_model=AchievementDetailResponse)
+async def get_achievement_detail_canonical(
+    achievement_id: str = Path(..., description="Achievement ID"),
+    locale: str | None = Query(None, description="Locale for localized fields"),
+    accept_language: str | None = Header(None),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Canonical achievement detail endpoint."""
+    resolved_locale = _resolve_locale(locale, accept_language)
+    return await _build_achievement_detail_response(
+        achievement_id,
+        current_user,
+        db,
+        locale=resolved_locale,
+    )
 
 
 @router.post("/{achievement_id}/share", response_model=AchievementShareResponse)

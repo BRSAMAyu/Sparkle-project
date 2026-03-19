@@ -96,7 +96,6 @@ class _FakeAchievementRepository extends AchievementRepository {
   @override
   Future<List<UserTitle>> getTitles() async => <UserTitle>[
         UserTitle(
-          userId: 'user-1',
           titleId: 'night_owl',
           titleName: '夜航者',
           titleDisplay: '夜航者',

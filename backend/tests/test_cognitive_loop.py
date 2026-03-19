@@ -7,6 +7,7 @@ from app.models.curiosity_capsule import CuriosityCapsule
 from app.models.error_book import ErrorRecord
 from app.models.task import Task, TaskStatus, TaskType
 from app.services.capsule_feedback_service import CapsuleFeedbackService
+from app.services.capsule_favorite_service import capsule_favorite_service
 from app.services.capsule_generation_service import CapsuleGenerationService
 from app.services.cognitive.auto_fragment_collector import AutoFragmentCollector
 from app.services.cognitive_service import CognitiveService
@@ -110,12 +111,12 @@ async def test_auto_collector_error_pattern(db, test_user):
     error1 = ErrorRecord(
         user_id=test_user.id,
         subject_code="math",
-        linked_knowledge_node_ids=[node_id],
+        linked_knowledge_node_ids=[str(node_id)],
     )
     error2 = ErrorRecord(
         user_id=test_user.id,
         subject_code="math",
-        linked_knowledge_node_ids=[node_id],
+        linked_knowledge_node_ids=[str(node_id)],
     )
     db.add_all([error1, error2])
     await db.commit()
@@ -179,3 +180,37 @@ async def test_feedback_triggers_regenerate_event(db, test_user):
         )
 
     assert any(call.args[0] == CAPSULE_REGENERATE_REQUESTED for call in mock_publish.call_args_list)
+
+
+@pytest.mark.asyncio
+async def test_favorite_toggle_does_not_mutate_share_count(db, test_user):
+    capsule = CuriosityCapsule(
+        user_id=test_user.id,
+        title="Favorite Capsule",
+        content="Favorite Content",
+        share_count=3,
+    )
+    db.add(capsule)
+    await db.commit()
+    await db.refresh(capsule)
+
+    result = await capsule_favorite_service.toggle_favorite(
+        user_id=test_user.id,
+        capsule_id=capsule.id,
+        db=db,
+        note="收藏一下",
+    )
+    assert result["is_favorited"] is True
+
+    await db.refresh(capsule)
+    assert capsule.share_count == 3
+
+    result = await capsule_favorite_service.toggle_favorite(
+        user_id=test_user.id,
+        capsule_id=capsule.id,
+        db=db,
+    )
+    assert result["is_favorited"] is False
+
+    await db.refresh(capsule)
+    assert capsule.share_count == 3

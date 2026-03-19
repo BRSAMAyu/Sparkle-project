@@ -8,11 +8,12 @@ from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from loguru import logger
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
-from app.core.celery_app import celery_app
+from app.core.celery_app import celery_app, get_celery_status
 from app.db.session import get_db
 from app.models.user import User
 from app.services.capsule_favorite_service import capsule_favorite_service
@@ -323,18 +324,63 @@ async def request_batch_generation(
 
     返回任务ID，可以通过 /generation/jobs 查询状态
     """
-    # 通过 Celery 异步生成
-    task = celery_app.send_task(
-        "generate_capsules_batch",
-        args=(
-            str(current_user.id),
-            request.depth_preference,
-            request.curiosity_preference,
-            "manual",
-            request.requested_count,
-        ),
-        queue="default",
+    celery_status = get_celery_status()
+    should_fallback_sync = (
+        celery_status.get("status") != "healthy"
+        or int(celery_status.get("active_workers") or 0) <= 0
     )
+
+    if should_fallback_sync:
+        logger.warning(
+            f"Capsule batch generation falling back to sync mode: celery_status={celery_status}"
+        )
+        job = await curiosity_capsule_service.generate_batch(
+            user_id=current_user.id,
+            db=db,
+            depth_preference=request.depth_preference,
+            curiosity_preference=request.curiosity_preference,
+            generation_type="manual",
+            requested_count=request.requested_count,
+        )
+        return {
+            "success": True,
+            "task_id": str(job.id),
+            "job_id": str(job.id),
+            "status": job.status,
+            "actual_count": job.actual_count,
+            "message": "胶囊已生成（同步降级）",
+        }
+
+    try:
+        task = celery_app.send_task(
+            "generate_capsules_batch",
+            args=(
+                str(current_user.id),
+                request.depth_preference,
+                request.curiosity_preference,
+                "manual",
+                request.requested_count,
+            ),
+            queue="default",
+        )
+    except Exception as exc:
+        logger.warning(f"Celery batch generation failed, retrying synchronously: {exc}")
+        job = await curiosity_capsule_service.generate_batch(
+            user_id=current_user.id,
+            db=db,
+            depth_preference=request.depth_preference,
+            curiosity_preference=request.curiosity_preference,
+            generation_type="manual",
+            requested_count=request.requested_count,
+        )
+        return {
+            "success": True,
+            "task_id": str(job.id),
+            "job_id": str(job.id),
+            "status": job.status,
+            "actual_count": job.actual_count,
+            "message": "胶囊已生成（同步降级）",
+        }
 
     return {
         "success": True,

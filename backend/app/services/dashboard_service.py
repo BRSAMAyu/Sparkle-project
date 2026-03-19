@@ -154,7 +154,7 @@ class DashboardService:
             .where(
                 and_(
                     BehaviorPattern.user_id == user_id,
-                    not BehaviorPattern.is_archived
+                    BehaviorPattern.is_archived.is_(False),
                 )
             )
             .order_by(desc(BehaviorPattern.created_at))
@@ -168,7 +168,8 @@ class DashboardService:
         new_pattern_query = select(func.count(BehaviorPattern.id)).where(
             and_(
                 BehaviorPattern.user_id == user_id,
-                BehaviorPattern.created_at >= yesterday
+                BehaviorPattern.created_at >= yesterday,
+                BehaviorPattern.is_archived.is_(False),
             )
         )
         new_count_result = await self.db.execute(new_pattern_query)

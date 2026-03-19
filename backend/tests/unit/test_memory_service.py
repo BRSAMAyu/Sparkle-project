@@ -1,8 +1,9 @@
+from datetime import datetime
 from uuid import uuid4
 
 import pytest
 from sqlalchemy import select
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 from app.models.memory import MemoryPreference
 from app.models.user import User
@@ -83,3 +84,31 @@ async def test_memory_preference_update_enqueues_evolution_update(db_session, mo
     assert payload["category"] == "evolution"
     assert payload["metadata"]["evolution_kind"] == "preference_learning"
     assert "简洁概览" in payload["description"]
+
+
+@pytest.mark.asyncio
+async def test_create_episodic_memory_falls_back_when_vector_runtime_unavailable(monkeypatch):
+    db = AsyncMock()
+    db.add = MagicMock()
+    db.commit.side_effect = RuntimeError("vector.so unavailable")
+
+    enqueue = AsyncMock()
+    monkeypatch.setattr("app.services.memory_service.SystemUpdateService.enqueue", enqueue)
+
+    service = MemoryService(db)
+    monkeypatch.setattr(service, "_allow_write", AsyncMock(return_value=True))
+    monkeypatch.setattr(service, "_advanced_features_enabled", AsyncMock(return_value=False))
+    record = await service.create_episodic_memory(
+        user_id=uuid4(),
+        summary="memory summary",
+        source_type="analysis",
+        source_id="analysis-1",
+        occurred_at=datetime.utcnow(),
+        importance_score=0.7,
+        tags=["analysis"],
+        evidence_refs=[{"type": "event", "id": "evt_1", "schema_version": "event.v1"}],
+    )
+
+    assert record is None
+    db.rollback.assert_awaited_once()
+    enqueue.assert_not_awaited()

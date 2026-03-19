@@ -26,6 +26,13 @@ from app.services.stt.providers.base import STTProvider
 class XunFeiProvider(STTProvider):
     """科大讯飞语音听写 Provider。"""
 
+    _STREAM_RECV_TIMEOUT = 0.12
+    _STREAM_DRAIN_TIMEOUT = 0.02
+    _FINAL_RECV_TIMEOUT = 0.8
+    _FINAL_DEADLINE_SECONDS = 5.0
+    _FILE_CHUNK_SECONDS = 0.2
+    _FILE_TRANSCRIBE_TIMEOUT_SECONDS = 45.0
+
     def __init__(self):
         self.app_id = settings.XUNFEI_APP_ID
         self.api_key = settings.XUNFEI_API_KEY
@@ -124,6 +131,38 @@ class XunFeiProvider(STTProvider):
 
         return None
 
+    async def _drain_messages(
+        self,
+        websocket: websockets.WebSocketClientProtocol,
+        last_text: str,
+        *,
+        timeout: float,
+    ) -> tuple[str, list[str], bool]:
+        texts: list[str] = []
+        terminal = False
+        next_timeout = timeout
+
+        while True:
+            try:
+                response = await asyncio.wait_for(websocket.recv(), timeout=next_timeout)
+            except asyncio.TimeoutError:
+                break
+
+            response_data = json.loads(response)
+            text = self._parse_response(response_data)
+            if text and text != last_text:
+                last_text = text
+                texts.append(text)
+
+            status = (response_data.get("data") or {}).get("status")
+            if status == 2:
+                terminal = True
+                break
+
+            next_timeout = self._STREAM_DRAIN_TIMEOUT
+
+        return last_text, texts, terminal
+
     async def transcribe_stream(
         self,
         audio_stream: AsyncGenerator[bytes, None],
@@ -175,14 +214,17 @@ class XunFeiProvider(STTProvider):
                     sequence += 1
 
                     try:
-                        response = await asyncio.wait_for(websocket.recv(), timeout=1.6)
-                        response_data = json.loads(response)
-                        text = self._parse_response(response_data)
-                        if text and text != last_text:
-                            last_text = text
+                        last_text, texts, terminal = await self._drain_messages(
+                            websocket,
+                            last_text,
+                            timeout=self._STREAM_RECV_TIMEOUT,
+                        )
+                        for text in texts:
                             yield text
+                        if terminal:
+                            return
                     except asyncio.TimeoutError:
-                        pass
+                        continue
                     except Exception as exc:
                         logger.warning(f"接收识别结果失败: {exc}")
 
@@ -196,17 +238,17 @@ class XunFeiProvider(STTProvider):
                 }
                 await websocket.send(json.dumps(end_frame))
 
-                deadline = time.monotonic() + 3.0
+                deadline = time.monotonic() + self._FINAL_DEADLINE_SECONDS
                 while time.monotonic() < deadline:
                     try:
-                        response = await asyncio.wait_for(websocket.recv(), timeout=0.8)
-                        response_data = json.loads(response)
-                        text = self._parse_response(response_data)
-                        if text and text != last_text:
-                            last_text = text
+                        last_text, texts, terminal = await self._drain_messages(
+                            websocket,
+                            last_text,
+                            timeout=self._FINAL_RECV_TIMEOUT,
+                        )
+                        for text in texts:
                             yield text
-                        status = (response_data.get("data") or {}).get("status")
-                        if status == 2:
+                        if terminal:
                             break
                     except asyncio.TimeoutError:
                         continue
@@ -242,23 +284,32 @@ class XunFeiProvider(STTProvider):
 
             async def audio_generator():
                 sample_rate = detected_sample_rate or self.sample_rate
-                bytes_per_40ms = int(sample_rate * 2 * 0.04)
+                bytes_per_chunk = int(sample_rate * 2 * self._FILE_CHUNK_SECONDS)
                 chunk_size = max(
                     1280,
-                    min(10000, (bytes_per_40ms // 1280) * 1280 or 1280),
+                    min(16000, (bytes_per_chunk // 1280) * 1280 or 1280),
                 )
                 for index in range(0, len(audio_data), chunk_size):
                     yield audio_data[index:index + chunk_size]
-                    await asyncio.sleep(0.04)
+                    await asyncio.sleep(0.02)
 
             results: list[str] = []
-            async for text in self.transcribe_stream(
-                audio_generator(),
-                language=language,
-                sample_rate=detected_sample_rate,
-            ):
-                results.append(text)
+            async def collect_results() -> None:
+                async for text in self.transcribe_stream(
+                    audio_generator(),
+                    language=language,
+                    sample_rate=detected_sample_rate,
+                ):
+                    results.append(text)
+
+            await asyncio.wait_for(
+                collect_results(),
+                timeout=self._FILE_TRANSCRIBE_TIMEOUT_SECONDS,
+            )
             return results[-1] if results else ""
+        except asyncio.TimeoutError:
+            logger.error("文件语音识别失败: 科大讯飞转写超时")
+            return "文件语音识别失败: 科大讯飞转写超时"
         except Exception as exc:
             logger.error(f"文件语音识别失败: {exc}")
             return f"文件语音识别失败: {exc}"
