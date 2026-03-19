@@ -18,6 +18,8 @@ import os
 from celery import Celery
 from celery.schedules import crontab
 
+from app.config import settings
+
 logger = logging.getLogger(__name__)
 
 # =============================================================================
@@ -25,9 +27,9 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 
 # 从环境变量读取配置
-REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/1")
-CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", REDIS_URL)
-CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", REDIS_URL)
+REDIS_URL = str(settings.REDIS_URL or os.getenv("REDIS_URL") or "redis://localhost:6379/1")
+CELERY_BROKER_URL = str(os.getenv("CELERY_BROKER_URL") or REDIS_URL)
+CELERY_RESULT_BACKEND = str(os.getenv("CELERY_RESULT_BACKEND") or REDIS_URL)
 
 # Celery 应用实例
 celery_app = Celery(
@@ -76,6 +78,11 @@ celery_app.conf.update(
             "routing_key": "default",
             "priority": 5,
         },
+        "glm_batch": {
+            "exchange": "sparkle",
+            "routing_key": "glm_batch",
+            "priority": 7,
+        },
         "low_priority": {
             "exchange": "sparkle",
             "routing_key": "low",
@@ -89,6 +96,8 @@ celery_app.conf.update(
         "app.core.celery_tasks.batch_error_analysis": {"queue": "default"},
         "app.core.celery_tasks.cleanup_old_data": {"queue": "low_priority"},
         "app.core.celery_tasks.health_check_task": {"queue": "high_priority"},
+        "generate_capsules_batch": {"queue": "glm_batch"},
+        "analyze_cognitive_fragment_batch": {"queue": "glm_batch"},
         # P1: Knowledge Galaxy auto-update tasks
         "update_knowledge_galaxy": {"queue": "default"},
         "sync_plan_progress_to_galaxy": {"queue": "low_priority"},
@@ -346,6 +355,9 @@ def generate_capsules_batch(
     curiosity_preference: float = 0.5,
     generation_type: str = "daily",
     requested_count: int = 1,
+    model_key: str | None = None,
+    execution_mode: str = "online",
+    job_id: str | None = None,
 ):
     """
     异步批量生成胶囊 (Celery 任务)
@@ -371,6 +383,7 @@ def generate_capsules_batch(
     from loguru import logger
 
     from app.db.session import AsyncSessionLocal
+    from app.schemas.notification import NotificationCreate
     from app.services.capsule_generation_service import capsule_generation_service
     from app.services.notification_service import NotificationService
 
@@ -385,6 +398,9 @@ def generate_capsules_batch(
                     curiosity_preference=curiosity_preference,
                     generation_type=generation_type,
                     requested_count=requested_count,
+                    model_key=model_key,
+                    execution_mode=execution_mode,
+                    existing_job_id=UUID(job_id) if job_id else None,
                 )
 
                 result = {
@@ -396,17 +412,26 @@ def generate_capsules_batch(
 
                 # 如果生成成功，发送通知
                 if job.status == "completed" and result["capsule_count"] > 0:
-                    notification_service = NotificationService(session)
-                    await notification_service.create_system_notification(
-                        user_id=user_id,
-                        message=f"✨ 为你生成了 {result['capsule_count']} 个好奇心胶囊！",
-                        notification_type="capsule",
-                        metadata={
-                            "job_id": str(job.id),
-                            "capsule_count": result["capsule_count"],
-                        },
-                    )
-                    logger.info(f"✅ Celery: Sent notification for capsule job {job.id}")
+                    try:
+                        await NotificationService.create(
+                            session,
+                            UUID(user_id),
+                            NotificationCreate(
+                                title="新的好奇心胶囊",
+                                content=f"✨ 为你生成了 {result['capsule_count']} 个好奇心胶囊！",
+                                type="capsule",
+                                data={
+                                    "job_id": str(job.id),
+                                    "capsule_count": result["capsule_count"],
+                                },
+                            ),
+                            push_via_websocket=False,
+                        )
+                        logger.info(f"✅ Celery: Sent notification for capsule job {job.id}")
+                    except Exception as notify_exc:
+                        logger.warning(
+                            f"Capsule job {job.id} completed, but notification dispatch failed: {notify_exc}"
+                        )
 
                 logger.info(f"✅ Celery: Generated {result['capsule_count']} capsules for user {user_id}")
                 return result
@@ -420,6 +445,37 @@ def generate_capsules_batch(
     except Exception as exc:
         logger.error(f"Capsule generation task failed: {exc}")
         # 指数退避重试
+        countdown = 60 * (2 ** self.request.retries)
+        raise self.retry(exc=exc, countdown=countdown)
+
+
+@celery_app.task(bind=True, max_retries=3, name="analyze_cognitive_fragment_batch")
+def analyze_cognitive_fragment_batch(
+    self,
+    user_id: str,
+    fragment_id: str,
+    model_key: str | None = None,
+):
+    """使用 GLM batch 队列分析认知碎片。"""
+    import asyncio
+    from uuid import UUID
+
+    from app.db.session import AsyncSessionLocal
+    from app.services.cognitive_service import CognitiveService
+
+    async def _analyze():
+        async with AsyncSessionLocal() as session:
+            service = CognitiveService(session)
+            return await service.analyze_behavior(
+                UUID(user_id),
+                UUID(fragment_id),
+                batch_model_key=model_key,
+            )
+
+    try:
+        return asyncio.run(_analyze())
+    except Exception as exc:
+        logger.error(f"Cognitive batch analysis task failed: {exc}")
         countdown = 60 * (2 ** self.request.retries)
         raise self.retry(exc=exc, countdown=countdown)
 
@@ -889,11 +945,14 @@ def get_celery_status():
         # 获取活动 worker
         inspect = celery_app.control.inspect()
         active_workers = inspect.active() or {}
+        active_queues = inspect.active_queues() or {}
 
         return {
             "status": "healthy",
             "broker": "connected",
             "active_workers": len(active_workers),
+            "workers": sorted(active_workers.keys()),
+            "active_queues": active_queues,
             "scheduled_tasks": len(celery_app.conf.beat_schedule),
         }
     except Exception as e:
@@ -902,6 +961,45 @@ def get_celery_status():
             "broker": "disconnected",
             "error": str(e)
         }
+
+
+def get_celery_queue_status(queue_name: str):
+    """检查特定队列是否有可消费的 worker。"""
+    status = get_celery_status()
+    if status.get("status") != "healthy":
+        return status
+
+    active_queues = status.get("active_queues") or {}
+    matched_workers: list[str] = []
+    for worker_name, queue_defs in active_queues.items():
+        if not isinstance(queue_defs, list):
+            continue
+        for queue_def in queue_defs:
+            if isinstance(queue_def, dict) and str(queue_def.get("name") or "") == str(queue_name):
+                matched_workers.append(str(worker_name))
+                break
+
+    status = dict(status)
+    status["queue"] = queue_name
+    status["queue_workers"] = matched_workers
+    status["queue_worker_count"] = len(matched_workers)
+    inspect = celery_app.control.inspect()
+    active_tasks = inspect.active() or {}
+    reserved_tasks = inspect.reserved() or {}
+
+    def _count_tasks(task_map):
+        count = 0
+        for worker_name in matched_workers:
+            for task in task_map.get(worker_name, []) or []:
+                delivery_info = task.get("delivery_info") if isinstance(task, dict) else None
+                routing_key = str((delivery_info or {}).get("routing_key") or "")
+                if routing_key == str(queue_name):
+                    count += 1
+        return count
+
+    status["queue_active_tasks"] = _count_tasks(active_tasks)
+    status["queue_reserved_tasks"] = _count_tasks(reserved_tasks)
+    return status
 
 
 def schedule_long_task(task_name: str, args: tuple = (), kwargs: dict = None, queue: str = "default"):

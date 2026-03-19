@@ -52,11 +52,17 @@ abstract class ChatMode {
           final excluded = decoded['excluded'] is List
               ? (decoded['excluded'] as List).map((e) => '$e').toList()
               : const <String>[];
+          final finalAgents = decoded['final_agents'] is List
+              ? (decoded['final_agents'] as List).map((e) => '$e').toList()
+              : const <String>[];
           final mode = decoded['mode']?.toString() ?? 'auto';
           return ChatModeTeam(
             selectedAgents: agents,
             excludedAgents: excluded,
+            finalAnswerAgents: finalAgents,
             collaborationMode: mode,
+            teamLabel: decoded['label']?.toString(),
+            teamId: decoded['team_id']?.toString(),
           );
         }
       } catch (_) {}
@@ -210,28 +216,45 @@ class ChatModeTeam extends ChatMode {
   ChatModeTeam({
     required this.selectedAgents,
     this.excludedAgents = const [],
+    this.finalAnswerAgents = const [],
     this.collaborationMode = 'auto',
     this.teamLabel,
+    this.teamId,
   }) : super(
-          apiValue: _buildApiValue(selectedAgents, excludedAgents, collaborationMode),
+          apiValue: _buildApiValue(
+            selectedAgents,
+            excludedAgents,
+            collaborationMode,
+            finalAnswerAgents,
+            teamLabel,
+            teamId,
+          ),
           icon: Icons.groups_rounded,
           color: const Color(0xFF5C6BC0),
         );
 
   final List<String> selectedAgents;
   final List<String> excludedAgents;
+  final List<String> finalAnswerAgents;
   final String collaborationMode;
   final String? teamLabel;
+  final String? teamId;
 
   static String _buildApiValue(
     List<String> agents,
     List<String> excluded,
     String mode,
+    List<String> finalAgents,
+    String? label,
+    String? teamId,
   ) {
     final spec = <String, dynamic>{
       'agents': agents,
       if (excluded.isNotEmpty) 'excluded': excluded,
+      if (finalAgents.isNotEmpty) 'final_agents': finalAgents,
       if (mode != 'auto') 'mode': mode,
+      if (label != null && label.isNotEmpty) 'label': label,
+      if (teamId != null && teamId.isNotEmpty) 'team_id': teamId,
     };
     return '$teamChatModePrefix${jsonEncode(spec)}';
   }

@@ -56,6 +56,8 @@ class OpenAICompatibleProvider(LLMProvider):
         """从 base_url 提取提供商名称"""
         url_lower = self.base_url.lower()
         if "bigmodel" in url_lower or "zhipu" in url_lower:
+            if "/api/coding/" in url_lower:
+                return "zhipu_coding"
             return "zhipu"
         elif "deepseek" in url_lower:
             return "deepseek"

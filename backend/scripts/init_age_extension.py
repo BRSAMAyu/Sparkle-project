@@ -12,54 +12,40 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.core.age_client import get_age_client, init_age
+from app.db.extensions import ensure_database_extensions
 from app.db.session import AsyncSessionLocal
 from sqlalchemy import text
 from loguru import logger
 
 
-async def check_age_extension():
-    """检查并创建 AGE 扩展"""
+async def check_database_extensions():
+    """检查并创建 AGE / vector 扩展"""
     print("=" * 60)
-    print("🔍 检查 Apache AGE 扩展状态")
+    print("🔍 检查数据库扩展状态")
     print("=" * 60)
 
     async with AsyncSessionLocal() as session:
-        # 检查 AGE 扩展是否存在
-        result = await session.execute(text(
-            "SELECT EXISTS(SELECT 1 FROM pg_extension WHERE extname = 'age')"
-        ))
-        age_exists = result.scalar()
+        status = await ensure_database_extensions(session, ("vector", "age"))
 
-        if age_exists:
-            print("✅ Apache AGE 扩展已安装")
-
-            # 获取 AGE 版本
-            result = await session.execute(text(
-                "SELECT extversion FROM pg_extension WHERE extname = 'age'"
-            ))
+        vector_ready = status.get("vector", False)
+        if vector_ready:
+            result = await session.execute(text("SELECT extversion FROM pg_extension WHERE extname = 'vector'"))
             version = result.scalar()
-            print(f"   版本: {version}")
+            print(f"✅ pgvector 扩展已安装 (版本: {version})")
         else:
-            available = await session.execute(text(
-                "SELECT EXISTS(SELECT 1 FROM pg_available_extensions WHERE name = 'age')"
-            ))
-            age_available = available.scalar()
-            if not age_available:
-                print("❌ Apache AGE 扩展不可用")
-                print("\n当前数据库镜像未内置 AGE，请先切换到包含 AGE 的数据库镜像。")
-                return False
+            print("❌ pgvector 扩展不可用")
+            print("\n当前数据库镜像未内置 vector，请先切换到包含 pgvector 的数据库镜像。")
 
-            print("⚙️  Apache AGE 扩展可用，正在安装...")
-            await session.execute(text("CREATE EXTENSION IF NOT EXISTS age"))
-            await session.commit()
-
-            result = await session.execute(text(
-                "SELECT extversion FROM pg_extension WHERE extname = 'age'"
-            ))
+        age_ready = status.get("age", False)
+        if age_ready:
+            result = await session.execute(text("SELECT extversion FROM pg_extension WHERE extname = 'age'"))
             version = result.scalar()
-            print(f"✅ Apache AGE 扩展安装完成 (版本: {version})")
+            print(f"✅ Apache AGE 扩展已安装 (版本: {version})")
+        else:
+            print("❌ Apache AGE 扩展不可用")
+            print("\n当前数据库镜像未内置 AGE，请先切换到包含 AGE 的数据库镜像。")
 
-    return True
+    return vector_ready and age_ready
 
 
 async def init_age_schema():
@@ -159,10 +145,10 @@ async def init_age_schema():
 async def main():
     """主函数"""
     # 1. 检查 AGE 扩展
-    age_installed = await check_age_extension()
+    extensions_ready = await check_database_extensions()
 
-    if not age_installed:
-        print("\n❌ Apache AGE 扩展未安装，无法继续")
+    if not extensions_ready:
+        print("\n❌ 数据库扩展未准备完成，无法继续")
         sys.exit(1)
 
     # 2. 初始化 Schema

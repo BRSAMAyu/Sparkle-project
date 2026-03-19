@@ -13,13 +13,16 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
-from app.core.celery_app import celery_app, get_celery_status
+from app.config import settings
+from app.core.celery_app import get_celery_queue_status
 from app.db.session import get_db
 from app.models.user import User
 from app.services.capsule_favorite_service import capsule_favorite_service
 from app.services.capsule_feedback_service import capsule_feedback_service
+from app.services.capsule_generation_service import capsule_generation_service
 from app.services.capsule_share_service import capsule_share_service
 from app.services.curiosity_capsule_service import curiosity_capsule_service
+from app.services.glm_batch_service import glm_batch_service
 
 router = APIRouter()
 
@@ -324,10 +327,15 @@ async def request_batch_generation(
 
     返回任务ID，可以通过 /generation/jobs 查询状态
     """
-    celery_status = get_celery_status()
+    celery_status = get_celery_queue_status(settings.GLM_BATCH_QUEUE)
+    queue_saturated = (
+        int(celery_status.get("queue_active_tasks") or 0) >= int(settings.GLM_BATCH_MAX_CONCURRENCY or 2)
+        or int(celery_status.get("queue_reserved_tasks") or 0) > 0
+    )
     should_fallback_sync = (
         celery_status.get("status") != "healthy"
-        or int(celery_status.get("active_workers") or 0) <= 0
+        or int(celery_status.get("queue_worker_count") or 0) <= 0
+        or queue_saturated
     )
 
     if should_fallback_sync:
@@ -341,6 +349,13 @@ async def request_batch_generation(
             curiosity_preference=request.curiosity_preference,
             generation_type="manual",
             requested_count=request.requested_count,
+            model_key=glm_batch_service.plan_capsule_generation(
+                depth_preference=request.depth_preference,
+                curiosity_preference=request.curiosity_preference,
+                requested_count=request.requested_count or 1,
+                generation_type="manual",
+            ).model_key if settings.GLM_BATCH_ENABLED and settings.GLM_BATCH_CAPSULES_ENABLED else None,
+            execution_mode="sync_fallback",
         )
         return {
             "success": True,
@@ -351,18 +366,57 @@ async def request_batch_generation(
             "message": "胶囊已生成（同步降级）",
         }
 
+    pending_job = None
     try:
-        task = celery_app.send_task(
-            "generate_capsules_batch",
-            args=(
-                str(current_user.id),
-                request.depth_preference,
-                request.curiosity_preference,
-                "manual",
-                request.requested_count,
-            ),
-            queue="default",
-        )
+        if settings.GLM_BATCH_ENABLED and settings.GLM_BATCH_CAPSULES_ENABLED:
+            plan = glm_batch_service.plan_capsule_generation(
+                depth_preference=request.depth_preference,
+                curiosity_preference=request.curiosity_preference,
+                requested_count=request.requested_count or 1,
+                generation_type="manual",
+            )
+            pending_job = await capsule_generation_service.create_generation_job(
+                user_id=current_user.id,
+                db=db,
+                depth_preference=request.depth_preference,
+                curiosity_preference=request.curiosity_preference,
+                generation_type="manual",
+                requested_count=request.requested_count or 1,
+                model_used=plan.model_key,
+            )
+            task = glm_batch_service.enqueue_capsule_generation(
+                user_id=current_user.id,
+                depth_preference=request.depth_preference,
+                curiosity_preference=request.curiosity_preference,
+                generation_type="manual",
+                requested_count=request.requested_count or 1,
+                job_id=pending_job.id,
+            )
+        else:
+            from app.core.celery_app import celery_app
+
+            pending_job = await capsule_generation_service.create_generation_job(
+                user_id=current_user.id,
+                db=db,
+                depth_preference=request.depth_preference,
+                curiosity_preference=request.curiosity_preference,
+                generation_type="manual",
+                requested_count=request.requested_count or 1,
+                model_used=None,
+            )
+            task = celery_app.send_task(
+                "generate_capsules_batch",
+                args=(
+                    str(current_user.id),
+                    request.depth_preference,
+                    request.curiosity_preference,
+                    "manual",
+                    request.requested_count,
+                    None,
+                    "online",
+                    str(pending_job.id),
+                ),
+            )
     except Exception as exc:
         logger.warning(f"Celery batch generation failed, retrying synchronously: {exc}")
         job = await curiosity_capsule_service.generate_batch(
@@ -372,6 +426,13 @@ async def request_batch_generation(
             curiosity_preference=request.curiosity_preference,
             generation_type="manual",
             requested_count=request.requested_count,
+            model_key=glm_batch_service.plan_capsule_generation(
+                depth_preference=request.depth_preference,
+                curiosity_preference=request.curiosity_preference,
+                requested_count=request.requested_count or 1,
+                generation_type="manual",
+            ).model_key if settings.GLM_BATCH_ENABLED and settings.GLM_BATCH_CAPSULES_ENABLED else None,
+            execution_mode="sync_fallback",
         )
         return {
             "success": True,
@@ -385,6 +446,7 @@ async def request_batch_generation(
     return {
         "success": True,
         "task_id": task.id,
+        "job_id": str(pending_job.id) if pending_job else None,
         "message": "胶囊生成任务已提交，请稍后查询结果",
     }
 

@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:async/async.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -95,7 +94,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
   @override
   void dispose() {
     _isDisposed = true;
-    _historyLoadOperation?.cancel();
+    unawaited(_historyLoadOperation?.cancel());
     _historyLoadOperation = null;
     unawaited(_connectionStateSubscription?.cancel());
     _streamDebouncer.cancel();
@@ -541,11 +540,13 @@ class ChatNotifier extends StateNotifier<ChatState> {
         onTimeout: (sink) {
           debugPrint('[ChatProvider] Stream timeout after $streamTimeout');
           sink
-            ..add(ErrorEvent(
-              code: 'STREAM_TIMEOUT',
-              message: 'Stream timed out after 120 seconds of inactivity',
-              retryable: true,
-            ))
+            ..add(
+              ErrorEvent(
+                code: 'STREAM_TIMEOUT',
+                message: 'Stream timed out after 120 seconds of inactivity',
+                retryable: true,
+              ),
+            )
             ..close();
         },
       );
@@ -599,6 +600,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
           }
           if (metadata != null) {
             final selectedExpertsRaw = metadata['selected_experts'];
+            final answerExpertsRaw = metadata['answer_experts'];
             final routingStrategy = metadata['routing_strategy'];
             final fallbackReason = metadata['fallback_reason'];
             final routeConfidence = metadata['route_confidence'];
@@ -619,6 +621,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
               accumulatedCollaboration = {
                 ...(accumulatedCollaboration ?? const <String, dynamic>{}),
                 'selected_experts': selectedExperts,
+                'answer_experts': _parseSelectedExperts(answerExpertsRaw),
                 'routing_strategy': routingStrategy,
                 'fallback_reason': fallbackReason,
                 'route_confidence': routeConfidence,
@@ -682,6 +685,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
           }
           if (metadata != null) {
             final selectedExpertsRaw = metadata['selected_experts'];
+            final answerExpertsRaw = metadata['answer_experts'];
             final routingStrategy = metadata['routing_strategy'];
             final fallbackReason = metadata['fallback_reason'];
             final routeConfidence = metadata['route_confidence'];
@@ -702,6 +706,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
               accumulatedCollaboration = {
                 ...(accumulatedCollaboration ?? const <String, dynamic>{}),
                 'selected_experts': selectedExperts,
+                'answer_experts': _parseSelectedExperts(answerExpertsRaw),
                 'routing_strategy': routingStrategy,
                 'fallback_reason': fallbackReason,
                 'route_confidence': routeConfidence,
@@ -855,7 +860,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
         } else if (event is AchievementUnlockEvent) {
           // Achievement Unlock Event
           _handleAchievementUnlock(event);
-          _ref.read(closeToUnlockProvider.notifier).triggerCheck();
+          unawaited(_ref.read(closeToUnlockProvider.notifier).triggerCheck());
           flushPending();
         } else if (event is AchievementMilestoneEvent) {
           // Achievement Milestone Event

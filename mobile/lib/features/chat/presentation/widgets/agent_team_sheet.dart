@@ -6,6 +6,7 @@ import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/chat/data/models/chat_mode.dart';
 import 'package:sparkle/features/chat/data/models/expert_catalog_model.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.dart';
+import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/expert_catalog_provider.dart';
 
 class AgentTeamSheet extends ConsumerStatefulWidget {
@@ -17,6 +18,7 @@ class AgentTeamSheet extends ConsumerStatefulWidget {
 
 class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
   final Set<String> _selectedAgents = {};
+  final Set<String> _answerAgents = {};
   String _collaborationMode = 'auto';
 
   @override
@@ -63,6 +65,11 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
                   ),
                   const Spacer(),
                   SparkleIconButton(
+                    icon: const Icon(Icons.person_add_alt_1_outlined),
+                    onPressed: () => _showCreateExpertDialog(context),
+                    variant: ButtonVariant.ghost,
+                  ),
+                  SparkleIconButton(
                     icon: const Icon(Icons.close),
                     onPressed: () => Navigator.pop(context),
                     variant: ButtonVariant.ghost,
@@ -86,12 +93,32 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
               const SizedBox(height: DS.spacing8),
               catalogAsync.when(
                 data: (catalog) {
-                  final experts =
-                      catalog.experts.where((e) => e.enabled).toList();
+                  final experts = [
+                    ...catalog.experts.where((e) => e.enabled),
+                    ...catalog.customExperts.where((e) => e.enabled),
+                  ];
                   if (experts.isEmpty) {
                     return _emptyHint(context.l10n.chatTeamSheetNoExperts);
                   }
-                  return _buildExpertGrid(experts);
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (catalog.customTeams.where((e) => e.enabled).isNotEmpty) ...[
+                        Text(
+                          '已保存团队',
+                          style: TextStyle(
+                            fontSize: DS.fontSizeSm,
+                            fontWeight: DS.fontWeightSemibold,
+                            color: DS.neutral500,
+                          ),
+                        ),
+                        const SizedBox(height: DS.spacing8),
+                        _buildSavedTeams(catalog.customTeams.where((e) => e.enabled).toList()),
+                        const SizedBox(height: DS.spacing12),
+                      ],
+                      _buildExpertGrid(experts),
+                    ],
+                  );
                 },
                 loading: () =>
                     _emptyHint(context.l10n.chatTeamSheetLoading),
@@ -135,8 +162,34 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
                 const SizedBox(height: DS.spacing8),
                 _buildSelectedChips(),
               ],
+              if (_selectedAgents.length > 1) ...[
+                const SizedBox(height: DS.spacing16),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    '最终回答参与专家',
+                    style: TextStyle(
+                      fontSize: DS.fontSizeSm,
+                      fontWeight: DS.fontWeightSemibold,
+                      color: DS.neutral600,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: DS.spacing8),
+                _buildAnswerExpertSelector(),
+              ],
 
               const SizedBox(height: DS.spacing20),
+
+              if (_selectedAgents.length > 1)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () => _showSaveTeamDialog(context),
+                    icon: const Icon(Icons.bookmark_add_outlined),
+                    label: const Text('保存团队'),
+                  ),
+                ),
 
               // Confirm button
               SizedBox(
@@ -187,7 +240,9 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
           final isSelected = _selectedAgents.contains(expert.id);
           return FilterChip(
             selected: isSelected,
-            label: Text(expert.displayName),
+            label: Text(
+              expert.official ? expert.displayName : '${expert.displayName} · 自定义',
+            ),
             avatar: isSelected
                 ? null
                 : Icon(_agentIcon(expert.id), size: 16, color: color),
@@ -202,13 +257,40 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
               setState(() {
                 if (selected) {
                   _selectedAgents.add(expert.id);
+                  _answerAgents.add(expert.id);
                 } else {
                   _selectedAgents.remove(expert.id);
+                  _answerAgents.remove(expert.id);
                 }
               });
             },
           );
         }).toList(),
+      );
+
+  Widget _buildSavedTeams(List<ExpertCatalogTeam> teams) => Wrap(
+        spacing: DS.spacing8,
+        runSpacing: DS.spacing8,
+        children: teams.map((team) => ActionChip(
+            label: Text(team.name),
+            avatar: const Icon(Icons.collections_bookmark_outlined, size: 16),
+            onPressed: () {
+              setState(() {
+                _selectedAgents
+                  ..clear()
+                  ..addAll(team.expertIds);
+                _answerAgents
+                  ..clear()
+                  ..addAll(
+                    team.answerExpertIds.isEmpty
+                        ? team.expertIds
+                        : team.answerExpertIds,
+                  );
+                _collaborationMode = team.collaborationMode;
+              });
+            },
+          ),
+        ).toList(),
       );
 
   Widget _buildModeSelector() => Column(
@@ -253,7 +335,33 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
             ),
             backgroundColor: color.withValues(alpha: 0.12),
             deleteIconColor: color.withValues(alpha: 0.6),
-            onDeleted: () => setState(() => _selectedAgents.remove(agentId)),
+            onDeleted: () => setState(() {
+              _selectedAgents.remove(agentId);
+              _answerAgents.remove(agentId);
+            }),
+          );
+        }).toList(),
+      );
+
+  Widget _buildAnswerExpertSelector() => Wrap(
+        spacing: DS.spacing8,
+        runSpacing: DS.spacing8,
+        children: _selectedAgents.map((agentId) {
+          final selected = _answerAgents.contains(agentId);
+          final color = _agentColor(agentId);
+          return FilterChip(
+            selected: selected,
+            label: Text(_resolveLabel(agentId)),
+            selectedColor: color.withValues(alpha: 0.18),
+            onSelected: (value) {
+              setState(() {
+                if (value) {
+                  _answerAgents.add(agentId);
+                } else if (_answerAgents.length > 1) {
+                  _answerAgents.remove(agentId);
+                }
+              });
+            },
           );
         }).toList(),
       );
@@ -262,7 +370,7 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
   String _resolveLabel(String agentId) {
     final catalog = ref.read(multiAgentCatalogProvider).valueOrNull;
     if (catalog != null) {
-      for (final expert in catalog.experts) {
+      for (final expert in [...catalog.experts, ...catalog.customExperts]) {
         if (expert.id == agentId) return expert.displayName;
       }
     }
@@ -280,6 +388,7 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
     }
     return ChatModeTeam(
       selectedAgents: _selectedAgents.toList(),
+      finalAnswerAgents: _answerAgents.toList(),
       collaborationMode: _collaborationMode,
     );
   }
@@ -309,6 +418,9 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
       case 'study_buddy':
         return Icons.school_outlined;
       default:
+        if (agentId.startsWith('custom_expert:')) {
+          return Icons.tune_outlined;
+        }
         return Icons.smart_toy_outlined;
     }
   }
@@ -344,6 +456,9 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
       case 'study_buddy':
         return l10n.chatAgentLearningBuddy;
       default:
+        if (agentId.startsWith('custom_expert:')) {
+          return '我的专家';
+        }
         return agentId.replaceAll('_', ' ');
     }
   }
@@ -362,6 +477,155 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
     'search_agent': 'gray',
     'study_buddy': 'yellow',
   };
+
+  Future<void> _showCreateExpertDialog(BuildContext context) async {
+    final catalog = ref.read(multiAgentCatalogProvider).valueOrNull;
+    final repository = ref.read(chatRepositoryProvider);
+    final nameController = TextEditingController();
+    final descriptionController = TextEditingController();
+    final promptController = TextEditingController();
+    final enabledExperts =
+        catalog?.experts.where((e) => e.enabled).toList() ?? const <ExpertCatalogExpert>[];
+    final modelOptions = catalog?.modelOptions ?? const <ModelOption>[];
+    var selectedBaseExpert =
+        enabledExperts.isNotEmpty ? enabledExperts.first.id : null;
+    var selectedModelKey = modelOptions.isNotEmpty ? modelOptions.first.key : null;
+
+    final created = await showDialog<ExpertCatalogExpert>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+          builder: (context, setLocalState) => AlertDialog(
+            title: const Text('创建自定义专家'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nameController,
+                    decoration: const InputDecoration(labelText: '专家名称'),
+                  ),
+                  TextField(
+                    controller: descriptionController,
+                    decoration: const InputDecoration(labelText: '简介'),
+                  ),
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedBaseExpert,
+                    decoration: const InputDecoration(labelText: '基底专家'),
+                    items: enabledExperts
+                        .map(
+                          (expert) => DropdownMenuItem<String>(
+                            value: expert.id,
+                            child: Text(expert.displayName),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) => setLocalState(() => selectedBaseExpert = value),
+                  ),
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedModelKey,
+                    decoration: const InputDecoration(labelText: '模型'),
+                    items: modelOptions
+                        .map(
+                          (item) => DropdownMenuItem<String>(
+                            value: item.key,
+                            child: Text('${item.modelName} · ${item.tier}'),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) => setLocalState(() => selectedModelKey = value),
+                  ),
+                  TextField(
+                    controller: promptController,
+                    decoration: const InputDecoration(
+                      labelText: '系统提示词',
+                      alignLabelWithHint: true,
+                    ),
+                    minLines: 4,
+                    maxLines: 8,
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('取消'),
+              ),
+              FilledButton(
+                onPressed: () async {
+                  final expert = await repository.createCustomExpert(
+                    name: nameController.text.trim(),
+                    description: descriptionController.text.trim(),
+                    systemPrompt: promptController.text.trim(),
+                    baseExpertId: selectedBaseExpert,
+                    preferredModelKey: selectedModelKey,
+                  );
+                  if (!dialogContext.mounted) return;
+                  Navigator.pop(dialogContext, expert);
+                },
+                child: const Text('创建'),
+              ),
+            ],
+          ),
+      ),
+    );
+
+    if (created != null) {
+      ref.invalidate(multiAgentCatalogProvider);
+      setState(() {
+        _selectedAgents.add(created.id);
+        _answerAgents.add(created.id);
+      });
+    }
+  }
+
+  Future<void> _showSaveTeamDialog(BuildContext context) async {
+    final repository = ref.read(chatRepositoryProvider);
+    final nameController = TextEditingController();
+    final descriptionController = TextEditingController();
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('保存专家团队'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(labelText: '团队名称'),
+            ),
+            TextField(
+              controller: descriptionController,
+              decoration: const InputDecoration(labelText: '说明'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              await repository.createCustomTeam(
+                name: nameController.text.trim(),
+                description: descriptionController.text.trim(),
+                expertIds: _selectedAgents.toList(),
+                answerExpertIds: _answerAgents.toList(),
+                collaborationMode: _collaborationMode,
+              );
+              if (!dialogContext.mounted) return;
+              Navigator.pop(dialogContext, true);
+            },
+            child: const Text('保存'),
+          ),
+        ],
+      ),
+    );
+    if (saved ?? false) {
+      ref.invalidate(multiAgentCatalogProvider);
+    }
+  }
 }
 
 /// Collaboration mode metadata for the UI.

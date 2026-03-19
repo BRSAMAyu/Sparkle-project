@@ -36,7 +36,9 @@ class AccountabilityPartnershipInfo {
     // Runtime stats (populated from /stats endpoint)
     this.myStreakDays,
     this.partnerStreakDays,
+    this.myCheckedInToday,
     this.partnerCheckedInToday,
+    this.lastCheckinAt,
   });
 
   factory AccountabilityPartnershipInfo.fromJson(Map<String, dynamic> json) =>
@@ -65,13 +67,17 @@ class AccountabilityPartnershipInfo {
   final UserBrief? initiator;
   final UserBrief? partner;
 
-  // Runtime stats (not from API, loaded separately)
+  // Runtime stats and summary fields
   @JsonKey(includeFromJson: false, includeToJson: false)
   final int? myStreakDays;
   @JsonKey(includeFromJson: false, includeToJson: false)
   final int? partnerStreakDays;
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(name: 'my_checked_in_today')
+  final bool? myCheckedInToday;
+  @JsonKey(name: 'partner_checked_in_today')
   final bool? partnerCheckedInToday;
+  @JsonKey(name: 'last_checkin_at')
+  final DateTime? lastCheckinAt;
 
   Map<String, dynamic> toJson() =>
       _$AccountabilityPartnershipInfoToJson(this);
@@ -79,7 +85,9 @@ class AccountabilityPartnershipInfo {
   AccountabilityPartnershipInfo copyWithStats({
     int? myStreakDays,
     int? partnerStreakDays,
+    bool? myCheckedInToday,
     bool? partnerCheckedInToday,
+    DateTime? lastCheckinAt,
   }) =>
       AccountabilityPartnershipInfo(
         id: id,
@@ -96,8 +104,10 @@ class AccountabilityPartnershipInfo {
         partner: partner,
         myStreakDays: myStreakDays ?? this.myStreakDays,
         partnerStreakDays: partnerStreakDays ?? this.partnerStreakDays,
+        myCheckedInToday: myCheckedInToday ?? this.myCheckedInToday,
         partnerCheckedInToday:
             partnerCheckedInToday ?? this.partnerCheckedInToday,
+        lastCheckinAt: lastCheckinAt ?? this.lastCheckinAt,
       );
 }
 
@@ -113,6 +123,7 @@ class AccountabilityCheckinInfo {
     required this.createdAt,
     this.likes = 0,
     this.encouragements = const [],
+    this.author,
   });
 
   factory AccountabilityCheckinInfo.fromJson(Map<String, dynamic> json) =>
@@ -128,6 +139,7 @@ class AccountabilityCheckinInfo {
   final int minutes;
   @JsonKey(name: 'created_at')
   final DateTime createdAt;
+  final UserBrief? author;
 
   // 互动字段
   final int likes;
@@ -164,6 +176,7 @@ class AccountabilityStatsInfo {
   AccountabilityStatsInfo({
     required this.myStreakDays,
     required this.partnerStreakDays,
+    required this.myCheckedInToday,
     required this.partnerCheckedInToday,
     required this.totalCheckins,
   });
@@ -175,6 +188,8 @@ class AccountabilityStatsInfo {
   final int myStreakDays;
   @JsonKey(name: 'partner_streak_days')
   final int partnerStreakDays;
+  @JsonKey(name: 'my_checked_in_today')
+  final bool myCheckedInToday;
   @JsonKey(name: 'partner_checked_in_today')
   final bool partnerCheckedInToday;
   @JsonKey(name: 'total_checkins')

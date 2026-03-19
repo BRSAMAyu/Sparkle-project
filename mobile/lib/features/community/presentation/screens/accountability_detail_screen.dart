@@ -10,6 +10,8 @@ import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/community/data/models/accountability_model.dart';
 import 'package:sparkle/features/community/data/repositories/accountability_repository.dart';
 import 'package:sparkle/features/community/presentation/providers/accountability_provider.dart';
+import 'package:sparkle/features/community/presentation/widgets/accountability_heatmap.dart';
+import 'package:sparkle/features/community/presentation/widgets/achievement_badge.dart';
 
 /// 责任伙伴关系详情页
 class AccountabilityDetailScreen extends ConsumerStatefulWidget {
@@ -33,6 +35,11 @@ class _AccountabilityDetailScreenState
         ref.watch(partnershipStatsProvider(widget.partnershipId));
     final timelineAsync =
         ref.watch(partnershipTimelineProvider(widget.partnershipId));
+    final heatmapAsync =
+        ref.watch(partnershipHeatmapProvider(widget.partnershipId));
+    final achievementsAsync = ref.watch(accountabilityAchievementsProvider);
+    final partnershipAchievementsAsync =
+        ref.watch(partnershipAchievementsProvider(widget.partnershipId));
     final currentUserId = ref.watch(currentUserProvider)?.id ?? '';
 
     final partnership = partnershipsAsync.valueOrNull?.firstWhere(
@@ -87,7 +94,7 @@ class _AccountabilityDetailScreenState
                   _PersonStat(
                     name: '我',
                     streakDays: stats.myStreakDays,
-                    checkedInToday: true, // assume checked if we called this page
+                    checkedInToday: stats.myCheckedInToday,
                   ),
                   Column(
                     children: [
@@ -114,45 +121,139 @@ class _AccountabilityDetailScreenState
           ),
 
           const Divider(),
-
-          // ── Today's goal section ────────────────────────────────────
-          if (partnership != null)
-            Padding(
-              padding: const EdgeInsets.all(DS.spacing16),
-              child: GraphiteCardSurface(
-                surfaceRole: SparkleSurfaceRole.panel,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('我的目标',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: DS.fontSizeSm,
-                            color: DS.textSecondary),),
-                    const SizedBox(height: DS.xs),
-                    Text(
-                      isInitiator
-                          ? partnership.initiatorGoal
-                          : partnership.partnerGoal ?? '(未设置)',
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-          // ── Timeline ────────────────────────────────────────────────
           Expanded(
             child: timelineAsync.when(
               loading: () => const Center(child: LoadingIndicator()),
               error: (e, _) => Center(
                   child: Text('$e', style: TextStyle(color: DS.error)),),
-              data: (checkins) => ListView.builder(
+              data: (checkins) => ListView(
                 padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
-                itemCount: checkins.length,
-                itemBuilder: (ctx, i) => _CheckinTile(
-                  checkin: checkins[i],
-                  isMe: checkins[i].userId == currentUserId,
-                ),
+                children: [
+                  if (partnership != null) ...[
+                    const SizedBox(height: DS.spacing16),
+                    _GoalPanel(
+                      title: '我的目标',
+                      goal: isInitiator
+                          ? partnership.initiatorGoal
+                          : partnership.partnerGoal ?? '(未设置)',
+                    ),
+                    const SizedBox(height: DS.spacing12),
+                    _GoalPanel(
+                      title: '伙伴目标',
+                      goal: isInitiator
+                          ? partnership.partnerGoal ?? '对方还没填写目标'
+                          : partnership.initiatorGoal,
+                    ),
+                  ],
+                  const SizedBox(height: DS.spacing12),
+                  _SectionCard(
+                    title: '年度打卡热力图',
+                    child: heatmapAsync.when(
+                      loading: () => const Padding(
+                        padding: EdgeInsets.symmetric(vertical: DS.spacing24),
+                        child: Center(child: LoadingIndicator()),
+                      ),
+                      error: (e, _) => Text(
+                        '热力图暂时不可用: $e',
+                        style: TextStyle(color: DS.textSecondary),
+                      ),
+                      data: (data) => AccountabilityHeatmap(
+                        year: (data['year'] as int?) ?? DateTime.now().year,
+                        heatmap: ((data['heatmap'] as List<dynamic>?) ?? const [])
+                            .map((item) => Map<String, dynamic>.from(item as Map))
+                            .toList(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: DS.spacing12),
+                  _SectionCard(
+                    title: '伙伴成就',
+                    child: achievementsAsync.when(
+                      loading: () => const Padding(
+                        padding: EdgeInsets.symmetric(vertical: DS.spacing24),
+                        child: Center(child: LoadingIndicator()),
+                      ),
+                      error: (e, _) => Text(
+                        '成就加载失败: $e',
+                        style: TextStyle(color: DS.textSecondary),
+                      ),
+                      data: (payload) => partnershipAchievementsAsync.when(
+                        loading: () => const Padding(
+                          padding: EdgeInsets.symmetric(vertical: DS.spacing24),
+                          child: Center(child: LoadingIndicator()),
+                        ),
+                        error: (e, _) => Text(
+                          '伙伴成就加载失败: $e',
+                          style: TextStyle(color: DS.textSecondary),
+                        ),
+                        data: (partnershipPayload) {
+                          final achievements =
+                              ((payload['achievements'] as List<dynamic>?) ??
+                                      const [])
+                                  .map(
+                                    (item) => AchievementInfo.fromJson(
+                                      Map<String, dynamic>.from(item as Map),
+                                    ),
+                                  )
+                                  .toList();
+                          final partnerUnlocked = ((partnershipPayload[
+                                          'partner_achievements']
+                                      as List<dynamic>?) ??
+                                  const [])
+                              .map((item) => item.toString())
+                              .toSet();
+                          final partnerAchievements = achievements
+                              .where((item) => partnerUnlocked.contains(item.id))
+                              .map(
+                                (item) => AchievementInfo(
+                                  id: item.id,
+                                  name: item.name,
+                                  description: item.description,
+                                  icon: item.icon,
+                                  points: item.points,
+                                  isUnlocked: true,
+                                ),
+                              )
+                              .toList();
+
+                          if (partnerAchievements.isEmpty) {
+                            return Text(
+                              '伙伴还没有解锁专属成就，先互相打卡一轮试试看。',
+                              style: TextStyle(color: DS.textSecondary),
+                            );
+                          }
+
+                          return AchievementGrid(
+                            achievements: partnerAchievements,
+                            crossAxisCount: 1,
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: DS.spacing12),
+                  Text(
+                    '最近打卡',
+                    style: DS.titleLarge.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: DS.spacing8),
+                  if (checkins.isEmpty)
+                    _SectionCard(
+                      title: '还没有打卡记录',
+                      child: Text(
+                        '今天先发一条简短进展，伙伴关系就会开始有温度。',
+                        style: TextStyle(color: DS.textSecondary),
+                      ),
+                    )
+                  else
+                    ...checkins.map(
+                      (checkin) => _CheckinTile(
+                        checkin: checkin,
+                        isMe: checkin.userId == currentUserId,
+                      ),
+                    ),
+                  const SizedBox(height: DS.spacing24),
+                ],
               ),
             ),
           ),
@@ -162,9 +263,22 @@ class _AccountabilityDetailScreenState
             padding: const EdgeInsets.all(DS.spacing16),
             child: SizedBox(
               width: double.infinity,
-              child: SparkleButton.primary(
-                label: '今日打卡',
-                onPressed: () => _showCheckinSheet(),
+              child: statsAsync.when(
+                loading: () => SparkleButton.primary(
+                  label: '今日打卡',
+                  onPressed: _showCheckinSheet,
+                ),
+                error: (_, __) => SparkleButton.primary(
+                  label: '今日打卡',
+                  onPressed: _showCheckinSheet,
+                ),
+                data: (stats) => SparkleButton(
+                  label: stats.myCheckedInToday ? '今天已打卡' : '今日打卡',
+                  onPressed:
+                      stats.myCheckedInToday ? null : _showCheckinSheet,
+                  disabled: stats.myCheckedInToday,
+                  expand: true,
+                ),
               ),
             ),
           ),
@@ -181,6 +295,7 @@ class _AccountabilityDetailScreenState
       builder: (ctx) => AccountabilityCheckinSheet(
         partnershipId: widget.partnershipId,
         onDone: () {
+          ref.invalidate(myPartnershipsProvider);
           ref.invalidate(partnershipStatsProvider(widget.partnershipId));
           ref.invalidate(partnershipTimelineProvider(widget.partnershipId));
         },
@@ -280,18 +395,75 @@ class _PersonStat extends StatelessWidget {
       );
 }
 
-class _CheckinTile extends StatelessWidget {
+class _GoalPanel extends StatelessWidget {
+  const _GoalPanel({required this.title, required this.goal});
+
+  final String title;
+  final String goal;
+
+  @override
+  Widget build(BuildContext context) {
+    return GraphiteCardSurface(
+      surfaceRole: SparkleSurfaceRole.panel,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: DS.fontSizeSm,
+              color: DS.textSecondary,
+            ),
+          ),
+          const SizedBox(height: DS.xs),
+          Text(goal),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionCard extends StatelessWidget {
+  const _SectionCard({required this.title, required this.child});
+
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return GraphiteCardSurface(
+      surfaceRole: SparkleSurfaceRole.panel,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+          const SizedBox(height: DS.spacing12),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _CheckinTile extends ConsumerWidget {
   const _CheckinTile({required this.checkin, required this.isMe});
 
   final AccountabilityCheckinInfo checkin;
   final bool isMe;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final dateStr =
         DateFormat('MM-dd HH:mm').format(checkin.createdAt);
     final moodEmojis = ['😔', '😕', '😐', '😊', '😄'];
     final moodIdx = (checkin.mood - 1).clamp(0, 4);
+    final authorName = checkin.author?.displayName ?? (isMe ? '我' : '伙伴');
 
     return Container(
       margin: const EdgeInsets.only(bottom: DS.sm),
@@ -308,7 +480,7 @@ class _CheckinTile extends StatelessWidget {
           Row(
             children: [
               Text(
-                isMe ? '我' : '伙伴',
+                authorName,
                 style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: isMe ? DS.brandPrimary : DS.textPrimary,
@@ -330,9 +502,117 @@ class _CheckinTile extends StatelessWidget {
           const SizedBox(height: DS.xs),
           Text(checkin.content,
               style: const TextStyle(fontSize: DS.fontSizeSm),),
+          const SizedBox(height: DS.spacing12),
+          Row(
+            children: [
+              Icon(Icons.favorite, size: 16, color: DS.error),
+              const SizedBox(width: DS.xs),
+              Text('${checkin.likes}', style: TextStyle(color: DS.textSecondary)),
+              const SizedBox(width: DS.spacing16),
+              Icon(Icons.chat_bubble_outline, size: 16, color: DS.neutral500),
+              const SizedBox(width: DS.xs),
+              Text(
+                '${checkin.encouragements.length}',
+                style: TextStyle(color: DS.textSecondary),
+              ),
+              const Spacer(),
+              if (!isMe) ...[
+                TextButton.icon(
+                  onPressed: () => _likeCheckin(context, ref),
+                  icon: const Icon(Icons.thumb_up_alt_outlined, size: 16),
+                  label: const Text('点赞'),
+                ),
+                TextButton.icon(
+                  onPressed: () => _encourageCheckin(context, ref),
+                  icon: const Icon(Icons.bolt_outlined, size: 16),
+                  label: const Text('鼓励'),
+                ),
+              ],
+            ],
+          ),
+          if (checkin.encouragements.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing8),
+            Wrap(
+              runSpacing: DS.xs,
+              children: checkin.encouragements.map((item) {
+                return Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: DS.xs),
+                  padding: const EdgeInsets.all(DS.sm),
+                  decoration: BoxDecoration(
+                    color: DS.surfaceTertiary,
+                    borderRadius: BorderRadius.circular(DS.borderRadiusMD),
+                  ),
+                  child: Text(
+                    item.message,
+                    style: TextStyle(
+                      fontSize: DS.fontSizeXs,
+                      color: DS.textSecondary,
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
         ],
       ),
     );
+  }
+
+  Future<void> _likeCheckin(BuildContext context, WidgetRef ref) async {
+    try {
+      await ref.read(accountabilityActionsProvider).likeCheckin(ref, checkin.id);
+      ref.invalidate(partnershipTimelineProvider(checkin.partnershipId));
+      if (context.mounted) {
+        AppFeedback.success(context, '已为伙伴点亮鼓励');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        AppFeedback.error(context, '点赞失败: $e');
+      }
+    }
+  }
+
+  Future<void> _encourageCheckin(BuildContext context, WidgetRef ref) async {
+    final controller = TextEditingController();
+    final message = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('发送鼓励'),
+        content: TextField(
+          controller: controller,
+          maxLines: 3,
+          decoration: const InputDecoration(
+            hintText: '写一句你想对伙伴说的话',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: const Text('发送'),
+          ),
+        ],
+      ),
+    );
+    if (message == null || message.isEmpty) return;
+    try {
+      await ref
+          .read(accountabilityActionsProvider)
+          .encourageCheckin(ref, checkin.id, message);
+      ref.invalidate(partnershipTimelineProvider(checkin.partnershipId));
+      if (context.mounted) {
+        AppFeedback.success(context, '鼓励已送达');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        AppFeedback.error(context, '发送失败: $e');
+      }
+    }
   }
 }
 

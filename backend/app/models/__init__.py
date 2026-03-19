@@ -26,6 +26,7 @@ from app.models.capsule_favorite import CapsuleFavorite
 from app.models.capsule_feedback import CapsuleFeedback, FeedbackCategory
 from app.models.capsule_generation_job import CapsuleGenerationJob, GenerationType
 from app.models.capsule_generation_job import JobStatus as CapsuleJobStatus
+from app.models.candidate_action_feedback import CandidateActionFeedback
 from app.models.chat import ChatMessage, ChatSession, MessageRole
 from app.models.cognitive import BehaviorPattern, CognitiveFragment
 from app.models.community import (
@@ -54,6 +55,7 @@ from app.models.compliance import (
 )
 from app.models.context_pack import ContextBudgetProfile, ContextPackFeedback, ContextPackRun
 from app.models.curiosity_capsule import CuriosityCapsule, DepthLevel
+from app.models.custom_expert import CustomExpertProfile, CustomExpertSource, CustomExpertTeam
 from app.models.decision_record import DecisionRecord
 from app.models.document_chunks import DocumentChunk
 from app.models.error_book import ErrorRecord
@@ -214,12 +216,16 @@ __all__ = [
     "PersonaSnapshot",
     "CuriosityCapsule",
     "DepthLevel",
+    "CustomExpertProfile",
+    "CustomExpertTeam",
+    "CustomExpertSource",
     "CapsuleFeedback",
     "FeedbackCategory",
     "CapsuleFavorite",
     "CapsuleGenerationJob",
     "CapsuleJobStatus",
     "GenerationType",
+    "CandidateActionFeedback",
     # Focus
     "FocusSession",
     "FocusType",

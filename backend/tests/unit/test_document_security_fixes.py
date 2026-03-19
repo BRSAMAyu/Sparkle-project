@@ -196,8 +196,8 @@ class TestMagicBytesValidation:
         assert chunks == []
         mock_attempt.assert_not_called()
 
-    def test_legacy_deepseek_engine_maps_to_zhipu(self):
-        """测试旧 deepseek 选项会自动映射到 zhipu"""
+    def test_legacy_deepseek_engine_maps_to_siliconflow(self):
+        """测试旧 deepseek 选项会自动映射到 siliconflow"""
         page = Mock()
         page_image = Mock()
         page_image.original = Mock()
@@ -212,6 +212,8 @@ class TestMagicBytesValidation:
         assert confidence is None
         mock_api.assert_called_once()
         mock_local.assert_not_called()
+        _, call_kwargs = mock_api.call_args
+        assert call_kwargs == {}
 
 
 class Test10MBSizeLimit:

@@ -12,7 +12,9 @@ RUN pip install --no-cache-dir uv
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
     gcc \
+    libc6-dev \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 

@@ -144,6 +144,8 @@ task_routes = {
     "app.core.celery_tasks.persist_bayesian_data": {"queue": "low_priority"},
     "app.core.celery_tasks.cleanup_pending_actions": {"queue": "low_priority"},
     "app.core.celery_tasks.rerank_documents": {"queue": "low_priority"},
+    "generate_capsules_batch": {"queue": "glm_batch"},
+    "analyze_cognitive_fragment_batch": {"queue": "glm_batch"},
     "app.core.celery_tasks.expansion_worker_task": {"queue": "default"},
     "app.core.celery_tasks.visualize_graph": {"queue": "low_priority"},
     "app.core.celery_tasks.health_check_task": {"queue": "high_priority"},

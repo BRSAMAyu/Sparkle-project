@@ -2,16 +2,16 @@
 Capsule Generation Service
 
 支持：
-- DeepSeek Reasoner 集成
-- 二维控制面 (深度偏好 x 好奇心偏好)
-- 异步批量生成
-- 模型降级策略
-- 指数退避重试
+- 二维偏好控制（深度 x 好奇心）
+- GLM batch / 在线模式统一执行
+- 显式模型主备链
+- 思考 / 非思考模式分流
 """
 from __future__ import annotations
-import asyncio
+
+from dataclasses import dataclass
 import random
-from datetime import timezone, datetime
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
@@ -19,88 +19,121 @@ from loguru import logger
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.agent_profiles import TaskType
 from app.models.capsule_generation_job import CapsuleGenerationJob, JobStatus
 from app.models.curiosity_capsule import CuriosityCapsule, DepthLevel
 from app.models.task import Task, TaskStatus
 from app.models.user import User
-from app.services.llm_service import get_llm_service_for_task, llm_service
+from app.services.llm_service import get_llm_service_for_specific_model
 
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
+@dataclass(frozen=True)
+class CapsuleExecutionPlan:
+    primary_model: str
+    fallback_models: list[str]
+    depth_level: DepthLevel
+    thinking_mode: bool
+    execution_mode: str
+
+
 class ModelSelectionStrategy:
-    """
-    模型选择策略
+    """根据用户偏好和执行模式为胶囊生成选择模型计划。"""
 
-    二维控制面映射：
-    - depth_preference: 0.0-1.0
-    - curiosity_preference: 0.0-1.0
-    """
-
-    # 根据深度偏好选择模型
-    DEPTH_MODEL_MAP = {
-        DepthLevel.SHALLOW: ["xiaomi_chat", "zhipu_flash"],  # 浅度：快速响应
-        DepthLevel.MEDIUM: ["zhipu_chat", "deepseek_chat", "xiaomi_chat"],  # 中度：标准深度
-        DepthLevel.DEEP: ["deepseek_reason", "zhipu_chat", "deepseek_chat"],  # 深度：深度推理
-    }
-
-    @classmethod
-    def select_depth_level(cls, depth_preference: float) -> DepthLevel:
-        """根据深度偏好选择深度级别"""
+    @staticmethod
+    def select_depth_level(depth_preference: float) -> DepthLevel:
         if depth_preference < 0.3:
             return DepthLevel.SHALLOW
-        elif depth_preference > 0.7:
+        if depth_preference > 0.7:
             return DepthLevel.DEEP
-        else:
-            return DepthLevel.MEDIUM
+        return DepthLevel.MEDIUM
 
-    @classmethod
-    def get_model_fallback_chain(cls, depth_level: DepthLevel) -> list[str]:
-        """获取模型降级链"""
-        return cls.DEPTH_MODEL_MAP.get(depth_level, ["zhipu_chat"])
-
-    @classmethod
-    def calculate_capsule_count(cls, curiosity_preference: float) -> int:
-        """根据好奇心偏好计算生成胶囊数量"""
+    @staticmethod
+    def calculate_capsule_count(curiosity_preference: float) -> int:
         if curiosity_preference < 0.3:
             return 1
-        elif 0.3 <= curiosity_preference <= 0.7:
+        if curiosity_preference <= 0.7:
             return random.choice([2, 3])
-        else:
-            return random.choice([4, 5])
-
-
-class RetryConfig:
-    """重试配置 - 针对不同异常类型的精细重试"""
-
-    CONFIG = {
-        "rate_limit_error": {"base_delay": 60, "max_retries": 3},
-        "timeout_error": {"base_delay": 30, "max_retries": 2},
-        "api_error": {"base_delay": 10, "max_retries": 3},
-        "llm_service_unavailable": {"base_delay": 120, "max_retries": 5},
-    }
+        return random.choice([4, 5])
 
     @classmethod
-    def get_config(cls, error_type: str) -> dict:
-        return cls.CONFIG.get(error_type, {"base_delay": 10, "max_retries": 3})
+    def build_execution_plan(
+        cls,
+        depth_preference: float,
+        curiosity_preference: float,
+        generation_type: str,
+        execution_mode: str,
+        requested_count: int,
+        model_key: str | None = None,
+    ) -> CapsuleExecutionPlan:
+        depth_level = cls.select_depth_level(depth_preference)
+        explicit_mode = cls._normalize_explicit_model(model_key)
+        if explicit_mode is not None:
+            return CapsuleExecutionPlan(
+                primary_model=model_key or explicit_mode[0],
+                fallback_models=explicit_mode[1],
+                depth_level=depth_level,
+                thinking_mode=explicit_mode[2],
+                execution_mode=execution_mode,
+            )
+
+        use_thinking = depth_level == DepthLevel.DEEP and requested_count <= 2
+        if not use_thinking:
+            use_thinking = (
+                depth_preference >= 0.65
+                and curiosity_preference >= 0.8
+                and generation_type in {"manual", "weekly", "push_triggered"}
+            )
+
+        if use_thinking:
+            return CapsuleExecutionPlan(
+                primary_model="glm_4_7_thinking",
+                fallback_models=["glm_4_7_flash_thinking", "deepseek_reason"],
+                depth_level=depth_level,
+                thinking_mode=True,
+                execution_mode=execution_mode,
+            )
+
+        if depth_level == DepthLevel.SHALLOW:
+            primary = "glm_4_7_flash_no_thinking"
+            fallbacks = ["glm_4_7_no_thinking", "deepseek_chat"]
+        else:
+            primary = "glm_4_7_no_thinking"
+            fallbacks = ["glm_4_7_flash_no_thinking", "deepseek_chat"]
+
+        return CapsuleExecutionPlan(
+            primary_model=primary,
+            fallback_models=fallbacks,
+            depth_level=depth_level,
+            thinking_mode=False,
+            execution_mode=execution_mode,
+        )
+
+    @staticmethod
+    def _normalize_explicit_model(model_key: str | None) -> tuple[str, list[str], bool] | None:
+        if not model_key:
+            return None
+        if model_key == "glm_4_7_thinking":
+            return model_key, ["glm_4_7_flash_thinking", "deepseek_reason"], True
+        if model_key == "glm_4_7_flash_thinking":
+            return model_key, ["glm_4_7_thinking", "deepseek_reason"], True
+        if model_key == "glm_4_7_no_thinking":
+            return model_key, ["glm_4_7_flash_no_thinking", "deepseek_chat"], False
+        if model_key == "glm_4_7_flash_no_thinking":
+            return model_key, ["glm_4_7_no_thinking", "deepseek_chat"], False
+        if model_key == "deepseek_reason":
+            return model_key, ["glm_4_7_thinking", "glm_4_7_flash_thinking"], True
+        if model_key == "deepseek_chat":
+            return model_key, ["glm_4_7_no_thinking", "glm_4_7_flash_no_thinking"], False
+        return model_key, [], model_key.endswith("_thinking") and "no_thinking" not in model_key
 
 
 class CapsuleGenerationService:
-    """
-    胶囊生成服务
+    """生成好奇心胶囊，并记录完整执行计划和回退结果。"""
 
-    核心功能：
-    - 批量生成胶囊
-    - 模型选择与降级
-    - 用户上下文收集
-    - 任务状态追踪
-    """
-
-    def __init__(self):
-        self.llm = llm_service
+    def __init__(self) -> None:
         self.model_strategy = ModelSelectionStrategy()
 
     async def generate_capsules_batch(
@@ -111,129 +144,150 @@ class CapsuleGenerationService:
         curiosity_preference: float = 0.5,
         generation_type: str = "daily",
         requested_count: int | None = None,
+        model_key: str | None = None,
+        execution_mode: str = "online",
+        existing_job_id: UUID | None = None,
     ) -> CapsuleGenerationJob:
-        """
-        批量生成胶囊
+        requested_total = requested_count or self.model_strategy.calculate_capsule_count(curiosity_preference)
+        execution_plan = self.model_strategy.build_execution_plan(
+            depth_preference=depth_preference,
+            curiosity_preference=curiosity_preference,
+            generation_type=generation_type,
+            execution_mode=execution_mode,
+            requested_count=requested_total,
+            model_key=model_key,
+        )
 
-        Args:
-            user_id: 用户ID
-            db: 数据库会话
-            depth_preference: 深度偏好 (0.0-1.0)
-            curiosity_preference: 好奇心偏好 (0.0-1.0)
-            generation_type: 生成类型 (daily/weekly/manual/push_triggered)
-            requested_count: 请求生成的数量（可选，默认根据偏好计算）
+        if existing_job_id is not None:
+            job = await db.get(CapsuleGenerationJob, existing_job_id)
+            if job is None:
+                raise ValueError(f"Capsule generation job {existing_job_id} not found")
+            if job.user_id != user_id:
+                raise ValueError("Capsule generation job does not belong to requested user")
+            job.status = JobStatus.PENDING.value
+            job.generation_type = generation_type
+            job.depth_preference = depth_preference
+            job.curiosity_preference = curiosity_preference
+            job.requested_count = requested_total
+            job.actual_count = None
+            job.capsule_ids = None
+            job.progress = 0.0
+            job.error_message = None
+            job.duration_ms = None
+            job.model_used = execution_plan.primary_model
+            job.started_at = None
+            job.completed_at = None
+            db.add(job)
+            await db.flush()
+        else:
+            job = CapsuleGenerationJob(
+                user_id=user_id,
+                status=JobStatus.PENDING.value,
+                generation_type=generation_type,
+                depth_preference=depth_preference,
+                curiosity_preference=curiosity_preference,
+                requested_count=requested_total,
+                model_used=execution_plan.primary_model,
+            )
+            db.add(job)
+            await db.flush()
 
-        Returns:
-            生成任务对象
-        """
-        # 创建生成任务记录
+        try:
+            job.mark_started()
+            await db.flush()
+
+            user_context = await self._gather_user_context(
+                user_id=user_id,
+                db=db,
+                depth_preference=depth_preference,
+                curiosity_preference=curiosity_preference,
+                generation_type=generation_type,
+                execution_mode=execution_mode,
+            )
+
+            capsule_ids: list[UUID] = []
+            for index in range(job.requested_count):
+                progress = 0.1 + (0.8 * (index + 1) / job.requested_count)
+                job.update_progress(progress)
+                await db.flush()
+
+                capsule = await self._generate_single_capsule(
+                    user_id=user_id,
+                    db=db,
+                    execution_plan=execution_plan,
+                    user_context=user_context,
+                    index=index,
+                )
+                if capsule is not None:
+                    capsule_ids.append(capsule.id)
+
+            job.mark_completed(capsule_ids)
+            await db.commit()
+            await db.refresh(job)
+            logger.info(
+                "[CapsuleGen] Job {} completed: {}/{} capsules, mode={}, model={}",
+                job.id,
+                len(capsule_ids),
+                job.requested_count,
+                execution_plan.execution_mode,
+                execution_plan.primary_model,
+            )
+            return job
+        except Exception as exc:
+            logger.error("[CapsuleGen] Job {} failed: {}", job.id, exc)
+            job.mark_failed(str(exc))
+            await db.commit()
+            await db.refresh(job)
+            return job
+
+    async def create_generation_job(
+        self,
+        *,
+        user_id: UUID,
+        db: AsyncSession,
+        depth_preference: float,
+        curiosity_preference: float,
+        generation_type: str,
+        requested_count: int,
+        model_used: str | None = None,
+    ) -> CapsuleGenerationJob:
         job = CapsuleGenerationJob(
             user_id=user_id,
             status=JobStatus.PENDING.value,
             generation_type=generation_type,
             depth_preference=depth_preference,
             curiosity_preference=curiosity_preference,
-            requested_count=requested_count or self.model_strategy.calculate_capsule_count(curiosity_preference),
+            requested_count=requested_count,
+            model_used=model_used,
+            progress=0.0,
         )
         db.add(job)
-        await db.flush()
-
-        try:
-            # 标记任务开始
-            job.mark_started()
-            await db.flush()
-
-            # 收集用户上下文
-            user_context = await self._gather_user_context(user_id, db)
-
-            # 选择深度级别
-            depth_level = self.model_strategy.select_depth_level(depth_preference)
-
-            # 生成胶囊
-            capsule_ids = []
-            for i in range(job.requested_count):
-                job.update_progress(0.1 + (0.8 * (i + 1) / job.requested_count))
-                await db.flush()
-
-                capsule = await self._generate_single_capsule(
-                    user_id=user_id,
-                    db=db,
-                    depth_level=depth_level,
-                    user_context=user_context,
-                    index=i,
-                )
-
-                if capsule:
-                    capsule_ids.append(capsule.id)
-
-            # 标记任务完成
-            job.mark_completed(capsule_ids)
-            await db.commit()
-            await db.refresh(job)
-
-            logger.info(
-                f"[CapsuleGen] Job {job.id} completed: "
-                f"{len(capsule_ids)}/{job.requested_count} capsules generated"
-            )
-
-            return job
-
-        except Exception as e:
-            logger.error(f"[CapsuleGen] Job {job.id} failed: {e}")
-            job.mark_failed(str(e))
-            await db.commit()
-            await db.refresh(job)
-            return job
+        await db.commit()
+        await db.refresh(job)
+        return job
 
     async def _generate_single_capsule(
         self,
         user_id: UUID,
         db: AsyncSession,
-        depth_level: DepthLevel,
+        execution_plan: CapsuleExecutionPlan,
         user_context: dict[str, Any],
         index: int = 0,
     ) -> CuriosityCapsule | None:
-        """
-        生成单个胶囊，支持模型降级
+        model_chain = [execution_plan.primary_model, *execution_plan.fallback_models]
+        last_error: Exception | None = None
 
-        Args:
-            user_id: 用户ID
-            db: 数据库会话
-            depth_level: 深度级别
-            user_context: 用户上下文
-            index: 生成索引（用于生成不同内容）
-
-        Returns:
-            生成的胶囊对象，失败返回 None
-        """
-        # 获取模型降级链
-        model_chain = self.model_strategy.get_model_fallback_chain(depth_level)
-
-        last_error = None
         for model_name in model_chain:
             try:
-                logger.debug(f"[CapsuleGen] Trying model: {model_name} for depth_level={depth_level.value}")
-
-                # 根据模型选择LLM服务
-                if "reason" in model_name:
-                    llm = get_llm_service_for_task(TaskType.DEEP_REASONING)
-                elif "flash" in model_name:
-                    llm = get_llm_service_for_task(TaskType.FAST_GENERATION)
-                else:
-                    llm = self.llm
-
-                # 生成内容
                 content_data = await self._generate_content(
-                    llm=llm,
                     model_name=model_name,
-                    depth_level=depth_level,
+                    depth_level=execution_plan.depth_level,
+                    thinking_mode=self._is_thinking_model(model_name),
                     user_context=user_context,
                     index=index,
                 )
 
                 personalization_context = self._build_personalization_context(user_context)
-
-                # 创建胶囊
                 capsule = CuriosityCapsule(
                     user_id=user_id,
                     title=content_data["title"],
@@ -241,53 +295,52 @@ class CapsuleGenerationService:
                     related_subject=content_data.get("subject"),
                     related_task_id=content_data.get("task_id"),
                     is_read=False,
-                    depth_level=depth_level,
+                    depth_level=execution_plan.depth_level,
                     generation_method=model_name,
                     source_context={
-                        "depth_level": depth_level.value,
+                        "depth_level": execution_plan.depth_level.value,
+                        "execution_mode": execution_plan.execution_mode,
+                        "thinking_mode": self._is_thinking_model(model_name),
+                        "primary_model": execution_plan.primary_model,
+                        "model_chain": model_chain,
+                        "selected_model": model_name,
                         "subjects_studied": [s.get("title") for s in user_context.get("recent_tasks", [])],
                         "generated_at": _utcnow().isoformat(),
                         "dominant_pattern": user_context.get("dominant_pattern"),
                         "behavior_patterns": [
                             p.get("name") for p in user_context.get("behavior_patterns", []) if p.get("name")
                         ],
+                        "profile_preferences": {
+                            "depth_preference": user_context.get("depth_preference"),
+                            "curiosity_preference": user_context.get("curiosity_preference"),
+                        },
                     },
                     personalization_context=personalization_context,
                     quality_score=content_data.get("quality_score", 0.5),
                 )
-
                 db.add(capsule)
                 await db.flush()
                 await db.refresh(capsule)
-
-                logger.info(f"[CapsuleGen] Generated capsule {capsule.id} using {model_name}")
+                logger.info("[CapsuleGen] Generated capsule {} using {}", capsule.id, model_name)
                 return capsule
+            except Exception as exc:
+                last_error = exc
+                logger.warning("[CapsuleGen] Model {} failed for user {}: {}", model_name, user_id, exc)
 
-            except Exception as e:
-                last_error = e
-                logger.warning(f"[CapsuleGen] Model {model_name} failed: {e}, trying fallback...")
-
-                # 检查是否需要重试
-                error_type = self._classify_error(e)
-                retry_config = RetryConfig.get_config(error_type)
-
-                # 如果是速率限制，等待后重试
-                if error_type == "rate_limit_error" and model_chain.index(model_name) == 0:
-                    await asyncio.sleep(retry_config["base_delay"])
-
-                # 继续尝试下一个模型
-                continue
-
-        # 所有模型都失败了
-        logger.error(f"[CapsuleGen] All models failed for user {user_id}: {last_error}")
+        logger.error("[CapsuleGen] All models failed for user {}: {}", user_id, last_error)
         return None
 
     def _build_personalization_context(self, user_context: dict[str, Any]) -> dict[str, Any] | None:
         patterns = user_context.get("behavior_patterns") or []
         if not patterns:
-            return None
+            return {
+                "depth_preference": user_context.get("depth_preference"),
+                "curiosity_preference": user_context.get("curiosity_preference"),
+            }
 
         return {
+            "depth_preference": user_context.get("depth_preference"),
+            "curiosity_preference": user_context.get("curiosity_preference"),
             "based_on_patterns": [p.get("name") for p in patterns if p.get("name")],
             "dominant_pattern": user_context.get("dominant_pattern"),
             "confidence_scores": {
@@ -297,146 +350,140 @@ class CapsuleGenerationService:
             },
         }
 
-    def _build_personalized_prompt(self, user_context: dict[str, Any], depth_level: DepthLevel) -> str:
+    def _build_personalized_prompt(
+        self,
+        user_context: dict[str, Any],
+        depth_level: DepthLevel,
+        thinking_mode: bool,
+    ) -> str:
         depth_instruction = {
-            DepthLevel.SHALLOW: "简洁明了，一两句话点出核心",
-            DepthLevel.MEDIUM: "适度展开，包含背景、核心、延伸建议",
-            DepthLevel.DEEP: "深度解析，包含原理、应用、拓展思考",
+            DepthLevel.SHALLOW: "简洁明了，用很短篇幅点出最值得继续探索的一个角度。",
+            DepthLevel.MEDIUM: "适度展开，讲清背景、关键点与下一步探索方向。",
+            DepthLevel.DEEP: "深度解析，解释原理、迁移意义，以及可以继续思考的问题。",
         }
+        curiosity_value = float(user_context.get("curiosity_preference") or 0.5)
+        if curiosity_value < 0.35:
+            exploration_instruction = "保持聚焦，只围绕当前学习主题做一步延伸。"
+        elif curiosity_value > 0.75:
+            exploration_instruction = "鼓励跨主题联想，加入一个意想不到但合理的连接点。"
+        else:
+            exploration_instruction = "在当前主题附近做中等幅度拓展。"
 
-        base_prompt = f"""你是Sparkle AI学习助手的知识胶囊生成器。
+        mode_instruction = (
+            "先充分思考结构与洞见，再输出最终 JSON。不要输出思考过程。"
+            if thinking_mode
+            else "直接输出高质量结果，不展开冗长推理。"
+        )
 
-任务：基于用户最近的学习内容，生成一个"好奇心胶囊"——一个简短有趣的知识拓展。
+        base_prompt = f"""你是 Sparkle AI 的好奇心胶囊生成器。
+
+任务：基于用户最近的学习轨迹，生成一个短小但有价值的知识胶囊。
 
 风格要求：
 - {depth_instruction[depth_level]}
-- 引人入胜，激发好奇心
-- 与主题直接相关
-- 使用Markdown格式
+- {exploration_instruction}
+- {mode_instruction}
+- 内容必须自然，不能像解释自己在帮用户生成内容
+- 使用 Markdown
 
 输出格式（JSON）：
 {{
-    "title": "吸引人的标题",
-    "content": "胶囊内容（Markdown格式）",
-    "quality_score": 0.8  // 0.0-1.0 内容质量自评
+  "title": "吸引人的标题",
+  "content": "胶囊正文（Markdown）",
+  "quality_score": 0.0
 }}"""
 
         patterns = user_context.get("behavior_patterns") or []
         if patterns:
-            pattern_hints: list[str] = []
+            hints: list[str] = []
             for pattern in patterns:
                 name = pattern.get("name")
                 solution_hint = pattern.get("solution_hint")
                 if name == "Planning Optimism":
-                    pattern_hints.append("用户倾向于低估任务时间，可以生成关于时间管理技巧的内容")
+                    hints.append("用户容易低估时间，适合加入可执行的拆解或节奏提示。")
                 elif name == "Focus Decay":
-                    pattern_hints.append("用户近期专注力下降，可以生成关于恢复精力的内容")
+                    hints.append("用户近期专注力波动，适合给出轻量、能快速启动的切入点。")
                 elif name == "Procrastination":
-                    pattern_hints.append("用户有拖延倾向，可以生成关于克服拖延的技巧")
+                    hints.append("用户有拖延倾向，内容应降低启动阻力。")
                 elif name and solution_hint:
-                    pattern_hints.append(f"用户模式「{name}」提示：{solution_hint}")
+                    hints.append(f"结合模式「{name}」：{solution_hint}")
                 elif name:
-                    pattern_hints.append(f"结合用户模式「{name}」生成更贴合的内容")
-
-            if pattern_hints:
-                base_prompt += "\n\n个性化建议（基于用户行为模式）：\n" + "\n".join(
-                    f"- {hint}" for hint in pattern_hints
-                )
+                    hints.append(f"结合模式「{name}」做个性化调整。")
+            if hints:
+                base_prompt += "\n\n个性化约束：\n" + "\n".join(f"- {hint}" for hint in hints)
 
         return base_prompt
 
     async def _generate_content(
         self,
-        llm,
         model_name: str,
         depth_level: DepthLevel,
+        thinking_mode: bool,
         user_context: dict[str, Any],
         index: int = 0,
     ) -> dict[str, Any]:
-        """
-        使用LLM生成胶囊内容
-
-        Returns:
-            {
-                "title": str,
-                "content": str,
-                "subject": Optional[str],
-                "task_id": Optional[UUID],
-                "quality_score": float,
-            }
-        """
-        # 选择主题（从最近任务中选择或随机）
         recent_tasks = user_context.get("recent_tasks", [])
         selected_task = None
         topic = "有趣的知识点"
-
-        if recent_tasks and len(recent_tasks) > index:
+        if recent_tasks:
             selected_task = recent_tasks[index % len(recent_tasks)]
             topic = selected_task.get("title", "学习内容")
 
-        # 构建prompt
-        system_prompt = self._build_personalized_prompt(user_context, depth_level)
-
+        system_prompt = self._build_personalized_prompt(
+            user_context=user_context,
+            depth_level=depth_level,
+            thinking_mode=thinking_mode,
+        )
         user_prompt = f"""用户最近学习了：{topic}
 
-请生成一个相关的"好奇心胶囊"，拓展这个知识点。"""
+请围绕这个主题生成一个相关的好奇心胶囊。"""
+
+        llm = await get_llm_service_for_specific_model(model_name, agent_role="generation")
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ]
+        temperature = 0.45 if thinking_mode or depth_level == DepthLevel.DEEP else 0.7
 
         try:
-            # 使用chat_json获取结构化输出
-            result = await llm.chat_json(
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                temperature=0.7 if depth_level != DepthLevel.DEEP else 0.5,
-            )
-
+            if thinking_mode:
+                result = await llm.reason_json(messages=messages, temperature=temperature)
+            else:
+                result = await llm.chat_json(messages=messages, temperature=temperature)
             if not result or not isinstance(result, dict):
                 raise ValueError("Invalid LLM response")
-
-            title = result.get("title", f"关于{topic}的小知识")
-            content = result.get("content", f"探索**{topic}**的更多可能性...")
-            quality_score = result.get("quality_score", 0.5)
-
             return {
-                "title": title,
-                "content": content,
+                "title": result.get("title", f"关于 {topic} 的延伸思考"),
+                "content": result.get("content", f"从 **{topic}** 再往前走一步，会看到更多联系。"),
                 "subject": topic if isinstance(topic, str) else "学习拓展",
                 "task_id": selected_task.get("id") if selected_task else None,
-                "quality_score": quality_score,
+                "quality_score": float(result.get("quality_score", 0.5)),
             }
-
-        except Exception as e:
-            logger.error(f"[CapsuleGen] Content generation failed: {e}")
-            # 返回兜底内容
+        except Exception as exc:
+            logger.error("[CapsuleGen] Content generation failed with {}: {}", model_name, exc)
             return {
-                "title": f"探索{topic}",
-                "content": f"""关于 **{topic}** 的小知识：
+                "title": f"探索 {topic}",
+                "content": f"""关于 **{topic}** 的一个延伸视角：
 
-这是为你准备的知识胶囊。探索这个主题，发现更多有趣的连接！""",
+这个主题不仅关乎当前内容，也可能和你接下来要学的知识建立联系。""",
                 "subject": topic if isinstance(topic, str) else "学习拓展",
                 "task_id": selected_task.get("id") if selected_task else None,
                 "quality_score": 0.3,
             }
 
-    async def _gather_user_context(self, user_id: UUID, db: AsyncSession) -> dict[str, Any]:
-        """
-        收集用户上下文用于生成个性化内容
-
-        Returns:
-            {
-                "user_id": str,
-                "nickname": str,
-                "recent_tasks": List[Dict],
-                "subjects": List[str],
-            }
-        """
-        # 获取用户信息
+    async def _gather_user_context(
+        self,
+        user_id: UUID,
+        db: AsyncSession,
+        depth_preference: float = 0.5,
+        curiosity_preference: float = 0.5,
+        generation_type: str = "daily",
+        execution_mode: str = "online",
+    ) -> dict[str, Any]:
         user = await db.get(User, user_id)
         if not user:
             return {}
 
-        # 获取最近完成的任务
         result = await db.execute(
             select(Task)
             .where(Task.user_id == user_id, Task.status == TaskStatus.COMPLETED)
@@ -460,6 +507,10 @@ class CapsuleGenerationService:
         return {
             "user_id": str(user_id),
             "nickname": user.nickname or "学习者",
+            "depth_preference": depth_preference,
+            "curiosity_preference": curiosity_preference,
+            "generation_type": generation_type,
+            "execution_mode": execution_mode,
             "recent_tasks": [
                 {
                     "id": t.id,
@@ -469,14 +520,7 @@ class CapsuleGenerationService:
                 }
                 for t in recent_tasks
             ],
-            "subjects": list(
-                {
-                    subject
-                    for t in recent_tasks
-                    for subject in [_task_subject(t)]
-                    if subject
-                }
-            ),
+            "subjects": list({subject for t in recent_tasks for subject in [_task_subject(t)] if subject}),
             "behavior_patterns": [
                 {
                     "name": pattern.pattern_name,
@@ -490,18 +534,8 @@ class CapsuleGenerationService:
         }
 
     @staticmethod
-    def _classify_error(error: Exception) -> str:
-        """分类错误类型用于重试策略"""
-        error_msg = str(error).lower()
-
-        if "rate limit" in error_msg or "429" in error_msg:
-            return "rate_limit_error"
-        elif "timeout" in error_msg or "timed out" in error_msg:
-            return "timeout_error"
-        elif "service unavailable" in error_msg or "503" in error_msg:
-            return "llm_service_unavailable"
-        else:
-            return "api_error"
+    def _is_thinking_model(model_key: str) -> bool:
+        return model_key.endswith("_thinking") and "no_thinking" not in model_key
 
     async def get_user_generation_jobs(
         self,
@@ -509,7 +543,6 @@ class CapsuleGenerationService:
         db: AsyncSession,
         limit: int = 20,
     ) -> list[CapsuleGenerationJob]:
-        """获取用户的生成任务列表"""
         result = await db.execute(
             select(CapsuleGenerationJob)
             .where(CapsuleGenerationJob.user_id == user_id)
@@ -518,14 +551,5 @@ class CapsuleGenerationService:
         )
         return result.scalars().all()
 
-    async def get_job_status(
-        self,
-        job_id: UUID,
-        db: AsyncSession,
-    ) -> CapsuleGenerationJob | None:
-        """获取任务状态"""
-        return await db.get(CapsuleGenerationJob, job_id)
 
-
-# 全局单例
 capsule_generation_service = CapsuleGenerationService()

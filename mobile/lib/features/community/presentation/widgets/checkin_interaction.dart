@@ -25,7 +25,7 @@ class CheckinInteraction extends StatelessWidget {
   final bool isMyCheckin;
   final bool isMyPartner;
   final VoidCallback? onLike;
-  final Function(String message)? onEncourage;
+  final void Function(String message)? onEncourage;
 
   @override
   Widget build(BuildContext context) {
@@ -222,11 +222,11 @@ class CheckinInteraction extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 10,
-                  child: Text(encouragement.authorName[0].toUpperCase()),
+                  child: Text(_encouragementAuthor(encouragement)[0].toUpperCase()),
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  encouragement.authorName,
+                  _encouragementAuthor(encouragement),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -251,10 +251,17 @@ class CheckinInteraction extends StatelessWidget {
     );
   }
 
+  String _encouragementAuthor(EncouragementMessage encouragement) {
+    if (encouragement.authorName.isNotEmpty) {
+      return encouragement.authorName;
+    }
+    return '伙伴';
+  }
+
   void _showEncourageDialog(BuildContext context) {
     final controller = TextEditingController();
 
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('发送鼓励'),

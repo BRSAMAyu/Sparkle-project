@@ -26,8 +26,9 @@ class STTService:
     def _init_provider(self):
         """根据配置初始化STT Provider"""
         provider_name = (settings.STT_PROVIDER or "zhipu").lower()
+        backup_name = (settings.STT_BACKUP_PROVIDER or "").lower()
         self.provider = self._build_provider(provider_name)
-        alternate_name = "xunfei" if provider_name == "zhipu" else "zhipu"
+        alternate_name = backup_name or ("xunfei" if provider_name == "zhipu" else "zhipu")
         self.backup_provider = self._build_provider(alternate_name)
 
         # 移动端的聊天、群聊、工具页都通过 WebSocket 走流式识别。

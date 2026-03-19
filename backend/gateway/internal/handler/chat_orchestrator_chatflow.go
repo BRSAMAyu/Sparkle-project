@@ -28,6 +28,7 @@ const (
 	defaultChatMode = "standard"
 	expertModeAuto  = "expert_auto"
 	expertModePref  = "expert::"
+	teamModePref    = "team::"
 	wsWriteWait     = 10 * time.Second
 )
 
@@ -71,7 +72,7 @@ func normalizeChatMode(mode string) string {
 	if trimmed == "" {
 		return defaultChatMode
 	}
-	if strings.HasPrefix(trimmed, expertModePref) {
+	if strings.HasPrefix(trimmed, expertModePref) || strings.HasPrefix(trimmed, teamModePref) {
 		return trimmed
 	}
 	switch trimmed {
@@ -84,7 +85,11 @@ func normalizeChatMode(mode string) string {
 
 func writeLegacyJSON(conn *websocket.Conn, payload interface{}) error {
 	_ = conn.SetWriteDeadline(time.Now().Add(wsWriteWait))
-	return conn.WriteJSON(payload)
+	if err := conn.WriteJSON(payload); err != nil {
+		return err
+	}
+	_ = conn.SetWriteDeadline(time.Time{})
+	return nil
 }
 
 func workflowIDForChatMode(mode string) string {
@@ -107,6 +112,9 @@ func workflowIDForChatMode(mode string) string {
 				expertID = "unknown"
 			}
 			return "expert_" + expertID + "_workflow"
+		}
+		if strings.HasPrefix(normalized, teamModePref) {
+			return "expert_team_workflow"
 		}
 		return "standard_chat"
 	}
@@ -143,11 +151,15 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		attribute.String("session_id", input.SessionID),
 	)
 
-	// Set timeout for the entire chat message processing
-	// Default 60s, configurable via GRPC_TIMEOUT_SECONDS
-	timeoutSeconds := 60
+	// Set timeout for the entire chat message processing.
+	// Streaming multi-agent/team conversations can legitimately run longer than
+	// short unary-style gRPC calls, so we keep a more generous floor here.
+	timeoutSeconds := 300
 	if h.cfg != nil && h.cfg.GRPCTimeoutSeconds > 0 {
 		timeoutSeconds = h.cfg.GRPCTimeoutSeconds
+		if timeoutSeconds < 300 {
+			timeoutSeconds = 300
+		}
 	}
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(timeoutSeconds)*time.Second)
 	defer cancel()

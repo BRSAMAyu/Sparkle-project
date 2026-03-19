@@ -71,6 +71,7 @@ def main() -> None:
     baseline_patterns = _request("GET", "/cognitive/patterns", token=token).json()
     baseline_capsules = _request("GET", "/capsules/today", token=token).json()
     baseline_stats = _request("GET", "/capsules/stats", token=token).json()
+    baseline_jobs = _request("GET", "/capsules/generation/jobs", token=token).json()
     groups = _request("GET", "/community/groups", token=token).json()
 
     target_group_id = groups[0]["id"] if groups else _request(
@@ -168,12 +169,51 @@ def main() -> None:
             "requested_count": 1,
         },
     ).json()
-    job_id = batch_resp["job_id"]
-    if batch_resp.get("status") != "completed":
-        raise RuntimeError(f"Batch generation did not complete successfully: {json.dumps(batch_resp, ensure_ascii=False)}")
+    job_id = batch_resp.get("job_id")
+    baseline_job_ids = {item["id"] for item in baseline_jobs}
 
-    jobs = _request("GET", "/capsules/generation/jobs", token=token).json()
-    job = next((item for item in jobs if item["id"] == job_id), None)
+    if job_id:
+        jobs = _request("GET", "/capsules/generation/jobs", token=token).json()
+        job = next((item for item in jobs if item["id"] == job_id), None)
+    else:
+        task_id = batch_resp.get("task_id")
+        if not task_id:
+            raise RuntimeError(f"Batch generation returned neither job_id nor task_id: {json.dumps(batch_resp, ensure_ascii=False)}")
+        job = _poll_until(
+            lambda: next(
+                (
+                    item
+                    for item in _request("GET", "/capsules/generation/jobs", token=token).json()
+                    if item["id"] not in baseline_job_ids
+                ),
+                None,
+            ),
+            timeout_seconds=120,
+            interval_seconds=2,
+        )
+        if not job:
+            raise RuntimeError(
+                "Batch generation task was accepted but no new capsule generation job appeared"
+            )
+
+    if not job:
+        raise RuntimeError("Generated capsule job missing from /capsules/generation/jobs")
+    job_id = job["id"]
+    if job.get("status") != "completed":
+        job = _poll_until(
+            lambda: next(
+                (
+                    item
+                    for item in _request("GET", "/capsules/generation/jobs", token=token).json()
+                    if item["id"] == job_id and item.get("status") == "completed"
+                ),
+                None,
+            ),
+            timeout_seconds=180,
+            interval_seconds=2,
+        )
+    if not job:
+        raise RuntimeError("Generated capsule job did not reach completed status")
     if not job:
         raise RuntimeError("Generated capsule job missing from /capsules/generation/jobs")
     if job.get("status") != "completed":

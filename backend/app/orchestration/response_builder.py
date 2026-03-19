@@ -143,6 +143,12 @@ class ResponseBuilderMixin:
                 [str(expert) for expert in selected_experts],
                 ensure_ascii=False,
             )
+        answer_experts = final_state.context_data.get("answer_experts")
+        if isinstance(answer_experts, list) and answer_experts:
+            response_metadata["answer_experts"] = json.dumps(
+                [str(expert) for expert in answer_experts],
+                ensure_ascii=False,
+            )
         if parsed_session_signal is not None:
             response_metadata["session_feedback_signal"] = json.dumps(
                 parsed_session_signal.to_dict(),

@@ -18,14 +18,18 @@ class CapsuleGenerationPreview extends StatelessWidget {
   final double depthPreference;
   final double curiosityPreference;
 
-  /// 根据深度偏好获取深度级别
+  /// 根据深度偏好获取深度级别与预估模型
   (String Function(BuildContext) label, String model) get _depthLevel {
+    final useThinking =
+        depthPreference >= 0.8 || (depthPreference >= 0.6 && curiosityPreference >= 0.8);
     if (depthPreference < 0.3) {
-      return ((context) => context.l10n.capsuleDepthShallow, 'MIMO');
+      return ((context) => context.l10n.capsuleDepthShallow, 'GLM-4.7 FlashX');
     } else if (depthPreference < 0.7) {
       return ((context) => context.l10n.capsuleDepthMedium, 'GLM-4.7');
+    } else if (useThinking) {
+      return ((context) => context.l10n.capsuleDepthDeep, 'GLM-4.7 Thinking');
     } else {
-      return ((context) => context.l10n.capsuleDepthDeep, 'DeepSeek R1');
+      return ((context) => context.l10n.capsuleDepthDeep, 'GLM-4.7');
     }
   }
 
@@ -34,9 +38,9 @@ class CapsuleGenerationPreview extends StatelessWidget {
     if (curiosityPreference < 0.3) {
       return 1;
     } else if (curiosityPreference < 0.7) {
-      return 2;
-    } else {
       return 3;
+    } else {
+      return 5;
     }
   }
 

@@ -175,7 +175,7 @@ class _PartnershipCard extends ConsumerWidget {
               _GoalRow(label: '我的目标', goal: myGoal),
               if (isActive) ...[
                 const SizedBox(height: DS.spacing8),
-                _StreakRow(partnershipId: partnership.id),
+                _StreakRow(partnership: partnership),
               ],
             ],
           ),
@@ -263,13 +263,24 @@ class _GoalRow extends StatelessWidget {
 }
 
 class _StreakRow extends ConsumerWidget {
-  const _StreakRow({required this.partnershipId});
-  final String partnershipId;
+  const _StreakRow({required this.partnership});
+  final AccountabilityPartnershipInfo partnership;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final statsAsync =
-        ref.watch(partnershipStatsProvider(partnershipId));
+    final hasSummary = partnership.myCheckedInToday != null ||
+        partnership.partnerCheckedInToday != null;
+    final statsAsync = hasSummary
+        ? AsyncValue.data(
+            AccountabilityStatsInfo(
+              myStreakDays: partnership.myStreakDays ?? 0,
+              partnerStreakDays: partnership.partnerStreakDays ?? 0,
+              myCheckedInToday: partnership.myCheckedInToday ?? false,
+              partnerCheckedInToday: partnership.partnerCheckedInToday ?? false,
+              totalCheckins: 0,
+            ),
+          )
+        : ref.watch(partnershipStatsProvider(partnership.id));
     return statsAsync.when(
       loading: () => const SizedBox.shrink(),
       error: (_, __) => const SizedBox.shrink(),

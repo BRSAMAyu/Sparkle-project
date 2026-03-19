@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
@@ -81,9 +82,11 @@ class _SeedLibraryDetailScreenState
           PopupMenuButton<String>(
             onSelected: (value) {
               if (value == 'subscribe') {
-                ref
-                    .read(seedLibraryDetailProvider(widget.libraryId).notifier)
-                    .toggleSubscription();
+                unawaited(
+                  ref
+                      .read(seedLibraryDetailProvider(widget.libraryId).notifier)
+                      .toggleSubscription(),
+                );
               }
             },
             itemBuilder: (context) => [
@@ -305,10 +308,12 @@ class _SeedLibraryDetailScreenState
                   (context, index) {
                     if (index >= state.items.length) {
                       // Load more indicator
-                      ref
-                          .read(seedLibraryDetailProvider(widget.libraryId)
-                              .notifier,)
-                          .loadItems();
+                      unawaited(
+                        ref
+                            .read(seedLibraryDetailProvider(widget.libraryId)
+                                .notifier,)
+                            .loadItems(),
+                      );
                       return const SizedBox(
                         height: 100,
                         child: Center(child: CircularProgressIndicator()),
@@ -366,35 +371,40 @@ class _SeedLibraryDetailScreenState
   void _showDeleteDialog(
     BuildContext context,
   ) {
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(context.l10n.seedLibraryDeleteTitle),
-        content: Text(context.l10n.seedLibraryDeleteConfirm),
-        actions: [
-          SparkleButton.ghost(
-            onPressed: () => Navigator.pop(context),
-            label: context.l10n.commonCancel,
-          ),
-          SparkleButton.destructive(
-            onPressed: () async {
-              try {
-                await ref
-                    .read(seedLibraryDetailProvider(widget.libraryId).notifier)
-                    .deleteLibrary();
-                if (context.mounted) {
-                  Navigator.pop(context); // Close dialog
-                  Navigator.pop(context); // Close screen
+    unawaited(
+      showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(context.l10n.seedLibraryDeleteTitle),
+          content: Text(context.l10n.seedLibraryDeleteConfirm),
+          actions: [
+            SparkleButton.ghost(
+              onPressed: () => Navigator.pop(context),
+              label: context.l10n.commonCancel,
+            ),
+            SparkleButton.destructive(
+              onPressed: () async {
+                try {
+                  await ref
+                      .read(seedLibraryDetailProvider(widget.libraryId).notifier)
+                      .deleteLibrary();
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    Navigator.pop(context);
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    AppFeedback.error(
+                      context,
+                      context.l10n.seedLibraryDeleteFailed(e.toString()),
+                    );
+                  }
                 }
-              } catch (e) {
-                if (context.mounted) {
-                  AppFeedback.error(context, context.l10n.seedLibraryDeleteFailed(e.toString()));
-                }
-              }
-            },
-            label: context.l10n.commonDelete,
-          ),
-        ],
+              },
+              label: context.l10n.commonDelete,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -405,14 +415,13 @@ class _SeedLibraryDetailScreenState
     final contentController = TextEditingController();
     final subjectController = TextEditingController();
     final tagsController = TextEditingController();
-    ItemType itemType = ItemType.example;
+    var itemType = ItemType.example;
     DifficultyLevel? difficultyLevel = DifficultyLevel.beginner;
 
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (context) {
-        return Padding(
+      builder: (context) => Padding(
           padding: EdgeInsets.only(
             left: DS.spacing16,
             right: DS.spacing16,
@@ -420,8 +429,7 @@ class _SeedLibraryDetailScreenState
             bottom: MediaQuery.of(context).viewInsets.bottom + DS.spacing16,
           ),
           child: StatefulBuilder(
-            builder: (context, setModalState) {
-              return Form(
+            builder: (context, setModalState) => Form(
                 key: formKey,
                 child: SingleChildScrollView(
                   child: Column(
@@ -434,7 +442,7 @@ class _SeedLibraryDetailScreenState
                       ),
                       const SizedBox(height: DS.spacing16),
                       DropdownButtonFormField<ItemType>(
-                        value: itemType,
+                        initialValue: itemType,
                         decoration: const InputDecoration(
                           labelText: '内容类型',
                           border: OutlineInputBorder(),
@@ -481,14 +489,13 @@ class _SeedLibraryDetailScreenState
                       ),
                       const SizedBox(height: DS.spacing12),
                       DropdownButtonFormField<DifficultyLevel?>(
-                        value: difficultyLevel,
+                        initialValue: difficultyLevel,
                         decoration: const InputDecoration(
                           labelText: '难度',
                           border: OutlineInputBorder(),
                         ),
                         items: [
                           const DropdownMenuItem<DifficultyLevel?>(
-                            value: null,
                             child: Text('未设置'),
                           ),
                           ...DifficultyLevel.values.map(
@@ -552,11 +559,9 @@ class _SeedLibraryDetailScreenState
                     ],
                   ),
                 ),
-              );
-            },
+              ),
           ),
-        );
-      },
+        ),
     );
   }
 
@@ -570,6 +575,9 @@ class _SeedLibraryDetailScreenState
       if (result == null || result.files.isEmpty) {
         return;
       }
+      if (!mounted) {
+        return;
+      }
       final file = result.files.single;
       final bytes = file.bytes;
       if (bytes == null) {
@@ -579,14 +587,17 @@ class _SeedLibraryDetailScreenState
       final decoded = jsonDecode(utf8.decode(bytes));
       final dynamic rawItems =
           decoded is Map<String, dynamic> ? decoded['items'] : decoded;
+      if (!mounted) {
+        return;
+      }
       if (rawItems is! List) {
         AppFeedback.error(context, 'JSON 格式无效，需为数组或 {items:[...]}');
         return;
       }
 
       final items = rawItems
-          .whereType<Map>()
-          .map((item) => Map<String, dynamic>.from(item.cast<String, dynamic>()))
+          .whereType<Map<String, dynamic>>()
+          .map(Map<String, dynamic>.from)
           .toList();
       if (items.isEmpty) {
         AppFeedback.info(context, '文件中没有可导入的内容项');

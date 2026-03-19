@@ -298,6 +298,13 @@ class User(BaseModel):
         order_by="desc(PhotonTransactionHistory.created_at)"
     )
 
+    candidate_feedbacks = relationship(
+        "CandidateActionFeedback",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="dynamic",
+    )
+
     def __repr__(self):
         return f"<User(username={self.username}, email={self.email})>"
 

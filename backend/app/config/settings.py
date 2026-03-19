@@ -222,6 +222,11 @@ class Settings(BaseSettings):
     XIAOMI_CHAT_MODEL: str = "mimo-v2-flash"
     XIAOMI_TEMPERATURE: float = 0.3
 
+    # XiaoMi MIMO Pro Configuration (标准 + 推理，支持联网搜索)
+    XIAOMI_PRO_MODEL: str = "mimo-v2-pro"
+    XIAOMI_PRO_TEMPERATURE: float = 1.0  # mimo-v2-pro 默认值
+    XIAOMI_WEB_SEARCH_ENABLED: bool = True  # 启用内置联网搜索
+
     # Prompt Snapshot (debug observability)
     PROMPT_SNAPSHOT_ENABLED: bool = False
     PROMPT_SNAPSHOT_SAMPLE_RATE: float = 0.0
@@ -236,6 +241,7 @@ class Settings(BaseSettings):
     # Zhipu GLM Configuration (编程/工具调用)
     ZHIPU_API_KEY: str = ""
     ZHIPU_BASE_URL: str = "https://open.bigmodel.cn/api/paas/v4"
+    ZHIPU_CODING_BASE_URL: str = "https://open.bigmodel.cn/api/coding/paas/v4"
     ZHIPU_CHAT_MODEL: str = "glm-4.7"
     ZHIPU_TOOLS_MODEL: str = "glm-4.7"
     ZHIPU_FLASH_MODEL: str = "glm-4.7-flashx"  # 快速响应模型 (FlashX)
@@ -249,6 +255,7 @@ class Settings(BaseSettings):
     SILICONFLOW_API_KEY: str = ""
     SILICONFLOW_BASE_URL: str = "https://api.siliconflow.cn/v1"
     SILICONFLOW_OCR_MODEL: str = "deepseek-ai/DeepSeek-OCR"
+    SILICONFLOW_OCR_TIMEOUT_SECONDS: int = 120
 
     # Translation Service (via SiliconFlow)
     # Uses Hunyuan-MT-7B (Machine Translation model) for best translation quality
@@ -256,12 +263,22 @@ class Settings(BaseSettings):
     HUNYUAN_API_KEY: str = ""  # Optional: overrides SILICONFLOW_API_KEY for translation
     HUNYUAN_BASE_URL: str = "https://api.siliconflow.cn/v1"
     HUNYUAN_TRANSLATE_MODEL: str = "tencent/Hunyuan-MT-7B"  # Translation-specific model
+    SILICONFLOW_TRANSLATE_MODEL: str = "tencent/Hunyuan-MT-7B"
+    TRANSLATION_PRIMARY_PROVIDER: str = "hunyuan"  # hunyuan | siliconflow
+    TRANSLATION_BACKUP_PROVIDER: str = "siliconflow"  # hunyuan | siliconflow
+    TRANSLATION_PROVIDER_TIMEOUT_SECONDS: int = 30
+
+    # OCR / Document Cleaning
+    OCR_PROVIDER: str = "zhipu"  # zhipu | siliconflow
+    OCR_BACKUP_PROVIDER: str = "siliconflow"  # zhipu | siliconflow
 
     # Embedding Service
     EMBEDDING_PROVIDER: str = "dashscope"  # dashscope | siliconflow
+    EMBEDDING_BACKUP_PROVIDER: str = "siliconflow"  # dashscope | siliconflow
     EMBEDDING_MODEL: str = "text-embedding-v4"  # 向量模型
     EMBEDDING_DIM: int = 1024  # 向量维度
     RERANK_PROVIDER: str = "dashscope"  # dashscope | siliconflow
+    RERANK_BACKUP_PROVIDER: str = "siliconflow"  # dashscope | siliconflow
     RERANK_MODEL: str = "qwen3-rerank"  # 重排序模型
 
     # DashScope (Aliyun)
@@ -281,7 +298,17 @@ class Settings(BaseSettings):
 
     # STT (Speech to Text) Service
     STT_PROVIDER: str = "zhipu"  # zhipu
+    STT_BACKUP_PROVIDER: str = "xunfei"  # xunfei | zhipu
     STT_ENHANCE_ENABLED: bool = True  # 是否启用LLM后处理增强
+
+    # GLM Batch
+    GLM_BATCH_ENABLED: bool = True
+    GLM_BATCH_QUEUE: str = "glm_batch"
+    GLM_BATCH_MAX_CONCURRENCY: int = 2
+    GLM_BATCH_CAPSULES_ENABLED: bool = True
+    GLM_BATCH_COGNITIVE_ANALYSIS_ENABLED: bool = True
+    GLM_BATCH_THINKING_DEPTH_THRESHOLD: float = 0.72
+    GLM_BATCH_THINKING_SEVERITY_THRESHOLD: int = 4
 
     # Zhipu ASR Configuration
     ZHIPU_ASR_BASE_URL: str = "https://open.bigmodel.cn/api/paas/v4"

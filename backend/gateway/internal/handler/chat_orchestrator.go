@@ -207,6 +207,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 				if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 					return
 				}
+				_ = conn.SetWriteDeadline(time.Time{})
 			case <-pingDone:
 				return
 			}
@@ -338,9 +339,6 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 		}
 
 		shouldClose := func() bool {
-			// Set write deadline for any response we send during this message handling
-			_ = conn.SetWriteDeadline(time.Now().Add(writeWait))
-
 			mode := wsModeLegacy
 			var envelope *wsEnvelopeIn
 			if env, ok := parseEnvelopeJSON(msg); ok {

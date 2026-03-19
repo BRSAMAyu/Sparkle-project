@@ -7,6 +7,7 @@ from app.agents.graph.expert_registry import (
     get_graph_expert_specs,
     resolve_node_name,
 )
+from app.agents.graph.nodes.custom_expert import custom_expert_node
 # Phase 3: Import collaboration nodes
 from app.agents.graph.nodes.collaboration import (
     collaboration_aggregator_node,
@@ -30,6 +31,7 @@ from app.agents.graph.state import SparkleState
 
 EXPERT_SPECS = get_graph_expert_specs()
 EXPERT_NODE_NAMES = [spec.node_name for spec in EXPERT_SPECS]
+RUNTIME_NODE_NAMES = [*EXPERT_NODE_NAMES, "custom_expert"]
 
 # --- 1. 条件边逻辑 (Conditional Edges) ---
 
@@ -78,6 +80,7 @@ workflow = StateGraph(SparkleState)
 workflow.add_node("router", router_node)
 for spec in EXPERT_SPECS:
     workflow.add_node(spec.node_name, spec.node_handler)
+workflow.add_node("custom_expert", custom_expert_node)
 
 # (B) 添加工具节点 (所有 Agent 的工具汇聚于此，也可拆分为多个 ToolNode)
 all_tools = [
@@ -106,13 +109,13 @@ workflow.add_node("human_node", human_node)
 workflow.set_entry_point("router")
 
 # Router -> Agents
-router_edge_map = {name: name for name in EXPERT_NODE_NAMES}
+router_edge_map = {name: name for name in RUNTIME_NODE_NAMES}
 router_edge_map["human_node"] = "human_node"
 router_edge_map[END] = END
 workflow.add_conditional_edges("router", route_after_router, router_edge_map)
 
 # Agents -> Tools OR End
-for agent_name in EXPERT_NODE_NAMES:
+for agent_name in RUNTIME_NODE_NAMES:
     workflow.add_conditional_edges(
         agent_name,
         route_after_agent,
@@ -166,6 +169,7 @@ def create_planning_graph():
     planning_workflow.add_node("collaboration", collaboration_node)
     for spec in EXPERT_SPECS:
         planning_workflow.add_node(spec.node_name, spec.node_handler)
+    planning_workflow.add_node("custom_expert", custom_expert_node)
     # Phase 3: Add aggregator node
     planning_workflow.add_node("aggregator", collaboration_aggregator_node)
     # P0 Fix: Add reset_collaboration node for review feedback loop
@@ -183,7 +187,7 @@ def create_planning_graph():
         "collaboration": "collaboration",
         END: END,
     }
-    for name in EXPERT_NODE_NAMES:
+    for name in RUNTIME_NODE_NAMES:
         router_planning_edges[name] = name
     planning_workflow.add_conditional_edges("router", route_after_router_with_collaboration, router_planning_edges)
 
@@ -198,12 +202,12 @@ def create_planning_graph():
 
     # Collaboration -> Agents (sequential execution)
     collaboration_edges = {"aggregator": "aggregator"}
-    for name in EXPERT_NODE_NAMES:
+    for name in RUNTIME_NODE_NAMES:
         collaboration_edges[name] = name
     planning_workflow.add_conditional_edges("collaboration", route_after_collaboration, collaboration_edges)
 
     # Agents -> Back to Collaboration or Aggregator
-    for agent_name in EXPERT_NODE_NAMES:
+    for agent_name in RUNTIME_NODE_NAMES:
         planning_workflow.add_conditional_edges(
             agent_name,
             route_after_agent_in_collaboration,

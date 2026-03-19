@@ -170,6 +170,12 @@ async def _build_partnership_out(
     partnership: AccountabilityPartnership,
     current_user: User,
 ) -> PartnershipOut:
+    initiator = partnership.initiator
+    partner = partnership.partner
+    if initiator is None:
+        initiator = await db.get(User, partnership.initiator_id)
+    if partner is None:
+        partner = await db.get(User, partnership.partner_id)
     timezone_name = _user_timezone(current_user)
     partner_user_id = (
         partnership.partner_id if str(partnership.initiator_id) == str(current_user.id) else partnership.initiator_id
@@ -201,8 +207,8 @@ async def _build_partnership_out(
         started_at=partnership.started_at,
         ended_at=partnership.ended_at,
         created_at=partnership.created_at,
-        initiator=_build_user_brief(partnership.initiator),
-        partner=_build_user_brief(partnership.partner),
+        initiator=_build_user_brief(initiator),
+        partner=_build_user_brief(partner),
         my_role="initiator" if str(partnership.initiator_id) == str(current_user.id) else "partner",
         my_checked_in_today=my_checked_in_today,
         partner_checked_in_today=partner_checked_in_today,
@@ -210,7 +216,10 @@ async def _build_partnership_out(
     )
 
 
-def _build_checkin_out(checkin: AccountabilityCheckin) -> CheckinOut:
+async def _build_checkin_out(db: AsyncSession, checkin: AccountabilityCheckin) -> CheckinOut:
+    author = checkin.user
+    if author is None:
+        author = await db.get(User, checkin.user_id)
     return CheckinOut(
         id=checkin.id,
         partnership_id=checkin.partnership_id,
@@ -221,7 +230,7 @@ def _build_checkin_out(checkin: AccountabilityCheckin) -> CheckinOut:
         created_at=checkin.created_at,
         likes=checkin.likes or 0,
         encouragements=checkin.encouragements or [],
-        author=_build_user_brief(checkin.user),
+        author=_build_user_brief(author),
     )
 
 
@@ -425,6 +434,9 @@ async def end_partnership(
     await accountability_notification_service.send_partnership_ended(
         db, partner_id, partnership_id, current_user.id, current_user.id
     )
+    await accountability_notification_service.send_partnership_ended(
+        db, current_user.id, partnership_id, partner_id, current_user.id
+    )
 
 
 @router.post("/{partnership_id}/checkin", response_model=CheckinOut, status_code=201)
@@ -499,7 +511,7 @@ async def daily_checkin(
             f"Failed to check achievements for user {current_user.id}, partnership {partnership_id}: {e}", exc_info=True
         )
 
-    return _build_checkin_out(checkin)
+    return await _build_checkin_out(db, checkin)
 
 
 @router.get("/{partnership_id}/stats", response_model=PartnershipStatsOut)
@@ -604,7 +616,10 @@ async def get_partnership_timeline(
         .order_by(AccountabilityCheckin.created_at.desc())
         .limit(limit)
     )
-    return [_build_checkin_out(c) for c in result.scalars().all()]
+    checkins = []
+    for item in result.scalars().all():
+        checkins.append(await _build_checkin_out(db, item))
+    return checkins
 
 
 @router.get("/{partnership_id}/heatmap")

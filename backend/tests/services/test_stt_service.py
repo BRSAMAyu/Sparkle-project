@@ -16,6 +16,7 @@ async def test_stt_service_init_zhipu():
     """测试 STTService 初始化（智谱 Provider）"""
     with patch("app.services.stt_service.settings") as mock_settings:
         mock_settings.STT_PROVIDER = "zhipu"
+        mock_settings.STT_BACKUP_PROVIDER = "xunfei"
         mock_settings.UPLOAD_DIR = "./uploads"
         mock_settings.ZHIPU_API_KEY = "test-key"
         mock_settings.XUNFEI_APP_ID = ""
@@ -35,6 +36,7 @@ async def test_stt_service_init_unknown_provider():
     """测试STTService初始化（未知Provider）"""
     with patch("app.services.stt_service.settings") as mock_settings:
         mock_settings.STT_PROVIDER = "unknown"
+        mock_settings.STT_BACKUP_PROVIDER = ""
         mock_settings.UPLOAD_DIR = "./uploads"
         mock_settings.ZHIPU_API_KEY = ""
         mock_settings.XUNFEI_APP_ID = ""
@@ -50,6 +52,7 @@ async def test_stt_service_transcribe_file_success():
     """测试STTService文件转写成功"""
     with patch("app.services.stt_service.settings") as mock_settings:
         mock_settings.STT_PROVIDER = "zhipu"
+        mock_settings.STT_BACKUP_PROVIDER = "xunfei"
         mock_settings.UPLOAD_DIR = "./uploads"
         mock_settings.ZHIPU_API_KEY = "test-key"
         mock_settings.XUNFEI_APP_ID = ""
@@ -81,6 +84,7 @@ async def test_stt_service_transcribe_file_no_provider():
     """测试STTService文件转写（无Provider）"""
     with patch("app.services.stt_service.settings") as mock_settings:
         mock_settings.STT_PROVIDER = "unknown"
+        mock_settings.STT_BACKUP_PROVIDER = ""
         mock_settings.UPLOAD_DIR = "./uploads"
         mock_settings.ZHIPU_API_KEY = ""
         mock_settings.XUNFEI_APP_ID = ""
@@ -98,6 +102,7 @@ async def test_stt_service_transcribe_file_not_found():
     """测试STTService文件不存在"""
     with patch("app.services.stt_service.settings") as mock_settings:
         mock_settings.STT_PROVIDER = "zhipu"
+        mock_settings.STT_BACKUP_PROVIDER = "xunfei"
         mock_settings.UPLOAD_DIR = "./uploads"
         mock_settings.ZHIPU_API_KEY = "test-key"
         mock_settings.XUNFEI_APP_ID = ""
@@ -119,6 +124,7 @@ async def test_stt_service_transcribe_file_error():
     """测试STTService转写错误"""
     with patch("app.services.stt_service.settings") as mock_settings:
         mock_settings.STT_PROVIDER = "zhipu"
+        mock_settings.STT_BACKUP_PROVIDER = "xunfei"
         mock_settings.UPLOAD_DIR = "./uploads"
         mock_settings.DEMO_MODE = False
         mock_settings.ZHIPU_API_KEY = "test-key"
@@ -151,6 +157,7 @@ async def test_stt_service_transcribe_file_demo_mode():
     """测试STTService转写错误（演示模式）"""
     with patch("app.services.stt_service.settings") as mock_settings:
         mock_settings.STT_PROVIDER = "zhipu"
+        mock_settings.STT_BACKUP_PROVIDER = "xunfei"
         mock_settings.UPLOAD_DIR = "./uploads"
         mock_settings.DEMO_MODE = True
         mock_settings.ZHIPU_API_KEY = "test-key"
@@ -183,6 +190,7 @@ async def test_stt_service_enhance_transcript():
     """测试STTService转写增强"""
     with patch("app.services.stt_service.settings") as mock_settings:
         mock_settings.STT_PROVIDER = "zhipu"
+        mock_settings.STT_BACKUP_PROVIDER = "xunfei"
         mock_settings.UPLOAD_DIR = "./uploads"
         mock_settings.ZHIPU_API_KEY = "test-key"
         mock_settings.XUNFEI_APP_ID = ""
@@ -217,6 +225,7 @@ async def test_stt_service_create_audio_stream_generator():
     """测试创建音频流生成器"""
     with patch("app.services.stt_service.settings") as mock_settings:
         mock_settings.STT_PROVIDER = "zhipu"
+        mock_settings.STT_BACKUP_PROVIDER = "xunfei"
         mock_settings.UPLOAD_DIR = "./uploads"
         mock_settings.ZHIPU_API_KEY = "test-key"
         mock_settings.XUNFEI_APP_ID = ""
@@ -253,6 +262,7 @@ async def test_stt_service_init_xunfei_provider():
     """测试 xunfei 配置会初始化讯飞 provider"""
     with patch("app.services.stt_service.settings") as mock_settings:
         mock_settings.STT_PROVIDER = "xunfei"
+        mock_settings.STT_BACKUP_PROVIDER = "zhipu"
         mock_settings.UPLOAD_DIR = "./uploads"
         mock_settings.ZHIPU_API_KEY = ""
         mock_settings.XUNFEI_APP_ID = "app-id"
@@ -272,6 +282,7 @@ async def test_stt_service_falls_back_to_xunfei_when_zhipu_quota_exhausted():
     """测试主 provider 配额异常时会切换到讯飞"""
     with patch("app.services.stt_service.settings") as mock_settings:
         mock_settings.STT_PROVIDER = "zhipu"
+        mock_settings.STT_BACKUP_PROVIDER = "xunfei"
         mock_settings.UPLOAD_DIR = "./uploads"
         mock_settings.DEMO_MODE = False
         mock_settings.ZHIPU_API_KEY = "zhipu-key"
@@ -310,6 +321,7 @@ async def test_stt_service_falls_back_when_xunfei_times_out():
     """测试讯飞超时时会自动切换到备用 provider"""
     with patch("app.services.stt_service.settings") as mock_settings:
         mock_settings.STT_PROVIDER = "xunfei"
+        mock_settings.STT_BACKUP_PROVIDER = "zhipu"
         mock_settings.UPLOAD_DIR = "./uploads"
         mock_settings.DEMO_MODE = False
         mock_settings.ZHIPU_API_KEY = "zhipu-key"

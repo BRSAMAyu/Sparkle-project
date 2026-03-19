@@ -29,6 +29,7 @@ class ModelProvider(str, Enum):
     XIAOMI = "xiaomi"      # XiaoMi MIMO (快速响应)
     DEEPSEEK = "deepseek"  # DeepSeek (核心模型)
     ZHIPU = "zhipu"        # Zhipu GLM (编程/工具)
+    HUNYUAN = "hunyuan"    # Hunyuan Translation
     DASHSCOPE = "dashscope"  # Aliyun DashScope (通义千问)
     SILICONFLOW = "siliconflow"  # SiliconFlow (专家模型：OCR、翻译等)
 
@@ -44,6 +45,9 @@ class ModelConfig:
     max_tokens: int | None = None
     # GLM 特有参数
     clear_thinking: bool | None = None  # False=保留式思考(适合Coding/Agent), True=None=默认
+    # MIMO 特有参数
+    enable_web_search: bool = False     # 启用内置联网搜索
+    thinking_mode: str | None = None    # "enabled" | "disabled" | None
     # 成本/性能指标
     tier: ModelTier = ModelTier.STANDARD
     cost_per_1k_tokens: float = 0.001
@@ -91,6 +95,10 @@ class LLMRouter:
     def _load_model_configs(self):
         """从settings加载所有可用模型配置"""
         dashscope_base_url = settings.DASHSCOPE_BASE_URL_COMPATIBLE or "https://dashscope.aliyuncs.com/compatible-mode/v1"
+        translation_primary = (settings.TRANSLATION_PRIMARY_PROVIDER or "hunyuan").strip().lower()
+        translation_backup = (settings.TRANSLATION_BACKUP_PROVIDER or "siliconflow").strip().lower()
+        ocr_primary = (settings.OCR_PROVIDER or "zhipu").strip().lower()
+        ocr_backup = (settings.OCR_BACKUP_PROVIDER or "siliconflow").strip().lower()
         configs = {
             # ===== XiaoMi MIMO (快速) =====
             "xiaomi_chat": ModelConfig(
@@ -102,6 +110,20 @@ class LLMRouter:
                 tier=ModelTier.FAST,
                 cost_per_1k_tokens=0.0001,
                 avg_latency_ms=200,
+            ),
+
+            # ===== XiaoMi MIMO Pro (标准 + 推理，支持联网搜索) =====
+            "mimo_pro": ModelConfig(
+                provider=ModelProvider.XIAOMI,
+                model_name=settings.XIAOMI_PRO_MODEL,
+                base_url=settings.XIAOMI_MIMO_BASE_URL,
+                api_key=settings.XIAOMI_MIMO_API_KEY,
+                temperature=settings.XIAOMI_PRO_TEMPERATURE,
+                tier=ModelTier.STANDARD,
+                cost_per_1k_tokens=0.002,
+                avg_latency_ms=600,
+                enable_web_search=settings.XIAOMI_WEB_SEARCH_ENABLED,
+                thinking_mode="enabled",  # mimo-v2-pro 默认启用思考
             ),
 
             # ===== DeepSeek (标准 + 推理) =====
@@ -131,7 +153,7 @@ class LLMRouter:
             "glm_4_7_no_thinking": ModelConfig(
                 provider=ModelProvider.ZHIPU,
                 model_name=settings.ZHIPU_CHAT_MODEL,
-                base_url=settings.ZHIPU_BASE_URL,
+                base_url=settings.ZHIPU_CODING_BASE_URL,
                 api_key=settings.ZHIPU_API_KEY,
                 temperature=settings.ZHIPU_TEMPERATURE,
                 clear_thinking=True,  # 关闭思考模式
@@ -143,7 +165,7 @@ class LLMRouter:
             "glm_4_7_thinking": ModelConfig(
                 provider=ModelProvider.ZHIPU,
                 model_name=settings.ZHIPU_CHAT_MODEL,
-                base_url=settings.ZHIPU_BASE_URL,
+                base_url=settings.ZHIPU_CODING_BASE_URL,
                 api_key=settings.ZHIPU_API_KEY,
                 temperature=settings.ZHIPU_TEMPERATURE,
                 clear_thinking=False,  # 开启保留式思考
@@ -154,8 +176,8 @@ class LLMRouter:
             # GLM-4.7-Flash 非思考模式 - 快速响应（免费）
             "glm_4_7_flash_no_thinking": ModelConfig(
                 provider=ModelProvider.ZHIPU,
-                model_name=settings.GLM_4_7_FLASH_MODEL,
-                base_url=settings.ZHIPU_BASE_URL,
+                model_name=settings.ZHIPU_FLASH_MODEL,
+                base_url=settings.ZHIPU_CODING_BASE_URL,
                 api_key=settings.ZHIPU_API_KEY,
                 temperature=settings.ZHIPU_TEMPERATURE,
                 clear_thinking=True,
@@ -167,7 +189,7 @@ class LLMRouter:
             "glm_4_7_flash_thinking": ModelConfig(
                 provider=ModelProvider.ZHIPU,
                 model_name=settings.GLM_4_7_FLASH_MODEL,
-                base_url=settings.ZHIPU_BASE_URL,
+                base_url=settings.ZHIPU_CODING_BASE_URL,
                 api_key=settings.ZHIPU_API_KEY,
                 temperature=settings.ZHIPU_TEMPERATURE,
                 clear_thinking=False,
@@ -210,7 +232,7 @@ class LLMRouter:
             ),
 
             # ===== Specialist Models (OCR、翻译等) =====
-            "siliconflow_ocr": ModelConfig(
+            "zhipu_ocr": ModelConfig(
                 provider=ModelProvider.ZHIPU,
                 model_name=settings.ZHIPU_OCR_MODEL,
                 base_url=settings.ZHIPU_OCR_BASE_URL,
@@ -220,11 +242,31 @@ class LLMRouter:
                 cost_per_1k_tokens=0.001,
                 avg_latency_ms=2000,
             ),
-            "siliconflow_translate": ModelConfig(
+            "siliconflow_ocr": ModelConfig(
                 provider=ModelProvider.SILICONFLOW,
+                model_name=settings.SILICONFLOW_OCR_MODEL,
+                base_url=settings.SILICONFLOW_BASE_URL,
+                api_key=settings.SILICONFLOW_API_KEY,
+                temperature=0.0,
+                tier=ModelTier.SPECIALIST,
+                cost_per_1k_tokens=0.001,
+                avg_latency_ms=2000,
+            ),
+            "hunyuan_translate": ModelConfig(
+                provider=ModelProvider.HUNYUAN,
                 model_name=settings.HUNYUAN_TRANSLATE_MODEL,
                 base_url=settings.HUNYUAN_BASE_URL,
-                api_key=settings.HUNYUAN_API_KEY or settings.SILICONFLOW_API_KEY,
+                api_key=settings.HUNYUAN_API_KEY,
+                temperature=0.2,
+                tier=ModelTier.SPECIALIST,
+                cost_per_1k_tokens=0.0005,
+                avg_latency_ms=1000,
+            ),
+            "siliconflow_translate": ModelConfig(
+                provider=ModelProvider.SILICONFLOW,
+                model_name=settings.SILICONFLOW_TRANSLATE_MODEL,
+                base_url=settings.SILICONFLOW_BASE_URL,
+                api_key=settings.SILICONFLOW_API_KEY,
                 temperature=0.2,
                 tier=ModelTier.SPECIALIST,
                 cost_per_1k_tokens=0.0005,
@@ -247,13 +289,13 @@ class LLMRouter:
         # 按tier分组（优先级从高到低）
         # - FREE_FAST: 免费快速响应模型
         # - FREE_REASONING: 免费深度推理模型
-        # - FAST: 付费快速响应模型（xiaomi, qwen3.5-flash）
-        # - STANDARD: 付费标准模型（deepseek, qwen3.5-plus）
-        # - REASONING: 付费推理模型（deepseek-reasoner, qwen3.5-plus）
+        # - FAST: 付费快速响应模型（mimo-v2-flash, qwen3.5-flash）
+        # - STANDARD: 付费标准模型（mimo-v2-pro, deepseek, qwen3.5-plus）
+        # - REASONING: 付费推理模型（mimo-v2-pro, deepseek-reasoner, qwen3.5-plus）
         # - GLM_BATCH: GLM批量处理（glm-4.7 非思考+思考）
         # - SPECIALIST: 专家模型
-        standard_models = ["dashscope_chat", "deepseek_chat"]
-        reasoning_models = ["dashscope_reason", "deepseek_reason"]
+        standard_models = ["mimo_pro", "dashscope_chat", "deepseek_chat"]
+        reasoning_models = ["mimo_pro", "dashscope_reason", "deepseek_reason"]
         fast_models = ["xiaomi_chat", "dashscope_fast"]
 
         preferred_provider = (settings.LLM_PROVIDER or "").strip().lower()
@@ -262,14 +304,14 @@ class LLMRouter:
             "dashscope": "dashscope_chat",
             "deepseek": "deepseek_chat",
             "zhipu": "deepseek_chat",
-            "xiaomi": "deepseek_chat",
+            "xiaomi": "mimo_pro",  # xiaomi 优先使用 mimo_pro
         }
         provider_reasoning_preference = {
             "qwen": "dashscope_reason",
             "dashscope": "dashscope_reason",
             "deepseek": "deepseek_reason",
             "zhipu": "deepseek_reason",
-            "xiaomi": "deepseek_reason",
+            "xiaomi": "mimo_pro",  # xiaomi 优先使用 mimo_pro
         }
 
         preferred_standard = provider_standard_preference.get(preferred_provider)
@@ -281,14 +323,33 @@ class LLMRouter:
             reasoning_models.remove(preferred_reasoning)
             reasoning_models.insert(0, preferred_reasoning)
 
+        specialist_models: list[str] = []
+        specialist_aliases = {
+            "zhipu": "zhipu_ocr",
+            "siliconflow": "siliconflow_ocr",
+            "hunyuan": "hunyuan_translate",
+        }
+        for provider_name in (ocr_primary, ocr_backup, translation_primary, translation_backup):
+            model_key = specialist_aliases.get(provider_name)
+            if model_key and model_key not in specialist_models:
+                specialist_models.append(model_key)
+        for default_key in ("zhipu_ocr", "siliconflow_ocr", "hunyuan_translate", "siliconflow_translate"):
+            if default_key not in specialist_models:
+                specialist_models.append(default_key)
+
         self._tier_mapping = {
             ModelTier.FREE_FAST: ["glm_4_7_flash_no_thinking"],
             ModelTier.FREE_REASONING: ["glm_4_7_flash_thinking"],
             ModelTier.FAST: fast_models,
             ModelTier.STANDARD: standard_models,
             ModelTier.REASONING: reasoning_models,
-            ModelTier.GLM_BATCH: ["glm_4_7_no_thinking", "glm_4_7_thinking"],
-            ModelTier.SPECIALIST: ["siliconflow_ocr", "siliconflow_translate"],
+            ModelTier.GLM_BATCH: [
+                "glm_4_7_no_thinking",
+                "glm_4_7_thinking",
+                "glm_4_7_flash_no_thinking",
+                "glm_4_7_flash_thinking",
+            ],
+            ModelTier.SPECIALIST: specialist_models,
         }
         self._override_tier_mapping_from_env()
 
@@ -348,7 +409,7 @@ class LLMRouter:
         # 1. 获取Agent配置
         profile = agent_profile_registry.get_profile(agent_role)
 
-        # 2. 确定目标tier
+        # 2. 确定目标tier / policy
         if force_tier:
             target_tier = force_tier
             reason = f"强制tier={target_tier.value}"
@@ -361,6 +422,14 @@ class LLMRouter:
                 task_type,
                 f"Agent指定模型: {profile.specific_model}"
             )
+        elif profile.model_policy:
+            selection = self._select_by_policy(
+                profile=profile,
+                agent_role=agent_role,
+                task_type=task_type,
+            )
+            if selection is not None:
+                return selection
         elif task_type:
             # 根据任务类型调整tier
             task_config = TASK_TO_AGENT_PROFILE.get(task_type, {})
@@ -381,6 +450,55 @@ class LLMRouter:
         model_key = candidates[0]
         model_config = self._available_models.get(model_key, self._available_models["default"])
 
+        return self._create_selection(model_key, model_config, agent_role, task_type, reason)
+
+    def _select_by_policy(
+        self,
+        *,
+        profile,
+        agent_role: AgentRole,
+        task_type: TaskType | None,
+    ) -> LLMSelection | None:
+        policy = getattr(profile, "model_policy", None)
+        if policy is None:
+            return None
+
+        blocked = set(policy.blocked_models or [])
+        candidates: list[str] = []
+
+        def _append(model_key: str) -> None:
+            if not model_key or model_key in blocked or model_key not in self._available_models:
+                return
+            if model_key not in candidates:
+                candidates.append(model_key)
+
+        for model_key in policy.preferred_models or []:
+            _append(model_key)
+
+        tiers: list[ModelTier] = []
+        if policy.preferred_tier is not None:
+            tiers.append(policy.preferred_tier)
+        elif task_type is not None and not getattr(policy, "lock_to_policy", True):
+            task_config = TASK_TO_AGENT_PROFILE.get(task_type, {})
+            task_tier = task_config.get("model_tier")
+            if isinstance(task_tier, ModelTier):
+                tiers.append(task_tier)
+        if profile.model_tier not in tiers:
+            tiers.append(profile.model_tier)
+        for tier in policy.fallback_tiers or []:
+            if tier not in tiers:
+                tiers.append(tier)
+
+        for tier in tiers:
+            for model_key in self._tier_mapping.get(tier, []):
+                _append(model_key)
+
+        if not candidates:
+            return None
+
+        model_key = candidates[0]
+        model_config = self._available_models.get(model_key, self._available_models["default"])
+        reason = f"Agent策略路由: {agent_role.value} -> {model_key}"
         return self._create_selection(model_key, model_config, agent_role, task_type, reason)
 
     def select_specific_model(

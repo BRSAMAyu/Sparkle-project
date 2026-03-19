@@ -117,6 +117,50 @@ class ChatRepository {
     return MultiAgentCatalog.fromJson(response.data ?? const {});
   }
 
+  Future<ExpertCatalogExpert> createCustomExpert({
+    required String name,
+    required String description,
+    required String systemPrompt,
+    String? baseExpertId,
+    String? preferredModelKey,
+    String reasoningMode = 'balanced',
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/multi-agent/custom-experts',
+      data: {
+        'name': name,
+        'description': description,
+        'system_prompt': systemPrompt,
+        if (baseExpertId != null && baseExpertId.isNotEmpty)
+          'base_expert_id': baseExpertId,
+        if (preferredModelKey != null && preferredModelKey.isNotEmpty)
+          'preferred_model_key': preferredModelKey,
+        'reasoning_mode': reasoningMode,
+      },
+    );
+    return ExpertCatalogExpert.fromJson(response.data ?? const {});
+  }
+
+  Future<ExpertCatalogTeam> createCustomTeam({
+    required String name,
+    required List<String> expertIds,
+    required List<String> answerExpertIds,
+    required String collaborationMode,
+    String? description,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/multi-agent/custom-teams',
+      data: {
+        'name': name,
+        'description': description,
+        'expert_ids': expertIds,
+        'answer_expert_ids': answerExpertIds,
+        'collaboration_mode': collaborationMode,
+      },
+    );
+    return ExpertCatalogTeam.fromJson(response.data ?? const {});
+  }
+
   /// 流式聊天（WebSocket）
   Stream<ChatStreamEvent> chatStream(
     String message,
@@ -128,11 +172,11 @@ class ChatRepository {
     List<String>? fileIds,
     bool includeReferences = false,
     String? chatMode,
-  }) {
+  }) =>
     // 🎭 演示模式：LLM对话仍然使用真实API，保证核心功能可用
     // 只有历史数据使用预设内容
     // 使用 WebSocket 服务
-    return _wsService.sendMessage(
+    _wsService.sendMessage(
       message: message,
       userId: userId ?? 'anonymous',
       sessionId: conversationId,
@@ -143,7 +187,6 @@ class ChatRepository {
       includeReferences: includeReferences,
       chatMode: chatMode,
     );
-  }
 
   /// 发送 ActionCard 确认/忽略反馈
   void sendActionFeedback({
@@ -256,6 +299,7 @@ class ChatRepository {
 
       await for (final chunk
           in stream.cast<List<int>>().transform(utf8.decoder)) {
+        // ignore: use_string_buffers
         buffer += chunk;
 
         // 解析 SSE 事件

@@ -220,6 +220,95 @@ async def test_reason_same_tier_fallback_on_429(fallback_router):
 
 
 @pytest.mark.asyncio
+async def test_reason_honors_explicit_glm_batch_override(monkeypatch):
+    explicit_primary = ModelConfig(
+        provider=ModelProvider.ZHIPU,
+        model_name="glm-4.7",
+        base_url="https://primary.test",
+        api_key="primary-key",
+        temperature=0.2,
+        clear_thinking=False,
+        tier=ModelTier.GLM_BATCH,
+    )
+    explicit_secondary = ModelConfig(
+        provider=ModelProvider.ZHIPU,
+        model_name="glm-4.7-flash",
+        base_url="https://secondary.test",
+        api_key="secondary-key",
+        temperature=0.2,
+        clear_thinking=False,
+        tier=ModelTier.GLM_BATCH,
+    )
+    unrelated_reasoning = ModelConfig(
+        provider=ModelProvider.XIAOMI,
+        model_name="mimo-v2-pro",
+        base_url="https://reasoning.test",
+        api_key="reasoning-key",
+        temperature=0.2,
+        tier=ModelTier.REASONING,
+    )
+
+    monkeypatch.setattr(
+        llm_router,
+        "_available_models",
+        {
+            "glm_4_7_thinking": explicit_primary,
+            "glm_4_7_flash_thinking": explicit_secondary,
+            "mimo_pro": unrelated_reasoning,
+            "default": unrelated_reasoning,
+        },
+    )
+    monkeypatch.setattr(
+        llm_router,
+        "_tier_mapping",
+        {
+            ModelTier.GLM_BATCH: ["glm_4_7_thinking", "glm_4_7_flash_thinking"],
+            ModelTier.REASONING: ["mimo_pro"],
+            ModelTier.STANDARD: [],
+            ModelTier.FAST: [],
+            ModelTier.FREE_REASONING: [],
+            ModelTier.FREE_FAST: [],
+            ModelTier.SPECIALIST: [],
+        },
+    )
+    monkeypatch.setattr(
+        llm_router,
+        "select_model",
+        lambda agent_role, task_type=None, force_tier=None: _build_selection("mimo_pro", unrelated_reasoning, task_type),
+    )
+    monkeypatch.setattr(
+        llm_router,
+        "select_specific_model",
+        lambda model_key, agent_role=None: _build_selection(model_key, llm_router._available_models[model_key]),
+    )
+    monkeypatch.setattr(
+        "app.services.llm_service.OpenAICompatibleProvider",
+        FakeProvider,
+    )
+
+    async def _noop(*args, **kwargs):
+        return None
+
+    monkeypatch.setattr("app.services.llm_service.circuit_breaker_service.check", _noop)
+    monkeypatch.setattr("app.services.llm_service.circuit_breaker_service.record_success", _noop)
+    monkeypatch.setattr("app.services.llm_service.circuit_breaker_service.record_failure", _noop)
+
+    FakeProvider.calls = []
+
+    service = LLMService(agent_role=AgentRole.GENERATION, enable_dynamic_routing=True)
+    await service.switch_to_specific_model("glm_4_7_thinking")
+
+    response = await service.reason([{"role": "user", "content": "think deeply"}])
+
+    assert response == "reply from https://secondary.test"
+    assert [call["base_url"] for call in FakeProvider.calls[:2]] == [
+        "https://primary.test",
+        "https://secondary.test",
+    ]
+    assert all(call["base_url"] != "https://reasoning.test" for call in FakeProvider.calls[:2])
+
+
+@pytest.mark.asyncio
 async def test_chat_stream_with_tools_skips_original_model_after_429(fallback_router):
     service = LLMService(agent_role=AgentRole.GENERATION, enable_dynamic_routing=True)
 
@@ -238,3 +327,64 @@ async def test_chat_stream_with_tools_skips_original_model_after_429(fallback_ro
         "https://primary.test",
         "https://secondary.test",
     ]
+
+
+@pytest.mark.asyncio
+async def test_thinking_mode_is_sent_via_extra_body_not_top_level(monkeypatch):
+    xiaomi_cfg = ModelConfig(
+        provider=ModelProvider.XIAOMI,
+        model_name="mimo-v2-pro",
+        base_url="https://mimo.test",
+        api_key="mimo-key",
+        temperature=0.2,
+        thinking_mode="enabled",
+        tier=ModelTier.STANDARD,
+    )
+
+    monkeypatch.setattr(
+        llm_router,
+        "_available_models",
+        {
+            "mimo_pro": xiaomi_cfg,
+            "default": xiaomi_cfg,
+        },
+    )
+    monkeypatch.setattr(
+        llm_router,
+        "_tier_mapping",
+        {
+            ModelTier.STANDARD: ["mimo_pro"],
+            ModelTier.REASONING: [],
+            ModelTier.FAST: [],
+            ModelTier.FREE_REASONING: [],
+            ModelTier.FREE_FAST: [],
+            ModelTier.SPECIALIST: [],
+        },
+    )
+    monkeypatch.setattr(
+        llm_router,
+        "select_model",
+        lambda agent_role, task_type=None, force_tier=None: _build_selection("mimo_pro", xiaomi_cfg, task_type),
+    )
+    monkeypatch.setattr("app.services.llm_service.OpenAICompatibleProvider", FakeProvider)
+
+    async def _noop(*args, **kwargs):
+        return None
+
+    monkeypatch.setattr("app.services.llm_service.circuit_breaker_service.check", _noop)
+    monkeypatch.setattr("app.services.llm_service.circuit_breaker_service.record_success", _noop)
+    monkeypatch.setattr("app.services.llm_service.circuit_breaker_service.record_failure", _noop)
+
+    FakeProvider.calls = []
+    service = LLMService(agent_role=AgentRole.GENERATION, enable_dynamic_routing=True)
+
+    await service.chat_with_tools(
+        system_prompt="You are helpful.",
+        user_message="hello",
+        tools=[],
+        conversation_history=None,
+    )
+
+    kwargs = FakeProvider.calls[0]["kwargs"]
+    assert "thinking" not in kwargs
+    assert kwargs["extra_body"] == {"thinking": {"type": "enabled"}}

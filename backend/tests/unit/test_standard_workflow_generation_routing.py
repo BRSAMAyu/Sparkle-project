@@ -3,8 +3,14 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from app.agents.standard_workflow import _classify_user_intent, generation_node
-from app.core.agent_profiles import TaskType
+from app.agents.standard_workflow import (
+    _classify_user_intent,
+    _sanitize_community_sendable_response,
+    collaboration_post_process_node,
+    generation_node,
+    router_node,
+)
+from app.core.agent_profiles import AgentRole, TaskType
 from app.orchestration.statechart_engine import WorkflowState
 
 
@@ -37,6 +43,11 @@ class _LowInfoPrivateAgentLLM(_FakeGenerationLLM):
         yield SimpleNamespace(type="text", content="我来帮你给阿泽写一条合适的私聊消息。")
 
 
+class _LeadInGroupAgentLLM(_FakeGenerationLLM):
+    async def chat_stream_with_tools(self, system_prompt, user_message, tools, user_context):
+        yield SimpleNamespace(type="text", content="你可以这样发：\n大家今晚 8 点前同步一下各自的复习进度。")
+
+
 @pytest.mark.asyncio
 async def test_generation_node_uses_role_and_task_scoped_llm(monkeypatch):
     fake_llm = _FakeGenerationLLM()
@@ -62,6 +73,99 @@ async def test_generation_node_uses_role_and_task_scoped_llm(monkeypatch):
     assert new_state.context_data["active_generation_model"] == "deep-analyst-model"
     assert new_state.messages[-1]["role"] == "assistant"
     assert new_state.messages[-1]["content"] == "分析完成"
+
+
+@pytest.mark.asyncio
+async def test_generation_node_uses_custom_expert_specific_model(monkeypatch):
+    fake_llm = _FakeGenerationLLM()
+    get_specific_mock = AsyncMock(return_value=fake_llm)
+    monkeypatch.setattr("app.agents.standard_workflow.get_llm_service_for_specific_model", get_specific_mock)
+    monkeypatch.setattr("app.agents.standard_workflow.build_system_prompt", lambda *args, **kwargs: "SYSTEM")
+
+    captured = {}
+
+    async def _chat_stream(system_prompt, user_message, tools, user_context):
+        captured["system_prompt"] = system_prompt
+        yield SimpleNamespace(type="text", content="自定义专家分析完成")
+
+    fake_llm.chat_stream_with_tools = _chat_stream
+
+    state = WorkflowState(
+        messages=[{"role": "user", "content": "帮我从反例角度分析这个问题"}],
+        context_data={
+            "chat_mode": "expert::custom_expert:test",
+            "selected_experts": ["custom_expert:test"],
+            "_custom_expert_profiles": {
+                "custom_expert:test": {
+                    "display_name": "批判专家",
+                    "system_prompt": "必须补充两个反例。",
+                    "base_expert_id": "deep_analyst",
+                    "preferred_model_key": "mimo_pro",
+                    "reasoning_mode": "deep",
+                }
+            },
+            "user_context": {},
+            "conversation_context": {"messages": []},
+            "tools_schema": [],
+        },
+    )
+
+    new_state = await generation_node(state)
+
+    get_specific_mock.assert_awaited_once_with("mimo_pro", AgentRole.DEEP_ANALYST)
+    assert "必须补充两个反例" in captured["system_prompt"]
+    assert new_state.messages[-1]["content"] == "自定义专家分析完成"
+
+
+@pytest.mark.asyncio
+async def test_router_node_forces_collaboration_for_explicit_team():
+    state = WorkflowState(
+        messages=[{"role": "user", "content": "给我一个综合方案"}],
+        context_data={
+            "chat_mode": 'team::{"agents":["deep_analyst","custom_expert:test"],"final_agents":["custom_expert:test"]}',
+            "selected_experts": ["deep_analyst", "custom_expert:test"],
+            "answer_experts": ["custom_expert:test"],
+        },
+    )
+
+    routed = await router_node(state)
+
+    assert routed.context_data["router_decision"] == "collaboration"
+    assert routed.context_data["router_confidence"] == 1.0
+
+
+@pytest.mark.asyncio
+async def test_collaboration_post_process_ends_explicit_team_after_final_response():
+    state = WorkflowState(
+        messages=[{"role": "user", "content": "给我一个综合方案"}],
+        context_data={
+            "chat_mode": 'team::{"agents":["deep_analyst","time_tutor"],"final_agents":["deep_analyst"]}',
+            "selected_experts": ["deep_analyst", "time_tutor"],
+            "answer_experts": ["deep_analyst"],
+            "collaboration_result": SimpleNamespace(final_response="这里是团队综合后的最终答案。", outputs=[]),
+        },
+    )
+
+    updated = await collaboration_post_process_node(state)
+
+    assert updated.next_step == "__end__"
+    assert updated.messages[-1]["role"] == "assistant"
+    assert updated.messages[-1]["content"] == "这里是团队综合后的最终答案。"
+
+
+@pytest.mark.asyncio
+async def test_collaboration_post_process_falls_back_to_tool_planning_without_explicit_team():
+    state = WorkflowState(
+        messages=[{"role": "user", "content": "继续"}],
+        context_data={
+            "chat_mode": "standard",
+            "collaboration_result": SimpleNamespace(final_response="中间协作结果", outputs=[]),
+        },
+    )
+
+    updated = await collaboration_post_process_node(state)
+
+    assert updated.next_step == "tool_planning"
 
 
 def test_exam_fact_query_does_not_trigger_exam_preparation():
@@ -164,3 +268,46 @@ async def test_generation_node_replaces_low_information_private_agent_reply(monk
     assert "我来帮你给阿泽写一条" not in new_state.messages[-1]["content"]
     assert "阿泽" in new_state.messages[-1]["content"]
     assert "CS101" in new_state.messages[-1]["content"]
+
+
+def test_sanitize_community_sendable_response_removes_explanatory_lead_in():
+    user_message = (
+        "你是Sparkle内置的群聊AI助手，正在协助群聊「高数冲刺群」。\n"
+        "用户问题:\n帮我在群里发一条提醒，今晚 8 点前同步复习进度。"
+    )
+
+    sanitized = _sanitize_community_sendable_response(
+        user_message,
+        "你可以这样发：\n“大家今晚 8 点前同步一下各自的复习进度。”",
+    )
+
+    assert sanitized == "大家今晚 8 点前同步一下各自的复习进度。"
+
+
+@pytest.mark.asyncio
+async def test_generation_node_sanitizes_group_reply_lead_in(monkeypatch):
+    get_llm_mock = AsyncMock(return_value=_LeadInGroupAgentLLM())
+    monkeypatch.setattr("app.agents.standard_workflow.get_configured_llm_service", get_llm_mock)
+    monkeypatch.setattr("app.agents.standard_workflow.build_system_prompt", lambda *args, **kwargs: "SYSTEM")
+
+    state = WorkflowState(
+        messages=[{
+            "role": "user",
+            "content": (
+                "你是Sparkle内置的群聊AI助手，正在协助群聊「高数冲刺群」。\n"
+                "最近对话:\n"
+                "小林: 我今天晚上复盘错题。\n\n"
+                "用户问题:\n"
+                "帮我在群里发一条提醒，今晚 8 点前同步复习进度。"
+            ),
+        }],
+        context_data={
+            "user_context": {},
+            "conversation_context": {"messages": []},
+            "tools_schema": [],
+        },
+    )
+
+    new_state = await generation_node(state)
+
+    assert new_state.messages[-1]["content"] == "大家今晚 8 点前同步一下各自的复习进度。"

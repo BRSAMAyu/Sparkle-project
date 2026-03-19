@@ -7,6 +7,7 @@ import httpx
 from loguru import logger
 
 from app.config import settings
+from app.services.circuit_breaker import CircuitBreakerOpenException, circuit_breaker_service
 
 try:
     import dashscope
@@ -33,6 +34,7 @@ class RerankService:
 
     def __init__(self):
         self.primary_provider = settings.RERANK_PROVIDER
+        self.backup_provider = settings.RERANK_BACKUP_PROVIDER
         self.dashscope_api_key = settings.DASHSCOPE_API_KEY
         self.dashscope_base_url = settings.DASHSCOPE_BASE_HTTP_API_URL
         self.dashscope_model = settings.DASHSCOPE_RERANK_MODEL  # qwen3-rerank
@@ -101,6 +103,7 @@ class RerankService:
         last_error = None
         for provider in providers_to_try:
             try:
+                await circuit_breaker_service.check(f"rerank:{provider}")
                 if provider == "dashscope":
                     if not self.dashscope_api_key:
                         continue
@@ -112,9 +115,15 @@ class RerankService:
                 else:
                     continue
 
+                await circuit_breaker_service.record_success(f"rerank:{provider}")
                 return [valid_candidates[i] for i in indices if i < len(valid_candidates)]
+            except CircuitBreakerOpenException as e:
+                logger.warning(f"Rerank provider {provider} skipped because circuit breaker is open: {e}")
+                last_error = e
+                continue
             except Exception as e:
                 logger.warning(f"Rerank provider {provider} failed: {e}")
+                await circuit_breaker_service.record_failure(f"rerank:{provider}")
                 last_error = e
                 continue
 
@@ -124,7 +133,7 @@ class RerankService:
 
     def _get_provider_order(self) -> list[str]:
         """获取供应商尝试顺序 (主供应商优先)"""
-        order = [self.primary_provider]
+        order = [self.primary_provider, self.backup_provider]
         for provider in self.PROVIDER_ORDER:
             if provider not in order:
                 order.append(provider)

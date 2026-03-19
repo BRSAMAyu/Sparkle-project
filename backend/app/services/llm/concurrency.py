@@ -20,6 +20,7 @@ from loguru import logger
 class ProviderType(str, Enum):
     """LLM 提供商类型"""
     ZHIPU = "zhipu"          # GLM API
+    ZHIPU_CODING = "zhipu_coding"  # GLM Coding / Batch API
     DEEPSEEK = "deepseek"    # DeepSeek
     XIAOMI = "xiaomi"        # XiaoMi MIMO
     DASHSCOPE = "dashscope"  # Aliyun
@@ -87,6 +88,10 @@ PROVIDER_CONFIGS: dict[ProviderType, ConcurrencyConfig] = {
         max_concurrent=_get_zhipu_concurrent_limit(),
         queue_timeout=30.0,
     ),
+    ProviderType.ZHIPU_CODING: ConcurrencyConfig(
+        max_concurrent=min(int(os.getenv("GLM_BATCH_MAX_CONCURRENCY", "2")), 2),
+        queue_timeout=120.0,
+    ),
     ProviderType.DEEPSEEK: ConcurrencyConfig(
         max_concurrent=10,  # DeepSeek Pro 支持更高并发
         queue_timeout=30.0,
@@ -139,6 +144,8 @@ class LLMConcurrencyManager:
     def _get_provider_type(self, provider: str) -> ProviderType:
         """根据 provider 名称获取 ProviderType"""
         provider_lower = provider.lower()
+        if provider_lower == ProviderType.ZHIPU_CODING.value:
+            return ProviderType.ZHIPU_CODING
         for pt in ProviderType:
             if pt.value in provider_lower or provider_lower in pt.value:
                 return pt

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -56,6 +57,20 @@ class DictionaryPackageInfo {
   final String? generatedAt;
 }
 
+class InstalledDictionaryPackage {
+  const InstalledDictionaryPackage({
+    required this.id,
+    required this.filePath,
+    required this.sizeBytes,
+    required this.installedAt,
+  });
+
+  final String id;
+  final String filePath;
+  final int sizeBytes;
+  final DateTime installedAt;
+}
+
 class OfflineDictionaryService {
   OfflineDictionaryService(this._apiClient);
 
@@ -74,19 +89,39 @@ class OfflineDictionaryService {
   }
 
   Future<List<String>> getInstalledPackageIds() async {
+    final packages = await getInstalledPackages();
+    return packages.map((package) => package.id).toList(growable: false);
+  }
+
+  Future<List<InstalledDictionaryPackage>> getInstalledPackages() async {
     final dir = await _packageDirectory();
-    if (!await dir.exists()) {
-      return const [];
-    }
-    final files = dir
-        .listSync()
-        .whereType<File>()
-        .where((file) => file.path.endsWith('.json'))
-        .map((file) => file.uri.pathSegments.last.replaceAll('.json', ''))
-        .where((name) => name != 'lookup_cache')
-        .toList()
-      ..sort();
-    return files;
+    final dirPath = dir.path;
+    return Isolate.run(() {
+      final packageDir = Directory(dirPath);
+      if (!packageDir.existsSync()) {
+        return <InstalledDictionaryPackage>[];
+      }
+
+      final packages = packageDir
+          .listSync()
+          .whereType<File>()
+          .where((file) => file.path.endsWith('.json'))
+          .map((file) {
+            final id = file.uri.pathSegments.last.replaceAll('.json', '');
+            final stats = file.statSync();
+            return InstalledDictionaryPackage(
+              id: id,
+              filePath: file.path,
+              sizeBytes: stats.size,
+              installedAt: stats.modified,
+            );
+          })
+          .where((package) => package.id != 'lookup_cache')
+          .toList()
+        ..sort((left, right) => left.id.compareTo(right.id));
+
+      return packages;
+    });
   }
 
   Future<void> downloadPackage(String packageId) async {
@@ -111,10 +146,7 @@ class OfflineDictionaryService {
     final dir = await _packageDirectory();
     await dir.create(recursive: true);
     final file = File('${dir.path}/$packageId.json');
-    await file.writeAsString(
-      json.encode(entries),
-      flush: true,
-    );
+    await _writeJsonFile(file.path, entries);
     _mergedEntries = null;
   }
 
@@ -142,15 +174,26 @@ class OfflineDictionaryService {
     await dir.create(recursive: true);
     final cacheFile = File('${dir.path}/lookup_cache.json');
     var payload = <String, dynamic>{};
-    if (await cacheFile.exists()) {
-      final raw = await cacheFile.readAsString();
-      final decoded = json.decode(raw);
-      if (decoded is Map<String, dynamic>) {
+    if (await _fileExists(cacheFile.path)) {
+      final decoded = await _readJsonMap(cacheFile.path);
+      if (decoded != null) {
         payload = decoded;
       }
     }
     payload[word] = entry;
-    await cacheFile.writeAsString(json.encode(payload), flush: true);
+    await _writeJsonFile(cacheFile.path, payload);
+    _mergedEntries = null;
+  }
+
+  Future<void> removePackage(String packageId) async {
+    final dir = await _packageDirectory();
+    final filePath = '${dir.path}/$packageId.json';
+    await Isolate.run(() {
+      final file = File(filePath);
+      if (file.existsSync()) {
+        file.deleteSync();
+      }
+    });
     _mergedEntries = null;
   }
 
@@ -161,27 +204,12 @@ class OfflineDictionaryService {
     }
 
     final dir = await _packageDirectory();
-    if (!await dir.exists()) {
+    if (!await _directoryExists(dir.path)) {
       _mergedEntries = <String, Map<String, dynamic>>{};
       return _mergedEntries!;
     }
 
-    final result = <String, Map<String, dynamic>>{};
-    for (final entity in dir.listSync()) {
-      if (entity is! File || !entity.path.endsWith('.json')) {
-        continue;
-      }
-      final decoded = json.decode(await entity.readAsString());
-      if (decoded is! Map<String, dynamic>) {
-        continue;
-      }
-      for (final entry in decoded.entries) {
-        final value = entry.value;
-        if (value is Map<String, dynamic>) {
-          result[entry.key.toLowerCase()] = value;
-        }
-      }
-    }
+    final result = await _loadEntriesFromDirectory(dir.path);
 
     _mergedEntries = result;
     return result;
@@ -191,6 +219,56 @@ class OfflineDictionaryService {
     final root = await getApplicationDocumentsDirectory();
     return Directory('${root.path}/offline_dictionary');
   }
+
+  Future<bool> _directoryExists(String path) async =>
+      Isolate.run(() => Directory(path).existsSync());
+
+  Future<bool> _fileExists(String path) async =>
+      Isolate.run(() => File(path).existsSync());
+
+  Future<Map<String, dynamic>?> _readJsonMap(String path) async => Isolate.run(() {
+        final file = File(path);
+        if (!file.existsSync()) {
+          return null;
+        }
+        final decoded = json.decode(file.readAsStringSync());
+        if (decoded is Map<String, dynamic>) {
+          return decoded;
+        }
+        return null;
+      });
+
+  Future<void> _writeJsonFile(String path, Object value) async {
+    await Isolate.run(() {
+      File(path).writeAsStringSync(json.encode(value), flush: true);
+    });
+  }
+
+  Future<Map<String, Map<String, dynamic>>> _loadEntriesFromDirectory(
+    String dirPath,
+  ) async =>
+      Isolate.run(() {
+      final result = <String, Map<String, dynamic>>{};
+      final dir = Directory(dirPath);
+
+      for (final entity in dir.listSync()) {
+        if (entity is! File || !entity.path.endsWith('.json')) {
+          continue;
+        }
+        final decoded = json.decode(entity.readAsStringSync());
+        if (decoded is! Map<String, dynamic>) {
+          continue;
+        }
+        for (final entry in decoded.entries) {
+          final value = entry.value;
+          if (value is Map<String, dynamic>) {
+            result[entry.key.toLowerCase()] = Map<String, dynamic>.from(value);
+          }
+        }
+      }
+
+      return result;
+    });
 }
 
 final offlineDictionaryServiceProvider = Provider<OfflineDictionaryService>(

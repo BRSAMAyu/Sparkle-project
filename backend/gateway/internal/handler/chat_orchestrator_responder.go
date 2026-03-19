@@ -222,7 +222,11 @@ func (r *envelopeResponder) writeEnvelope(payload map[string]json.RawMessage, tr
 		return err
 	}
 	_ = r.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
-	return r.conn.WriteMessage(websocket.TextMessage, data)
+	if err := r.conn.WriteMessage(websocket.TextMessage, data); err != nil {
+		return err
+	}
+	_ = r.conn.SetWriteDeadline(time.Time{})
+	return nil
 }
 
 // protobufResponder implements the responder interfaces for Binary/Protobuf protocol
@@ -352,5 +356,9 @@ func (r *protobufResponder) sendProto(msgType string, payload []byte) error {
 		return err
 	}
 	_ = r.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
-	return r.conn.WriteMessage(websocket.BinaryMessage, data)
+	if err := r.conn.WriteMessage(websocket.BinaryMessage, data); err != nil {
+		return err
+	}
+	_ = r.conn.SetWriteDeadline(time.Time{})
+	return nil
 }

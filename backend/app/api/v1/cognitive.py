@@ -9,11 +9,14 @@ from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
+from app.config import settings
+from app.core.celery_app import get_celery_queue_status
 from app.db.session import AsyncSessionLocal
 from app.models.cognitive import BehaviorPattern
 from app.models.user import User
 from app.schemas.cognitive import BehaviorPatternResponse, CognitiveFragmentCreate, CognitiveFragmentResponse
 from app.services.cognitive_service import CognitiveService
+from app.services.glm_batch_service import glm_batch_service
 
 router = APIRouter()
 
@@ -53,13 +56,34 @@ async def create_fragment(
         persona_version=fragment_in.persona_version
     )
 
-    # Trigger AI Analysis via Background Task
-    background_tasks.add_task(
-        _analyze_fragment_task,
-        user_id,
-        fragment.id,
-        AsyncSessionLocal
+    celery_status = get_celery_queue_status(settings.GLM_BATCH_QUEUE)
+    queue_saturated = (
+        int(celery_status.get("queue_active_tasks") or 0) >= int(settings.GLM_BATCH_MAX_CONCURRENCY or 2)
+        or int(celery_status.get("queue_reserved_tasks") or 0) > 0
     )
+    should_enqueue_glm_batch = (
+        settings.GLM_BATCH_ENABLED
+        and settings.GLM_BATCH_COGNITIVE_ANALYSIS_ENABLED
+        and celery_status.get("status") == "healthy"
+        and int(celery_status.get("queue_worker_count") or 0) > 0
+        and not queue_saturated
+    )
+
+    if should_enqueue_glm_batch:
+        glm_batch_service.enqueue_cognitive_analysis(
+            user_id=user_id,
+            fragment_id=fragment.id,
+            severity=fragment.severity,
+            context_tags=fragment.context_tags,
+            error_tags=fragment.error_tags,
+        )
+    else:
+        background_tasks.add_task(
+            _analyze_fragment_task,
+            user_id,
+            fragment.id,
+            AsyncSessionLocal
+        )
 
     return fragment
 

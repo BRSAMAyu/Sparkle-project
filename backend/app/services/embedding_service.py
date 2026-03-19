@@ -14,6 +14,7 @@ from loguru import logger
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from app.config import settings
+from app.services.circuit_breaker import CircuitBreakerOpenException, circuit_breaker_service
 
 try:
     import dashscope
@@ -37,6 +38,7 @@ class EmbeddingService:
 
     def __init__(self):
         self.primary_provider = settings.EMBEDDING_PROVIDER
+        self.backup_provider = settings.EMBEDDING_BACKUP_PROVIDER
         self.embedding_dim = settings.EMBEDDING_DIM
 
         # DashScope 配置 (阿里云百炼)
@@ -85,16 +87,26 @@ class EmbeddingService:
         last_error = None
         for provider in providers_to_try:
             try:
+                await circuit_breaker_service.check(f"embedding:{provider}")
                 if provider == "dashscope":
                     if not self.dashscope_api_key:
                         continue
-                    return await self._dashscope_embeddings(texts, text_type=text_type)
+                    result = await self._dashscope_embeddings(texts, text_type=text_type)
                 elif provider == "siliconflow":
                     if not self.siliconflow_api_key:
                         continue
-                    return await self._siliconflow_embeddings(texts)
+                    result = await self._siliconflow_embeddings(texts)
+                else:
+                    continue
+                await circuit_breaker_service.record_success(f"embedding:{provider}")
+                return result
+            except CircuitBreakerOpenException as e:
+                logger.warning(f"Embedding provider {provider} skipped because circuit breaker is open: {e}")
+                last_error = e
+                continue
             except Exception as e:
                 logger.warning(f"Embedding provider {provider} failed: {e}")
+                await circuit_breaker_service.record_failure(f"embedding:{provider}")
                 last_error = e
                 continue
 
@@ -105,7 +117,7 @@ class EmbeddingService:
 
     def _get_provider_order(self) -> list[str]:
         """获取供应商尝试顺序 (主供应商优先)"""
-        order = [self.primary_provider]
+        order = [self.primary_provider, self.backup_provider]
         for provider in self.PROVIDER_ORDER:
             if provider not in order:
                 order.append(provider)

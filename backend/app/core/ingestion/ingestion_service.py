@@ -214,12 +214,12 @@ class IngestionService:
             # Use 300 DPI for better OCR
             im = page.to_image(resolution=300).original
 
-            ocr_engine = (options.get("ocr_engine", "local") or "local").lower()
+            ocr_engine = (options.get("ocr_engine", settings.OCR_PROVIDER) or settings.OCR_PROVIDER).lower()
             if ocr_engine == "deepseek":
-                logger.warning("OCR engine 'deepseek' 已废弃，自动切换到 'zhipu'")
-                ocr_engine = "zhipu"
+                logger.warning("OCR engine 'deepseek' 已兼容映射到 'siliconflow'")
+                ocr_engine = "siliconflow"
 
-            if ocr_engine == "zhipu":
+            if ocr_engine in {"zhipu", "siliconflow", "auto", "remote"}:
                 return self._ocr_via_api(im, options), None
             if not HAS_TESSERACT:
                 logger.warning("Local OCR requested but pytesseract not installed.")
@@ -266,12 +266,15 @@ class IngestionService:
 
     def _ocr_via_api(self, image, options: dict[str, Any]) -> str:
         """
-        Run remote GLM OCR.
+        Run remote OCR with provider failover.
         """
-        del options
-        if not settings.ZHIPU_API_KEY:
-            logger.warning("GLM OCR requested but ZHIPU_API_KEY not set.")
-            return ""
+        provider = (options.get("ocr_engine") or "").strip().lower()
+        if provider in {"deepseek", "siliconflow"}:
+            preferred_provider = "siliconflow"
+        elif provider == "zhipu":
+            preferred_provider = "zhipu"
+        else:
+            preferred_provider = None
 
         try:
             # Convert to base64
@@ -282,10 +285,15 @@ class IngestionService:
 
             image.save(buffered, format="JPEG", quality=95)
             img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
-            return ocr_service.ocr_from_base64_sync(img_str)
+            prompt_mode = (options.get("ocr_prompt_mode") or "").strip()
+            return ocr_service.ocr_from_base64_sync(
+                img_str,
+                prompt=prompt_mode,
+                preferred_provider=preferred_provider,
+            )
 
         except Exception as e:
-            logger.error(f"GLM OCR API Exception: {e}")
+            logger.error(f"Remote OCR API Exception: {e}")
             return ""
 
     def _process_docx(self, path: str) -> list[ExtractedChunk]:

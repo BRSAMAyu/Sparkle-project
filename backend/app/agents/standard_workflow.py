@@ -3,15 +3,18 @@ import json
 import re
 import time
 import uuid
+from datetime import datetime
 from typing import Any
 
 from google.protobuf import struct_pb2
 from loguru import logger
 
 from app.agents.collaboration_workflows import (
+    CollaborationResult,
     ErrorDiagnosisWorkflow,
     ProgressiveExplorationWorkflow,
     TaskDecompositionWorkflow,
+    _build_timeline_step,
 )
 from app.agents.enhanced_agents import EnhancedAgentContext
 
@@ -24,16 +27,22 @@ from app.agents.graph.nodes.review_nodes import (
 
 # P1 & P2: Tool Fallback and Enhanced Features
 from app.agents.tool_fallback import ToolExecutionFallback
-from app.core.agent_profiles import TaskType
+from app.core.agent_profiles import AgentRole, ModelTier, TaskType, agent_profile_registry
 from app.core.business_metrics import HITL_REQUESTED, TASK_LOOP_COMPLETED
 from app.core.pending_actions import pending_actions_store
 from app.gen.agent.v1 import agent_service_pb2
 from app.orchestration.executor import ToolExecutor
+from app.orchestration.chat_modes import CHAT_MODE_TEAM_PREFIX, parse_team_spec
 from app.orchestration.prompts import build_system_prompt
 from app.orchestration.statechart_engine import StateGraph, WorkflowState
 from app.services.galaxy.retrieval_service import KnowledgeRetrievalService
 from app.services.knowledge_service import KnowledgeService
-from app.services.llm_service import get_configured_llm_service, llm_service
+from app.services.llm_service import (
+    get_configured_llm_service,
+    get_configured_llm_service_for_tier,
+    get_llm_service_for_specific_model,
+    llm_service,
+)
 
 # ==========================================
 # Nodes
@@ -45,11 +54,18 @@ def _resolve_generation_agent_role(state: WorkflowState) -> str:
     if explicit_role:
         return str(explicit_role)
 
+    answer_experts = state.context_data.get("answer_experts")
+    if isinstance(answer_experts, list):
+        for expert in answer_experts:
+            cleaned = str(expert).strip()
+            if cleaned and not cleaned.startswith("custom_expert:"):
+                return cleaned
+
     selected_experts = state.context_data.get("selected_experts")
     if isinstance(selected_experts, list):
         for expert in selected_experts:
             cleaned = str(expert).strip()
-            if cleaned:
+            if cleaned and not cleaned.startswith("custom_expert:"):
                 return cleaned
 
     return "generation"
@@ -64,6 +80,252 @@ def _resolve_generation_task_type(state: WorkflowState) -> TaskType:
     if chat_mode == "error_diagnosis":
         return TaskType.ERROR_DIAGNOSIS
     return TaskType.STANDARD_RESPONSE
+
+
+def _coerce_agent_role(role: str | None) -> AgentRole:
+    cleaned = str(role or "").strip().lower()
+    for item in AgentRole:
+        if item.value == cleaned:
+            return item
+    return AgentRole.GENERATION
+
+
+def _selected_expert_ids(state: WorkflowState) -> list[str]:
+    raw = state.context_data.get("selected_experts")
+    if not isinstance(raw, list):
+        return []
+    return [str(item).strip() for item in raw if str(item).strip()]
+
+
+def _answer_expert_ids(state: WorkflowState) -> list[str]:
+    raw = state.context_data.get("answer_experts")
+    if not isinstance(raw, list):
+        return []
+    return [str(item).strip() for item in raw if str(item).strip()]
+
+
+def _single_explicit_expert_id(state: WorkflowState) -> str | None:
+    experts = _selected_expert_ids(state)
+    if len(experts) == 1:
+        return experts[0]
+    return None
+
+
+def _get_custom_expert_profile(state: WorkflowState, expert_id: str | None) -> dict[str, Any] | None:
+    if not expert_id:
+        return None
+    profiles = state.context_data.get("_custom_expert_profiles") or {}
+    if not isinstance(profiles, dict):
+        return None
+    profile = profiles.get(expert_id)
+    return profile if isinstance(profile, dict) else None
+
+
+def _reasoning_mode_to_task_type(value: str | None, fallback: TaskType) -> TaskType:
+    mode = str(value or "").strip().lower()
+    if mode == "fast":
+        return TaskType.QUICK_QUERY
+    if mode == "deep":
+        return TaskType.DEEP_REASONING
+    return fallback
+
+
+async def _resolve_llm_for_expert(
+    *,
+    expert_id: str,
+    state: WorkflowState,
+    task_type: TaskType,
+):
+    custom_profile = _get_custom_expert_profile(state, expert_id)
+    if custom_profile:
+        base_role = str(custom_profile.get("base_expert_id") or "generation").strip().lower()
+        effective_role = _coerce_agent_role(base_role)
+        custom_task_type = _reasoning_mode_to_task_type(custom_profile.get("reasoning_mode"), task_type)
+        model_key = str(custom_profile.get("preferred_model_key") or "").strip()
+        if model_key:
+            service = await get_llm_service_for_specific_model(model_key, effective_role)
+        else:
+            tier_value = str(custom_profile.get("preferred_model_tier") or "").strip().lower()
+            if tier_value and tier_value in {item.value for item in ModelTier}:
+                service = await get_configured_llm_service_for_tier(
+                    effective_role,
+                    ModelTier(tier_value),
+                    task_type=custom_task_type,
+                )
+            else:
+                service = await get_configured_llm_service(effective_role, custom_task_type)
+        return {
+            "service": service,
+            "agent_role": effective_role,
+            "display_name": str(custom_profile.get("display_name") or custom_profile.get("name") or expert_id),
+            "system_prompt": str(custom_profile.get("system_prompt") or "").strip(),
+            "expert_id": expert_id,
+            "is_custom": True,
+        }
+
+    effective_role = _coerce_agent_role(expert_id)
+    service = await get_configured_llm_service(effective_role, task_type)
+    profile = agent_profile_registry.get_profile(effective_role)
+    return {
+        "service": service,
+        "agent_role": effective_role,
+        "display_name": profile.display_name,
+        "system_prompt": "",
+        "expert_id": expert_id,
+        "is_custom": False,
+    }
+
+
+def _build_expert_collaboration_system_prompt(
+    *,
+    state: WorkflowState,
+    runtime: dict[str, Any],
+    user_context: dict[str, Any],
+    conversation_context: dict[str, Any],
+    prompt_version: str,
+) -> str:
+    agent_role = runtime["agent_role"]
+    base_prompt = build_system_prompt(
+        user_context,
+        conversation_history=conversation_context,
+        prompt_version=prompt_version,
+        agent_role=agent_role,
+        plan_context=state.context_data.get("plan_context"),
+        session_feedback_instruction=str(state.context_data.get("session_feedback_instruction") or ""),
+        dual_core_instruction=str(state.context_data.get("dual_core_prompt_instruction") or ""),
+        context_focus=state.context_data.get("context_focus"),
+        context_briefing_note=str(state.context_data.get("context_briefing_note") or ""),
+        chat_mode=str(state.context_data.get("chat_mode", "standard") or "standard"),
+    )
+    directive = (
+        f"\n\n## 当前参与身份\n"
+        f"你正在以「{runtime['display_name']}」的身份参与专家协作。"
+        "请只从这一专家视角发言，避免和其他专家重复。"
+        "\n输出要求：1. 先给结论；2. 再给你的依据；3. 最后给可执行建议。"
+    )
+    custom_prompt = str(runtime.get("system_prompt") or "").strip()
+    if custom_prompt:
+        directive += f"\n\n## 自定义专家指令\n{custom_prompt}"
+    return f"{base_prompt}{directive}"
+
+
+async def _execute_explicit_expert_collaboration(state: WorkflowState) -> CollaborationResult:
+    selected = _selected_expert_ids(state)
+    answer_targets = _answer_expert_ids(state) or list(selected)
+    user_message = state.messages[-1]["content"] if state.messages else ""
+    user_context = state.context_data.get("user_context") or {}
+    conversation_context = state.context_data.get("conversation_context") or {"messages": []}
+    prompt_version = str(state.context_data.get("prompt_version") or "v1")
+    task_type = _resolve_generation_task_type(state)
+
+    expert_outputs: list[dict[str, Any]] = []
+    timeline: list[dict[str, Any]] = []
+
+    for expert_id in selected:
+        started_at = time.time()
+        runtime = await _resolve_llm_for_expert(expert_id=expert_id, state=state, task_type=task_type)
+        system_prompt = _build_expert_collaboration_system_prompt(
+            state=state,
+            runtime=runtime,
+            user_context=user_context,
+            conversation_context=conversation_context,
+            prompt_version=prompt_version,
+        )
+        expert_request = (
+            "请用你的专业视角回答下面的问题。"
+            "回答必须保留你的独特判断，不要假装代表其他专家。\n\n"
+            f"用户问题：{user_message}"
+        )
+        response = await runtime["service"].chat(
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": expert_request},
+            ],
+            temperature=0.5,
+        )
+        expert_outputs.append(
+            {
+                "expert_id": expert_id,
+                "display_name": runtime["display_name"],
+                "agent_role": runtime["agent_role"].value,
+                "response": response,
+            }
+        )
+        timeline.append(
+            _build_timeline_step(
+                runtime["display_name"],
+                "expert_analysis",
+                datetime.fromtimestamp(started_at),
+                output_summary=response[:120],
+                agent_role=runtime["agent_role"].value,
+            )
+        )
+
+    synthesis_target = answer_targets[0] if answer_targets else selected[0]
+    synthesis_runtime = await _resolve_llm_for_expert(
+        expert_id=synthesis_target,
+        state=state,
+        task_type=TaskType.COLLABORATION,
+    )
+    synthesis_prompt = _build_expert_collaboration_system_prompt(
+        state=state,
+        runtime=synthesis_runtime,
+        user_context=user_context,
+        conversation_context=conversation_context,
+        prompt_version=prompt_version,
+    )
+    synthesis_input = "\n\n".join(
+        f"### {item['display_name']} ({item['agent_role']})\n{item['response']}"
+        for item in expert_outputs
+    )
+    answer_names = "、".join(
+        item["display_name"] for item in expert_outputs if item["expert_id"] in answer_targets
+    ) or synthesis_runtime["display_name"]
+    final_response = await synthesis_runtime["service"].chat(
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    f"{synthesis_prompt}\n\n"
+                    "## 多专家综合要求\n"
+                    f"本轮参与专家：{'、'.join(item['display_name'] for item in expert_outputs)}。\n"
+                    f"最终定稿优先吸收：{answer_names}。\n"
+                    "请输出一份统一答案，既保留分歧，也给出清晰结论。"
+                ),
+            },
+            {
+                "role": "user",
+                "content": (
+                    f"用户问题：{user_message}\n\n"
+                    f"专家观点汇总：\n{synthesis_input}"
+                ),
+            },
+        ],
+        temperature=0.4,
+    )
+    timeline.append(
+        _build_timeline_step(
+            synthesis_runtime["display_name"],
+            "final_synthesis",
+            datetime.fromtimestamp(time.time()),
+            output_summary=final_response[:120],
+            agent_role=synthesis_runtime["agent_role"].value,
+        )
+    )
+    return CollaborationResult(
+        workflow_type="explicit_expert_collaboration",
+        participants=[item["display_name"] for item in expert_outputs],
+        outputs=[],
+        final_response=final_response,
+        reasoning=" -> ".join(item["display_name"] for item in expert_outputs),
+        metadata={
+            "selected_experts": list(selected),
+            "answer_experts": list(answer_targets),
+            "expert_outputs": expert_outputs,
+        },
+        timeline=timeline,
+        confidence=0.85,
+    )
 
 
 def _build_generation_fallback_response(
@@ -184,6 +446,45 @@ def _build_community_prompt_fallback_response(user_message: str) -> str:
         return f"大家好，{direct_message}。"
 
     return ""
+
+
+def _strip_wrapping_quotes(text: str) -> str:
+    pairs = (("“", "”"), ('"', '"'), ("'", "'"))
+    stripped = text.strip()
+    for left, right in pairs:
+        if stripped.startswith(left) and stripped.endswith(right) and len(stripped) >= 2:
+            return stripped[1:-1].strip()
+    return stripped
+
+
+def _sanitize_community_sendable_response(user_message: str, response_text: str) -> str:
+    prompt_context = _extract_community_prompt_context(user_message)
+    if not prompt_context:
+        return str(response_text or "").strip()
+
+    cleaned = str(response_text or "").strip()
+    if not cleaned:
+        return cleaned
+
+    lines = [line.strip() for line in cleaned.splitlines() if line.strip()]
+    if not lines:
+        return ""
+
+    lead_in_patterns = (
+        r"^(我来帮你|让我帮你|我帮你|我先帮你)",
+        r"^(你可以这样发|可以这样发|可以直接发|建议发|建议回复|建议你发|建议你回复)",
+        r"^(下面是|这是|给你的|为你准备的).*(消息|回复|文案)",
+        r"^(群里可以这样发|私聊可以这样回|可直接发送|直接发这句)",
+    )
+    while lines and any(re.match(pattern, lines[0]) for pattern in lead_in_patterns):
+        lines.pop(0)
+
+    if lines and re.match(r"^(消息|回复|文案|发送内容|建议内容)\s*[:：]$", lines[0]):
+        lines.pop(0)
+
+    sanitized = "\n".join(lines).strip()
+    sanitized = _strip_wrapping_quotes(sanitized)
+    return sanitized or cleaned
 
 
 def _extract_best_retrieval_fact(*contexts: str) -> str:
@@ -385,9 +686,20 @@ async def generation_node(state: WorkflowState) -> WorkflowState:
     prompt_version = state.context_data.get("prompt_version") or "v1"
     agent_role = _resolve_generation_agent_role(state)
     task_type = _resolve_generation_task_type(state)
+    explicit_runtime = None
 
     try:
-        generation_llm = await get_configured_llm_service(agent_role, task_type)
+        explicit_expert_id = _single_explicit_expert_id(state)
+        if explicit_expert_id:
+            explicit_runtime = await _resolve_llm_for_expert(
+                expert_id=explicit_expert_id,
+                state=state,
+                task_type=task_type,
+            )
+            generation_llm = explicit_runtime["service"]
+            agent_role = explicit_runtime["agent_role"].value
+        else:
+            generation_llm = await get_configured_llm_service(agent_role, task_type)
     except Exception as e:
         logger.warning(f"Failed to configure role-scoped LLM for {agent_role}/{task_type.value}: {e}")
         generation_llm = llm_service
@@ -431,7 +743,7 @@ Ask about their available time and current tasks if needed.
         user_context,
         conversation_history=conversation_context,
         prompt_version=prompt_version,
-        agent_role=getattr(generation_llm, "agent_role", "generation"),
+        agent_role=_coerce_agent_role(getattr(generation_llm, "agent_role", agent_role)),
         plan_context=plan_context,
         intent_instruction=intent_instruction, # Vision Item 4b
         session_feedback_instruction=str(state.context_data.get("session_feedback_instruction") or ""),
@@ -440,6 +752,8 @@ Ask about their available time and current tasks if needed.
         context_briefing_note=str(state.context_data.get("context_briefing_note") or ""),
         chat_mode=str(state.context_data.get("chat_mode", "standard") or "standard"),
     )
+    if explicit_runtime and explicit_runtime.get("system_prompt"):
+        system_prompt += f"\n\n## 自定义专家指令\n{explicit_runtime['system_prompt']}"
 
     knowledge_context = state.context_data.get("knowledge_context") or ""
     if knowledge_context:
@@ -546,6 +860,12 @@ Ask about their available time and current tasks if needed.
         knowledge_context=knowledge_context,
         document_context=document_context,
     )
+    if full_response and not tool_calls:
+        sanitized_community_response = _sanitize_community_sendable_response(user_message, full_response)
+        if sanitized_community_response != full_response:
+            logger.info("Sanitized community generation response into direct sendable content")
+            full_response = sanitized_community_response
+
     if full_response and not tool_calls and _is_low_information_generation_response(full_response):
         community_fallback = _build_community_prompt_fallback_response(user_message)
         if community_fallback:
@@ -983,6 +1303,20 @@ async def collaboration_node(state: WorkflowState) -> WorkflowState:
     stream_callback = state.context_data.get("stream_callback")
     user_id = state.context_data.get("user_id", "")
     db_session = state.context_data.get("db_session")
+    selected_experts = _selected_expert_ids(state)
+
+    if selected_experts:
+        try:
+            logger.info(f"Executing explicit expert collaboration with experts={selected_experts}")
+            result = await _execute_explicit_expert_collaboration(state)
+            state.context_data["collaboration_result"] = result
+            state.next_step = "collaboration_post_process"
+            return state
+        except Exception as e:
+            logger.error(f"Explicit expert collaboration failed: {e}", exc_info=True)
+            state.context_data["collaboration_error"] = str(e)
+            state.next_step = "tool_planning"
+            return state
 
     if not intent or not _should_use_collaboration(user_message, intent):
         logger.info("No collaboration needed, moving to standard workflow")
@@ -1101,12 +1435,24 @@ async def collaboration_post_process_node(state: WorkflowState) -> WorkflowState
         return state
 
     stream_callback = state.context_data.get("stream_callback")
+    chat_mode = str(state.context_data.get("chat_mode") or "")
+    selected_experts = _selected_expert_ids(state)
+    answer_experts = _answer_expert_ids(state)
+    has_explicit_team = parse_team_spec(chat_mode) is not None
+    has_explicit_expert_answer = bool(selected_experts or answer_experts or has_explicit_team)
+    final_response_text = ""
 
     # Stream the final response
     if stream_callback and hasattr(collaboration_result, 'final_response'):
+        final_response_text = str(collaboration_result.final_response or "").strip()
         await stream_callback(agent_service_pb2.ChatResponse(
-            delta=collaboration_result.final_response
+            delta=final_response_text
         ))
+    elif hasattr(collaboration_result, 'final_response'):
+        final_response_text = str(collaboration_result.final_response or "").strip()
+
+    if final_response_text:
+        state.append_message("assistant", final_response_text)
 
     # Extract and queue action cards for execution
     action_cards = []
@@ -1122,6 +1468,14 @@ async def collaboration_post_process_node(state: WorkflowState) -> WorkflowState
         # 这些卡片已经包含 widget_type 和 widget_data，前端可以直接渲染
         state.context_data["collaboration_action_cards"] = action_cards
         # 后续可选择直接返回或继续对话
+        state.next_step = "__end__"
+    elif has_explicit_expert_answer and final_response_text:
+        # Explicit expert/team requests already produced a complete answer.
+        # Ending here avoids a second generation pass that can flood the stream
+        # and cause gateway-side timeouts on long-running collaborations.
+        logger.info(
+            "Explicit expert/team collaboration produced final answer; ending workflow without extra generation"
+        )
         state.next_step = "__end__"
     else:
         # 如果没有动作卡片，继续标准流程
@@ -1405,6 +1759,18 @@ def create_standard_chat_graph() -> StateGraph:
 
 async def router_node(state: WorkflowState) -> WorkflowState:
     """Intelligent Routing Node."""
+    selected_experts = _selected_expert_ids(state)
+    if selected_experts:
+        chat_mode = str(state.context_data.get("chat_mode") or "").strip()
+        has_team = chat_mode.startswith(CHAT_MODE_TEAM_PREFIX)
+        answer_experts = _answer_expert_ids(state)
+        if has_team or len(selected_experts) > 1 or len(answer_experts) > 1:
+            state.context_data["router_decision"] = "collaboration"
+        else:
+            state.context_data["router_decision"] = "generation"
+        state.context_data["router_confidence"] = 1.0
+        return state
+
     from app.routing.router_node import RouterNode
     redis_client = state.context_data.get("redis_client")
     user_id = str(state.context_data.get("user_id", ""))

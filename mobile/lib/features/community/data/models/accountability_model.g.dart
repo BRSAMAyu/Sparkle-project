@@ -29,6 +29,11 @@ AccountabilityPartnershipInfo _$AccountabilityPartnershipInfoFromJson(
       partner: json['partner'] == null
           ? null
           : UserBrief.fromJson(json['partner'] as Map<String, dynamic>),
+      myCheckedInToday: json['my_checked_in_today'] as bool?,
+      partnerCheckedInToday: json['partner_checked_in_today'] as bool?,
+      lastCheckinAt: json['last_checkin_at'] == null
+          ? null
+          : DateTime.parse(json['last_checkin_at'] as String),
     );
 
 Map<String, dynamic> _$AccountabilityPartnershipInfoToJson(
@@ -46,6 +51,9 @@ Map<String, dynamic> _$AccountabilityPartnershipInfoToJson(
       'created_at': instance.createdAt.toIso8601String(),
       'initiator': instance.initiator,
       'partner': instance.partner,
+      'my_checked_in_today': instance.myCheckedInToday,
+      'partner_checked_in_today': instance.partnerCheckedInToday,
+      'last_checkin_at': instance.lastCheckinAt?.toIso8601String(),
     };
 
 const _$AccountabilityStatusEnumMap = {
@@ -65,6 +73,9 @@ AccountabilityCheckinInfo _$AccountabilityCheckinInfoFromJson(
       mood: (json['mood'] as num).toInt(),
       minutes: (json['minutes'] as num).toInt(),
       createdAt: DateTime.parse(json['created_at'] as String),
+      author: json['author'] == null
+          ? null
+          : UserBrief.fromJson(json['author'] as Map<String, dynamic>),
       likes: (json['likes'] as num?)?.toInt() ?? 0,
       encouragements: (json['encouragements'] as List<dynamic>?)
               ?.map((e) =>
@@ -83,6 +94,7 @@ Map<String, dynamic> _$AccountabilityCheckinInfoToJson(
       'mood': instance.mood,
       'minutes': instance.minutes,
       'created_at': instance.createdAt.toIso8601String(),
+      'author': instance.author,
       'likes': instance.likes,
       'encouragements': instance.encouragements,
     };
@@ -110,6 +122,7 @@ AccountabilityStatsInfo _$AccountabilityStatsInfoFromJson(
     AccountabilityStatsInfo(
       myStreakDays: (json['my_streak_days'] as num).toInt(),
       partnerStreakDays: (json['partner_streak_days'] as num).toInt(),
+      myCheckedInToday: json['my_checked_in_today'] as bool,
       partnerCheckedInToday: json['partner_checked_in_today'] as bool,
       totalCheckins: (json['total_checkins'] as num).toInt(),
     );
@@ -119,6 +132,7 @@ Map<String, dynamic> _$AccountabilityStatsInfoToJson(
     <String, dynamic>{
       'my_streak_days': instance.myStreakDays,
       'partner_streak_days': instance.partnerStreakDays,
+      'my_checked_in_today': instance.myCheckedInToday,
       'partner_checked_in_today': instance.partnerCheckedInToday,
       'total_checkins': instance.totalCheckins,
     };

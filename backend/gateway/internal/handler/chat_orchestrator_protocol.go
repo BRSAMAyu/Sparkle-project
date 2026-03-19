@@ -33,6 +33,7 @@ var jsonMetadataKeys = map[string]bool{
 	"state_change_event":     true,
 	"visualization":          true,
 	"selected_experts":       true,
+	"answer_experts":         true,
 	"routing_strategy":       true,
 	"fallback_reason":        true,
 	"route_confidence":       true,

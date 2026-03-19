@@ -191,6 +191,8 @@ class CuriosityCapsuleService:
         curiosity_preference: float = 0.5,
         generation_type: str = "manual",
         requested_count: int | None = None,
+        model_key: str | None = None,
+        execution_mode: str = "online",
     ):
         """
         批量生成胶囊（委托给生成服务）
@@ -202,6 +204,8 @@ class CuriosityCapsuleService:
             curiosity_preference=curiosity_preference,
             generation_type=generation_type,
             requested_count=requested_count,
+            model_key=model_key,
+            execution_mode=execution_mode,
         )
 
     async def submit_feedback(

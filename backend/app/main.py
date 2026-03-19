@@ -29,6 +29,7 @@ from app.core.idempotency import get_idempotency_store
 from app.core.pending_actions import pending_actions_store
 from app.core.rate_limiting import setup_rate_limiting
 from app.core.websocket import manager
+from app.db.extensions import ensure_database_extensions
 from app.db.init_db import init_db
 from app.db.session import AsyncSessionLocal
 from app.orchestration.summarization_worker import create_summarization_worker
@@ -172,6 +173,17 @@ async def lifespan(app: FastAPI):
 
     async with AsyncSessionLocal() as db:
         try:
+            try:
+                extension_status = await ensure_database_extensions(db, ("vector", "age"))
+                logger.info(
+                    "Database extensions ensured: vector={}, age={}",
+                    extension_status.get("vector", False),
+                    extension_status.get("age", False),
+                )
+            except Exception as e:
+                await db.rollback()
+                logger.warning(f"Failed to ensure database extensions at startup (non-fatal): {e}")
+
             # 0. 初始化数据库数据
             await init_db(db)
 

@@ -33,6 +33,7 @@ func TestNormalizeChatMode(t *testing.T) {
 	assert.Equal(t, "standard", normalizeChatMode("unknown"))
 	assert.Equal(t, "expert_auto", normalizeChatMode("expert_auto"))
 	assert.Equal(t, "expert::math_agent", normalizeChatMode("expert::math_agent"))
+	assert.Equal(t, `team::{"agents":["deep_analyst"]}`, normalizeChatMode(`team::{"agents":["deep_analyst"]}`))
 }
 
 func TestWorkflowIDForChatMode(t *testing.T) {
@@ -40,6 +41,7 @@ func TestWorkflowIDForChatMode(t *testing.T) {
 	assert.Equal(t, "deep_analysis_workflow", workflowIDForChatMode("deep_analysis"))
 	assert.Equal(t, "expert_auto_workflow", workflowIDForChatMode("expert_auto"))
 	assert.Equal(t, "expert_code_agent_workflow", workflowIDForChatMode("expert::code_agent"))
+	assert.Equal(t, "expert_team_workflow", workflowIDForChatMode(`team::{"agents":["deep_analyst"]}`))
 }
 
 func TestConvertResponseToJSONCitations(t *testing.T) {
@@ -150,6 +152,7 @@ func TestConvertResponseToJSONDecodesExpertMetadata(t *testing.T) {
 		RequestId:  "req-expert-meta",
 		Metadata: map[string]string{
 			"selected_experts":    `["deep_analyst","code_agent"]`,
+			"answer_experts":      `["code_agent"]`,
 			"routing_strategy":    "auto_multi_expert",
 			"fallback_reason":     "",
 			"route_confidence":    "0.82",
@@ -166,6 +169,9 @@ func TestConvertResponseToJSONDecodesExpertMetadata(t *testing.T) {
 	selected, ok := meta["selected_experts"].([]interface{})
 	assert.True(t, ok)
 	assert.Len(t, selected, 2)
+	answerExperts, ok := meta["answer_experts"].([]interface{})
+	assert.True(t, ok)
+	assert.Equal(t, []interface{}{"code_agent"}, answerExperts)
 	assert.Equal(t, "auto_multi_expert", meta["routing_strategy"])
 	assert.Equal(t, "0.82", meta["route_confidence"])
 }

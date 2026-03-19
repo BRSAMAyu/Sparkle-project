@@ -7,11 +7,14 @@ from app.orchestration.chat_modes import (
     CHAT_MODE_DEEP_ANALYSIS,
     CHAT_MODE_ERROR_DIAGNOSIS,
     CHAT_MODE_EXPERT_AUTO,
+    CHAT_MODE_EXPERT_PREFIX,
     CHAT_MODE_STANDARD,
     CHAT_MODE_STUDY_PLAN,
     CHAT_MODE_TEAM_PREFIX,
+    extract_expert_id,
     parse_team_spec,
 )
+from app.services.custom_expert_service import is_custom_expert_id
 
 
 @dataclass
@@ -27,6 +30,7 @@ class ModeStrategyOverride:
     min_confidence_for_direct: float | None = 0.92
     preferred_agents: list[str] = field(default_factory=list)
     required_agents: list[str] = field(default_factory=list)
+    answer_agents: list[str] = field(default_factory=list)
     collaboration_mode: Literal["auto", "single", "sequential", "parallel", "debate", "delegation"] = "auto"
     review_strictness: float = 1.0
     require_alignment_check: bool = True
@@ -133,6 +137,20 @@ def get_mode_strategy(chat_mode: str | None) -> ModeStrategyOverride | None:
         team_spec = parse_team_spec(mode)
         if team_spec:
             return build_team_strategy(team_spec)
+    if mode.startswith(CHAT_MODE_EXPERT_PREFIX):
+        expert_id = extract_expert_id(mode)
+        if expert_id:
+            return ModeStrategyOverride(
+                chat_mode=mode,
+                force_execution_mode="direct",
+                min_confidence_for_direct=1.0,
+                required_agents=[expert_id],
+                answer_agents=[expert_id],
+                collaboration_mode="single",
+                review_strictness=1.0,
+                require_alignment_check=False,
+                synthesis_instruction="当前模式为显式专家模式，回答必须保留该专家视角的一致性。",
+            )
     return MODE_STRATEGIES.get(mode.lower())
 
 
@@ -153,6 +171,10 @@ def build_team_strategy(team_spec: dict) -> ModeStrategyOverride:
 
     resolved_agents = []
     for agent in agents:
+        if is_custom_expert_id(agent):
+            if agent not in resolved_agents:
+                resolved_agents.append(agent)
+            continue
         resolved = resolve_node_name(agent)
         if resolved and resolved not in resolved_agents:
             resolved_agents.append(resolved)
@@ -161,12 +183,19 @@ def build_team_strategy(team_spec: dict) -> ModeStrategyOverride:
         return MODE_STRATEGIES[CHAT_MODE_STANDARD]
 
     collaboration_mode = mode if mode in {"sequential", "parallel", "debate", "delegation"} else "auto"
+    answer_agents = [
+        str(agent).strip()
+        for agent in (team_spec.get("final_agents") or team_spec.get("answer_agents") or [])
+        if str(agent).strip()
+    ]
+    answer_agents = [agent for agent in answer_agents if agent in resolved_agents]
 
     return ModeStrategyOverride(
         chat_mode=f"team_custom_{len(resolved_agents)}",
-        force_execution_mode="langgraph",
-        min_confidence_for_direct=0.98,
+        force_execution_mode="direct",
+        min_confidence_for_direct=1.0,
         required_agents=resolved_agents,
+        answer_agents=answer_agents,
         collaboration_mode=collaboration_mode,
         review_strictness=1.0,
         require_alignment_check=False,

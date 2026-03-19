@@ -15,4 +15,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN git clone --branch "${AGE_REF}" --depth 1 https://github.com/apache/age.git /tmp/age \
     && make -C /tmp/age PG_CONFIG=/usr/bin/pg_config install \
+    && test -f "$(pg_config --pkglibdir)/age.so" \
+    && test -f "$(pg_config --pkglibdir)/vector.so" \
     && rm -rf /tmp/age

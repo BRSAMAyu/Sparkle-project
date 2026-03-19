@@ -6,12 +6,14 @@ from typing import Callable
 from app.agents.graph.nodes.deep_analyst import deep_analyst_node
 from app.agents.graph.nodes.error_analyst import error_analyst_node
 from app.agents.graph.nodes.exam_oracle import exam_oracle_node
+from app.agents.graph.nodes.custom_expert import custom_expert_node
 from app.agents.graph.nodes.expert_node_factory import create_specialist_node
 from app.agents.graph.nodes.galaxy_guide import galaxy_guide_node
 from app.agents.graph.nodes.registry_tools import create_task, query_knowledge
 from app.agents.graph.nodes.study_buddy import study_buddy_node
 from app.agents.graph.nodes.time_tutor import time_tutor_node
 from app.agents.graph.state import SparkleState
+from app.services.custom_expert_service import is_custom_expert_id
 
 
 @dataclass(frozen=True)
@@ -177,6 +179,8 @@ def resolve_node_name(target: str | None) -> str | None:
     if not target:
         return None
     target_norm = target.strip().lower()
+    if is_custom_expert_id(target_norm):
+        return "custom_expert"
     for spec in GRAPH_EXPERT_SPECS:
         if target_norm == spec.node_name:
             return spec.node_name
@@ -191,6 +195,8 @@ def get_node_function(target: str | None):
     resolved = resolve_node_name(target)
     if not resolved:
         return None
+    if resolved == "custom_expert":
+        return custom_expert_node
     for spec in GRAPH_EXPERT_SPECS:
         if spec.node_name == resolved:
             return spec.node_handler

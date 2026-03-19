@@ -16,7 +16,7 @@ services:
     volumes:
       - ./postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD", "pg_isready", "-U", "postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -159,7 +159,7 @@ services:
       dockerfile: Dockerfile
     env_file:
       - .env
-    command: celery -A app.core.celery_app worker -l info -Q high_priority,default,low_priority --concurrency=2
+    command: celery -A app.core.celery_app worker -l info -Q high_priority,default,low_priority --concurrency=4
     environment:
       # Override localhost URLs from .env with correct Docker service names
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sparkle_db:5432/${POSTGRES_DB}
@@ -187,6 +187,45 @@ services:
           memory: 512M
     healthcheck:
       test: ["CMD-SHELL", "celery -A app.core.celery_app inspect ping -d celery@$${HOSTNAME} 2>/dev/null || exit 1"]
+      interval: 60s
+      timeout: 15s
+      retries: 3
+      start_period: 45s
+
+  celery_glm_batch_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    command: celery -A app.core.celery_app worker -l info -Q glm_batch --concurrency=2 --hostname=glm-batch@%h
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sparkle_db:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/0
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/2
+      - POSTGRES_HOST=sparkle_db
+      - POSTGRES_PORT=5432
+      - REDIS_HOST=sparkle_redis
+      - SERVICE_ROLE=celery-glm-batch
+      - GLM_BATCH_MAX_CONCURRENCY=2
+    depends_on:
+      sparkle_db:
+        condition: service_healthy
+      sparkle_age_init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A app.core.celery_app inspect ping -d glm-batch@$${HOSTNAME} 2>/dev/null || exit 1"]
       interval: 60s
       timeout: 15s
       retries: 3

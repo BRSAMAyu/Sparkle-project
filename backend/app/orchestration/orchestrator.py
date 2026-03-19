@@ -83,8 +83,10 @@ from app.orchestration.lang_graph_planner import LangGraphPlanner
 # Multi-Agent Mode Support
 from app.orchestration.chat_modes import (
     CHAT_MODE_STANDARD,
+    extract_expert_id,
     is_expert_chat_mode,
     normalize_chat_mode,
+    parse_team_spec,
 )
 from app.orchestration.expert_strategy import ExpertStrategyV1
 from app.orchestration.mode_workflow_config import get_mode_strategy, get_workflow_config  # noqa: F401
@@ -129,6 +131,7 @@ from app.orchestration.ux_envelope import ux_envelope_builder  # noqa: F401
 from app.orchestration.validator import RequestValidator
 from app.routing.tool_preference_router import ToolPreferenceRouter  # noqa: F401
 from app.services.chat_signal_collector import ChatSignalCollector
+from app.services.custom_expert_service import CustomExpertService, is_custom_expert_id
 from app.services.focus_service import focus_service  # noqa: F401
 from app.services.llm_service import llm_service  # noqa: F401
 from app.services.plan_progress_service import PlanProgressService  # noqa: F401
@@ -537,7 +540,34 @@ class ChatOrchestrator(
                 )
 
                 expert_routing_decision = None
-                if settings.ENABLE_EXPERT_STRATEGY_V1 and is_expert_chat_mode(chat_mode):
+                requested_experts: list[str] = []
+                answer_experts: list[str] = []
+                team_spec = parse_team_spec(chat_mode)
+                if team_spec:
+                    requested_experts = [
+                        str(item).strip()
+                        for item in (team_spec.get("agents") or [])
+                        if str(item).strip()
+                    ]
+                    answer_experts = [
+                        str(item).strip()
+                        for item in (team_spec.get("final_agents") or team_spec.get("answer_agents") or [])
+                        if str(item).strip()
+                    ]
+                explicit_expert = extract_expert_id(chat_mode)
+                if explicit_expert:
+                    requested_experts = [explicit_expert]
+
+                custom_expert_profiles: dict[str, dict[str, Any]] = {}
+                if active_db is not None and any(is_custom_expert_id(item) for item in [*requested_experts, *answer_experts]):
+                    custom_expert_profiles = await CustomExpertService(active_db).load_runtime_profiles(
+                        user_id=user_id,
+                        expert_ids=[*requested_experts, *answer_experts],
+                    )
+
+                if settings.ENABLE_EXPERT_STRATEGY_V1 and is_expert_chat_mode(chat_mode) and not any(
+                    is_custom_expert_id(item) for item in requested_experts
+                ):
                     user_preferences = (user_context_payload or {}).get("preferences", {})
                     expert_routing_decision = ExpertStrategyV1.route(
                         message=user_message,
@@ -749,6 +779,13 @@ class ChatOrchestrator(
                     state.context_data["expert_routing_metadata"] = expert_routing_decision.to_metadata()
                     state.context_data["selected_experts"] = list(expert_routing_decision.selected_experts)
                     state.context_data["expert_policy_id"] = expert_routing_decision.policy_id
+                elif requested_experts:
+                    state.context_data["selected_experts"] = list(requested_experts)
+                    state.context_data["expert_policy_id"] = "custom_team_v1" if team_spec else "explicit_custom_expert"
+                if answer_experts:
+                    state.context_data["answer_experts"] = list(answer_experts)
+                if custom_expert_profiles:
+                    state.context_data["_custom_expert_profiles"] = dict(custom_expert_profiles)
 
                 # Step 9: Non-standard mode fallback only when unified graph routing is explicitly disabled.
                 if chat_mode != CHAT_MODE_STANDARD and not settings.ENABLE_UNIFIED_GRAPH_ROUTING:

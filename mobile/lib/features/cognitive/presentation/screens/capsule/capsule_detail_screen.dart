@@ -81,10 +81,7 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
     );
   }
 
-  Widget _buildContent(CuriosityCapsuleModel capsule) {
-    final l10n = context.l10n;
-
-    return ContentConstraint(
+  Widget _buildContent(CuriosityCapsuleModel capsule) => ContentConstraint(
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(
           DS.spacing16,
@@ -175,7 +172,6 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
         ),
       ),
     );
-  }
 
   Widget _buildBottomBar(CuriosityCapsuleModel capsule) {
     final l10n = context.l10n;
@@ -249,12 +245,14 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
   }
 
   void _showShareSheet(CuriosityCapsuleModel capsule) {
-    showShareResourceSheet(
-      context,
-      resourceType: 'capsule',
-      resourceId: capsule.id,
-      title: capsule.title,
-      subtitle: capsule.content.split('\n').first,
+    unawaited(
+      showShareResourceSheet(
+        context,
+        resourceType: 'capsule',
+        resourceId: capsule.id,
+        title: capsule.title,
+        subtitle: capsule.content.split('\n').first,
+      ),
     );
   }
 
@@ -272,15 +270,6 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
     }
   }
 
-  List<String> _localizedPatterns(
-      BuildContext context, dynamic rawPatterns) {
-    if (rawPatterns is! List) return [];
-    return rawPatterns
-        .map((e) => e.toString())
-        .where((e) => e.isNotEmpty)
-        .map((e) => _localizePatternName(context, e))
-        .toList();
-  }
 }
 
 // ─────────────────────────────────────────────
@@ -340,8 +329,7 @@ class _MetaRow extends StatelessWidget {
   final CuriosityCapsuleModel capsule;
 
   @override
-  Widget build(BuildContext context) {
-    return Row(
+  Widget build(BuildContext context) => Row(
       children: [
         Icon(Icons.auto_awesome_outlined, size: 13, color: DS.textSecondary),
         const SizedBox(width: DS.spacing4),
@@ -358,7 +346,6 @@ class _MetaRow extends StatelessWidget {
         ),
       ],
     );
-  }
 }
 
 class _PersonalizationCard extends StatelessWidget {
@@ -374,7 +361,7 @@ class _PersonalizationCard extends StatelessWidget {
     final rawPatterns = capsule.personalizationContext?['based_on_patterns'];
     if (rawPatterns is! List) return const SizedBox.shrink();
 
-    final patterns = (rawPatterns as List)
+    final patterns = rawPatterns
         .map((e) => e.toString())
         .where((e) => e.isNotEmpty)
         .map((e) => localizePattern(context, e))
@@ -691,7 +678,7 @@ class _FeedbackBottomSheetState extends State<_FeedbackBottomSheet> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: DS.borderRadius12,
-                borderSide: BorderSide(color: DS.brandPrimary, width: 1),
+                borderSide: BorderSide(color: DS.brandPrimary),
               ),
               contentPadding: const EdgeInsets.all(DS.spacing12),
               counterStyle: TextStyle(color: DS.textSecondary, fontSize: 11),

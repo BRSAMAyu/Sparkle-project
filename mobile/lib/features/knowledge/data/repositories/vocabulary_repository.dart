@@ -132,8 +132,14 @@ class VocabularyRepository {
   Future<List<String>> getInstalledDictionaryPackages() =>
       _offlineDictionaryService.getInstalledPackageIds();
 
+  Future<List<InstalledDictionaryPackage>> getInstalledDictionaryPackageDetails() =>
+      _offlineDictionaryService.getInstalledPackages();
+
   Future<void> downloadDictionaryPackage(String packageId) =>
       _offlineDictionaryService.downloadPackage(packageId);
+
+  Future<void> removeDictionaryPackage(String packageId) =>
+      _offlineDictionaryService.removePackage(packageId);
 }
 
 final vocabularyRepositoryProvider = Provider<VocabularyRepository>(

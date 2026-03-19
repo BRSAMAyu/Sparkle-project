@@ -27,6 +27,7 @@ from app.core.metrics import (
 )
 from app.orchestration.agent_activity import AGENT_DISPLAY_CONFIG, emit_agent_activity, get_stream_callback
 from app.orchestration.agent_scoring import AgentScoringService
+from app.services.custom_expert_service import is_custom_expert_id
 
 
 COLLABORATION_MODES = {"single", "sequential", "parallel", "debate", "delegation"}
@@ -170,7 +171,7 @@ def _normalize_order(order: list[Any], default_task: str) -> list[dict[str, str]
             agent = item.get("agent")
             if not agent:
                 continue
-            resolved = resolve_node_name(str(agent))
+            resolved = _normalize_agent_identifier(str(agent))
             if not resolved:
                 continue
             task_value = str(item.get("task") or "").strip()
@@ -178,10 +179,19 @@ def _normalize_order(order: list[Any], default_task: str) -> list[dict[str, str]
                 task_value = default_task
             normalized.append({"agent": resolved, "task": task_value})
         elif isinstance(item, str):
-            resolved = resolve_node_name(item)
+            resolved = _normalize_agent_identifier(item)
             if resolved:
                 normalized.append({"agent": resolved, "task": default_task})
     return normalized
+
+
+def _normalize_agent_identifier(agent: str | None) -> str | None:
+    raw = str(agent or "").strip()
+    if not raw:
+        return None
+    if is_custom_expert_id(raw):
+        return raw
+    return resolve_node_name(raw)
 
 
 def _classify_primary_agent(message: str) -> str:
@@ -252,7 +262,7 @@ def _sort_plan_by_quality(
 
     mode = str(plan.get("mode") or "sequential")
     if mode == "delegation":
-        primary_agent = resolve_node_name(plan.get("primary_agent")) or agents[0]
+        primary_agent = _normalize_agent_identifier(plan.get("primary_agent")) or agents[0]
         delegate_agents = [agent for agent in agents if agent != primary_agent]
         delegate_agents = sorted(delegate_agents, key=lambda agent_id: (-quality_by_agent.get(agent_id, 0.5), agent_id))
         ordered_agents = [primary_agent, *delegate_agents]
@@ -349,15 +359,15 @@ async def _analyze_collaboration_needs_llm(
         }
     )
 
-    resolved_primary = resolve_node_name(decision.primary_agent) or _classify_primary_agent(message)
+    resolved_primary = _normalize_agent_identifier(decision.primary_agent) or _classify_primary_agent(message)
     resolved_agents = []
     for agent in decision.agents:
-        resolved = resolve_node_name(agent)
+        resolved = _normalize_agent_identifier(agent)
         if resolved and resolved not in resolved_agents:
             resolved_agents.append(resolved)
     resolved_order = []
     for item in decision.order:
-        resolved = resolve_node_name(item.agent)
+        resolved = _normalize_agent_identifier(item.agent)
         if resolved:
             resolved_order.append({"agent": resolved, "task": item.task})
 
@@ -443,7 +453,7 @@ async def analyze_collaboration_plan(
             AGENT_COLLAB_DECISION_TOTAL.labels(source="fallback_single", intent_type=intent_type).inc()
             return {
                 "mode": "single",
-                "primary_agent": resolve_node_name(state.get("next_step")) or _classify_primary_agent(message),
+                "primary_agent": _normalize_agent_identifier(state.get("next_step")) or _classify_primary_agent(message),
                 "agents": [],
                 "order": [],
             }
@@ -720,9 +730,9 @@ async def _execute_delegation(
     try:
         decomposition = await primary_llm.ainvoke([HumanMessage(content=decomposition_prompt)])
         subtasks = [
-            {"agent": resolve_node_name(item.agent_id) or item.agent_id, "task": item.task}
+            {"agent": _normalize_agent_identifier(item.agent_id) or item.agent_id, "task": item.task}
             for item in decomposition.subtasks
-            if (resolve_node_name(item.agent_id) or item.agent_id) in delegate_agents
+            if (_normalize_agent_identifier(item.agent_id) or item.agent_id) in delegate_agents
         ]
     except Exception:
         subtasks = [{"agent": agent_id, "task": task_map.get(agent_id, user_query)} for agent_id in delegate_agents]
@@ -805,7 +815,7 @@ async def collaboration_node(state: SparkleState, config: dict | None = None) ->
         mode = "sequential"
 
     if mode == "single":
-        state["next_step"] = resolve_node_name(collaboration_plan.get("primary_agent")) or "study_buddy"
+        state["next_step"] = _normalize_agent_identifier(collaboration_plan.get("primary_agent")) or "study_buddy"
         state["active_agent"] = "router"
         state["collaboration_mode"] = "single"
         return state
@@ -827,7 +837,7 @@ async def collaboration_node(state: SparkleState, config: dict | None = None) ->
             return await _merge_parallel_results(results, state, config)
         if mode == "debate":
             return await _execute_debate(agents, state, config, stream_cb, task_map=task_map)
-        primary_agent = resolve_node_name(collaboration_plan.get("primary_agent")) or (agents[0] if agents else "study_buddy")
+        primary_agent = _normalize_agent_identifier(collaboration_plan.get("primary_agent")) or (agents[0] if agents else "study_buddy")
         delegates = [agent for agent in agents if agent != primary_agent]
         return await _execute_delegation(primary_agent, delegates, state, config, stream_cb, task_map=task_map)
 
