@@ -931,6 +931,25 @@ class NotificationEvent extends ChatStreamEvent {
   /// 通知类型: 'system' | 'intervention'
   final String notificationType;
 
+  /// 工厂方法：从 JSON 创建
+  factory NotificationEvent.fromJson(Map<String, dynamic> json) {
+    final rawNotification =
+        json['notification'] ?? json['data'] ?? <String, dynamic>{};
+    final notificationData = rawNotification is Map<String, dynamic>
+        ? rawNotification
+        : rawNotification is Map
+            ? Map<String, dynamic>.from(rawNotification)
+            : <String, dynamic>{};
+    return NotificationEvent(
+      notificationData: notificationData,
+      notificationType: json['notification_type'] as String? ?? 'system',
+      responseId: json['response_id'] as String?,
+      traceId: json['trace_id'] as String?,
+      workflowId: json['workflow_id'] as String?,
+      promptVersion: json['prompt_version'] as String?,
+    );
+  }
+
   /// 通知 ID
   String get notificationId =>
       notificationData['id'] as String? ??
@@ -956,8 +975,7 @@ class NotificationEvent extends ChatStreamEvent {
   String get createdAt => notificationData['created_at'] as String? ?? '';
 
   /// 优先级
-  String get priority =>
-      notificationData['priority'] as String? ?? 'normal';
+  String get priority => notificationData['priority'] as String? ?? 'normal';
 
   /// 附加数据
   Map<String, dynamic> get data =>
@@ -975,22 +993,6 @@ class NotificationEvent extends ChatStreamEvent {
         'data': data,
         ...notificationData,
       };
-
-  /// 工厂方法：从 JSON 创建
-  factory NotificationEvent.fromJson(Map<String, dynamic> json) {
-    final rawNotification = json['notification'] ?? json['data'] ?? {};
-    final notificationData = rawNotification is Map
-        ? Map<String, dynamic>.from(rawNotification)
-        : <String, dynamic>{};
-    return NotificationEvent(
-      notificationData: notificationData,
-      notificationType: json['notification_type'] as String? ?? 'system',
-      responseId: json['response_id'] as String?,
-      traceId: json['trace_id'] as String?,
-      workflowId: json['workflow_id'] as String?,
-      promptVersion: json['prompt_version'] as String?,
-    );
-  }
 }
 
 // ============================================
@@ -1051,14 +1053,16 @@ class OrchestrationTraceEvent extends ChatStreamEvent {
 
   final Map<String, dynamic> traceData;
 
-  List<OrchestrationTraceStep> get steps => (traceData['steps'] as List<dynamic>?)
+  List<OrchestrationTraceStep> get steps =>
+      (traceData['steps'] as List<dynamic>?)
           ?.whereType<Map<String, dynamic>>()
           .map(OrchestrationTraceStep.fromJson)
           .toList() ??
       [];
 
   String get mode => traceData['mode'] as String? ?? '';
-  List<String> get agents => (traceData['agents'] as List<dynamic>?)
+  List<String> get agents =>
+      (traceData['agents'] as List<dynamic>?)
           ?.map((e) => e.toString())
           .toList() ??
       [];
@@ -1096,6 +1100,125 @@ class OrchestrationTraceStep {
 }
 
 // ============================================
+// Run Ledger Events
+// ============================================
+
+class RunLedgerSnapshotEvent extends ChatStreamEvent {
+  RunLedgerSnapshotEvent({
+    required this.summary,
+    this.latestEvent,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+  });
+
+  final RunLedgerSummary summary;
+  final RunLedgerEvent? latestEvent;
+}
+
+class RunLedgerSummary {
+  const RunLedgerSummary({
+    required this.traceId,
+    required this.status,
+    required this.route,
+    required this.models,
+    required this.agents,
+    required this.quality,
+    required this.evidence,
+    required this.response,
+    required this.feedback,
+    required this.timeline,
+    required this.eventCount,
+    this.workflowId = '',
+    this.promptVersion = '',
+  });
+
+  factory RunLedgerSummary.fromJson(Map<String, dynamic> json) =>
+      RunLedgerSummary(
+        traceId: json['trace_id'] as String? ?? '',
+        workflowId: json['workflow_id'] as String? ?? '',
+        promptVersion: json['prompt_version'] as String? ?? '',
+        status: json['status'] as String? ?? 'running',
+        route: (json['route'] as Map?)?.cast<String, dynamic>() ??
+            const <String, dynamic>{},
+        models: ((json['models'] as List<dynamic>?) ?? const [])
+            .whereType<Map<String, dynamic>>()
+            .map(Map<String, dynamic>.from)
+            .toList(),
+        agents: ((json['agents'] as List<dynamic>?) ?? const [])
+            .whereType<Map<String, dynamic>>()
+            .map(Map<String, dynamic>.from)
+            .toList(),
+        quality: (json['quality'] as Map?)?.cast<String, dynamic>() ??
+            const <String, dynamic>{},
+        evidence: (json['evidence'] as Map?)?.cast<String, dynamic>() ??
+            const <String, dynamic>{},
+        response: (json['response'] as Map?)?.cast<String, dynamic>() ??
+            const <String, dynamic>{},
+        feedback: (json['feedback'] as Map?)?.cast<String, dynamic>() ??
+            const <String, dynamic>{},
+        timeline: ((json['timeline'] as List<dynamic>?) ?? const [])
+            .whereType<Map<String, dynamic>>()
+            .map(Map<String, dynamic>.from)
+            .toList(),
+        eventCount: json['event_count'] as int? ?? 0,
+      );
+
+  final String traceId;
+  final String workflowId;
+  final String promptVersion;
+  final String status;
+  final Map<String, dynamic> route;
+  final List<Map<String, dynamic>> models;
+  final List<Map<String, dynamic>> agents;
+  final Map<String, dynamic> quality;
+  final Map<String, dynamic> evidence;
+  final Map<String, dynamic> response;
+  final Map<String, dynamic> feedback;
+  final List<Map<String, dynamic>> timeline;
+  final int eventCount;
+
+  String get executionMode => route['execution_mode'] as String? ?? '';
+  String get routeReason => route['reason'] as String? ?? '';
+  double? get reviewScore => (quality['review_score'] as num?)?.toDouble();
+  double get reflectionDelta =>
+      (quality['reflection_delta'] as num?)?.toDouble() ?? 0.0;
+  bool get reflectionCompleted => quality['reflection_completed'] == true;
+  int get totalTokens => response['total_tokens'] as int? ?? 0;
+  double get estimatedCostUsd =>
+      (response['estimated_cost_usd'] as num?)?.toDouble() ?? 0.0;
+}
+
+class RunLedgerEvent {
+  const RunLedgerEvent({
+    required this.eventType,
+    required this.label,
+    required this.workflowStage,
+    required this.status,
+    required this.timestamp,
+    required this.metadata,
+  });
+
+  factory RunLedgerEvent.fromJson(Map<String, dynamic> json) => RunLedgerEvent(
+        eventType: json['event_type'] as String? ?? '',
+        label: json['label'] as String? ?? '',
+        workflowStage: json['workflow_stage'] as String? ?? '',
+        status: json['status'] as String? ?? '',
+        timestamp: json['timestamp'] as String? ?? '',
+        metadata: (json['metadata'] as Map?)?.cast<String, dynamic>() ??
+            const <String, dynamic>{},
+      );
+
+  final String eventType;
+  final String label;
+  final String workflowStage;
+  final String status;
+  final String timestamp;
+  final Map<String, dynamic> metadata;
+}
+
+// ============================================
 // Mode Suggestion Events
 // ============================================
 
@@ -1112,7 +1235,8 @@ class ModeSuggestionEvent extends ChatStreamEvent {
 
   String get suggestedMode => suggestion['suggested_mode'] as String? ?? '';
   String get reason => suggestion['reason'] as String? ?? '';
-  double get confidence => (suggestion['confidence'] as num?)?.toDouble() ?? 0.0;
+  double get confidence =>
+      (suggestion['confidence'] as num?)?.toDouble() ?? 0.0;
 }
 
 // ============================================
@@ -1147,14 +1271,15 @@ class AgentActivityEvent extends ChatStreamEvent {
     return AgentActivityEvent(
       agentId: json['agent_id'] as String? ?? '',
       status: json['status'] as String? ?? 'pending',
-      displayName: json['display_name'] as String? ?? json['agent_id'] as String? ?? '',
+      displayName:
+          json['display_name'] as String? ?? json['agent_id'] as String? ?? '',
       icon: json['icon'] as String? ?? 'bot',
       color: json['color'] as String? ?? '#636E72',
       description: json['description'] as String? ?? '',
       durationMs: (json['duration_ms'] as num?)?.toDouble(),
       resultSummary: json['result_summary'] as String?,
-      collaborationMode:
-          metadata['collaboration_mode']?.toString() ?? json['collaboration_mode'] as String?,
+      collaborationMode: metadata['collaboration_mode']?.toString() ??
+          json['collaboration_mode'] as String?,
       phase: metadata['phase']?.toString() ?? json['phase'] as String?,
     );
   }
@@ -1184,7 +1309,8 @@ class TransparencyData {
       TransparencyData(
         steps: (json['steps'] as List<dynamic>?)
                 ?.map(
-                    (e) => TransparencyStep.fromJson(e as Map<String, dynamic>),)
+                  (e) => TransparencyStep.fromJson(e as Map<String, dynamic>),
+                )
                 .toList() ??
             [],
         totalDurationMs: json['totalDurationMs'] as int? ?? 0,

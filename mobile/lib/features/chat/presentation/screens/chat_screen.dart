@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
@@ -30,7 +29,7 @@ import 'package:sparkle/features/home/presentation/providers/intent_prediction_p
 import 'package:sparkle/features/home/presentation/widgets/intent_prediction_bar.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
-import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
+import 'package:sparkle/features/settings/presentation/screens/transparency_settings_screen.dart';
 
 const _chatContentFontFallback = <String>[
   'PingFang SC',
@@ -42,6 +41,13 @@ const _chatContentFontFallback = <String>[
   'Microsoft YaHei',
   'Arial Unicode MS',
 ];
+
+const _defaultAiSystemPreferences = TransparencyPreferences(
+  enabled: true,
+  showTokenUsage: true,
+  showAgentSwitching: true,
+  showReasoningSteps: true,
+);
 
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key});
@@ -145,7 +151,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           final conversationId = ref.read(chatProvider).conversationId;
           if (conversationId != null && conversationId.isNotEmpty) {
             unawaited(
-              ref.read(chatProvider.notifier).loadConversationHistory(conversationId),
+              ref
+                  .read(chatProvider.notifier)
+                  .loadConversationHistory(conversationId),
             );
           }
         } else if (next == WsConnectionState.failed &&
@@ -159,13 +167,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final activePlanId = ref.read(activePlanProvider);
       unawaited(
-          ref.read(chatProvider.notifier).switchPlanSession(activePlanId),);
+        ref.read(chatProvider.notifier).switchPlanSession(activePlanId),
+      );
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final chatState = ref.watch(chatProvider);
+    final aiSystemPreferences =
+        ref.watch(transparencyPreferencesProvider).valueOrNull ??
+            _defaultAiSystemPreferences;
     final messages = chatState.messages;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = context.l10n;
@@ -246,6 +258,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ),
         actions: [
           SparkleIconButton(
+            icon: Icon(Icons.tune_rounded, color: DS.textSecondary),
+            onPressed: () => _showAiSystemSettings(context),
+            semanticLabel: 'AI system settings',
+            variant: ButtonVariant.ghost,
+          ),
+          SparkleIconButton(
             icon: Icon(Icons.history, color: DS.textSecondary),
             onPressed: () => _showHistoryBottomSheet(context),
             semanticLabel: l10n.chatHistoryTitle,
@@ -297,8 +315,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                 left: DS.spacing16,
                                 right: DS.spacing16,
                                 top: DS.spacing20,
-                                bottom:
-                                    _calculateBottomPadding(context, chatState),
+                                bottom: _calculateBottomPadding(
+                                  context,
+                                  chatState,
+                                  aiSystemPreferences,
+                                ),
                               ),
                               cacheExtent: 600,
                               itemCount: chatState.listItemCount,
@@ -312,7 +333,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                 if (isStatusShowing && index == 0) {
                                   return Padding(
                                     padding: const EdgeInsets.only(
-                                        bottom: DS.spacing12,),
+                                      bottom: DS.spacing12,
+                                    ),
                                     child: AiStatusIndicator(
                                       status: chatState.aiStatus,
                                       details: chatState.aiStatusDetails,
@@ -332,7 +354,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
                                   return Padding(
                                     padding: const EdgeInsets.only(
-                                        bottom: DS.spacing12,),
+                                      bottom: DS.spacing12,
+                                    ),
                                     child: AgentReasoningBubble(
                                       steps: chatState.reasoningSteps,
                                       isThinking: true,
@@ -349,7 +372,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                   if (chatState.streamingContent.isNotEmpty) {
                                     return Padding(
                                       padding: const EdgeInsets.only(
-                                          bottom: DS.spacing12,),
+                                        bottom: DS.spacing12,
+                                      ),
                                       child: Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
@@ -525,7 +549,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     // Bottom input area - wrapped to prevent overflow
                     LayoutBuilder(
                       builder: (context, constraints) => _buildBottomInputArea(
-                          context, chatState, constraints,),
+                        context,
+                        chatState,
+                        constraints,
+                      ),
                     ),
                   ],
                 ),
@@ -719,7 +746,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                         : null,
                                     onTap: () => unawaited(
                                       _handleHistorySessionTap(
-                                          sheetContext, session,),
+                                        sheetContext,
+                                        session,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -862,9 +891,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           color: DS.brandPrimaryConst,
                           isNarrow: isNarrow,
                           onTap: () => unawaited(
-                            ref
-                                .read(chatProvider.notifier)
-                                .sendMessage(
+                            ref.read(chatProvider.notifier).sendMessage(
                                   context.l10n.chatQuickActionNewTaskPrompt,
                                 ),
                           ),
@@ -875,9 +902,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           color: DS.capsuleAccent,
                           isNarrow: isNarrow,
                           onTap: () => unawaited(
-                            ref
-                                .read(chatProvider.notifier)
-                                .sendMessage(
+                            ref.read(chatProvider.notifier).sendMessage(
                                   context.l10n.chatQuickActionLongPlanPrompt,
                                 ),
                           ),
@@ -888,11 +913,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           color: DS.brandPrimaryConst,
                           isNarrow: isNarrow,
                           onTap: () => unawaited(
-                            ref
-                                .read(chatProvider.notifier)
-                                .sendMessage(
-                                  context
-                                      .l10n
+                            ref.read(chatProvider.notifier).sendMessage(
+                                  context.l10n
                                       .chatQuickActionErrorAttributionPrompt,
                                 ),
                           ),
@@ -920,7 +942,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   /// Calculate bottom padding for ListView to prevent messages being hidden
   /// behind fixed components at the bottom.
-  double _calculateBottomPadding(BuildContext context, ChatState chatState) {
+  double _calculateBottomPadding(
+    BuildContext context,
+    ChatState chatState,
+    TransparencyPreferences aiSystemPreferences,
+  ) {
     final isCompactMobile = _isCompactMobileContext(context);
 
     if (isCompactMobile && !_showContextControls) {
@@ -955,7 +981,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     padding += isSmallScreen ? 80.0 : 100.0;
 
     // TransparencyPanel (conditional)
-    if (ref.watch(transparentModeProvider)) {
+    if (aiSystemPreferences.enabled) {
       padding += isSmallScreen
           ? DS.spacing64 + DS.spacing64 + DS.spacing12
           : DS.spacing64 + DS.spacing64 + DS.spacing32;
@@ -983,12 +1009,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     ChatState chatState,
     BoxConstraints constraints,
   ) {
+    final aiSystemPreferences =
+        ref.watch(transparencyPreferencesProvider).valueOrNull ??
+            _defaultAiSystemPreferences;
     final isCompactMobile = _isCompactMobileContext(context);
     final showExpandedContext = !isCompactMobile || _showContextControls;
-    final transparentMode = ref.watch(transparentModeProvider);
+    final showAiSystemPanel = aiSystemPreferences.enabled;
     final currentMode = ref.watch(chatModeProvider);
-    final dynamicPrompts =
-        _buildPromptStarters(context, currentMode.apiValue);
+    final dynamicPrompts = _buildPromptStarters(context, currentMode.apiValue);
     final activePlanId = ref.watch(activePlanProvider);
     final activePlans =
         ref.watch(planListProvider.select((s) => s.activePlans));
@@ -1021,7 +1049,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 },
               ),
             ),
-          if (showExpandedContext && transparentMode)
+          if (showAiSystemPanel)
             Padding(
               padding: const EdgeInsets.only(bottom: DS.spacing12),
               child: TransparencyPanel(
@@ -1037,7 +1065,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 dailyTokenLimit: chatState.dailyTokenLimit,
                 dailyCostMicroUsd: chatState.dailyCostMicroUsd,
                 transparencyData: chatState.transparencyData,
+                runLedgerSummary: chatState.runLedgerSummary,
                 currentStepIndex: chatState.currentStepIndex,
+                showTokenUsageDetails: aiSystemPreferences.showTokenUsage,
+                showAgentCollaboration: aiSystemPreferences.showAgentSwitching,
+                showReasoningTimeline: aiSystemPreferences.showReasoningSteps,
               ),
             ),
           if (showExpandedContext) ...[
@@ -1108,6 +1140,177 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final media = MediaQuery.of(context);
     return media.orientation == Orientation.portrait && media.size.width < 430;
   }
+
+  void _showAiSystemSettings(BuildContext context) {
+    unawaited(
+      showModalBottomSheet<void>(
+        context: context,
+        backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
+        useRootNavigator: true,
+        isScrollControlled: true,
+        builder: (sheetContext) => Consumer(
+          builder: (context, ref, _) {
+            final preferences =
+                ref.watch(transparencyPreferencesProvider).valueOrNull ??
+                    _defaultAiSystemPreferences;
+            final notifier =
+                ref.read(transparencyPreferencesNotifierProvider.notifier);
+
+            return GraphiteModalSurface(
+              padding: EdgeInsets.zero,
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    DS.spacing20,
+                    DS.spacing12,
+                    DS.spacing20,
+                    DS.spacing20,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: DS.spacing40,
+                          height: DS.spacing4,
+                          decoration: BoxDecoration(
+                            color: DS.surfaceTertiary,
+                            borderRadius:
+                                BorderRadius.circular(DS.spacing4 / 2),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: DS.spacing20),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(DS.spacing10),
+                            decoration: BoxDecoration(
+                              color: DS.surfaceOverlay,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: DS.borderSubtle),
+                            ),
+                            child: Icon(
+                              Icons.auto_awesome_rounded,
+                              color: DS.primaryBase,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: DS.spacing12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Sparkle AI System',
+                                  style: DS.titleLarge.copyWith(
+                                    color: DS.textPrimary,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '在对话中展示多 Agent 协作、模型编排与质量依据。',
+                                  style: DS.bodySmall.copyWith(
+                                    color: DS.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: DS.spacing20),
+                      _buildAiSettingTile(
+                        title: '显示 AI 系统面板',
+                        subtitle: '默认开启，在聊天页直接展示协作与推理能力。',
+                        value: preferences.enabled,
+                        onChanged: notifier.setEnabled,
+                      ),
+                      if (preferences.enabled) ...[
+                        const SizedBox(height: DS.spacing12),
+                        _buildAiSettingTile(
+                          title: '显示 Token 与成本',
+                          subtitle: '展示本轮用量、成本估算和系统资源消耗。',
+                          value: preferences.showTokenUsage,
+                          onChanged: notifier.setShowTokenUsage,
+                        ),
+                        const SizedBox(height: DS.spacing12),
+                        _buildAiSettingTile(
+                          title: '显示 Agent 协作',
+                          subtitle: '展示参与的专家、职责分工和模型协同。',
+                          value: preferences.showAgentSwitching,
+                          onChanged: notifier.setShowAgentSwitching,
+                        ),
+                        const SizedBox(height: DS.spacing12),
+                        _buildAiSettingTile(
+                          title: '显示推理时间线',
+                          subtitle: '展示关键步骤、审查与反思过程。',
+                          value: preferences.showReasoningSteps,
+                          onChanged: notifier.setShowReasoningSteps,
+                        ),
+                      ],
+                      const SizedBox(height: DS.spacing20),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.of(sheetContext).pop();
+                            unawaited(
+                              Navigator.of(context, rootNavigator: true).push(
+                                MaterialPageRoute<void>(
+                                  builder: (_) =>
+                                      const TransparencySettingsScreen(),
+                                ),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.settings_outlined),
+                          label: const Text('打开高级设置'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAiSettingTile({
+    required String title,
+    required String subtitle,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) =>
+      GraphiteCardSurface(
+        surfaceRole: SparkleSurfaceRole.card,
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing12,
+          vertical: DS.spacing8,
+        ),
+        child: SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text(
+            title,
+            style: DS.bodyLarge.copyWith(
+              color: DS.textPrimary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          subtitle: Text(
+            subtitle,
+            style: DS.bodySmall.copyWith(color: DS.textSecondary),
+          ),
+          value: value,
+          onChanged: onChanged,
+        ),
+      );
 
   List<String> _buildPromptStarters(BuildContext context, String mode) {
     switch (mode) {
@@ -1339,9 +1542,8 @@ class _StreamingBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    // Use a lighter color for better contrast in dark mode
-    final bubbleColor = isDark ? DS.neutral800 : DS.brandPrimary;
-    final textColor = isDark ? DS.textPrimary : DS.onBrandPrimary;
+    final bubbleColor = DS.chatBubbleOther;
+    final textColor = DS.chatBubbleOtherText;
     final shouldUseMarkdown = _hasMarkdownSyntax(content);
 
     return Align(
@@ -1363,7 +1565,7 @@ class _StreamingBubble extends StatelessWidget {
             bottomLeft: Radius.circular(DS.spacing4),
           ),
           boxShadow: DS.shadowSm,
-          border: Border.all(color: isDark ? DS.neutral700 : DS.neutral200),
+          border: Border.all(color: isDark ? DS.neutral700 : DS.borderSubtle),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -1380,37 +1582,57 @@ class _StreamingBubble extends StatelessWidget {
                           fontSize: DS.fontSizeBase,
                           fontFamilyFallback: _chatContentFontFallback,
                         ),
+                        strong: TextStyle(
+                          color: textColor,
+                          fontWeight: FontWeight.w700,
+                          fontFamilyFallback: _chatContentFontFallback,
+                        ),
+                        em: TextStyle(
+                          color: textColor,
+                          fontStyle: FontStyle.italic,
+                          fontFamilyFallback: _chatContentFontFallback,
+                        ),
                         code: TextStyle(
                           backgroundColor: isDark
                               ? DS.neutral700
-                              : DS.onBrandPrimary.withValues(alpha: 0.2),
+                              : DS.chatBubbleOtherText.withValues(alpha: 0.08),
                           color: textColor,
                           fontFamily: 'monospace',
+                          fontFamilyFallback: _chatContentFontFallback,
                           fontSize: 13,
                         ),
                         codeblockDecoration: BoxDecoration(
                           color: isDark
                               ? DS.neutral700
-                              : DS.onBrandPrimary.withValues(alpha: 0.1),
+                              : DS.chatBubbleOtherText.withValues(alpha: 0.06),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         listBullet: TextStyle(
                           color: textColor,
+                          fontFamilyFallback: _chatContentFontFallback,
                         ),
                         h1: TextStyle(
                           color: textColor,
                           fontSize: DS.fontSizeBase + 6,
                           fontWeight: FontWeight.bold,
+                          fontFamilyFallback: _chatContentFontFallback,
                         ),
                         h2: TextStyle(
                           color: textColor,
                           fontSize: DS.fontSizeBase + 4,
                           fontWeight: FontWeight.bold,
+                          fontFamilyFallback: _chatContentFontFallback,
                         ),
                         h3: TextStyle(
                           color: textColor,
                           fontSize: DS.fontSizeBase + 2,
                           fontWeight: FontWeight.w600,
+                          fontFamilyFallback: _chatContentFontFallback,
+                        ),
+                        a: TextStyle(
+                          color: DS.brandPrimary,
+                          decoration: TextDecoration.underline,
+                          fontFamilyFallback: _chatContentFontFallback,
                         ),
                       ),
                     )
@@ -1424,8 +1646,7 @@ class _StreamingBubble extends StatelessWidget {
                     ),
             ),
             const SizedBox(width: DS.xs),
-            // 闪烁的光标
-            const _BlinkingCursor(),
+            _BlinkingCursor(color: textColor),
           ],
         ),
       ),
@@ -1442,7 +1663,9 @@ class _StreamingBubble extends StatelessWidget {
 
 /// 闪烁光标组件
 class _BlinkingCursor extends StatefulWidget {
-  const _BlinkingCursor();
+  const _BlinkingCursor({required this.color});
+
+  final Color color;
 
   @override
   State<_BlinkingCursor> createState() => _BlinkingCursorState();
@@ -1476,7 +1699,7 @@ class _BlinkingCursorState extends State<_BlinkingCursor>
         child: Container(
           width: DS.spacing4 / 2,
           height: DS.spacing16,
-          color: DS.primaryBase,
+          color: widget.color,
         ),
       );
 }
@@ -1503,12 +1726,8 @@ class _TypingIndicatorState extends State<_TypingIndicator>
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    // Use a lighter color for better contrast in dark mode
-    final bubbleColor = isDark ? DS.neutral800 : DS.brandPrimary;
-    final dotColor = isDark
-        ? DS.textPrimary.withValues(alpha: 0.7)
-        : DS.onBrandPrimary.withValues(alpha: 0.7);
+    final bubbleColor = DS.chatBubbleOther;
+    final dotColor = DS.chatBubbleOtherText.withValues(alpha: 0.7);
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: DS.spacing16,
@@ -1523,7 +1742,7 @@ class _TypingIndicatorState extends State<_TypingIndicator>
           bottomLeft: Radius.circular(DS.spacing4),
         ),
         boxShadow: DS.shadowSm,
-        border: Border.all(color: isDark ? DS.neutral700 : DS.neutral200),
+        border: Border.all(color: DS.borderSubtle),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

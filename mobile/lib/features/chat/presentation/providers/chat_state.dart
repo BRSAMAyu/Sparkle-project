@@ -45,6 +45,7 @@ class ChatState {
     this.dailyTokenLimit,
     this.dailyCostMicroUsd,
     this.transparencyData,
+    this.runLedgerSummary,
     this.currentStepId,
     this.currentStepIndex,
     this.dagExecutionSignal,
@@ -85,6 +86,7 @@ class ChatState {
   final int? dailyTokenLimit;
   final int? dailyCostMicroUsd;
   final TransparencyData? transparencyData;
+  final RunLedgerSummary? runLedgerSummary;
   final int? currentStepId;
   final int? currentStepIndex;
   final DagExecutionSignal? dagExecutionSignal;
@@ -140,6 +142,7 @@ class ChatState {
     int? dailyTokenLimit,
     int? dailyCostMicroUsd,
     TransparencyData? transparencyData,
+    RunLedgerSummary? runLedgerSummary,
     int? currentStepId,
     int? currentStepIndex,
     bool clearTransparency = false,
@@ -204,6 +207,9 @@ class ChatState {
         transparencyData: clearTransparency
             ? null
             : transparencyData ?? this.transparencyData,
+        runLedgerSummary: clearTransparency
+            ? null
+            : runLedgerSummary ?? this.runLedgerSummary,
         currentStepId:
             clearTransparency ? null : currentStepId ?? this.currentStepId,
         currentStepIndex: clearTransparency

@@ -1,5 +1,5 @@
-from app.core.agent_profiles import AgentRole
-from app.core.llm_router import llm_router
+from app.core.agent_profiles import AgentRole, TaskType
+from app.core.llm_router import ModelProvider, llm_router
 
 
 def test_tool_execution_uses_policy_backed_registered_model():
@@ -10,3 +10,18 @@ def test_tool_execution_uses_policy_backed_registered_model():
 def test_science_agent_no_longer_points_to_removed_model_key():
     selection = llm_router.select_model(AgentRole.SCIENCE_AGENT)
     assert selection.model_key in {"dashscope_reason", "mimo_pro", "deepseek_reason"}
+
+
+def test_reviewer_can_avoid_generation_provider():
+    selection = llm_router.select_model(
+        AgentRole.REVIEWER,
+        TaskType.REVIEW,
+        avoid_providers=[ModelProvider.DEEPSEEK],
+    )
+    assert selection.config.provider != ModelProvider.DEEPSEEK
+
+
+def test_siliconflow_free_model_registered_in_free_fast_tier():
+    selection = llm_router.select_specific_model("siliconflow_free", agent_role=AgentRole.ROUTER)
+    assert selection.config.provider == ModelProvider.SILICONFLOW
+    assert selection.config.tier.value == "free_fast"

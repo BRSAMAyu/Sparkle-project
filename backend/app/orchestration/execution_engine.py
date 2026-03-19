@@ -196,6 +196,18 @@ class ExecutionEngineMixin:
             metadata={"tool_count": len(tools), "requested_tool_count": len(active_tools)},
         )
         await emit_transparency_event(transparency_generator.get_step_event())
+        run_ledger = state.context_data.get("run_ledger")
+        if run_ledger is not None:
+            await run_ledger.record_event(
+                event_type="runtime_context_ready",
+                label="运行上下文准备完成",
+                workflow_stage="context",
+                metadata={
+                    "tool_count": len(tools),
+                    "requested_tool_count": len(active_tools),
+                },
+                emit_snapshot=False,
+            )
 
         # Emit initial thinking status
         await stream_callback(agent_service_pb2.ChatResponse(
@@ -621,6 +633,7 @@ class ExecutionEngineMixin:
         include_references: bool,
         workflow_id: str,
         prompt_version: str,
+        run_ledger=None,
     ) -> None:
         """Inject all runtime dependencies into the workflow state."""
         if active_db:
@@ -640,6 +653,7 @@ class ExecutionEngineMixin:
             "include_references": include_references,
             "workflow_id": workflow_id,
             "prompt_version": prompt_version,
+            "run_ledger": run_ledger,
         })
 
     async def _execute_graph(

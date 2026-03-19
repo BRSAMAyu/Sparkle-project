@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,13 +7,15 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/design/widgets/universal_share_bottom_sheet.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/share_poster_service.dart';
+import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/presentation/providers/learning_path_progress_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 import 'package:sparkle/features/plan/presentation/widgets/learning_path_progress_bar.dart';
-import 'package:sparkle/features/community/presentation/widgets/share_resource_sheet.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
@@ -42,13 +46,7 @@ class PlanDetailScreen extends ConsumerWidget {
                 child: SparkleIconButton(
                   variant: ButtonVariant.ghost,
                   icon: const Icon(Icons.share_outlined),
-                  onPressed: () => showShareResourceSheet(
-                    context,
-                    resourceType: 'plan',
-                    resourceId: plan.id,
-                    title: plan.name,
-                    subtitle: plan.description ?? plan.subject ?? '',
-                  ),
+                  onPressed: () => unawaited(_showShareSheet(context, plan)),
                 ),
               ),
               orElse: () => const SizedBox.shrink(),
@@ -76,6 +74,32 @@ class PlanDetailScreen extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Future<void> _showShareSheet(BuildContext context, PlanModel plan) async {
+    final tasks = plan.tasks ?? const <TaskModel>[];
+    final completedTasks =
+        tasks.where((task) => task.status == TaskStatus.completed).length;
+
+    await showUniversalShareSheet(
+      context,
+      payload: UniversalSharePayload(
+        contentType: ShareableContentType.planProgress,
+        resourceId: plan.id,
+        title: plan.name,
+        subtitle: plan.description ?? plan.subject ?? '',
+        description: plan.description,
+        metadata: {
+          'progress': plan.progress,
+          'completed_tasks': completedTasks,
+          'total_tasks': tasks.length,
+          'deadline': plan.targetDate?.toIso8601String(),
+          'subject': plan.subject,
+        },
+      ),
+      onGenerateCard: (payload) =>
+          SharePosterService().generatePoster(context, payload),
     );
   }
 }
@@ -158,8 +182,10 @@ class _PlanOverviewTab extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: DS.lg),
-          Text(l10n.planRelatedTasks,
-              style: Theme.of(context).textTheme.titleLarge,),
+          Text(
+            l10n.planRelatedTasks,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
           const SizedBox(height: DS.sm),
           if (plan.tasks == null || plan.tasks!.isEmpty)
             Text(l10n.planNoTasks, style: TextStyle(color: DS.textSecondary))

@@ -154,7 +154,7 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: () => Navigator.of(context).maybePop(),
         ),
         title: Text(
           context.l10n.communityTitle,

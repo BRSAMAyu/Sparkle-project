@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -359,9 +360,8 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
         spacing: DS.xs,
         runSpacing: DS.xs,
         children: entries.map((e) {
-          final count = e.value is int
-              ? e.value as int
-              : (e.value as List).length;
+          final count =
+              e.value is int ? e.value as int : (e.value as List).length;
           return GestureDetector(
             onTap: widget.onReaction != null
                 ? () => widget.onReaction!(widget.message, e.key)
@@ -380,8 +380,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                   const SizedBox(width: 3),
                   Text(
                     '$count',
-                    style: TextStyle(
-                        fontSize: 11, color: DS.textSecondary),
+                    style: TextStyle(fontSize: 11, color: DS.textSecondary),
                   ),
                 ],
               ),
@@ -528,18 +527,107 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
           children: [
             if (widget.message.replyToId != null)
               _buildQuotePreview(context, isMe),
-            Text(
-              widget.message.content ?? '',
-              style: TextStyle(
-                color: isMe ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
-                fontSize: 16,
-                height: 1.4,
-                fontFamilyFallback: _chatContentFontFallback,
-              ),
-            ),
+            _buildTextContent(context, isMe),
           ],
         ),
       );
+
+  Widget _buildTextContent(BuildContext context, bool isMe) {
+    final rawContent = isCommunityAgentMessage(widget.message)
+        ? normalizeCommunityAgentOutput(widget.message.content ?? '')
+        : widget.message.content ?? '';
+    final textColor = isMe ? DS.chatBubbleUserText : DS.chatBubbleOtherText;
+
+    if (!_hasMarkdownSyntax(rawContent)) {
+      return Text(
+        rawContent,
+        style: TextStyle(
+          color: textColor,
+          fontSize: 16,
+          height: 1.4,
+          fontFamilyFallback: _chatContentFontFallback,
+        ),
+      );
+    }
+
+    return MarkdownBody(
+      data: rawContent,
+      styleSheet: MarkdownStyleSheet(
+        p: TextStyle(
+          color: textColor,
+          fontSize: 16,
+          height: 1.4,
+          fontFamilyFallback: _chatContentFontFallback,
+        ),
+        h1: TextStyle(
+          color: textColor,
+          fontSize: 22,
+          fontWeight: FontWeight.bold,
+          fontFamilyFallback: _chatContentFontFallback,
+        ),
+        h2: TextStyle(
+          color: textColor,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          fontFamilyFallback: _chatContentFontFallback,
+        ),
+        h3: TextStyle(
+          color: textColor,
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+          fontFamilyFallback: _chatContentFontFallback,
+        ),
+        strong: TextStyle(
+          color: textColor,
+          fontWeight: FontWeight.w700,
+          fontFamilyFallback: _chatContentFontFallback,
+        ),
+        em: TextStyle(
+          color: textColor,
+          fontStyle: FontStyle.italic,
+          fontFamilyFallback: _chatContentFontFallback,
+        ),
+        code: TextStyle(
+          fontSize: 14,
+          color: textColor,
+          fontFamily: 'monospace',
+          fontFamilyFallback: _chatContentFontFallback,
+          backgroundColor:
+              isMe ? Colors.white.withValues(alpha: 0.14) : DS.surfaceTertiary,
+        ),
+        codeblockDecoration: BoxDecoration(
+          color:
+              isMe ? Colors.white.withValues(alpha: 0.12) : DS.surfaceTertiary,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        listBullet: TextStyle(
+          color: textColor,
+          fontFamilyFallback: _chatContentFontFallback,
+        ),
+        a: TextStyle(
+          color: isMe ? Colors.white : DS.brandPrimary,
+          decoration: TextDecoration.underline,
+          fontFamilyFallback: _chatContentFontFallback,
+        ),
+      ),
+    );
+  }
+
+  bool _hasMarkdownSyntax(String content) {
+    if (content.trim().isEmpty) {
+      return false;
+    }
+
+    return <RegExp>[
+      RegExp(r'(^|\n)#{1,6}\s', multiLine: true),
+      RegExp(r'(^|\n)[-*+]\s', multiLine: true),
+      RegExp(r'(^|\n)\d+\.\s', multiLine: true),
+      RegExp(r'`[^`\n]+`'),
+      RegExp('```'),
+      RegExp(r'\[[^\]]+\]\([^)]+\)'),
+      RegExp(r'(\*\*|__)[^*_]+(\*\*|__)'),
+    ].any((pattern) => pattern.hasMatch(content));
+  }
 
   Widget _buildQuotePreview(BuildContext context, bool isMe) {
     final quoted = widget.message.quotedMessage;
@@ -757,7 +845,8 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
     final payload = UniversalSharePayload(
       contentType: ShareableContentType.taskCompletion,
       resourceId: data['resource_id'] as String? ?? '',
-      title: data['resource_title'] as String? ?? widget.message.content ?? '任务',
+      title:
+          data['resource_title'] as String? ?? widget.message.content ?? '任务',
       subtitle: data['resource_summary'] as String?,
       metadata: {
         'duration': meta['estimated_minutes'],
@@ -787,8 +876,11 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
     final payload = UniversalSharePayload(
       contentType: ShareableContentType.planProgress,
       resourceId: data['resource_id'] as String? ?? '',
-      title: data['resource_title'] as String? ?? widget.message.content ?? '计划',
-      subtitle: progress != null ? '进度: ${(progress * 100).toStringAsFixed(0)}%' : null,
+      title:
+          data['resource_title'] as String? ?? widget.message.content ?? '计划',
+      subtitle: progress != null
+          ? '进度: ${(progress * 100).toStringAsFixed(0)}%'
+          : null,
       metadata: {
         'progress': progress,
         'deadline': meta['target_date'],
@@ -812,7 +904,8 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
   Widget _buildCapsuleShareBubble(BuildContext context, bool isMe) {
     final data = widget.message.contentData ?? {};
     final sharedResourceType = data['resource_type'] as String?;
-    if (sharedResourceType == 'seed_library' || sharedResourceType == 'seed_item') {
+    if (sharedResourceType == 'seed_library' ||
+        sharedResourceType == 'seed_item') {
       return _buildRichCardWrapper(
         isMe: isMe,
         child: _buildGenericSeedShareCard(isMe, data),
@@ -823,8 +916,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
       contentType: ShareableContentType.capsule,
       resourceId:
           data['resource_id'] as String? ?? data['capsule_id'] as String? ?? '',
-      title:
-          data['resource_title'] as String? ??
+      title: data['resource_title'] as String? ??
           data['title'] as String? ??
           widget.message.content ??
           '时光胶囊',
@@ -851,8 +943,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
 
   Widget _buildGenericSeedShareCard(bool isMe, Map<String, dynamic> data) {
     final resourceType = data['resource_type'] as String? ?? 'seed_item';
-    final title =
-        data['resource_title'] as String? ??
+    final title = data['resource_title'] as String? ??
         widget.message.content ??
         (resourceType == 'seed_library' ? '种子库' : '种子内容');
     final summary = data['resource_summary'] as String?;
@@ -872,7 +963,9 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                   borderRadius: DS.borderRadius8,
                 ),
                 child: Icon(
-                  resourceType == 'seed_library' ? Icons.inventory_2 : Icons.auto_stories,
+                  resourceType == 'seed_library'
+                      ? Icons.inventory_2
+                      : Icons.auto_stories,
                   color: isMe ? Colors.white : DS.brandPrimary,
                   size: 20,
                 ),
@@ -895,10 +988,9 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                       resourceType == 'seed_library' ? '种子库分享' : '种子内容分享',
                       style: TextStyle(
                         fontSize: 12,
-                        color:
-                            isMe
-                                ? Colors.white.withValues(alpha: 0.72)
-                                : DS.textSecondary,
+                        color: isMe
+                            ? Colors.white.withValues(alpha: 0.72)
+                            : DS.textSecondary,
                       ),
                     ),
                   ],
@@ -914,8 +1006,9 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: 13,
-                color:
-                    isMe ? Colors.white.withValues(alpha: 0.92) : DS.textSecondary,
+                color: isMe
+                    ? Colors.white.withValues(alpha: 0.92)
+                    : DS.textSecondary,
               ),
             ),
           ],
@@ -952,8 +1045,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
       if (!context.mounted) return;
       AppFeedback.success(context, '已采纳，跳转中...');
       final newId = result['new_resource_id'] as String;
-      final route =
-          resourceType == 'plan' ? '/plans/$newId' : '/tasks/$newId';
+      final route = resourceType == 'plan' ? '/plans/$newId' : '/tasks/$newId';
       unawaited(context.push(route));
     } catch (e) {
       if (!context.mounted) return;
@@ -1168,7 +1260,9 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
 
   Widget _buildAvatar(UserBrief? user) {
     final resolvedUser = user ??
-        (isCommunityAgentMessage(widget.message) ? buildCommunityAgentUser() : null);
+        (isCommunityAgentMessage(widget.message)
+            ? buildCommunityAgentUser()
+            : null);
     return DecoratedBox(
       decoration: BoxDecoration(
         shape: BoxShape.circle,

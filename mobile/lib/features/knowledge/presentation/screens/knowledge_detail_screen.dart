@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/universal_share_bottom_sheet.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/features/community/presentation/widgets/share_resource_sheet.dart';
+import 'package:sparkle/core/services/share_poster_service.dart';
+import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
 import 'package:sparkle/features/insights/presentation/widgets/learning_path_dialog.dart';
 import 'package:sparkle/features/knowledge/data/models/knowledge_detail_model.dart';
@@ -116,13 +120,7 @@ class KnowledgeDetailScreen extends ConsumerWidget {
               SparkleIconButton(
                 variant: ButtonVariant.ghost,
                 icon: const Icon(Icons.share_outlined),
-                onPressed: () => showShareResourceSheet(
-                  context,
-                  resourceType: 'node',
-                  resourceId: nodeId,
-                  title: detail.node.name,
-                  subtitle: detail.node.nameEn ?? detail.node.description?.split('\n').first,
-                ),
+                onPressed: () => unawaited(_showShareSheet(context, detail)),
               ),
             ],
             flexibleSpace: FlexibleSpaceBar(
@@ -133,9 +131,15 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                     end: Alignment.bottomRight,
                     colors: [
                       Color.lerp(
-                          DS.surfaceCanvas, sectorStyle.primaryColor, 0.28,)!,
+                        DS.surfaceCanvas,
+                        sectorStyle.primaryColor,
+                        0.28,
+                      )!,
                       Color.lerp(
-                          DS.surfaceCanvas, sectorStyle.glowColor, 0.16,)!,
+                        DS.surfaceCanvas,
+                        sectorStyle.glowColor,
+                        0.16,
+                      )!,
                       DS.surfaceCanvas,
                     ],
                   ),
@@ -292,7 +296,7 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                             ),
                             title: Text(task.title),
                             subtitle: Text(
-                              '${context.l10n.knowledgeEstimated} ${task.estimatedMinutes} ${context.l10n.knowledgeMinutes}'),
+                                '${context.l10n.knowledgeEstimated} ${task.estimatedMinutes} ${context.l10n.knowledgeMinutes}'),
                             trailing: const Icon(Icons.chevron_right),
                             onTap: () {
                               context.push('/tasks/${task.id}');
@@ -349,6 +353,33 @@ class KnowledgeDetailScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _showShareSheet(
+    BuildContext context,
+    KnowledgeDetailResponse detail,
+  ) async {
+    await showUniversalShareSheet(
+      context,
+      payload: UniversalSharePayload(
+        contentType: ShareableContentType.knowledgeNode,
+        resourceId: detail.node.id,
+        title: detail.node.name,
+        subtitle:
+            detail.node.nameEn ?? detail.node.description?.split('\n').first,
+        description: detail.node.description,
+        metadata: {
+          'mastery': detail.userStats.masteryProgress,
+          'category': SectorConfig.getLocalizedName(detail.node.sector),
+          'parent_path': detail.node.subjectName,
+          'connections': detail.relations.length,
+          'learning_time': detail.userStats.totalStudyMinutes,
+          'study_count': detail.userStats.studyCount,
+        },
+      ),
+      onGenerateCard: (payload) =>
+          SharePosterService().generatePoster(context, payload),
     );
   }
 

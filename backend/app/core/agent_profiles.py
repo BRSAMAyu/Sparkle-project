@@ -122,6 +122,7 @@ class AgentProfile:
     model_tier: ModelTier = ModelTier.STANDARD
     specific_model: str | None = None  # 强制指定具体模型（覆盖 tier）
     model_policy: AgentModelPolicy | None = None
+    diversity_hint: "ModelDiversityHint | None" = None
     temperature: float = 0.7
     max_tokens: int | None = None
 
@@ -156,6 +157,13 @@ class AgentProfile:
     def get_system_prompt(self, **kwargs) -> str:
         """渲染系统Prompt模板"""
         return self.system_prompt_template.format(**kwargs)
+
+
+@dataclass
+class ModelDiversityHint:
+    """提示链路中不同角色应尽量避免复用同一提供商。"""
+
+    avoid_same_provider_as: list[AgentRole] = field(default_factory=list)
 
 
 # ============================================
@@ -198,7 +206,7 @@ DEFAULT_AGENT_PROFILES: dict[AgentRole, AgentProfile] = {
         description="负责知识检索",
         model_tier=ModelTier.FREE_FAST,
         model_policy=AgentModelPolicy(
-            preferred_models=["glm_4_7_flash_no_thinking", "dashscope_fast", "xiaomi_chat"],
+            preferred_models=["glm_4_7_flash_no_thinking", "siliconflow_free", "dashscope_fast", "xiaomi_chat"],
             preferred_tier=ModelTier.FREE_FAST,
             fallback_tiers=[ModelTier.FAST, ModelTier.STANDARD],
         ),
@@ -213,7 +221,7 @@ DEFAULT_AGENT_PROFILES: dict[AgentRole, AgentProfile] = {
         description="意图识别与路由分发",
         model_tier=ModelTier.FREE_FAST,
         model_policy=AgentModelPolicy(
-            preferred_models=["glm_4_7_flash_no_thinking", "dashscope_fast"],
+            preferred_models=["glm_4_7_flash_no_thinking", "siliconflow_free", "dashscope_fast"],
             preferred_tier=ModelTier.FREE_FAST,
             fallback_tiers=[ModelTier.FAST],
         ),
@@ -454,7 +462,7 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
         entry_tags=["search", "evidence", "retrieval"],
         model_tier=ModelTier.FREE_FAST,
         model_policy=AgentModelPolicy(
-            preferred_models=["glm_4_7_flash_no_thinking", "dashscope_fast", "xiaomi_chat"],
+            preferred_models=["glm_4_7_flash_no_thinking", "siliconflow_free", "dashscope_fast", "xiaomi_chat"],
             preferred_tier=ModelTier.FREE_FAST,
             fallback_tiers=[ModelTier.FAST, ModelTier.STANDARD],
         ),
@@ -473,6 +481,7 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
             preferred_tier=ModelTier.REASONING,
             fallback_tiers=[ModelTier.STANDARD],
         ),
+        diversity_hint=ModelDiversityHint(avoid_same_provider_as=[AgentRole.GENERATION]),
         temperature=0.2,  # 低温确保客观
         support_structured_output=True,
         system_prompt_template="""你是内容审查专家，负责评估AI生成内容的质量。
@@ -509,7 +518,7 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
         entry_tags=["chat", "coaching", "support"],
         model_tier=ModelTier.FREE_FAST,
         model_policy=AgentModelPolicy(
-            preferred_models=["glm_4_7_flash_no_thinking", "xiaomi_chat", "dashscope_fast"],
+            preferred_models=["glm_4_7_flash_no_thinking", "siliconflow_free", "xiaomi_chat", "dashscope_fast"],
             preferred_tier=ModelTier.FREE_FAST,
             fallback_tiers=[ModelTier.FAST, ModelTier.STANDARD],
         ),

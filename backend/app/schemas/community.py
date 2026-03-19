@@ -632,12 +632,15 @@ class MessageFavoriteCreate(BaseModel):
 
 class MessageFavoriteInfo(BaseSchema):
     """消息收藏信息"""
+    user_id: UUID = Field(description="收藏用户ID")
     group_message_id: UUID | None = Field(default=None)
     private_message_id: UUID | None = Field(default=None)
     note: str | None = Field(default=None)
     tags: list[str] | None = Field(default=None)
     # 可选：嵌入消息摘要
     message_preview: str | None = Field(default=None, description="消息预览")
+    group_message: MessageInfo | None = Field(default=None, description="群消息详情")
+    private_message: PrivateMessageInfo | None = Field(default=None, description="私聊消息详情")
 
 
 # ============ 转发相关 Schemas ============

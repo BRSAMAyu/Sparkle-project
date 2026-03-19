@@ -12,6 +12,7 @@ void main() {
           'name': 'Calculus',
           'importance_level': 4,
           'sector_code': 'TECH',
+          'base_color': '#5AB8CC',
           'is_seed': true,
           'parent_id': null,
           'description': 'Limits and derivatives',
@@ -40,6 +41,7 @@ void main() {
 
     final node = response.nodes.first;
     expect(node.importance, 4);
+    expect(node.baseColor, '#5AB8CC');
     expect(node.isUnlocked, isTrue);
     expect(node.masteryScore, 76);
     expect(node.studyCount, 9);

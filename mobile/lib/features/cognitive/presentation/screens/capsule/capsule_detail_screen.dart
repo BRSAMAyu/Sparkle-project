@@ -5,11 +5,13 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/universal_share_bottom_sheet.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/share_poster_service.dart';
+import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/cognitive/data/models/curiosity_capsule_model.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/capsule_provider.dart';
-import 'package:sparkle/features/community/presentation/widgets/share_resource_sheet.dart';
 
 /// 胶囊详情页
 class CapsuleDetailScreen extends ConsumerStatefulWidget {
@@ -63,8 +65,9 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
                 capsule.isFavorite ? Icons.favorite : Icons.favorite_border,
               ),
               onPressed: () => _toggleFavorite(capsule),
-              variant:
-                  capsule.isFavorite ? ButtonVariant.destructive : ButtonVariant.ghost,
+              variant: capsule.isFavorite
+                  ? ButtonVariant.destructive
+                  : ButtonVariant.ghost,
             ),
         ],
       ),
@@ -75,103 +78,103 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
           return _buildContent(c);
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) =>
-            Center(child: Text(l10n.capsuleLoadFailed('$err'))),
+        error: (err, _) => Center(child: Text(l10n.capsuleLoadFailed('$err'))),
       ),
     );
   }
 
   Widget _buildContent(CuriosityCapsuleModel capsule) => ContentConstraint(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(
-          DS.spacing16,
-          DS.spacing16,
-          DS.spacing16,
-          DS.spacing32,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 深度级别标签
-            if (capsule.depthLevel != null) ...[
-              _DepthBadge(capsule: capsule),
-              const SizedBox(height: DS.spacing16),
-            ],
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(
+            DS.spacing16,
+            DS.spacing16,
+            DS.spacing16,
+            DS.spacing32,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 深度级别标签
+              if (capsule.depthLevel != null) ...[
+                _DepthBadge(capsule: capsule),
+                const SizedBox(height: DS.spacing16),
+              ],
 
-            // 标题
-            Text(
-              capsule.title,
-              style: context.sparkleTypography.headingMedium,
-            ),
-            const SizedBox(height: DS.spacing8),
-
-            // 元信息行
-            _MetaRow(capsule: capsule),
-            const SizedBox(height: DS.spacing24),
-
-            // 个性化说明卡片
-            if (capsule.personalizationContext != null) ...[
-              _PersonalizationCard(
-                capsule: capsule,
-                localizePattern: _localizePatternName,
+              // 标题
+              Text(
+                capsule.title,
+                style: context.sparkleTypography.headingMedium,
               ),
+              const SizedBox(height: DS.spacing8),
+
+              // 元信息行
+              _MetaRow(capsule: capsule),
               const SizedBox(height: DS.spacing24),
-            ],
 
-            // 主内容
-            MarkdownBody(
-              data: capsule.content,
-              styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
-                p: context.sparkleTypography.bodyLarge,
-                h1: context.sparkleTypography.headingLarge,
-                h2: context.sparkleTypography.headingMedium,
-                h3: context.sparkleTypography.titleLarge,
-                strong: context.sparkleTypography.bodyLarge
-                    .copyWith(fontWeight: FontWeight.bold),
-                blockquote: context.sparkleTypography.bodyMedium.copyWith(
-                  color: DS.textSecondary,
-                  fontStyle: FontStyle.italic,
+              // 个性化说明卡片
+              if (capsule.personalizationContext != null) ...[
+                _PersonalizationCard(
+                  capsule: capsule,
+                  localizePattern: _localizePatternName,
                 ),
-                code: context.sparkleTypography.bodyMedium.copyWith(
-                  fontFamily: 'monospace',
-                  backgroundColor: DS.surfaceTertiary,
-                ),
-                codeblockDecoration: BoxDecoration(
-                  color: DS.surfaceTertiary,
-                  borderRadius: DS.borderRadius8,
-                ),
-              ),
-            ),
-            const SizedBox(height: DS.spacing24),
+                const SizedBox(height: DS.spacing24),
+              ],
 
-            // 相关主题 chip
-            if (capsule.relatedSubject != null) ...[
-              Wrap(
-                spacing: DS.spacing8,
-                children: [
-                  Chip(
-                    avatar: const Icon(Icons.tag, size: 14),
-                    label: Text(
-                      capsule.relatedSubject!,
-                      style: context.sparkleTypography.labelSmall,
-                    ),
-                    backgroundColor:
-                        DS.surfaceSecondary,
-                    side: BorderSide(color: DS.border, width: 0.5),
-                    padding: const EdgeInsets.symmetric(horizontal: DS.spacing4),
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              // 主内容
+              MarkdownBody(
+                data: capsule.content,
+                styleSheet:
+                    MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+                  p: context.sparkleTypography.bodyLarge,
+                  h1: context.sparkleTypography.headingLarge,
+                  h2: context.sparkleTypography.headingMedium,
+                  h3: context.sparkleTypography.titleLarge,
+                  strong: context.sparkleTypography.bodyLarge
+                      .copyWith(fontWeight: FontWeight.bold),
+                  blockquote: context.sparkleTypography.bodyMedium.copyWith(
+                    color: DS.textSecondary,
+                    fontStyle: FontStyle.italic,
                   ),
-                ],
+                  code: context.sparkleTypography.bodyMedium.copyWith(
+                    fontFamily: 'monospace',
+                    backgroundColor: DS.surfaceTertiary,
+                  ),
+                  codeblockDecoration: BoxDecoration(
+                    color: DS.surfaceTertiary,
+                    borderRadius: DS.borderRadius8,
+                  ),
+                ),
               ),
               const SizedBox(height: DS.spacing24),
-            ],
 
-            // 质量评分 + 统计信息合并一行
-            _StatsRow(capsule: capsule),
-          ],
+              // 相关主题 chip
+              if (capsule.relatedSubject != null) ...[
+                Wrap(
+                  spacing: DS.spacing8,
+                  children: [
+                    Chip(
+                      avatar: const Icon(Icons.tag, size: 14),
+                      label: Text(
+                        capsule.relatedSubject!,
+                        style: context.sparkleTypography.labelSmall,
+                      ),
+                      backgroundColor: DS.surfaceSecondary,
+                      side: BorderSide(color: DS.border, width: 0.5),
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: DS.spacing4),
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: DS.spacing24),
+              ],
+
+              // 质量评分 + 统计信息合并一行
+              _StatsRow(capsule: capsule),
+            ],
+          ),
         ),
-      ),
-    );
+      );
 
   Widget _buildBottomBar(CuriosityCapsuleModel capsule) {
     final l10n = context.l10n;
@@ -221,7 +224,8 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
         isScrollControlled: true,
         useRootNavigator: true,
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(DS.radius20)),
+          borderRadius:
+              BorderRadius.vertical(top: Radius.circular(DS.radius20)),
         ),
         builder: (ctx) => _FeedbackBottomSheet(
           capsule: capsule,
@@ -245,13 +249,37 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
   }
 
   void _showShareSheet(CuriosityCapsuleModel capsule) {
+    final tags = <String>[
+      if ((capsule.relatedSubject ?? '').trim().isNotEmpty)
+        capsule.relatedSubject!.trim(),
+      capsule.depthLabel,
+    ];
+
     unawaited(
-      showShareResourceSheet(
+      showUniversalShareSheet(
         context,
-        resourceType: 'capsule',
-        resourceId: capsule.id,
-        title: capsule.title,
-        subtitle: capsule.content.split('\n').first,
+        payload: UniversalSharePayload(
+          contentType: ShareableContentType.capsule,
+          resourceId: capsule.id,
+          title: capsule.title,
+          subtitle: capsule.content.split('\n').first,
+          description: capsule.content,
+          metadata: {
+            'type': '好奇心胶囊',
+            'depth': switch (capsule.depthLevelEnum) {
+              CapsuleDepthLevel.shallow => 1,
+              CapsuleDepthLevel.medium => 2,
+              CapsuleDepthLevel.deep => 3,
+            },
+            'depth_label': capsule.depthLabel,
+            'word_count': capsule.content.trim().length,
+            'created_at': capsule.createdAt.toIso8601String(),
+            'related_subject': capsule.relatedSubject,
+            'tags': tags,
+          },
+        ),
+        onGenerateCard: (payload) =>
+            SharePosterService().generatePoster(context, payload),
       ),
     );
   }
@@ -269,7 +297,6 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
         return name;
     }
   }
-
 }
 
 // ─────────────────────────────────────────────
@@ -330,22 +357,23 @@ class _MetaRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Row(
-      children: [
-        Icon(Icons.auto_awesome_outlined, size: 13, color: DS.textSecondary),
-        const SizedBox(width: DS.spacing4),
-        Text(
-          'AI',
-          style: TextStyle(fontSize: 12, color: DS.textSecondary),
-        ),
-        const SizedBox(width: DS.spacing16),
-        Icon(Icons.calendar_today_outlined, size: 13, color: DS.textSecondary),
-        const SizedBox(width: DS.spacing4),
-        Text(
-          Formatters.formatRelativeTime(capsule.createdAt),
-          style: TextStyle(fontSize: 12, color: DS.textSecondary),
-        ),
-      ],
-    );
+        children: [
+          Icon(Icons.auto_awesome_outlined, size: 13, color: DS.textSecondary),
+          const SizedBox(width: DS.spacing4),
+          Text(
+            'AI',
+            style: TextStyle(fontSize: 12, color: DS.textSecondary),
+          ),
+          const SizedBox(width: DS.spacing16),
+          Icon(Icons.calendar_today_outlined,
+              size: 13, color: DS.textSecondary),
+          const SizedBox(width: DS.spacing4),
+          Text(
+            Formatters.formatRelativeTime(capsule.createdAt),
+            style: TextStyle(fontSize: 12, color: DS.textSecondary),
+          ),
+        ],
+      );
 }
 
 class _PersonalizationCard extends StatelessWidget {
@@ -399,7 +427,8 @@ class _PersonalizationCard extends StatelessWidget {
               color: DS.prismPurple.withValues(alpha: 0.12),
               borderRadius: DS.borderRadius8,
             ),
-            child: Icon(Icons.psychology_outlined, size: 16, color: DS.prismPurple),
+            child: Icon(Icons.psychology_outlined,
+                size: 16, color: DS.prismPurple),
           ),
           const SizedBox(width: DS.spacing12),
           Expanded(
@@ -415,7 +444,8 @@ class _PersonalizationCard extends StatelessWidget {
                 ),
                 const SizedBox(height: DS.spacing4),
                 Text(
-                  l10n.capsulePersonalizationExplanation(patterns.join(separator)),
+                  l10n.capsulePersonalizationExplanation(
+                      patterns.join(separator)),
                   style: TextStyle(
                     color: DS.textSecondary,
                     fontSize: 13,
@@ -624,9 +654,7 @@ class _FeedbackBottomSheetState extends State<_FeedbackBottomSheet> {
                 avatar: Icon(
                   icon,
                   size: 14,
-                  color: selected
-                      ? DS.brandPrimary
-                      : DS.textSecondary,
+                  color: selected ? DS.brandPrimary : DS.textSecondary,
                 ),
                 label: Text(labels[value] ?? value),
                 selected: selected,
@@ -637,8 +665,7 @@ class _FeedbackBottomSheetState extends State<_FeedbackBottomSheet> {
                 labelStyle: TextStyle(
                   fontSize: 12,
                   color: selected ? DS.brandPrimary : DS.textPrimary,
-                  fontWeight:
-                      selected ? FontWeight.w600 : FontWeight.normal,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
                 ),
                 side: BorderSide(
                   color: selected

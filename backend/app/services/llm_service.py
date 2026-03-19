@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.core.agent_profiles import AgentRole, ModelTier, TaskType
-from app.core.llm_router import LLMSelection, llm_router
+from app.core.llm_router import LLMSelection, ModelProvider, llm_router
 from app.services.circuit_breaker import CircuitBreakerOpenException, circuit_breaker_service
 from app.services.llm.base import LLMProvider
 from app.services.llm.providers import OpenAICompatibleProvider
@@ -195,9 +195,9 @@ class LLMService:
             # 使用原有的 LLM_PROVIDER 逻辑
             self._init_legacy()
 
-    def _init_with_router(self):
+    def _init_with_router(self, selection: LLMSelection | None = None):
         """使用 LLMRouter 初始化（推荐方式）"""
-        selection = llm_router.select_model(self.agent_role)
+        selection = selection or llm_router.select_model(self.agent_role)
         self._current_selection = selection
 
         kwargs = llm_router.get_openai_client_kwargs(selection)
@@ -282,7 +282,23 @@ class LLMService:
         """获取默认模型（向后兼容）"""
         return self.chat_model
 
-    async def switch_model_for_task(self, task_type: TaskType):
+    @property
+    def model_key(self) -> str:
+        """获取当前选中的注册模型 key。"""
+        return self._current_selection.model_key if self._current_selection else ""
+
+    @property
+    def provider_name(self) -> str:
+        """获取当前选中模型的 provider 名称。"""
+        if self._current_selection is not None:
+            return self._current_selection.config.provider.value
+        return self._get_provider_name_from_url()
+
+    async def switch_model_for_task(
+        self,
+        task_type: TaskType,
+        avoid_providers: list[ModelProvider] | None = None,
+    ):
         """
         根据任务类型动态切换模型（线程安全）
 
@@ -295,7 +311,11 @@ class LLMService:
 
         # 保护状态变更
         async with self._state_lock:
-            selection = llm_router.select_model(self.agent_role, task_type)
+            selection = llm_router.select_model(
+                self.agent_role,
+                task_type,
+                avoid_providers=avoid_providers,
+            )
             kwargs = llm_router.get_openai_client_kwargs(selection)
 
             self._provider = OpenAICompatibleProvider(
@@ -1256,6 +1276,7 @@ def get_llm_service(agent_role: AgentRole | str) -> LLMService:
 async def get_configured_llm_service(
     agent_role: AgentRole | str,
     task_type: TaskType | None = None,
+    avoid_providers: list[ModelProvider] | None = None,
 ) -> LLMService:
     """
     获取已按角色/任务完成模型路由的 LLM 服务实例。
@@ -1265,7 +1286,7 @@ async def get_configured_llm_service(
     """
     service = get_llm_service(agent_role)
     if task_type is not None:
-        await service.switch_model_for_task(task_type)
+        await service.switch_model_for_task(task_type, avoid_providers=avoid_providers)
     return service
 
 
@@ -1281,7 +1302,10 @@ async def get_configured_llm_service_for_tier(
     return service
 
 
-def get_llm_service_for_task(task_type: TaskType) -> LLMService:
+def get_llm_service_for_task(
+    task_type: TaskType,
+    avoid_providers: list[ModelProvider] | None = None,
+) -> LLMService:
     """
     获取适合特定任务的LLM服务实例
 
@@ -1293,9 +1317,17 @@ def get_llm_service_for_task(task_type: TaskType) -> LLMService:
         reason_llm = get_llm_service_for_task(TaskType.DEEP_REASONING)
         response = await reason_llm.chat(messages)
     """
-    from app.core.llm_router import select_model_for_task
-    selection = select_model_for_task(task_type)
-    return LLMService(agent_role=selection.agent_role, enable_dynamic_routing=True)
+    from app.core.agent_profiles import agent_profile_registry
+
+    role = agent_profile_registry.get_profile_for_task(task_type).role
+    selection = llm_router.select_model(
+        agent_role=role,
+        task_type=task_type,
+        avoid_providers=avoid_providers,
+    )
+    service = LLMService(agent_role=selection.agent_role, enable_dynamic_routing=True)
+    service._init_with_router(selection)
+    return service
 
 
 async def get_llm_service_for_specific_model(

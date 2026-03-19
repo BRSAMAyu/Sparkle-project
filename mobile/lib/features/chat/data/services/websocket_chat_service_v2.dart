@@ -141,7 +141,8 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
         }
 
         // Check for orchestration trace events
-        if (metadata != null && metadata['event_type'] == 'orchestration_trace') {
+        if (metadata != null &&
+            metadata['event_type'] == 'orchestration_trace') {
           final tracePayload = metadata['trace'] as String?;
           if (tracePayload != null && tracePayload.isNotEmpty) {
             try {
@@ -156,6 +157,33 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
               );
             } catch (e) {
               debugPrint('Failed to parse orchestration trace: $e');
+            }
+          }
+        }
+
+        if (metadata != null && metadata['event_type'] == 'run_ledger') {
+          final ledgerPayload = metadata['payload'] as String?;
+          if (ledgerPayload != null && ledgerPayload.isNotEmpty) {
+            try {
+              final decoded =
+                  json.decode(ledgerPayload) as Map<String, dynamic>;
+              final summaryJson = decoded['summary'] as Map<String, dynamic>?;
+              final latestEventJson =
+                  decoded['latest_event'] as Map<String, dynamic>?;
+              if (summaryJson != null) {
+                return RunLedgerSnapshotEvent(
+                  summary: RunLedgerSummary.fromJson(summaryJson),
+                  latestEvent: latestEventJson != null
+                      ? RunLedgerEvent.fromJson(latestEventJson)
+                      : null,
+                  responseId: responseId,
+                  traceId: traceId,
+                  workflowId: workflowId,
+                  promptVersion: promptVersion,
+                );
+              }
+            } catch (e) {
+              debugPrint('Failed to parse run ledger event: $e');
             }
           }
         }
@@ -526,7 +554,8 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
       case 'ack':
         final messageId = data['message_id'] as String?;
         final status = data['status'] as String? ?? 'received';
-        final timestamp = data['timestamp'] as int? ?? DateTime.now().millisecondsSinceEpoch;
+        final timestamp =
+            data['timestamp'] as int? ?? DateTime.now().millisecondsSinceEpoch;
         if (messageId != null) {
           return AckEvent(
             messageId: messageId,
@@ -550,7 +579,8 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
       case 'nack':
         final messageId = data['message_id'] as String?;
         final errorCode = data['error_code'] as String? ?? 'unknown';
-        final errorMessage = data['error_message'] as String? ?? 'Unknown error';
+        final errorMessage =
+            data['error_message'] as String? ?? 'Unknown error';
         final retryAfterMs = data['retry_after_ms'] as int?;
         if (messageId != null) {
           return NackEvent(
@@ -815,6 +845,31 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
           promptVersion: promptVersion,
         );
 
+      case 'run_ledger':
+        final ledgerData = data['payload'] as Map<String, dynamic>?;
+        final summaryJson = ledgerData?['summary'] as Map<String, dynamic>?;
+        final latestEventJson =
+            ledgerData?['latest_event'] as Map<String, dynamic>?;
+        if (summaryJson != null) {
+          return RunLedgerSnapshotEvent(
+            summary: RunLedgerSummary.fromJson(summaryJson),
+            latestEvent: latestEventJson != null
+                ? RunLedgerEvent.fromJson(latestEventJson)
+                : null,
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
+          );
+        }
+        return UnknownEvent(
+          data: data,
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+        );
+
       case 'notification':
         // 实时通知推送事件
         return NotificationEvent.fromJson(data);
@@ -875,7 +930,8 @@ class HeartbeatMetrics {
   bool get isTimeout => receivedAt == null;
 
   @override
-  String toString() => 'HeartbeatMetrics(rtt: ${rtt.inMilliseconds}ms, failures: $consecutiveFailures)';
+  String toString() =>
+      'HeartbeatMetrics(rtt: ${rtt.inMilliseconds}ms, failures: $consecutiveFailures)';
 }
 
 /// Factory for creating WebSocket channels (facilitates testing)
@@ -938,7 +994,8 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
   Timer? _heartbeatTimer;
   Timer? _heartbeatTimeoutTimer;
   static const Duration _heartbeatInterval = Duration(seconds: 30);
-  static const Duration _heartbeatTimeout = Duration(seconds: 60); // 从 90s 降低到 60s
+  static const Duration _heartbeatTimeout =
+      Duration(seconds: 60); // 从 90s 降低到 60s
   int _consecutiveHeartbeatFailures = 0;
   static const int _maxConsecutiveHeartbeatFailures = 3;
   DateTime? _lastPongReceivedTime;
@@ -949,8 +1006,10 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
   DateTime? _lastStreamDataTime;
 
   // 心跳指标
-  final _heartbeatMetricsController = StreamController<HeartbeatMetrics>.broadcast();
-  Stream<HeartbeatMetrics> get heartbeatMetrics => _heartbeatMetricsController.stream;
+  final _heartbeatMetricsController =
+      StreamController<HeartbeatMetrics>.broadcast();
+  Stream<HeartbeatMetrics> get heartbeatMetrics =>
+      _heartbeatMetricsController.stream;
 
   // 消息队列（连接断开时暂存）
   final List<Map<String, dynamic>> _pendingMessages = [];
@@ -1312,7 +1371,8 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
               finishReason != 'NULL' &&
               finishReason.isNotEmpty) {
             _log(
-                '📌 Detected finish_reason in raw message: $finishReason, sending DoneEvent',);
+              '📌 Detected finish_reason in raw message: $finishReason, sending DoneEvent',
+            );
             _safeAdd(
               _messageStreamController!,
               DoneEvent(
@@ -1393,7 +1453,8 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       // 🔧 P0-2: 通知用户有消息未发送
       if (_pendingMessages.isNotEmpty) {
         _log(
-            '⚠️ Discarding ${_pendingMessages.length} pending messages due to auth failure',);
+          '⚠️ Discarding ${_pendingMessages.length} pending messages due to auth failure',
+        );
         if (_messageStreamController != null) {
           _safeAdd(
             _messageStreamController!,
@@ -1415,7 +1476,8 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     _401ErrorCount++;
 
     _log(
-        '🔑 Detected 401 error, refreshing token... ($_401ErrorCount/$_max401Retries)',);
+      '🔑 Detected 401 error, refreshing token... ($_401ErrorCount/$_max401Retries)',
+    );
 
     try {
       // 发送刷新中的提示
@@ -1469,7 +1531,8 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       // 🔧 P0-2: 通知用户有消息未发送
       if (_pendingMessages.isNotEmpty) {
         _log(
-            '⚠️ Discarding ${_pendingMessages.length} pending messages due to token refresh failure',);
+          '⚠️ Discarding ${_pendingMessages.length} pending messages due to token refresh failure',
+        );
         if (_messageStreamController != null) {
           _safeAdd(
             _messageStreamController!,
@@ -1643,7 +1706,8 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
   void _startHeartbeatTimeout() {
     _heartbeatTimeoutTimer?.cancel();
     _heartbeatTimeoutTimer = Timer(_heartbeatTimeout, () {
-      _log('⏰ Heartbeat timeout - no pong received in ${_heartbeatTimeout.inSeconds}s');
+      _log(
+          '⏰ Heartbeat timeout - no pong received in ${_heartbeatTimeout.inSeconds}s');
       _handleHeartbeatFailure();
     });
   }
@@ -1684,7 +1748,8 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       _heartbeatMetricsController.add(metrics);
     }
 
-    _log('❌ Heartbeat failure #$_consecutiveHeartbeatFailures/$_maxConsecutiveHeartbeatFailures');
+    _log(
+        '❌ Heartbeat failure #$_consecutiveHeartbeatFailures/$_maxConsecutiveHeartbeatFailures');
 
     if (_consecutiveHeartbeatFailures >= _maxConsecutiveHeartbeatFailures) {
       // 🔧 P0修复：流式消息活跃期间，如果最近收到过数据则跳过重连
@@ -1692,8 +1757,10 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       if (_isStreamActive && _lastStreamDataTime != null) {
         final sinceLastData = DateTime.now().difference(_lastStreamDataTime!);
         if (sinceLastData.inSeconds < 120) {
-          _log('💡 Suppressing heartbeat reconnect: stream active, last data ${sinceLastData.inSeconds}s ago');
-          _consecutiveHeartbeatFailures = 0; // Reset to avoid immediate re-trigger
+          _log(
+              '💡 Suppressing heartbeat reconnect: stream active, last data ${sinceLastData.inSeconds}s ago');
+          _consecutiveHeartbeatFailures =
+              0; // Reset to avoid immediate re-trigger
           return;
         }
       }
@@ -1713,7 +1780,8 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
   /// 发送消息 (TODO-A7)
   void _sendMessage(Map<String, dynamic> payload) {
     _log(
-        '📤 Attempting to send message, isConnected: $isConnected, channel: ${_channel != null}',);
+      '📤 Attempting to send message, isConnected: $isConnected, channel: ${_channel != null}',
+    );
     if (!isConnected) {
       _log('⚠️  Cannot send: not connected');
       // TODO-A7: Pending Limit

@@ -254,6 +254,7 @@ class Settings(BaseSettings):
     # SiliconFlow API
     SILICONFLOW_API_KEY: str = ""
     SILICONFLOW_BASE_URL: str = "https://api.siliconflow.cn/v1"
+    SILICONFLOW_FREE_MODEL: str = "Qwen/Qwen3.5-4B"
     SILICONFLOW_OCR_MODEL: str = "deepseek-ai/DeepSeek-OCR"
     SILICONFLOW_OCR_TIMEOUT_SECONDS: int = 120
 
@@ -441,6 +442,9 @@ class Settings(BaseSettings):
     TRANSPARENCY_SHOW_AGENT_SWITCHING: bool = True  # Show agent switching
     TRANSPARENCY_SHOW_REASONING_STEPS: bool = True  # Show LLM reasoning steps
     TRANSPARENCY_STEP_DEBOUNCE_MS: int = 100  # Minimum time between step updates
+    RUN_LEDGER_ENABLED: bool = True  # Unified control-tower ledger toggle
+    RUN_LEDGER_STREAM_SNAPSHOTS: bool = True  # Stream live ledger snapshots to clients
+    RUN_LEDGER_TTL_SECONDS: int = 86400  # 24h trace replay window in Redis
 
     # Plan Quota Settings (并行计划数限制)
     PLAN_QUOTA_DEFAULT: int = 3  # 免费用户默认3个活跃计划

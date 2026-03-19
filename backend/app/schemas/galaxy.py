@@ -64,6 +64,8 @@ class NodeBase(BaseModel):
     description: str | None = None
     importance_level: int
     sector_code: SectorCode
+    base_color: str | None = None
+    glow_color: str | None = None
     is_seed: bool
     parent_id: UUID | None = None
     parent_name: str | None = None  # Added for context
@@ -134,6 +136,8 @@ class NodeWithStatus(NodeBase):
                 sector_code = SectorCode.VOID
 
             position_angle = float(node.subject.position_angle) if node.subject.position_angle is not None else 0.0
+
+        base_color, glow_color = cls._resolve_sector_colors(node, sector_code)
         position_x, position_y = cls._resolve_position(
             node=node,
             angle=position_angle,
@@ -147,6 +151,8 @@ class NodeWithStatus(NodeBase):
             description=node.description,
             importance_level=node.importance_level,
             sector_code=sector_code,
+            base_color=base_color,
+            glow_color=glow_color,
             is_seed=node.is_seed,
             parent_id=node.parent_id,
             parent_name=node.parent.name if getattr(node, "parent", None) else None,
@@ -199,6 +205,25 @@ class NodeWithStatus(NodeBase):
             math.cos(effective_angle) * effective_radius,
             math.sin(effective_angle) * effective_radius,
         )
+
+    @staticmethod
+    def _resolve_sector_colors(node, sector_code: SectorCode) -> tuple[str, str]:
+        subject = getattr(node, "subject", None)
+        base_color = getattr(subject, "hex_color", None)
+        glow_color = getattr(subject, "glow_color", None)
+        if base_color and glow_color:
+            return base_color, glow_color
+
+        fallback = {
+            SectorCode.COSMOS: ("#78A3D1", "#A8C8F3"),
+            SectorCode.TECH: ("#5AB8CC", "#92E1E9"),
+            SectorCode.ART: ("#C97C8F", "#F4B0C1"),
+            SectorCode.CIVILIZATION: ("#D0A05F", "#F2D5A1"),
+            SectorCode.LIFE: ("#5FAF80", "#9FDEB6"),
+            SectorCode.WISDOM: ("#A181C8", "#D0B8EE"),
+            SectorCode.VOID: ("#70798B", "#AAB2C4"),
+        }
+        return fallback.get(sector_code, fallback[SectorCode.VOID])
 
     @staticmethod
     def _build_auto_tags(node, sector_code: SectorCode) -> list[str]:

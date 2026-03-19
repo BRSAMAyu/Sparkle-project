@@ -146,8 +146,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
           ? Map<String, dynamic>.from(item['payload'] as Map)
           : <String, dynamic>{};
       final type = item['type']?.toString() ?? defaultType;
-      final label =
-          item['label']?.toString() ??
+      final label = item['label']?.toString() ??
           payload['label']?.toString() ??
           item['prompt']?.toString() ??
           payload['prompt']?.toString() ??
@@ -272,9 +271,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
       final nextActions = _normalizeUxActionList(nextActionsRaw);
       final retryOptions = _normalizeUxActionList(retryOptionsRaw);
       addWidget('next_actions', {
-        'title':
-            followthrough['next_actions_title']?.toString() ??
-                l10n.chatNextActionsTitle,
+        'title': followthrough['next_actions_title']?.toString() ??
+            l10n.chatNextActionsTitle,
         'actions': nextActions,
         'retry_options': retryOptions,
         'recovery_message': followthrough['recovery_message'],
@@ -299,8 +297,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       final completionState = result['completion_state']?.toString();
       if (completionState == 'needs_input' || completionState == 'blocked') {
         addWidget('blocked_input_request', {
-          'title': result['headline']?.toString() ??
-              l10n.chatBlockedInputTitle,
+          'title': result['headline']?.toString() ?? l10n.chatBlockedInputTitle,
           'reason': result['why_this_answer'],
           'failure_kind': result['failure_kind'],
           'recovery_message': followthrough is Map<String, dynamic>
@@ -319,7 +316,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
     }
   }
 
-  WidgetPayload _normalizeWidgetPayload(String type, Map<String, dynamic> data) {
+  WidgetPayload _normalizeWidgetPayload(
+      String type, Map<String, dynamic> data) {
     if (type == 'system_update') {
       final category = data['category']?.toString();
       final metadata = data['metadata'];
@@ -347,7 +345,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
               'recommended_action': Map<String, dynamic>.from(
                 metadata['recommended_action'] as Map,
               ),
-            if (metadata['confidence'] != null) 'confidence': metadata['confidence'],
+            if (metadata['confidence'] != null)
+              'confidence': metadata['confidence'],
             if (metadata['weekly_summary'] != null)
               'weekly_summary': metadata['weekly_summary'],
             if (metadata['top_learnings'] is List<dynamic>)
@@ -517,9 +516,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
       final chatMode = _ref.read(chatModeProvider);
       final chatModeValue = chatMode.apiValue;
 
-      // 🔧 P1-FIX: Stream timeout protection (120 seconds)
-      // If no events received for 120 seconds, treat as timeout
-      const streamTimeout = Duration(seconds: 120);
+      // Long-running expert and study-plan flows can stay silent for minutes
+      // before the first token arrives. Keep a hard inactivity guard, but do
+      // not abort healthy generations too early.
+      const streamTimeout = Duration(minutes: 8);
 
       // Create a timeout wrapper for the stream
       final rawStream = _chatRepository.chatStream(
@@ -543,7 +543,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
             ..add(
               ErrorEvent(
                 code: 'STREAM_TIMEOUT',
-                message: 'Stream timed out after 120 seconds of inactivity',
+                message:
+                    'Stream timed out after ${streamTimeout.inSeconds} seconds of inactivity',
                 retryable: true,
               ),
             )
@@ -731,6 +732,32 @@ class ChatNotifier extends StateNotifier<ChatState> {
         } else if (event is ErrorEvent) {
           // 错误事件 - 使用用户友好的错误消息
           _streamDebouncer.cancel();
+          if (accumulatedContent.trim().isNotEmpty) {
+            final partialMessage = ChatMessageModel(
+              id: 'ai_partial_${DateTime.now().millisecondsSinceEpoch}',
+              userId: 'ai_assistant',
+              conversationId: state.conversationId ?? 'temp_conversation',
+              role: MessageRole.assistant,
+              content: accumulatedContent,
+              createdAt: DateTime.now(),
+              widgets:
+                  accumulatedWidgets.isNotEmpty ? accumulatedWidgets : null,
+              agentCollaboration: accumulatedCollaboration,
+              orchestrationTrace: accumulatedOrchestrationTrace,
+              modeSuggestion: accumulatedModeSuggestion,
+              collaborationNarrative: accumulatedCollaborationNarrative,
+              collaborationMode: accumulatedCollaborationMode,
+              agentsInvolved: accumulatedAgentsInvolved ?? const [],
+              responseId: responseId,
+              traceId: traceId,
+              workflowId: workflowId,
+              promptVersion: promptVersion,
+              aiStatus: lastAiStatus,
+              uxEnvelope: accumulatedUxEnvelope,
+            );
+            state =
+                state.copyWith(messages: [...state.messages, partialMessage]);
+          }
           final userFriendlyMessage = ErrorMessages.getUserFriendlyMessage(
             event.code,
             event.message,
@@ -790,7 +817,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
                 !_shouldIncludeSystemUpdate(widgetData)) {
               continue;
             }
-            accumulatedWidgets.add(_normalizeWidgetPayload(widgetType, widgetData));
+            accumulatedWidgets
+                .add(_normalizeWidgetPayload(widgetType, widgetData));
           }
         } else if (event is CitationEvent) {
           accumulatedWidgets.add(
@@ -879,6 +907,11 @@ class ChatNotifier extends StateNotifier<ChatState> {
             transparencyData: event.transparencyData,
           );
           flushPending();
+        } else if (event is RunLedgerSnapshotEvent) {
+          state = state.copyWith(
+            runLedgerSummary: event.summary,
+          );
+          flushPending();
         } else if (event is OrchestrationTraceEvent) {
           accumulatedOrchestrationTrace = event.traceData;
           flushPending();
@@ -887,7 +920,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
           flushPending();
         } else if (event is AgentActivityEvent) {
           final activities = [...state.agentActivities];
-          final idx = activities.indexWhere((item) => item.agentId == event.agentId);
+          final idx =
+              activities.indexWhere((item) => item.agentId == event.agentId);
           if (idx >= 0) {
             activities[idx] = event;
           } else {

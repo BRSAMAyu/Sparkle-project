@@ -2903,6 +2903,7 @@ async def add_message_favorite(
 
         # 获取消息预览
         preview = None
+        msg = None
         if favorite.group_message_id:
             msg = await db.get(GroupMessage, favorite.group_message_id)
             if msg:
@@ -2916,11 +2917,14 @@ async def add_message_favorite(
             id=favorite.id,
             created_at=favorite.created_at,
             updated_at=favorite.updated_at,
+            user_id=favorite.user_id,
             group_message_id=favorite.group_message_id,
             private_message_id=favorite.private_message_id,
             note=favorite.note,
             tags=favorite.tags,
-            message_preview=preview
+            message_preview=preview,
+            group_message=_build_message_info(msg) if favorite.group_message_id and msg else None,
+            private_message=_build_private_message_info(msg) if favorite.private_message_id and msg else None,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -2949,11 +2953,14 @@ async def get_message_favorites(
             id=fav.id,
             created_at=fav.created_at,
             updated_at=fav.updated_at,
+            user_id=fav.user_id,
             group_message_id=fav.group_message_id,
             private_message_id=fav.private_message_id,
             note=fav.note,
             tags=fav.tags,
-            message_preview=preview
+            message_preview=preview,
+            group_message=_build_message_info(fav.group_message) if fav.group_message else None,
+            private_message=_build_private_message_info(fav.private_message) if fav.private_message else None,
         ))
     return result
 

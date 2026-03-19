@@ -23,6 +23,7 @@ from app.core.metrics import (
 )
 from app.gen.agent.v1 import agent_service_pb2, agent_service_pb2_grpc
 from app.learning.prompt_bandit import PromptBandit
+from app.orchestration.run_ledger import RunLedgerStore
 from app.orchestration.chat_modes import (
     CHAT_MODE_DEEP_ANALYSIS,
     CHAT_MODE_ERROR_DIAGNOSIS,
@@ -164,7 +165,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
             except Exception as e:
                 logger.warning(f"Prompt bandit selection failed: {e}")
 
-            await self._observe_feedback_effect(user_id, workflow_id, prompt_version)
+            await self._observe_feedback_effect(user_id, workflow_id, prompt_version, trace_id=trace_id)
 
             logger.info(
                 f"StreamChat started - user_id={user_id}, session={request.session_id}, trace={trace_id}, "
@@ -342,6 +343,8 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         user_id: str,
         workflow_id: str,
         prompt_version: str,
+        *,
+        trace_id: str,
     ) -> None:
         if not self.orchestrator.redis:
             return
@@ -358,6 +361,19 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                 return
             delta = max(0, int(time.time()) - last_ts)
             FEEDBACK_TO_EFFECT_SECONDS.labels(workflow_id=workflow_id, prompt_version=prompt_version).observe(delta)
+            await RunLedgerStore.append_external_event(
+                self.orchestrator.redis,
+                trace_id=trace_id,
+                event_type="strategy_effect_applied",
+                label="历史反馈已在本轮生效",
+                workflow_stage="feedback",
+                metadata={
+                    "effect_target": "prompt_selection",
+                    "status": "observed",
+                    "detail": f"{workflow_id}:{prompt_version}",
+                    "effect_latency_seconds": delta,
+                },
+            )
             await self.orchestrator.redis.delete(key)
         except Exception:
             return

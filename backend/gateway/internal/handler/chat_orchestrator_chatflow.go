@@ -14,7 +14,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/gorilla/websocket"
 	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
 	"github.com/sparkle/gateway/internal/service"
 	"go.opentelemetry.io/otel"
@@ -29,7 +28,6 @@ const (
 	expertModeAuto  = "expert_auto"
 	expertModePref  = "expert::"
 	teamModePref    = "team::"
-	wsWriteWait     = 10 * time.Second
 )
 
 func shortHash(parts ...string) string {
@@ -83,13 +81,8 @@ func normalizeChatMode(mode string) string {
 	}
 }
 
-func writeLegacyJSON(conn *websocket.Conn, payload interface{}) error {
-	_ = conn.SetWriteDeadline(time.Now().Add(wsWriteWait))
-	if err := conn.WriteJSON(payload); err != nil {
-		return err
-	}
-	_ = conn.SetWriteDeadline(time.Time{})
-	return nil
+func writeLegacyJSON(writer *wsSafeWriter, payload interface{}) error {
+	return writer.WriteJSON(payload)
 }
 
 func workflowIDForChatMode(mode string) string {
@@ -284,10 +277,15 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 					"latency_ms":   time.Since(startTime).Milliseconds(),
 					"is_cache_hit": true,
 				})
-			default:
-				conn := responder.(*websocket.Conn)
-				_ = writeLegacyJSON(conn, convertResponseToJSON(resp))
-				_ = writeLegacyJSON(conn, gin.H{
+			case *protobufResponder:
+				_ = r.SendChatResponse(resp)
+				_ = r.SendMeta(map[string]interface{}{
+					"latency_ms":   time.Since(startTime).Milliseconds(),
+					"is_cache_hit": true,
+				})
+			case *wsSafeWriter:
+				_ = writeLegacyJSON(r, convertResponseToJSON(resp))
+				_ = writeLegacyJSON(r, gin.H{
 					"type": "meta",
 					"meta": map[string]interface{}{
 						"latency_ms":   time.Since(startTime).Milliseconds(),
@@ -327,9 +325,10 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 				switch r := responder.(type) {
 				case *envelopeResponder:
 					r.SendError("resource_exhausted", "Quota exhausted", false)
-				default:
-					conn := responder.(*websocket.Conn)
-					_ = writeLegacyJSON(conn, gin.H{"type": "error", "message": "Quota exhausted"})
+				case *protobufResponder:
+					r.SendError("resource_exhausted", "Quota exhausted", false)
+				case *wsSafeWriter:
+					_ = writeLegacyJSON(r, gin.H{"type": "error", "message": "Quota exhausted"})
 				}
 				return false
 			}
@@ -369,9 +368,10 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		switch r := responder.(type) {
 		case *envelopeResponder:
 			r.SendError("unavailable", "AI Service Unavailable", true)
-		default:
-			conn := responder.(*websocket.Conn)
-			_ = writeLegacyJSON(conn, gin.H{"type": "error", "message": "AI Service Unavailable"})
+		case *protobufResponder:
+			r.SendError("unavailable", "AI Service Unavailable", true)
+		case *wsSafeWriter:
+			_ = writeLegacyJSON(r, gin.H{"type": "error", "message": "AI Service Unavailable"})
 		}
 		return false
 	}
@@ -386,9 +386,10 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		switch r := responder.(type) {
 		case *envelopeResponder:
 			r.SendError("unavailable", "AI Service Unavailable", true)
-		default:
-			conn := responder.(*websocket.Conn)
-			_ = writeLegacyJSON(conn, gin.H{"type": "error", "message": "AI Service Unavailable"})
+		case *protobufResponder:
+			r.SendError("unavailable", "AI Service Unavailable", true)
+		case *wsSafeWriter:
+			_ = writeLegacyJSON(r, gin.H{"type": "error", "message": "AI Service Unavailable"})
 		}
 		return false
 	}
@@ -423,9 +424,10 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 			switch r := responder.(type) {
 			case *envelopeResponder:
 				r.SendError("aborted", "Stream interrupted", true)
-			default:
-				conn := responder.(*websocket.Conn)
-				_ = writeLegacyJSON(conn, gin.H{"type": "error", "message": "Stream interrupted"})
+			case *protobufResponder:
+				r.SendError("aborted", "Stream interrupted", true)
+			case *wsSafeWriter:
+				_ = writeLegacyJSON(r, gin.H{"type": "error", "message": "Stream interrupted"})
 			}
 			break
 		}
@@ -453,9 +455,10 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 					switch r := responder.(type) {
 					case *envelopeResponder:
 						r.SendError("resource_exhausted", "Daily quota exceeded", false)
-					default:
-						conn := responder.(*websocket.Conn)
-						_ = writeLegacyJSON(conn, gin.H{"type": "error", "message": "Daily quota exceeded"})
+					case *protobufResponder:
+						r.SendError("resource_exhausted", "Daily quota exceeded", false)
+					case *wsSafeWriter:
+						_ = writeLegacyJSON(r, gin.H{"type": "error", "message": "Daily quota exceeded"})
 					}
 					return false
 				}
@@ -477,12 +480,17 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 				respSpan.End()
 				return true
 			}
-		default:
-			conn := responder.(*websocket.Conn)
+		case *protobufResponder:
+			if err := r.SendChatResponse(resp); err != nil {
+				log.Printf("Failed to write to WebSocket: %v", err)
+				respSpan.End()
+				return true
+			}
+		case *wsSafeWriter:
 			// Convert protobuf response to JSON-friendly map
 			jsonResp := convertResponseToJSON(resp)
 			// Forward to WebSocket client
-			if err := writeLegacyJSON(conn, jsonResp); err != nil {
+			if err := writeLegacyJSON(r, jsonResp); err != nil {
 				log.Printf("Failed to write to WebSocket: %v", err)
 				respSpan.End()
 				return true
@@ -532,13 +540,35 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 	switch r := responder.(type) {
 	case *envelopeResponder:
 		_ = r.SendMeta(meta)
-	default:
-		conn := responder.(*websocket.Conn)
+	case *protobufResponder:
+		_ = r.SendMeta(meta)
+	case *wsSafeWriter:
 		// Send final metadata
-		_ = writeLegacyJSON(conn, gin.H{
+		_ = writeLegacyJSON(r, gin.H{
 			"type": "meta",
 			"meta": meta,
 		})
+	}
+
+	doneResp := &agentv1.ChatResponse{
+		ResponseId:    uuid.New().String(),
+		CreatedAt:     time.Now().Unix(),
+		RequestId:     reqID,
+		TraceId:       traceID,
+		WorkflowId:    workflowIDForChatMode(normalizedChatMode),
+		PromptVersion: "v1",
+		SessionId:     input.SessionID,
+		FinishReason:  agentv1.FinishReason_STOP,
+		EventTime:     timestamppb.New(time.Now()),
+	}
+
+	switch r := responder.(type) {
+	case *envelopeResponder:
+		_ = r.SendChatResponse(doneResp)
+	case *protobufResponder:
+		_ = r.SendChatResponse(doneResp)
+	case *wsSafeWriter:
+		_ = writeLegacyJSON(r, convertResponseToJSON(doneResp))
 	}
 
 	// Persist completed message to database and cache (async)

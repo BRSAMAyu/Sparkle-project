@@ -208,6 +208,43 @@ AGENT_COMBINATION_EXPLORATION_TOTAL = get_or_create_metric(
     ["intent_type"],
 )
 
+LLM_ROUTER_SELECTION_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_llm_router_selection_total",
+    "Total model-routing selections made by the unified LLM router",
+    ["agent_role", "model_key", "provider", "tier", "task_type", "complexity", "fallback"],
+)
+
+LLM_ROUTER_ESTIMATED_COST_PER_1K = get_or_create_metric(
+    Histogram,
+    "sparkle_llm_router_estimated_cost_per_1k",
+    "Estimated cost-per-1k tokens for router selections",
+    ["agent_role", "provider", "tier"],
+    buckets=[0.0, 0.0001, 0.0005, 0.001, 0.002, 0.005, 0.01],
+)
+
+RUN_LEDGER_EVENT_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_run_ledger_event_total",
+    "Total unified run-ledger events recorded",
+    ["event_type", "workflow_stage"],
+)
+
+RUN_LEDGER_REVIEW_SCORE = get_or_create_metric(
+    Histogram,
+    "sparkle_run_ledger_review_score",
+    "Review scores captured by the unified run ledger",
+    ["target_type", "decision"],
+    buckets=[0.0, 0.25, 0.5, 0.65, 0.75, 0.85, 0.95, 1.0],
+)
+
+RUN_LEDGER_FEEDBACK_EFFECT_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_run_ledger_feedback_effect_total",
+    "Total feedback-to-strategy effects captured by the unified run ledger",
+    ["effect_target", "status"],
+)
+
 
 # 装饰器：用于测量函数执行时间并记录指标
 def track_latency(module, method):

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
@@ -9,9 +11,11 @@ import 'package:sparkle/core/design/widgets/custom_button.dart'
     hide ButtonVariant;
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/design/widgets/universal_share_bottom_sheet.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/share_poster_service.dart';
+import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
-import 'package:sparkle/features/community/presentation/widgets/share_resource_sheet.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
@@ -80,7 +84,8 @@ class _TaskDetailView extends ConsumerWidget {
                           const SizedBox(height: DS.spacing12),
                           _buildGuideSection(context),
                           const SizedBox(
-                              height: DS.spacing64,), // Space for bottom bar
+                            height: DS.spacing64,
+                          ), // Space for bottom bar
                         ],
                       ),
                     ),
@@ -152,13 +157,7 @@ class _TaskDetailView extends ConsumerWidget {
           SparkleIconButton(
             variant: ButtonVariant.ghost,
             icon: const Icon(Icons.share_outlined),
-            onPressed: () => showShareResourceSheet(
-              context,
-              resourceType: 'task',
-              resourceId: task.id,
-              title: task.title,
-              subtitle: task.guideContent?.split('\n').first ?? '',
-            ),
+            onPressed: () => unawaited(_showShareSheet(context)),
           ),
         ],
         flexibleSpace: FlexibleSpaceBar(
@@ -228,6 +227,29 @@ class _TaskDetailView extends ConsumerWidget {
           ),
         ),
       );
+
+  Future<void> _showShareSheet(BuildContext context) async {
+    await showUniversalShareSheet(
+      context,
+      payload: UniversalSharePayload(
+        contentType: ShareableContentType.taskCompletion,
+        resourceId: task.id,
+        title: task.title,
+        subtitle: task.guideContent?.split('\n').first ?? '',
+        description: task.userNote,
+        metadata: {
+          'duration': task.actualMinutes ?? task.estimatedMinutes,
+          'completed_at':
+              (task.completedAt ?? task.updatedAt).toIso8601String(),
+          'task_type': _taskTypeLabel(context, task.type),
+          'subtasks_completed': task.subtasksCompleted,
+          'subtasks_total': task.subtasksTotal,
+        },
+      ),
+      onGenerateCard: (payload) =>
+          SharePosterService().generatePoster(context, payload),
+    );
+  }
 
   Widget _buildInfoSection(BuildContext context) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -452,8 +474,11 @@ class _InfoTileCardState extends State<_InfoTileCard>
                       ),
                     ],
                   ),
-                  child: Icon(widget.icon,
-                      color: DS.brandPrimaryConst, size: DS.iconSizeSm,),
+                  child: Icon(
+                    widget.icon,
+                    color: DS.brandPrimaryConst,
+                    size: DS.iconSizeSm,
+                  ),
                 ),
                 const SizedBox(width: DS.spacing16),
                 Expanded(

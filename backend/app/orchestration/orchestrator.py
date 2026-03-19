@@ -97,6 +97,7 @@ from app.orchestration.orchestration_trace import OrchestrationTrace
 from app.orchestration.persona_aware_planner import PersonaAwarePlanner  # noqa: F401
 from app.orchestration.observability_logger import observability_logger
 from app.orchestration.plan_review_service import ReviewDecision, plan_review_service  # noqa: F401
+from app.orchestration.run_ledger import RunLedgerRecorder
 from app.orchestration.session_feedback import (
     SESSION_FEEDBACK_TTL_SECONDS,  # noqa: F401
     SessionAdaptationContext,  # noqa: F401
@@ -634,6 +635,29 @@ class ChatOrchestrator(
                     except asyncio.QueueFull:
                         logger.warning(f"Response queue full (maxsize=200), dropping response: {resp.response_id}")
 
+                run_ledger = RunLedgerRecorder(
+                    trace_id=trace_id,
+                    session_id=session_id,
+                    workflow_id=workflow_id,
+                    response_id=response_id,
+                    prompt_version=prompt_version,
+                    request_id=request_id,
+                    redis_client=self.redis,
+                    stream_callback=stream_callback,
+                )
+                state.context_data["run_ledger"] = run_ledger
+                await run_ledger.record_event(
+                    event_type="run_started",
+                    label="运行开始",
+                    workflow_stage="orchestration",
+                    metadata={
+                        "chat_mode": chat_mode,
+                        "workflow_id": workflow_id,
+                        "prompt_version": prompt_version,
+                    },
+                    emit_snapshot=False,
+                )
+
                 # Step 4.5: Proactively emit unread evolution/system updates at session start
                 await self._maybe_enqueue_perceptible_insight(
                     active_db=active_db,
@@ -766,7 +790,7 @@ class ChatOrchestrator(
                     emit_transparency_event=emit_transparency_event, user_context_payload=user_context_payload,
                     conversation_context=conversation_context, plan_context=plan_context,
                     file_ids=list(request.file_ids), include_references=bool(request.include_references),
-                    workflow_id=workflow_id, prompt_version=prompt_version,
+                    workflow_id=workflow_id, prompt_version=prompt_version, run_ledger=run_ledger,
                 )
                 state.context_data["chat_mode"] = chat_mode
                 orchestration_trace = OrchestrationTrace(trace_id=trace_id or request_id or str(uuid.uuid4()))
@@ -853,6 +877,22 @@ class ChatOrchestrator(
                     state=state,
                     orchestration_trace=orchestration_trace,
                     user_context_payload=user_context_payload,
+                )
+                await run_ledger.record_event(
+                    event_type="route_selected",
+                    label="路由决策",
+                    workflow_stage="routing",
+                    metadata={
+                        "execution_mode": route_decision.execution_mode,
+                        "reason": route_decision.reason,
+                        "risk_level": route_decision.risk_level,
+                        "confidence": route_decision.confidence,
+                        "intent": (
+                            unified_routing_result.primary_intent.value
+                            if unified_routing_result and hasattr(unified_routing_result, "primary_intent")
+                            else ""
+                        ),
+                    },
                 )
 
                 if chat_mode == CHAT_MODE_STANDARD and unified_routing_result:
@@ -1021,6 +1061,8 @@ class ChatOrchestrator(
                         trace_id=trace_id, workflow_id=workflow_id, prompt_version=prompt_version,
                         route_decision=route_decision, plan_switched=plan_switched, plan_id=plan_id,
                         user_context_payload=user_context_payload,
+                        total_prompt_tokens=total_prompt_tokens,
+                        total_completion_tokens=total_completion_tokens,
                     )
                     await self._cache_response(session_id, request_id, final_response_data)
                     try:

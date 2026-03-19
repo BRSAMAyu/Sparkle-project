@@ -21,6 +21,7 @@ from typing import Any
 from loguru import logger
 
 from app.core.agent_profiles import TaskType
+from app.core.llm_router import ModelProvider
 from app.services.llm_service import get_llm_service_for_task
 
 # ============================================
@@ -333,19 +334,27 @@ class ReviewerAgent:
     DEFAULT_OVERALL_THRESHOLD = 0.7
     DEFAULT_METRIC_THRESHOLD = 0.7
 
-    def __init__(self, reviewer_llm=None):
+    def __init__(
+        self,
+        reviewer_llm=None,
+        avoid_providers: list[ModelProvider] | None = None,
+        task_type_override: TaskType | None = None,
+    ):
         """
         初始化审查Agent
 
         Args:
             reviewer_llm: 可选的LLM服务实例，默认使用REVIEW任务类型的服务
         """
+        task_type = task_type_override or TaskType.REVIEW
         if reviewer_llm is None:
             # 使用专门用于审查任务的LLM服务
-            self.llm = get_llm_service_for_task(TaskType.REVIEW)
+            self.llm = get_llm_service_for_task(task_type, avoid_providers=avoid_providers)
         else:
             self.llm = reviewer_llm
 
+        self.model_key = getattr(self.llm, "model_key", "")
+        self.provider_name = getattr(self.llm, "provider_name", "")
         self.reviewer_model = getattr(self.llm, 'default_model', 'reviewer_model')
         logger.info(f"[ReviewerAgent] Initialized with model: {self.reviewer_model}")
 
@@ -657,8 +666,22 @@ class ReviewerAgent:
 _reviewer_agent_instance: ReviewerAgent | None = None
 
 
-def get_reviewer_agent() -> ReviewerAgent:
+def get_reviewer_agent(
+    generation_provider: ModelProvider | None = None,
+    avoid_providers: list[ModelProvider] | None = None,
+    task_type_override: TaskType | None = None,
+) -> ReviewerAgent:
     """获取审查Agent单例"""
+    merged_avoid = [provider for provider in (avoid_providers or []) if provider is not None]
+    if generation_provider is not None and generation_provider not in merged_avoid:
+        merged_avoid.append(generation_provider)
+
+    if merged_avoid or task_type_override is not None:
+        return ReviewerAgent(
+            avoid_providers=merged_avoid or None,
+            task_type_override=task_type_override,
+        )
+
     global _reviewer_agent_instance
     if _reviewer_agent_instance is None:
         _reviewer_agent_instance = ReviewerAgent()

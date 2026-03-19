@@ -128,8 +128,10 @@ String buildGroupAgentPrompt({
       .take(_maxContextMessages)
       .toList()
       .reversed
-      .map((msg) =>
-          '${msg.sender?.displayName ?? "系统"}: ${_compressContent(msg.content ?? "")}',)
+      .map(
+        (msg) =>
+            '${msg.sender?.displayName ?? "系统"}: ${_compressContent(msg.content ?? "")}',
+      )
       .join('\n');
 
   final name = groupName ?? '学习小组';
@@ -158,8 +160,10 @@ String buildPrivateAgentPrompt({
       .take(_maxContextMessages)
       .toList()
       .reversed
-      .map((msg) =>
-          '${msg.sender.displayName}: ${_compressContent(msg.content ?? "")}',)
+      .map(
+        (msg) =>
+            '${msg.sender.displayName}: ${_compressContent(msg.content ?? "")}',
+      )
       .join('\n');
 
   final name = friendName ?? '好友';
@@ -181,6 +185,44 @@ String _compressContent(String content) {
   final trimmed = content.trim();
   if (trimmed.length <= _maxContextChars) return trimmed;
   return '${trimmed.substring(0, _maxContextChars)}…';
+}
+
+String normalizeCommunityAgentOutput(String content) {
+  var normalized = content
+      .replaceAll(RegExp(r'```[\s\S]*?```'), '')
+      .replaceAll(RegExp(r'^\s{0,3}#{1,6}\s*', multiLine: true), '')
+      .replaceAll(RegExp(r'^\s*[-*+]\s+', multiLine: true), '')
+      .replaceAll(RegExp(r'^\s*\d+\.\s+', multiLine: true), '');
+
+  normalized = normalized
+      .replaceAllMapped(
+        RegExp(r'`([^`\n]+)`'),
+        (match) => match.group(1) ?? '',
+      )
+      .replaceAllMapped(
+        RegExp(r'\*\*([^*]+)\*\*'),
+        (match) => match.group(1) ?? '',
+      )
+      .replaceAllMapped(
+        RegExp(r'__([^_]+)__'),
+        (match) => match.group(1) ?? '',
+      )
+      .replaceAllMapped(
+        RegExp(r'(?<!\*)\*([^*\n]+)\*(?!\*)'),
+        (match) => match.group(1) ?? '',
+      )
+      .replaceAllMapped(
+        RegExp(r'(?<!_)_([^_\n]+)_(?!_)'),
+        (match) => match.group(1) ?? '',
+      );
+
+  final lines = normalized
+      .split('\n')
+      .map((line) => line.trimRight())
+      .where((line) => line.trim().isNotEmpty)
+      .toList();
+
+  return lines.join('\n').trim();
 }
 
 class GroupAgentChatNotifier
@@ -232,20 +274,27 @@ class GroupAgentChatNotifier
       )) {
         if (event is TextEvent) {
           buffer += event.content;
-          state = state.copyWith(streamingContent: buffer);
+          state = state.copyWith(
+            streamingContent: normalizeCommunityAgentOutput(buffer),
+          );
         } else if (event is FullTextEvent) {
           buffer = event.content;
-          state = state.copyWith(streamingContent: buffer);
+          state = state.copyWith(
+            streamingContent: normalizeCommunityAgentOutput(buffer),
+          );
         } else if (event is ErrorEvent) {
           final message =
               ErrorMessages.getUserFriendlyMessage(event.code, event.message);
           state = state.copyWith(
-              isSending: false, streamingContent: '', error: message,);
+            isSending: false,
+            streamingContent: '',
+            error: message,
+          );
           return;
         }
       }
 
-      final content = buffer.trim();
+      final content = normalizeCommunityAgentOutput(buffer).trim();
       if (content.isNotEmpty) {
         final message = await _persistGroupAgentMessage(
           userId: userContext.userId,
@@ -265,7 +314,10 @@ class GroupAgentChatNotifier
       final message =
           ErrorMessages.getUserFriendlyMessage('UNKNOWN', e.toString());
       state = state.copyWith(
-          isSending: false, streamingContent: '', error: message,);
+        isSending: false,
+        streamingContent: '',
+        error: message,
+      );
     }
   }
 
@@ -354,20 +406,27 @@ class PrivateAgentChatNotifier
       )) {
         if (event is TextEvent) {
           buffer += event.content;
-          state = state.copyWith(streamingContent: buffer);
+          state = state.copyWith(
+            streamingContent: normalizeCommunityAgentOutput(buffer),
+          );
         } else if (event is FullTextEvent) {
           buffer = event.content;
-          state = state.copyWith(streamingContent: buffer);
+          state = state.copyWith(
+            streamingContent: normalizeCommunityAgentOutput(buffer),
+          );
         } else if (event is ErrorEvent) {
           final message =
               ErrorMessages.getUserFriendlyMessage(event.code, event.message);
           state = state.copyWith(
-              isSending: false, streamingContent: '', error: message,);
+            isSending: false,
+            streamingContent: '',
+            error: message,
+          );
           return;
         }
       }
 
-      final content = buffer.trim();
+      final content = normalizeCommunityAgentOutput(buffer).trim();
       if (content.isNotEmpty) {
         final message = await _persistPrivateAgentMessage(
           userId: userContext.userId,
@@ -388,7 +447,10 @@ class PrivateAgentChatNotifier
       final message =
           ErrorMessages.getUserFriendlyMessage('UNKNOWN', e.toString());
       state = state.copyWith(
-          isSending: false, streamingContent: '', error: message,);
+        isSending: false,
+        streamingContent: '',
+        error: message,
+      );
     }
   }
 

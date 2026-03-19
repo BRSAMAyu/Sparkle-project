@@ -47,6 +47,26 @@ _TIER_PROMPT_BUDGET: dict[str, int] = {
     "glm_batch": 2800,
 }
 
+_SECTION_BUDGET_RATIO: dict[str, tuple[int, float]] = {
+    "context_briefing_section": (80, 0.05),
+    "intent_section": (100, 0.08),
+    "session_feedback_section": (60, 0.05),
+    "dual_core_section": (80, 0.05),
+    "mode_strategy_section": (120, 0.10),
+    "plan_context_section": (100, 0.12),
+    "user_context": (120, 0.10),
+    "conversation_history_section": (80, 0.20),
+    "task_awareness_section": (60, 0.08),
+    "cognitive_prism_section": (60, 0.05),
+    "preference_instructions": (60, 0.05),
+    "persona_section": (40, 0.04),
+    "agent_memory_section": (40, 0.03),
+    "understanding_depth_section": (60, 0.05),
+    "orchestration_context_section": (60, 0.05),
+    "collaboration_narrative_section": (60, 0.05),
+    "seed_library_section": (40, 0.04),
+}
+
 
 def _estimate_prompt_tokens(text: str) -> int:
     return max(1, len(str(text or "")) // 4)
@@ -103,32 +123,48 @@ def _apply_prompt_budget(
     if total_tokens <= limit:
         return section_map
 
-    min_tokens = {
-        "user_context": 120,
-        "preference_instructions": 80,
-        "conversation_history_section": 80,
-        "task_awareness_section": 80,
-        "cognitive_prism_section": 80,
-        "plan_context_section": 120,
-        "dual_core_section": 80,
-    }
     adjusted = dict(section_map)
-    for priority in (3, 2):
+
+    def _recount() -> int:
+        return sum(
+            _estimate_prompt_tokens(item)
+            for item in adjusted.values()
+            if str(item or "").strip()
+        )
+
+    # 先按每个区域的最大占比做一次硬上限裁剪
+    for priority in sorted(set(priority_map.values()), reverse=True):
         for section_name, content in list(adjusted.items()):
             if priority_map.get(section_name) != priority:
                 continue
             text = str(content or "").strip()
             if not text:
                 continue
+            min_tokens, max_ratio = _SECTION_BUDGET_RATIO.get(section_name, (60, 0.06))
             current_tokens = _estimate_prompt_tokens(text)
-            target_tokens = max(min_tokens.get(section_name, 60), int(current_tokens * 0.6))
+            target_tokens = max(min_tokens, int(limit * max_ratio))
+            if current_tokens > target_tokens:
+                adjusted[section_name] = _truncate_section(text, target_tokens=target_tokens)
+        if _recount() <= limit:
+            return adjusted
+
+    # 如果仍超限，则从低优先级开始继续向下压到保底 token
+    for priority in sorted(set(priority_map.values()), reverse=True):
+        section_names = [
+            name for name in adjusted.keys()
+            if priority_map.get(name) == priority and str(adjusted.get(name) or "").strip()
+        ]
+        for section_name in section_names:
+            text = str(adjusted.get(section_name) or "").strip()
+            if not text:
+                continue
+            min_tokens, _ = _SECTION_BUDGET_RATIO.get(section_name, (60, 0.06))
+            current_tokens = _estimate_prompt_tokens(text)
+            if current_tokens <= min_tokens:
+                continue
+            target_tokens = max(min_tokens, int(current_tokens * 0.75))
             adjusted[section_name] = _truncate_section(text, target_tokens=target_tokens)
-            total_tokens = sum(
-                _estimate_prompt_tokens(item)
-                for item in adjusted.values()
-                if str(item or "").strip()
-            )
-            if total_tokens <= limit:
+            if _recount() <= limit:
                 return adjusted
     return adjusted
 
@@ -166,75 +202,43 @@ TASK_AWARENESS_SECTION = """
 
 AGENT_SYSTEM_PROMPT = """你是 Sparkle（星火），一个智能学习助手。你的目标是帮助用户高效学习，同时保持学习的乐趣。
 
-
-
-{context_briefing_section}
-
-
-
-{intent_section}
-
-
-
-{session_feedback_section}
-
-
-
-{dual_core_section}
-
-
-
-{understanding_depth_section}
-
-
-
-{orchestration_context_section}
-
-
-
-{collaboration_narrative_section}
-
-
-
 {mode_strategy_section}
 
-
+{task_awareness_section}
 
 {persona_section}
-
-
-
-{agent_memory_section}
-
-
 
 ## 当前用户上下文
 
 {user_context}
 
-
-
-{preference_instructions}
-
-
-
 {plan_context_section}
 
-
-
-{cognitive_prism_section}
-
-
+{preference_instructions}
 
 ## 对话历史
 
 {conversation_history_section}
 
+{context_briefing_section}
 
+{intent_section}
 
-{task_awareness_section}
+{session_feedback_section}
 
+{dual_core_section}
 
+{understanding_depth_section}
+
+{orchestration_context_section}
+
+{collaboration_narrative_section}
+
+{agent_memory_section}
+
+{cognitive_prism_section}
+
+{seed_library_section}
 
 ## 核心原则
 
@@ -934,6 +938,9 @@ def build_system_prompt(
     focus_decision = ContextFocusDecision.from_dict(context_focus)
     cognitive_priority = 2 if focus_decision and focus_decision.focus_mode in {"emotional_focus", "cognitive_focus"} else 3
     section_map = {
+        "context_briefing_section": context_briefing_section,
+        "intent_section": intent_section,
+        "session_feedback_section": session_feedback_section,
         "user_context": f"[优先级：L3 背景]\n{formatted_user_context}".strip(),
         "preference_instructions": f"[优先级：L3 背景]\n{preference_instructions}".strip(),
         "plan_context_section": plan_context_section,
@@ -964,6 +971,9 @@ def build_system_prompt(
     section_map = _apply_prompt_budget(
         section_map,
         priority_map={
+            "context_briefing_section": 0,
+            "intent_section": 1,
+            "session_feedback_section": 1,
             "user_context": 3,
             "preference_instructions": 3,
             "plan_context_section": 2,
@@ -981,6 +991,9 @@ def build_system_prompt(
         },
         budget_tokens=_prompt_budget,
     )
+    context_briefing_section = section_map["context_briefing_section"]
+    intent_section = section_map["intent_section"]
+    session_feedback_section = section_map["session_feedback_section"]
     formatted_user_context = section_map["user_context"]
     preference_instructions = section_map["preference_instructions"]
     plan_context_section = section_map["plan_context_section"]
@@ -994,6 +1007,7 @@ def build_system_prompt(
     cognitive_prism_section = section_map["cognitive_prism_section"]
     conversation_history_section = section_map["conversation_history_section"]
     task_awareness_section = section_map["task_awareness_section"]
+    seed_library_section = section_map["seed_library_section"]
 
 
     # 3. 如果是通用模板，进行完整渲染
@@ -1017,8 +1031,30 @@ def build_system_prompt(
                 context_briefing_section=context_briefing_section,
                 task_awareness_section=task_awareness_section,
                 cognitive_prism_section=cognitive_prism_section,
+                seed_library_section=seed_library_section,
             )
         )
+        if base_prompt != AGENT_SYSTEM_PROMPT:
+            ordered_sections = [
+                mode_strategy_section,
+                task_awareness_section,
+                persona_section,
+                plan_context_section,
+                conversation_history_section,
+                context_briefing_section,
+                intent_section,
+                session_feedback_section,
+                dual_core_section,
+                understanding_depth_section,
+                orchestration_context_section,
+                collaboration_narrative_section,
+                agent_memory_section,
+                cognitive_prism_section,
+                seed_library_section,
+            ]
+            suffix = "\n\n".join(section for section in ordered_sections if str(section or "").strip())
+            if suffix:
+                prompt = f"{prompt}\n\n{suffix}"
 
     else:
 
@@ -1034,26 +1070,26 @@ def build_system_prompt(
             )
         )
 
-        if context_briefing_section:
-             prompt = f"{context_briefing_section}\n\n{prompt}"
-        if intent_instruction:
-             prompt += f"\n\n## 当前意图指令 [L1 强制]\n{intent_instruction}"
-        if session_feedback_instruction:
-             prompt += f"\n\n## 会话内反馈适配 [L1 强制]\n{session_feedback_instruction}"
-        if dual_core_instruction:
-             prompt += f"\n\n## 双核心路由指令 [L2 引导]\n{dual_core_instruction}"
-        if orchestration_context_section:
-             prompt += f"\n\n{orchestration_context_section}"
-        if collaboration_narrative_section:
-             prompt += f"\n\n{collaboration_narrative_section}"
-        if mode_strategy_section:
-             prompt += f"\n\n{mode_strategy_section}"
-        if persona_section:
-             prompt += f"\n\n{persona_section}"
-        if agent_memory_section:
-             prompt += f"\n\n{agent_memory_section}"
-        if understanding_depth_section:
-             prompt += f"\n\n{understanding_depth_section}"
+        ordered_sections = [
+            mode_strategy_section,
+            task_awareness_section,
+            persona_section,
+            plan_context_section,
+            conversation_history_section,
+            context_briefing_section,
+            intent_section,
+            session_feedback_section,
+            dual_core_section,
+            understanding_depth_section,
+            orchestration_context_section,
+            collaboration_narrative_section,
+            agent_memory_section,
+            cognitive_prism_section,
+            seed_library_section,
+        ]
+        suffix = "\n\n".join(section for section in ordered_sections if str(section or "").strip())
+        if suffix:
+            prompt = f"{prompt}\n\n{suffix}"
 
 
 
@@ -1163,6 +1199,14 @@ def get_system_prompt(
     )
 
 
+def _is_anchor_message(msg: dict[str, Any]) -> bool:
+    content = str(msg.get("content") or "")
+    if msg.get("tool_calls") or msg.get("tool_results"):
+        return True
+    anchor_keywords = ["计划已创建", "任务完成", "阶段", "里程碑", "目标确认", "关键决策"]
+    return any(keyword in content for keyword in anchor_keywords)
+
+
 def _format_conversation_history(conversation_history: dict = None) -> str:
     """
     格式化对话历史
@@ -1207,9 +1251,9 @@ def _format_conversation_history(conversation_history: dict = None) -> str:
         for msg in messages:
             role = "用户" if msg["role"] == "user" else "助手"
             content = msg.get("content", "")
-            # 限制每条消息长度，避免过长
-            if len(content) > 200:
-                content = content[:200] + "..."
+            max_length = 500 if _is_anchor_message(msg) else 100
+            if len(content) > max_length:
+                content = content[:max_length] + "..."
             parts.append(f"{role}: {content}")
 
     # 添加统计信息（用于调试）

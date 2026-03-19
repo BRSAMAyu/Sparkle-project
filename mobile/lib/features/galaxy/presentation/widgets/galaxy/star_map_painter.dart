@@ -1133,7 +1133,6 @@ class StarMapPainter extends CustomPainter {
     }
   }
 
-
   void _drawNodes(Canvas canvas, GalaxyLod lod, List<_PaintNode> nodes) {
     final allowPulse = lod.index >= GalaxyLod.l3.index &&
         nodes.length < 100 &&
@@ -2068,7 +2067,7 @@ class StarMapPainter extends CustomPainter {
 
   Color _nodeCanvasColor(GalaxyNodeModel node) {
     final blended = blendedColors[node.id] ??
-        SectorConfig.getColor(node.sector, isDarkMode: isDarkMode);
+        SectorConfig.resolveNodeBaseColor(node: node, isDarkMode: isDarkMode);
     return SectorConfig.applyImportanceRamp(
       blended,
       importance: node.importance,

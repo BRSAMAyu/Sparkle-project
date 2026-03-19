@@ -51,51 +51,52 @@ class MessageDetailView extends StatelessWidget {
               onTap: () {},
               child: SafeArea(
                 child: Center(
-                child: Container(
-                  margin: const EdgeInsets.symmetric(
-                    horizontal: DS.md,
-                    vertical: DS.lg,
-                  ),
-                  constraints: BoxConstraints(
-                    maxHeight: MediaQuery.of(context).size.height * 0.92,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: DS.textPrimary.withValues(alpha: 0.3),
-                        blurRadius: 20,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // 顶部工具栏
-                      _buildHeader(context, isUserMessage),
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: DS.md,
+                      vertical: DS.lg,
+                    ),
+                    constraints: BoxConstraints(
+                      maxHeight: MediaQuery.of(context).size.height * 0.92,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: DS.textPrimary.withValues(alpha: 0.3),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // 顶部工具栏
+                        _buildHeader(context, isUserMessage),
 
-                      // 内容区域（可滚动）
-                      Flexible(
-                        child: Hero(
-                          tag: heroTag,
-                          child: Material(
-                            color: DS.overlay30.withValues(alpha: 0),
-                            child: SingleChildScrollView(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: DS.lg,
-                                vertical: DS.md,
+                        // 内容区域（可滚动）
+                        Flexible(
+                          child: Hero(
+                            tag: heroTag,
+                            child: Material(
+                              color: DS.overlay30.withValues(alpha: 0),
+                              child: SingleChildScrollView(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: DS.lg,
+                                  vertical: DS.md,
+                                ),
+                                child: _buildContent(context, isUserMessage),
                               ),
-                              child: _buildContent(context, isUserMessage),
                             ),
                           ),
                         ),
-                      ),
 
-                      // 底部操作栏
-                      _buildActions(context),
-                    ],
+                        // 底部操作栏
+                        _buildActions(context),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -103,7 +104,6 @@ class MessageDetailView extends StatelessWidget {
           ),
         ),
       ),
-    ),
     );
   }
 
@@ -244,7 +244,7 @@ class MessageDetailView extends StatelessWidget {
     // AI消息使用Markdown渲染
     return MarkdownBody(
       data: message.content,
-      selectable: true,
+      selectable: false,
       styleSheet: MarkdownStyleSheet(
         p: TextStyle(
           fontSize: 16,
@@ -280,6 +280,7 @@ class MessageDetailView extends StatelessWidget {
           ),
           color: DS.primaryBase,
           fontFamily: 'monospace',
+          fontFamilyFallback: _detailContentFontFallback,
         ),
         codeblockDecoration: BoxDecoration(
           color: DS.surfaceTertiary.withValues(alpha: 0.35),
@@ -310,6 +311,16 @@ class MessageDetailView extends StatelessWidget {
         a: TextStyle(
           color: DS.primaryBase,
           decoration: TextDecoration.underline,
+          fontFamilyFallback: _detailContentFontFallback,
+        ),
+        strong: TextStyle(
+          color: DS.textPrimary,
+          fontWeight: FontWeight.w700,
+          fontFamilyFallback: _detailContentFontFallback,
+        ),
+        em: TextStyle(
+          color: DS.textPrimary,
+          fontStyle: FontStyle.italic,
           fontFamilyFallback: _detailContentFontFallback,
         ),
       ),
@@ -418,31 +429,31 @@ class _ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => InkWell(
-      onTap: onPressed,
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.lg,
-          vertical: DS.sm,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: 24,
-              color: DS.textSecondary,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.lg,
+            vertical: DS.sm,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 24,
                 color: DS.textSecondary,
               ),
-            ),
-          ],
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: DS.textSecondary,
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
-    );
+      );
 }

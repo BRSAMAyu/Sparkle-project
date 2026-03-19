@@ -29,6 +29,7 @@ from app.agents.reviewer_agent import (
     ReviewerAgent,
     ReviewResult,
 )
+from app.core.llm_router import ModelProvider
 
 # ============================================
 # 反思策略定义
@@ -193,6 +194,7 @@ class ReflectionAgent:
         self,
         generator_llm=None,
         reviewer: ReviewerAgent | None = None,
+        avoid_providers: list[ModelProvider] | None = None,
         max_rounds: int = DEFAULT_MAX_ROUNDS,
         min_improvement: float = DEFAULT_MIN_IMPROVEMENT,
         target_score: float = DEFAULT_TARGET_SCORE
@@ -210,7 +212,10 @@ class ReflectionAgent:
         if generator_llm is None:
             from app.agents.reviewer_agent import TaskType
             from app.services.llm_service import get_llm_service_for_task
-            generator_llm = get_llm_service_for_task(TaskType.STANDARD_RESPONSE)
+            generator_llm = get_llm_service_for_task(
+                TaskType.STANDARD_RESPONSE,
+                avoid_providers=avoid_providers,
+            )
 
         self.generator = generator_llm
         self.reviewer = reviewer or ReviewerAgent()
@@ -593,8 +598,14 @@ class ReflectionAgent:
 _reflection_agent_instance: ReflectionAgent | None = None
 
 
-def get_reflection_agent() -> ReflectionAgent:
+def get_reflection_agent(
+    avoid_providers: list[ModelProvider] | None = None,
+    reviewer: ReviewerAgent | None = None,
+) -> ReflectionAgent:
     """获取反思Agent单例"""
+    if avoid_providers or reviewer is not None:
+        return ReflectionAgent(avoid_providers=avoid_providers, reviewer=reviewer)
+
     global _reflection_agent_instance
     if _reflection_agent_instance is None:
         _reflection_agent_instance = ReflectionAgent()

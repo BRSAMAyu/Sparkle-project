@@ -223,6 +223,29 @@ class SectorConfig {
   }) =>
       getStyle(sector).primaryColorFor(isDarkMode: isDarkMode);
 
+  static Color? tryParseHexColor(String? raw) {
+    if (raw == null) {
+      return null;
+    }
+
+    final normalized = raw.trim().replaceAll('#', '').replaceAll('0x', '');
+    if (normalized.isEmpty) {
+      return null;
+    }
+
+    if (normalized.length != 6 && normalized.length != 8) {
+      return null;
+    }
+
+    final prefixed = normalized.length == 6 ? 'FF$normalized' : normalized;
+    final value = int.tryParse(prefixed, radix: 16);
+    if (value == null) {
+      return null;
+    }
+
+    return Color(value);
+  }
+
   static Color getGlowColor(
     SectorEnum sector, {
     bool isDarkMode = true,
@@ -274,65 +297,122 @@ class SectorConfig {
     ).toColor();
   }
 
+  static Color resolveNodeBaseColor({
+    required GalaxyNodeModel node,
+    required bool isDarkMode,
+  }) {
+    final sectorColor = getColor(node.sector, isDarkMode: isDarkMode);
+    final explicitColor = tryParseHexColor(node.baseColor);
+    final inheritedColor = explicitColor == null
+        ? sectorColor
+        : lerpInHsl(
+            sectorColor,
+            explicitColor,
+            0.62,
+            clampSaturationMin: isDarkMode ? 0.24 : 0.18,
+          );
+    final jitteredColor = _applyNodeVariance(
+      inheritedColor,
+      node: node,
+      isDarkMode: isDarkMode,
+      allowWideHue: node.sector == SectorEnum.voidSector,
+    );
+
+    return _applySemanticColorHints(
+      node: node,
+      baseColor: jitteredColor,
+      isDarkMode: isDarkMode,
+    );
+  }
+
   static Color computeBlendedColor({
     required GalaxyNodeModel node,
     required Iterable<GalaxyNodeModel> neighbors,
     required bool isDarkMode,
   }) {
     final baseSector = node.sector;
-    // When sector is void (no subject assigned), generate a distinctive color
-    // based on the node's importance level so nodes are visually distinguishable.
-    if (baseSector == SectorEnum.voidSector) {
-      final imp = node.importance.clamp(1, 5);
-      // Map importance 1-5 to hues across the blue-violet spectrum (200–280°)
-      final hue = 200.0 + (imp - 1) * 20.0;
-      final saturation = isDarkMode ? 0.45 : 0.35;
-      final lightness = isDarkMode
-          ? 0.30 + (imp - 1) * 0.06
-          : 0.55 + (imp - 1) * 0.04;
-      return HSLColor.fromAHSL(1.0, hue, saturation, lightness.clamp(0.3, 0.75))
-          .toColor();
-    }
-    final baseColor = getColor(baseSector, isDarkMode: isDarkMode);
+    final baseColor = resolveNodeBaseColor(
+      node: node,
+      isDarkMode: isDarkMode,
+    );
 
     var totalNeighbors = 0;
     var crossNeighbors = 0;
-    final sectorCounts = <SectorEnum, int>{};
+    final neighborInfluences = <SectorEnum, double>{};
 
     for (final neighbor in neighbors) {
       totalNeighbors++;
-      if (neighbor.sector == baseSector ||
-          neighbor.sector == SectorEnum.voidSector) {
-        continue;
+      final isCrossSector = neighbor.sector != baseSector &&
+          neighbor.sector != SectorEnum.voidSector;
+      if (isCrossSector) {
+        crossNeighbors++;
       }
-      crossNeighbors++;
-      sectorCounts.update(
+
+      final influenceWeight = isCrossSector ? 1.0 : 0.22;
+      neighborInfluences.update(
         neighbor.sector,
-        (count) => count + 1,
-        ifAbsent: () => 1,
+        (count) => count + influenceWeight,
+        ifAbsent: () => influenceWeight,
       );
     }
 
-    if (totalNeighbors == 0 || crossNeighbors == 0 || sectorCounts.isEmpty) {
+    final semanticWeights = _inferSecondarySectorWeights(node);
+    final weightedColors = <(Color, double)>[(baseColor, 1.8)];
+
+    for (final entry in semanticWeights.entries) {
+      if (entry.key == node.sector) {
+        continue;
+      }
+      weightedColors.add(
+        (
+          _applyNodeVariance(
+            getColor(entry.key, isDarkMode: isDarkMode),
+            node: node,
+            isDarkMode: isDarkMode,
+            salt: 'semantic:${entry.key.name}',
+          ),
+          entry.value * 0.65,
+        ),
+      );
+    }
+
+    for (final entry in neighborInfluences.entries) {
+      final sector = entry.key;
+      if (sector == baseSector && node.sector != SectorEnum.voidSector) {
+        continue;
+      }
+      weightedColors.add(
+        (
+          _applyNodeVariance(
+            getColor(sector, isDarkMode: isDarkMode),
+            node: node,
+            isDarkMode: isDarkMode,
+            salt: 'neighbor:${sector.name}',
+            allowWideHue: sector == SectorEnum.voidSector,
+          ),
+          entry.value,
+        ),
+      );
+    }
+
+    if (weightedColors.length == 1) {
       return baseColor;
     }
 
-    final crossColor = _averageColors(
-      sectorCounts.entries
-          .map(
-            (entry) => (
-              getColor(entry.key, isDarkMode: isDarkMode),
-              entry.value.toDouble(),
-            ),
-          )
-          .toList(growable: false),
-    );
-    final crossRatio = crossNeighbors / totalNeighbors;
+    final blendedInfluenceColor = _averageColors(weightedColors);
+    final semanticLift = semanticWeights.isEmpty
+        ? 0.0
+        : (0.06 +
+                semanticWeights.values.fold<double>(0, (a, b) => a + b) * 0.02)
+            .clamp(0.0, 0.16);
+    final crossRatio =
+        totalNeighbors == 0 ? 0.0 : crossNeighbors / totalNeighbors;
     return lerpInHsl(
       baseColor,
-      crossColor,
-      0.3 * crossRatio.clamp(0.0, 1.0),
-      clampSaturationMin: 0.2,
+      blendedInfluenceColor,
+      (0.12 + 0.26 * crossRatio.clamp(0.0, 1.0) + semanticLift)
+          .clamp(0.0, 0.48),
+      clampSaturationMin: isDarkMode ? 0.24 : 0.18,
     );
   }
 
@@ -432,5 +512,136 @@ class SectorConfig {
   static double _lerpHue(double a, double b, double t) {
     final delta = ((b - a + 540) % 360) - 180;
     return (a + delta * t + 360) % 360;
+  }
+
+  static Color _applyNodeVariance(
+    Color color, {
+    required GalaxyNodeModel node,
+    required bool isDarkMode,
+    String salt = 'base',
+    bool allowWideHue = false,
+  }) {
+    final hsl = HSLColor.fromColor(color);
+    final hueRange = allowWideHue ? 28.0 : 10.0;
+    final hueDelta = _stableRange(
+      node,
+      salt: '$salt:hue',
+      min: -hueRange,
+      max: hueRange,
+    );
+    final saturationDelta = _stableRange(
+      node,
+      salt: '$salt:saturation',
+      min: isDarkMode ? -0.06 : -0.08,
+      max: isDarkMode ? 0.08 : 0.1,
+    );
+    final lightnessDelta = _stableRange(
+      node,
+      salt: '$salt:lightness',
+      min: isDarkMode ? -0.05 : -0.08,
+      max: isDarkMode ? 0.08 : 0.07,
+    );
+    final unlockLift = node.isUnlocked ? (isDarkMode ? 0.01 : 0.015) : -0.015;
+
+    return HSLColor.fromAHSL(
+      hsl.alpha,
+      (hsl.hue + hueDelta + 360) % 360,
+      (hsl.saturation + saturationDelta).clamp(
+        isDarkMode ? 0.24 : 0.18,
+        isDarkMode ? 0.88 : 0.8,
+      ),
+      (hsl.lightness + lightnessDelta + unlockLift).clamp(
+        isDarkMode ? 0.24 : 0.2,
+        isDarkMode ? 0.8 : 0.72,
+      ),
+    ).toColor();
+  }
+
+  static Color _applySemanticColorHints({
+    required GalaxyNodeModel node,
+    required Color baseColor,
+    required bool isDarkMode,
+  }) {
+    final weights = _inferSecondarySectorWeights(node);
+    if (weights.isEmpty) {
+      return baseColor;
+    }
+
+    final influenceColors = <(Color, double)>[(baseColor, 1.0)];
+    for (final entry in weights.entries) {
+      if (entry.key == node.sector) {
+        continue;
+      }
+      influenceColors.add(
+        (
+          _applyNodeVariance(
+            getColor(entry.key, isDarkMode: isDarkMode),
+            node: node,
+            isDarkMode: isDarkMode,
+            salt: 'hint:${entry.key.name}',
+          ),
+          entry.value,
+        ),
+      );
+    }
+
+    if (influenceColors.length == 1) {
+      return baseColor;
+    }
+
+    return lerpInHsl(
+      baseColor,
+      _averageColors(influenceColors),
+      0.18,
+      clampSaturationMin: isDarkMode ? 0.26 : 0.2,
+    );
+  }
+
+  static Map<SectorEnum, double> _inferSecondarySectorWeights(
+    GalaxyNodeModel node,
+  ) {
+    final searchableText = [
+      node.name,
+      if (node.description case final description?) description,
+      ...node.autoTags,
+    ].join(' ').toLowerCase();
+
+    if (searchableText.trim().isEmpty) {
+      return const <SectorEnum, double>{};
+    }
+
+    final weights = <SectorEnum, double>{};
+    for (final entry in styles.entries) {
+      for (final keyword in entry.value.keywords) {
+        if (searchableText.contains(keyword.toLowerCase())) {
+          weights.update(
+            entry.key,
+            (value) => value + 0.55,
+            ifAbsent: () => 0.55,
+          );
+        }
+      }
+    }
+
+    return weights;
+  }
+
+  static double _stableRange(
+    GalaxyNodeModel node, {
+    required String salt,
+    required double min,
+    required double max,
+  }) {
+    final unit = _stableUnit('${node.id}|${node.name}|$salt');
+    return min + (max - min) * unit;
+  }
+
+  static double _stableUnit(String input) {
+    var hash = 0x811C9DC5;
+    for (final code in input.codeUnits) {
+      hash ^= code;
+      hash = (hash * 0x01000193) & 0xFFFFFFFF;
+    }
+    return (hash & 0xFFFFFFFF) / 0xFFFFFFFF;
   }
 }

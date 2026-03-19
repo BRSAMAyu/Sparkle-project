@@ -7,11 +7,16 @@ import uuid
 from datetime import date, datetime, timedelta
 
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import get_password_hash
 from app.data.populate_achievements import sync_achievement_definitions
+from app.models.accountability import (
+    AccountabilityCheckin,
+    AccountabilityPartnership,
+    AccountabilityStatus,
+)
 from app.models import (
     Achievement,
     AchievementRarity,
@@ -28,7 +33,10 @@ from app.models import (
     Group,
     GroupMember,
     GroupMessage,
+    GroupMessageRead,
     GroupRole,
+    GroupTask,
+    GroupTaskClaim,
     GroupType,
     KnowledgeNode,
     MessageRole,
@@ -36,6 +44,8 @@ from app.models import (
     Plan,
     PlanType,
     Post,
+    PrivateMessage,
+    SharedResource,
     Task,
     TaskStatus,
     TaskType,
@@ -48,8 +58,10 @@ from app.models import (
     ChatMessage,
     ChatSession,
 )
+from app.models.community import MessageFavorite
 from app.models.galaxy import NodeRelation
 from app.models.shop import PhotonTransactionHistory, PhotonTransactionType
+from app.models.user import UserStatus
 
 
 async def _ensure_achievements(session: AsyncSession):
@@ -93,6 +105,575 @@ async def _ensure_galaxy_skins(session: AsyncSession):
         if existing.scalar_one_or_none():
             continue
         session.add(GalaxySkin(**item, created_at=now, updated_at=now))
+
+
+def _avatar_seed(seed: str) -> str:
+    return f"https://api.dicebear.com/9.x/avataaars/png?seed={seed}"
+
+
+async def _ensure_demo_user(
+    session: AsyncSession,
+    *,
+    username: str,
+    email: str,
+    nickname: str,
+    flame_level: int,
+    flame_brightness: float,
+    depth_preference: float,
+    curiosity_preference: float,
+    status: UserStatus,
+) -> User:
+    result = await session.execute(select(User).where(User.username == username))
+    friend = result.scalar_one_or_none()
+    if not friend:
+        friend = User(
+            username=username,
+            email=email,
+            hashed_password=get_password_hash("DemoFriend123"),
+            nickname=nickname,
+            avatar_url=_avatar_seed(username),
+            flame_level=flame_level,
+            flame_brightness=flame_brightness,
+            depth_preference=depth_preference,
+            curiosity_preference=curiosity_preference,
+            registration_source="seed",
+            is_active=True,
+            status=status,
+        )
+        session.add(friend)
+        await session.flush()
+    else:
+        friend.nickname = nickname
+        friend.avatar_url = friend.avatar_url or _avatar_seed(username)
+        friend.flame_level = max(friend.flame_level or 1, flame_level)
+        friend.flame_brightness = max(friend.flame_brightness or 0.5, flame_brightness)
+        friend.depth_preference = depth_preference
+        friend.curiosity_preference = curiosity_preference
+        friend.status = status
+    return friend
+
+
+async def _ensure_friendship(
+    session: AsyncSession,
+    *,
+    left_user_id,
+    right_user_id,
+    initiated_by,
+    status: FriendshipStatus,
+    match_reason: dict | None = None,
+) -> Friendship:
+    uid_small, uid_large = sorted([left_user_id, right_user_id])
+    friendship = (
+        await session.execute(
+            select(Friendship).where(
+                Friendship.user_id == uid_small,
+                Friendship.friend_id == uid_large,
+            )
+        )
+    ).scalar_one_or_none()
+    if friendship:
+        friendship.status = status
+        friendship.initiated_by = initiated_by
+        if match_reason:
+            friendship.match_reason = match_reason
+        return friendship
+
+    friendship = Friendship(
+        user_id=uid_small,
+        friend_id=uid_large,
+        status=status,
+        initiated_by=initiated_by,
+        match_reason=match_reason,
+    )
+    session.add(friendship)
+    await session.flush()
+    return friendship
+
+
+async def _ensure_group(
+    session: AsyncSession,
+    *,
+    name: str,
+    defaults: dict,
+) -> Group:
+    group = (
+        await session.execute(select(Group).where(Group.name == name))
+    ).scalar_one_or_none()
+    if not group:
+        group = Group(name=name, **defaults)
+        session.add(group)
+        await session.flush()
+        return group
+
+    for key, value in defaults.items():
+        setattr(group, key, value)
+    return group
+
+
+async def _ensure_group_member(
+    session: AsyncSession,
+    *,
+    group_id,
+    member_id,
+    role: GroupRole,
+    flame_contribution: int,
+    tasks_completed: int,
+    checkin_streak: int,
+    last_checkin_date: datetime | None,
+    joined_at: datetime,
+) -> GroupMember:
+    membership = (
+        await session.execute(
+            select(GroupMember).where(
+                GroupMember.group_id == group_id,
+                GroupMember.user_id == member_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if membership:
+        membership.role = role
+        membership.flame_contribution = flame_contribution
+        membership.tasks_completed = tasks_completed
+        membership.checkin_streak = checkin_streak
+        membership.last_checkin_date = last_checkin_date
+        membership.joined_at = membership.joined_at or joined_at
+        membership.last_active_at = max(membership.last_active_at or joined_at, joined_at)
+        return membership
+
+    membership = GroupMember(
+        group_id=group_id,
+        user_id=member_id,
+        role=role,
+        flame_contribution=flame_contribution,
+        tasks_completed=tasks_completed,
+        checkin_streak=checkin_streak,
+        last_checkin_date=last_checkin_date,
+        joined_at=joined_at,
+        last_active_at=joined_at,
+    )
+    session.add(membership)
+    await session.flush()
+    return membership
+
+
+async def _ensure_plan(
+    session: AsyncSession,
+    *,
+    owner_id,
+    name: str,
+    defaults: dict,
+) -> Plan:
+    plan = (
+        await session.execute(
+            select(Plan).where(Plan.user_id == owner_id, Plan.name == name)
+        )
+    ).scalar_one_or_none()
+    if plan:
+        for key, value in defaults.items():
+            setattr(plan, key, value)
+        return plan
+
+    plan = Plan(user_id=owner_id, name=name, **defaults)
+    session.add(plan)
+    await session.flush()
+    return plan
+
+
+async def _ensure_task(
+    session: AsyncSession,
+    *,
+    owner_id,
+    title: str,
+    defaults: dict,
+) -> Task:
+    task = (
+        await session.execute(
+            select(Task).where(Task.user_id == owner_id, Task.title == title)
+        )
+    ).scalar_one_or_none()
+    if task:
+        for key, value in defaults.items():
+            setattr(task, key, value)
+        return task
+
+    task = Task(user_id=owner_id, title=title, **defaults)
+    session.add(task)
+    await session.flush()
+    return task
+
+
+async def _ensure_shared_resource(
+    session: AsyncSession,
+    *,
+    shared_by,
+    group_id=None,
+    target_user_id=None,
+    plan_id=None,
+    task_id=None,
+    comment: str | None = None,
+    permission: str = "view",
+) -> SharedResource:
+    query = select(SharedResource).where(
+        SharedResource.shared_by == shared_by,
+        SharedResource.group_id == group_id,
+        SharedResource.target_user_id == target_user_id,
+        SharedResource.plan_id == plan_id,
+        SharedResource.task_id == task_id,
+    )
+    shared = (await session.execute(query)).scalar_one_or_none()
+    if shared:
+        shared.comment = comment
+        shared.permission = permission
+        return shared
+
+    shared = SharedResource(
+        shared_by=shared_by,
+        group_id=group_id,
+        target_user_id=target_user_id,
+        plan_id=plan_id,
+        task_id=task_id,
+        comment=comment,
+        permission=permission,
+    )
+    session.add(shared)
+    await session.flush()
+    return shared
+
+
+async def _ensure_group_message(
+    session: AsyncSession,
+    *,
+    group_id,
+    sender_id,
+    message_type: MessageType,
+    content: str | None,
+    created_at: datetime,
+    content_data: dict | None = None,
+    reply_to_id=None,
+    thread_root_id=None,
+    reactions: dict | None = None,
+    mention_user_ids: list | None = None,
+    forwarded_from_id=None,
+    edited_at: datetime | None = None,
+) -> GroupMessage:
+    query = select(GroupMessage).where(
+        GroupMessage.group_id == group_id,
+        GroupMessage.sender_id == sender_id,
+        GroupMessage.message_type == message_type,
+        GroupMessage.content == content,
+    )
+    message = (await session.execute(query)).scalar_one_or_none()
+    if message:
+        message.content_data = content_data
+        message.reply_to_id = reply_to_id
+        message.thread_root_id = thread_root_id
+        message.reactions = reactions
+        message.mention_user_ids = mention_user_ids
+        message.forwarded_from_id = forwarded_from_id
+        message.edited_at = edited_at
+        return message
+
+    message = GroupMessage(
+        group_id=group_id,
+        sender_id=sender_id,
+        message_type=message_type,
+        content=content,
+        content_data=content_data,
+        reply_to_id=reply_to_id,
+        thread_root_id=thread_root_id,
+        reactions=reactions,
+        mention_user_ids=mention_user_ids,
+        forwarded_from_id=forwarded_from_id,
+        edited_at=edited_at,
+        created_at=created_at,
+        updated_at=created_at,
+    )
+    session.add(message)
+    await session.flush()
+    return message
+
+
+async def _ensure_private_message(
+    session: AsyncSession,
+    *,
+    sender_id,
+    receiver_id,
+    message_type: MessageType,
+    content: str | None,
+    created_at: datetime,
+    content_data: dict | None = None,
+    is_read: bool = True,
+    read_at: datetime | None = None,
+    reply_to_id=None,
+    thread_root_id=None,
+    reactions: dict | None = None,
+    forwarded_from_id=None,
+) -> PrivateMessage:
+    query = select(PrivateMessage).where(
+        PrivateMessage.sender_id == sender_id,
+        PrivateMessage.receiver_id == receiver_id,
+        PrivateMessage.message_type == message_type,
+        PrivateMessage.content == content,
+    )
+    message = (await session.execute(query)).scalar_one_or_none()
+    if message:
+        message.content_data = content_data
+        message.is_read = is_read
+        message.read_at = read_at
+        message.reply_to_id = reply_to_id
+        message.thread_root_id = thread_root_id
+        message.reactions = reactions
+        message.forwarded_from_id = forwarded_from_id
+        return message
+
+    message = PrivateMessage(
+        sender_id=sender_id,
+        receiver_id=receiver_id,
+        message_type=message_type,
+        content=content,
+        content_data=content_data,
+        is_read=is_read,
+        read_at=read_at,
+        reply_to_id=reply_to_id,
+        thread_root_id=thread_root_id,
+        reactions=reactions,
+        forwarded_from_id=forwarded_from_id,
+        created_at=created_at,
+        updated_at=created_at,
+    )
+    session.add(message)
+    await session.flush()
+    return message
+
+
+async def _ensure_group_message_read(
+    session: AsyncSession,
+    *,
+    message_id,
+    user_id,
+    read_at: datetime,
+) -> None:
+    read = (
+        await session.execute(
+            select(GroupMessageRead).where(
+                GroupMessageRead.message_id == message_id,
+                GroupMessageRead.user_id == user_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if read:
+        read.read_at = read_at
+        return
+
+    session.add(
+        GroupMessageRead(
+            message_id=message_id,
+            user_id=user_id,
+            read_at=read_at,
+            created_at=read_at,
+            updated_at=read_at,
+        )
+    )
+
+
+async def _ensure_group_task(
+    session: AsyncSession,
+    *,
+    group_id,
+    created_by,
+    title: str,
+    defaults: dict,
+) -> GroupTask:
+    task = (
+        await session.execute(
+            select(GroupTask).where(
+                GroupTask.group_id == group_id,
+                GroupTask.title == title,
+            )
+        )
+    ).scalar_one_or_none()
+    if task:
+        for key, value in defaults.items():
+            setattr(task, key, value)
+        return task
+
+    task = GroupTask(
+        group_id=group_id,
+        created_by=created_by,
+        title=title,
+        **defaults,
+    )
+    session.add(task)
+    await session.flush()
+    return task
+
+
+async def _ensure_group_task_claim(
+    session: AsyncSession,
+    *,
+    group_task_id,
+    user_id,
+    personal_task_id=None,
+    is_completed: bool = False,
+    completed_at: datetime | None = None,
+    claimed_at: datetime,
+) -> GroupTaskClaim:
+    claim = (
+        await session.execute(
+            select(GroupTaskClaim).where(
+                GroupTaskClaim.group_task_id == group_task_id,
+                GroupTaskClaim.user_id == user_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if claim:
+        claim.personal_task_id = personal_task_id
+        claim.is_completed = is_completed
+        claim.completed_at = completed_at
+        return claim
+
+    claim = GroupTaskClaim(
+        group_task_id=group_task_id,
+        user_id=user_id,
+        personal_task_id=personal_task_id,
+        is_completed=is_completed,
+        completed_at=completed_at,
+        claimed_at=claimed_at,
+    )
+    session.add(claim)
+    await session.flush()
+    return claim
+
+
+async def _ensure_message_favorite(
+    session: AsyncSession,
+    *,
+    user_id,
+    group_message_id=None,
+    private_message_id=None,
+    note: str | None = None,
+    tags: list[str] | None = None,
+) -> MessageFavorite:
+    favorite = (
+        await session.execute(
+            select(MessageFavorite).where(
+                MessageFavorite.user_id == user_id,
+                MessageFavorite.group_message_id == group_message_id,
+                MessageFavorite.private_message_id == private_message_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if favorite:
+        favorite.note = note
+        favorite.tags = tags
+        return favorite
+
+    favorite = MessageFavorite(
+        user_id=user_id,
+        group_message_id=group_message_id,
+        private_message_id=private_message_id,
+        note=note,
+        tags=tags,
+    )
+    session.add(favorite)
+    await session.flush()
+    return favorite
+
+
+async def _ensure_partnership(
+    session: AsyncSession,
+    *,
+    initiator_id,
+    partner_id,
+    friendship_id,
+    initiator_goal: str,
+    partner_goal: str | None,
+    check_in_days: int,
+    status: AccountabilityStatus,
+    started_at: datetime | None,
+    ended_at: datetime | None = None,
+) -> AccountabilityPartnership:
+    partnership = (
+        await session.execute(
+            select(AccountabilityPartnership).where(
+                AccountabilityPartnership.initiator_id == initiator_id,
+                AccountabilityPartnership.partner_id == partner_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if partnership:
+        partnership.friendship_id = friendship_id
+        partnership.initiator_goal = initiator_goal
+        partnership.partner_goal = partner_goal
+        partnership.check_in_days = check_in_days
+        partnership.status = status
+        partnership.started_at = started_at
+        partnership.ended_at = ended_at
+        return partnership
+
+    partnership = AccountabilityPartnership(
+        initiator_id=initiator_id,
+        partner_id=partner_id,
+        friendship_id=friendship_id,
+        initiator_goal=initiator_goal,
+        partner_goal=partner_goal,
+        check_in_days=check_in_days,
+        status=status,
+        started_at=started_at,
+        ended_at=ended_at,
+        created_at=started_at or datetime.utcnow(),
+        updated_at=started_at or datetime.utcnow(),
+    )
+    session.add(partnership)
+    await session.flush()
+    return partnership
+
+
+async def _ensure_accountability_checkin(
+    session: AsyncSession,
+    *,
+    partnership_id,
+    user_id,
+    content: str,
+    mood: int,
+    minutes: int,
+    created_at: datetime,
+    likes: int = 0,
+    liked_by: list[str] | None = None,
+    encouragements: list[dict] | None = None,
+) -> AccountabilityCheckin:
+    checkin = (
+        await session.execute(
+            select(AccountabilityCheckin).where(
+                AccountabilityCheckin.partnership_id == partnership_id,
+                AccountabilityCheckin.user_id == user_id,
+                AccountabilityCheckin.content == content,
+            )
+        )
+    ).scalar_one_or_none()
+    if checkin:
+        checkin.mood = mood
+        checkin.minutes = minutes
+        checkin.likes = likes
+        checkin.liked_by = liked_by or []
+        checkin.encouragements = encouragements or []
+        return checkin
+
+    checkin = AccountabilityCheckin(
+        partnership_id=partnership_id,
+        user_id=user_id,
+        content=content,
+        mood=mood,
+        minutes=minutes,
+        likes=likes,
+        liked_by=liked_by or [],
+        encouragements=encouragements or [],
+        created_at=created_at,
+        updated_at=created_at,
+    )
+    session.add(checkin)
+    await session.flush()
+    return checkin
 
 
 async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
@@ -614,72 +1195,240 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
                     curiosity_preference=0.6,
                     requested_count=3,
                     actual_count=3,
-                    capsule_ids=capsule_ids,
+                    capsule_ids=[str(item) for item in capsule_ids],
                     progress=1.0,
                     duration_ms=4200,
                     completed_at=now - timedelta(hours=2),
                 )
             )
 
-    # Community: seed friend accounts + friendships
-    friend_specs = [
-        ("spark_friend_1", "friend1@sparkle.demo", "阿泽"),
-        ("spark_friend_2", "friend2@sparkle.demo", "小林"),
-        ("spark_friend_3", "friend3@sparkle.demo", "Nora"),
-    ]
-    friends = []
-    for username, email, nickname in friend_specs:
-        result = await session.execute(select(User).where(User.username == username))
-        friend = result.scalar_one_or_none()
-        if not friend:
-            friend = User(
-                username=username,
-                email=email,
-                hashed_password=get_password_hash("DemoFriend123"),
-                nickname=nickname,
-                avatar_url=f"https://api.dicebear.com/9.x/avataaars/png?seed={username}",
-                flame_level=8,
-                flame_brightness=0.6,
-                depth_preference=0.55,
-                curiosity_preference=0.55,
-                registration_source="seed",
-                is_active=True,
-            )
-            session.add(friend)
-            await session.flush()
-        friends.append(friend)
-
-        uid_small, uid_large = sorted([user.id, friend.id])
-        friendship_exists = await session.execute(
-            select(Friendship).where(
-                Friendship.user_id == uid_small,
-                Friendship.friend_id == uid_large,
+    user_primary_task = (
+        await session.execute(
+            select(Task).where(
+                Task.user_id == user.id,
+                Task.title == "数据结构 - 二叉树遍历算法",
             )
         )
-        if not friendship_exists.scalar_one_or_none():
-            session.add(
-                Friendship(
-                    user_id=uid_small,
-                    friend_id=uid_large,
-                    status=FriendshipStatus.ACCEPTED,
-                    initiated_by=user.id,
-                    match_reason={"courses": ["数据结构", "操作系统"]},
-                )
-            )
+    ).scalar_one()
 
-    # Community feed posts — guest user + friend posts for a lively feed
-    _feed_posts = [
-        (user, "连续一周打卡成功！今天的专注时间达到了 120 分钟。", "学习分享", 12, 3),
-        (user, "分享一个高效学习番茄钟设置方法，欢迎交流。", "学习分享", 8, 2),
+    user_network_task = (
+        await session.execute(
+            select(Task).where(
+                Task.user_id == user.id,
+                Task.title == "计算机网络 - TCP协议分析",
+            )
+        )
+    ).scalar_one()
+
+    # Community: seed a richer guest social graph, shared resources, task boards,
+    # favorites, and accountability history so the simulator has realistic data.
+    friend_specs = [
+        dict(
+            username="spark_friend_1",
+            email="friend1@sparkle.demo",
+            nickname="阿泽",
+            flame_level=18,
+            flame_brightness=0.83,
+            depth_preference=0.72,
+            curiosity_preference=0.58,
+            status=UserStatus.ONLINE,
+            match_reason={"courses": ["数据结构", "操作系统"], "scene": "晚间复盘搭子"},
+        ),
+        dict(
+            username="spark_friend_2",
+            email="friend2@sparkle.demo",
+            nickname="小林",
+            flame_level=14,
+            flame_brightness=0.74,
+            depth_preference=0.61,
+            curiosity_preference=0.67,
+            status=UserStatus.ONLINE,
+            match_reason={"courses": ["离散数学", "算法"], "scene": "题目互改"},
+        ),
+        dict(
+            username="spark_friend_3",
+            email="friend3@sparkle.demo",
+            nickname="Nora",
+            flame_level=20,
+            flame_brightness=0.86,
+            depth_preference=0.69,
+            curiosity_preference=0.79,
+            status=UserStatus.ONLINE,
+            match_reason={"courses": ["英语", "微反馈"], "scene": "责任伙伴候选"},
+        ),
+        dict(
+            username="spark_friend_4",
+            email="friend4@sparkle.demo",
+            nickname="Mia",
+            flame_level=11,
+            flame_brightness=0.66,
+            depth_preference=0.52,
+            curiosity_preference=0.73,
+            status=UserStatus.OFFLINE,
+            match_reason={"courses": ["产品设计", "表达"], "scene": "分享任务卡"},
+        ),
+        dict(
+            username="spark_friend_5",
+            email="friend5@sparkle.demo",
+            nickname="Ethan",
+            flame_level=13,
+            flame_brightness=0.69,
+            depth_preference=0.58,
+            curiosity_preference=0.57,
+            status=UserStatus.ONLINE,
+            match_reason={"courses": ["计算机网络", "系统"], "scene": "资料收藏党"},
+        ),
+        dict(
+            username="spark_friend_6",
+            email="friend6@sparkle.demo",
+            nickname="苏苏",
+            flame_level=9,
+            flame_brightness=0.61,
+            depth_preference=0.49,
+            curiosity_preference=0.81,
+            status=UserStatus.OFFLINE,
+            match_reason={"courses": ["英语", "共学打卡"], "scene": "晨读搭子"},
+        ),
     ]
-    # Add posts from friends if they were created
-    if len(friends) >= 3:
-        _feed_posts.extend([
-            (friends[0], "刚做完数据结构的链表练习，感觉指针终于理解了！💡", "学习心得", 15, 4),
-            (friends[1], "推荐一本《算法导论》配套笔记，图论部分写得特别清楚。", "资源分享", 20, 6),
-            (friends[2], "今天的番茄钟完成了8个，创个人纪录！🍅", "打卡", 10, 2),
-        ])
-    for post_user, content, topic, likes, comments in _feed_posts:
+    pending_specs = [
+        dict(
+            username="spark_friend_pending_1",
+            email="pending1@sparkle.demo",
+            nickname="Vega",
+            flame_level=10,
+            flame_brightness=0.63,
+            depth_preference=0.57,
+            curiosity_preference=0.62,
+            status=UserStatus.ONLINE,
+            note="最近在搜集能一起验收社群系统的人",
+        ),
+    ]
+
+    friends: list[User] = []
+    friend_by_name: dict[str, User] = {}
+    friendship_by_name: dict[str, Friendship] = {}
+    for spec in friend_specs:
+        friend = await _ensure_demo_user(session, **{k: spec[k] for k in (
+            "username",
+            "email",
+            "nickname",
+            "flame_level",
+            "flame_brightness",
+            "depth_preference",
+            "curiosity_preference",
+            "status",
+        )})
+        friends.append(friend)
+        friend_by_name[spec["nickname"]] = friend
+        friendship_by_name[spec["nickname"]] = await _ensure_friendship(
+            session,
+            left_user_id=user.id,
+            right_user_id=friend.id,
+            initiated_by=user.id,
+            status=FriendshipStatus.ACCEPTED,
+            match_reason=spec["match_reason"],
+        )
+
+    for spec in pending_specs:
+        pending_user = await _ensure_demo_user(session, **{k: spec[k] for k in (
+            "username",
+            "email",
+            "nickname",
+            "flame_level",
+            "flame_brightness",
+            "depth_preference",
+            "curiosity_preference",
+            "status",
+        )})
+        await _ensure_friendship(
+            session,
+            left_user_id=user.id,
+            right_user_id=pending_user.id,
+            initiated_by=pending_user.id,
+            status=FriendshipStatus.PENDING,
+            match_reason={"intro": spec["note"]},
+        )
+
+    aze = friend_by_name["阿泽"]
+    xiaolin = friend_by_name["小林"]
+    nora = friend_by_name["Nora"]
+    mia = friend_by_name["Mia"]
+    ethan = friend_by_name["Ethan"]
+    susu = friend_by_name["苏苏"]
+
+    aze_plan = await _ensure_plan(
+        session,
+        owner_id=aze.id,
+        name="阿泽的树与图复盘计划",
+        defaults=dict(
+            type=PlanType.SPRINT,
+            description="用 5 天完成树、图和堆的高频题回顾。",
+            target_date=date.today() + timedelta(days=5),
+            daily_available_minutes=80,
+            total_estimated_hours=10,
+            mastery_level=0.55,
+            progress=0.64,
+            is_active=True,
+        ),
+    )
+    nora_plan = await _ensure_plan(
+        session,
+        owner_id=nora.id,
+        name="Nora 的口语微反馈计划",
+        defaults=dict(
+            type=PlanType.GROWTH,
+            description="晨读、复述、微反馈三段式练口语。",
+            target_date=date.today() + timedelta(days=21),
+            daily_available_minutes=45,
+            total_estimated_hours=18,
+            mastery_level=0.48,
+            progress=0.58,
+            is_active=True,
+        ),
+    )
+    mia_task = await _ensure_task(
+        session,
+        owner_id=mia.id,
+        title="把任务卡改成更易读的三段结构",
+        defaults=dict(
+            type=TaskType.LEARNING,
+            tags=["Design", "Task Card"],
+            estimated_minutes=35,
+            difficulty=2,
+            energy_cost=2,
+            status=TaskStatus.COMPLETED,
+            priority=2,
+            due_date=date.today() - timedelta(days=1),
+            completed_at=now - timedelta(hours=18),
+        ),
+    )
+    susu_task = await _ensure_task(
+        session,
+        owner_id=susu.id,
+        title="英语晨读 shadowing 20 分钟",
+        defaults=dict(
+            type=TaskType.LEARNING,
+            tags=["English", "Speaking"],
+            estimated_minutes=20,
+            difficulty=2,
+            energy_cost=2,
+            status=TaskStatus.IN_PROGRESS,
+            priority=2,
+            due_date=date.today(),
+            started_at=now - timedelta(minutes=40),
+        ),
+    )
+
+    feed_posts = [
+        (user, "连续一周打卡成功！今天的专注时间达到了 120 分钟。", "学习分享", 12, 3),
+        (user, "刚把微反馈模式在社群里走了一轮，准备继续补收藏和转发链路。", "产品验收", 9, 4),
+        (aze, "刚和搭子语音复盘完二叉树遍历，顺手把任务卡也贴进群里了。", "学习心得", 16, 5),
+        (xiaolin, "整理了一套图论错题卡，欢迎来算法冲刺小队一起测。", "资源分享", 21, 7),
+        (nora, "晨读营今天已经 11 人打卡，微反馈一句话版本挺好用。", "打卡", 13, 2),
+        (mia, "把计划卡和任务卡都换成更适合手机阅读的结构啦。", "设计迭代", 8, 3),
+        (ethan, "我把几条关键消息收藏了，回头可以顺着收藏页继续验收。", "使用技巧", 7, 1),
+    ]
+    for post_user, content, topic, likes, comments in feed_posts:
         post_exists = await session.execute(
             select(Post).where(Post.user_id == post_user.id, Post.content == content)
         )
@@ -688,68 +1437,700 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
                 Post(
                     user_id=post_user.id,
                     content=content,
-                    image_urls=["https://picsum.photos/seed/sparkle/600/400"],
+                    image_urls=[f"https://picsum.photos/seed/{post_user.username}/600/400"],
                     topic=topic,
                     visibility="public",
                     like_count=likes,
                     comment_count=comments,
+                    created_at=now - timedelta(hours=likes),
+                    updated_at=now - timedelta(hours=max(likes - 1, 0)),
                 )
             )
 
-    # Group
-    group = (await session.execute(
-        select(Group).where(Group.name == "算法冲刺小队")
-    )).scalar_one_or_none()
-    if not group:
-        group = Group(
-            name="算法冲刺小队",
+    algorithm_group = await _ensure_group(
+        session,
+        name="算法冲刺小队",
+        defaults=dict(
             description="一起冲刺算法与数据结构的学习群",
             avatar_url="https://picsum.photos/seed/algosprint/200/200",
             type=GroupType.SPRINT,
-            focus_tags=["数据结构", "算法"],
+            focus_tags=["数据结构", "算法", "期中复习"],
             deadline=now + timedelta(days=10),
             sprint_goal="完成算法专题复习并拿下期中考试",
             max_members=30,
             is_public=True,
             join_requires_approval=False,
-        )
-        session.add(group)
-        await session.flush()
-
-    for idx, member in enumerate([user] + friends[:2]):
-        member_exists = await session.execute(
-            select(GroupMember).where(
-                GroupMember.group_id == group.id,
-                GroupMember.user_id == member.id,
-            )
-        )
-        if not member_exists.scalar_one_or_none():
-            session.add(
-                GroupMember(
-                    group_id=group.id,
-                    user_id=member.id,
-                    role=GroupRole.OWNER if idx == 0 else GroupRole.MEMBER,
-                    flame_contribution=120 if idx == 0 else 60,
-                    tasks_completed=8 if idx == 0 else 3,
-                    checkin_streak=5,
-                    last_checkin_date=now - timedelta(days=1),
-                )
-            )
-
-    msg_exists = await session.execute(
-        select(GroupMessage).where(
-            GroupMessage.group_id == group.id,
-            GroupMessage.content == "今晚 20:00 一起复盘二叉树遍历？",
-        )
+            total_flame_power=980,
+            today_checkin_count=8,
+            total_tasks_completed=24,
+            announcement="今晚 20:00 语音复盘 + 微反馈验收。",
+        ),
     )
-    if not msg_exists.scalar_one_or_none():
-        session.add(
-            GroupMessage(
-                group_id=group.id,
-                sender_id=user.id,
-                message_type=MessageType.TEXT,
-                content="今晚 20:00 一起复盘二叉树遍历？",
+    study_group = await _ensure_group(
+        session,
+        name="期末自习室",
+        defaults=dict(
+            description="长期自习陪伴群，适合静默学习、资料收藏和复盘。",
+            avatar_url="https://picsum.photos/seed/finalstudy/200/200",
+            type=GroupType.SQUAD,
+            focus_tags=["自习", "复盘", "资料整理"],
+            deadline=None,
+            sprint_goal=None,
+            max_members=80,
+            is_public=True,
+            join_requires_approval=False,
+            total_flame_power=1640,
+            today_checkin_count=14,
+            total_tasks_completed=66,
+            announcement="收藏值得二次复习的消息，周日晚统一回顾。",
+        ),
+    )
+    english_group = await _ensure_group(
+        session,
+        name="英语口语晨读营",
+        defaults=dict(
+            description="口语晨读、shadowing、微反馈快回路。",
+            avatar_url="https://picsum.photos/seed/englishclub/200/200",
+            type=GroupType.SPRINT,
+            focus_tags=["英语", "口语", "晨读"],
+            deadline=now + timedelta(days=14),
+            sprint_goal="连续 14 天完成晨读与跟读打卡",
+            max_members=40,
+            is_public=True,
+            join_requires_approval=False,
+            total_flame_power=760,
+            today_checkin_count=11,
+            total_tasks_completed=31,
+            announcement="今天重点测试任务卡分享和打卡互动。",
+        ),
+    )
+    design_group = await _ensure_group(
+        session,
+        name="产品设计共学社",
+        defaults=dict(
+            description="讨论计划卡、任务卡、社群体验和表达设计。",
+            avatar_url="https://picsum.photos/seed/designlab/200/200",
+            type=GroupType.SQUAD,
+            focus_tags=["产品", "设计", "验收"],
+            deadline=None,
+            sprint_goal=None,
+            max_members=60,
+            is_public=True,
+            join_requires_approval=False,
+            total_flame_power=540,
+            today_checkin_count=5,
+            total_tasks_completed=18,
+            announcement="优先看移动端展示是否完整，再看数据结构是否一致。",
+        ),
+    )
+    await _ensure_group(
+        session,
+        name="考研政治夜航团",
+        defaults=dict(
+            description="夜间陪伴复习群，适合政治和公共课冲刺。",
+            avatar_url="https://picsum.photos/seed/politicsnight/200/200",
+            type=GroupType.SPRINT,
+            focus_tags=["考研", "政治"],
+            deadline=now + timedelta(days=30),
+            sprint_goal="完成冲刺背诵",
+            max_members=120,
+            is_public=True,
+            join_requires_approval=False,
+            total_flame_power=1320,
+            today_checkin_count=27,
+            total_tasks_completed=84,
+            announcement="新成员可以直接浏览群任务。",
+        ),
+    )
+    await _ensure_group(
+        session,
+        name="AIGC 创作实验室",
+        defaults=dict(
+            description="分享 Prompt、计划卡和创作复盘。",
+            avatar_url="https://picsum.photos/seed/aigclab/200/200",
+            type=GroupType.SQUAD,
+            focus_tags=["AI", "创作", "Prompt"],
+            deadline=None,
+            sprint_goal=None,
+            max_members=90,
+            is_public=True,
+            join_requires_approval=True,
+            total_flame_power=1880,
+            today_checkin_count=19,
+            total_tasks_completed=59,
+            announcement="入群前先完成作品集自评表。",
+        ),
+    )
+
+    for member, role, flame, tasks_completed, streak, joined_delta in [
+        (user, GroupRole.OWNER, 210, 9, 7, 28),
+        (aze, GroupRole.ADMIN, 160, 8, 6, 27),
+        (xiaolin, GroupRole.MEMBER, 120, 5, 4, 20),
+        (nora, GroupRole.MEMBER, 96, 4, 5, 16),
+    ]:
+        await _ensure_group_member(
+            session,
+            group_id=algorithm_group.id,
+            member_id=member.id,
+            role=role,
+            flame_contribution=flame,
+            tasks_completed=tasks_completed,
+            checkin_streak=streak,
+            last_checkin_date=now - timedelta(hours=6),
+            joined_at=now - timedelta(days=joined_delta),
+        )
+    for member, role, flame, tasks_completed, streak, joined_delta in [
+        (user, GroupRole.ADMIN, 155, 6, 5, 34),
+        (aze, GroupRole.MEMBER, 110, 4, 3, 30),
+        (mia, GroupRole.MEMBER, 88, 2, 2, 18),
+        (ethan, GroupRole.OWNER, 132, 6, 6, 40),
+    ]:
+        await _ensure_group_member(
+            session,
+            group_id=study_group.id,
+            member_id=member.id,
+            role=role,
+            flame_contribution=flame,
+            tasks_completed=tasks_completed,
+            checkin_streak=streak,
+            last_checkin_date=now - timedelta(hours=12),
+            joined_at=now - timedelta(days=joined_delta),
+        )
+    for member, role, flame, tasks_completed, streak, joined_delta in [
+        (user, GroupRole.MEMBER, 92, 3, 4, 12),
+        (nora, GroupRole.OWNER, 168, 8, 11, 25),
+        (susu, GroupRole.ADMIN, 121, 6, 9, 22),
+        (mia, GroupRole.MEMBER, 80, 2, 3, 11),
+    ]:
+        await _ensure_group_member(
+            session,
+            group_id=english_group.id,
+            member_id=member.id,
+            role=role,
+            flame_contribution=flame,
+            tasks_completed=tasks_completed,
+            checkin_streak=streak,
+            last_checkin_date=now - timedelta(hours=3),
+            joined_at=now - timedelta(days=joined_delta),
+        )
+    for member, role, flame, tasks_completed, streak, joined_delta in [
+        (user, GroupRole.MEMBER, 74, 3, 2, 15),
+        (mia, GroupRole.OWNER, 140, 7, 5, 31),
+        (ethan, GroupRole.ADMIN, 108, 4, 3, 26),
+        (susu, GroupRole.MEMBER, 66, 2, 2, 14),
+    ]:
+        await _ensure_group_member(
+            session,
+            group_id=design_group.id,
+            member_id=member.id,
+            role=role,
+            flame_contribution=flame,
+            tasks_completed=tasks_completed,
+            checkin_streak=streak,
+            last_checkin_date=now - timedelta(days=1),
+            joined_at=now - timedelta(days=joined_delta),
+        )
+
+    shared_algo_task = await _ensure_shared_resource(
+        session,
+        shared_by=mia.id,
+        group_id=algorithm_group.id,
+        task_id=mia_task.id,
+        comment="这张任务卡适合测试分享和采纳。",
+    )
+    shared_algo_plan = await _ensure_shared_resource(
+        session,
+        shared_by=aze.id,
+        group_id=algorithm_group.id,
+        plan_id=aze_plan.id,
+        comment="计划卡里有每日节奏，可以直接验收。",
+    )
+    shared_private_plan = await _ensure_shared_resource(
+        session,
+        shared_by=nora.id,
+        target_user_id=user.id,
+        plan_id=nora_plan.id,
+        comment="你可以拿这个计划卡测私聊分享。",
+    )
+    shared_private_task = await _ensure_shared_resource(
+        session,
+        shared_by=susu.id,
+        target_user_id=user.id,
+        task_id=susu_task.id,
+        comment="这个晨读任务卡也能测采纳。",
+    )
+
+    algo_msg_1 = await _ensure_group_message(
+        session,
+        group_id=algorithm_group.id,
+        sender_id=aze.id,
+        message_type=MessageType.TEXT,
+        content="今晚 20:00 一起复盘二叉树遍历？我想顺手把微反馈流程也走一遍。",
+        created_at=now - timedelta(hours=5),
+    )
+    algo_msg_2 = await _ensure_group_message(
+        session,
+        group_id=algorithm_group.id,
+        sender_id=user.id,
+        message_type=MessageType.TEXT,
+        content="可以，我正好要测社群里的任务卡、计划卡、收藏和转发。",
+        created_at=now - timedelta(hours=4, minutes=46),
+        reply_to_id=algo_msg_1.id,
+        thread_root_id=algo_msg_1.id,
+    )
+    algo_msg_3 = await _ensure_group_message(
+        session,
+        group_id=algorithm_group.id,
+        sender_id=mia.id,
+        message_type=MessageType.TASK_SHARE,
+        content="我先把任务卡发出来，你们直接在群里看展示效果。",
+        created_at=now - timedelta(hours=4, minutes=28),
+        content_data={
+            "resource_type": "task",
+            "resource_id": str(mia_task.id),
+            "shared_resource_id": str(shared_algo_task.id),
+            "resource_title": mia_task.title,
+            "resource_summary": "一张适合验证任务卡标题、摘要、采纳按钮是否正常展示的示例。",
+            "resource_meta": {
+                "estimated_minutes": mia_task.estimated_minutes,
+                "completed_at": mia_task.completed_at.isoformat() if mia_task.completed_at else None,
+            },
+            "comment": "这张任务卡适合测试分享和采纳。",
+        },
+    )
+    algo_msg_4 = await _ensure_group_message(
+        session,
+        group_id=algorithm_group.id,
+        sender_id=aze.id,
+        message_type=MessageType.PLAN_SHARE,
+        content="再补一张计划卡，方便你一起测。",
+        created_at=now - timedelta(hours=4, minutes=10),
+        content_data={
+            "resource_type": "plan",
+            "resource_id": str(aze_plan.id),
+            "shared_resource_id": str(shared_algo_plan.id),
+            "resource_title": aze_plan.name,
+            "resource_summary": aze_plan.description,
+            "resource_meta": {
+                "progress": 0.64,
+                "target_date": datetime.combine(aze_plan.target_date, datetime.min.time()).isoformat()
+                if aze_plan.target_date
+                else None,
+            },
+            "comment": "计划卡里有每日节奏，可以直接验收。",
+        },
+    )
+    algo_msg_5 = await _ensure_group_message(
+        session,
+        group_id=algorithm_group.id,
+        sender_id=nora.id,
+        message_type=MessageType.CHECKIN,
+        content="完成今日算法打卡，刚把 DFS/BFS 题单刷完。",
+        created_at=now - timedelta(hours=3, minutes=52),
+        content_data={"flame_power": 118, "today_duration": 95, "streak": 6},
+    )
+    algo_msg_6 = await _ensure_group_message(
+        session,
+        group_id=algorithm_group.id,
+        sender_id=aze.id,
+        message_type=MessageType.TEXT,
+        content="刚刚和你语音把微反馈流程过了一遍，聊天、收藏、转发、任务卡入口都能找到了。",
+        created_at=now - timedelta(hours=3, minutes=35),
+        reactions={"🔥": [str(user.id), str(xiaolin.id)]},
+    )
+    algo_msg_7 = await _ensure_group_message(
+        session,
+        group_id=algorithm_group.id,
+        sender_id=xiaolin.id,
+        message_type=MessageType.TEXT,
+        content="我把上一条先收藏了，等会你再试试从群里转发到私聊。",
+        created_at=now - timedelta(hours=3, minutes=20),
+        reply_to_id=algo_msg_6.id,
+        thread_root_id=algo_msg_6.id,
+    )
+
+    study_msg_1 = await _ensure_group_message(
+        session,
+        group_id=study_group.id,
+        sender_id=ethan.id,
+        message_type=MessageType.TEXT,
+        content="自习室今天先别刷太快，把值得回看的消息收藏起来，验收会更顺。",
+        created_at=now - timedelta(days=1, hours=2),
+    )
+    study_msg_2 = await _ensure_group_message(
+        session,
+        group_id=study_group.id,
+        sender_id=aze.id,
+        message_type=MessageType.CAPSULE_SHARE,
+        content="这条胶囊适合在收藏和二次分享链路里测试。",
+        created_at=now - timedelta(days=1, hours=1, minutes=40),
+        content_data={
+            "resource_type": "curiosity_capsule",
+            "resource_id": str(capsule_ids[1]),
+            "resource_title": "进程和线程的本质区别是什么？",
+            "resource_summary": "进程是资源容器，线程是执行轨迹，这条内容很适合收藏回看。",
+            "resource_meta": {"related_subject": "操作系统"},
+            "comment": "收藏后再打开看看预览是否完整。",
+        },
+    )
+    study_msg_3 = await _ensure_group_message(
+        session,
+        group_id=study_group.id,
+        sender_id=mia.id,
+        message_type=MessageType.PRISM_SHARE,
+        content="我把一个认知棱镜放进来了，想看下卡片样式会不会挤。",
+        created_at=now - timedelta(days=1, hours=1, minutes=20),
+        content_data={
+            "resource_type": "cognitive_prism_pattern",
+            "resource_title": "计划谬误",
+            "resource_summary": "容易低估任务复杂度，导致计划卡看起来很乐观。",
+            "resource_meta": {"severity": 3, "source": "self_review"},
+            "comment": "这里也能顺手测一下富文本气泡。",
+        },
+    )
+
+    english_msg_1 = await _ensure_group_message(
+        session,
+        group_id=english_group.id,
+        sender_id=nora.id,
+        message_type=MessageType.TEXT,
+        content="晨读营今天重点看微反馈是不是足够轻，别把打卡流程做重了。",
+        created_at=now - timedelta(hours=9),
+    )
+    english_msg_2 = await _ensure_group_message(
+        session,
+        group_id=english_group.id,
+        sender_id=susu.id,
+        message_type=MessageType.CHECKIN,
+        content="shadowing 20 分钟完成，今天状态不错。",
+        created_at=now - timedelta(hours=8, minutes=42),
+        content_data={"flame_power": 96, "today_duration": 20, "streak": 9},
+    )
+    english_msg_3 = await _ensure_group_message(
+        session,
+        group_id=english_group.id,
+        sender_id=nora.id,
+        message_type=MessageType.PLAN_SHARE,
+        content="我把口语计划卡贴这里，方便你测群分享。",
+        created_at=now - timedelta(hours=8, minutes=30),
+        content_data={
+            "resource_type": "plan",
+            "resource_id": str(nora_plan.id),
+            "shared_resource_id": str(shared_private_plan.id),
+            "resource_title": nora_plan.name,
+            "resource_summary": nora_plan.description,
+            "resource_meta": {
+                "progress": 0.58,
+                "target_date": datetime.combine(nora_plan.target_date, datetime.min.time()).isoformat()
+                if nora_plan.target_date
+                else None,
+            },
+            "comment": "群里和私聊里都可以对着这张卡验收。",
+        },
+    )
+
+    design_msg_1 = await _ensure_group_message(
+        session,
+        group_id=design_group.id,
+        sender_id=mia.id,
+        message_type=MessageType.TEXT,
+        content="我把计划卡和任务卡的文案层级重新排了下，移动端看起来会更稳。",
+        created_at=now - timedelta(days=2, hours=4),
+    )
+    design_msg_2 = await _ensure_group_message(
+        session,
+        group_id=design_group.id,
+        sender_id=ethan.id,
+        message_type=MessageType.FRAGMENT_SHARE,
+        content="这条认知碎片可以帮你测分享卡的轻量信息密度。",
+        created_at=now - timedelta(days=2, hours=3, minutes=25),
+        content_data={
+            "resource_type": "cognitive_fragment",
+            "resource_title": "验收时先看入口，再看状态一致性",
+            "resource_summary": "别一上来就盯细节，先确认全链路能进、能看、能回。",
+            "resource_meta": {"source_type": "review", "severity": 1},
+            "comment": "这条更适合看信息卡折叠后的效果。",
+        },
+    )
+
+    for message, readers in [
+        (algo_msg_6, [user.id, xiaolin.id, nora.id]),
+        (algo_msg_7, [user.id, aze.id]),
+        (english_msg_3, [user.id, susu.id]),
+    ]:
+        for idx, reader_id in enumerate(readers):
+            await _ensure_group_message_read(
+                session,
+                message_id=message.id,
+                user_id=reader_id,
+                read_at=message.created_at + timedelta(minutes=idx + 1),
             )
+
+    algo_task_1 = await _ensure_group_task(
+        session,
+        group_id=algorithm_group.id,
+        created_by=aze.id,
+        title="把二叉树前中后序都手写一遍",
+        defaults=dict(
+            description="用于检查群任务列表、认领按钮和完成状态展示。",
+            tags=["二叉树", "高频题"],
+            estimated_minutes=40,
+            difficulty=3,
+            total_claims=3,
+            total_completions=1,
+            due_date=now + timedelta(days=1),
+        ),
+    )
+    algo_task_2 = await _ensure_group_task(
+        session,
+        group_id=algorithm_group.id,
+        created_by=xiaolin.id,
+        title="把最近 5 条错题做成分享任务卡",
+        defaults=dict(
+            description="验收任务卡分享后，顺手看群任务池刷新是否正常。",
+            tags=["错题整理", "分享"],
+            estimated_minutes=25,
+            difficulty=2,
+            total_claims=2,
+            total_completions=0,
+            due_date=now + timedelta(days=2),
+        ),
+    )
+    english_task_1 = await _ensure_group_task(
+        session,
+        group_id=english_group.id,
+        created_by=susu.id,
+        title="shadowing 15 分钟并发一句微反馈",
+        defaults=dict(
+            description="用来验证打卡和任务卡之间的节奏衔接。",
+            tags=["晨读", "微反馈"],
+            estimated_minutes=15,
+            difficulty=2,
+            total_claims=4,
+            total_completions=2,
+            due_date=now + timedelta(days=1),
+        ),
+    )
+    await _ensure_group_task_claim(
+        session,
+        group_task_id=algo_task_1.id,
+        user_id=user.id,
+        personal_task_id=user_primary_task.id,
+        is_completed=False,
+        claimed_at=now - timedelta(hours=4),
+    )
+    await _ensure_group_task_claim(
+        session,
+        group_task_id=algo_task_1.id,
+        user_id=aze.id,
+        is_completed=True,
+        completed_at=now - timedelta(hours=2),
+        claimed_at=now - timedelta(days=1),
+    )
+    await _ensure_group_task_claim(
+        session,
+        group_task_id=algo_task_2.id,
+        user_id=xiaolin.id,
+        is_completed=False,
+        claimed_at=now - timedelta(hours=6),
+    )
+    await _ensure_group_task_claim(
+        session,
+        group_task_id=english_task_1.id,
+        user_id=user.id,
+        personal_task_id=user_network_task.id,
+        is_completed=True,
+        completed_at=now - timedelta(hours=7),
+        claimed_at=now - timedelta(hours=10),
+    )
+
+    private_aze_1 = await _ensure_private_message(
+        session,
+        sender_id=aze.id,
+        receiver_id=user.id,
+        message_type=MessageType.TEXT,
+        content="刚刚语音里那套微反馈流程我又顺了一遍，好友页、私聊页、群聊页都能进。",
+        created_at=now - timedelta(hours=6, minutes=10),
+        is_read=True,
+        read_at=now - timedelta(hours=6),
+    )
+    await _ensure_private_message(
+        session,
+        sender_id=user.id,
+        receiver_id=aze.id,
+        message_type=MessageType.TEXT,
+        content="太好了，我主要担心访客模式的数据太薄，今天终于能像真实用户一样验收了。",
+        created_at=now - timedelta(hours=5, minutes=55),
+        is_read=True,
+        read_at=now - timedelta(hours=5, minutes=40),
+        reply_to_id=private_aze_1.id,
+        thread_root_id=private_aze_1.id,
+    )
+    private_aze_3 = await _ensure_private_message(
+        session,
+        sender_id=aze.id,
+        receiver_id=user.id,
+        message_type=MessageType.TEXT,
+        content="我已经把那条关键消息收藏了，你待会可以直接去收藏页看预览和备注。",
+        created_at=now - timedelta(hours=5, minutes=20),
+        is_read=True,
+        read_at=now - timedelta(hours=5, minutes=10),
+        reactions={"✅": [str(user.id)]},
+    )
+    await _ensure_private_message(
+        session,
+        sender_id=nora.id,
+        receiver_id=user.id,
+        message_type=MessageType.PLAN_SHARE,
+        content="这张口语计划卡也发你一份，私聊分享链路可以直接测。",
+        created_at=now - timedelta(hours=4, minutes=45),
+        content_data={
+            "resource_type": "plan",
+            "resource_id": str(nora_plan.id),
+            "shared_resource_id": str(shared_private_plan.id),
+            "resource_title": nora_plan.name,
+            "resource_summary": nora_plan.description,
+            "resource_meta": {
+                "progress": 0.58,
+                "target_date": datetime.combine(nora_plan.target_date, datetime.min.time()).isoformat()
+                if nora_plan.target_date
+                else None,
+            },
+            "comment": "你从这里点开会更快。",
+        },
+        is_read=False,
+    )
+    await _ensure_private_message(
+        session,
+        sender_id=susu.id,
+        receiver_id=user.id,
+        message_type=MessageType.TASK_SHARE,
+        content="晨读任务卡给你，看看私聊里的分享卡会不会压行。",
+        created_at=now - timedelta(hours=3, minutes=35),
+        content_data={
+            "resource_type": "task",
+            "resource_id": str(susu_task.id),
+            "shared_resource_id": str(shared_private_task.id),
+            "resource_title": susu_task.title,
+            "resource_summary": "轻量任务卡，适合看私聊里的折叠布局。",
+            "resource_meta": {"estimated_minutes": susu_task.estimated_minutes},
+            "comment": "也能顺手测采纳。",
+        },
+        is_read=False,
+    )
+    await _ensure_private_message(
+        session,
+        sender_id=ethan.id,
+        receiver_id=user.id,
+        message_type=MessageType.TEXT,
+        content="我把群里那条'语音复盘 + 微反馈'消息加了标签，收藏页应该能看到了。",
+        created_at=now - timedelta(days=1, hours=4),
+        is_read=True,
+        read_at=now - timedelta(days=1, hours=3, minutes=40),
+    )
+    await _ensure_private_message(
+        session,
+        sender_id=mia.id,
+        receiver_id=user.id,
+        message_type=MessageType.TEXT,
+        content="任务卡标题、摘要、按钮层级我都压缩过，移动端展示应该更稳。",
+        created_at=now - timedelta(days=2, hours=1),
+        is_read=True,
+        read_at=now - timedelta(days=2, minutes=40),
+    )
+
+    await _ensure_message_favorite(
+        session,
+        user_id=user.id,
+        group_message_id=algo_msg_6.id,
+        note="验收用：语音复盘 + 微反馈全链路说明",
+        tags=["验收", "微反馈", "群聊"],
+    )
+    await _ensure_message_favorite(
+        session,
+        user_id=user.id,
+        private_message_id=private_aze_3.id,
+        note="收藏页要能看到备注和发送人",
+        tags=["收藏", "私聊"],
+    )
+
+    active_partnership = await _ensure_partnership(
+        session,
+        initiator_id=user.id,
+        partner_id=aze.id,
+        friendship_id=friendship_by_name["阿泽"].id,
+        initiator_goal="连续 14 天完成算法复盘并记录微反馈。",
+        partner_goal="每天晚上一起复盘 20 分钟，互相提醒打卡。",
+        check_in_days=1,
+        status=AccountabilityStatus.ACTIVE,
+        started_at=now - timedelta(days=12),
+    )
+    await _ensure_partnership(
+        session,
+        initiator_id=nora.id,
+        partner_id=user.id,
+        friendship_id=friendship_by_name["Nora"].id,
+        initiator_goal="一起把英语晨读和口语微反馈坚持 10 天。",
+        partner_goal=None,
+        check_in_days=1,
+        status=AccountabilityStatus.PENDING,
+        started_at=None,
+    )
+
+    accountability_timeline = [
+        (
+            user.id,
+            "今天把群聊里的任务卡、计划卡、收藏入口都走通了。",
+            4,
+            75,
+            now - timedelta(days=4, hours=2),
+            1,
+            [str(aze.id)],
+            [{"id": str(uuid.uuid4()), "user_id": str(aze.id), "message": "这条写得很清楚，继续保持。", "created_at": (now - timedelta(days=4, hours=1, minutes=40)).isoformat()}],
+        ),
+        (
+            aze.id,
+            "晚上的语音复盘把微反馈入口重新确认了一遍。",
+            5,
+            40,
+            now - timedelta(days=3, hours=20),
+            1,
+            [str(user.id)],
+            [{"id": str(uuid.uuid4()), "user_id": str(user.id), "message": "收到，明天我再测一次收藏页。", "created_at": (now - timedelta(days=3, hours=19, minutes=45)).isoformat()}],
+        ),
+        (
+            user.id,
+            "今天重点测了私聊分享计划卡，卡片展示正常。",
+            4,
+            55,
+            now - timedelta(days=2, hours=3),
+            1,
+            [str(aze.id)],
+            [],
+        ),
+        (
+            aze.id,
+            "帮你把群任务认领按钮也点了一遍，没有卡死。",
+            5,
+            35,
+            now - timedelta(days=1, hours=5),
+            0,
+            [],
+            [{"id": str(uuid.uuid4()), "user_id": str(user.id), "message": "太关键了，这样我明天能继续验收任务池。", "created_at": (now - timedelta(days=1, hours=4, minutes=50)).isoformat()}],
+        ),
+    ]
+    for actor_id, content, mood, minutes, created_at, likes, liked_by, encouragements in accountability_timeline:
+        await _ensure_accountability_checkin(
+            session,
+            partnership_id=active_partnership.id,
+            user_id=actor_id,
+            content=content,
+            mood=mood,
+            minutes=minutes,
+            created_at=created_at,
+            likes=likes,
+            liked_by=liked_by,
+            encouragements=encouragements,
         )
 
     await session.flush()

@@ -47,6 +47,7 @@ from app.api.v1 import (
     nightly_reviews,
     notification_center,
     notifications,
+    observability,
     omnibar,
     photons,
     plans,
@@ -96,6 +97,7 @@ api_router.include_router(plans.router, prefix="/plans", tags=["plans"])
 api_router.include_router(subjects.router, prefix="/subjects", tags=["subjects"])
 api_router.include_router(statistics.router, prefix="/stats", tags=["statistics"])
 api_router.include_router(notifications.router, prefix="/notifications", tags=["notifications"])
+api_router.include_router(observability.router)
 api_router.include_router(capsules.router, prefix="/capsules", tags=["capsules"])
 api_router.include_router(community.router, prefix="/community", tags=["community"])
 api_router.include_router(cognitive.router, prefix="/cognitive", tags=["cognitive"])

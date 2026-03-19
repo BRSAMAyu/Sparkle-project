@@ -197,6 +197,21 @@ func TestConvertResponseToJSONAddsUXProgressFromStatus(t *testing.T) {
 	assert.Equal(t, "我在替你执行需要的步骤", uxProgress["headline"])
 }
 
+func TestConvertResponseToJSONMarksDoneOnFinishOnlyResponse(t *testing.T) {
+	resp := &agentv1.ChatResponse{
+		ResponseId:   "resp-done",
+		RequestId:    "req-done",
+		FinishReason: agentv1.FinishReason_STOP,
+	}
+
+	result := convertResponseToJSON(resp)
+	assert.Equal(t, "done", result["type"])
+	assert.Equal(t, "STOP", result["finish_reason"])
+	meta, ok := result["metadata"].(map[string]interface{})
+	assert.True(t, ok)
+	assert.Equal(t, true, meta["done"])
+}
+
 func TestConvertResponseToJSONBuildsExecutionSummaryWidget(t *testing.T) {
 	payload, err := structpb.NewStruct(map[string]interface{}{
 		"plan_id": "plan-1",

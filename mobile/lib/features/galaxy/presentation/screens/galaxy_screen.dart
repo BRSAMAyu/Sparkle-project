@@ -1861,6 +1861,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                                   camera: _camera,
                                   positions: _positions,
                                   nodesById: _nodesById,
+                                  blendedColors: blendedColors,
                                   worldBounds: _computeWorldBounds(),
                                   isDarkMode: isDarkMode,
                                   sceneVersion: _sceneVersion,

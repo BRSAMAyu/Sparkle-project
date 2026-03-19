@@ -31,6 +31,8 @@ from app.agents.graph.state import (
 )
 from app.agents.reflection_agent import get_reflection_agent
 from app.agents.reviewer_agent import ReviewerAgent, ReviewResult, get_reviewer_agent
+from app.core.agent_profiles import TaskType
+from app.core.llm_router import ModelProvider, llm_router
 
 # Phase 2c: 导入审查历史服务
 try:
@@ -60,8 +62,17 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
-def _get_reviewer() -> ReviewerAgent:
+def _get_reviewer(
+    avoid_providers: list[ModelProvider] | None = None,
+    task_type_override: TaskType | None = None,
+) -> ReviewerAgent:
     """获取ReviewerAgent单例"""
+    if avoid_providers or task_type_override is not None:
+        return get_reviewer_agent(
+            avoid_providers=avoid_providers,
+            task_type_override=task_type_override,
+        )
+
     global _reviewer_agent
     if _reviewer_agent is None:
         _reviewer_agent = get_reviewer_agent()
@@ -400,7 +411,13 @@ async def generation_review_node(state: SparkleState) -> dict[str, Any]:
     review_start_time = time.time() * 1000
 
     # 4. 执行审查
-    reviewer = _get_reviewer()
+    context_data = _state_get(state, "context_data", {})
+    generation_model_key = str(context_data.get("generation_model_key") or "")
+    generation_provider = llm_router.get_model_provider(generation_model_key) if generation_model_key else None
+    run_ledger = context_data.get("run_ledger")
+    reviewer = _get_reviewer(
+        avoid_providers=[generation_provider] if generation_provider is not None else None,
+    )
     review_result: ReviewResult = await reviewer.review_llm_response(
         user_query=user_query,
         llm_response=llm_response,
@@ -417,9 +434,32 @@ async def generation_review_node(state: SparkleState) -> dict[str, Any]:
         f"decision={review_result.decision}, score={review_result.overall_score:.2f}, "
         f"issues={len(review_result.issues)}"
     )
+    if run_ledger is not None:
+        await run_ledger.record_event(
+            event_type="review_completed",
+            label="内容审查完成",
+            workflow_stage="review",
+            metadata={
+                "role": "review",
+                "target_type": "llm_response",
+                "decision": review_result.decision,
+                "overall_score": review_result.overall_score,
+                "critical_count": len(review_result.critical_issues),
+                "warning_count": len(review_result.warning_issues),
+                "requires_reflection": review_result.requires_reflection,
+                "model_key": getattr(reviewer, "model_key", ""),
+                "provider": getattr(reviewer, "provider_name", ""),
+                "tier": getattr(getattr(reviewer, "get_current_selection", lambda: None)(), "tier_used", ""),
+                "estimated_cost_per_1k": getattr(
+                    getattr(reviewer, "get_current_selection", lambda: None)(),
+                    "estimated_cost_per_1k",
+                    0.0,
+                ),
+            },
+            emit_snapshot=False,
+        )
 
     # Phase 2c: Record review to history
-    context_data = _state_get(state, "context_data", {})
     target_id = context_data.get("response_id") or _message_attr(last_assistant_msg, "id", "")
     review_duration = int(time.time() * 1000 - review_start_time) if 'review_start_time' in locals() else 0
     await _record_review_to_history(
@@ -434,8 +474,11 @@ async def generation_review_node(state: SparkleState) -> dict[str, Any]:
 
     # Phase 2d: Record model performance and check for fallback
     # 获取生成模型（从context_data或使用默认值）
-    context_data = _state_get(state, "context_data", {})
-    generation_model = context_data.get("model_used", "unknown")
+    generation_model = (
+        context_data.get("generation_model_key")
+        or context_data.get("model_used")
+        or "unknown"
+    )
     if generation_model == "unknown":
         # 尝试从其他来源获取模型名称
         generation_model = getattr(review_result, 'reviewer_model', 'unknown')
@@ -491,6 +534,8 @@ async def generation_review_node(state: SparkleState) -> dict[str, Any]:
         "result": review_result.to_dict(),
         "reflection_round": 0,
         "reviewer_model": review_result.reviewer_model,
+        "reviewer_model_key": getattr(reviewer, "model_key", ""),
+        "reviewer_provider": getattr(reviewer, "provider_name", ""),
         "original_content": llm_response,
         "reviewed_content": None,
     }
@@ -587,7 +632,7 @@ async def execution_review_node(state: SparkleState) -> dict[str, Any]:
         # 如果没有工具结果，回到generation继续对话
         return {"next_step": "generation"}
 
-    reviewer = _get_reviewer()
+    reviewer = _get_reviewer(task_type_override=TaskType.STANDARD_RESPONSE)
     issues_summary = []
 
     for tool_result in tool_results:
@@ -612,6 +657,18 @@ async def execution_review_node(state: SparkleState) -> dict[str, Any]:
         logger.warning(f"[ReviewNode] Tool execution issues: {issues_summary}")
         # 存储问题但不中断流程
         context_data["tool_review_issues"] = issues_summary
+    run_ledger = context_data.get("run_ledger")
+    if run_ledger is not None:
+        await run_ledger.record_event(
+            event_type="tool_reviewed",
+            label="工具执行审查完成",
+            workflow_stage="review",
+            metadata={
+                "issue_count": len(issues_summary),
+                "issue_preview": issues_summary[:3],
+            },
+            emit_snapshot=False,
+        )
 
     # 工具执行后，回到generation解释结果
     return {
@@ -695,8 +752,31 @@ async def reflection_node(state: SparkleState) -> dict[str, Any]:
     )
 
     try:
+        reflection_avoid_providers: list[ModelProvider] = []
+        generation_provider_name = str(context_data.get("generation_provider") or "").strip()
+        reviewer_provider_name = str(review_context.get("reviewer_provider") or "").strip()
+        for provider_name in (generation_provider_name, reviewer_provider_name):
+            if not provider_name:
+                continue
+            try:
+                provider = ModelProvider(provider_name)
+            except ValueError:
+                continue
+            if provider not in reflection_avoid_providers:
+                reflection_avoid_providers.append(provider)
+
+        reviewer_model_key = str(review_context.get("reviewer_model_key") or "").strip()
+        reviewer_provider = llm_router.get_model_provider(reviewer_model_key) if reviewer_model_key else None
+        reviewer_agent = _get_reviewer(
+            avoid_providers=[provider for provider in reflection_avoid_providers if provider != reviewer_provider],
+        )
+
         # 获取ReflectionAgent并执行反思
-        reflector = get_reflection_agent()
+        reflector = get_reflection_agent(
+            avoid_providers=reflection_avoid_providers or None,
+            reviewer=reviewer_agent,
+        )
+        run_ledger = context_data.get("run_ledger")
 
         # 执行反思修正
         reflection_result = await reflector.reflect_and_fix(
@@ -716,6 +796,26 @@ async def reflection_node(state: SparkleState) -> dict[str, Any]:
             f"score_delta={reflection_result.score_delta:+.2f}, "
             f"rounds={reflection_result.total_rounds}"
         )
+        if run_ledger is not None:
+            reflection_selection = getattr(reflector.generator, "get_current_selection", lambda: None)()
+            await run_ledger.record_event(
+                event_type="reflection_completed",
+                label="反思修正完成",
+                workflow_stage="reflection",
+                metadata={
+                    "role": "reflection",
+                    "success": reflection_result.success,
+                    "score_delta": reflection_result.score_delta,
+                    "rounds": reflection_result.total_rounds,
+                    "initial_score": reflection_result.initial_score,
+                    "final_score": reflection_result.final_score,
+                    "model_key": getattr(reflector.generator, "model_key", ""),
+                    "provider": getattr(reflector.generator, "provider_name", ""),
+                    "tier": getattr(reflection_selection, "tier_used", ""),
+                    "estimated_cost_per_1k": getattr(reflection_selection, "estimated_cost_per_1k", 0.0),
+                },
+                emit_snapshot=False,
+            )
 
         # Phase 2c: Record reflection to history
         history_service = _get_review_history_service(state)

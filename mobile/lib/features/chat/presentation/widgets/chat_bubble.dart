@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/utils/grapheme_utils.dart';
 import 'package:sparkle/core/services/deep_link_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
@@ -472,91 +473,98 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                       ),
                                     // Share card for private messages
                                     if (_isShareMessage())
-                                      _buildPrivateShareCard() ?? const SizedBox.shrink()
+                                      _buildPrivateShareCard() ??
+                                          const SizedBox.shrink()
                                     else
                                       // Use constrained height for long messages
                                       LayoutBuilder(
-                                      builder: (context, constraints) {
-                                        // Calculate max height based on screen size
-                                        final maxHeight =
-                                            MediaQuery.of(context).size.height *
-                                                0.5;
-                                        final contentWidget = _shouldUseMarkdown
-                                            ? MarkdownBody(
-                                                data: _content,
-                                                styleSheet: _getMarkdownStyle(
-                                                  context,
-                                                  isUser,
-                                                ),
-                                                onTapLink:
-                                                    (text, href, title) async {
-                                                  if (href == null) return;
-                                                  final uri =
-                                                      Uri.tryParse(href);
-                                                  if (uri == null) return;
+                                        builder: (context, constraints) {
+                                          // Calculate max height based on screen size
+                                          final maxHeight =
+                                              MediaQuery.of(context)
+                                                      .size
+                                                      .height *
+                                                  0.5;
+                                          final contentWidget =
+                                              _shouldUseMarkdown
+                                                  ? MarkdownBody(
+                                                      data: _content,
+                                                      styleSheet:
+                                                          _getMarkdownStyle(
+                                                        context,
+                                                        isUser,
+                                                      ),
+                                                      onTapLink: (text, href,
+                                                          title) async {
+                                                        if (href == null)
+                                                          return;
+                                                        final uri =
+                                                            Uri.tryParse(href);
+                                                        if (uri == null) return;
 
-                                                  final scheme =
-                                                      uri.scheme.toLowerCase();
-                                                  const allowedSchemes = [
-                                                    'http',
-                                                    'https',
-                                                  ];
-                                                  if (!allowedSchemes
-                                                      .contains(scheme)) {
-                                                    return;
-                                                  }
+                                                        final scheme = uri
+                                                            .scheme
+                                                            .toLowerCase();
+                                                        const allowedSchemes = [
+                                                          'http',
+                                                          'https',
+                                                        ];
+                                                        if (!allowedSchemes
+                                                            .contains(scheme)) {
+                                                          return;
+                                                        }
 
-                                                  try {
-                                                    if (await canLaunchUrl(
-                                                      uri,
-                                                    )) {
-                                                      unawaited(
-                                                        launchUrl(
-                                                          uri,
-                                                          mode: LaunchMode
-                                                              .externalApplication,
-                                                        ),
-                                                      );
-                                                    }
-                                                  } catch (e) {
-                                                    debugPrint(
-                                                      'Failed to launch URL: $e',
+                                                        try {
+                                                          if (await canLaunchUrl(
+                                                            uri,
+                                                          )) {
+                                                            unawaited(
+                                                              launchUrl(
+                                                                uri,
+                                                                mode: LaunchMode
+                                                                    .externalApplication,
+                                                              ),
+                                                            );
+                                                          }
+                                                        } catch (e) {
+                                                          debugPrint(
+                                                            'Failed to launch URL: $e',
+                                                          );
+                                                        }
+                                                      },
+                                                    )
+                                                  : Text(
+                                                      _content,
+                                                      style: TextStyle(
+                                                        color: isUser
+                                                            ? DS.chatBubbleUserText
+                                                            : DS.chatBubbleOtherText,
+                                                        fontSize: 16,
+                                                        height: 1.5,
+                                                        fontFamilyFallback:
+                                                            _chatContentFontFallback,
+                                                      ),
                                                     );
-                                                  }
-                                                },
-                                              )
-                                            : Text(
-                                                _content,
-                                                style: TextStyle(
-                                                  color: isUser
-                                                      ? DS.chatBubbleUserText
-                                                      : DS.chatBubbleOtherText,
-                                                  fontSize: 16,
-                                                  height: 1.5,
-                                                  fontFamilyFallback:
-                                                      _chatContentFontFallback,
-                                                ),
-                                              );
 
-                                        // Try to estimate content height and decide if scrolling is needed
-                                        // For long content (heuristic: >500 chars), use constrained scrollable
-                                        final shouldConstrain =
-                                            _content.length > 500;
+                                          // Try to estimate content height and decide if scrolling is needed
+                                          // For long content (heuristic: >500 chars), use constrained scrollable
+                                          final shouldConstrain =
+                                              _content.length > 500;
 
-                                        if (!shouldConstrain) {
-                                          return contentWidget;
-                                        }
+                                          if (!shouldConstrain) {
+                                            return contentWidget;
+                                          }
 
-                                        return SizedBox(
-                                          height: maxHeight,
-                                          child: SingleChildScrollView(
-                                            physics:
-                                                const ClampingScrollPhysics(),
-                                            child: contentWidget,
-                                          ),
-                                        );
-                                      },
-                                    ),
+                                          return SizedBox(
+                                            height: maxHeight,
+                                            child: SingleChildScrollView(
+                                              physics:
+                                                  const ClampingScrollPhysics(),
+                                              child: contentWidget,
+                                            ),
+                                          );
+                                        },
+                                      ),
                                   ],
                                 ),
                               ),
@@ -659,18 +667,18 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                         ? () => widget.onActionDismiss!(w)
                                         : null,
                                     onConfirmTasks: (toolResultId) async {
-                                      final planId = w.data['plan_id']
-                                              ?.toString() ??
-                                          w.data['planId']?.toString();
+                                      final planId =
+                                          w.data['plan_id']?.toString() ??
+                                              w.data['planId']?.toString();
                                       await _confirmGeneratedTasks(
                                         toolResultId: toolResultId,
                                         planId: planId,
                                       );
                                     },
                                     onConfirmAllTasks: (toolResultId) async {
-                                      final planId = w.data['plan_id']
-                                              ?.toString() ??
-                                          w.data['planId']?.toString();
+                                      final planId =
+                                          w.data['plan_id']?.toString() ??
+                                              w.data['planId']?.toString();
                                       await _confirmGeneratedTasks(
                                         toolResultId: toolResultId,
                                         planId: planId,
@@ -855,10 +863,11 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
   Widget _buildAvatar(bool isUser) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     String? avatarUrl;
-    var initial = '?';
+    var initial = 'S';
 
     if (_isAgent) {
-      final agent = buildCommunityAgentUser(localizedName: context.l10n.communityAgentName);
+      final agent = buildCommunityAgentUser(
+          localizedName: context.l10n.communityAgentName);
       avatarUrl = agent.avatarUrl;
       initial = 'AI';
     } else if (widget.message is ChatMessageModel) {
@@ -866,11 +875,14 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     } else if (widget.message is PrivateMessageInfo) {
       final msg = widget.message as PrivateMessageInfo;
       avatarUrl = msg.sender.avatarUrl;
-      initial = msg.sender.displayName[0].toUpperCase();
+      initial = (GraphemeUtils.graphemeAt(msg.sender.displayName, 0) ?? 'S')
+          .toUpperCase();
     } else if (widget.message is MessageInfo) {
       final msg = widget.message as MessageInfo;
       avatarUrl = msg.sender?.avatarUrl;
-      initial = (msg.sender?.displayName ?? 'S')[0].toUpperCase();
+      initial =
+          (GraphemeUtils.graphemeAt(msg.sender?.displayName ?? 'S', 0) ?? 'S')
+              .toUpperCase();
     }
 
     return Container(
@@ -934,11 +946,52 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
           fontWeight: FontWeight.bold,
           fontFamilyFallback: _chatContentFontFallback,
         ),
+        h2: TextStyle(
+          color: isUser ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
+          fontSize: 22,
+          fontWeight: FontWeight.bold,
+          fontFamilyFallback: _chatContentFontFallback,
+        ),
+        h3: TextStyle(
+          color: isUser ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+          fontFamilyFallback: _chatContentFontFallback,
+        ),
+        h4: TextStyle(
+          color: isUser ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+          fontFamilyFallback: _chatContentFontFallback,
+        ),
+        h5: TextStyle(
+          color: isUser ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
+          fontSize: 17,
+          fontWeight: FontWeight.w600,
+          fontFamilyFallback: _chatContentFontFallback,
+        ),
+        h6: TextStyle(
+          color: isUser ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          fontFamilyFallback: _chatContentFontFallback,
+        ),
+        strong: TextStyle(
+          color: isUser ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
+          fontWeight: FontWeight.w700,
+          fontFamilyFallback: _chatContentFontFallback,
+        ),
+        em: TextStyle(
+          color: isUser ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
+          fontStyle: FontStyle.italic,
+          fontFamilyFallback: _chatContentFontFallback,
+        ),
         code: TextStyle(
           backgroundColor: isUser
               ? DS.chatBubbleUserText.withValues(alpha: 0.2)
               : DS.surfaceTertiary,
           fontFamily: 'monospace',
+          fontFamilyFallback: _chatContentFontFallback,
           fontSize: 14,
           color: isUser ? DS.chatBubbleUserText : DS.brandSecondary,
         ),
@@ -951,6 +1004,15 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
         a: TextStyle(
           color: isUser ? DS.chatBubbleUserText : DS.brandPrimary,
           decoration: TextDecoration.underline,
+          fontFamilyFallback: _chatContentFontFallback,
+        ),
+        listBullet: TextStyle(
+          color: isUser ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
+          fontFamilyFallback: _chatContentFontFallback,
+        ),
+        blockquote: TextStyle(
+          color: isUser ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
+          fontStyle: FontStyle.italic,
           fontFamilyFallback: _chatContentFontFallback,
         ),
       );
@@ -1162,8 +1224,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
       if (!context.mounted) return;
       AppFeedback.success(context, '已采纳，跳转中...');
       final newId = result['new_resource_id'] as String;
-      final route =
-          resourceType == 'plan' ? '/plans/$newId' : '/tasks/$newId';
+      final route = resourceType == 'plan' ? '/plans/$newId' : '/tasks/$newId';
       unawaited(context.push(route));
     } catch (e) {
       if (!context.mounted) return;
@@ -1206,8 +1267,10 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     final title = switch (type) {
       MessageType.taskShare => safeGetString(data['resource_title']),
       MessageType.planShare => safeGetString(data['resource_title']),
-      MessageType.capsuleShare => safeGetString(data['resource_title']) ?? safeGetString(data['title']),
-      MessageType.prismShare => safeGetString(data['resource_title']) ?? safeGetString(data['title']),
+      MessageType.capsuleShare =>
+        safeGetString(data['resource_title']) ?? safeGetString(data['title']),
+      MessageType.prismShare =>
+        safeGetString(data['resource_title']) ?? safeGetString(data['title']),
       MessageType.achievement => safeGetString(data['name']),
       _ => null,
     };
@@ -1242,15 +1305,19 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     final meta = (data['resource_meta'] as Map<String, dynamic>?) ?? {};
     return switch (type) {
       MessageType.taskShare => () {
-        final duration = safeGetInt(meta['estimated_minutes']) ?? 0;
-        return duration > 0 ? '已完成 · $duration分钟' : '已完成';
-      }(),
+          final duration = safeGetInt(meta['estimated_minutes']) ?? 0;
+          return duration > 0 ? '已完成 · $duration分钟' : '已完成';
+        }(),
       MessageType.planShare => () {
-        final progress = safeGetDouble(meta['progress']);
-        return progress != null ? '进度: ${(progress * 100).toStringAsFixed(0)}%' : null;
-      }(),
-      MessageType.capsuleShare => safeGetString(data['resource_summary']) ?? safeGetString(data['summary']),
-      MessageType.prismShare => safeGetString(data['resource_summary']) ?? safeGetString(data['insight']),
+          final progress = safeGetDouble(meta['progress']);
+          return progress != null
+              ? '进度: ${(progress * 100).toStringAsFixed(0)}%'
+              : null;
+        }(),
+      MessageType.capsuleShare => safeGetString(data['resource_summary']) ??
+          safeGetString(data['summary']),
+      MessageType.prismShare => safeGetString(data['resource_summary']) ??
+          safeGetString(data['insight']),
       MessageType.achievement => safeGetString(data['description']),
       _ => null,
     };
@@ -1396,11 +1463,13 @@ class _CollaborationSignatureCard extends StatelessWidget {
       if (normalized.isEmpty || !seen.add(normalized)) {
         continue;
       }
-      final snapshot = activitySnapshots.cast<Map<String, dynamic>?>().firstWhere(
-        (item) => item?['agent_id']?.toString() == normalized,
-        orElse: () => null,
-      );
-      final label = snapshot?['display_name']?.toString() ?? _formatAgentLabel(normalized);
+      final snapshot =
+          activitySnapshots.cast<Map<String, dynamic>?>().firstWhere(
+                (item) => item?['agent_id']?.toString() == normalized,
+                orElse: () => null,
+              );
+      final label = snapshot?['display_name']?.toString() ??
+          _formatAgentLabel(normalized);
       final color = _chatBubbleHexToColor(
         snapshot?['color']?.toString() ?? '#6B7280',
         context,

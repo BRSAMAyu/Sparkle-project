@@ -24,6 +24,7 @@ from loguru import logger
 from app.config import settings
 from app.core.agent_profiles import TASK_TO_AGENT_PROFILE, AgentRole, ModelTier, TaskType, agent_profile_registry
 from app.core import complexity_analyzer as _cx
+from app.core.metrics import LLM_ROUTER_ESTIMATED_COST_PER_1K, LLM_ROUTER_SELECTION_TOTAL
 
 
 class ModelProvider(str, Enum):
@@ -221,7 +222,7 @@ class LLMRouter:
             "glm_4_7_flash_no_thinking": ModelConfig(
                 provider=ModelProvider.ZHIPU,
                 model_name=settings.ZHIPU_FLASH_MODEL,
-                base_url=settings.ZHIPU_CODING_BASE_URL,
+                base_url=settings.ZHIPU_BASE_URL,
                 api_key=settings.ZHIPU_API_KEY,
                 temperature=settings.ZHIPU_TEMPERATURE,
                 clear_thinking=True,
@@ -233,13 +234,23 @@ class LLMRouter:
             "glm_4_7_flash_thinking": ModelConfig(
                 provider=ModelProvider.ZHIPU,
                 model_name=settings.GLM_4_7_FLASH_MODEL,
-                base_url=settings.ZHIPU_CODING_BASE_URL,
+                base_url=settings.ZHIPU_BASE_URL,
                 api_key=settings.ZHIPU_API_KEY,
                 temperature=settings.ZHIPU_TEMPERATURE,
                 clear_thinking=False,
                 tier=ModelTier.FREE_REASONING,
                 cost_per_1k_tokens=0.0005,
                 avg_latency_ms=15000,
+            ),
+            "siliconflow_free": ModelConfig(
+                provider=ModelProvider.SILICONFLOW,
+                model_name=settings.SILICONFLOW_FREE_MODEL,
+                base_url=settings.SILICONFLOW_BASE_URL,
+                api_key=settings.SILICONFLOW_API_KEY,
+                temperature=0.7,
+                tier=ModelTier.FREE_FAST,
+                cost_per_1k_tokens=0.0,
+                avg_latency_ms=300,
             ),
 
             # ===== Aliyun DashScope (通义千问) =====
@@ -382,7 +393,7 @@ class LLMRouter:
                 specialist_models.append(default_key)
 
         self._tier_mapping = {
-            ModelTier.FREE_FAST: ["glm_4_7_flash_no_thinking"],
+            ModelTier.FREE_FAST: ["glm_4_7_flash_no_thinking", "siliconflow_free"],
             ModelTier.FREE_REASONING: ["glm_4_7_flash_thinking"],
             ModelTier.FAST: fast_models,
             ModelTier.STANDARD: standard_models,
@@ -435,6 +446,7 @@ class LLMRouter:
         task_type: TaskType | str | Any | None = None,
         force_tier: ModelTier | None = None,
         user_message: str | None = None,
+        avoid_providers: list[ModelProvider] | None = None,
     ) -> LLMSelection:
         """
         选择最合适的模型
@@ -454,6 +466,7 @@ class LLMRouter:
 
         # 1. 获取Agent配置
         profile = agent_profile_registry.get_profile(agent_role)
+        complexity_level = "unknown"
 
         # 2. 确定目标tier / policy
         if force_tier:
@@ -466,13 +479,16 @@ class LLMRouter:
                 self._available_models.get(profile.specific_model, self._available_models["default"]),
                 agent_role,
                 task_type,
-                f"Agent指定模型: {profile.specific_model}"
+                f"Agent指定模型: {profile.specific_model}",
+                complexity_level=complexity_level,
             )
         elif profile.model_policy:
             selection = self._select_by_policy(
                 profile=profile,
                 agent_role=agent_role,
                 task_type=task_type,
+                avoid_providers=avoid_providers,
+                complexity_level=complexity_level,
             )
             if selection is not None:
                 return selection
@@ -488,6 +504,7 @@ class LLMRouter:
         # 2.5 复杂度感知调整（仅当复杂度路由开关打开且有 user_message）
         if user_message and getattr(settings, "COMPLEXITY_ROUTING_ENABLED", True):
             assessment = _cx.assess(user_message)
+            complexity_level = assessment.level.value
             delta = assessment.suggested_tier_delta
             if delta != 0:
                 allow_down = delta < 0 and getattr(settings, "COMPLEXITY_DOWNGRADE_ENABLED", True)
@@ -507,19 +524,29 @@ class LLMRouter:
             k for k in self._tier_mapping.get(target_tier, [])
             if self._is_model_healthy(k)
         ]
+        candidates = self._apply_provider_avoidance(candidates, avoid_providers)
         if not candidates:
             logger.warning(f"No healthy models for tier {target_tier}, falling back to standard")
             candidates = [
                 k for k in self._tier_mapping.get(ModelTier.STANDARD, ["deepseek_chat"])
                 if self._is_model_healthy(k)
             ] or ["deepseek_chat"]
+            candidates = self._apply_provider_avoidance(candidates, avoid_providers)
             reason += " → 降级到standard"
 
         # 优先使用第一个候选
         model_key = candidates[0]
         model_config = self._available_models.get(model_key, self._available_models["default"])
 
-        return self._create_selection(model_key, model_config, agent_role, task_type, reason)
+        return self._create_selection(
+            model_key,
+            model_config,
+            agent_role,
+            task_type,
+            reason,
+            is_fallback="降级" in reason,
+            complexity_level=complexity_level,
+        )
 
     def resolve_candidate_models(
         self,
@@ -608,6 +635,8 @@ class LLMRouter:
         profile,
         agent_role: AgentRole,
         task_type: TaskType | None,
+        avoid_providers: list[ModelProvider] | None = None,
+        complexity_level: str = "unknown",
     ) -> LLMSelection | None:
         policy = getattr(profile, "model_policy", None)
         if policy is None:
@@ -646,13 +675,43 @@ class LLMRouter:
             for model_key in self._tier_mapping.get(tier, []):
                 _append(model_key)
 
+        candidates = self._apply_provider_avoidance(candidates, avoid_providers)
+
         if not candidates:
             return None
 
         model_key = candidates[0]
         model_config = self._available_models.get(model_key, self._available_models["default"])
         reason = f"Agent策略路由: {agent_role.value} -> {model_key}"
-        return self._create_selection(model_key, model_config, agent_role, task_type, reason)
+        return self._create_selection(
+            model_key,
+            model_config,
+            agent_role,
+            task_type,
+            reason,
+            complexity_level=complexity_level,
+        )
+
+    def get_model_provider(self, model_key: str) -> ModelProvider | None:
+        config = self._available_models.get(model_key)
+        return config.provider if config else None
+
+    def _apply_provider_avoidance(
+        self,
+        candidates: list[str],
+        avoid_providers: list[ModelProvider] | None,
+    ) -> list[str]:
+        if not candidates or not avoid_providers:
+            return candidates
+        avoid_set = {provider for provider in avoid_providers if provider is not None}
+        if not avoid_set:
+            return candidates
+        filtered = [
+            model_key
+            for model_key in candidates
+            if self.get_model_provider(model_key) not in avoid_set
+        ]
+        return filtered or candidates
 
     def select_specific_model(
         self,
@@ -677,20 +736,40 @@ class LLMRouter:
         agent_role: AgentRole,
         task_type: TaskType | None,
         reason: str,
+        *,
+        is_fallback: bool = False,
+        complexity_level: str = "unknown",
     ) -> LLMSelection:
         """创建LLMSelection对象，含成本可观测字段"""
         cost = config.cost_per_1k_tokens if hasattr(config, "cost_per_1k_tokens") else 0.0
         tier_str = config.tier.value if hasattr(config, "tier") and config.tier else ""
         rich_reason = f"{reason} [${cost:.4f}/1k, tier={tier_str}]"
-        return LLMSelection(
+        selection = LLMSelection(
             model_key=model_key,
             config=config,
             agent_role=agent_role,
             task_type=task_type,
             reason=rich_reason,
+            is_fallback=is_fallback,
             estimated_cost_per_1k=cost,
             tier_used=tier_str,
         )
+        task_label = task_type.value if task_type is not None else "none"
+        LLM_ROUTER_SELECTION_TOTAL.labels(
+            agent_role=agent_role.value,
+            model_key=model_key,
+            provider=config.provider.value,
+            tier=tier_str or "unknown",
+            task_type=task_label,
+            complexity=complexity_level or "unknown",
+            fallback="true" if is_fallback else "false",
+        ).inc()
+        LLM_ROUTER_ESTIMATED_COST_PER_1K.labels(
+            agent_role=agent_role.value,
+            provider=config.provider.value,
+            tier=tier_str or "unknown",
+        ).observe(cost)
+        return selection
 
     # ============================================
     # 模型健康上报

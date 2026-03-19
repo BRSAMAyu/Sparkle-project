@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/gorilla/websocket"
 	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
 	pbws "github.com/sparkle/gateway/gen/ws"
 	wsmetrics "github.com/sparkle/gateway/internal/metrics"
@@ -250,14 +249,18 @@ func convertResponseToJSON(resp *agentv1.ChatResponse) map[string]interface{} {
 		}
 		result["intervention"] = intervention
 	default:
-		// If no content field is set, add type "metadata" for responses with only metadata
-		if _, hasType := result["type"]; !hasType {
+		// Finish-only responses are terminal stream markers for WebSocket clients.
+		if resp.FinishReason != agentv1.FinishReason_NULL {
+			result["type"] = "done"
+		} else if _, hasType := result["type"]; !hasType {
+			// If no content field is set, add type "metadata" for responses with only metadata
 			result["type"] = "metadata"
 		}
 	}
 
 	if resp.FinishReason != agentv1.FinishReason_NULL {
 		result["finish_reason"] = resp.FinishReason.String()
+		metadata["done"] = true
 	}
 
 	return result
@@ -486,7 +489,7 @@ func generateRequestID() string {
 	return "req_" + strings.ReplaceAll(id.String(), "-", "")
 }
 
-func (h *ChatOrchestrator) handleProtobufMessage(conn *websocket.Conn, msg []byte, userID string, tracer trace.Tracer, baseCtx context.Context) {
+func (h *ChatOrchestrator) handleProtobufMessage(writer *wsSafeWriter, msg []byte, userID string, tracer trace.Tracer, baseCtx context.Context) {
 	wsMsg := &pbws.WebSocketMessage{}
 	if err := proto.Unmarshal(msg, wsMsg); err != nil {
 		log.Printf("Failed to unmarshal protobuf message: %v", err)
@@ -504,7 +507,7 @@ func (h *ChatOrchestrator) handleProtobufMessage(conn *websocket.Conn, msg []byt
 	)
 	defer span.End()
 
-	responder := newProtobufResponder(conn, wsMsg, ctx)
+	responder := newProtobufResponder(writer, wsMsg, ctx)
 
 	switch wsMsg.Type {
 	case "chat":

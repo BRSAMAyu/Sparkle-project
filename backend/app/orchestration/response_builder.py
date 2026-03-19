@@ -39,6 +39,8 @@ class ResponseBuilderMixin:
         plan_switched: bool,
         plan_id: uuid.UUID | None,
         user_context_payload: dict[str, Any] | None,
+        total_prompt_tokens: int,
+        total_completion_tokens: int,
     ) -> tuple[agent_service_pb2.ChatResponse, dict[str, Any]]:
         full_response = ""
         for msg in reversed(final_state.messages):
@@ -52,6 +54,7 @@ class ResponseBuilderMixin:
             RESPONSE_FALLBACK_GENERATED_TOTAL.labels(source="standard_empty_final").inc()
 
         llm_profile_meta = self._extract_llm_profile_meta(user_context_payload)
+        run_ledger = final_state.context_data.get("run_ledger")
         session_feedback_signal = final_state.context_data.get("session_feedback_signal")
         full_response, session_adaptation_visible = apply_session_feedback_visible_prefix(
             full_response,
@@ -149,6 +152,29 @@ class ResponseBuilderMixin:
                 [str(expert) for expert in answer_experts],
                 ensure_ascii=False,
             )
+        if run_ledger is not None:
+            agent_ids = []
+            for source in (agents_involved, selected_experts, answer_experts):
+                if not isinstance(source, list):
+                    continue
+                for agent_id in source:
+                    label = str(agent_id).strip()
+                    if label and label not in agent_ids:
+                        agent_ids.append(label)
+            for agent_id in agent_ids:
+                await run_ledger.record_event(
+                    event_type="agent_completed",
+                    label=f"{agent_id} 已参与本轮编排",
+                    workflow_stage="collaboration",
+                    metadata={
+                        "agent_id": agent_id,
+                        "display_name": agent_id,
+                        "description": "参与本轮回答生成与协作",
+                        "status": "completed",
+                        "collaboration_mode": getattr(executable_plan, "collaboration_mode", "") if executable_plan else "",
+                    },
+                    emit_snapshot=False,
+                )
         if parsed_session_signal is not None:
             response_metadata["session_feedback_signal"] = json.dumps(
                 parsed_session_signal.to_dict(),
@@ -195,6 +221,30 @@ class ResponseBuilderMixin:
         if isinstance(returning_context, dict):
             response_metadata["returning_after_silence"] = json.dumps(returning_context, ensure_ascii=False)
 
+        focused_memory = final_state.context_data.get("focused_memory")
+        context_pack_meta = {}
+        if isinstance(focused_memory, dict):
+            context_pack_meta = ((focused_memory.get("context_pack") or {}).get("metadata") or {})
+        if run_ledger is not None:
+            evidence_avg = context_pack_meta.get("evidence_score_avg")
+            if evidence_avg is None:
+                evidence_avg = context_pack_meta.get("evidence_score")
+            await run_ledger.record_event(
+                event_type="context_pack_built",
+                label="上下文证据完成注入",
+                workflow_stage="context",
+                metadata={
+                    "context_pack_id": str(context_pack_meta.get("pack_id") or context_pack_meta.get("id") or ""),
+                    "focus_mode": str((final_state.context_data.get("context_focus") or {}).get("focus_mode") or ""),
+                    "context_briefing_note": str(final_state.context_data.get("context_briefing_note") or ""),
+                    "preferences": len(dict((focused_memory or {}).get("preferences") or {})),
+                    "goals": len(list((focused_memory or {}).get("active_goals") or [])),
+                    "episodic": len(list((focused_memory or {}).get("episodic_memories") or [])),
+                    "evidence_score_avg": evidence_avg,
+                },
+                emit_snapshot=False,
+            )
+
         execution_validation = await self._validate_plan_execution(
             executable_plan=executable_plan,
             active_db=active_db,
@@ -240,6 +290,32 @@ class ResponseBuilderMixin:
             "tool_results": [],
             "metadata": response_metadata,
         }
+
+        if run_ledger is not None:
+            estimated_cost = 0.0
+            if self.token_tracker and total_prompt_tokens > 0:
+                try:
+                    estimated_cost = await self.token_tracker.estimate_cost(
+                        prompt_tokens=total_prompt_tokens,
+                        completion_tokens=total_completion_tokens,
+                        model="gpt-4",
+                    )
+                except Exception:
+                    estimated_cost = 0.0
+            await run_ledger.record_event(
+                event_type="response_streamed",
+                label="回答已完成",
+                workflow_stage="response",
+                metadata={
+                    "prompt_tokens": total_prompt_tokens,
+                    "completion_tokens": total_completion_tokens,
+                    "total_tokens": total_prompt_tokens + total_completion_tokens,
+                    "estimated_cost_usd": estimated_cost,
+                    "finish_reason": "stop",
+                    "fallback_used": bool(used_fallback_response),
+                },
+            )
+            response_metadata["run_ledger_summary"] = run_ledger.to_metadata_payload()
 
         # Phase 1-D: Cognitive Feedback Loop — when user views behavior patterns,
         # boost confidence of viewed patterns (positive reinforcement signal).

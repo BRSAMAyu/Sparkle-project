@@ -15,14 +15,14 @@ import (
 )
 
 type envelopeResponder struct {
-	conn     *websocket.Conn
+	writer   *wsSafeWriter
 	envelope *wsEnvelopeIn
 	ctx      context.Context
 }
 
-func newEnvelopeResponder(conn *websocket.Conn, env *wsEnvelopeIn, ctx context.Context) *envelopeResponder {
+func newEnvelopeResponder(writer *wsSafeWriter, env *wsEnvelopeIn, ctx context.Context) *envelopeResponder {
 	return &envelopeResponder{
-		conn:     conn,
+		writer:   writer,
 		envelope: env,
 		ctx:      ctx,
 	}
@@ -221,24 +221,19 @@ func (r *envelopeResponder) writeEnvelope(payload map[string]json.RawMessage, tr
 	if err != nil {
 		return err
 	}
-	_ = r.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
-	if err := r.conn.WriteMessage(websocket.TextMessage, data); err != nil {
-		return err
-	}
-	_ = r.conn.SetWriteDeadline(time.Time{})
-	return nil
+	return r.writer.WriteMessage(websocket.TextMessage, data)
 }
 
 // protobufResponder implements the responder interfaces for Binary/Protobuf protocol
 type protobufResponder struct {
-	conn *websocket.Conn
+	writer *wsSafeWriter
 	msg  *pbws.WebSocketMessage
 	ctx  context.Context
 }
 
-func newProtobufResponder(conn *websocket.Conn, msg *pbws.WebSocketMessage, ctx context.Context) *protobufResponder {
+func newProtobufResponder(writer *wsSafeWriter, msg *pbws.WebSocketMessage, ctx context.Context) *protobufResponder {
 	return &protobufResponder{
-		conn: conn,
+		writer: writer,
 		msg:  msg,
 		ctx:  ctx,
 	}
@@ -355,10 +350,5 @@ func (r *protobufResponder) sendProto(msgType string, payload []byte) error {
 	if err != nil {
 		return err
 	}
-	_ = r.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
-	if err := r.conn.WriteMessage(websocket.BinaryMessage, data); err != nil {
-		return err
-	}
-	_ = r.conn.SetWriteDeadline(time.Time{})
-	return nil
+	return r.writer.WriteMessage(websocket.BinaryMessage, data)
 }

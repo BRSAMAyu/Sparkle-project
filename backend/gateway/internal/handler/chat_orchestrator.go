@@ -165,15 +165,11 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 		log.Printf("Failed to upgrade WS: %v", err)
 		return
 	}
-	defer func() {
-		_ = conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
-		_ = conn.Close()
-	}()
 
 	// --- WebSocket lifecycle: deadlines, ping/pong, idle timeout ---
 	pongWait := 90 * time.Second
 	pingInterval := 30 * time.Second
-	writeWait := 10 * time.Second
+	writeWait := 60 * time.Second
 	idleTimeout := 5 * time.Minute
 	if h.cfg != nil {
 		if h.cfg.WSPongWaitSeconds > 0 {
@@ -189,6 +185,14 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 			idleTimeout = time.Duration(h.cfg.WSIdleTimeoutSeconds) * time.Second
 		}
 	}
+	if writeWait < 60*time.Second {
+		writeWait = 60 * time.Second
+	}
+	writer := newWSSafeWriter(conn, writeWait)
+	defer func() {
+		_ = writer.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+		_ = conn.Close()
+	}()
 
 	_ = conn.SetReadDeadline(time.Now().Add(pongWait))
 	conn.SetPongHandler(func(string) error {
@@ -203,11 +207,9 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 		for {
 			select {
 			case <-pingTicker.C:
-				_ = conn.SetWriteDeadline(time.Now().Add(writeWait))
-				if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				if err := writer.WriteMessage(websocket.PingMessage, nil); err != nil {
 					return
 				}
-				_ = conn.SetWriteDeadline(time.Time{})
 			case <-pingDone:
 				return
 			}
@@ -225,10 +227,9 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 		select {
 		case <-idleTimer.C:
 			log.Printf("WebSocket idle timeout for connection, closing")
-			_ = conn.WriteControl(
+			_ = writer.WriteControl(
 				websocket.CloseMessage,
 				websocket.FormatCloseMessage(websocket.CloseGoingAway, "idle timeout"),
-				time.Now().Add(writeWait),
 			)
 			_ = conn.Close()
 		case <-connDone:
@@ -252,7 +253,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 
 	if userID == "" {
 		log.Printf("WebSocket rejected: missing authentication")
-		conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseUnsupportedData, "Authentication required"))
+		_ = writer.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseUnsupportedData, "Authentication required"))
 		_ = conn.Close() // Explicitly close rejected connection
 		return
 	}
@@ -310,7 +311,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 		msgType, msg, err := conn.ReadMessage()
 		if err != nil {
 			if errors.Is(err, websocket.ErrReadLimit) {
-				_ = conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "Message too large"))
+				_ = writer.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "Message too large"))
 			}
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("WebSocket error: %v", err)
@@ -328,13 +329,13 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 		idleTimer.Reset(idleTimeout)
 
 		if !msgLimiter.Allow() {
-			_ = conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "Message rate limit exceeded"))
+			_ = writer.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "Message rate limit exceeded"))
 			break
 		}
 
 		// P2: Support Binary Protobuf Protocol
 		if msgType == websocket.BinaryMessage {
-			h.handleProtobufMessage(conn, msg, userID, tracer, c.Request.Context())
+			h.handleProtobufMessage(writer, msg, userID, tracer, c.Request.Context())
 			continue
 		}
 
@@ -351,7 +352,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 				msgMap := make(map[string]interface{})
 				if err := json.Unmarshal(msg, &msgMap); err != nil {
 					log.Printf("Failed to parse message: %v", err)
-					conn.WriteJSON(gin.H{"type": "error", "message": "Invalid JSON format"})
+					_ = writer.WriteJSON(gin.H{"type": "error", "message": "Invalid JSON format"})
 					return false
 				}
 
@@ -363,7 +364,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 				// Route based on message type
 				switch msgType {
 				case "ping":
-					conn.WriteJSON(gin.H{"type": "pong"})
+					_ = writer.WriteJSON(gin.H{"type": "pong"})
 					return false
 				case "action_feedback":
 					h.handleActionFeedback(conn, msgMap, userID, authToken)
@@ -387,7 +388,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 					// Continue with normal chat message handling
 				default:
 					log.Printf("Unknown message type: %s", msgType)
-					conn.WriteJSON(gin.H{"type": "error", "message": "Unknown message type"})
+					_ = writer.WriteJSON(gin.H{"type": "error", "message": "Unknown message type"})
 					return false
 				}
 
@@ -404,18 +405,18 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 				// Parse JSON input
 				if err := json.Unmarshal(msg, input); err != nil {
 					log.Printf("Failed to parse message: %v", err)
-					conn.WriteJSON(gin.H{"type": "error", "message": "Invalid JSON format"})
+					_ = writer.WriteJSON(gin.H{"type": "error", "message": "Invalid JSON format"})
 					return false
 				}
 
 				if input.Message == "" {
-					conn.WriteJSON(gin.H{"type": "error", "message": "Empty message"})
+					_ = writer.WriteJSON(gin.H{"type": "error", "message": "Empty message"})
 					return false
 				}
 
 				// 🔧 P1-2: 消息长度检查
 				if len(input.Message) > maxMessageLength {
-					conn.WriteJSON(gin.H{
+					_ = writer.WriteJSON(gin.H{
 						"type":    "error",
 						"message": fmt.Sprintf("消息长度超过 %d 字符限制", maxMessageLength),
 					})
@@ -439,7 +440,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 				}
 				defer span.End()
 
-				return h.handleChatMessage(ctx, conn, userID, input, input.RequestID)
+				return h.handleChatMessage(ctx, writer, userID, input, input.RequestID)
 			}
 
 			if envelope.MessageID == "" {
@@ -458,7 +459,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 			)
 			defer span.End()
 
-			responder := newEnvelopeResponder(conn, envelope, msgCtx)
+			responder := newEnvelopeResponder(writer, envelope, msgCtx)
 			responder.SendAck()
 
 			switch payloadType := envelopePayloadType(envelope.Payload); payloadType {

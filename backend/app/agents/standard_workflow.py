@@ -190,6 +190,7 @@ def _build_expert_collaboration_system_prompt(
         conversation_history=conversation_context,
         prompt_version=prompt_version,
         agent_role=agent_role,
+        model_key=getattr(runtime["service"], "model_key", None),
         plan_context=state.context_data.get("plan_context"),
         session_feedback_instruction=str(state.context_data.get("session_feedback_instruction") or ""),
         dual_core_instruction=str(state.context_data.get("dual_core_prompt_instruction") or ""),
@@ -262,11 +263,18 @@ async def _execute_explicit_expert_collaboration(state: WorkflowState) -> Collab
         )
 
     synthesis_target = answer_targets[0] if answer_targets else selected[0]
-    synthesis_runtime = await _resolve_llm_for_expert(
-        expert_id=synthesis_target,
-        state=state,
-        task_type=TaskType.COLLABORATION,
-    )
+    synthesis_runtime = {
+        "service": await get_configured_llm_service_for_tier(
+            AgentRole.GENERATION,
+            ModelTier.FAST,
+            task_type=TaskType.ROUTING,
+        ),
+        "agent_role": AgentRole.GENERATION,
+        "display_name": "协作汇总器",
+        "system_prompt": "",
+        "expert_id": synthesis_target,
+        "is_custom": False,
+    }
     synthesis_prompt = _build_expert_collaboration_system_prompt(
         state=state,
         runtime=synthesis_runtime,
@@ -744,6 +752,7 @@ Ask about their available time and current tasks if needed.
         conversation_history=conversation_context,
         prompt_version=prompt_version,
         agent_role=_coerce_agent_role(getattr(generation_llm, "agent_role", agent_role)),
+        model_key=getattr(generation_llm, "model_key", None),
         plan_context=plan_context,
         intent_instruction=intent_instruction, # Vision Item 4b
         session_feedback_instruction=str(state.context_data.get("session_feedback_instruction") or ""),
@@ -804,10 +813,31 @@ Ask about their available time and current tasks if needed.
 
     state.context_data["active_generation_agent_role"] = str(getattr(generation_llm, "agent_role", agent_role))
     selection = generation_llm.get_current_selection()
+    run_ledger = state.context_data.get("run_ledger")
     if selection is not None:
         state.context_data["active_generation_model"] = selection.config.model_name
+        state.context_data["generation_model_key"] = selection.model_key
+        state.context_data["generation_provider"] = selection.config.provider.value
+        state.context_data["model_used"] = selection.model_key
+        if run_ledger is not None:
+            await run_ledger.record_event(
+                event_type="generation_started",
+                label="主生成模型开始工作",
+                workflow_stage="generation",
+                metadata={
+                    "role": "generation",
+                    "model_key": selection.model_key,
+                    "provider": selection.config.provider.value,
+                    "tier": selection.config.tier.value,
+                    "estimated_cost_per_1k": selection.estimated_cost_per_1k,
+                    "is_fallback": selection.is_fallback,
+                },
+                emit_snapshot=False,
+            )
 
     try:
+        usage_prompt_tokens = 0
+        usage_completion_tokens = 0
         async for chunk in generation_llm.chat_stream_with_tools(
             system_prompt=system_prompt,
             user_message=user_message,
@@ -843,6 +873,8 @@ Ask about their available time and current tasks if needed.
                         )
                     ))
             elif chunk.type == "usage":
+                usage_prompt_tokens = chunk.prompt_tokens or 0
+                usage_completion_tokens = chunk.completion_tokens or 0
                 if stream_callback:
                     await stream_callback(agent_service_pb2.ChatResponse(
                         usage=agent_service_pb2.Usage(
@@ -854,6 +886,8 @@ Ask about their available time and current tasks if needed.
     except Exception as e:
         logger.warning(f"Generation streaming failed, using retrieval fallback: {e}")
         state.context_data["generation_fallback_reason"] = str(e)
+        usage_prompt_tokens = 0
+        usage_completion_tokens = 0
 
     retrieval_grounded_response = _build_generation_fallback_response(
         user_message=user_message,
@@ -890,6 +924,28 @@ Ask about their available time and current tasks if needed.
                 ))
             else:
                 await stream_callback(agent_service_pb2.ChatResponse(delta=fallback_response))
+    if selection is not None and run_ledger is not None:
+        total_tokens = usage_prompt_tokens + usage_completion_tokens
+        await run_ledger.record_event(
+            event_type="generation_completed",
+            label="主生成模型完成输出",
+            workflow_stage="generation",
+            metadata={
+                "role": "generation",
+                "model_key": selection.model_key,
+                "provider": selection.config.provider.value,
+                "tier": selection.config.tier.value,
+                "estimated_cost_per_1k": selection.estimated_cost_per_1k,
+                "is_fallback": selection.is_fallback,
+                "prompt_tokens": usage_prompt_tokens,
+                "completion_tokens": usage_completion_tokens,
+                "total_tokens": total_tokens,
+                "estimated_cost_usd": round((total_tokens / 1000.0) * selection.estimated_cost_per_1k, 6)
+                if total_tokens > 0
+                else 0.0,
+            },
+            emit_snapshot=False,
+        )
 
     state.append_message("assistant", full_response)
     if tool_calls:

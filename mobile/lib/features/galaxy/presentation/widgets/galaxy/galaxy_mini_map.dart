@@ -11,6 +11,7 @@ class GalaxyMiniMap extends StatelessWidget {
     required this.camera,
     required this.positions,
     required this.nodesById,
+    this.blendedColors,
     required this.worldBounds,
     required this.isDarkMode,
     required this.sceneVersion,
@@ -23,6 +24,7 @@ class GalaxyMiniMap extends StatelessWidget {
   final GalaxyCamera camera;
   final Map<String, Offset> positions;
   final Map<String, GalaxyNodeModel> nodesById;
+  final Map<String, Color>? blendedColors;
   final Rect worldBounds;
   final bool isDarkMode;
   final int sceneVersion;
@@ -75,6 +77,7 @@ class GalaxyMiniMap extends StatelessWidget {
                   camera: camera,
                   positions: positions,
                   nodesById: nodesById,
+                  blendedColors: blendedColors,
                   worldBounds: worldBounds,
                   isDarkMode: isDarkMode,
                   sceneVersion: sceneVersion,
@@ -103,6 +106,7 @@ class _GalaxyMiniMapPainter extends CustomPainter {
     required this.camera,
     required this.positions,
     required this.nodesById,
+    this.blendedColors,
     required this.worldBounds,
     required this.isDarkMode,
     required this.sceneVersion,
@@ -111,6 +115,7 @@ class _GalaxyMiniMapPainter extends CustomPainter {
   final GalaxyCamera camera;
   final Map<String, Offset> positions;
   final Map<String, GalaxyNodeModel> nodesById;
+  final Map<String, Color>? blendedColors;
   final Rect worldBounds;
   final bool isDarkMode;
   final int sceneVersion;
@@ -134,7 +139,16 @@ class _GalaxyMiniMapPainter extends CustomPainter {
       }
 
       final point = _mapToMini(entry.value, paddedBounds, scaleX, scaleY);
-      final color = SectorConfig.getColor(node.sector, isDarkMode: isDarkMode);
+      final resolvedColors = blendedColors ?? const <String, Color>{};
+      final color = SectorConfig.applyImportanceRamp(
+        resolvedColors[node.id] ??
+            SectorConfig.resolveNodeBaseColor(
+              node: node,
+              isDarkMode: isDarkMode,
+            ),
+        importance: node.importance,
+        isDarkMode: isDarkMode,
+      );
       canvas.drawCircle(
         point,
         node.importance >= 4 ? 2.1 : 1.4,
@@ -200,5 +214,6 @@ class _GalaxyMiniMapPainter extends CustomPainter {
       oldDelegate.camera != camera ||
       oldDelegate.sceneVersion != sceneVersion ||
       oldDelegate.worldBounds != worldBounds ||
-      oldDelegate.isDarkMode != isDarkMode;
+      oldDelegate.isDarkMode != isDarkMode ||
+      !identical(oldDelegate.blendedColors, blendedColors);
 }

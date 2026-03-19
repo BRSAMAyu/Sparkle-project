@@ -21,6 +21,7 @@ from app.agents.graph.expert_registry import (
 from app.agents.graph.llm_factory import LLMFactory
 from app.agents.graph.state import SparkleState
 from app.config import settings
+from app.core.agent_profiles import ModelTier, TaskType
 from app.core.metrics import (
     AGENT_COLLAB_DECISION_TOTAL,
     AGENT_COMBINATION_EXPLORATION_TOTAL,
@@ -321,7 +322,11 @@ async def _analyze_collaboration_needs_llm(
     available_agents: list[dict[str, Any]],
     combination_hints: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    llm = LLMFactory.get_llm("router")
+    llm = LLMFactory.get_llm(
+        "orchestrator",
+        task_type=TaskType.ROUTING,
+        force_tier=ModelTier.FAST,
+    )
     structured_llm = llm.with_structured_output(CollaborationDecision)
     agent_lines = "\n".join(
         f"- {item['id']} ({item['display_name']}): {item['description']} | quality_score={item['quality_score']:.2f}"

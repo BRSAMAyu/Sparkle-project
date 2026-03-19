@@ -238,7 +238,7 @@ Future<TransparencyPreferences> transparencyPreferences(Ref ref) async {
 
   // Default preferences
   return const TransparencyPreferences(
-    enabled: false,
+    enabled: true,
     showTokenUsage: true,
     showAgentSwitching: true,
     showReasoningSteps: true,
@@ -261,7 +261,7 @@ class TransparencyPreferencesNotifier
   Future<void> setEnabled(bool value) async {
     final current = state.valueOrNull ??
         const TransparencyPreferences(
-          enabled: false,
+          enabled: true,
           showTokenUsage: true,
           showAgentSwitching: true,
           showReasoningSteps: true,
@@ -272,7 +272,7 @@ class TransparencyPreferencesNotifier
   Future<void> setShowTokenUsage(bool value) async {
     final current = state.valueOrNull ??
         const TransparencyPreferences(
-          enabled: false,
+          enabled: true,
           showTokenUsage: true,
           showAgentSwitching: true,
           showReasoningSteps: true,
@@ -283,7 +283,7 @@ class TransparencyPreferencesNotifier
   Future<void> setShowAgentSwitching(bool value) async {
     final current = state.valueOrNull ??
         const TransparencyPreferences(
-          enabled: false,
+          enabled: true,
           showTokenUsage: true,
           showAgentSwitching: true,
           showReasoningSteps: true,
@@ -294,7 +294,7 @@ class TransparencyPreferencesNotifier
   Future<void> setShowReasoningSteps(bool value) async {
     final current = state.valueOrNull ??
         const TransparencyPreferences(
-          enabled: false,
+          enabled: true,
           showTokenUsage: true,
           showAgentSwitching: true,
           showReasoningSteps: true,
@@ -314,7 +314,7 @@ class TransparencyPreferencesNotifier
     }
 
     return const TransparencyPreferences(
-      enabled: false,
+      enabled: true,
       showTokenUsage: true,
       showAgentSwitching: true,
       showReasoningSteps: true,
