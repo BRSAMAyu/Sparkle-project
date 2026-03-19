@@ -213,6 +213,7 @@ class Settings(BaseSettings):
     LLM_TIER_FAST: str = ""
     LLM_TIER_STANDARD: str = ""
     LLM_TIER_REASONING: str = ""
+    LLM_TIER_GLM_BATCH: str = ""
     LLM_TIER_SPECIALIST: str = ""
 
     # XiaoMi MIMO Configuration (快速响应)
@@ -267,8 +268,9 @@ class Settings(BaseSettings):
     DASHSCOPE_API_KEY: str = ""
     DASHSCOPE_BASE_HTTP_API_URL: str = "https://dashscope.aliyuncs.com/api/v1"
     DASHSCOPE_BASE_URL_COMPATIBLE: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-    DASHSCOPE_CHAT_MODEL: str = "qwen-plus"
-    DASHSCOPE_REASON_MODEL: str = "qwen-plus"
+    DASHSCOPE_CHAT_MODEL: str = "qwen3.5-plus"  # 标准/推理模型
+    DASHSCOPE_REASON_MODEL: str = "qwen3.5-plus"
+    DASHSCOPE_FAST_MODEL: str = "qwen3.5-flash"  # 快速响应模型
     DASHSCOPE_TEMPERATURE: float = 0.7
     DASHSCOPE_EMBEDDING_MODEL: str = "text-embedding-v4"
     DASHSCOPE_RERANK_MODEL: str = "qwen3-rerank"
@@ -414,6 +416,8 @@ class Settings(BaseSettings):
     MDX_DICTIONARY_ENABLED: bool = True
     MDX_DICTIONARY_PATH: str = ""
     MDD_RESOURCES_PATH: Optional[str] = None
+    DICTIONARY_PACKAGE_DIR: str = "data/dictionaries/packages"
+    DICTIONARY_PACKAGE_BASE_URL: str = ""
 
     # Internal API
     INTERNAL_API_KEY: str = ""

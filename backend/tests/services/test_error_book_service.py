@@ -1,6 +1,6 @@
 
 import pytest
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import MagicMock, AsyncMock, patch
 from uuid import uuid4
 from datetime import timezone, datetime
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,6 +15,15 @@ from app.models.error_book import ErrorRecord
 # Import models to ensure they are registered in SQLAlchemy mapper
 from app.models.audit_log import SecurityAuditLog
 from app.models.user import User
+
+
+class _AsyncNullContext:
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        return False
+
 
 @pytest.mark.asyncio
 async def test_create_error_with_cognitive_tags():
@@ -120,3 +129,84 @@ async def test_update_error_cognitive_tags():
     assert result.cognitive_tags == ["analysis"]
     assert result.ai_analysis_summary == "Updated summary"
     db_mock.commit.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_analyze_and_link_publishes_event_without_links():
+    """即使没有关联知识点，也应该发布 error_created 事件以驱动画像回流。"""
+    db_mock = MagicMock(spec=AsyncSession)
+    db_mock.execute = AsyncMock()
+    db_mock.commit = AsyncMock()
+    db_mock.rollback = AsyncMock()
+    db_mock.begin_nested = MagicMock(return_value=_AsyncNullContext())
+
+    service = ErrorBookService(db_mock)
+    user_id = uuid4()
+    error_id = uuid4()
+
+    error = MagicMock(spec=ErrorRecord)
+    error.id = error_id
+    error.user_id = user_id
+    error.question_text = "What does pointer dereference return?"
+    error.question_image_url = None
+    error.user_answer = "address"
+    error.correct_answer = "value"
+    error.subject_code = "computer"
+    error.latest_analysis = None
+    error.linked_knowledge_node_ids = []
+
+    mock_result = MagicMock()
+    mock_result.scalar_one_or_none.return_value = error
+    db_mock.execute.return_value = mock_result
+
+    with patch.object(service, "_search_knowledge_nodes", AsyncMock(return_value=[])), \
+         patch.object(
+             service,
+             "_run_llm_analysis",
+             AsyncMock(
+                 return_value={
+                     "error_type": "concept_confusion",
+                     "error_type_label": "概念混淆",
+                     "root_cause": "把地址和值混淆了",
+                     "correct_approach": "先解引用再读取值",
+                     "similar_traps": [],
+                     "recommended_knowledge": [],
+                     "study_suggestion": "回看指针与引用",
+                 }
+             ),
+         ), \
+         patch("app.services.error_book_service.event_bus.publish", new=AsyncMock()) as mock_publish, \
+         patch("app.services.error_book_service.SemanticMemoryService") as mock_semantic:
+        mock_semantic.return_value.upsert_strategy_from_error = AsyncMock()
+        await service.analyze_and_link(error_id, user_id)
+
+    mock_publish.assert_awaited_once()
+    event_type, payload = mock_publish.await_args.args
+    assert event_type == "error_created"
+    assert payload["error_id"] == str(error_id)
+    assert payload["linked_node_ids"] == []
+
+
+@pytest.mark.asyncio
+async def test_search_knowledge_nodes_keyword_fallback_when_vector_search_unavailable():
+    """向量检索不可用时，错题服务应退回关键词检索而不是整条链失败。"""
+    db_mock = MagicMock(spec=AsyncSession)
+    db_mock.execute = AsyncMock()
+    db_mock.begin_nested = MagicMock(return_value=_AsyncNullContext())
+
+    service = ErrorBookService(db_mock)
+    user_id = uuid4()
+    node = MagicMock(spec=ErrorRecord)
+
+    mock_result = MagicMock()
+    mock_result.scalars.return_value.all.return_value = [node]
+    db_mock.execute.return_value = mock_result
+
+    with patch(
+        "app.services.error_book_service.embedding_service.get_embedding",
+        new=AsyncMock(side_effect=RuntimeError("pgvector unavailable")),
+    ):
+        results = await service._search_knowledge_nodes(user_id, "牛顿第二定律 受力分析")
+
+    assert results == [node]
+    db_mock.execute.assert_awaited_once()

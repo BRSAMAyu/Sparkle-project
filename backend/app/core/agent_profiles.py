@@ -72,11 +72,12 @@ class TaskType(str, Enum):
 
 class ModelTier(str, Enum):
     """模型层级（按成本/能力分类）"""
-    FAST = "fast"           # 快速响应（如 mimo-v2-flash）
+    FAST = "fast"           # 快速响应（如 mimo-v2-flash, qwen3.5-flash）
     FREE_FAST = "free_fast" # 免费快速（如 glm-4.7-flash 非思考模式）
-    STANDARD = "standard"   # 标准模型（如 deepseek-chat, glm-4.7）
-    REASONING = "reasoning" # 强推理（如 deepseek-reasoner）
+    STANDARD = "standard"   # 标准模型（如 deepseek-chat, qwen3.5-plus）
+    REASONING = "reasoning" # 强推理（如 deepseek-reasoner, qwen3.5-plus）
     FREE_REASONING = "free_reasoning" # 免费推理（如 glm-4.7-flash 思考模式）
+    GLM_BATCH = "glm_batch" # GLM批量处理（glm-4.7 非思考+思考模式）
     SPECIALIST = "specialist" # 专家模型（如 OCR、翻译等专用模型）
 
 
@@ -121,6 +122,7 @@ class AgentProfile:
             ModelTier.FAST: available_models.get("fast_model"),
             ModelTier.STANDARD: available_models.get("standard_model"),
             ModelTier.REASONING: available_models.get("reasoning_model"),
+            ModelTier.GLM_BATCH: available_models.get("glm_batch_model"),
         }
         return tier_defaults.get(self.model_tier, {})
 

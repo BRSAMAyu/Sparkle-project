@@ -15,6 +15,9 @@ service ErrorBookService {
   
   // Get a single error detail
   rpc GetError(GetErrorRequest) returns (ErrorRecord);
+
+  // Get semantic summary for an error
+  rpc GetErrorSemanticSummary(GetErrorRequest) returns (ErrorSemanticSummary);
   
   // Update an error record
   rpc UpdateError(UpdateErrorRequest) returns (ErrorRecord);
@@ -60,6 +63,8 @@ message ErrorRecord {
   
   google.protobuf.Timestamp created_at = 15;
   google.protobuf.Timestamp updated_at = 16;
+  repeated string cognitive_tags = 17;
+  string ai_analysis_summary = 18;
 }
 
 message ErrorAnalysisResult {
@@ -80,6 +85,36 @@ message KnowledgeLinkBrief {
   bool is_primary = 4;
 }
 
+message SemanticConceptBrief {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+}
+
+message StrategyNodeSummary {
+  string id = 1;
+  string title = 2;
+  string description = 3;
+  string subject_code = 4;
+  repeated string tags = 5;
+  google.protobuf.Timestamp created_at = 6;
+}
+
+message SimilarErrorSummary {
+  string id = 1;
+  string subject_code = 2;
+  string root_cause = 3;
+  google.protobuf.Timestamp created_at = 4;
+}
+
+message ErrorSemanticSummary {
+  string error_id = 1;
+  string root_cause = 2;
+  repeated SemanticConceptBrief linked_concepts = 3;
+  repeated StrategyNodeSummary strategies = 4;
+  repeated SimilarErrorSummary similar_errors = 5;
+}
+
 // Requests & Responses
 
 message CreateErrorRequest {
@@ -90,6 +125,8 @@ message CreateErrorRequest {
   string correct_answer = 5;
   string subject_code = 6;
   string chapter = 7;
+  repeated string cognitive_tags = 8;
+  string ai_analysis_summary = 9;
 }
 
 message ListErrorsRequest {
@@ -103,6 +140,7 @@ message ListErrorsRequest {
   string keyword = 8;
   int32 page = 9;
   int32 page_size = 10;
+  string cognitive_dimension = 11;
 }
 
 message ListErrorsResponse {
@@ -127,6 +165,8 @@ message UpdateErrorRequest {
   optional string subject_code = 6;
   optional string chapter = 7;
   optional string question_image_url = 8;
+  repeated string cognitive_tags = 9;
+  optional string ai_analysis_summary = 10;
 }
 
 message DeleteErrorRequest {

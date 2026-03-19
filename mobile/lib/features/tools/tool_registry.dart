@@ -147,7 +147,10 @@ class ToolRegistry {
         ToolLaunchContext.taskExecution,
         ToolLaunchContext.toolLibrary,
       },
-      embeddedBuilder: (request) => NotesTool(surface: request.surface),
+      embeddedBuilder: (request) => NotesTool(
+        taskId: request.taskId,
+        surface: request.surface,
+      ),
     ),
     ToolDefinition(
       id: 'breathing',

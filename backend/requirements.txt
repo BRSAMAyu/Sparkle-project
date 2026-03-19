@@ -98,7 +98,9 @@ jinja2>=3.1.0
 celery>=5.3.6
 y-py>=0.6.0
 
-# Dictionary/HTML parsing (MDX feature is disabled by default)
+# Dictionary/HTML parsing
+readmdict>=0.1.1
+python-lzo>=1.15
 beautifulsoup4>=4.12.0
 lxml>=5.0.0
 

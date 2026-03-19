@@ -6,11 +6,10 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user_id, get_db
-from app.models.galaxy import KnowledgeNode
+from app.db.session import AsyncSessionLocal
 from app.schemas.error_book import (
     ErrorQueryParams,
     ErrorRecordCreate,
@@ -22,11 +21,17 @@ from app.schemas.error_book import (
     ReviewStatsResponse,
     SubjectEnum,
 )
-from app.schemas.semantic_memory import ConceptBrief, ErrorSemanticSummary, SimilarErrorItem, StrategyNodeResponse
+from app.schemas.semantic_memory import ErrorSemanticSummary
 from app.services.error_book_service import ErrorBookService
-from app.services.semantic_memory_service import SemanticMemoryService
 
 router = APIRouter(prefix="/errors", tags=["Error Book"])
+
+
+async def _analyze_error_task(error_id: UUID, user_id: UUID, db_session_factory) -> None:
+    """Run error analysis with a fresh DB session for background execution."""
+    async with db_session_factory() as session:
+        service = ErrorBookService(session)
+        await service.analyze_and_link(error_id, user_id)
 
 async def get_error_service(
     db: AsyncSession = Depends(get_db),
@@ -46,8 +51,7 @@ async def create_error(
     """
     error = await service.create_error(UUID(user_id), data)
 
-    # Trigger Async Analysis via BackgroundTasks
-    background_tasks.add_task(service.analyze_and_link, error.id, UUID(user_id))
+    background_tasks.add_task(_analyze_error_task, error.id, UUID(user_id), AsyncSessionLocal)
 
     return error
 
@@ -184,12 +188,7 @@ async def re_analyze_error(
     if not error:
         raise HTTPException(status_code=404, detail="没有找到这个错题，可能已经删除了")
 
-    # 异步执行分析
-    background_tasks.add_task(
-        service.analyze_and_link,
-        error_id,
-        UUID(user_id)
-    )
+    background_tasks.add_task(_analyze_error_task, error_id, UUID(user_id), AsyncSessionLocal)
 
     return {"message": "分析任务已提交，请稍后刷新查看结果~"}
 
@@ -216,52 +215,8 @@ async def get_error_semantic_summary(
     error_id: UUID,
     user_id: str = Depends(get_current_user_id),
     service: ErrorBookService = Depends(get_error_service),
-    db: AsyncSession = Depends(get_db),
 ):
-    error = await service.get_error(error_id, UUID(user_id))
-    if not error:
+    summary = await service.get_semantic_summary(error_id, UUID(user_id))
+    if not summary:
         raise HTTPException(status_code=404, detail="没有找到这个错题，可能已经删除了")
-
-    semantic_service = SemanticMemoryService(db)
-    strategies = await semantic_service.get_strategies_for_error(error_id, UUID(user_id))
-    similar_errors = await semantic_service.get_same_cause_errors(error_id, UUID(user_id), limit=5)
-
-    concepts = []
-    if error.linked_knowledge_node_ids:
-        result = await db.execute(
-            select(KnowledgeNode).where(KnowledgeNode.id.in_(error.linked_knowledge_node_ids))
-        )
-        nodes = result.scalars().all()
-        concepts = [
-            ConceptBrief(id=node.id, name=node.name, description=node.description)
-            for node in nodes
-        ]
-
-    root_cause = (error.latest_analysis or {}).get("root_cause") if error.latest_analysis else None
-
-    return ErrorSemanticSummary(
-        error_id=error.id,
-        root_cause=root_cause,
-        linked_concepts=concepts,
-        strategies=[
-            StrategyNodeResponse(
-                id=strategy.id,
-                title=strategy.title,
-                description=strategy.description,
-                subject_code=strategy.subject_code,
-                tags=strategy.tags,
-                created_at=strategy.created_at,
-            )
-            for strategy in strategies
-        ],
-        similar_errors=[
-            SimilarErrorItem(
-                id=item.id,
-                subject_code=item.subject_code,
-                root_cause=(item.latest_analysis or {}).get("root_cause"),
-                created_at=item.created_at,
-            )
-            for item in similar_errors
-        ],
-        metadata={"strategies_count": len(strategies)},
-    )
+    return summary

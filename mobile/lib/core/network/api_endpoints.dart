@@ -34,6 +34,13 @@ class ApiEndpoints {
   static const String myFiles = '/me/files';
   static const String myFilesSearch = '/me/files/search';
 
+  // Vocabulary / Dictionary
+  static const String vocabularyLookup = '/vocabulary/lookup';
+  static const String vocabularyWordbook = '/vocabulary/wordbook';
+  static const String dictionaryPackages = '/vocabulary/dictionary/packages';
+  static String dictionaryPackageDownload(String packageId) =>
+      '/vocabulary/dictionary/packages/$packageId/download';
+
   // Users
   static String user(String id) => '/users/$id';
 

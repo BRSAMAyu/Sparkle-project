@@ -55,6 +55,10 @@ dependencies = [
     "tiktoken>=0.5.2",
     "pypdf>=3.0.0",
     "pdfplumber>=0.10.0",
+    "readmdict>=0.1.1",
+    "python-lzo>=1.15",
+    "beautifulsoup4>=4.12.0",
+    "lxml>=5.0.0",
 
     # Additional Dependencies
     "sse-starlette",

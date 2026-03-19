@@ -49,6 +49,11 @@ class ErrorBookServiceStub(object):
                 request_serializer=error__book__pb2.GetErrorRequest.SerializeToString,
                 response_deserializer=error__book__pb2.ErrorRecord.FromString,
                 _registered_method=True)
+        self.GetErrorSemanticSummary = channel.unary_unary(
+                '/error_book.ErrorBookService/GetErrorSemanticSummary',
+                request_serializer=error__book__pb2.GetErrorRequest.SerializeToString,
+                response_deserializer=error__book__pb2.ErrorSemanticSummary.FromString,
+                _registered_method=True)
         self.UpdateError = channel.unary_unary(
                 '/error_book.ErrorBookService/UpdateError',
                 request_serializer=error__book__pb2.UpdateErrorRequest.SerializeToString,
@@ -100,6 +105,13 @@ class ErrorBookServiceServicer(object):
 
     def GetError(self, request, context):
         """Get a single error detail
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetErrorSemanticSummary(self, request, context):
+        """Get semantic summary for an error
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -164,6 +176,11 @@ def add_ErrorBookServiceServicer_to_server(servicer, server):
                     servicer.GetError,
                     request_deserializer=error__book__pb2.GetErrorRequest.FromString,
                     response_serializer=error__book__pb2.ErrorRecord.SerializeToString,
+            ),
+            'GetErrorSemanticSummary': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetErrorSemanticSummary,
+                    request_deserializer=error__book__pb2.GetErrorRequest.FromString,
+                    response_serializer=error__book__pb2.ErrorSemanticSummary.SerializeToString,
             ),
             'UpdateError': grpc.unary_unary_rpc_method_handler(
                     servicer.UpdateError,
@@ -277,6 +294,33 @@ class ErrorBookService(object):
             '/error_book.ErrorBookService/GetError',
             error__book__pb2.GetErrorRequest.SerializeToString,
             error__book__pb2.ErrorRecord.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetErrorSemanticSummary(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/error_book.ErrorBookService/GetErrorSemanticSummary',
+            error__book__pb2.GetErrorRequest.SerializeToString,
+            error__book__pb2.ErrorSemanticSummary.FromString,
             options,
             channel_credentials,
             insecure,

@@ -2,7 +2,7 @@
 MDX/MDD 词典查询服务
 MDX/MDD Dictionary Query Service
 
-默认关闭。仅当 ENABLE_MDX_DICTIONARY=true 时才尝试加载 MDX 依赖。
+默认启用；如果运行环境缺依赖或实际词典文件是 Git LFS 指针文件，则优雅降级。
 """
 from __future__ import annotations
 import html
@@ -13,7 +13,16 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-ENABLE_MDX_DICTIONARY = os.getenv("ENABLE_MDX_DICTIONARY", "false").lower() in {"1", "true", "yes", "on"}
+def _is_truthy(value: str | None, default: bool = True) -> bool:
+    if value is None:
+        return default
+    return value.lower() in {"1", "true", "yes", "on"}
+
+
+ENABLE_MDX_DICTIONARY = _is_truthy(
+    os.getenv("ENABLE_MDX_DICTIONARY", os.getenv("MDX_DICTIONARY_ENABLED")),
+    default=True,
+)
 
 if ENABLE_MDX_DICTIONARY:
     try:
@@ -58,6 +67,8 @@ class MDXDictionaryService:
 
         if not self.mdx_path.exists():
             raise FileNotFoundError(f"MDX file not found: {mdx_path}")
+        if self._is_git_lfs_pointer(self.mdx_path):
+            raise RuntimeError(f"MDX file is still a Git LFS pointer: {mdx_path}")
 
         try:
             self.mdx = MDX(str(self.mdx_path))
@@ -67,6 +78,14 @@ class MDXDictionaryService:
         except Exception as e:
             logger.error(f"Failed to load MDX dictionary: {e}")
             raise
+
+    @staticmethod
+    def _is_git_lfs_pointer(path: Path) -> bool:
+        try:
+            header = path.read_bytes()[:64]
+        except OSError:
+            return False
+        return header.startswith(b"version https://git-lfs.github.com/spec/v1")
 
     def _get_items(self):
         """获取词典条目（延迟加载并缓存）"""

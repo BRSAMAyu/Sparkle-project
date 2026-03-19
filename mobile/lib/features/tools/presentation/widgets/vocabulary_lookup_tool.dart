@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/features/knowledge/data/repositories/vocabulary_repository.dart';
 import 'package:sparkle/features/knowledge/presentation/providers/vocabulary_provider.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
@@ -27,12 +28,15 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   bool _isInLocalWordbook = false;
+  bool _isDownloadingDictionary = false;
+  int _installedPackageCount = 0;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusNode.requestFocus();
+      _refreshDictionaryPackages();
     });
   }
 
@@ -41,6 +45,20 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
     _controller.dispose();
     _focusNode.dispose();
     super.dispose();
+  }
+
+  Future<void> _refreshDictionaryPackages() async {
+    try {
+      final installed = await ref
+          .read(vocabularyRepositoryProvider)
+          .getInstalledDictionaryPackages();
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _installedPackageCount = installed.length;
+      });
+    } catch (_) {}
   }
 
   Future<void> _lookup() async {
@@ -138,6 +156,35 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
     }
   }
 
+  Future<void> _downloadStarterDictionary() async {
+    setState(() {
+      _isDownloadingDictionary = true;
+    });
+    try {
+      final repository = ref.read(vocabularyRepositoryProvider);
+      final packages = await repository.getDictionaryPackages();
+      final starter = packages.firstWhere(
+        (item) => item.packageScope == 'starter',
+        orElse: () => packages.first,
+      );
+      await repository.downloadDictionaryPackage(starter.id);
+      await _refreshDictionaryPackages();
+      if (mounted) {
+        AppFeedback.success(context, '离线词典已下载，可优先本地查词');
+      }
+    } catch (e) {
+      if (mounted) {
+        AppFeedback.error(context, '离线词典下载失败: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isDownloadingDictionary = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(vocabularyProvider);
@@ -169,13 +216,33 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
           accentColor: accent,
           icon: Icons.hub_rounded,
         ),
+        ToolHeroChip(
+          label: _installedPackageCount > 0
+              ? '$_installedPackageCount 个离线词典包'
+              : '未下载离线词典',
+          accentColor: accent,
+          icon: _installedPackageCount > 0
+              ? Icons.download_done_rounded
+              : Icons.cloud_download_rounded,
+        ),
       ],
       body: Column(
         children: [
           ToolSectionCard(
             accentColor: accent,
             title: '查询输入',
-            subtitle: '输入英文单词后回车或点击查询。',
+            subtitle: '输入英文单词后回车或点击查询。Oxford 词典优先，本地离线包会先于网络命中。',
+            trailing: SparkleButton(
+              label: _installedPackageCount > 0 ? '更新离线词典' : '下载离线词典',
+              onPressed: _isDownloadingDictionary ? null : _downloadStarterDictionary,
+              icon: Icon(
+                _installedPackageCount > 0
+                    ? Icons.sync_rounded
+                    : Icons.download_rounded,
+              ),
+              variant: ButtonVariant.ghost,
+              loading: _isDownloadingDictionary,
+            ),
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final compact = constraints.maxWidth < 520;

@@ -3,8 +3,10 @@
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import random
+import re
 from datetime import timezone, datetime, timedelta
 from uuid import UUID
 
@@ -24,6 +26,7 @@ from app.schemas.error_book import (
     ReviewAction,
     ReviewPerformanceEnum,
 )
+from app.schemas.semantic_memory import ConceptBrief, ErrorSemanticSummary, SimilarErrorItem, StrategyNodeResponse
 from app.services.embedding_service import embedding_service
 from app.services.ocr_service import ocr_service
 from app.services.semantic_memory_service import SemanticMemoryService
@@ -180,7 +183,7 @@ class ErrorBookService:
 
             # --- Step 2: RAG Retrieval ---
             linked_ids = []
-            suggested_concepts = []
+            nodes: list[KnowledgeNode] = []
 
             try:
                 # Retrieve relevant knowledge nodes
@@ -216,8 +219,9 @@ class ErrorBookService:
             # error.suggested_concepts = ... (if LLM returns them)
 
             try:
-                semantic_service = SemanticMemoryService(self.db)
-                await semantic_service.upsert_strategy_from_error(error)
+                async with self.db.begin_nested():
+                    semantic_service = SemanticMemoryService(self.db)
+                    await semantic_service.upsert_strategy_from_error(error)
             except Exception as e:
                 logger.warning(f"Semantic memory linking failed: {e}")
 
@@ -228,15 +232,22 @@ class ErrorBookService:
             await self.db.commit()
             logger.info(f"Analysis completed for error {error.id}")
 
+            try:
+                from app.services.error_book_signal_processor import ErrorBookSignalProcessor
+
+                processor = ErrorBookSignalProcessor(self.db)
+                await processor.process_error_created(user_id)
+            except Exception as e:
+                logger.warning(f"Error book preference sync failed: {e}")
+
             # Publish Error Created Event
             try:
-                if linked_ids:
-                    event = ErrorCreated(
-                        user_id=str(user_id),
-                        error_id=str(error.id),
-                        linked_node_ids=[str(i) for i in linked_ids]
-                    )
-                    await event_bus.publish(event.to_dict()['event_type'], event.to_dict())
+                event = ErrorCreated(
+                    user_id=str(user_id),
+                    error_id=str(error.id),
+                    linked_node_ids=[str(i) for i in linked_ids]
+                )
+                await event_bus.publish(event.to_dict()['event_type'], event.to_dict())
             except Exception as e:
                 logger.error(f"Failed to publish ErrorCreated event: {e}")
 
@@ -254,12 +265,54 @@ class ErrorBookService:
             return ""
 
     async def _search_knowledge_nodes(self, user_id: UUID, text: str, limit: int = 3) -> list[KnowledgeNode]:
-        # Generate embedding
-        embedding = await embedding_service.get_embedding(text, text_type="query")
+        try:
+            async with self.db.begin_nested():
+                embedding = await embedding_service.get_embedding(text, text_type="query")
+                stmt = (
+                    select(KnowledgeNode)
+                    .outerjoin(
+                        UserNodeStatus,
+                        and_(
+                            UserNodeStatus.node_id == KnowledgeNode.id,
+                            UserNodeStatus.user_id == user_id,
+                        ),
+                    )
+                    .where(
+                        KnowledgeNode.not_deleted_filter(),
+                        or_(
+                            KnowledgeNode.is_seed,
+                            UserNodeStatus.user_id.isnot(None),
+                        ),
+                    )
+                    .order_by(KnowledgeNode.embedding.l2_distance(embedding))
+                    .limit(limit)
+                )
 
-        # PGVector search
-        # Note: This requires the KnowledgeNode model to have the `embedding` column and pgvector extension
-        # We assume KnowledgeNode.embedding is mapped.
+                result = await self.db.execute(stmt)
+                return result.scalars().all()
+        except Exception as exc:
+            logger.warning(f"Knowledge node vector search failed, falling back to keyword search: {exc}")
+            return await self._keyword_search_knowledge_nodes(user_id, text, limit=limit)
+
+    async def _keyword_search_knowledge_nodes(self, user_id: UUID, text: str, limit: int = 3) -> list[KnowledgeNode]:
+        cleaned_text = text.strip()
+        if not cleaned_text:
+            return []
+
+        keywords = [
+            token
+            for token in re.split(r"[\s,，。！？；;:：/\\\\()\\[\\]{}]+", cleaned_text)
+            if len(token) >= 2
+        ][:6]
+        if not keywords:
+            keywords = [cleaned_text[:40]]
+
+        conditions = []
+        for keyword in keywords:
+            like = f"%{keyword}%"
+            conditions.append(KnowledgeNode.name.ilike(like))
+            conditions.append(KnowledgeNode.description.ilike(like))
+
         stmt = (
             select(KnowledgeNode)
             .outerjoin(
@@ -275,8 +328,9 @@ class ErrorBookService:
                     KnowledgeNode.is_seed,
                     UserNodeStatus.user_id.isnot(None),
                 ),
+                or_(*conditions),
             )
-            .order_by(KnowledgeNode.embedding.l2_distance(embedding))
+            .order_by(KnowledgeNode.is_seed.desc(), KnowledgeNode.updated_at.desc())
             .limit(limit)
         )
 
@@ -306,12 +360,16 @@ class ErrorBookService:
         """
 
         try:
-            response = await llm_client.chat_completion(
-                messages=[
-                    {"role": "system", "content": "You are an expert tutor."},
-                    {"role": "user", "content": prompt}
-                ],
-                response_format={"type": "json_object"}
+            response = await asyncio.wait_for(
+                llm_client.chat_completion(
+                    messages=[
+                        {"role": "system", "content": "You are an expert tutor."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    response_format={"type": "json_object"},
+                    max_tokens=700,
+                ),
+                timeout=12.0,
             )
             # Parse JSON
             if isinstance(response, str):
@@ -322,15 +380,56 @@ class ErrorBookService:
             return response
         except Exception as e:
             logger.error(f"LLM call failed: {e}")
-            return {
-                "error_type": "other",
-                "error_type_label": "分析失败",
-                "root_cause": "暂时无法进行智能分析",
-                "correct_approach": "请参考正确答案",
-                "similar_traps": [],
-                "recommended_knowledge": [],
-                "study_suggestion": "请稍后重试"
-            }
+            return self._build_fallback_analysis(
+                question=question,
+                user_ans=user_ans,
+                correct_ans=correct_ans,
+                linked_nodes=linked_nodes,
+            )
+
+    def _build_fallback_analysis(self, question, user_ans, correct_ans, linked_nodes) -> dict:
+        question_text = (question or "").strip()
+        user_text = (user_ans or "").strip()
+        correct_text = (correct_ans or "").strip()
+        related_concepts = [node.name for node in linked_nodes[:3] if getattr(node, "name", None)]
+
+        combined_text = f"{question_text}\n{user_text}\n{correct_text}".lower()
+        if any(keyword in combined_text for keyword in ["指针", "pointer", "*p", "地址", "内存"]):
+            error_type = "concept_confusion"
+            error_type_label = "概念混淆"
+        elif any(keyword in combined_text for keyword in ["计算", "算错", "结果", "公式"]):
+            error_type = "calculation_error"
+            error_type_label = "计算失误"
+        else:
+            error_type = "knowledge_gap"
+            error_type_label = "知识缺口"
+
+        root_cause = (
+            f"从题干与作答来看，当前错误更像是{error_type_label}。"
+            f"学生回答“{user_text or '未填写'}”与正确表达“{correct_text or '未提供'}”之间存在关键概念错位。"
+        )
+        correct_approach = (
+            f"先用自己的话复述题目核心概念，再明确区分“{correct_text or '正确答案中的关键定义'}”"
+            "与常见混淆点，最后用一个最小例子重新验证。"
+        )
+        similar_traps = [
+            "把符号本身和它表示的对象混为一谈",
+            "没有先确认概念定义就直接代入理解",
+        ]
+        recommended_knowledge = related_concepts or ["核心概念定义", "易混点辨析"]
+        study_suggestion = (
+            "先把这道题压缩成一张两列表：左边写错误理解，右边写正确解释；"
+            "随后再做一道同类型变式题，确认自己能稳定说清差异。"
+        )
+        return {
+            "error_type": error_type,
+            "error_type_label": error_type_label,
+            "root_cause": root_cause,
+            "correct_approach": correct_approach,
+            "similar_traps": similar_traps,
+            "recommended_knowledge": recommended_knowledge,
+            "study_suggestion": study_suggestion,
+        }
 
     async def get_error(self, error_id: UUID, user_id: UUID) -> ErrorRecord | None:
         stmt = select(ErrorRecord).where(
@@ -357,6 +456,54 @@ class ErrorBookService:
             ]
 
         return record
+
+    async def get_semantic_summary(self, error_id: UUID, user_id: UUID) -> ErrorSemanticSummary | None:
+        error = await self.get_error(error_id, user_id)
+        if not error:
+            return None
+
+        semantic_service = SemanticMemoryService(self.db)
+        strategies = await semantic_service.get_strategies_for_error(error_id, user_id)
+        similar_errors = await semantic_service.get_same_cause_errors(error_id, user_id, limit=5)
+
+        concepts: list[ConceptBrief] = []
+        if error.linked_knowledge_node_ids:
+            result = await self.db.execute(
+                select(KnowledgeNode).where(KnowledgeNode.id.in_(error.linked_knowledge_node_ids))
+            )
+            nodes = result.scalars().all()
+            concepts = [
+                ConceptBrief(id=node.id, name=node.name, description=node.description)
+                for node in nodes
+            ]
+
+        root_cause = (error.latest_analysis or {}).get("root_cause") if error.latest_analysis else None
+        return ErrorSemanticSummary(
+            error_id=error.id,
+            root_cause=root_cause,
+            linked_concepts=concepts,
+            strategies=[
+                StrategyNodeResponse(
+                    id=strategy.id,
+                    title=strategy.title,
+                    description=strategy.description,
+                    subject_code=strategy.subject_code,
+                    tags=strategy.tags,
+                    created_at=strategy.created_at,
+                )
+                for strategy in strategies
+            ],
+            similar_errors=[
+                SimilarErrorItem(
+                    id=item.id,
+                    subject_code=item.subject_code,
+                    root_cause=(item.latest_analysis or {}).get("root_cause"),
+                    created_at=item.created_at,
+                )
+                for item in similar_errors
+            ],
+            metadata={"strategy_count": len(strategies), "similar_error_count": len(similar_errors)},
+        )
 
     async def list_errors(
         self,
@@ -470,6 +617,14 @@ class ErrorBookService:
 
         await self.db.commit()
         await self.db.refresh(error)
+
+        try:
+            from app.services.error_book_signal_processor import ErrorBookSignalProcessor
+
+            processor = ErrorBookSignalProcessor(self.db)
+            await processor.process_error_created(user_id)
+        except Exception as e:
+            logger.warning(f"Error book preference refresh after review failed: {e}")
 
         return error
 

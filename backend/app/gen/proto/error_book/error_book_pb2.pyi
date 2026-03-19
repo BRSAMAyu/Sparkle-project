@@ -1,17 +1,16 @@
 import datetime
-from collections.abc import Iterable as _Iterable
-from collections.abc import Mapping as _Mapping
-from typing import ClassVar as _ClassVar
 
-from google.protobuf import descriptor as _descriptor
-from google.protobuf import message as _message
 from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from google.protobuf.internal import containers as _containers
+from google.protobuf import descriptor as _descriptor
+from google.protobuf import message as _message
+from collections.abc import Iterable as _Iterable, Mapping as _Mapping
+from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class ErrorRecord(_message.Message):
-    __slots__ = ("id", "user_id", "subject_code", "chapter", "question_text", "question_image_url", "user_answer", "correct_answer", "mastery_level", "review_count", "next_review_at", "last_reviewed_at", "latest_analysis", "knowledge_links", "created_at", "updated_at")
+    __slots__ = ("id", "user_id", "subject_code", "chapter", "question_text", "question_image_url", "user_answer", "correct_answer", "mastery_level", "review_count", "next_review_at", "last_reviewed_at", "latest_analysis", "knowledge_links", "created_at", "updated_at", "cognitive_tags", "ai_analysis_summary")
     ID_FIELD_NUMBER: _ClassVar[int]
     USER_ID_FIELD_NUMBER: _ClassVar[int]
     SUBJECT_CODE_FIELD_NUMBER: _ClassVar[int]
@@ -28,6 +27,8 @@ class ErrorRecord(_message.Message):
     KNOWLEDGE_LINKS_FIELD_NUMBER: _ClassVar[int]
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
     UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
+    COGNITIVE_TAGS_FIELD_NUMBER: _ClassVar[int]
+    AI_ANALYSIS_SUMMARY_FIELD_NUMBER: _ClassVar[int]
     id: str
     user_id: str
     subject_code: str
@@ -44,7 +45,9 @@ class ErrorRecord(_message.Message):
     knowledge_links: _containers.RepeatedCompositeFieldContainer[KnowledgeLinkBrief]
     created_at: _timestamp_pb2.Timestamp
     updated_at: _timestamp_pb2.Timestamp
-    def __init__(self, id: str | None = ..., user_id: str | None = ..., subject_code: str | None = ..., chapter: str | None = ..., question_text: str | None = ..., question_image_url: str | None = ..., user_answer: str | None = ..., correct_answer: str | None = ..., mastery_level: float | None = ..., review_count: int | None = ..., next_review_at: datetime.datetime | _timestamp_pb2.Timestamp | _Mapping | None = ..., last_reviewed_at: datetime.datetime | _timestamp_pb2.Timestamp | _Mapping | None = ..., latest_analysis: ErrorAnalysisResult | _Mapping | None = ..., knowledge_links: _Iterable[KnowledgeLinkBrief | _Mapping] | None = ..., created_at: datetime.datetime | _timestamp_pb2.Timestamp | _Mapping | None = ..., updated_at: datetime.datetime | _timestamp_pb2.Timestamp | _Mapping | None = ...) -> None: ...
+    cognitive_tags: _containers.RepeatedScalarFieldContainer[str]
+    ai_analysis_summary: str
+    def __init__(self, id: _Optional[str] = ..., user_id: _Optional[str] = ..., subject_code: _Optional[str] = ..., chapter: _Optional[str] = ..., question_text: _Optional[str] = ..., question_image_url: _Optional[str] = ..., user_answer: _Optional[str] = ..., correct_answer: _Optional[str] = ..., mastery_level: _Optional[float] = ..., review_count: _Optional[int] = ..., next_review_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., last_reviewed_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., latest_analysis: _Optional[_Union[ErrorAnalysisResult, _Mapping]] = ..., knowledge_links: _Optional[_Iterable[_Union[KnowledgeLinkBrief, _Mapping]]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., cognitive_tags: _Optional[_Iterable[str]] = ..., ai_analysis_summary: _Optional[str] = ...) -> None: ...
 
 class ErrorAnalysisResult(_message.Message):
     __slots__ = ("error_type", "error_type_label", "root_cause", "correct_approach", "similar_traps", "recommended_knowledge", "study_suggestion", "ocr_text")
@@ -64,7 +67,7 @@ class ErrorAnalysisResult(_message.Message):
     recommended_knowledge: _containers.RepeatedScalarFieldContainer[str]
     study_suggestion: str
     ocr_text: str
-    def __init__(self, error_type: str | None = ..., error_type_label: str | None = ..., root_cause: str | None = ..., correct_approach: str | None = ..., similar_traps: _Iterable[str] | None = ..., recommended_knowledge: _Iterable[str] | None = ..., study_suggestion: str | None = ..., ocr_text: str | None = ...) -> None: ...
+    def __init__(self, error_type: _Optional[str] = ..., error_type_label: _Optional[str] = ..., root_cause: _Optional[str] = ..., correct_approach: _Optional[str] = ..., similar_traps: _Optional[_Iterable[str]] = ..., recommended_knowledge: _Optional[_Iterable[str]] = ..., study_suggestion: _Optional[str] = ..., ocr_text: _Optional[str] = ...) -> None: ...
 
 class KnowledgeLinkBrief(_message.Message):
     __slots__ = ("id", "name", "relevance", "is_primary")
@@ -76,10 +79,62 @@ class KnowledgeLinkBrief(_message.Message):
     name: str
     relevance: float
     is_primary: bool
-    def __init__(self, id: str | None = ..., name: str | None = ..., relevance: float | None = ..., is_primary: bool = ...) -> None: ...
+    def __init__(self, id: _Optional[str] = ..., name: _Optional[str] = ..., relevance: _Optional[float] = ..., is_primary: bool = ...) -> None: ...
+
+class SemanticConceptBrief(_message.Message):
+    __slots__ = ("id", "name", "description")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    name: str
+    description: str
+    def __init__(self, id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ...) -> None: ...
+
+class StrategyNodeSummary(_message.Message):
+    __slots__ = ("id", "title", "description", "subject_code", "tags", "created_at")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    TITLE_FIELD_NUMBER: _ClassVar[int]
+    DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
+    SUBJECT_CODE_FIELD_NUMBER: _ClassVar[int]
+    TAGS_FIELD_NUMBER: _ClassVar[int]
+    CREATED_AT_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    title: str
+    description: str
+    subject_code: str
+    tags: _containers.RepeatedScalarFieldContainer[str]
+    created_at: _timestamp_pb2.Timestamp
+    def __init__(self, id: _Optional[str] = ..., title: _Optional[str] = ..., description: _Optional[str] = ..., subject_code: _Optional[str] = ..., tags: _Optional[_Iterable[str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class SimilarErrorSummary(_message.Message):
+    __slots__ = ("id", "subject_code", "root_cause", "created_at")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    SUBJECT_CODE_FIELD_NUMBER: _ClassVar[int]
+    ROOT_CAUSE_FIELD_NUMBER: _ClassVar[int]
+    CREATED_AT_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    subject_code: str
+    root_cause: str
+    created_at: _timestamp_pb2.Timestamp
+    def __init__(self, id: _Optional[str] = ..., subject_code: _Optional[str] = ..., root_cause: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class ErrorSemanticSummary(_message.Message):
+    __slots__ = ("error_id", "root_cause", "linked_concepts", "strategies", "similar_errors")
+    ERROR_ID_FIELD_NUMBER: _ClassVar[int]
+    ROOT_CAUSE_FIELD_NUMBER: _ClassVar[int]
+    LINKED_CONCEPTS_FIELD_NUMBER: _ClassVar[int]
+    STRATEGIES_FIELD_NUMBER: _ClassVar[int]
+    SIMILAR_ERRORS_FIELD_NUMBER: _ClassVar[int]
+    error_id: str
+    root_cause: str
+    linked_concepts: _containers.RepeatedCompositeFieldContainer[SemanticConceptBrief]
+    strategies: _containers.RepeatedCompositeFieldContainer[StrategyNodeSummary]
+    similar_errors: _containers.RepeatedCompositeFieldContainer[SimilarErrorSummary]
+    def __init__(self, error_id: _Optional[str] = ..., root_cause: _Optional[str] = ..., linked_concepts: _Optional[_Iterable[_Union[SemanticConceptBrief, _Mapping]]] = ..., strategies: _Optional[_Iterable[_Union[StrategyNodeSummary, _Mapping]]] = ..., similar_errors: _Optional[_Iterable[_Union[SimilarErrorSummary, _Mapping]]] = ...) -> None: ...
 
 class CreateErrorRequest(_message.Message):
-    __slots__ = ("user_id", "question_text", "question_image_url", "user_answer", "correct_answer", "subject_code", "chapter")
+    __slots__ = ("user_id", "question_text", "question_image_url", "user_answer", "correct_answer", "subject_code", "chapter", "cognitive_tags", "ai_analysis_summary")
     USER_ID_FIELD_NUMBER: _ClassVar[int]
     QUESTION_TEXT_FIELD_NUMBER: _ClassVar[int]
     QUESTION_IMAGE_URL_FIELD_NUMBER: _ClassVar[int]
@@ -87,6 +142,8 @@ class CreateErrorRequest(_message.Message):
     CORRECT_ANSWER_FIELD_NUMBER: _ClassVar[int]
     SUBJECT_CODE_FIELD_NUMBER: _ClassVar[int]
     CHAPTER_FIELD_NUMBER: _ClassVar[int]
+    COGNITIVE_TAGS_FIELD_NUMBER: _ClassVar[int]
+    AI_ANALYSIS_SUMMARY_FIELD_NUMBER: _ClassVar[int]
     user_id: str
     question_text: str
     question_image_url: str
@@ -94,10 +151,12 @@ class CreateErrorRequest(_message.Message):
     correct_answer: str
     subject_code: str
     chapter: str
-    def __init__(self, user_id: str | None = ..., question_text: str | None = ..., question_image_url: str | None = ..., user_answer: str | None = ..., correct_answer: str | None = ..., subject_code: str | None = ..., chapter: str | None = ...) -> None: ...
+    cognitive_tags: _containers.RepeatedScalarFieldContainer[str]
+    ai_analysis_summary: str
+    def __init__(self, user_id: _Optional[str] = ..., question_text: _Optional[str] = ..., question_image_url: _Optional[str] = ..., user_answer: _Optional[str] = ..., correct_answer: _Optional[str] = ..., subject_code: _Optional[str] = ..., chapter: _Optional[str] = ..., cognitive_tags: _Optional[_Iterable[str]] = ..., ai_analysis_summary: _Optional[str] = ...) -> None: ...
 
 class ListErrorsRequest(_message.Message):
-    __slots__ = ("user_id", "subject_code", "chapter", "error_type", "mastery_min", "mastery_max", "need_review", "keyword", "page", "page_size")
+    __slots__ = ("user_id", "subject_code", "chapter", "error_type", "mastery_min", "mastery_max", "need_review", "keyword", "page", "page_size", "cognitive_dimension")
     USER_ID_FIELD_NUMBER: _ClassVar[int]
     SUBJECT_CODE_FIELD_NUMBER: _ClassVar[int]
     CHAPTER_FIELD_NUMBER: _ClassVar[int]
@@ -108,6 +167,7 @@ class ListErrorsRequest(_message.Message):
     KEYWORD_FIELD_NUMBER: _ClassVar[int]
     PAGE_FIELD_NUMBER: _ClassVar[int]
     PAGE_SIZE_FIELD_NUMBER: _ClassVar[int]
+    COGNITIVE_DIMENSION_FIELD_NUMBER: _ClassVar[int]
     user_id: str
     subject_code: str
     chapter: str
@@ -118,7 +178,8 @@ class ListErrorsRequest(_message.Message):
     keyword: str
     page: int
     page_size: int
-    def __init__(self, user_id: str | None = ..., subject_code: str | None = ..., chapter: str | None = ..., error_type: str | None = ..., mastery_min: float | None = ..., mastery_max: float | None = ..., need_review: bool = ..., keyword: str | None = ..., page: int | None = ..., page_size: int | None = ...) -> None: ...
+    cognitive_dimension: str
+    def __init__(self, user_id: _Optional[str] = ..., subject_code: _Optional[str] = ..., chapter: _Optional[str] = ..., error_type: _Optional[str] = ..., mastery_min: _Optional[float] = ..., mastery_max: _Optional[float] = ..., need_review: bool = ..., keyword: _Optional[str] = ..., page: _Optional[int] = ..., page_size: _Optional[int] = ..., cognitive_dimension: _Optional[str] = ...) -> None: ...
 
 class ListErrorsResponse(_message.Message):
     __slots__ = ("items", "total", "page", "page_size", "has_next")
@@ -132,7 +193,7 @@ class ListErrorsResponse(_message.Message):
     page: int
     page_size: int
     has_next: bool
-    def __init__(self, items: _Iterable[ErrorRecord | _Mapping] | None = ..., total: int | None = ..., page: int | None = ..., page_size: int | None = ..., has_next: bool = ...) -> None: ...
+    def __init__(self, items: _Optional[_Iterable[_Union[ErrorRecord, _Mapping]]] = ..., total: _Optional[int] = ..., page: _Optional[int] = ..., page_size: _Optional[int] = ..., has_next: bool = ...) -> None: ...
 
 class GetErrorRequest(_message.Message):
     __slots__ = ("error_id", "user_id")
@@ -140,10 +201,10 @@ class GetErrorRequest(_message.Message):
     USER_ID_FIELD_NUMBER: _ClassVar[int]
     error_id: str
     user_id: str
-    def __init__(self, error_id: str | None = ..., user_id: str | None = ...) -> None: ...
+    def __init__(self, error_id: _Optional[str] = ..., user_id: _Optional[str] = ...) -> None: ...
 
 class UpdateErrorRequest(_message.Message):
-    __slots__ = ("error_id", "user_id", "question_text", "user_answer", "correct_answer", "subject_code", "chapter", "question_image_url")
+    __slots__ = ("error_id", "user_id", "question_text", "user_answer", "correct_answer", "subject_code", "chapter", "question_image_url", "cognitive_tags", "ai_analysis_summary")
     ERROR_ID_FIELD_NUMBER: _ClassVar[int]
     USER_ID_FIELD_NUMBER: _ClassVar[int]
     QUESTION_TEXT_FIELD_NUMBER: _ClassVar[int]
@@ -152,6 +213,8 @@ class UpdateErrorRequest(_message.Message):
     SUBJECT_CODE_FIELD_NUMBER: _ClassVar[int]
     CHAPTER_FIELD_NUMBER: _ClassVar[int]
     QUESTION_IMAGE_URL_FIELD_NUMBER: _ClassVar[int]
+    COGNITIVE_TAGS_FIELD_NUMBER: _ClassVar[int]
+    AI_ANALYSIS_SUMMARY_FIELD_NUMBER: _ClassVar[int]
     error_id: str
     user_id: str
     question_text: str
@@ -160,7 +223,9 @@ class UpdateErrorRequest(_message.Message):
     subject_code: str
     chapter: str
     question_image_url: str
-    def __init__(self, error_id: str | None = ..., user_id: str | None = ..., question_text: str | None = ..., user_answer: str | None = ..., correct_answer: str | None = ..., subject_code: str | None = ..., chapter: str | None = ..., question_image_url: str | None = ...) -> None: ...
+    cognitive_tags: _containers.RepeatedScalarFieldContainer[str]
+    ai_analysis_summary: str
+    def __init__(self, error_id: _Optional[str] = ..., user_id: _Optional[str] = ..., question_text: _Optional[str] = ..., user_answer: _Optional[str] = ..., correct_answer: _Optional[str] = ..., subject_code: _Optional[str] = ..., chapter: _Optional[str] = ..., question_image_url: _Optional[str] = ..., cognitive_tags: _Optional[_Iterable[str]] = ..., ai_analysis_summary: _Optional[str] = ...) -> None: ...
 
 class DeleteErrorRequest(_message.Message):
     __slots__ = ("error_id", "user_id")
@@ -168,7 +233,7 @@ class DeleteErrorRequest(_message.Message):
     USER_ID_FIELD_NUMBER: _ClassVar[int]
     error_id: str
     user_id: str
-    def __init__(self, error_id: str | None = ..., user_id: str | None = ...) -> None: ...
+    def __init__(self, error_id: _Optional[str] = ..., user_id: _Optional[str] = ...) -> None: ...
 
 class DeleteErrorResponse(_message.Message):
     __slots__ = ("success",)
@@ -182,13 +247,13 @@ class AnalyzeErrorRequest(_message.Message):
     USER_ID_FIELD_NUMBER: _ClassVar[int]
     error_id: str
     user_id: str
-    def __init__(self, error_id: str | None = ..., user_id: str | None = ...) -> None: ...
+    def __init__(self, error_id: _Optional[str] = ..., user_id: _Optional[str] = ...) -> None: ...
 
 class AnalyzeErrorResponse(_message.Message):
     __slots__ = ("message",)
     MESSAGE_FIELD_NUMBER: _ClassVar[int]
     message: str
-    def __init__(self, message: str | None = ...) -> None: ...
+    def __init__(self, message: _Optional[str] = ...) -> None: ...
 
 class SubmitReviewRequest(_message.Message):
     __slots__ = ("error_id", "user_id", "performance", "time_spent_seconds")
@@ -200,13 +265,13 @@ class SubmitReviewRequest(_message.Message):
     user_id: str
     performance: str
     time_spent_seconds: int
-    def __init__(self, error_id: str | None = ..., user_id: str | None = ..., performance: str | None = ..., time_spent_seconds: int | None = ...) -> None: ...
+    def __init__(self, error_id: _Optional[str] = ..., user_id: _Optional[str] = ..., performance: _Optional[str] = ..., time_spent_seconds: _Optional[int] = ...) -> None: ...
 
 class GetReviewStatsRequest(_message.Message):
     __slots__ = ("user_id",)
     USER_ID_FIELD_NUMBER: _ClassVar[int]
     user_id: str
-    def __init__(self, user_id: str | None = ...) -> None: ...
+    def __init__(self, user_id: _Optional[str] = ...) -> None: ...
 
 class ReviewStatsResponse(_message.Message):
     __slots__ = ("total_errors", "mastered_count", "need_review_count", "review_streak_days", "subject_distribution")
@@ -216,7 +281,7 @@ class ReviewStatsResponse(_message.Message):
         VALUE_FIELD_NUMBER: _ClassVar[int]
         key: str
         value: int
-        def __init__(self, key: str | None = ..., value: int | None = ...) -> None: ...
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[int] = ...) -> None: ...
     TOTAL_ERRORS_FIELD_NUMBER: _ClassVar[int]
     MASTERED_COUNT_FIELD_NUMBER: _ClassVar[int]
     NEED_REVIEW_COUNT_FIELD_NUMBER: _ClassVar[int]
@@ -227,7 +292,7 @@ class ReviewStatsResponse(_message.Message):
     need_review_count: int
     review_streak_days: int
     subject_distribution: _containers.ScalarMap[str, int]
-    def __init__(self, total_errors: int | None = ..., mastered_count: int | None = ..., need_review_count: int | None = ..., review_streak_days: int | None = ..., subject_distribution: _Mapping[str, int] | None = ...) -> None: ...
+    def __init__(self, total_errors: _Optional[int] = ..., mastered_count: _Optional[int] = ..., need_review_count: _Optional[int] = ..., review_streak_days: _Optional[int] = ..., subject_distribution: _Optional[_Mapping[str, int]] = ...) -> None: ...
 
 class GetTodayReviewsRequest(_message.Message):
     __slots__ = ("user_id", "page", "page_size")
@@ -237,4 +302,4 @@ class GetTodayReviewsRequest(_message.Message):
     user_id: str
     page: int
     page_size: int
-    def __init__(self, user_id: str | None = ..., page: int | None = ..., page_size: int | None = ...) -> None: ...
+    def __init__(self, user_id: _Optional[str] = ..., page: _Optional[int] = ..., page_size: _Optional[int] = ...) -> None: ...

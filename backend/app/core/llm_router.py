@@ -126,43 +126,30 @@ class LLMRouter:
                 avg_latency_ms=3000,
             ),
 
-            # ===== Zhipu GLM (标准 + 推理) =====
-            # GLM-4.7 非思考模式 - 用于 STANDARD 任务（快速响应）
-            "zhipu_chat": ModelConfig(
+            # ===== Zhipu GLM Batch (独立层级) =====
+            # GLM-4.7 非思考模式 - 用于批量处理任务
+            "glm_4_7_no_thinking": ModelConfig(
                 provider=ModelProvider.ZHIPU,
                 model_name=settings.ZHIPU_CHAT_MODEL,
                 base_url=settings.ZHIPU_BASE_URL,
                 api_key=settings.ZHIPU_API_KEY,
                 temperature=settings.ZHIPU_TEMPERATURE,
-                clear_thinking=True,  # 关闭思考模式，用于标准任务的快速响应
-                tier=ModelTier.STANDARD,
+                clear_thinking=True,  # 关闭思考模式
+                tier=ModelTier.GLM_BATCH,
                 cost_per_1k_tokens=0.001,
                 avg_latency_ms=400,
             ),
-            # GLM-4.7 思考模式 - 用于 REASONING 任务（深度推理）
-            # NOTE: clear_thinking=False 启用深度思考模式，实际延迟 10-30 秒
-            "zhipu_reason": ModelConfig(
+            # GLM-4.7 思考模式 - 用于批量深度推理
+            "glm_4_7_thinking": ModelConfig(
                 provider=ModelProvider.ZHIPU,
                 model_name=settings.ZHIPU_CHAT_MODEL,
                 base_url=settings.ZHIPU_BASE_URL,
                 api_key=settings.ZHIPU_API_KEY,
                 temperature=settings.ZHIPU_TEMPERATURE,
-                clear_thinking=False,  # 开启保留式思考，保持推理连续性
-                tier=ModelTier.REASONING,
+                clear_thinking=False,  # 开启保留式思考
+                tier=ModelTier.GLM_BATCH,
                 cost_per_1k_tokens=0.002,
-                avg_latency_ms=20000,  # 实际 10-30s，设置为 20s 作为预期
-            ),
-            # GLM-4.7-FlashX 快速响应模型（非思考模式）
-            "zhipu_flash": ModelConfig(
-                provider=ModelProvider.ZHIPU,
-                model_name=settings.ZHIPU_FLASH_MODEL,
-                base_url=settings.ZHIPU_BASE_URL,
-                api_key=settings.ZHIPU_API_KEY,
-                temperature=settings.ZHIPU_TEMPERATURE,
-                clear_thinking=True,  # 关闭思考模式，极速响应
-                tier=ModelTier.FAST,
-                cost_per_1k_tokens=0.0001,
-                avg_latency_ms=150,
+                avg_latency_ms=20000,
             ),
             # GLM-4.7-Flash 非思考模式 - 快速响应（免费）
             "glm_4_7_flash_no_thinking": ModelConfig(
@@ -171,23 +158,22 @@ class LLMRouter:
                 base_url=settings.ZHIPU_BASE_URL,
                 api_key=settings.ZHIPU_API_KEY,
                 temperature=settings.ZHIPU_TEMPERATURE,
-                clear_thinking=True,  # 关闭思考模式，快速响应
+                clear_thinking=True,
                 tier=ModelTier.FREE_FAST,
                 cost_per_1k_tokens=0.0001,
                 avg_latency_ms=200,
             ),
             # GLM-4.7-Flash 思考模式 - 深度推理（免费）
-            # NOTE: clear_thinking=False 启用深度思考模式，实际延迟 10-20 秒
             "glm_4_7_flash_thinking": ModelConfig(
                 provider=ModelProvider.ZHIPU,
                 model_name=settings.GLM_4_7_FLASH_MODEL,
                 base_url=settings.ZHIPU_BASE_URL,
                 api_key=settings.ZHIPU_API_KEY,
                 temperature=settings.ZHIPU_TEMPERATURE,
-                clear_thinking=False,  # 开启保留式思考，深度推理
+                clear_thinking=False,
                 tier=ModelTier.FREE_REASONING,
                 cost_per_1k_tokens=0.0005,
-                avg_latency_ms=15000,  # 实际 10-20s，设置为 15s 作为预期
+                avg_latency_ms=15000,
             ),
 
             # ===== Aliyun DashScope (通义千问) =====
@@ -211,9 +197,19 @@ class LLMRouter:
                 cost_per_1k_tokens=0.001,
                 avg_latency_ms=2000,
             ),
+            # Qwen3.5-Flash 快速响应
+            "dashscope_fast": ModelConfig(
+                provider=ModelProvider.DASHSCOPE,
+                model_name=settings.DASHSCOPE_FAST_MODEL,
+                base_url=dashscope_base_url,
+                api_key=settings.DASHSCOPE_API_KEY,
+                temperature=settings.DASHSCOPE_TEMPERATURE,
+                tier=ModelTier.FAST,
+                cost_per_1k_tokens=0.0001,
+                avg_latency_ms=150,
+            ),
 
             # ===== Specialist Models (OCR、翻译等) =====
-            # 兼容旧 key：siliconflow_ocr 实际已切换到智谱 GLM OCR
             "siliconflow_ocr": ModelConfig(
                 provider=ModelProvider.ZHIPU,
                 model_name=settings.ZHIPU_OCR_MODEL,
@@ -224,7 +220,6 @@ class LLMRouter:
                 cost_per_1k_tokens=0.001,
                 avg_latency_ms=2000,
             ),
-            # Hunyuan MT - 机器翻译
             "siliconflow_translate": ModelConfig(
                 provider=ModelProvider.SILICONFLOW,
                 model_name=settings.HUNYUAN_TRANSLATE_MODEL,
@@ -238,7 +233,7 @@ class LLMRouter:
 
             # ===== 通用备用 =====
             "default": ModelConfig(
-                provider=ModelProvider.DEEPSEEK,  # 默认用deepseek
+                provider=ModelProvider.DEEPSEEK,
                 model_name=settings.DEEPSEEK_CHAT_MODEL,
                 base_url=settings.DEEPSEEK_BASE_URL,
                 api_key=settings.DEEPSEEK_API_KEY,
@@ -250,28 +245,30 @@ class LLMRouter:
         self._available_models = configs
 
         # 按tier分组（优先级从高到低）
-        # - FREE_FAST: 免费快速响应模型（glm-4.7-flash 非思考模式）
-        # - FREE_REASONING: 免费深度推理模型（glm-4.7-flash 思考模式）
-        # - FAST: 付费快速响应模型（xunfei暂不可用，使用zhipu_flash）
-        # - STANDARD: 付费标准模型
-        # - REASONING: 付费推理模型
-        # - SPECIALIST: 专家模型（OCR、翻译等专用功能）
-        standard_models = ["zhipu_chat", "deepseek_chat", "dashscope_chat"]
-        reasoning_models = ["zhipu_reason", "deepseek_reason", "dashscope_reason"]
+        # - FREE_FAST: 免费快速响应模型
+        # - FREE_REASONING: 免费深度推理模型
+        # - FAST: 付费快速响应模型（xiaomi, qwen3.5-flash）
+        # - STANDARD: 付费标准模型（deepseek, qwen3.5-plus）
+        # - REASONING: 付费推理模型（deepseek-reasoner, qwen3.5-plus）
+        # - GLM_BATCH: GLM批量处理（glm-4.7 非思考+思考）
+        # - SPECIALIST: 专家模型
+        standard_models = ["dashscope_chat", "deepseek_chat"]
+        reasoning_models = ["dashscope_reason", "deepseek_reason"]
+        fast_models = ["xiaomi_chat", "dashscope_fast"]
 
         preferred_provider = (settings.LLM_PROVIDER or "").strip().lower()
         provider_standard_preference = {
             "qwen": "dashscope_chat",
             "dashscope": "dashscope_chat",
             "deepseek": "deepseek_chat",
-            "zhipu": "zhipu_chat",
+            "zhipu": "deepseek_chat",
             "xiaomi": "deepseek_chat",
         }
         provider_reasoning_preference = {
             "qwen": "dashscope_reason",
             "dashscope": "dashscope_reason",
             "deepseek": "deepseek_reason",
-            "zhipu": "zhipu_reason",
+            "zhipu": "deepseek_reason",
             "xiaomi": "deepseek_reason",
         }
 
@@ -287,9 +284,10 @@ class LLMRouter:
         self._tier_mapping = {
             ModelTier.FREE_FAST: ["glm_4_7_flash_no_thinking"],
             ModelTier.FREE_REASONING: ["glm_4_7_flash_thinking"],
-            ModelTier.FAST: ["xiaomi_chat", "zhipu_flash"],
+            ModelTier.FAST: fast_models,
             ModelTier.STANDARD: standard_models,
             ModelTier.REASONING: reasoning_models,
+            ModelTier.GLM_BATCH: ["glm_4_7_no_thinking", "glm_4_7_thinking"],
             ModelTier.SPECIALIST: ["siliconflow_ocr", "siliconflow_translate"],
         }
         self._override_tier_mapping_from_env()
@@ -307,6 +305,7 @@ class LLMRouter:
             ModelTier.FAST: settings.LLM_TIER_FAST,
             ModelTier.STANDARD: settings.LLM_TIER_STANDARD,
             ModelTier.REASONING: settings.LLM_TIER_REASONING,
+            ModelTier.GLM_BATCH: settings.LLM_TIER_GLM_BATCH,
             ModelTier.SPECIALIST: settings.LLM_TIER_SPECIALIST,
         }
 

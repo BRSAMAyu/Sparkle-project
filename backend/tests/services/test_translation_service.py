@@ -193,7 +193,7 @@ async def test_translate_with_glossary(mock_cache_service, mock_llm_service):
     # Check that Hunyuan client was called with glossary in prompt
     call_args = mock_client.chat.completions.create.call_args
     messages = call_args.kwargs['messages']
-    prompt = messages[0]['content']
+    prompt = messages[1]['content']
 
     # Glossary should be included in prompt
     assert "Terminology:" in prompt

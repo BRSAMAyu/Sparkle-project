@@ -33,11 +33,20 @@ def auth_headers(mock_user):
 class TestVocabularyAPI:
     """词汇 API 测试"""
 
-    def test_lookup_word_local_db(self, vocab_client, auth_headers):
-        """测试查词（本地数据库）"""
+    def test_lookup_word_prefers_mdx(self, vocab_client, auth_headers):
+        """测试查词优先命中 Oxford MDX"""
         word = "hello"
 
-        with patch('app.api.v1.vocabulary.vocabulary_service') as mock_service:
+        with patch('app.api.v1.vocabulary.vocabulary_service') as mock_service, \
+             patch('app.api.v1.vocabulary.get_mdx_service') as mock_mdx:
+            mock_mdx.return_value.lookup.return_value = {
+                "word": word,
+                "phonetic": "/həˈləʊ/",
+                "pos": "exclamation",
+                "definitions": ["greeting"],
+                "examples": ["Hello, world!"],
+                "source": "oaldpe",
+            }
             mock_entry = AsyncMock()
             mock_entry.word = word
             mock_entry.phonetic = "/həˈloʊ/"
@@ -57,16 +66,25 @@ class TestVocabularyAPI:
             assert response.status_code == 200
             data = response.json()
             assert data["word"] == word
-            assert data["phonetic"] == "/həˈloʊ/"
-            assert data["source"] == "test"
+            assert data["phonetic"] == "/həˈləʊ/"
+            assert data["source"] == "oaldpe"
+            mock_service.lookup.assert_not_called()
 
-    def test_lookup_word_not_found(self, vocab_client, auth_headers):
-        """测试查词（未找到）"""
+    def test_lookup_word_llm_fallback(self, vocab_client, auth_headers):
+        """测试查词未命中词典时回退到 LLM 合成"""
         word = "nonexistentword12345"
 
         with patch('app.api.v1.vocabulary.vocabulary_service') as mock_service, \
              patch('app.api.v1.vocabulary.get_mdx_service') as mock_mdx:
             mock_service.lookup = AsyncMock(return_value=None)
+            mock_service.synthesize_lookup = AsyncMock(return_value={
+                "word": word,
+                "phonetic": None,
+                "pos": None,
+                "definitions": [f"{word}: definition unavailable"],
+                "examples": [],
+                "source": "llm_fallback",
+            })
             mock_mdx.return_value = None
 
             response = vocab_client.get(
@@ -75,7 +93,10 @@ class TestVocabularyAPI:
                 headers=auth_headers
             )
 
-            assert response.status_code == 404
+            assert response.status_code == 200
+            data = response.json()
+            assert data["source"] == "llm_fallback"
+            assert data["word"] == word
 
     def test_add_to_wordbook(self, vocab_client, auth_headers, mock_user):
         """测试添加生词到生词本"""
@@ -258,3 +279,29 @@ class TestVocabularyAPI:
             assert response.status_code == 200
             data = response.json()
             assert data["consecutive_correct"] == 3
+
+    def test_list_dictionary_packages(self, vocab_client, auth_headers):
+        with patch('app.api.v1.vocabulary.dictionary_package_service') as mock_service:
+            mock_service.list_packages.return_value = [
+                {
+                    "id": "oxford-oaldpe-starter",
+                    "name": "Oxford Starter Pack",
+                    "version": "1.0.0",
+                    "description": "starter",
+                    "package_scope": "starter",
+                    "source": "oxford-oaldpe",
+                    "format": "json.gz",
+                    "entry_count": 10,
+                    "size_bytes": 1024,
+                    "sha256": "abc",
+                    "generated_at": "2026-03-19T00:00:00+00:00",
+                    "download_available": True,
+                }
+            ]
+
+            response = vocab_client.get("/vocabulary/dictionary/packages", headers=auth_headers)
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data[0]["id"] == "oxford-oaldpe-starter"
+            assert data[0]["download_url"].endswith("/vocabulary/dictionary/packages/oxford-oaldpe-starter/download")
