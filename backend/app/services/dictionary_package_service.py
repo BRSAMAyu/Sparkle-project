@@ -26,10 +26,11 @@ class DictionaryPackageDefinition:
 
 class DictionaryPackageService:
     def __init__(self) -> None:
-        self._project_root = Path(__file__).resolve().parents[3]
-        self._package_dir = Path(settings.DICTIONARY_PACKAGE_DIR)
-        if not self._package_dir.is_absolute():
-            self._package_dir = (self._project_root / self._package_dir).resolve()
+        preferred_dir = Path(settings.DICTIONARY_PACKAGE_DIR)
+        self._package_dir = preferred_dir.resolve() if not preferred_dir.is_absolute() else preferred_dir
+        if not self._is_directory_writable(self._package_dir):
+            self._package_dir = (Path(settings.UPLOAD_DIR) / "dictionary_packages").resolve()
+            self._package_dir.mkdir(parents=True, exist_ok=True)
 
         self._definitions = {
             "oxford-oaldpe-starter": DictionaryPackageDefinition(
@@ -46,12 +47,26 @@ class DictionaryPackageService:
 
     def _resolve_source_path(self, configured_path: str | None) -> Path | None:
         if configured_path:
-            path = Path(configured_path)
-            if not path.is_absolute():
-                path = (self._project_root / path).resolve()
-            return path
-        default_path = self._project_root / "data" / "dictionaries" / "oaldpe.mdx"
-        return default_path if default_path.exists() else None
+            return Path(configured_path).resolve()
+        candidates = [
+            Path(settings.DICTIONARY_PACKAGE_DIR).resolve().parent / "oaldpe.mdx",
+            self._package_dir.parent / "oaldpe.mdx",
+            Path(__file__).resolve().parents[2] / "data" / "dictionaries" / "oaldpe.mdx",
+        ]
+        for candidate in candidates:
+            if candidate.exists():
+                return candidate
+        return None
+
+    def _is_directory_writable(self, directory: Path) -> bool:
+        try:
+            directory.mkdir(parents=True, exist_ok=True)
+            probe = directory / ".sparkle-write-test"
+            probe.write_text("ok", encoding="utf-8")
+            probe.unlink(missing_ok=True)
+            return True
+        except OSError:
+            return False
 
     def list_packages(self) -> list[dict[str, Any]]:
         packages: list[dict[str, Any]] = []

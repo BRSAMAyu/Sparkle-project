@@ -261,8 +261,13 @@ class TaskRepository {
         final existing = DemoDataService().demoTasks[existingIndex];
         final updated = existing.copyWith(
           title: task.title ?? existing.title,
+          type: task.type ?? existing.type,
+          estimatedMinutes: task.estimatedMinutes ?? existing.estimatedMinutes,
+          difficulty: task.difficulty ?? existing.difficulty,
+          tags: task.tags ?? existing.tags,
           status: task.status ?? existing.status,
-          // ... other fields
+          dueDate: task.dueDate ?? existing.dueDate,
+          updatedAt: DateTime.now(),
         );
         DemoDataService().demoTasks[existingIndex] = updated;
         return updated;

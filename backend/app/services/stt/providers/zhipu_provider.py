@@ -183,9 +183,22 @@ class ZhipuProvider(STTProvider):
         if file_size > self.max_file_size_bytes:
             raise RuntimeError("音频文件超过智谱 ASR 25MB 限制")
 
-        duration = await self._probe_duration(file_path)
+        duration = await self._detect_duration(file_path)
         if duration > self.max_audio_seconds:
             raise RuntimeError(f"智谱 ASR 最长支持 {self.max_audio_seconds} 秒音频")
+
+    async def _detect_duration(self, file_path: str) -> float:
+        if file_path.lower().endswith(".wav"):
+            return await asyncio.to_thread(self._probe_wav_duration, file_path)
+        return await self._probe_duration(file_path)
+
+    def _probe_wav_duration(self, file_path: str) -> float:
+        with wave.open(file_path, "rb") as wav_file:
+            frame_rate = wav_file.getframerate()
+            frame_count = wav_file.getnframes()
+        if frame_rate <= 0:
+            raise RuntimeError(f"无法识别音频时长: {file_path}")
+        return frame_count / frame_rate
 
     async def _probe_duration(self, file_path: str) -> float:
         stdout = await self._run_command(

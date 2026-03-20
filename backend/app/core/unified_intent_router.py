@@ -254,6 +254,22 @@ class UnifiedIntentRouter:
             )
             return rule_result
 
+        if self._should_skip_llm_assist(
+            message=message,
+            rule_result=rule_result,
+            conversation_history=conversation_history or [],
+        ):
+            rule_result.routing_layer = "rule_fast_path"
+            rule_result.context_signals = {
+                **(rule_result.context_signals or {}),
+                "llm_assist_skipped": True,
+            }
+            logger.info(
+                f"Layer 2.5 (fast-path): {rule_result.primary_intent} "
+                f"confidence={rule_result.confidence:.2f}, skip llm assist"
+            )
+            return rule_result
+
         # Layer 3: LLM辅助分类
         logger.info(f"Layer 3 (llm): rule confidence={rule_result.confidence:.2f}, using LLM assist")
         llm_result = await self._llm_classify(
@@ -506,6 +522,33 @@ class UnifiedIntentRouter:
             context_parts.append(f"{i}. [{role}]: {content}")
 
         return "\n".join(context_parts)
+
+    def _should_skip_llm_assist(
+        self,
+        *,
+        message: str,
+        rule_result: IntentRoutingResult,
+        conversation_history: list[dict],
+    ) -> bool:
+        message = (message or "").strip()
+        if not message:
+            return True
+        if not conversation_history:
+            return False
+        if rule_result.primary_intent != UnifiedIntentType.CHAT:
+            return False
+        if rule_result.confidence < 0.5:
+            return False
+        if len(message) > 120:
+            return False
+        if self._is_complex_intent(message):
+            return False
+
+        explicit_action_keywords = (
+            "创建", "新建", "添加", "保存", "同步", "安排", "提醒", "日程", "计划", "任务",
+            "创建计划", "生成计划", "create", "schedule", "remind", "task", "plan",
+        )
+        return not any(keyword in message.lower() for keyword in explicit_action_keywords)
 
     def _is_complex_intent(self, message: str) -> bool:
         """检查是否为复杂意图"""

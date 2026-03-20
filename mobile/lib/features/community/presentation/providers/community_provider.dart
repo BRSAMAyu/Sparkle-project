@@ -131,11 +131,14 @@ class FriendsNotifier extends StateNotifier<AsyncValue<List<FriendshipInfo>>> {
   }
 
   Future<void> loadFriends() async {
+    if (!mounted) return;
     state = const AsyncValue.loading();
     try {
       final friends = await _repository.getFriends();
+      if (!mounted) return;
       state = AsyncValue.data(friends);
     } catch (e, st) {
+      if (!mounted) return;
       state = AsyncValue.error(e, st);
     }
   }
@@ -178,11 +181,14 @@ class PendingRequestsNotifier
   final CommunityRepository _repository;
 
   Future<void> loadPendingRequests() async {
+    if (!mounted) return;
     state = const AsyncValue.loading();
     try {
       final requests = await _repository.getPendingRequests();
+      if (!mounted) return;
       state = AsyncValue.data(requests);
     } catch (e, st) {
+      if (!mounted) return;
       state = AsyncValue.error(e, st);
     }
   }
@@ -214,11 +220,14 @@ class FriendRecommendationsNotifier
   final CommunityRepository _repository;
 
   Future<void> loadRecommendations() async {
+    if (!mounted) return;
     state = const AsyncValue.loading();
     try {
       final recommendations = await _repository.getFriendRecommendations();
+      if (!mounted) return;
       state = AsyncValue.data(recommendations);
     } catch (e, st) {
+      if (!mounted) return;
       state = AsyncValue.error(e, st);
     }
   }
@@ -268,12 +277,14 @@ class GroupRecommendationsNotifier
   final Set<String> _viewed = {};
 
   Future<void> loadRecommendations({int cursor = 0}) async {
+    if (!mounted) return;
     state = const AsyncValue.loading();
     try {
       final recommendations = await _repository.getGroupRecommendations(
         limit: limit,
         cursor: cursor,
       );
+      if (!mounted) return;
       state = AsyncValue.data(recommendations);
       try {
         await _recordViews(recommendations);
@@ -281,6 +292,7 @@ class GroupRecommendationsNotifier
         debugPrint('Group recommendation view feedback failed: $e');
       }
     } catch (e, st) {
+      if (!mounted) return;
       state = AsyncValue.error(e, st);
     }
   }
@@ -440,11 +452,14 @@ class MyGroupsNotifier extends StateNotifier<AsyncValue<List<GroupListItem>>> {
   final CommunityRepository _repository;
 
   Future<void> loadGroups() async {
+    if (!mounted) return;
     state = const AsyncValue.loading();
     try {
       final groups = await _repository.getMyGroups();
+      if (!mounted) return;
       state = AsyncValue.data(groups);
     } catch (e, st) {
+      if (!mounted) return;
       state = AsyncValue.error(e, st);
     }
   }

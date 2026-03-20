@@ -135,7 +135,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: '/chat',
                 pageBuilder: (context, state) => MaterialPage<void>(
                   key: state.pageKey,
-                  child: const ChatScreen(),
+                  child: ChatScreen(
+                    initialPrompt: state.uri.queryParameters['prompt'],
+                    initialChatMode: state.uri.queryParameters['chat_mode'],
+                  ),
                 ),
               ),
             ],

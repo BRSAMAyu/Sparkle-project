@@ -14,14 +14,14 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
 
-# 获取当前文件的绝对路径
-current_dir = os.path.dirname(os.path.abspath(__file__))
-backend_dir = os.path.dirname(current_dir)  # backend/app
-project_root = os.path.dirname(backend_dir)  # backend
-repo_root = os.path.dirname(project_root)  # repo root
+# 获取当前文件的绝对路径，并兼容本地源码结构与容器内 /app 结构。
+current_dir = os.path.dirname(os.path.abspath(__file__))  # .../app/config
+app_dir = os.path.dirname(current_dir)  # .../app
+project_root = os.path.dirname(app_dir)  # local: .../backend, container: /app
+repo_root = os.path.dirname(project_root) if os.path.basename(project_root) == "backend" else project_root
 repo_env_path = os.path.join(repo_root, ".env")
 service_env_path = os.path.join(project_root, ".env")
-backend_env_path = os.path.join(backend_dir, ".env")
+backend_env_path = service_env_path
 
 
 def _is_running_in_docker() -> bool:
@@ -87,6 +87,15 @@ def to_sync_database_url(raw_url: str) -> str:
     if url.startswith("postgres://"):
         url = "postgresql://" + url[len("postgres://") :]
     return url
+
+
+def _normalize_local_path(raw_path: str | None, *, base_dir: str) -> str:
+    if not raw_path:
+        return ""
+    expanded = os.path.expanduser(raw_path.strip())
+    if os.path.isabs(expanded):
+        return os.path.abspath(expanded)
+    return os.path.abspath(os.path.join(base_dir, expanded))
 
 
 def normalize_redis_url(raw_url: str) -> str:
@@ -268,7 +277,7 @@ class Settings(BaseSettings):
     TRANSLATION_PRIMARY_PROVIDER: str = "hunyuan"  # hunyuan | siliconflow
     TRANSLATION_BACKUP_PROVIDER: str = "siliconflow"  # hunyuan | siliconflow
     TRANSLATION_PROVIDER_TIMEOUT_SECONDS: int = 30
-    REVIEWER_LLM_TIMEOUT_SECONDS: int = 45
+    REVIEWER_LLM_TIMEOUT_SECONDS: int = 12
 
     # OCR / Document Cleaning
     OCR_PROVIDER: str = "zhipu"  # zhipu | siliconflow
@@ -542,6 +551,34 @@ class Settings(BaseSettings):
         if not v:
             return ""
         return v
+
+    @field_validator("UPLOAD_DIR", mode="before")
+    @classmethod
+    def validate_upload_dir(cls, v):
+        if not v:
+            return _normalize_local_path("./uploads", base_dir=project_root)
+        return _normalize_local_path(str(v), base_dir=project_root)
+
+    @field_validator("MDX_DICTIONARY_PATH", mode="before")
+    @classmethod
+    def validate_mdx_dictionary_path(cls, v):
+        if not v:
+            return ""
+        return _normalize_local_path(str(v), base_dir=repo_root)
+
+    @field_validator("MDD_RESOURCES_PATH", mode="before")
+    @classmethod
+    def validate_mdd_resources_path(cls, v):
+        if not v:
+            return None
+        return _normalize_local_path(str(v), base_dir=repo_root)
+
+    @field_validator("DICTIONARY_PACKAGE_DIR", mode="before")
+    @classmethod
+    def validate_dictionary_package_dir(cls, v):
+        if not v:
+            return _normalize_local_path("data/dictionaries/packages", base_dir=repo_root)
+        return _normalize_local_path(str(v), base_dir=repo_root)
 
     @property
     def CONTEXT_SEMANTIC_GATING_RULES(self) -> Dict[str, Dict[str, Union[float, int]]]:

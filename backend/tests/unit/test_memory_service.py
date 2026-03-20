@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 
 import pytest
@@ -84,6 +84,47 @@ async def test_memory_preference_update_enqueues_evolution_update(db_session, mo
     assert payload["category"] == "evolution"
     assert payload["metadata"]["evolution_kind"] == "preference_learning"
     assert "简洁概览" in payload["description"]
+
+
+@pytest.mark.asyncio
+async def test_memory_preference_version_uses_global_max_after_retraction(db_session):
+    user_id = uuid4()
+    user = User(
+        id=user_id,
+        username=f"user_{user_id.hex[:8]}",
+        email=f"{user_id.hex[:8]}@example.com",
+        hashed_password="test",
+    )
+    db_session.add(user)
+    await db_session.commit()
+
+    service = MemoryService(db_session)
+    first = await service.upsert_preference(
+        user_id=user_id,
+        pref_key="community_engagement_level",
+        pref_value={"value": "moderate"},
+        evidence_refs=[{"type": "event", "id": "evt_1", "schema_version": "event.v1"}],
+    )
+    second = await service.upsert_preference(
+        user_id=user_id,
+        pref_key="community_engagement_level",
+        pref_value={"value": "high"},
+        evidence_refs=[{"type": "event", "id": "evt_2", "schema_version": "event.v1"}],
+    )
+
+    second.retracted_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    await db_session.commit()
+
+    third = await service.upsert_preference(
+        user_id=user_id,
+        pref_key="community_engagement_level",
+        pref_value={"value": "low"},
+        evidence_refs=[{"type": "event", "id": "evt_3", "schema_version": "event.v1"}],
+    )
+
+    assert first.version == 1
+    assert second.version == 2
+    assert third.version == 3
 
 
 @pytest.mark.asyncio

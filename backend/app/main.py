@@ -34,6 +34,7 @@ from app.db.init_db import init_db
 from app.db.session import AsyncSessionLocal
 from app.orchestration.summarization_worker import create_summarization_worker
 from app.services.achievement_event_consumer import AchievementEventConsumer
+from app.services.billing_worker import BillingWorker
 from app.services.capsule_event_consumer import CapsuleEventConsumer
 from app.services.galaxy_event_consumer import GalaxyEventConsumer
 from app.services.job_service import JobService
@@ -159,6 +160,18 @@ async def lifespan(app: FastAPI):
             logger.info("SummarizationWorker started")
         except Exception as e:
             logger.error(f"Failed to start SummarizationWorker: {e}")
+
+    billing_worker_task = None
+    billing_worker = None
+    if cache_service.redis:
+        try:
+            billing_worker = BillingWorker()
+            billing_worker_task = asyncio.create_task(billing_worker.start())
+            app.state.billing_worker = billing_worker
+            app.state.billing_worker_task = billing_worker_task
+            logger.info("BillingWorker started")
+        except Exception as e:
+            logger.error(f"Failed to start BillingWorker: {e}")
 
     # Start Galaxy Services (Phase 4)
     if cache_service.redis and event_bus is not None:
@@ -292,6 +305,15 @@ async def lifespan(app: FastAPI):
         summarization_worker_task.cancel()
         with suppress(asyncio.CancelledError):
             await summarization_worker_task
+
+    billing_worker = getattr(app.state, "billing_worker", None)
+    billing_worker_task = getattr(app.state, "billing_worker_task", None)
+    if billing_worker:
+        billing_worker.stop()
+    if billing_worker_task:
+        billing_worker_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await billing_worker_task
 
     # Stop Galaxy Streaming Service
     galaxy_streaming_service = getattr(app.state, "galaxy_streaming_service", None)

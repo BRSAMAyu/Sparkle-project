@@ -5,6 +5,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/task_notification_scheduler.dart' show TaskNotificationScheduler, taskNotificationSchedulerProvider, taskReminderConfigProvider;
+import 'package:sparkle/features/calendar/data/repositories/calendar_repository.dart';
+import 'package:sparkle/features/calendar/presentation/providers/calendar_provider.dart';
+import 'package:sparkle/features/calendar/presentation/providers/unified_calendar_provider.dart';
 import 'package:sparkle/features/task/data/models/next_action.dart';
 import 'package:sparkle/features/task/data/models/next_action_selection_submission.dart';
 import 'package:sparkle/features/task/data/models/task_completion_result.dart';
@@ -57,19 +60,21 @@ class TaskNotifier extends StateNotifier<TaskListState> {
   TaskNotifier(this._taskRepository, this._notificationScheduler, this._ref)
       : super(TaskListState()) {
     // Load initial data
-    loadTodayTasks();
-    loadRecommendedTasks();
-    loadTasks();
+    unawaited(loadTodayTasks());
+    unawaited(loadRecommendedTasks());
+    unawaited(loadTasks());
   }
   final TaskRepository _taskRepository;
   final TaskNotificationScheduler _notificationScheduler;
   final Ref _ref;
 
   Future<void> _runWithErrorHandling(Future<void> Function() action) async {
+    if (!mounted) return;
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       await action();
     } catch (e) {
+      if (!mounted) return;
       state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
@@ -78,6 +83,7 @@ class TaskNotifier extends StateNotifier<TaskListState> {
     await _runWithErrorHandling(() async {
       final paginatedResponse =
           await _taskRepository.getTasks(filters: {}); // Add filter logic later
+      if (!mounted) return;
       state = state.copyWith(
           isLoading: false,
           tasks: paginatedResponse.items,
@@ -88,6 +94,7 @@ class TaskNotifier extends StateNotifier<TaskListState> {
   Future<void> loadTodayTasks() async {
     await _runWithErrorHandling(() async {
       final tasks = await _taskRepository.getTodayTasks();
+      if (!mounted) return;
       state = state.copyWith(isLoading: false, todayTasks: tasks);
     });
   }
@@ -95,6 +102,7 @@ class TaskNotifier extends StateNotifier<TaskListState> {
   Future<void> loadRecommendedTasks() async {
     await _runWithErrorHandling(() async {
       final tasks = await _taskRepository.getRecommendedTasks();
+      if (!mounted) return;
       state = state.copyWith(isLoading: false, recommendedTasks: tasks);
     });
   }
@@ -119,6 +127,8 @@ class TaskNotifier extends StateNotifier<TaskListState> {
           // Log but continue
         }
       }
+
+      await _syncCalendarForTask(newTask);
 
       // 🔧 修复：先将新任务添加到本地状态，确保立即显示
       state = state.copyWith(
@@ -149,6 +159,10 @@ class TaskNotifier extends StateNotifier<TaskListState> {
   Future<void> updateTask(String id, TaskUpdate taskUpdate,
       {bool refresh = true,}) async {
     await _runWithErrorHandling(() async {
+      final previousTask = state.tasks.cast<TaskModel?>().firstWhere(
+            (task) => task?.id == id,
+            orElse: () => null,
+          );
       final updatedTask = await _taskRepository.updateTask(id, taskUpdate);
 
       // Reschedule reminders if due date changed
@@ -171,12 +185,22 @@ class TaskNotifier extends StateNotifier<TaskListState> {
         }
       }
 
+      await _syncCalendarForTask(updatedTask);
+      if (previousTask?.dueDate != null &&
+          updatedTask.dueDate != previousTask!.dueDate) {
+        await _refreshCalendarSurfacesForDate(previousTask.dueDate!);
+      }
+
       if (refresh) await refreshTasks();
     });
   }
 
   Future<void> deleteTask(String id) async {
     await _runWithErrorHandling(() async {
+      final existingTask = state.tasks.cast<TaskModel?>().firstWhere(
+            (task) => task?.id == id,
+            orElse: () => null,
+          );
       // Cancel reminders before deleting
       try {
         await _notificationScheduler.cancelTaskReminders(id);
@@ -185,6 +209,12 @@ class TaskNotifier extends StateNotifier<TaskListState> {
       }
 
       await _taskRepository.deleteTask(id);
+      await _ref.read(calendarRepositoryProvider).removeTaskLinkedEvent(id);
+      if (existingTask?.dueDate != null) {
+        await _refreshCalendarSurfacesForDate(existingTask!.dueDate!);
+      } else {
+        unawaited(_ref.read(calendarProvider.notifier).loadEvents());
+      }
       await refreshTasks();
     });
   }
@@ -253,6 +283,28 @@ class TaskNotifier extends StateNotifier<TaskListState> {
     }
   }
 
+  Future<void> _syncCalendarForTask(TaskModel task) async {
+    try {
+      await _ref.read(calendarRepositoryProvider).syncTaskLinkedEvent(task);
+      if (task.dueDate != null) {
+        await _refreshCalendarSurfacesForDate(task.dueDate!);
+      } else {
+        unawaited(_ref.read(calendarProvider.notifier).loadEvents());
+      }
+    } catch (e) {
+      debugPrint('Failed to sync task to calendar: $e');
+    }
+  }
+
+  Future<void> _refreshCalendarSurfacesForDate(DateTime date) async {
+    await _ref.read(taskCalendarProvider.notifier).loadTasksForMonth(
+          date,
+          force: true,
+        );
+    await _ref.read(calendarProvider.notifier).loadEvents();
+    unawaited(_ref.read(unifiedCalendarProvider.notifier).refreshMonth(date));
+  }
+
   /// 🆕 重试完成任务
   Future<void> retryCompleteTask(String id, int minutes, String? note) async {
     _updateTask(
@@ -294,8 +346,8 @@ class TaskNotifier extends StateNotifier<TaskListState> {
     // _ref.invalidate(taskDetailProvider(id)); // If we had access to ref
 
     // For now, simple reload
-    loadTasks();
-    loadTodayTasks();
+    unawaited(loadTasks());
+    unawaited(loadTodayTasks());
   }
 
   Future<void> abandonTask(String id) async {

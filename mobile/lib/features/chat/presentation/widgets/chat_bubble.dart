@@ -25,9 +25,10 @@ import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/repositories/community_share_repository.dart';
 import 'package:sparkle/features/community/presentation/providers/community_agent_provider.dart';
 import 'package:sparkle/features/community/presentation/widgets/share_cards/share_cards.dart';
+import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
+import 'package:sparkle/features/plan/presentation/widgets/plan_context_summary.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
-import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 
 class ChatBubble extends ConsumerStatefulWidget {
   const ChatBubble({
@@ -174,9 +175,21 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
           case 'mode_explanation':
           case 'source_summary':
           case 'next_actions':
+          case 'plan_context_summary':
+          case 'plan_state':
             return false;
           default:
             return true;
+        }
+      }).toList();
+
+  List<WidgetPayload> get _informationalWidgets => _widgets.where((widgetItem) {
+        switch (widgetItem.type) {
+          case 'plan_context_summary':
+          case 'plan_state':
+            return true;
+          default:
+            return false;
         }
       }).toList();
 
@@ -578,6 +591,16 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                   narrative: collaborationNarrative,
                                 ),
                               ),
+                            ..._informationalWidgets.map(
+                              (w) => Padding(
+                                padding: const EdgeInsets.only(
+                                  top: 8.0,
+                                  right: 8.0,
+                                  left: 8.0,
+                                ),
+                                child: _buildInformationalWidget(w),
+                              ),
+                            ),
                             ..._actionableWidgets.map(
                               (w) {
                                 final actionable = (w.data['id'] ??
@@ -620,9 +643,11 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                       );
                                     },
                                     onPlanNavigation: (planId) {
-                                      ref
-                                          .read(planListProvider.notifier)
-                                          .refresh();
+                                      unawaited(
+                                        ref
+                                            .read(planListProvider.notifier)
+                                            .refresh(),
+                                      );
                                     },
                                     onWidgetAction: widget.onWidgetAction,
                                   ),
@@ -683,6 +708,16 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     final contentMaxWidth = ContentConstraintSystem.maxWidth(context);
     final baseMax = contentMaxWidth.isFinite ? contentMaxWidth : screenWidth;
     return min(screenWidth * 0.72, baseMax * 0.9);
+  }
+
+  Widget _buildInformationalWidget(WidgetPayload widgetPayload) {
+    switch (widgetPayload.type) {
+      case 'plan_context_summary':
+      case 'plan_state':
+        return PlanContextSummary(contextData: widgetPayload.data);
+      default:
+        return const SizedBox.shrink();
+    }
   }
 
   Widget _buildQuoteArea(
@@ -957,8 +992,8 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
           .read(taskRepositoryProvider)
           .confirmGeneratedTasks(toolResultId);
       if (!mounted) return;
-      ref.read(taskListProvider.notifier).refreshTasks();
-      ref.read(planListProvider.notifier).refresh();
+      unawaited(ref.read(taskListProvider.notifier).refreshTasks());
+      unawaited(ref.read(planListProvider.notifier).refresh());
 
       final countRaw = result['count'];
       final count = countRaw is num
@@ -991,16 +1026,15 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
   }
 
   /// Get shareable content type from message type
-  ShareableContentType? _getShareContentType(MessageType messageType) {
-    return switch (messageType) {
-      MessageType.taskShare => ShareableContentType.taskCompletion,
-      MessageType.planShare => ShareableContentType.planProgress,
-      MessageType.capsuleShare => ShareableContentType.capsule,
-      MessageType.prismShare => ShareableContentType.cognitivePrism,
-      MessageType.achievement => ShareableContentType.achievement,
-      _ => null,
-    };
-  }
+  ShareableContentType? _getShareContentType(MessageType messageType) =>
+      switch (messageType) {
+        MessageType.taskShare => ShareableContentType.taskCompletion,
+        MessageType.planShare => ShareableContentType.planProgress,
+        MessageType.capsuleShare => ShareableContentType.capsule,
+        MessageType.prismShare => ShareableContentType.cognitivePrism,
+        MessageType.achievement => ShareableContentType.achievement,
+        _ => null,
+      };
 
   /// Build share card for private message
   Widget? _buildPrivateShareCard() {

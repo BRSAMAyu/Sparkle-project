@@ -1,4 +1,5 @@
 from __future__ import annotations
+import asyncio
 import json
 import re
 import time
@@ -56,6 +57,11 @@ from app.services.llm_service import (
 # ==========================================
 # Nodes
 # ==========================================
+
+_EXPLICIT_COLLAB_LLM_TIMEOUT_SECONDS = 90.0
+_STREAM_DELTA_FLUSH_CHARS = 96
+_STREAM_DELTA_FLUSH_SECONDS = 0.12
+_MAX_TOOL_LOOPS_PER_TURN = 2
 
 
 def _resolve_generation_agent_role(state: WorkflowState) -> str:
@@ -289,13 +295,37 @@ async def _execute_explicit_expert_collaboration(state: WorkflowState) -> Collab
                 "必须保留你的独特判断，不要假装代表其他专家。"
             ),
         )
-        response = await runtime["service"].chat(
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": expert_request},
-            ],
-            temperature=0.5,
-        )
+        try:
+            response = await asyncio.wait_for(
+                runtime["service"].chat(
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": expert_request},
+                    ],
+                    temperature=0.5,
+                ),
+                timeout=_EXPLICIT_COLLAB_LLM_TIMEOUT_SECONDS,
+            )
+        except asyncio.TimeoutError:
+            logger.warning(
+                "Explicit expert collaboration timed out for expert=%s after %.1fs",
+                expert_id,
+                _EXPLICIT_COLLAB_LLM_TIMEOUT_SECONDS,
+            )
+            response = (
+                f"{runtime['display_name']} 暂时没有在时限内返回完整分析。"
+                "请先基于其他专家视角继续综合，并保留这一缺口提示。"
+            )
+        except Exception as exc:
+            logger.warning(
+                "Explicit expert collaboration degraded for expert=%s: %s",
+                expert_id,
+                exc,
+            )
+            response = (
+                f"{runtime['display_name']} 本轮未稳定返回。"
+                "请基于现有专家观点继续完成综合，并明确说明该视角暂时缺席。"
+            )
         expert_outputs.append(
             {
                 "expert_id": expert_id,
@@ -322,18 +352,12 @@ async def _execute_explicit_expert_collaboration(state: WorkflowState) -> Collab
         )
 
     synthesis_target = answer_targets[0] if answer_targets else selected[0]
-    synthesis_runtime = {
-        "service": await get_configured_llm_service_for_tier(
-            AgentRole.GENERATION,
-            ModelTier.FAST,
-            task_type=TaskType.ROUTING,
-        ),
-        "agent_role": AgentRole.GENERATION,
-        "display_name": "协作汇总器",
-        "system_prompt": "",
-        "expert_id": synthesis_target,
-        "is_custom": False,
-    }
+    synthesis_runtime = await _resolve_llm_for_expert(
+        expert_id=synthesis_target,
+        state=state,
+        task_type=TaskType.STANDARD_RESPONSE,
+    )
+    synthesis_runtime["display_name"] = f"{synthesis_runtime['display_name']}·综合"
     synthesis_examples: list[dict[str, Any]] = []
     if few_shot_total < 3 and should_inject_few_shot(
         workflow_type="explicit_expert_collaboration",
@@ -365,29 +389,57 @@ async def _execute_explicit_expert_collaboration(state: WorkflowState) -> Collab
     answer_names = "、".join(
         item["display_name"] for item in expert_outputs if item["expert_id"] in answer_targets
     ) or synthesis_runtime["display_name"]
-    final_response = await synthesis_runtime["service"].chat(
-        messages=[
-            {
-                "role": "system",
-                "content": (
-                    f"{synthesis_prompt}\n\n"
-                    "## 多专家综合要求\n"
-                    f"本轮参与专家：{'、'.join(item['display_name'] for item in expert_outputs)}。\n"
-                    f"最终定稿优先吸收：{answer_names}。\n"
-                    "请输出一份统一答案，既保留分歧，也给出清晰结论。"
-                ),
-            },
-            {
-                "role": "user",
-                "content": (
-                    f"{build_collaboration_user_query(base_query=user_message, workflow_type='explicit_expert_collaboration', handoff_packets=handoff_packets, few_shot_examples=synthesis_examples)}\n\n"
-                    f"专家观点汇总：\n{synthesis_input}\n\n"
-                    f"必要原文片段：\n{synthesis_raw_excerpt}"
-                ),
-            },
-        ],
-        temperature=0.4,
-    )
+    try:
+        final_response = await asyncio.wait_for(
+            synthesis_runtime["service"].chat(
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            f"{synthesis_prompt}\n\n"
+                            "## 多专家综合要求\n"
+                            f"本轮参与专家：{'、'.join(item['display_name'] for item in expert_outputs)}。\n"
+                            f"最终定稿优先吸收：{answer_names}。\n"
+                            "请输出一份统一答案，既保留分歧，也给出清晰结论。"
+                        ),
+                    },
+                    {
+                        "role": "user",
+                        "content": (
+                            f"{build_collaboration_user_query(base_query=user_message, workflow_type='explicit_expert_collaboration', handoff_packets=handoff_packets, few_shot_examples=synthesis_examples)}\n\n"
+                            f"专家观点汇总：\n{synthesis_input}\n\n"
+                            f"必要原文片段：\n{synthesis_raw_excerpt}"
+                        ),
+                    },
+                ],
+                temperature=0.4,
+            ),
+            timeout=_EXPLICIT_COLLAB_LLM_TIMEOUT_SECONDS,
+        )
+    except asyncio.TimeoutError:
+        logger.warning(
+            "Explicit expert collaboration synthesis timed out for target=%s after %.1fs",
+            synthesis_target,
+            _EXPLICIT_COLLAB_LLM_TIMEOUT_SECONDS,
+        )
+        final_response = (
+            "我先给你一个保底综合版，避免这轮协作卡住：\n\n"
+            + "\n".join(
+                f"{index + 1}. {item['display_name']}：{str(item['response']).strip()[:120]}"
+                for index, item in enumerate(expert_outputs[:3])
+            )
+            + "\n\n最终建议：先按以上共识执行；如果你需要，我可以继续补一版更完整的综合说明。"
+        )
+    except Exception as exc:
+        logger.warning("Explicit expert collaboration synthesis degraded: %s", exc)
+        final_response = (
+            "这轮多专家综合出现波动，我先把已经稳定拿到的观点整理给你：\n\n"
+            + "\n".join(
+                f"- {item['display_name']}：{str(item['response']).strip()[:140]}"
+                for item in expert_outputs[:3]
+            )
+            + "\n\n你可以先按这个版本继续推进，我随后还能继续细化。"
+        )
     timeline.append(
         _build_timeline_step(
             synthesis_runtime["display_name"],
@@ -775,6 +827,7 @@ async def generation_node(state: WorkflowState) -> WorkflowState:
     task_type = _resolve_generation_task_type(state)
     explicit_runtime = None
     user_message = state.messages[-1]["content"] or ""
+    use_slim_deep_context = _should_use_slim_deep_analysis_context(state, user_message)
     memory_answer = _resolve_recent_memory_answer(conversation_context, user_message)
 
     if memory_answer:
@@ -822,6 +875,8 @@ async def generation_node(state: WorkflowState) -> WorkflowState:
 
     # Extract plan_context from state if available
     plan_context = state.context_data.get("plan_context")
+    prompt_user_context = _build_slim_user_context_for_deep_analysis(user_context) if use_slim_deep_context else user_context
+    prompt_conversation_context = {"messages": []} if use_slim_deep_context else conversation_context
 
     # Extract intent instruction from plan_metadata (Vision Item 4b)
     # P1 Improvement: Enhanced intent instructions with stronger constraints
@@ -856,31 +911,45 @@ Ask about their available time and current tasks if needed.
 """
 
     system_prompt = build_system_prompt(
-        user_context,
-        conversation_history=conversation_context,
+        prompt_user_context,
+        conversation_history=prompt_conversation_context,
         prompt_version=prompt_version,
         agent_role=_coerce_agent_role(getattr(generation_llm, "agent_role", agent_role)),
         model_key=getattr(generation_llm, "model_key", None),
-        plan_context=plan_context,
+        plan_context=None if use_slim_deep_context else plan_context,
         intent_instruction=intent_instruction, # Vision Item 4b
         session_feedback_instruction=str(state.context_data.get("session_feedback_instruction") or ""),
         dual_core_instruction=str(state.context_data.get("dual_core_prompt_instruction") or ""),
         context_focus=state.context_data.get("context_focus"),
         context_briefing_note=str(state.context_data.get("context_briefing_note") or ""),
+        context_level="light" if use_slim_deep_context else "full",
         chat_mode=str(state.context_data.get("chat_mode", "standard") or "standard"),
     )
     if explicit_runtime and explicit_runtime.get("system_prompt"):
         system_prompt += f"\n\n## 自定义专家指令\n{explicit_runtime['system_prompt']}"
+    if use_slim_deep_context:
+        system_prompt += (
+            "\n\n## 深度分析输出约束\n"
+            "这是一个通用概念型深度分析问题，请优先输出高密度、强结构化答案，避免冗长铺陈。\n"
+            "输出格式固定为：1. 关键结论；2. 类比；3. 反例；4. 最易混淆点；5. 一个立即可用的判断口诀。\n"
+            "总长度尽量控制在 700 个中文字符以内；每一部分 1-2 个要点即可，用短段落，不要写成长篇教程。"
+        )
 
-    knowledge_context = state.context_data.get("knowledge_context") or ""
+    knowledge_context = "" if use_slim_deep_context else (state.context_data.get("knowledge_context") or "")
     if knowledge_context:
         system_prompt += f"\n\n## Retrieved Knowledge\n{knowledge_context}"
 
-    document_context = state.context_data.get("document_context") or ""
+    document_context = "" if use_slim_deep_context else (state.context_data.get("document_context") or "")
     if document_context:
         system_prompt += f"\n\n## Retrieved Documents\n{document_context}"
 
     tools = state.context_data.get("tools_schema", [])
+    if _should_disable_tools_for_light_standard_reply(state, user_message):
+        logger.info("Disabling tool exposure for light standard follow-up reply")
+        tools = []
+    elif _should_disable_tools_for_deep_analysis(state):
+        logger.info("Disabling tool exposure for deep analysis generation")
+        tools = []
 
     if (
         stream_callback
@@ -921,6 +990,8 @@ Ask about their available time and current tasks if needed.
     full_response = ""
     tool_calls = []
     first_chunk_sent = False  # Track first chunk for status transition
+    delta_buffer: list[str] = []
+    last_flush_at = time.monotonic()
 
     state.context_data["active_generation_agent_role"] = str(getattr(generation_llm, "agent_role", agent_role))
     selection = generation_llm.get_current_selection()
@@ -958,24 +1029,27 @@ Ask about their available time and current tasks if needed.
             if chunk.type == "text":
                 full_response += chunk.content
                 if stream_callback:
-                    # Send GENERATING status with first chunk to transition from THINKING
-                    if not first_chunk_sent:
-                        first_chunk_sent = True
-                        await stream_callback(agent_service_pb2.ChatResponse(
-                            delta=chunk.content,
-                            status_update=agent_service_pb2.AgentStatus(
-                                state=agent_service_pb2.AgentStatus.GENERATING,
-                                details="正在生成回复...",
-                                current_agent_name="Sparkle AI"
-                            )
-                        ))
-                    else:
-                        await stream_callback(agent_service_pb2.ChatResponse(
-                            delta=chunk.content
-                        ))
+                    delta_buffer.append(chunk.content)
+                    now = time.monotonic()
+                    if (
+                        sum(len(part) for part in delta_buffer) >= _STREAM_DELTA_FLUSH_CHARS
+                        or (now - last_flush_at) >= _STREAM_DELTA_FLUSH_SECONDS
+                    ):
+                        first_chunk_sent = await _flush_stream_text_buffer(
+                            stream_callback=stream_callback,
+                            buffer=delta_buffer,
+                            first_chunk_sent=first_chunk_sent,
+                        )
+                        last_flush_at = now
             elif chunk.type == "tool_call_end":
                 tool_calls.append(chunk)
                 if stream_callback:
+                    first_chunk_sent = await _flush_stream_text_buffer(
+                        stream_callback=stream_callback,
+                        buffer=delta_buffer,
+                        first_chunk_sent=first_chunk_sent,
+                    )
+                    last_flush_at = time.monotonic()
                     await stream_callback(agent_service_pb2.ChatResponse(
                         tool_call=agent_service_pb2.ToolCall(
                             id=chunk.tool_call_id,
@@ -987,6 +1061,12 @@ Ask about their available time and current tasks if needed.
                 usage_prompt_tokens = chunk.prompt_tokens or 0
                 usage_completion_tokens = chunk.completion_tokens or 0
                 if stream_callback:
+                    first_chunk_sent = await _flush_stream_text_buffer(
+                        stream_callback=stream_callback,
+                        buffer=delta_buffer,
+                        first_chunk_sent=first_chunk_sent,
+                    )
+                    last_flush_at = time.monotonic()
                     await stream_callback(agent_service_pb2.ChatResponse(
                         usage=agent_service_pb2.Usage(
                             prompt_tokens=chunk.prompt_tokens or 0,
@@ -1035,6 +1115,12 @@ Ask about their available time and current tasks if needed.
                 ))
             else:
                 await stream_callback(agent_service_pb2.ChatResponse(delta=fallback_response))
+    elif stream_callback:
+        first_chunk_sent = await _flush_stream_text_buffer(
+            stream_callback=stream_callback,
+            buffer=delta_buffer,
+            first_chunk_sent=first_chunk_sent,
+        )
     if selection is not None and run_ledger is not None:
         total_tokens = usage_prompt_tokens + usage_completion_tokens
         await run_ledger.record_event(
@@ -1060,9 +1146,16 @@ Ask about their available time and current tasks if needed.
 
     state.append_message("assistant", full_response)
     if tool_calls:
+        tool_loop_count = int(state.context_data.get("tool_loop_count") or 0)
+        if tool_loop_count >= _MAX_TOOL_LOOPS_PER_TURN:
+            logger.warning(f"Stopping tool loop after {tool_loop_count} rounds; returning current response directly")
+            state.context_data["tool_calls"] = []
+            state.next_step = "__end__"
+            return state
         state.context_data["tool_calls"] = tool_calls
         state.next_step = "tool_execution"
     else:
+        state.context_data["tool_loop_count"] = 0
         state.next_step = "__end__"
 
     return state
@@ -1363,6 +1456,7 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
 
     # Clear tool calls and loop back to generation
     state.context_data["tool_calls"] = []
+    state.context_data["tool_loop_count"] = int(state.context_data.get("tool_loop_count") or 0) + 1
     state.next_step = "generation"
 
     return state
@@ -1447,6 +1541,126 @@ def _should_use_collaboration(message: str, intent: str | None) -> bool:
     ]
 
     return intent in collaboration_intents
+
+
+def _should_disable_tools_for_light_standard_reply(state: WorkflowState, user_message: str) -> bool:
+    context_data = state.context_data or {}
+    chat_mode = str(context_data.get("chat_mode") or "standard").strip().lower()
+    if chat_mode not in {"standard", "chat"}:
+        return False
+    if context_data.get("planned_tool_sequence"):
+        return False
+    if context_data.get("selected_experts") or context_data.get("answer_experts"):
+        return False
+
+    text = (user_message or "").strip().lower()
+    if not text or len(text) > 160:
+        return False
+
+    action_keywords = (
+        "创建", "新建", "添加", "保存", "同步", "提醒", "日程", "任务", "计划",
+        "创建任务", "创建计划", "加入日历", "开始专注", "focus",
+        "schedule", "remind", "calendar", "task", "plan", "create",
+    )
+    if any(keyword in text for keyword in action_keywords):
+        return False
+
+    follow_up_keywords = (
+        "基于刚才", "根据刚才", "再给我", "换个说法", "举个例子", "再解释", "简化一下",
+        "再来一个", "继续说", "继续", "补充", "follow", "based on", "another", "example",
+    )
+    if any(keyword in text for keyword in follow_up_keywords):
+        return True
+
+    knowledge_keywords = (
+        "是什么", "什么意思", "为什么", "区别", "解释", "原理", "例子",
+        "怎么理解", "如何理解", "介绍一下", "概念", "define", "what is",
+        "difference", "explain", "concept",
+    )
+    return any(keyword in text for keyword in knowledge_keywords)
+
+
+def _should_disable_tools_for_deep_analysis(state: WorkflowState) -> bool:
+    context_data = state.context_data or {}
+    chat_mode = str(context_data.get("chat_mode") or "").strip().lower()
+    if chat_mode != "deep_analysis":
+        return False
+    if context_data.get("planned_tool_sequence"):
+        return False
+    if context_data.get("selected_experts") or context_data.get("answer_experts"):
+        return False
+    return True
+
+
+def _should_use_slim_deep_analysis_context(state: WorkflowState, user_message: str) -> bool:
+    context_data = state.context_data or {}
+    chat_mode = str(context_data.get("chat_mode") or "").strip().lower()
+    if chat_mode != "deep_analysis":
+        return False
+    if context_data.get("planned_tool_sequence"):
+        return False
+    if context_data.get("selected_experts") or context_data.get("answer_experts"):
+        return False
+
+    text = (user_message or "").strip().lower()
+    if not text or len(text) > 220:
+        return False
+
+    personal_or_system_keywords = (
+        "我的", "我当前", "我的计划", "我的任务", "根据我的", "结合我的",
+        "你看到我", "我的画像", "我的知识星图", "帮我规划", "上传", "文档",
+        "文件", "笔记", "错题", "计划", "任务", "日程", "calendar", "task",
+        "plan", "profile", "history", "document", "file", "upload", "my ",
+    )
+    return not any(keyword in text for keyword in personal_or_system_keywords)
+
+
+def _build_slim_user_context_for_deep_analysis(user_context: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(user_context, dict):
+        return {}
+
+    allowed_keys = {
+        "user_context",
+        "preferences",
+        "llm_profile",
+        "understanding_depth",
+        "understanding_depth_hint",
+        "context_focus",
+    }
+    slim = {key: user_context.get(key) for key in allowed_keys if key in user_context}
+    current_query = user_context.get("current_query")
+    if current_query:
+        slim["current_query"] = current_query
+    return slim
+
+
+async def _flush_stream_text_buffer(
+    *,
+    stream_callback,
+    buffer: list[str],
+    first_chunk_sent: bool,
+) -> bool:
+    if not stream_callback or not buffer:
+        return first_chunk_sent
+
+    content = "".join(buffer)
+    buffer.clear()
+    if not content:
+        return first_chunk_sent
+
+    if not first_chunk_sent:
+        await stream_callback(agent_service_pb2.ChatResponse(
+            delta=content,
+            status_update=agent_service_pb2.AgentStatus(
+                state=agent_service_pb2.AgentStatus.GENERATING,
+                details="正在生成回复...",
+                current_agent_name="Sparkle AI",
+            ),
+        ))
+        return True
+
+    await stream_callback(agent_service_pb2.ChatResponse(delta=content))
+    return first_chunk_sent
 
 
 def _select_workflow(intent: str):

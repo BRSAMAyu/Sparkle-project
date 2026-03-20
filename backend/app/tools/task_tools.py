@@ -83,6 +83,7 @@ class CreateTaskTool(BaseTool):
                     "guide_content": task.guide_content,  # 🔧 修复：字段名改为guide_content以匹配前端
                     "type": task.type.value,
                     "status": task.status.value,
+                    "plan_id": str(task.plan_id) if task.plan_id else None,
                     "estimated_minutes": task.estimated_minutes,
                     "priority": task.priority,
                     "created_at": task.created_at.isoformat(),
@@ -154,6 +155,7 @@ class UpdateTaskStatusTool(BaseTool):
                     "guide_content": task.guide_content,  # 🔧 修复：添加guide_content字段
                     "type": task.type.value,
                     "status": task.status.value,
+                    "plan_id": str(task.plan_id) if task.plan_id else None,
                     "estimated_minutes": task.estimated_minutes,
                     "priority": task.priority,
                     "actual_minutes": task.actual_minutes,
@@ -221,6 +223,7 @@ class BatchCreateTasksTool(BaseTool):
                     "guide_content": task.guide_content,  # 🔧 修复：添加guide_content字段
                     "type": task.type.value,
                     "status": task.status.value,
+                    "plan_id": str(task.plan_id) if task.plan_id else None,
                     "estimated_minutes": task.estimated_minutes,
                     "priority": task.priority,
                     "created_at": task.created_at.isoformat(),

@@ -42,7 +42,14 @@ const _defaultAiSystemPreferences = TransparencyPreferences(
 );
 
 class ChatScreen extends ConsumerStatefulWidget {
-  const ChatScreen({super.key});
+  const ChatScreen({
+    super.key,
+    this.initialPrompt,
+    this.initialChatMode,
+  });
+
+  final String? initialPrompt;
+  final String? initialChatMode;
 
   @override
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
@@ -59,6 +66,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   final ScrollController _scrollController = ScrollController();
   bool _showContextControls = false;
+  String? _dispatchedInitialPrompt;
 
   @override
   void initState() {
@@ -161,6 +169,40 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       unawaited(
         ref.read(chatProvider.notifier).switchPlanSession(activePlanId),
       );
+      _queueInitialPromptDispatch();
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant ChatScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialPrompt != widget.initialPrompt ||
+        oldWidget.initialChatMode != widget.initialChatMode) {
+      _queueInitialPromptDispatch();
+    }
+  }
+
+  void _queueInitialPromptDispatch() {
+    final prompt = widget.initialPrompt?.trim();
+    if (prompt == null ||
+        prompt.isEmpty ||
+        prompt == _dispatchedInitialPrompt) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final nextPrompt = widget.initialPrompt?.trim();
+      if (nextPrompt == null ||
+          nextPrompt.isEmpty ||
+          nextPrompt == _dispatchedInitialPrompt) {
+        return;
+      }
+      _dispatchedInitialPrompt = nextPrompt;
+      final initialMode = widget.initialChatMode?.trim();
+      if (initialMode != null && initialMode.isNotEmpty) {
+        ref.read(chatModeProvider.notifier).setFromApiValue(initialMode);
+      }
+      await ref.read(chatProvider.notifier).sendMessage(nextPrompt);
     });
   }
 
@@ -558,205 +600,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   void _showHistoryBottomSheet(BuildContext context) {
-    final l10n = I18nService.instance.l10n;
     unawaited(
       showModalBottomSheet<void>(
         context: context,
         backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
         useRootNavigator: true,
         isScrollControlled: true,
-        builder: (sheetContext) {
-          final mediaQuery = MediaQuery.of(sheetContext);
-          final maxHeight = mediaQuery.size.height -
-              mediaQuery.viewPadding.top -
-              kToolbarHeight;
-          final maxChildSize =
-              (maxHeight / mediaQuery.size.height).clamp(0.6, 0.95);
-          final initialChildSize = min(0.7, maxChildSize);
-
-          return DraggableScrollableSheet(
-            expand: false,
-            initialChildSize: initialChildSize,
-            minChildSize: 0.4,
-            maxChildSize: maxChildSize,
-            builder: (context, scrollController) => GraphiteModalSurface(
-              padding: EdgeInsets.zero,
-              child: SafeArea(
-                top: false,
-                child: Column(
-                  children: [
-                    Container(
-                      width: DS.spacing40,
-                      height: DS.spacing4,
-                      margin:
-                          const EdgeInsets.symmetric(vertical: DS.spacing12),
-                      decoration: BoxDecoration(
-                        color: DS.surfaceTertiary,
-                        borderRadius: BorderRadius.circular(DS.spacing4 / 2),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-                      child: Row(
-                        children: [
-                          DecoratedBox(
-                            decoration: BoxDecoration(
-                              color: DS.surfaceOverlay,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: DS.borderSubtle),
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(10),
-                              child: Icon(
-                                Icons.history_rounded,
-                                color: DS.primaryBase,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: DS.md),
-                          Text(
-                            l10n.chatHistoryTitle,
-                            style: DS.titleLarge.copyWith(
-                              color: DS.textPrimary,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      child: FutureBuilder<List<Map<String, dynamic>>>(
-                        future: ref
-                            .read(chatProvider.notifier)
-                            .getRecentConversations(),
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return ListView(
-                              controller: scrollController,
-                              children: const [
-                                SizedBox(
-                                  height: 200,
-                                  child: Center(
-                                    child: CircularProgressIndicator(),
-                                  ),
-                                ),
-                              ],
-                            );
-                          }
-
-                          if (snapshot.hasError) {
-                            return ListView(
-                              controller: scrollController,
-                              children: [
-                                SizedBox(
-                                  height: 200,
-                                  child: Center(
-                                    child: Text(
-                                      l10n.chatHistoryLoadFailed(
-                                        '${snapshot.error}',
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            );
-                          }
-
-                          final sessions = snapshot.data ?? [];
-                          if (sessions.isEmpty) {
-                            return ListView(
-                              controller: scrollController,
-                              children: [
-                                const SizedBox(height: 200),
-                                Center(child: Text(l10n.chatHistoryEmpty)),
-                              ],
-                            );
-                          }
-
-                          return ListView.builder(
-                            controller: scrollController,
-                            itemCount: sessions.length,
-                            itemBuilder: (context, index) {
-                              final session = sessions[index];
-                              final isCurrent = session['id'] ==
-                                  ref.read(chatProvider).conversationId;
-
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 6,
-                                ),
-                                child: GraphiteCardSurface(
-                                  padding: EdgeInsets.zero,
-                                  borderColor: isCurrent
-                                      ? DS.primaryBase.withValues(alpha: 0.22)
-                                      : DS.borderSubtle,
-                                  child: ListTile(
-                                    leading: Container(
-                                      padding: const EdgeInsets.all(DS.sm),
-                                      decoration: BoxDecoration(
-                                        color: isCurrent
-                                            ? DS.primaryBase
-                                                .withValues(alpha: 0.12)
-                                            : DS.surfaceOverlay,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Icon(
-                                        Icons.chat_bubble_outline_rounded,
-                                        size: DS.iconSizeXs,
-                                        color: isCurrent
-                                            ? DS.primaryBase
-                                            : DS.textSecondary,
-                                      ),
-                                    ),
-                                    title: Text(
-                                      (session['title'] as String?) ??
-                                          l10n.chatSessionUntitled,
-                                      style: DS.bodyLarge.copyWith(
-                                        color: DS.textPrimary,
-                                        fontWeight: isCurrent
-                                            ? FontWeight.w700
-                                            : FontWeight.w500,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    subtitle: Text(
-                                      (session['updated_at'] as String?)
-                                              ?.split('T')[0] ??
-                                          '',
-                                      style: DS.labelSmall.copyWith(
-                                        color: DS.textSecondary,
-                                      ),
-                                    ),
-                                    trailing: isCurrent
-                                        ? Icon(
-                                            Icons.check_circle,
-                                            color: DS.primaryBase,
-                                            size: DS.iconSizeXs,
-                                          )
-                                        : null,
-                                    onTap: () => unawaited(
-                                      _handleHistorySessionTap(
-                                        sheetContext,
-                                        session,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
+        builder: (sheetContext) => FractionallySizedBox(
+          heightFactor: 0.78,
+          child: _ChatHistorySheet(
+            currentConversationId: ref.read(chatProvider).conversationId,
+            onSelectSession: _loadHistorySessionFromSheet,
+          ),
+        ),
       ),
     );
   }
@@ -791,38 +647,27 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
   }
 
-  Future<void> _handleHistorySessionTap(
-    BuildContext sheetContext,
-    Map<String, dynamic> session,
-  ) async {
-    final navigator = Navigator.of(sheetContext, rootNavigator: true);
-    if (navigator.canPop()) {
-      navigator.pop();
-    }
-
-    final sessionId = session['id']?.toString() ?? '';
+  Future<String?> _loadHistorySessionFromSheet(String sessionId) async {
     if (sessionId.isEmpty) {
-      AppFeedback.error(context, context.l10n.chatSessionDataError);
-      return;
+      return context.l10n.chatSessionDataError;
     }
 
     final currentSessionId = ref.read(chatProvider).conversationId;
     if (currentSessionId == sessionId) {
-      return;
+      return null;
     }
 
+    ref.read(chatProvider.notifier).cancelActiveRun(reason: 'history_switch');
     await ref.read(chatProvider.notifier).loadConversationHistory(sessionId);
     if (mounted) {
       _scrollController.jumpTo(0);
     }
     if (!mounted) {
-      return;
+      return null;
     }
 
     final loadError = ref.read(chatProvider).error;
-    if (loadError != null && loadError.isNotEmpty) {
-      AppFeedback.error(context, loadError);
-    }
+    return (loadError != null && loadError.isNotEmpty) ? loadError : null;
   }
 
   void _handleExitChat(BuildContext context) {
@@ -1348,6 +1193,288 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ];
     }
   }
+}
+
+class _ChatHistorySheet extends ConsumerStatefulWidget {
+  const _ChatHistorySheet({
+    required this.onSelectSession,
+    this.currentConversationId,
+  });
+
+  final String? currentConversationId;
+  final Future<String?> Function(String sessionId) onSelectSession;
+
+  @override
+  ConsumerState<_ChatHistorySheet> createState() => _ChatHistorySheetState();
+}
+
+class _ChatHistorySheetState extends ConsumerState<_ChatHistorySheet> {
+  late Future<List<Map<String, dynamic>>> _historyFuture;
+  String? _openingSessionId;
+  String? _inlineError;
+
+  @override
+  void initState() {
+    super.initState();
+    _historyFuture = _fetchHistory();
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchHistory() async {
+    final notifier = ref.read(chatProvider.notifier);
+    return notifier.getRecentConversations().timeout(
+          const Duration(seconds: 8),
+          onTimeout: () => throw Exception('加载对话历史超时，请稍后重试'),
+        );
+  }
+
+  void _refresh() {
+    setState(() {
+      _inlineError = null;
+      _historyFuture = _fetchHistory();
+    });
+  }
+
+  Future<void> _openSession(String sessionId) async {
+    if (_openingSessionId != null) {
+      return;
+    }
+    if (sessionId == widget.currentConversationId) {
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).maybePop();
+      }
+      return;
+    }
+    setState(() {
+      _openingSessionId = sessionId;
+      _inlineError = null;
+    });
+    final error = await widget.onSelectSession(sessionId);
+    if (!mounted) {
+      return;
+    }
+    if (error == null || error.isEmpty) {
+      Navigator.of(context, rootNavigator: true).maybePop();
+      return;
+    }
+    setState(() {
+      _openingSessionId = null;
+      _inlineError = error;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = I18nService.instance.l10n;
+    return GraphiteModalSurface(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            Row(
+              children: [
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: DS.surfaceOverlay,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: DS.borderSubtle),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Icon(
+                      Icons.history_rounded,
+                      color: DS.primaryBase,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: DS.md),
+                Expanded(
+                  child: Text(
+                    l10n.chatHistoryTitle,
+                    style: DS.titleLarge.copyWith(
+                      color: DS.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                SparkleIconButton(
+                  icon: Icon(Icons.refresh_rounded, color: DS.textSecondary),
+                  onPressed: _openingSessionId == null ? _refresh : null,
+                  semanticLabel: 'refresh history',
+                  variant: ButtonVariant.ghost,
+                ),
+                SparkleIconButton(
+                  icon: Icon(Icons.close_rounded, color: DS.textSecondary),
+                  onPressed: () =>
+                      Navigator.of(context, rootNavigator: true).maybePop(),
+                  semanticLabel: 'close history',
+                  variant: ButtonVariant.ghost,
+                ),
+              ],
+            ),
+            if (_inlineError != null) ...[
+              const SizedBox(height: DS.md),
+              _InlineChatHistoryError(
+                message: _inlineError!,
+                onRetry: _openingSessionId == null ? _refresh : null,
+              ),
+            ],
+            const SizedBox(height: DS.md),
+            Expanded(
+              child: FutureBuilder<List<Map<String, dynamic>>>(
+                future: _historyFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  if (snapshot.hasError) {
+                    return _InlineChatHistoryError(
+                      message: l10n.chatHistoryLoadFailed('${snapshot.error}'),
+                      onRetry: _refresh,
+                    );
+                  }
+
+                  final sessions = snapshot.data ?? [];
+                  if (sessions.isEmpty) {
+                    return Center(
+                      child: Text(
+                        l10n.chatHistoryEmpty,
+                        style: DS.bodyMedium.copyWith(color: DS.textSecondary),
+                      ),
+                    );
+                  }
+
+                  return ListView.builder(
+                    itemCount: sessions.length,
+                    itemBuilder: (context, index) {
+                      final session = sessions[index];
+                      final sessionId = session['id']?.toString() ?? '';
+                      final isCurrent =
+                          sessionId == widget.currentConversationId;
+                      final isOpening = _openingSessionId == sessionId;
+
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: GraphiteCardSurface(
+                          padding: EdgeInsets.zero,
+                          borderColor: isCurrent
+                              ? DS.primaryBase.withValues(alpha: 0.22)
+                              : DS.borderSubtle,
+                          child: ListTile(
+                            enabled: !isOpening && _openingSessionId == null,
+                            leading: Container(
+                              padding: const EdgeInsets.all(DS.sm),
+                              decoration: BoxDecoration(
+                                color: isCurrent
+                                    ? DS.primaryBase.withValues(alpha: 0.12)
+                                    : DS.surfaceOverlay,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.chat_bubble_outline_rounded,
+                                size: DS.iconSizeXs,
+                                color: isCurrent
+                                    ? DS.primaryBase
+                                    : DS.textSecondary,
+                              ),
+                            ),
+                            title: Text(
+                              (session['title'] as String?) ??
+                                  l10n.chatSessionUntitled,
+                              style: DS.bodyLarge.copyWith(
+                                color: DS.textPrimary,
+                                fontWeight: isCurrent
+                                    ? FontWeight.w700
+                                    : FontWeight.w500,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            subtitle: Text(
+                              (session['updated_at'] as String?)
+                                      ?.replaceFirst('T', ' ')
+                                      .split('.')
+                                      .first ??
+                                  '',
+                              style: DS.labelSmall.copyWith(
+                                color: DS.textSecondary,
+                              ),
+                            ),
+                            trailing: isOpening
+                                ? SizedBox(
+                                    width: DS.iconSizeXs,
+                                    height: DS.iconSizeXs,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        DS.primaryBase,
+                                      ),
+                                    ),
+                                  )
+                                : isCurrent
+                                    ? Icon(
+                                        Icons.check_circle,
+                                        color: DS.primaryBase,
+                                        size: DS.iconSizeXs,
+                                      )
+                                    : null,
+                            onTap: sessionId.isEmpty
+                                ? null
+                                : () => unawaited(_openSession(sessionId)),
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _InlineChatHistoryError extends StatelessWidget {
+  const _InlineChatHistoryError({
+    required this.message,
+    this.onRetry,
+  });
+
+  final String message;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) => Center(
+        child: GraphiteCardSurface(
+          child: Padding(
+            padding: const EdgeInsets.all(DS.md),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.error_outline_rounded, color: DS.error),
+                const SizedBox(height: DS.sm),
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: DS.bodyMedium.copyWith(color: DS.textSecondary),
+                ),
+                if (onRetry != null) ...[
+                  const SizedBox(height: DS.md),
+                  SparkleButton(
+                    label: '重试',
+                    icon: const Icon(Icons.refresh_rounded),
+                    onPressed: onRetry,
+                    variant: ButtonVariant.secondary,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      );
 }
 
 class _QuickActionChip extends StatefulWidget {

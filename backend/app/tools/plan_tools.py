@@ -1,4 +1,5 @@
 from __future__ import annotations
+import asyncio
 import json
 from types import SimpleNamespace
 from typing import Any
@@ -87,6 +88,12 @@ class CreatePlanTool(BaseTool):
                     "type": plan.type.value,
                     "plan_stage": plan.plan_stage.value if plan.plan_stage else None,
                     "description": plan.description,
+                    "subject": getattr(plan, "subject", None),
+                    "progress": getattr(plan, "progress", 0),
+                    "is_active": getattr(plan, "is_active", True),
+                    "is_primary": getattr(plan, "is_primary", False),
+                    "task_count": len(getattr(plan, "tasks", []) or []),
+                    "source": getattr(plan, "source", None),
                     "target_date": plan.target_date.isoformat() if plan.target_date else None,
                     "target_mastery": params.target_mastery,
                 }
@@ -175,7 +182,10 @@ class GenerateTasksForPlanTool(BaseTool):
 
                     # 构造查询：结合主题和难度，查询相关知识点和前置依赖
                     query = f"{params.topic} {params.difficulty} learning path prerequisites"
-                    rag_result = await retriever.retrieve(query, str(user_uuid), depth=2)
+                    rag_result = await asyncio.wait_for(
+                        retriever.retrieve(query, str(user_uuid), depth=2),
+                        timeout=12,
+                    )
 
                 rag_context = getattr(rag_result, "fused_context", None)
                 if isinstance(rag_context, str) and rag_context.strip() and len(rag_context.strip()) >= 20:
@@ -198,15 +208,24 @@ class GenerateTasksForPlanTool(BaseTool):
                 logger.warning(f"Failed to retrieve knowledge context (non-fatal): {e}")
 
             # 第三步: 调用 LLM 生成任务建议 (带知识上下文)
-            task_list = await self._generate_tasks_with_llm(
-                plan_title=plan_snapshot.name,
-                plan_description=plan_snapshot.description,
-                topic=params.topic,
-                difficulty=params.difficulty,
-                task_count=params.task_count,
-                knowledge_context=knowledge_context,
-                persona_constraints=persona_constraints,
-            )
+            try:
+                task_list = await asyncio.wait_for(
+                    self._generate_tasks_with_llm(
+                        plan_title=plan_snapshot.name,
+                        plan_description=plan_snapshot.description,
+                        topic=params.topic,
+                        difficulty=params.difficulty,
+                        task_count=params.task_count,
+                        knowledge_context=knowledge_context,
+                        persona_constraints=persona_constraints,
+                    ),
+                    timeout=30,
+                )
+            except TimeoutError:
+                logger.warning(
+                    f"Task generation timed out for plan {plan_uuid}, using deterministic fallback"
+                )
+                task_list = None
 
             if not task_list:
                 logger.warning(
@@ -298,6 +317,7 @@ class GenerateTasksForPlanTool(BaseTool):
                 widget_type="task_list",
                 widget_data={
                     "tasks": created_tasks,
+                    "plan_id": params.plan_id,
                     "plan_title": plan_snapshot.name,
                     "source": "graph_augmented_ai" if knowledge_context else "ai_generated",
                     "rag_quality": rag_quality,
@@ -559,11 +579,18 @@ class GenerateTasksForPlanTool(BaseTool):
 严格返回 JSON 格式，不要其他文本。
 """
 
-        result = await plan_llm.json_call(
-            messages=[{"role": "user", "content": prompt}],
-            fallback=[],  # 降级返回空列表
-            temperature=0.3
-        )
+        try:
+            result = await asyncio.wait_for(
+                plan_llm.json_call(
+                    messages=[{"role": "user", "content": prompt}],
+                    fallback=[],  # 降级返回空列表
+                    temperature=0.3
+                ),
+                timeout=20,
+            )
+        except TimeoutError:
+            logger.warning("LLM plan task generation timed out")
+            return None
 
         if not result:
             logger.warning("LLM returned empty response for plan generation")

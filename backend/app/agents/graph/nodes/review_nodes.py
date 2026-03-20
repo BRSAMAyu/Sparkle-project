@@ -277,7 +277,7 @@ REVIEW_CONFIG_DEFAULTS = {
     "critical_threshold": 0.9,       # 关键指标阈值
     "max_reflection_rounds": 3,      # 最大反思轮次
     "skip_simple_responses": True,   # 跳过简单响应的审查
-    "simple_response_length": 100,   # 简单响应长度阈值
+    "simple_response_length": 400,   # 简单响应长度阈值
     "skip_patterns": ["你好", "hi", "hello"],  # 跳过审查的模式
 }
 
@@ -341,23 +341,73 @@ def _should_skip_review(state: SparkleState) -> bool:
     if not config.get("enable_review", True):
         return True
 
+    context_data = _state_get(state, "context_data", {}) or {}
+    messages = _state_get(state, "messages", [])
+    if not messages:
+        return False
+
+    last_message = messages[-1]
+    content = _message_attr(last_message, "content", "") or str(last_message)
+    content_lower = content.lower()
+    last_user_message = next(
+        (_message_attr(msg, "content", "") for msg in reversed(messages[:-1]) if _message_attr(msg, "role") == "user"),
+        "",
+    )
+    chat_mode = str(context_data.get("chat_mode") or "standard").strip().lower()
+    has_tool_calls = bool(context_data.get("tool_calls"))
+    has_selected_experts = bool(context_data.get("selected_experts") or context_data.get("answer_experts"))
+    workflow_type = str(context_data.get("workflow_type") or "").strip().lower()
+
+    if has_tool_calls and len(content) <= 120:
+        tool_progress_cues = ("我先", "先帮", "正在", "我来", "让我", "先查询", "先查看", "先检查")
+        if any(cue in content for cue in tool_progress_cues):
+            return True
+
+    if (
+        has_tool_calls
+        and chat_mode in {"standard", "chat"}
+        and len(content) <= 120
+        and "\n" not in content
+        and "：" not in content
+    ):
+        return True
+
+    if (
+        chat_mode == "deep_analysis"
+        and not has_tool_calls
+        and not has_selected_experts
+    ):
+        return True
+
+    # 标准轻对话优先保证首轮响应速度：无工具、无显式专家、无复杂工作流时跳过重审查。
+    if (
+        chat_mode in {"standard", "chat"}
+        and not has_tool_calls
+        and not has_selected_experts
+        and workflow_type in {"", "standard_chat", "conversation", "qa"}
+        and len(content) <= 1200
+        and len(last_user_message) <= 240
+    ):
+        return True
+
+    is_standard_like_chat = (
+        chat_mode in {"standard", "chat"}
+        and not has_tool_calls
+        and not has_selected_experts
+        and workflow_type in {"", "standard_chat", "conversation", "qa"}
+    )
+
     # 检查是否是简单响应
-    if config.get("skip_simple_responses"):
-        messages = _state_get(state, "messages", [])
-        if messages:
-            last_message = messages[-1]
-            content = _message_attr(last_message, "content", "") or str(last_message)
-            content_lower = content.lower()
+    if config.get("skip_simple_responses") and is_standard_like_chat:
+        # 检查长度
+        if len(content) < config.get("simple_response_length", 400):
+            return True
 
-            # 检查长度
-            if len(content) < config.get("simple_response_length", 100):
+        # 检查跳过模式
+        skip_patterns = config.get("skip_patterns", [])
+        for pattern in skip_patterns:
+            if pattern.lower() in content_lower:
                 return True
-
-            # 检查跳过模式
-            skip_patterns = config.get("skip_patterns", [])
-            for pattern in skip_patterns:
-                if pattern.lower() in content_lower:
-                    return True
 
     return False
 

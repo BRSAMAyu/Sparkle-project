@@ -5,6 +5,9 @@ import pytest
 
 from app.agents.standard_workflow import (
     _classify_user_intent,
+    _should_disable_tools_for_deep_analysis,
+    _should_disable_tools_for_light_standard_reply,
+    _should_use_slim_deep_analysis_context,
     _sanitize_community_sendable_response,
     collaboration_post_process_node,
     generation_node,
@@ -35,6 +38,23 @@ class _FakeGenerationLLM:
 
     async def chat_stream_with_tools(self, system_prompt, user_message, tools, user_context):
         yield SimpleNamespace(type="text", content="分析完成")
+
+
+class _ChunkedGenerationLLM(_FakeGenerationLLM):
+    async def chat_stream_with_tools(self, system_prompt, user_message, tools, user_context):
+        for part in ["这是一段", "被拆成很多", "碎片的流式", "输出文本。"]:
+            yield SimpleNamespace(type="text", content=part)
+
+
+class _ToolLoopGenerationLLM(_FakeGenerationLLM):
+    async def chat_stream_with_tools(self, system_prompt, user_message, tools, user_context):
+        yield SimpleNamespace(type="text", content="我继续检查一下。")
+        yield SimpleNamespace(
+            type="tool_call_end",
+            tool_call_id="tool-1",
+            tool_name="get_plan_state",
+            full_arguments={"plan_id": "current"},
+        )
 
 
 class _FailIfCalledLLM(_FakeGenerationLLM):
@@ -219,6 +239,120 @@ def test_exam_fact_query_does_not_trigger_exam_preparation():
         "帮我给阿泽写一条简短、自然、可直接发送的私聊回复，约今晚一起过一下 CS101 期末考点。"
     )
     assert community_prompt_intent is None
+
+
+def test_light_standard_followup_disables_tools():
+    state = WorkflowState(
+        messages=[
+            {"role": "user", "content": "番茄钟学习法是什么？"},
+            {"role": "assistant", "content": "它是一种专注学习法。"},
+            {"role": "user", "content": "基于刚才的解释，再给我一个今天就能执行的 25 分钟开始动作。"},
+        ],
+        context_data={
+            "chat_mode": "standard",
+            "tools_schema": [{"name": "get_plan_state"}],
+        },
+    )
+
+    assert _should_disable_tools_for_light_standard_reply(
+        state,
+        "基于刚才的解释，再给我一个今天就能执行的 25 分钟开始动作。",
+    ) is True
+
+
+def test_deep_analysis_disables_tools_by_default():
+    state = WorkflowState(
+        messages=[{"role": "user", "content": "请深入分析栈和队列的区别。"}],
+        context_data={
+            "chat_mode": "deep_analysis",
+            "tools_schema": [{"name": "web_search_pro"}],
+        },
+    )
+
+    assert _should_disable_tools_for_deep_analysis(state) is True
+
+
+def test_standard_knowledge_question_disables_tools():
+    state = WorkflowState(
+        messages=[{"role": "user", "content": "番茄钟学习法是什么？"}],
+        context_data={
+            "chat_mode": "standard",
+        },
+    )
+
+    assert _should_disable_tools_for_light_standard_reply(state, "番茄钟学习法是什么？") is True
+
+
+def test_generic_deep_analysis_uses_slim_context():
+    state = WorkflowState(
+        messages=[{"role": "user", "content": "请深度分析栈和队列的区别"}],
+        context_data={
+            "chat_mode": "deep_analysis",
+        },
+    )
+
+    assert _should_use_slim_deep_analysis_context(state, "请深度分析栈和队列的区别") is True
+
+
+def test_personalized_deep_analysis_keeps_full_context():
+    state = WorkflowState(
+        messages=[{"role": "user", "content": "结合我的任务和计划，深度分析我为什么总拖延"}],
+        context_data={
+            "chat_mode": "deep_analysis",
+        },
+    )
+
+    assert _should_use_slim_deep_analysis_context(state, "结合我的任务和计划，深度分析我为什么总拖延") is False
+
+
+@pytest.mark.asyncio
+async def test_generation_node_batches_stream_deltas(monkeypatch):
+    fake_llm = _ChunkedGenerationLLM()
+    get_llm_mock = AsyncMock(return_value=fake_llm)
+    stream_callback = AsyncMock()
+    monkeypatch.setattr("app.agents.standard_workflow.get_configured_llm_service", get_llm_mock)
+    monkeypatch.setattr("app.agents.standard_workflow.build_system_prompt", lambda *args, **kwargs: "SYSTEM")
+
+    state = WorkflowState(
+        messages=[{"role": "user", "content": "请深度分析这个问题"}],
+        context_data={
+            "chat_mode": "deep_analysis",
+            "selected_experts": ["deep_analyst"],
+            "user_context": {},
+            "conversation_context": {"messages": []},
+            "tools_schema": [],
+            "stream_callback": stream_callback,
+        },
+    )
+
+    new_state = await generation_node(state)
+
+    assert stream_callback.await_count == 1
+    assert new_state.messages[-1]["content"] == "这是一段被拆成很多碎片的流式输出文本。"
+
+
+@pytest.mark.asyncio
+async def test_generation_node_stops_after_tool_loop_cap(monkeypatch):
+    fake_llm = _ToolLoopGenerationLLM()
+    get_llm_mock = AsyncMock(return_value=fake_llm)
+    monkeypatch.setattr("app.agents.standard_workflow.get_configured_llm_service", get_llm_mock)
+    monkeypatch.setattr("app.agents.standard_workflow.build_system_prompt", lambda *args, **kwargs: "SYSTEM")
+
+    state = WorkflowState(
+        messages=[{"role": "user", "content": "继续处理这个计划"}],
+        context_data={
+            "chat_mode": "study_plan",
+            "user_context": {},
+            "conversation_context": {"messages": []},
+            "tools_schema": [{"name": "get_plan_state"}],
+            "tool_loop_count": 2,
+        },
+    )
+
+    new_state = await generation_node(state)
+
+    assert new_state.next_step == "__end__"
+    assert new_state.context_data["tool_calls"] == []
 
 
 @pytest.mark.asyncio

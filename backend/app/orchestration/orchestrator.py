@@ -263,6 +263,10 @@ class ChatOrchestrator(
     6. Response composition
     """
 
+    _STREAM_QUEUE_MAXSIZE = 512
+    _STREAM_QUEUE_PRESSURE_THRESHOLD = 0.75
+    _STREAM_QUEUE_CRITICAL_PUT_TIMEOUT_SECONDS = 1.5
+
     def __init__(self, db_session: AsyncSession | None = None, redis_client=None, user_id: str | None = None):
         if redis_client is None:
             logger.error("ChatOrchestrator requires Redis, but no redis_client was provided")
@@ -425,6 +429,83 @@ class ChatOrchestrator(
             return uuid.UUID(raw)
         except Exception:
             return uuid.uuid5(uuid.NAMESPACE_URL, f"sparkle-session:{raw}")
+
+    def _response_priority(self, resp: agent_service_pb2.ChatResponse) -> str:
+        content_kind = resp.WhichOneof("content")
+        if resp.finish_reason != agent_service_pb2.NULL or resp.HasField("error"):
+            return "critical"
+        if content_kind in {"delta", "full_text", "tool_call", "tool_result", "intervention", "citations", "usage"}:
+            return "critical"
+        metadata = dict(resp.metadata or {})
+        event_type = str(metadata.get("event_type") or "").strip().lower()
+        if content_kind == "status_update" or event_type in {"transparency", "mode_suggestion"}:
+            return "droppable"
+        if "ux_progress" in metadata or metadata.get("early_ack") == "true":
+            return "droppable"
+        return "normal"
+
+    def _evict_oldest_droppable_stream_item(self, queue: asyncio.Queue) -> bool:
+        internal_queue = getattr(queue, "_queue", None)
+        if internal_queue is None:
+            return False
+
+        items = list(internal_queue)
+        for index, item in enumerate(items):
+            if isinstance(item, agent_service_pb2.ChatResponse) and self._response_priority(item) == "droppable":
+                del items[index]
+                internal_queue.clear()
+                internal_queue.extend(items)
+
+                unfinished = getattr(queue, "_unfinished_tasks", None)
+                if isinstance(unfinished, int) and unfinished > 0:
+                    queue._unfinished_tasks = unfinished - 1
+                    if queue._unfinished_tasks == 0:
+                        queue._finished.set()
+                return True
+        return False
+
+    async def _enqueue_stream_response(self, queue: asyncio.Queue, resp: agent_service_pb2.ChatResponse) -> None:
+        priority = self._response_priority(resp)
+        pressure_ratio = queue.qsize() / max(queue.maxsize or self._STREAM_QUEUE_MAXSIZE, 1)
+
+        if priority == "droppable" and pressure_ratio >= self._STREAM_QUEUE_PRESSURE_THRESHOLD:
+            logger.debug(
+                "Skipping droppable stream response under queue pressure "
+                f"(size={queue.qsize()}, maxsize={queue.maxsize}, priority={priority})"
+            )
+            return
+
+        try:
+            queue.put_nowait(resp)
+            return
+        except asyncio.QueueFull:
+            if priority == "droppable":
+                logger.warning(
+                    "Response queue full; dropping low-priority stream response "
+                    f"(size={queue.qsize()}, maxsize={queue.maxsize})"
+                )
+                return
+
+        if self._evict_oldest_droppable_stream_item(queue):
+            try:
+                queue.put_nowait(resp)
+                logger.warning(
+                    "Evicted low-priority stream response to preserve critical event "
+                    f"(finish_reason={resp.finish_reason}, content={resp.WhichOneof('content')})"
+                )
+                return
+            except asyncio.QueueFull:
+                pass
+
+        logger.warning(
+            "Response queue full while enqueueing critical stream response; applying bounded backpressure "
+            f"(finish_reason={resp.finish_reason}, content={resp.WhichOneof('content')}, "
+            f"size={queue.qsize()}, maxsize={queue.maxsize})"
+        )
+        await asyncio.wait_for(
+            queue.put(resp),
+            timeout=self._STREAM_QUEUE_CRITICAL_PUT_TIMEOUT_SECONDS,
+        )
 
     @staticmethod
     def _experiment_cohort_for_user(user_id: str | None) -> str | None:
@@ -665,8 +746,8 @@ class ChatOrchestrator(
                     state.context_data["session_adaptation"] = session_adaptation_context.to_dict()
                 if conversation_rhythm is not None:
                     state.context_data["conversation_rhythm"] = conversation_rhythm
-                # ✅ Fix H4: Add maxsize to prevent OOM in slow client scenarios
-                queue: asyncio.Queue = asyncio.Queue(maxsize=200)
+                # Bound stream buffering while preserving critical terminal/content events.
+                queue: asyncio.Queue = asyncio.Queue(maxsize=self._STREAM_QUEUE_MAXSIZE)
 
                 async def stream_callback(resp: agent_service_pb2.ChatResponse):
                     resp.response_id = response_id
@@ -676,10 +757,13 @@ class ChatOrchestrator(
                     resp.prompt_version = resp.prompt_version or prompt_version
                     resp.trace_id = resp.trace_id or trace_id
                     try:
-                        # Non-blocking put to prevent blocking when queue is full
-                        queue.put_nowait(resp)
-                    except asyncio.QueueFull:
-                        logger.warning(f"Response queue full (maxsize=200), dropping response: {resp.response_id}")
+                        await self._enqueue_stream_response(queue, resp)
+                    except asyncio.TimeoutError:
+                        logger.error(
+                            "Timed out while enqueueing critical stream response "
+                            f"(response_id={resp.response_id}, finish_reason={resp.finish_reason}, "
+                            f"content={resp.WhichOneof('content')})"
+                        )
 
                 run_ledger = RunLedgerRecorder(
                     trace_id=trace_id,

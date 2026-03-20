@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,9 +8,12 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/lunar_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
+import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/calendar/calendar_routes.dart';
+import 'package:sparkle/features/calendar/data/models/calendar_day_aggregate.dart';
 import 'package:sparkle/features/calendar/data/models/calendar_event_model.dart';
 import 'package:sparkle/features/calendar/presentation/providers/calendar_provider.dart';
+import 'package:sparkle/features/calendar/presentation/providers/unified_calendar_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/weather_header.dart';
 // Import task provider for updating tasks
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart'
@@ -20,7 +25,7 @@ import 'package:sparkle/shared/widgets/draggable_task_card.dart'
 import 'package:table_calendar/table_calendar.dart';
 import 'package:uuid/uuid.dart';
 
-enum CalendarViewMode { month, twoWeeks, year }
+enum CalendarViewMode { month, insights, year }
 
 Color _resolveCalendarColor(int colorValue) {
   switch (colorValue) {
@@ -72,7 +77,12 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
     _selectedDay = _focusedDay;
     // Load task summaries for the initial month
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(taskCalendarProvider.notifier).loadTasksForMonth(_focusedDay);
+      unawaited(
+        ref.read(taskCalendarProvider.notifier).loadTasksForMonth(_focusedDay),
+      );
+      unawaited(
+        ref.read(unifiedCalendarProvider.notifier).loadMonth(_focusedDay),
+      );
     });
   }
 
@@ -113,14 +123,22 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
       await ref.read(taskListProvider.notifier).updateTask(task.id, taskUpdate);
 
       // Refresh task summaries for the current month
-      ref.read(taskCalendarProvider.notifier).loadTasksForMonth(_focusedDay);
+      await ref.read(taskCalendarProvider.notifier).loadTasksForMonth(
+            _focusedDay,
+            force: true,
+          );
+      await ref.read(unifiedCalendarProvider.notifier).refreshMonth(_focusedDay);
+      if (mounted) {
+        AppFeedback.success(
+          context,
+          '已将「${task.title}」加入 ${_formatMonthDay(newDueDate)} 的日程。',
+        );
+      }
     }
   }
 
   CalendarFormat get _tableCalendarFormat {
     switch (_viewMode) {
-      case CalendarViewMode.twoWeeks:
-        return CalendarFormat.twoWeeks;
       default:
         return CalendarFormat.month;
     }
@@ -135,6 +153,15 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
     // For list below calendar (only shown in non-year mode)
     final selectedEvents =
         notifier.getEventsForDay(_selectedDay ?? _focusedDay);
+    final taskState = ref.watch(taskListProvider);
+    final selectedTasks = taskState.tasks.where((task) {
+      final dueDate = task.dueDate;
+      if (dueDate == null) return false;
+      final target = _selectedDay ?? _focusedDay;
+      return dueDate.year == target.year &&
+          dueDate.month == target.month &&
+          dueDate.day == target.day;
+    }).toList();
 
     return SparklePageScaffold(
       role: SparklePageRole.content,
@@ -157,13 +184,18 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                   Expanded(
                     child: _viewMode == CalendarViewMode.year
                         ? _buildYearView()
-                        : Column(
+                        : _viewMode == CalendarViewMode.insights
+                            ? _buildInsightsView()
+                            : Column(
                             children: [
                               _buildTableCalendar(notifier),
                               Divider(color: DS.brandPrimary10),
                               Expanded(
-                                child:
-                                    _buildEventList(selectedEvents, notifier),
+                                child: _buildAgendaList(
+                                  selectedEvents,
+                                  selectedTasks,
+                                  notifier,
+                                ),
                               ),
                             ],
                           ),
@@ -219,8 +251,10 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
             label: Text(context.l10n.calendarMonthView),
           ),
           ButtonSegment(
-            value: CalendarViewMode.twoWeeks,
-            label: Text(context.l10n.calendarTwoWeekView),
+            value: CalendarViewMode.insights,
+            label: Text(
+              context.l10n.localeName.startsWith('zh') ? '热力' : 'Heat',
+            ),
           ),
           ButtonSegment(
             value: CalendarViewMode.year,
@@ -344,9 +378,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
     final startOffset = firstWeekday - 1;
 
     return LayoutBuilder(
-      builder: (context, constraints) {
-        // Calculate simple grid
-        return GridView.count(
+      builder: (context, constraints) => GridView.count(
           crossAxisCount: 7,
           padding: const EdgeInsets.all(2),
           physics: const NeverScrollableScrollPhysics(),
@@ -376,8 +408,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
               );
             }),
           ],
-        );
-      },
+        ),
     );
   }
 
@@ -405,8 +436,10 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
             // Let's add an "Enter Detail" button in the list header or make the list tapable.
           } else {
             // If tapping already selected day, open detail
-            context.push(
-              '${CalendarRoutes.dailyDetail}?date=${selectedDay.toIso8601String()}',
+            unawaited(
+              context.push(
+                '${CalendarRoutes.dailyDetail}?date=${selectedDay.toIso8601String()}',
+              ),
             );
           }
         },
@@ -416,7 +449,12 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
         onPageChanged: (focusedDay) {
           _focusedDay = focusedDay;
           // Load task summaries for the new month
-          ref.read(taskCalendarProvider.notifier).loadTasksForMonth(focusedDay);
+          unawaited(
+            ref.read(taskCalendarProvider.notifier).loadTasksForMonth(focusedDay),
+          );
+          unawaited(
+            ref.read(unifiedCalendarProvider.notifier).loadMonth(focusedDay),
+          );
         },
         eventLoader: (day) => notifier.getEventsForDay(day),
         calendarStyle: CalendarStyle(
@@ -627,12 +665,12 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
     );
   }
 
-  Widget _buildEventList(
+  Widget _buildAgendaList(
     List<CalendarEventModel> events,
+    List<TaskModel> tasks,
     CalendarNotifier notifier,
-  ) {
-    // Header for the list
-    return Column(
+  ) =>
+      Column(
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(
@@ -654,8 +692,10 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
               SparkleButton.ghost(
                 label: context.l10n.calendarViewDetails,
                 onPressed: () {
-                  context.push(
-                    '${CalendarRoutes.dailyDetail}?date=${(_selectedDay ?? _focusedDay).toIso8601String()}',
+                  unawaited(
+                    context.push(
+                      '${CalendarRoutes.dailyDetail}?date=${(_selectedDay ?? _focusedDay).toIso8601String()}',
+                    ),
                   );
                 },
                 icon: const Icon(Icons.info_outline, size: 16),
@@ -664,23 +704,28 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
           ),
         ),
         Expanded(
-          child: events.isEmpty
+          child: events.isEmpty && tasks.isEmpty
               ? Center(
                   child: Text(
-                    context.l10n.calendarNoEvents,
+                    '这一天还没有安排任务或日程',
                     style: TextStyle(color: DS.brandPrimary.withAlpha(100)),
                   ),
                 )
               : ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
-                  itemCount: events.length,
+                  itemCount: tasks.length + events.length,
                   itemBuilder: (context, index) {
-                    final event = events[index];
+                    if (index < tasks.length) {
+                      final task = tasks[index];
+                      return _buildTaskAgendaCard(task);
+                    }
+
+                    final event = events[index - tasks.length];
                     return Dismissible(
                       key: Key(event.id),
                       direction: DismissDirection.endToStart,
                       onDismissed: (direction) {
-                        notifier.deleteEvent(event.id);
+                        unawaited(notifier.deleteEvent(event.id));
                       },
                       background: Container(
                         color: DS.error,
@@ -732,10 +777,382 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
         ),
       ],
     );
+
+  Widget _buildInsightsView() {
+    final unifiedState = ref.watch(unifiedCalendarProvider);
+    final streakStats = ref.watch(streakStatsProvider);
+    final monthKey =
+        '${_focusedDay.year}-${_focusedDay.month.toString().padLeft(2, '0')}';
+    final aggregate = unifiedState.monthAggregates[monthKey];
+
+    if (!unifiedState.isMonthLoaded(_focusedDay.year, _focusedDay.month) &&
+        !unifiedState.isLoading) {
+      unawaited(
+        Future.microtask(
+          () => ref.read(unifiedCalendarProvider.notifier).loadMonth(_focusedDay),
+        ),
+      );
+    }
+
+    if (unifiedState.isLoading && aggregate == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (aggregate == null) {
+      return Center(
+        child: Text(
+          '暂无热力数据',
+          style: TextStyle(color: DS.textSecondary),
+        ),
+      );
+    }
+
+    final peakDay = aggregate.dayAggregates.values.fold<CalendarDayAggregate?>(
+      null,
+      (best, current) {
+        if (best == null) return current;
+        return current.intensityLevel > best.intensityLevel ? current : best;
+      },
+    );
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(DS.spacing16, 0, DS.spacing16, DS.spacing16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: DS.spacing10,
+            runSpacing: DS.spacing10,
+            children: [
+              _buildInsightMetric(
+                label: '连续天数',
+                value: '${streakStats.currentStreak}',
+                detail: '保持你的成就节奏',
+                icon: Icons.local_fire_department_rounded,
+                color: DS.warningAccent,
+              ),
+              _buildInsightMetric(
+                label: '活跃天数',
+                value: '${aggregate.activeDays}',
+                detail: '本月有行动的日期',
+                icon: Icons.calendar_month_rounded,
+                color: DS.info,
+              ),
+              _buildInsightMetric(
+                label: '完成任务',
+                value: '${aggregate.totalCompletedTasks}',
+                detail: '本月完成的任务数',
+                icon: Icons.task_alt_rounded,
+                color: DS.success,
+              ),
+              _buildInsightMetric(
+                label: '专注时长',
+                value: '${(aggregate.totalFocusMinutes / 60).toStringAsFixed(1)}h',
+                detail: '本月累计专注',
+                icon: Icons.bolt_rounded,
+                color: DS.prismPurple,
+              ),
+            ],
+          ),
+          const SizedBox(height: DS.spacing16),
+          MaterialStyler(
+            material: AppMaterials.ceramic,
+            borderRadius: DS.borderRadius20,
+            padding: const EdgeInsets.all(DS.spacing16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '学习热力',
+                  style: TextStyle(
+                    color: DS.textPrimary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: DS.spacing6),
+                Text(
+                  '用热力看连续性、完成度和学习投入，而不是重复浏览日程表。',
+                  style: TextStyle(color: DS.textSecondary, fontSize: 12),
+                ),
+                const SizedBox(height: DS.spacing16),
+                _buildActivityHeatmap(aggregate),
+                const SizedBox(height: DS.spacing12),
+                Row(
+                  children: [
+                    Text('低', style: TextStyle(fontSize: 11, color: DS.textSecondary)),
+                    const SizedBox(width: DS.spacing6),
+                    ...List.generate(
+                      5,
+                      (index) => Container(
+                        width: 12,
+                        height: 12,
+                        margin: const EdgeInsets.only(right: DS.spacing4),
+                        decoration: BoxDecoration(
+                          color: _resolveHeatColor(index),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                    ),
+                    Text('高', style: TextStyle(fontSize: 11, color: DS.textSecondary)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: DS.spacing16),
+          MaterialStyler(
+            material: AppMaterials.ceramic,
+            borderRadius: DS.borderRadius20,
+            padding: const EdgeInsets.all(DS.spacing16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '月度亮点',
+                  style: TextStyle(
+                    color: DS.textPrimary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: DS.spacing10),
+                _buildInsightLine(
+                  icon: Icons.trending_up_rounded,
+                  title: '最热的一天',
+                  value: peakDay == null
+                      ? '暂无'
+                      : '${peakDay.date.month}/${peakDay.date.day} · ${peakDay.summaryText}',
+                ),
+                _buildInsightLine(
+                  icon: Icons.flag_rounded,
+                  title: '当前主线',
+                  value: aggregate.activePlan?.name ?? '本月暂无活跃计划',
+                ),
+                _buildInsightLine(
+                  icon: Icons.emoji_events_rounded,
+                  title: '成就势能',
+                  value: streakStats.currentStreak >= 7
+                      ? '连续状态很好，适合冲刺里程碑'
+                      : '先把连续性拉起来，会更容易触发成就闭环',
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInsightMetric({
+    required String label,
+    required String value,
+    required String detail,
+    required IconData icon,
+    required Color color,
+  }) =>
+      SizedBox(
+        width: 156,
+        child: MaterialStyler(
+          material: AppMaterials.ceramic,
+          borderRadius: DS.borderRadius16,
+          padding: const EdgeInsets.all(DS.spacing12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, color: color, size: 18),
+              const SizedBox(height: DS.spacing10),
+              Text(
+                value,
+                style: TextStyle(
+                  color: DS.textPrimary,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: DS.spacing4),
+              Text(
+                label,
+                style: TextStyle(
+                  color: DS.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: DS.spacing2),
+              Text(
+                detail,
+                style: TextStyle(color: DS.textSecondary, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+      );
+
+  Widget _buildActivityHeatmap(CalendarMonthAggregate aggregate) {
+    final firstDay = DateTime(aggregate.year, aggregate.month);
+    final daysInMonth = DateTime(aggregate.year, aggregate.month + 1, 0).day;
+    final offset = firstDay.weekday - 1;
+    final cells = <Widget>[];
+
+    for (var i = 0; i < offset; i++) {
+      cells.add(const SizedBox());
+    }
+
+    for (var day = 1; day <= daysInMonth; day++) {
+      final aggregateDay = aggregate.dayAggregates[day];
+      final intensity = aggregateDay?.intensityLevel ?? 0;
+      final date = DateTime(aggregate.year, aggregate.month, day);
+      final isSelected = _selectedDay != null &&
+          _selectedDay!.year == date.year &&
+          _selectedDay!.month == date.month &&
+          _selectedDay!.day == date.day;
+      cells.add(
+        GestureDetector(
+          onTap: () {
+            setState(() {
+              _selectedDay = date;
+              _focusedDay = date;
+              _viewMode = CalendarViewMode.month;
+            });
+          },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 160),
+            decoration: BoxDecoration(
+              color: _resolveHeatColor(intensity),
+              borderRadius: BorderRadius.circular(6),
+              border: isSelected
+                  ? Border.all(color: DS.brandPrimary, width: 1.5)
+                  : null,
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              '$day',
+              style: TextStyle(
+                color: intensity >= 3 ? DS.textOnPrimary : DS.textPrimary,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return AspectRatio(
+      aspectRatio: 7 / 5,
+      child: GridView.count(
+        crossAxisCount: 7,
+        crossAxisSpacing: DS.spacing6,
+        mainAxisSpacing: DS.spacing6,
+        physics: const NeverScrollableScrollPhysics(),
+        children: cells,
+      ),
+    );
+  }
+
+  Widget _buildInsightLine({
+    required IconData icon,
+    required String title,
+    required String value,
+  }) =>
+      Padding(
+        padding: const EdgeInsets.only(bottom: DS.spacing10),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, size: 16, color: DS.brandPrimary),
+            const SizedBox(width: DS.spacing8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: DS.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: DS.spacing2),
+                  Text(
+                    value,
+                    style: TextStyle(
+                      color: DS.textPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+
+  Color _resolveHeatColor(int level) {
+    final clamped = level.clamp(0, 4);
+    return switch (clamped) {
+      0 => DS.surfaceTertiary,
+      1 => DS.brandPrimary.withValues(alpha: 0.18),
+      2 => DS.brandPrimary.withValues(alpha: 0.35),
+      3 => DS.brandPrimary.withValues(alpha: 0.58),
+      _ => DS.brandPrimary,
+    };
+  }
+
+  Widget _buildTaskAgendaCard(TaskModel task) {
+    final dueLabel = task.dueDate == null
+        ? '未安排时间'
+        : Formatters.formatDateTime(task.dueDate!);
+    final statusColor = switch (task.status) {
+      TaskStatus.completed => DS.success,
+      TaskStatus.inProgress => DS.info,
+      TaskStatus.pending => DS.warning,
+      TaskStatus.abandoned => DS.textSecondary,
+    };
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: DS.spacing8),
+      child: ListTile(
+        onTap: () => context.push('/tasks/${task.id}'),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing16,
+          vertical: DS.spacing6,
+        ),
+        tileColor: DS.surfaceSecondary,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: DS.borderSubtle),
+        ),
+        leading: Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: statusColor,
+            shape: BoxShape.circle,
+          ),
+        ),
+        title: Text(
+          task.title,
+          style: TextStyle(
+            color: DS.textPrimary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        subtitle: Text(
+          '${task.planId != null ? '任务' : '待办'} · $dueLabel',
+          style: TextStyle(color: DS.textSecondary),
+        ),
+        trailing: Icon(
+          Icons.chevron_right_rounded,
+          color: DS.textSecondary,
+        ),
+      ),
+    );
   }
 
   void _showAddEventDialog(BuildContext context) {
-    showModalBottomSheet<void>(
+    unawaited(
+      showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: DS.surfaceSecondary,
@@ -744,6 +1161,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
       ),
       builder: (context) => _EventEditDialog(
         selectedDate: _selectedDay ?? DateTime.now(),
+      ),
       ),
     );
   }
@@ -767,6 +1185,8 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
   int _colorValue = 0xFF2196F3;
   int _reminderMinutes = 15;
   String? _recurrenceRule;
+  bool _isSaving = false;
+  String? _saveError;
 
   final List<int> _colorOptions = [
     0xFF2196F3, // Blue
@@ -809,77 +1229,111 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
           right: DS.spacing16,
           top: DS.spacing20,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: SafeArea(
+          top: false,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  context.l10n.calendarCreateEvent,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: DS.brandPrimaryConst,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      context.l10n.calendarCreateEvent,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: DS.brandPrimaryConst,
+                      ),
+                    ),
+                    SparkleButton.primary(
+                      label: context.l10n.calendarSave,
+                      onPressed: _saveEvent,
+                      loading: _isSaving,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: DS.spacing20),
+                if (_saveError != null) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(DS.spacing12),
+                    decoration: BoxDecoration(
+                      color: DS.error.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: DS.error.withValues(alpha: 0.24),
+                      ),
+                    ),
+                    child: Text(
+                      _saveError!,
+                      style: TextStyle(
+                        color: DS.error,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: DS.spacing12),
+                ],
+                TextField(
+                  controller: _titleController,
+                  enabled: !_isSaving,
+                  style: TextStyle(color: DS.brandPrimary),
+                  decoration: InputDecoration(
+                    hintText: context.l10n.calendarTitleHint,
+                    hintStyle: TextStyle(color: DS.brandPrimary38),
+                    prefixIcon: Icon(Icons.title, color: DS.brandPrimary70),
+                    border: InputBorder.none,
+                    filled: true,
+                    fillColor: DS.brandPrimary10,
                   ),
                 ),
-                SparkleButton.primary(
-                  label: context.l10n.calendarSave,
-                  onPressed: _saveEvent,
+                const SizedBox(height: DS.spacing10),
+                _buildTimeRow(),
+                const SizedBox(height: DS.spacing10),
+                _buildOptionsRow(),
+                const SizedBox(height: DS.spacing10),
+                _buildColorPicker(),
+                const SizedBox(height: DS.spacing10),
+                TextField(
+                  controller: _locationController,
+                  enabled: !_isSaving,
+                  style: TextStyle(color: DS.brandPrimary),
+                  decoration: InputDecoration(
+                    hintText: context.l10n.calendarLocationHint,
+                    hintStyle: TextStyle(color: DS.brandPrimary38),
+                    prefixIcon: Icon(
+                      Icons.location_on_outlined,
+                      color: DS.brandPrimary70,
+                    ),
+                    border: InputBorder.none,
+                    filled: true,
+                    fillColor: DS.brandPrimary10,
+                  ),
                 ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _descController,
+                  enabled: !_isSaving,
+                  style: TextStyle(color: DS.brandPrimary),
+                  decoration: InputDecoration(
+                    hintText: context.l10n.calendarDescriptionHint,
+                    hintStyle: TextStyle(color: DS.brandPrimary38),
+                    prefixIcon: Icon(
+                      Icons.description_outlined,
+                      color: DS.brandPrimary70,
+                    ),
+                    border: InputBorder.none,
+                    filled: true,
+                    fillColor: DS.brandPrimary10,
+                  ),
+                  maxLines: 3,
+                ),
+                const SizedBox(height: DS.spacing20),
               ],
             ),
-            const SizedBox(height: DS.spacing20),
-            TextField(
-              controller: _titleController,
-              style: TextStyle(color: DS.brandPrimary),
-              decoration: InputDecoration(
-                hintText: context.l10n.calendarTitleHint,
-                hintStyle: TextStyle(color: DS.brandPrimary38),
-                prefixIcon: Icon(Icons.title, color: DS.brandPrimary70),
-                border: InputBorder.none,
-                filled: true,
-                fillColor: DS.brandPrimary10,
-              ),
-            ),
-            const SizedBox(height: DS.spacing10),
-            _buildTimeRow(),
-            const SizedBox(height: DS.spacing10),
-            _buildOptionsRow(),
-            const SizedBox(height: DS.spacing10),
-            _buildColorPicker(),
-            const SizedBox(height: DS.spacing10),
-            TextField(
-              controller: _locationController,
-              style: TextStyle(color: DS.brandPrimary),
-              decoration: InputDecoration(
-                hintText: context.l10n.calendarLocationHint,
-                hintStyle: TextStyle(color: DS.brandPrimary38),
-                prefixIcon:
-                    Icon(Icons.location_on_outlined, color: DS.brandPrimary70),
-                border: InputBorder.none,
-                filled: true,
-                fillColor: DS.brandPrimary10,
-              ),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _descController,
-              style: TextStyle(color: DS.brandPrimary),
-              decoration: InputDecoration(
-                hintText: context.l10n.calendarDescriptionHint,
-                hintStyle: TextStyle(color: DS.brandPrimary38),
-                prefixIcon:
-                    Icon(Icons.description_outlined, color: DS.brandPrimary70),
-                border: InputBorder.none,
-                filled: true,
-                fillColor: DS.brandPrimary10,
-              ),
-              maxLines: 3,
-            ),
-            const SizedBox(height: DS.spacing20),
-          ],
+          ),
         ),
       );
 
@@ -1067,6 +1521,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
     );
 
     if (date != null) {
+      if (!mounted) return;
       final time = await showTimePicker(
         context: context,
         initialTime: TimeOfDay.fromDateTime(initialDate),
@@ -1094,13 +1549,27 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
     }
   }
 
-  void _saveEvent() {
+  Future<void> _saveEvent() async {
     // Dismiss keyboard and commit any pending IME composition before validation
     FocusScope.of(context).unfocus();
     if (_titleController.text.isEmpty) {
-      AppFeedback.info(context, context.l10n.calendarTitleRequired);
+      setState(() {
+        _saveError = context.l10n.calendarTitleRequired;
+      });
       return;
     }
+
+    if (!_endTime.isAfter(_startTime)) {
+      setState(() {
+        _saveError = '结束时间需要晚于开始时间';
+      });
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+      _saveError = null;
+    });
 
     final event = CalendarEventModel(
       id: const Uuid().v4(),
@@ -1117,7 +1586,29 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
       updatedAt: DateTime.now(),
     );
 
-    ref.read(calendarProvider.notifier).addEvent(event);
-    context.pop();
+    try {
+      final result = await ref.read(calendarProvider.notifier).addEvent(event);
+      if (!mounted) return;
+      context.pop();
+      if (result.persistedRemotely) {
+        AppFeedback.success(context, '日程已创建');
+      } else {
+        AppFeedback.info(
+          context,
+          result.message ?? '已保存到本地，稍后会自动同步到云端。',
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _saveError = '创建日程失败：$e';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
   }
 }

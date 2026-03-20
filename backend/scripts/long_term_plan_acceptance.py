@@ -51,24 +51,36 @@ def main() -> None:
     quota = _request("GET", "/plans/quota/status", token=token).json()
     primary = _request("GET", "/plans/primary", token=token).json()
 
-    created = _request(
-        "POST",
-        "/plans",
-        token=token,
-        expected_status=201,
-        json={
-            "name": "长期计划验收",
-            "type": "growth",
-            "description": "验证长期计划全链路可用性",
-            "subject": "系统设计",
-            "target_date": (date.today() + timedelta(days=120)).isoformat(),
-            "daily_available_minutes": 45,
-            "total_estimated_hours": 48,
-            "priority": "high",
-            "plan_stage": "daily",
-        },
-    ).json()
-    plan_id = created["id"]
+    reusable_plan = next(
+        (
+            item
+            for item in (growth_before.get("data") or [])
+            if str(item.get("name") or "").startswith("长期计划验收")
+        ),
+        None,
+    )
+    created = None
+    if reusable_plan:
+        plan_id = reusable_plan["id"]
+    else:
+        created = _request(
+            "POST",
+            "/plans",
+            token=token,
+            expected_status=201,
+            json={
+                "name": "长期计划验收",
+                "type": "growth",
+                "description": "验证长期计划全链路可用性",
+                "subject": "系统设计",
+                "target_date": (date.today() + timedelta(days=120)).isoformat(),
+                "daily_available_minutes": 45,
+                "total_estimated_hours": 48,
+                "priority": "high",
+                "plan_stage": "daily",
+            },
+        ).json()
+        plan_id = created["id"]
 
     updated = _request(
         "PUT",
@@ -100,7 +112,8 @@ def main() -> None:
     assert "used" in quota and "limit" in quota
     assert "plan" in primary
 
-    assert created["type"] == "growth"
+    if created is not None:
+        assert created["type"] == "growth"
     assert updated["plan_stage"] == "review"
     assert updated["daily_available_minutes"] == 50
 

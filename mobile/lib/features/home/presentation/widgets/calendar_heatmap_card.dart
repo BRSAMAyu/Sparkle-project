@@ -76,13 +76,18 @@ class CalendarHeatmapCard extends ConsumerWidget {
               Expanded(
                 child: LayoutBuilder(
                   builder: (context, constraints) {
-                    final showSidebar = constraints.maxWidth > 240;
+                    final showSidebar = constraints.maxWidth >= 290;
+                    final sidebarWidth = dense
+                        ? 92.0
+                        : constraints.maxWidth >= 340
+                            ? 112.0
+                            : 96.0;
                     final grid = _buildMonthGrid(
                       context,
                       ref,
                       BoxConstraints(
                         maxWidth: showSidebar
-                            ? constraints.maxWidth * 0.64
+                            ? constraints.maxWidth - sidebarWidth - DS.spacing10
                             : constraints.maxWidth,
                         maxHeight: constraints.maxHeight,
                       ),
@@ -107,7 +112,7 @@ class CalendarHeatmapCard extends ConsumerWidget {
                         Expanded(child: grid),
                         const SizedBox(width: DS.spacing10),
                         SizedBox(
-                          width: dense ? 70 : 84,
+                          width: sidebarWidth,
                           child: _CompactCalendarSidebar(
                             activeDays: activeDays,
                             peakTasks: peakTasks,
@@ -184,7 +189,8 @@ class CalendarHeatmapCard extends ConsumerWidget {
           ),
           // Quick jump to today button
           GestureDetector(
-            onTap: () => context.push('/calendar/day?date=${DateTime.now().toIso8601String()}'),
+            onTap: () => context
+                .push('/calendar/day?date=${DateTime.now().toIso8601String()}'),
             child: Container(
               padding: EdgeInsets.symmetric(
                 horizontal: dense ? DS.spacing6 : DS.spacing8,
@@ -371,13 +377,17 @@ class _CompactCalendarSidebar extends ConsumerWidget {
     final hasActivePlan = todayAggregate.activePlan != null;
 
     return Container(
-      padding: const EdgeInsets.all(DS.spacing8),
+      padding: const EdgeInsets.symmetric(
+        horizontal: DS.spacing8,
+        vertical: DS.spacing6,
+      ),
       decoration: BoxDecoration(
         color: DS.surfaceOverlay,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: DS.borderSubtle),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Today's overview badge
@@ -394,22 +404,21 @@ class _CompactCalendarSidebar extends ConsumerWidget {
               child: Text(
                 todaySummary,
                 style: TextStyle(
-                  fontSize: 10,
+                  fontSize: 9.5,
                   fontWeight: FontWeight.w600,
                   color: DS.brandPrimary,
                 ),
-                maxLines: 2,
+                maxLines: 3,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-          if (todayAggregate.hasActivity)
-            const SizedBox(height: DS.spacing10),
+          if (todayAggregate.hasActivity) const SizedBox(height: DS.spacing6),
           _CompactCalendarStat(label: '活跃', value: '$activeDays天'),
-          const SizedBox(height: DS.spacing10),
+          const SizedBox(height: DS.spacing6),
           _CompactCalendarStat(label: '峰值', value: '$peakTasks项'),
           // Active plan indicator
           if (hasActivePlan) ...[
-            const SizedBox(height: DS.spacing10),
+            const SizedBox(height: DS.spacing6),
             Row(
               children: [
                 Icon(
@@ -422,18 +431,17 @@ class _CompactCalendarSidebar extends ConsumerWidget {
                   child: Text(
                     todayAggregate.activePlan!.name,
                     style: TextStyle(
-                      fontSize: 10,
+                      fontSize: 9.5,
                       color: DS.warningAccent,
                       fontWeight: FontWeight.w500,
                     ),
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
           ],
-          const Spacer(),
         ],
       ),
     );

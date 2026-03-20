@@ -35,9 +35,18 @@ def get_mdx_service():
             return None
         mdx_path = getattr(settings, 'MDX_DICTIONARY_PATH', None)
         if not mdx_path:
-            candidate = Path(__file__).resolve().parents[4] / "data" / "dictionaries" / "oaldpe.mdx"
-            if candidate.exists():
-                mdx_path = str(candidate)
+            candidates: list[Path] = []
+            package_dir = getattr(settings, "DICTIONARY_PACKAGE_DIR", None)
+            if package_dir:
+                candidates.append(Path(package_dir).resolve().parent / "oaldpe.mdx")
+            current_path = Path(__file__).resolve()
+            for parent_index in (3, 4):
+                if len(current_path.parents) > parent_index:
+                    candidates.append(current_path.parents[parent_index] / "data" / "dictionaries" / "oaldpe.mdx")
+            for candidate in candidates:
+                if candidate.exists():
+                    mdx_path = str(candidate)
+                    break
         mdd_path = getattr(settings, 'MDD_RESOURCES_PATH', None)
         if mdx_path:
             try:

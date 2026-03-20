@@ -7,7 +7,7 @@ import uuid
 from datetime import date, datetime, timedelta
 
 from loguru import logger
-from sqlalchemy import and_, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import get_password_hash
@@ -3410,12 +3410,12 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
         session.add(chat_session)
         await session.flush()
 
-    msg_count = (await session.execute(
-        select(ChatMessage).where(
+    msg_count = await session.scalar(
+        select(func.count(ChatMessage.id)).where(
             ChatMessage.user_id == user.id,
             ChatMessage.session_id == chat_session.id,
         )
-    )).scalar_one_or_none()
+    )
     if not msg_count:
         session.add_all([
             ChatMessage(

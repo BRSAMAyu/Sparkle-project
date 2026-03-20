@@ -1,11 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/achievement/presentation/providers/close_to_unlock_provider.dart';
-import 'package:sparkle/shared/entities/achievement_model.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+import 'package:sparkle/shared/entities/achievement_model.dart';
 
 /// Close-to-unlock achievement progress banner
 /// Displays at the bottom of the screen when an achievement is close to being unlocked
@@ -52,9 +54,16 @@ class _AchievementProgressBannerState
   Widget build(BuildContext context) {
     final bannerState = ref.watch(closeToUnlockProvider);
     final l10n = context.l10n;
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+    final isVisible = bannerState.isVisible && bannerState.item != null;
 
-    if (!bannerState.isVisible || bannerState.item == null) {
-      return const SizedBox.shrink();
+    if (!isVisible) {
+      return Positioned(
+        bottom: kBottomNavigationBarHeight + bottomPadding + DS.spacing8,
+        left: DS.spacing16,
+        right: DS.spacing16,
+        child: const SizedBox.shrink(),
+      );
     }
 
     final item = bannerState.item!;
@@ -64,11 +73,10 @@ class _AchievementProgressBannerState
     // Start slide-in animation
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && _controller.status == AnimationStatus.dismissed) {
-        _controller.forward();
+        unawaited(_controller.forward());
       }
     });
 
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
     return Positioned(
       bottom: kBottomNavigationBarHeight + bottomPadding + DS.spacing8,
       left: DS.spacing16,
@@ -78,7 +86,7 @@ class _AchievementProgressBannerState
         child: GestureDetector(
           onTap: () {
             // Navigate to achievement details
-            context.push('/achievements/${achievement.id}');
+            unawaited(context.push('/achievements/${achievement.id}'));
             // Dismiss banner after navigation
             ref.read(closeToUnlockProvider.notifier).dismiss();
           },

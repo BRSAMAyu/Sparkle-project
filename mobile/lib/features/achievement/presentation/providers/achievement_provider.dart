@@ -273,6 +273,7 @@ class AchievementNotifier extends StateNotifier<AchievementState> {
   /// Load all initial achievement data
   Future<void> loadInitialData() async {
     try {
+      if (!mounted) return;
       state = AchievementState.loading();
 
       // Load all data in parallel
@@ -292,6 +293,7 @@ class AchievementNotifier extends StateNotifier<AchievementState> {
       final titles = results[4] as List<UserTitle>;
       final contract = results[5] as SparkContract?;
 
+      if (!mounted) return;
       state = AchievementState(
         achievements: achievementsResponse.achievements,
         stats: stats,
@@ -303,6 +305,7 @@ class AchievementNotifier extends StateNotifier<AchievementState> {
     } catch (e, stackTrace) {
       debugPrint('Error loading achievement data: $e');
       debugPrint('Stack trace: $stackTrace');
+      if (!mounted) return;
       state = AchievementState.error(e.toString());
     }
   }

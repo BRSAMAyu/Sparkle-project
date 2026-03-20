@@ -218,18 +218,23 @@ class ErrorBookService:
             error.linked_knowledge_node_ids = linked_ids
             # error.suggested_concepts = ... (if LLM returns them)
 
-            try:
-                async with self.db.begin_nested():
-                    semantic_service = SemanticMemoryService(self.db)
-                    await semantic_service.upsert_strategy_from_error(error)
-            except Exception as e:
-                logger.warning(f"Semantic memory linking failed: {e}")
-
-            # If question text was empty, maybe fill it with OCR?
+            # 先落库核心分析结果，保证前端/验收链能尽快读取 latest_analysis。
+            # 后续语义记忆、画像信号和事件总线即使稍慢，也不再阻塞“分析已完成”的主链路。
             if not error.question_text and ocr_text:
                 error.question_text = ocr_text
 
             await self.db.commit()
+            logger.info(f"Analysis core result committed for error {error.id}")
+
+            try:
+                async with self.db.begin_nested():
+                    semantic_service = SemanticMemoryService(self.db)
+                    await semantic_service.upsert_strategy_from_error(error)
+                await self.db.commit()
+            except Exception as e:
+                logger.warning(f"Semantic memory linking failed: {e}")
+                await self.db.rollback()
+
             logger.info(f"Analysis completed for error {error.id}")
 
             try:

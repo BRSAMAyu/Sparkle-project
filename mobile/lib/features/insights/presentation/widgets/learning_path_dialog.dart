@@ -11,7 +11,7 @@ import 'package:sparkle/features/insights/presentation/providers/learning_path_p
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
-class LearningPathDialog extends ConsumerWidget {
+class LearningPathDialog extends ConsumerStatefulWidget {
   const LearningPathDialog({
     required this.targetNodeId,
     required this.targetNodeName,
@@ -21,8 +21,44 @@ class LearningPathDialog extends ConsumerWidget {
   final String targetNodeName;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final pathAsync = ref.watch(learningPathProvider(targetNodeId));
+  ConsumerState<LearningPathDialog> createState() => _LearningPathDialogState();
+}
+
+class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
+  bool _isGeneratingPlan = false;
+  bool _isGeneratingFullPlan = false;
+  String? _inlineStatus;
+  String? _inlineError;
+
+  bool get _isBusy => _isGeneratingPlan || _isGeneratingFullPlan;
+
+  void _setInlineStatus(String? message) {
+    if (!mounted) return;
+    setState(() {
+      _inlineStatus = message;
+      _inlineError = null;
+    });
+  }
+
+  void _setInlineError(String message) {
+    if (!mounted) return;
+    setState(() {
+      _inlineStatus = null;
+      _inlineError = message;
+    });
+  }
+
+  void _clearInlineFeedback() {
+    if (!mounted) return;
+    setState(() {
+      _inlineStatus = null;
+      _inlineError = null;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final pathAsync = ref.watch(learningPathProvider(widget.targetNodeId));
     final mediaQuery = MediaQuery.of(context);
     // Cap list height so the bottom sheet never overflows the screen.
     // Subtract viewPadding + approximate modal chrome (handle + title + padding).
@@ -36,13 +72,22 @@ class LearningPathDialog extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '目标：$targetNodeName',
+          '目标：${widget.targetNodeName}',
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: DS.textSecondary,
               ),
         ),
+        if (_inlineStatus != null || _inlineError != null) ...[
+          const SizedBox(height: DS.md),
+          _LearningPathInlineFeedback(
+            message: _inlineError ?? _inlineStatus!,
+            isError: _inlineError != null,
+            isLoading: _isBusy,
+            onDismiss: _isBusy ? null : _clearInlineFeedback,
+          ),
+        ],
         const SizedBox(height: DS.lg),
         ConstrainedBox(
           constraints: BoxConstraints(maxHeight: maxListHeight),
@@ -59,20 +104,31 @@ class LearningPathDialog extends ConsumerWidget {
                 itemBuilder: (context, index) {
                   final node = path[index];
                   final isLast = index == path.length - 1;
-                  return _buildTimelineItem(context, ref, node, isLast);
+                  return _buildTimelineItem(context, node, isLast);
                 },
               );
             },
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (err, stack) => Center(child: Text('加载失败：$err')),
+            error: (err, stack) => _LearningPathLoadError(
+              message: '加载失败：$err',
+              onRetry: () =>
+                  ref.invalidate(learningPathProvider(widget.targetNodeId)),
+            ),
           ),
         ),
         const SizedBox(height: DS.lg),
-        SparkleButton.primary(
-          label: '一键生成学习计划',
-          icon: const Icon(Icons.auto_awesome),
+        SparkleButton(
+          label: _isGeneratingFullPlan ? '正在生成...' : '一键生成学习计划',
+          icon: _isGeneratingFullPlan
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.auto_awesome),
           expand: true,
-          onPressed: () => _handleCreateFullPlan(context, ref),
+          onPressed: _isBusy ? null : () => _handleCreateFullPlan(context),
+          loading: _isGeneratingFullPlan,
         ),
       ],
     );
@@ -80,7 +136,6 @@ class LearningPathDialog extends ConsumerWidget {
 
   Widget _buildTimelineItem(
     BuildContext context,
-    WidgetRef ref,
     LearningPathNode node,
     bool isLast,
   ) {
@@ -104,7 +159,7 @@ class LearningPathDialog extends ConsumerWidget {
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () => _showNodeActions(context, ref, node),
+        onTap: _isBusy ? null : () => _showNodeActions(context, node),
         child: IntrinsicHeight(
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -169,7 +224,6 @@ class LearningPathDialog extends ConsumerWidget {
 
   void _showNodeActions(
     BuildContext parentContext,
-    WidgetRef ref,
     LearningPathNode node,
   ) {
     unawaited(
@@ -201,7 +255,6 @@ class LearningPathDialog extends ConsumerWidget {
                 onPressed: () => _handleCreateTask(
                   parentContext,
                   sheetContext,
-                  ref,
                   node,
                 ),
               ),
@@ -213,7 +266,6 @@ class LearningPathDialog extends ConsumerWidget {
                 onPressed: () => _handleCreatePlan(
                   parentContext,
                   sheetContext,
-                  ref,
                   node,
                 ),
               ),
@@ -237,12 +289,11 @@ class LearningPathDialog extends ConsumerWidget {
   Future<void> _handleCreateTask(
     BuildContext parentContext,
     BuildContext sheetContext,
-    WidgetRef ref,
     LearningPathNode node,
   ) async {
     final feedbackContext = _feedbackContext(parentContext);
     Navigator.of(sheetContext).pop(); // close action sheet
-    AppFeedback.loading(feedbackContext, '正在创建任务卡...');
+    _setInlineStatus('正在为「${node.name}」创建任务卡...');
     try {
       final task = await ref.read(taskRepositoryProvider).createTask(
             TaskCreate(
@@ -255,23 +306,25 @@ class LearningPathDialog extends ConsumerWidget {
           );
       if (!feedbackContext.mounted) return;
       AppFeedback.success(feedbackContext, '任务卡已创建');
+      _clearInlineFeedback();
       Navigator.of(parentContext).pop(); // close learning path dialog
       _pushFromRoot('/tasks/${task.id}', fallbackContext: feedbackContext);
     } catch (e) {
-      if (!feedbackContext.mounted) return;
-      AppFeedback.error(feedbackContext, '创建失败: $e');
+      _setInlineError('创建失败：$e');
     }
   }
 
   Future<void> _handleCreatePlan(
     BuildContext parentContext,
     BuildContext sheetContext,
-    WidgetRef ref,
     LearningPathNode node,
   ) async {
     final feedbackContext = _feedbackContext(parentContext);
     Navigator.of(sheetContext).pop(); // close action sheet
-    AppFeedback.loading(feedbackContext, '正在生成学习计划（可能需要几秒）...');
+    setState(() {
+      _isGeneratingPlan = true;
+    });
+    _setInlineStatus('正在为「${node.name}」生成学习计划，请稍候...');
     try {
       final response = await ref
           .read(learningPathRepositoryProvider)
@@ -283,37 +336,51 @@ class LearningPathDialog extends ConsumerWidget {
       } else {
         AppFeedback.success(feedbackContext, message);
       }
+      _clearInlineFeedback();
       Navigator.of(parentContext).pop(); // close learning path dialog
       _pushFromRoot(
         '/plans/${response.planId}',
         fallbackContext: feedbackContext,
       );
     } catch (e) {
-      if (!feedbackContext.mounted) return;
-      AppFeedback.error(feedbackContext, '生成失败: $e');
+      _setInlineError('生成失败：$e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isGeneratingPlan = false;
+        });
+      }
     }
   }
 
   Future<void> _handleCreateFullPlan(
     BuildContext context,
-    WidgetRef ref,
   ) async {
     final feedbackContext = _feedbackContext(context);
-    AppFeedback.loading(feedbackContext, '正在生成全路径计划...');
+    setState(() {
+      _isGeneratingFullPlan = true;
+    });
+    _setInlineStatus('正在生成完整学习路径计划，这可能需要十几秒...');
     try {
       final response = await ref
           .read(learningPathRepositoryProvider)
-          .generateFullPathPlan(targetNodeId);
+          .generateFullPathPlan(widget.targetNodeId);
       if (!feedbackContext.mounted) return;
       AppFeedback.success(feedbackContext, '学习计划已生成');
+      _clearInlineFeedback();
       Navigator.of(context).pop();
       _pushFromRoot(
         '/plans/${response.planId}',
         fallbackContext: feedbackContext,
       );
     } catch (e) {
-      if (!feedbackContext.mounted) return;
-      AppFeedback.error(feedbackContext, '生成失败: $e');
+      _setInlineError('生成失败：$e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isGeneratingFullPlan = false;
+        });
+      }
     }
   }
 
@@ -340,4 +407,92 @@ class LearningPathDialog extends ConsumerWidget {
         return status;
     }
   }
+}
+
+class _LearningPathInlineFeedback extends StatelessWidget {
+  const _LearningPathInlineFeedback({
+    required this.message,
+    required this.isError,
+    this.isLoading = false,
+    this.onDismiss,
+  });
+
+  final String message;
+  final bool isError;
+  final bool isLoading;
+  final VoidCallback? onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = isError ? DS.error : DS.primaryBase;
+    final icon = isError
+        ? Icons.error_outline_rounded
+        : (isLoading
+            ? Icons.hourglass_top_rounded
+            : Icons.info_outline_rounded);
+
+    return GraphiteCardSurface(
+      borderColor: accent.withValues(alpha: 0.22),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Icon(icon, size: 18, color: accent),
+          ),
+          const SizedBox(width: DS.sm),
+          Expanded(
+            child: Text(
+              message,
+              style: DS.bodyMedium.copyWith(color: DS.textPrimary),
+            ),
+          ),
+          if (onDismiss != null)
+            SparkleIconButton(
+              icon: Icon(Icons.close_rounded, color: DS.textSecondary),
+              onPressed: onDismiss,
+              semanticLabel: 'dismiss feedback',
+              variant: ButtonVariant.ghost,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LearningPathLoadError extends StatelessWidget {
+  const _LearningPathLoadError({
+    required this.message,
+    required this.onRetry,
+  });
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) => Center(
+        child: GraphiteCardSurface(
+          child: Padding(
+            padding: const EdgeInsets.all(DS.lg),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.timeline_outlined, color: DS.error),
+                const SizedBox(height: DS.sm),
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: DS.bodyMedium.copyWith(color: DS.textSecondary),
+                ),
+                const SizedBox(height: DS.md),
+                SparkleButton.secondary(
+                  label: '重试加载',
+                  icon: const Icon(Icons.refresh_rounded),
+                  onPressed: onRetry,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
 }

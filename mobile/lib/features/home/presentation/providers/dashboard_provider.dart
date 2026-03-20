@@ -160,9 +160,11 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
 
   Future<void> fetchData() async {
     try {
+      if (!mounted) return;
       state = DashboardState.loading();
 
       final dashboardData = await _repository.getDashboardStatus();
+      if (!mounted) return;
 
       // Parse weather data
       final weatherMap = dashboardData['weather'] as Map<String, dynamic>;
@@ -254,6 +256,7 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
       );
     } catch (e) {
       debugPrint('Error loading dashboard: $e');
+      if (!mounted) return;
       state = DashboardState.error(e.toString());
     }
   }

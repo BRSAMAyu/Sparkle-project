@@ -453,8 +453,51 @@ class _CosmicConstellationCanvasState extends State<_CosmicConstellationCanvas>
     if (oldWidget.nodes.length != widget.nodes.length) {
       _nodeEntranceController.duration =
           Duration(milliseconds: 600 + widget.nodes.length * 40);
+      _hasInitializedViewport = false;
+      _initializeViewportCenter();
     }
     _updateOrbitalParticleRegistration(force: true);
+  }
+
+  void _zoomBy(double factor) {
+    final current = _transformationController.value.clone();
+    final nextScale = (current.getMaxScaleOnAxis() * factor).clamp(0.4, 3.0);
+    final dx = current.storage[12];
+    final dy = current.storage[13];
+    _transformationController.value = Matrix4.identity()
+      ..translate(dx, dy)
+      ..scale(nextScale, nextScale);
+  }
+
+  void _resetViewport() {
+    _hasInitializedViewport = false;
+    _initializeViewportCenter();
+  }
+
+  List<Map<String, String>> _laneLegend() {
+    final seen = <String>{};
+    final lanes = <Map<String, String>>[];
+    for (final node in widget.nodes) {
+      final key = '${node.lane}|${node.laneLabel}';
+      if (!seen.add(key)) continue;
+      lanes.add({'lane': node.lane, 'label': node.laneLabel});
+    }
+    return lanes;
+  }
+
+  Color _laneColor(String lane) {
+    switch (lane) {
+      case 'streak_lane':
+        return const Color(0xFFFF8A3D);
+      case 'sprint_lane':
+        return const Color(0xFF2FB6FF);
+      case 'knowledge_lane':
+        return const Color(0xFF78E08F);
+      case 'social_lane':
+        return const Color(0xFFE8A1FF);
+      default:
+        return const Color(0xFFFFD166);
+    }
   }
 
   void _updateMotionPreference(bool reduceMotion) {
@@ -579,19 +622,25 @@ class _CosmicConstellationCanvasState extends State<_CosmicConstellationCanvas>
     final canvasWidth = maxX + padding;
     final canvasHeight = maxY + padding;
 
-    return InteractiveViewer(
-      transformationController: _transformationController,
-      minScale: 0.4,
-      maxScale: 3.0,
-      constrained: false,
-      interactionEndFrictionCoefficient: 0.001,
-      boundaryMargin: const EdgeInsets.all(DS.spacing32),
-      child: SizedBox(
-        width: canvasWidth,
-        height: canvasHeight,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
+    final lanes = _laneLegend();
+
+    return Stack(
+      children: [
+        InteractiveViewer(
+          transformationController: _transformationController,
+          minScale: 0.35,
+          maxScale: 3.5,
+          panEnabled: true,
+          scaleEnabled: true,
+          constrained: false,
+          interactionEndFrictionCoefficient: 0.001,
+          boundaryMargin: const EdgeInsets.all(DS.spacing32),
+          child: SizedBox(
+            width: canvasWidth,
+            height: canvasHeight,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
             // Layer 0 - Deep space background + star field.
             Positioned.fill(
               child: reduceMotion
@@ -701,7 +750,147 @@ class _CosmicConstellationCanvasState extends State<_CosmicConstellationCanvas>
                       ),
               );
             }),
-          ],
+              ],
+            ),
+          ),
+        ),
+        Positioned(
+          top: DS.spacing24,
+          left: DS.spacing16,
+          right: 88,
+          child: IgnorePointer(
+            ignoring: false,
+            child: Container(
+              padding: const EdgeInsets.all(DS.spacing16),
+              decoration: BoxDecoration(
+                color: DS.deepSpaceStart.withValues(alpha: 0.82),
+                borderRadius: DS.borderRadius16,
+                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x22000000),
+                    blurRadius: 24,
+                    offset: Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '征服路径图',
+                    style: TextStyle(
+                      fontSize: DS.fontSizeBase,
+                      fontWeight: DS.fontWeightBold,
+                      color: DS.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: DS.spacing6),
+                  Text(
+                    '双指缩放或用右侧控件查看不同赛道，推荐目标会被重点高亮。',
+                    style: TextStyle(
+                      fontSize: DS.fontSizeXs,
+                      height: 1.45,
+                      color: DS.textSecondary,
+                    ),
+                  ),
+                  if (lanes.isNotEmpty) ...[
+                    const SizedBox(height: DS.spacing10),
+                    Wrap(
+                      spacing: DS.spacing8,
+                      runSpacing: DS.spacing8,
+                      children: lanes
+                          .take(4)
+                          .map(
+                            (lane) => Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: DS.spacing10,
+                                vertical: DS.spacing6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _laneColor(lane['lane']!)
+                                    .withValues(alpha: 0.16),
+                                borderRadius: DS.borderRadius12,
+                              ),
+                              child: Text(
+                                lane['label']!,
+                                style: TextStyle(
+                                  fontSize: DS.fontSizeXs,
+                                  fontWeight: DS.fontWeightMedium,
+                                  color: _laneColor(lane['lane']!),
+                                ),
+                              ),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          right: DS.spacing16,
+          bottom: DS.spacing32,
+          child: Column(
+            children: [
+              _MapControlButton(
+                icon: Icons.add,
+                tooltip: '放大',
+                onTap: () => _zoomBy(1.2),
+              ),
+              const SizedBox(height: DS.spacing10),
+              _MapControlButton(
+                icon: Icons.remove,
+                tooltip: '缩小',
+                onTap: () => _zoomBy(0.84),
+              ),
+              const SizedBox(height: DS.spacing10),
+              _MapControlButton(
+                icon: Icons.center_focus_strong,
+                tooltip: '重置视角',
+                onTap: _resetViewport,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MapControlButton extends StatelessWidget {
+  const _MapControlButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: DS.deepSpaceStart.withValues(alpha: 0.86),
+        borderRadius: DS.borderRadius16,
+        child: InkWell(
+          borderRadius: DS.borderRadius16,
+          onTap: onTap,
+          child: Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              borderRadius: DS.borderRadius16,
+              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            ),
+            child: Icon(icon, color: DS.textPrimary, size: 22),
+          ),
         ),
       ),
     );

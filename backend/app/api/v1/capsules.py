@@ -327,7 +327,19 @@ async def request_batch_generation(
 
     返回任务ID，可以通过 /generation/jobs 查询状态
     """
-    celery_status = get_celery_queue_status(settings.GLM_BATCH_QUEUE)
+    interactive_manual_request = (request.requested_count or 1) <= 1
+    celery_status = (
+        {
+            "status": "unhealthy",
+            "queue": settings.GLM_BATCH_QUEUE,
+            "queue_worker_count": 0,
+            "queue_active_tasks": 0,
+            "queue_reserved_tasks": 0,
+            "reason": "interactive_manual_request",
+        }
+        if interactive_manual_request
+        else get_celery_queue_status(settings.GLM_BATCH_QUEUE)
+    )
     dispatch = glm_batch_service.decide_capsule_dispatch(
         depth_preference=request.depth_preference,
         curiosity_preference=request.curiosity_preference,
@@ -335,11 +347,16 @@ async def request_batch_generation(
         generation_type="manual",
         celery_status=celery_status,
     )
-    should_fallback_sync = not dispatch.should_enqueue
+    expired_jobs = await capsule_generation_service.expire_stale_jobs(
+        user_id=current_user.id,
+        db=db,
+        older_than_seconds=300,
+    )
+    should_fallback_sync = interactive_manual_request or (not dispatch.should_enqueue) or expired_jobs > 0
 
     if should_fallback_sync:
         logger.warning(
-            f"Capsule batch generation falling back to sync mode: decision={dispatch} celery_status={celery_status}"
+            f"Capsule batch generation falling back to sync mode: decision={dispatch} celery_status={celery_status} expired_jobs={expired_jobs} interactive_manual_request={interactive_manual_request}"
         )
         job = await curiosity_capsule_service.generate_batch(
             user_id=current_user.id,

@@ -450,10 +450,24 @@ class _UnifiedOmniBarState extends ConsumerState<UnifiedOmniBar>
 
   Future<void> _handleResult(Map<String, dynamic> result) async {
     final type = result['action_type'] as String?;
+    final data = result['data'] is Map
+        ? Map<String, dynamic>.from(result['data'] as Map)
+        : const <String, dynamic>{};
     switch (type) {
       case 'CHAT':
         if (mounted) {
-          context.go('/chat');
+          final prompt =
+              (data['initial_message']?.toString() ?? _controller.text).trim();
+          final currentMode = ref.read(chatModeProvider);
+          final target = Uri(
+            path: '/chat',
+            queryParameters: <String, String>{
+              if (prompt.isNotEmpty) 'prompt': prompt,
+              'chat_mode': currentMode.apiValue,
+              'source': 'omnibar',
+            },
+          ).toString();
+          context.go(target);
         }
         return;
       case 'TASK':

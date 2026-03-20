@@ -4,7 +4,7 @@ from datetime import date
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -584,7 +584,7 @@ async def update_preference(
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     if not payload.pref_key:
-        return {"status": "error", "message": "pref_key required"}
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="pref_key required")
 
     profile_write_service = ProfileWriteService(db, cache_service.redis)
     evidence_refs = [
@@ -613,12 +613,12 @@ async def override_inferred_preference(
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     if not payload.key:
-        return {"status": "error", "message": "key required"}
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="key required")
     meta = INFERRED_META.get(payload.key)
     if meta is None:
-        return {"status": "error", "message": "unknown inferred key"}
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="unknown inferred key")
     if not meta.adjustable:
-        return {"status": "error", "message": "key is not adjustable"}
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="key is not adjustable")
 
     profile_write_service = ProfileWriteService(db, cache_service.redis)
     evidence_refs = [
@@ -646,7 +646,7 @@ async def reset_override_preference(
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     if not payload.key:
-        return {"status": "error", "message": "key required"}
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="key required")
     profile_write_service = ProfileWriteService(db, cache_service.redis)
     result = await profile_write_service.reset_override_preference(
         user_id=current_user.id,
@@ -665,13 +665,13 @@ async def rollback_preference(
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     if not payload.pref_key:
-        return {"status": "error", "message": "pref_key required"}
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="pref_key required")
 
     memory_service = MemoryService(db)
     history = await memory_service.list_preference_history(current_user.id)
     candidates = [item for item in history if item.pref_key == payload.pref_key]
     if len(candidates) < 2:
-        return {"status": "error", "message": "no previous version"}
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="no previous version")
 
     current = candidates[0]
     previous = candidates[1]
@@ -712,11 +712,11 @@ async def update_goal(
         updates["target_date"] = payload.target_date
 
     if not updates:
-        return {"status": "error", "message": "no updates"}
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="no updates")
 
     record = await memory_service.update_goal(current_user.id, payload.goal_id, **updates)
     if record is None:
-        return {"status": "error", "message": "goal not found"}
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="goal not found")
 
     await SystemUpdateService(cache_service.redis).enqueue(
         current_user.id,
@@ -744,7 +744,7 @@ async def submit_correction(
     from app.models.memory import MemoryCorrection
 
     if not payload.target_type:
-        return {"status": "error", "message": "target_type required"}
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="target_type required")
 
     correction = MemoryCorrection(
         user_id=current_user.id,

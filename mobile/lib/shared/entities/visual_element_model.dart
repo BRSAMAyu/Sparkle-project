@@ -63,8 +63,66 @@ class VisualElementModel {
     this.isEquipped = false,
   });
 
-  factory VisualElementModel.fromJson(Map<String, dynamic> json) =>
-      _$VisualElementModelFromJson(json);
+  factory VisualElementModel.fromJson(Map<String, dynamic> json) {
+    VisualElementType? parseElementType(dynamic raw) {
+      final key = raw?.toString();
+      return VisualElementType.values
+          .where((value) => value.name == key)
+          .cast<VisualElementType?>()
+          .firstWhere((_) => true, orElse: () => null);
+    }
+
+    VisualElementRarity? parseRarity(dynamic raw) {
+      final key = raw?.toString();
+      return VisualElementRarity.values
+          .where((value) => value.name == key)
+          .cast<VisualElementRarity?>()
+          .firstWhere((_) => true, orElse: () => null);
+    }
+
+    VisualElementUnlockSource? parseUnlockSource(dynamic raw) {
+      final key = raw?.toString();
+      return VisualElementUnlockSource.values
+          .where((value) => value.name == key)
+          .cast<VisualElementUnlockSource?>()
+          .firstWhere((_) => true, orElse: () => null);
+    }
+
+    DateTime? parseDate(dynamic value) {
+      if (value == null) return null;
+      return DateTime.tryParse(value.toString());
+    }
+
+    return VisualElementModel(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      description: json['description'] as String?,
+      elementType: parseElementType(json['element_type']) ??
+          parseElementType(json['elementType']) ??
+          VisualElementType.background,
+      rarity: parseRarity(json['rarity']) ?? VisualElementRarity.common,
+      unlockSource: parseUnlockSource(json['unlock_source']) ??
+          parseUnlockSource(json['unlockSource']) ??
+          VisualElementUnlockSource.system,
+      isDefault: (json['is_default'] ?? json['isDefault'] ?? false) as bool,
+      sortOrder: ((json['sort_order'] ?? json['sortOrder'] ?? 0) as num).toInt(),
+      previewUrl: json['preview_url'] as String? ?? json['previewUrl'] as String?,
+      iconUrl: json['icon_url'] as String? ?? json['iconUrl'] as String?,
+      category: json['category'] as String?,
+      config: Map<String, dynamic>.from(
+        (json['config'] as Map?) ?? const <String, dynamic>{},
+      ),
+      unlockRequirement: (json['unlock_requirement'] ?? json['unlockRequirement'])
+              is Map
+          ? Map<String, dynamic>.from(
+              (json['unlock_requirement'] ?? json['unlockRequirement']) as Map,
+            )
+          : null,
+      isUnlocked: (json['is_unlocked'] ?? json['isUnlocked'] ?? false) as bool,
+      unlockedAt: parseDate(json['unlocked_at'] ?? json['unlockedAt']),
+      isEquipped: (json['is_equipped'] ?? json['isEquipped'] ?? false) as bool,
+    );
+  }
 
   final String id;
   final String name;
@@ -103,7 +161,24 @@ class VisualElementModel {
 
   bool get isPrestigeHighlight => visibilityWeight >= 85;
 
-  Map<String, dynamic> toJson() => _$VisualElementModelToJson(this);
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'id': id,
+        'name': name,
+        'description': description,
+        'element_type': elementType.name,
+        'rarity': rarity.name,
+        'unlock_source': unlockSource.name,
+        'is_default': isDefault,
+        'sort_order': sortOrder,
+        'preview_url': previewUrl,
+        'icon_url': iconUrl,
+        'category': category,
+        'config': config,
+        'unlock_requirement': unlockRequirement,
+        'is_unlocked': isUnlocked,
+        'unlocked_at': unlockedAt?.toIso8601String(),
+        'is_equipped': isEquipped,
+      };
 
   /// 获取稀有度对应的颜色
   static int getRarityColor(VisualElementRarity rarity) {
@@ -160,7 +235,43 @@ class UserVisualConfig {
   });
 
   factory UserVisualConfig.fromJson(Map<String, dynamic> json) =>
-      _$UserVisualConfigFromJson(json);
+      UserVisualConfig(
+        equippedBackground: (json['equipped_background'] ??
+                    json['equippedBackground'])
+                is Map<String, dynamic>
+            ? VisualElementModel.fromJson(
+                (json['equipped_background'] ?? json['equippedBackground'])
+                    as Map<String, dynamic>,
+              )
+            : null,
+        equippedParticle:
+            (json['equipped_particle'] ?? json['equippedParticle'])
+                    is Map<String, dynamic>
+                ? VisualElementModel.fromJson(
+                    (json['equipped_particle'] ?? json['equippedParticle'])
+                        as Map<String, dynamic>,
+                  )
+                : null,
+        equippedEffect: (json['equipped_effect'] ?? json['equippedEffect'])
+                is Map<String, dynamic>
+            ? VisualElementModel.fromJson(
+                (json['equipped_effect'] ?? json['equippedEffect'])
+                    as Map<String, dynamic>,
+              )
+            : null,
+        backgroundEquippedAt: DateTime.tryParse(
+          (json['background_equipped_at'] ?? json['backgroundEquippedAt'] ?? '')
+              .toString(),
+        ),
+        particleEquippedAt: DateTime.tryParse(
+          (json['particle_equipped_at'] ?? json['particleEquippedAt'] ?? '')
+              .toString(),
+        ),
+        effectEquippedAt: DateTime.tryParse(
+          (json['effect_equipped_at'] ?? json['effectEquippedAt'] ?? '')
+              .toString(),
+        ),
+      );
 
   final VisualElementModel? equippedBackground;
   final VisualElementModel? equippedParticle;
@@ -169,7 +280,14 @@ class UserVisualConfig {
   final DateTime? particleEquippedAt;
   final DateTime? effectEquippedAt;
 
-  Map<String, dynamic> toJson() => _$UserVisualConfigToJson(this);
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'equipped_background': equippedBackground?.toJson(),
+        'equipped_particle': equippedParticle?.toJson(),
+        'equipped_effect': equippedEffect?.toJson(),
+        'background_equipped_at': backgroundEquippedAt?.toIso8601String(),
+        'particle_equipped_at': particleEquippedAt?.toIso8601String(),
+        'effect_equipped_at': effectEquippedAt?.toIso8601String(),
+      };
 
   /// 检查是否有任何装备
   bool get hasEquipment =>
@@ -205,13 +323,23 @@ class EquipElementResponse {
   });
 
   factory EquipElementResponse.fromJson(Map<String, dynamic> json) =>
-      _$EquipElementResponseFromJson(json);
+      EquipElementResponse(
+        success: json['success'] as bool? ?? false,
+        message: json['message'] as String? ?? '',
+        config: UserVisualConfig.fromJson(
+          (json['config'] as Map<String, dynamic>?) ?? const {},
+        ),
+      );
 
   final bool success;
   final String message;
   final UserVisualConfig config;
 
-  Map<String, dynamic> toJson() => _$EquipElementResponseToJson(this);
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'success': success,
+        'message': message,
+        'config': config.toJson(),
+      };
 }
 
 /// 装备元素响应模型（扩展版）
@@ -225,12 +353,33 @@ class EquipElementResponseExtended {
   });
 
   factory EquipElementResponseExtended.fromJson(Map<String, dynamic> json) =>
-      _$EquipElementResponseExtendedFromJson(json);
+      EquipElementResponseExtended(
+        success: json['success'] as bool? ?? false,
+        message: json['message'] as String? ?? '',
+        config: UserVisualConfig.fromJson(
+          (json['config'] as Map<String, dynamic>?) ?? const {},
+        ),
+        unlockedElements: (json['unlocked_elements'] ??
+                    json['unlockedElements'])
+                is List<dynamic>
+            ? ((json['unlocked_elements'] ?? json['unlockedElements'])
+                    as List<dynamic>)
+                .whereType<Map<String, dynamic>>()
+                .map(VisualElementModel.fromJson)
+                .toList()
+            : null,
+      );
 
   final bool success;
   final String message;
   final UserVisualConfig config;
   final List<VisualElementModel>? unlockedElements;
 
-  Map<String, dynamic> toJson() => _$EquipElementResponseExtendedToJson(this);
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'success': success,
+        'message': message,
+        'config': config.toJson(),
+        'unlocked_elements':
+            unlockedElements?.map((element) => element.toJson()).toList(),
+      };
 }

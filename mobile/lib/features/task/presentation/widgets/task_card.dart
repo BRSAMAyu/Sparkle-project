@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/components/atoms/task_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
+import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
 import 'package:sparkle/core/utils/theme_utils.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/features/task/presentation/widgets/subtask_list_widget.dart';
@@ -37,6 +38,30 @@ class _TaskCardState extends ConsumerState<TaskCard>
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
 
+  SparkleThemeExtension? _sparkleTheme(BuildContext context) =>
+      Theme.of(context).extension<SparkleThemeExtension>();
+
+  BorderRadius _radius(BuildContext context) =>
+      _sparkleTheme(context)?.radius.mdRadius ?? BorderRadius.circular(16);
+
+  List<BoxShadow> _shadows(BuildContext context) => DS.shadowMd;
+
+  double _spacingMd(BuildContext context) =>
+      _sparkleTheme(context)?.spacing.md ?? DS.spacing16;
+
+  Color _surfaceSecondary(BuildContext context) =>
+      _sparkleTheme(context)?.colors.surfaceSecondary ??
+      Theme.of(context).colorScheme.surfaceContainerHighest;
+
+  Color _textPrimary(BuildContext context) =>
+      _sparkleTheme(context)?.colors.textPrimary ??
+      Theme.of(context).colorScheme.onSurface;
+
+  Color _textDisabled(BuildContext context) => DS.textDisabled;
+
+  Color _success(BuildContext context) =>
+      _sparkleTheme(context)?.colors.semanticSuccess ?? Colors.green;
+
   @override
   void initState() {
     super.initState();
@@ -63,7 +88,7 @@ class _TaskCardState extends ConsumerState<TaskCard>
     return LinearGradient(
       colors: [
         taskColor.withValues(alpha: 0.05),
-        context.sparkleColors.surfaceSecondary,
+        _surfaceSecondary(context),
       ],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
@@ -105,8 +130,8 @@ class _TaskCardState extends ConsumerState<TaskCard>
                     decoration: BoxDecoration(
                       gradient:
                           _getBackgroundGradient(context, widget.task.type),
-                      borderRadius: context.radius.mdRadius,
-                      boxShadow: context.sparkleShadows.medium,
+                      borderRadius: _radius(context),
+                      boxShadow: _shadows(context),
                     ),
                     foregroundDecoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -122,10 +147,10 @@ class _TaskCardState extends ConsumerState<TaskCard>
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
-                      borderRadius: context.radius.mdRadius,
+                      borderRadius: _radius(context),
                     ),
                     child: ClipRRect(
-                      borderRadius: context.radius.mdRadius,
+                      borderRadius: _radius(context),
                       child: Stack(
                         children: [
                           IntrinsicHeight(
@@ -145,9 +170,7 @@ class _TaskCardState extends ConsumerState<TaskCard>
                                 // Content
                                 Expanded(
                                   child: Padding(
-                                    padding: EdgeInsets.all(
-                                      context.sparkleSpacing.md,
-                                    ),
+                                    padding: EdgeInsets.all(_spacingMd(context)),
                                     child: Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
@@ -176,12 +199,12 @@ class _TaskCardState extends ConsumerState<TaskCard>
                                                           widget.task.status ==
                                                                   TaskStatus
                                                                       .completed
-                                                              ? context
-                                                                  .sparkleColors
-                                                                  .textDisabled
-                                                              : context
-                                                                  .sparkleColors
-                                                                  .textPrimary,
+                                                              ? _textDisabled(
+                                                                  context,
+                                                                )
+                                                              : _textPrimary(
+                                                                  context,
+                                                                ),
                                                     ),
                                                 maxLines: 2,
                                                 overflow: TextOverflow.ellipsis,
@@ -202,8 +225,7 @@ class _TaskCardState extends ConsumerState<TaskCard>
                                                 const SizedBox(width: 4),
                                                 Icon(
                                                   Icons.check_circle,
-                                                  color: context.sparkleColors
-                                                      .semanticSuccess,
+                                                  color: _success(context),
                                                   size: 16,
                                                 ),
                                               ] else if (widget.task.status !=

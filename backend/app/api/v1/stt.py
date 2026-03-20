@@ -5,6 +5,7 @@ STT (Speech to Text) API
 from __future__ import annotations
 
 import os
+from pathlib import Path
 import uuid
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile, WebSocket, status
@@ -35,7 +36,7 @@ async def transcribe_audio(
     # Save uploaded file
     file_id = str(uuid.uuid4())
     ext = os.path.splitext(file.filename)[1] if file.filename else ".tmp"
-    temp_path = os.path.join(settings.UPLOAD_DIR, f"{file_id}{ext}")
+    temp_path = str(Path(settings.UPLOAD_DIR).joinpath(f"{file_id}{ext}").resolve())
 
     try:
         await save_upload_file(

@@ -1,7 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/features/community/presentation/widgets/share_resource_sheet.dart';
+import 'package:sparkle/features/task/presentation/widgets/task_card.dart';
+import 'package:sparkle/shared/utils/entity_card_payloads.dart';
 
 /// 任务列表组件
 /// 用于在聊天中批量显示 AI 生成的任务
@@ -31,6 +36,7 @@ class _TaskListWidgetState extends State<TaskListWidget> {
     if (widget.tasks.isEmpty) {
       return const SizedBox.shrink();
     }
+    final planId = widget.tasks.first['plan_id']?.toString();
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8),
@@ -47,6 +53,29 @@ class _TaskListWidgetState extends State<TaskListWidget> {
                   ),
             ),
             const SizedBox(height: 10),
+            if (planId != null && planId.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: DS.sm),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: SparkleButton.ghost(
+                        label: '查看计划',
+                        icon: const Icon(Icons.map_outlined, size: 16),
+                        onPressed: () => context.push('/plans/$planId'),
+                      ),
+                    ),
+                    const SizedBox(width: DS.spacing8),
+                    Expanded(
+                      child: SparkleButton.ghost(
+                        label: '分享计划',
+                        icon: const Icon(Icons.share_outlined, size: 16),
+                        onPressed: () => _sharePlan(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ...widget.tasks.map((taskData) => _buildTaskItem(context, taskData)),
             const SizedBox(height: 10),
             Row(
@@ -56,10 +85,10 @@ class _TaskListWidgetState extends State<TaskListWidget> {
                   label: context.l10n.taskViewAll,
                   variant: ButtonVariant.ghost,
                   icon: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onPressed: () {
-                    // 导航到任务列表页面
-                    context.push('/tasks');
-                  },
+                    onPressed: () {
+                      // 导航到任务列表页面
+                      unawaited(context.push('/tasks'));
+                    },
                 ),
                 if (widget.toolResultId != null &&
                     widget.toolResultId!.trim().isNotEmpty &&
@@ -102,9 +131,52 @@ class _TaskListWidgetState extends State<TaskListWidget> {
 
   Widget _buildTaskItem(BuildContext context, Map<String, dynamic> taskData) {
     final title = taskData['title'] as String;
-    final type = taskData['type'] as String;
-    final status = taskData['status'] as String;
     final id = taskData['id'] as String;
+    final taskModel = taskModelFromEntityPayload(taskData);
+
+    if (taskModel != null) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Column(
+          children: [
+            TaskCard(
+              task: taskModel,
+              compact: true,
+              onTap: () => context.push('/tasks/$id'),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(
+                top: DS.spacing4,
+                left: DS.spacing8,
+                right: DS.spacing8,
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: SparkleButton.ghost(
+                      label: context.l10n.taskViewAll,
+                      icon: const Icon(Icons.open_in_new_rounded, size: 16),
+                      onPressed: () => context.push('/tasks/$id'),
+                    ),
+                  ),
+                  const SizedBox(width: DS.spacing8),
+                  Expanded(
+                    child: SparkleButton.ghost(
+                      label: '分享',
+                      icon: const Icon(Icons.share_outlined, size: 16),
+                      onPressed: () => _shareTask(context, taskData),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final type = taskData['type'] as String? ?? 'learning';
+    final status = taskData['status'] as String? ?? 'pending';
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
@@ -125,11 +197,37 @@ class _TaskListWidgetState extends State<TaskListWidget> {
             icon: const Icon(Icons.info_outline, size: 20),
             onPressed: () {
               // 导航到任务详情页面
-              context.push('/tasks/$id');
+              unawaited(context.push('/tasks/$id'));
             },
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _shareTask(
+    BuildContext context,
+    Map<String, dynamic> taskData,
+  ) async {
+    await showShareResourceSheet(
+      context,
+      resourceType: 'task',
+      resourceId: taskData['id'] as String,
+      title: taskData['title'] as String? ?? '任务卡片',
+      subtitle: taskData['guide_content'] as String? ??
+          taskData['description'] as String?,
+    );
+  }
+
+  Future<void> _sharePlan(BuildContext context) async {
+    final planId = widget.tasks.first['plan_id']?.toString();
+    if (planId == null || planId.isEmpty) return;
+    await showShareResourceSheet(
+      context,
+      resourceType: 'plan',
+      resourceId: planId,
+      title: '学习计划',
+      subtitle: '包含 ${widget.tasks.length} 个可执行任务',
     );
   }
 

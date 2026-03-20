@@ -517,41 +517,42 @@ class ProgressiveExplorationWorkflow:
         )
         handoff_packets.append(math_packet.to_dict())
 
-        # Round 2: CodeAgent - 代码实现
-        logger.info("[ProgressiveExploration] Round 2: Code implementation...")
-        code_context = EnhancedAgentContext(
-            **{**context.__dict__,
-               "previous_agent_outputs": [math_packet.to_dict()],
-               "user_query": _build_query(
-                   base_query=f"基于上述数学推导，提供代码实现：{query}",
-                   workflow_type="progressive_exploration",
-                   handoff_packets=[math_packet.to_dict()],
-                   extra_instruction="请只补充代码化视角，不要复述整段推导。",
-               )}
-        )
-        code_agent = CodeAgent()
-        code_response = await code_agent.process(code_context)
-        outputs.append(code_response)
-        conversation_history.append({
-            "agent": "CodeExpert",
-            "content": code_response.response_text,
-            "reasoning": code_response.reasoning
-        })
-        timeline.append(
-            _build_timeline_step(
-                "CodeExpert",
-                "代码实现",
-                start_time,
-                output_summary=code_response.response_text[:100] + "...",
+        code_packet = None
+        if self._needs_code_implementation(query):
+            logger.info("[ProgressiveExploration] Round 2: Code implementation...")
+            code_context = EnhancedAgentContext(
+                **{**context.__dict__,
+                   "previous_agent_outputs": [math_packet.to_dict()],
+                   "user_query": _build_query(
+                       base_query=f"基于上述数学推导，提供代码实现：{query}",
+                       workflow_type="progressive_exploration",
+                       handoff_packets=[math_packet.to_dict()],
+                       extra_instruction="请只补充代码化视角，不要复述整段推导。",
+                   )}
             )
-        )
-        code_packet = await build_handoff_packet(
-            agent="CodeExpert",
-            response_text=code_response.response_text,
-            workflow_type="progressive_exploration",
-            reasoning=code_response.reasoning,
-        )
-        handoff_packets.append(code_packet.to_dict())
+            code_agent = CodeAgent()
+            code_response = await code_agent.process(code_context)
+            outputs.append(code_response)
+            conversation_history.append({
+                "agent": "CodeExpert",
+                "content": code_response.response_text,
+                "reasoning": code_response.reasoning
+            })
+            timeline.append(
+                _build_timeline_step(
+                    "CodeExpert",
+                    "代码实现",
+                    start_time,
+                    output_summary=code_response.response_text[:100] + "...",
+                )
+            )
+            code_packet = await build_handoff_packet(
+                agent="CodeExpert",
+                response_text=code_response.response_text,
+                workflow_type="progressive_exploration",
+                reasoning=code_response.reasoning,
+            )
+            handoff_packets.append(code_packet.to_dict())
 
         # Round 3: ScienceAgent - 生物/物理类比（如果适用）
         if self._needs_scientific_analogy(query):
@@ -565,11 +566,11 @@ class ProgressiveExplorationWorkflow:
             )
             science_context = EnhancedAgentContext(
                 **{**context.__dict__,
-                   "previous_agent_outputs": [math_packet.to_dict(), code_packet.to_dict()],
+                   "previous_agent_outputs": [packet for packet in [math_packet.to_dict(), code_packet.to_dict() if code_packet else None] if packet],
                    "user_query": _build_query(
                        base_query=f"用生物学或物理学概念类比解释：{query}",
                        workflow_type="progressive_exploration",
-                       handoff_packets=[math_packet.to_dict(), code_packet.to_dict()],
+                       handoff_packets=[packet for packet in [math_packet.to_dict(), code_packet.to_dict() if code_packet else None] if packet],
                        few_shot_examples=science_examples,
                        extra_instruction="类比只能帮助理解，必须指出类比边界。",
                    )}
@@ -637,40 +638,45 @@ class ProgressiveExplorationWorkflow:
         )
         handoff_packets.append(writing_packet.to_dict())
 
-        # Round 5: StudyPlannerAgent - 复习安排
-        logger.info("[ProgressiveExploration] Round 5: Review scheduling...")
-        planner_context = EnhancedAgentContext(
-            **{**context.__dict__,
-               "previous_agent_outputs": [writing_packet.to_dict()],
-               "user_query": _build_query(
-                   base_query=f"为这个知识点安排复习计划：{query}",
-                   workflow_type="progressive_exploration",
-                   handoff_packets=[writing_packet.to_dict()],
-                   extra_instruction="复习安排只保留关键节奏和复盘节点即可。",
-               )}
-        )
-        planner = StudyPlannerAgent()
-        planner_response = await planner.process(planner_context)
-        outputs.append(planner_response)
-        timeline.append(
-            _build_timeline_step(
-                "StudyPlanner",
-                "安排复习计划",
-                start_time,
-                output_summary=planner_response.response_text[:100] + "...",
+        planner_response = None
+        if self._needs_review_schedule(query):
+            logger.info("[ProgressiveExploration] Round 5: Review scheduling...")
+            planner_context = EnhancedAgentContext(
+                **{**context.__dict__,
+                   "previous_agent_outputs": [writing_packet.to_dict()],
+                   "user_query": _build_query(
+                       base_query=f"为这个知识点安排复习计划：{query}",
+                       workflow_type="progressive_exploration",
+                       handoff_packets=[writing_packet.to_dict()],
+                       extra_instruction="复习安排只保留关键节奏和复盘节点即可。",
+                   )}
             )
-        )
+            planner = StudyPlannerAgent()
+            planner_response = await planner.process(planner_context)
+            outputs.append(planner_response)
+            timeline.append(
+                _build_timeline_step(
+                    "StudyPlanner",
+                    "安排复习计划",
+                    start_time,
+                    output_summary=planner_response.response_text[:100] + "...",
+                )
+            )
 
         # 整合响应
         final_response = self._format_exploration_summary(conversation_history, planner_response)
 
         return CollaborationResult(
             workflow_type="progressive_exploration",
-            participants=[item["agent"] for item in conversation_history] + ["StudyPlanner"],
+            participants=[item["agent"] for item in conversation_history] + (["StudyPlanner"] if planner_response else []),
             outputs=outputs,
             final_response=final_response,
-            reasoning=f"渐进式深度探索：从数学原理 → 代码实现 → 科学类比 → 学习笔记 → 复习计划，" \
-                     f"共 {len(outputs)} 个维度的深度解析",
+            reasoning=self._build_reasoning_summary(
+                include_code=code_packet is not None,
+                include_analogy=self._needs_scientific_analogy(query),
+                include_review_plan=planner_response is not None,
+                outputs_count=len(outputs),
+            ),
             metadata={
                 "exploration_depth": len(outputs),
                 "perspectives": len(conversation_history),
@@ -686,10 +692,38 @@ class ProgressiveExplorationWorkflow:
         keywords = ["神经网络", "机器学习", "深度学习", "算法", "梯度", "优化"]
         return any(kw in query for kw in keywords)
 
+    def _needs_code_implementation(self, query: str) -> bool:
+        keywords = ["代码", "实现", "编程", "python", "python", "java", "c++", "示例代码", "伪代码", "代码实现"]
+        query_lower = query.lower()
+        return any(keyword in query_lower for keyword in keywords)
+
+    def _needs_review_schedule(self, query: str) -> bool:
+        keywords = ["复习", "记忆", "怎么学", "学习计划", "安排", "复盘", "巩固", "schedule", "plan"]
+        query_lower = query.lower()
+        return any(keyword in query_lower for keyword in keywords)
+
+    def _build_reasoning_summary(
+        self,
+        *,
+        include_code: bool,
+        include_analogy: bool,
+        include_review_plan: bool,
+        outputs_count: int,
+    ) -> str:
+        stages = ["知识检索", "原理推导"]
+        if include_code:
+            stages.append("代码实现")
+        if include_analogy:
+            stages.append("科学类比")
+        stages.append("学习笔记")
+        if include_review_plan:
+            stages.append("复习计划")
+        return f"渐进式深度探索：从 {' → '.join(stages)}，共 {outputs_count} 个维度的深度解析"
+
     def _format_exploration_summary(
         self,
         conversation_history: list[dict],
-        planner_response: AgentResponse
+        planner_response: AgentResponse | None
     ) -> str:
         """格式化探索总结"""
 
@@ -700,8 +734,9 @@ class ProgressiveExplorationWorkflow:
             summary += f"## {i}. {item['agent']} 的视角\n\n"
             summary += f"{item['content']}\n\n---\n\n"
 
-        summary += f"## {len(conversation_history) + 1}. 复习计划\n\n"
-        summary += f"{planner_response.response_text}\n\n"
+        if planner_response is not None:
+            summary += f"## {len(conversation_history) + 1}. 复习计划\n\n"
+            summary += f"{planner_response.response_text}\n\n"
 
         summary += "\n💡 **学习建议**：建议你按照上述顺序逐步理解，从数学原理到实际应用，形成完整的知识体系。\n"
 

@@ -9,9 +9,10 @@ Capsule Generation Service
 """
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 import random
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
 
@@ -266,6 +267,33 @@ class CapsuleGenerationService:
         await db.refresh(job)
         return job
 
+    async def expire_stale_jobs(
+        self,
+        *,
+        user_id: UUID,
+        db: AsyncSession,
+        older_than_seconds: int = 300,
+    ) -> int:
+        cutoff = _utcnow() - timedelta(seconds=older_than_seconds)
+        result = await db.execute(
+            select(CapsuleGenerationJob).where(
+                CapsuleGenerationJob.user_id == user_id,
+                CapsuleGenerationJob.status.in_([JobStatus.PENDING.value, JobStatus.GENERATING.value]),
+                CapsuleGenerationJob.created_at < cutoff,
+            )
+        )
+        jobs = list(result.scalars().all())
+        if not jobs:
+            return 0
+
+        for job in jobs:
+            job.mark_failed("胶囊生成队列处理超时，已自动切换到即时生成。")
+            if job.started_at is None:
+                job.progress = 0.0
+            db.add(job)
+        await db.commit()
+        return len(jobs)
+
     async def _generate_single_capsule(
         self,
         user_id: UUID,
@@ -447,9 +475,15 @@ class CapsuleGenerationService:
 
         try:
             if thinking_mode:
-                result = await llm.reason_json(messages=messages, temperature=temperature)
+                result = await asyncio.wait_for(
+                    llm.reason_json(messages=messages, temperature=temperature),
+                    timeout=25.0,
+                )
             else:
-                result = await llm.chat_json(messages=messages, temperature=temperature)
+                result = await asyncio.wait_for(
+                    llm.chat_json(messages=messages, temperature=temperature),
+                    timeout=25.0,
+                )
             if not result or not isinstance(result, dict):
                 raise ValueError("Invalid LLM response")
             return {

@@ -7,6 +7,7 @@ import 'package:logger/logger.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/features/calendar/data/datasources/calendar_remote_datasource.dart';
 import 'package:sparkle/features/calendar/data/models/calendar_event_model.dart';
+import 'package:sparkle/shared/entities/task_model.dart';
 
 final _calendarLogger = Logger();
 
@@ -19,6 +20,18 @@ class Log {
       _calendarLogger.e('[$tag] $message');
 }
 
+class CalendarMutationResult {
+  const CalendarMutationResult({
+    required this.event,
+    required this.persistedRemotely,
+    this.message,
+  });
+
+  final CalendarEventModel event;
+  final bool persistedRemotely;
+  final String? message;
+}
+
 class CalendarRepository {
   CalendarRepository(
     this._notificationService,
@@ -28,7 +41,6 @@ class CalendarRepository {
   final NotificationService _notificationService;
   final CalendarRemoteDataSource _remoteDataSource;
   static const String _boxName = 'calendar_events_v2';
-  static const String _syncStatusBox = 'calendar_sync_status';
 
   Future<Box<dynamic>> _getBox() async {
     if (!Hive.isBoxOpen(_boxName)) {
@@ -77,13 +89,13 @@ class CalendarRepository {
     }
 
     // 4. 异步后台同步（不阻塞返回）
-    _syncInBackground(startDate, endDate);
+    unawaited(_syncInBackground(startDate, endDate));
 
     return _filterEventsByDateRange(localEvents, startDate, endDate);
   }
 
   /// 创建事件（云端优先）
-  Future<CalendarEventModel> addEvent(CalendarEventModel event) async {
+  Future<CalendarMutationResult> addEvent(CalendarEventModel event) async {
     try {
       // 1. 先保存到云端
       final createdEvent = await _remoteDataSource.createEvent(event);
@@ -96,7 +108,10 @@ class CalendarRepository {
       await _scheduleReminders(createdEvent);
 
       Log.i('CalendarRepository', 'Event created and synced: ${createdEvent.id}');
-      return createdEvent;
+      return CalendarMutationResult(
+        event: createdEvent.copyWith(isSynced: true),
+        persistedRemotely: true,
+      );
     } catch (e) {
       Log.w('CalendarRepository', 'Failed to sync event to cloud: $e');
 
@@ -108,7 +123,11 @@ class CalendarRepository {
       // 调度提醒
       await _scheduleReminders(localEvent);
 
-      return localEvent;
+      return CalendarMutationResult(
+        event: localEvent,
+        persistedRemotely: false,
+        message: '云端暂时不可用，已先保存到本地并将在稍后同步。',
+      );
     }
   }
 
@@ -191,6 +210,40 @@ class CalendarRepository {
     }
   }
 
+  Future<CalendarEventModel?> getTaskLinkedEvent(String taskId) async {
+    final events = await _getLocalEvents();
+    for (final event in events) {
+      if (event.taskId == taskId) {
+        return event;
+      }
+    }
+    return null;
+  }
+
+  Future<void> removeTaskLinkedEvent(String taskId) async {
+    final existing = await getTaskLinkedEvent(taskId);
+    if (existing == null) return;
+    await deleteEvent(existing.id);
+  }
+
+  Future<CalendarEventModel?> syncTaskLinkedEvent(TaskModel task) async {
+    if (task.dueDate == null) {
+      await removeTaskLinkedEvent(task.id);
+      return null;
+    }
+
+    final existing = await getTaskLinkedEvent(task.id);
+    final linkedEvent = _buildTaskLinkedEvent(task, existing: existing);
+
+    if (existing != null) {
+      await updateEvent(linkedEvent);
+      return linkedEvent.copyWith(isSynced: true);
+    }
+
+    final result = await addEvent(linkedEvent);
+    return result.event;
+  }
+
   /// 获取事件统计摘要
   Future<Map<String, dynamic>> getSummary() async {
     try {
@@ -209,11 +262,14 @@ class CalendarRepository {
           final eventDate = DateTime(e.startTime.year, e.startTime.month, e.startTime.day);
           return eventDate == today && !e.isDeleted;
         }).length,
-        'upcoming': events.where((e) {
-          return e.startTime.isAfter(now) &&
-                 e.startTime.isBefore(weekLater) &&
-                 !e.isDeleted;
-        }).length,
+        'upcoming': events
+            .where(
+              (e) =>
+                  e.startTime.isAfter(now) &&
+                  e.startTime.isBefore(weekLater) &&
+                  !e.isDeleted,
+            )
+            .length,
         'recurring': events.where((e) => e.isRecurring && !e.isDeleted).length,
       };
     }
@@ -343,6 +399,50 @@ class CalendarRepository {
     for (var i = 0; i < 5; i++) {
       await _notificationService.cancelNotification(baseId + i);
     }
+  }
+
+  CalendarEventModel _buildTaskLinkedEvent(
+    TaskModel task, {
+    CalendarEventModel? existing,
+  }) {
+    final dueDate = task.dueDate!;
+    final isAllDay = dueDate.hour == 0 &&
+        dueDate.minute == 0 &&
+        dueDate.second == 0 &&
+        dueDate.millisecond == 0;
+    final startTime = isAllDay
+        ? DateTime(dueDate.year, dueDate.month, dueDate.day)
+        : dueDate;
+    final endTime = isAllDay
+        ? startTime.add(const Duration(days: 1))
+        : startTime.add(
+            Duration(
+              minutes: task.estimatedMinutes.clamp(30, 180),
+            ),
+          );
+
+    return CalendarEventModel(
+      id: existing?.id ?? 'task_event_${task.id}',
+      title: task.title,
+      description: task.guideContent,
+      startTime: startTime,
+      endTime: endTime,
+      isAllDay: isAllDay,
+      colorValue: existing?.colorValue ?? 0xFF4CAF50,
+      reminderMinutes: existing?.reminderMinutes ?? const [15],
+      source: 'task',
+      sourceMetadata: {
+        'task_sync': true,
+        'task_status': task.status.name,
+        'estimated_minutes': task.estimatedMinutes,
+      },
+      taskId: task.id,
+      planId: task.planId,
+      isSynced: existing?.isSynced ?? false,
+      location: existing?.location,
+      createdAt: existing?.createdAt ?? DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
   }
 }
 

@@ -6,7 +6,7 @@ from typing import Any
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -101,7 +101,14 @@ class MemoryService:
             .with_for_update()  # 🔒 Acquires row-level lock until transaction ends
         )
         latest = result.scalar_one_or_none()
-        version = 1 if latest is None else latest.version + 1
+        version_result = await self.db.execute(
+            select(func.max(MemoryPreference.version)).where(
+                MemoryPreference.user_id == user_id,
+                MemoryPreference.pref_key == pref_key,
+            )
+        )
+        max_version = version_result.scalar_one_or_none() or 0
+        version = max_version + 1
 
         evidence_score = compute_score(normalized_refs, evidence_missing=False)
         record = MemoryPreference(

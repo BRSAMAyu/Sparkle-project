@@ -12,6 +12,7 @@ from sqlalchemy import select
 
 from app.models.task import Task
 from app.tools.base import BaseTool, ToolCategory, ToolContext
+from app.tools.plan_resolution import PlanResolutionError, resolve_user_plan_reference
 
 
 class QueryPlanTasksTool(BaseTool):
@@ -107,12 +108,19 @@ class QueryPlanTasksTool(BaseTool):
             }
 
         try:
-            plan_id = UUID(plan_id_str)
-        except ValueError:
+            plan_ref = await resolve_user_plan_reference(
+                context.db_session,
+                user_id=UUID(context.user_id),
+                plan_ref=plan_id_str,
+            )
+            plan_id = plan_ref.plan_id
+        except PlanResolutionError as exc:
             return {
                 "success": False,
-                "error": "Invalid plan_id format",
-                "tasks": []
+                "error": str(exc),
+                "suggestion": exc.suggestion,
+                "available_plans": exc.available_plan_names,
+                "tasks": [],
             }
 
         # 获取参数
@@ -192,7 +200,9 @@ class QueryPlanTasksTool(BaseTool):
 
         return {
             "success": True,
-            "plan_id": plan_id_str,
+            "plan_id": str(plan_id),
+            "plan_name": plan_ref.plan_name,
+            "resolved_via": plan_ref.resolution,
             "count": len(task_dicts),
             "tasks": task_dicts
         }

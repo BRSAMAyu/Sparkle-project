@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
+import 'package:sparkle/core/services/session_refresh_service.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/features/user/data/models/account_security_model.dart';
@@ -58,12 +59,23 @@ class AuthNotifier extends StateNotifier<AuthState> {
         try {
           // 有真实 token 时，强制关闭 isDemoMode，确保从后端读取真实数据
           DemoDataService.isDemoMode = false;
-          final user = await _authRepository.getCurrentUser();
+          var user = await _authRepository.getCurrentUser();
+          if (user.registrationSource == 'guest') {
+            try {
+              final guestId = await _ref.read(guestServiceProvider).getGuestId();
+              if (guestId == user.username) {
+                user = await _authRepository.guestLogin(guestId);
+              }
+            } catch (e) {
+              debugPrint('⚠️ Guest reseed refresh skipped: $e');
+            }
+          }
           state = state.copyWith(
             isLoading: false,
             isAuthenticated: true,
             user: user,
           );
+          SessionRefreshService.refreshSessionBoundProviders(_ref);
         } catch (e) {
           debugPrint('⚠️ Stored auth state invalid, clearing tokens: $e');
           await _authRepository.logout();
@@ -95,6 +107,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           .setBool(_demoGuestModePreferenceKey, false);
       final user = await _authRepository.login(usernameOrEmail, password);
       state = state.copyWith(isAuthenticated: true, user: user);
+      SessionRefreshService.refreshSessionBoundProviders(_ref);
     } catch (e) {
       state = state.copyWith(isAuthenticated: false, error: e.toString());
     } finally {
@@ -125,6 +138,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         avatarUrl: avatarUrl,
       );
       state = state.copyWith(isAuthenticated: true, user: user);
+      SessionRefreshService.refreshSessionBoundProviders(_ref);
     } catch (e) {
       state = state.copyWith(isAuthenticated: false, error: e.toString());
     } finally {
@@ -159,6 +173,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         agreedLocale: agreedLocale,
       );
       state = state.copyWith(isAuthenticated: true, user: user);
+      SessionRefreshService.refreshSessionBoundProviders(_ref);
     } catch (e) {
       state = state.copyWith(isAuthenticated: false, error: e.toString());
     } finally {
@@ -188,6 +203,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         isAuthenticated: true,
         user: user,
       );
+      SessionRefreshService.refreshSessionBoundProviders(_ref);
     } catch (e) {
       debugPrint('⚠️ Guest login failed: $e');
       state = state.copyWith(
@@ -433,6 +449,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           .read(sharedPreferencesProvider)
           .setBool(_demoGuestModePreferenceKey, false);
       state = state.copyWith(isAuthenticated: true, user: user);
+      SessionRefreshService.refreshSessionBoundProviders(_ref);
     } catch (e) {
       state = state.copyWith(error: e.toString());
       rethrow;
@@ -468,6 +485,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           .read(sharedPreferencesProvider)
           .setBool(_demoGuestModePreferenceKey, false);
       state = state.copyWith(isAuthenticated: true, user: user);
+      SessionRefreshService.refreshSessionBoundProviders(_ref);
     } catch (e) {
       state = state.copyWith(error: e.toString());
       rethrow;
@@ -483,6 +501,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         .setBool(_demoGuestModePreferenceKey, false);
     DemoDataService.isDemoMode = false;
     state = AuthState(); // Reset to initial state
+    SessionRefreshService.refreshSessionBoundProviders(_ref);
   }
 }
 

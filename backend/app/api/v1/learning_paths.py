@@ -4,6 +4,7 @@ Learning Paths API
 """
 from __future__ import annotations
 
+import asyncio
 from typing import Any, Union
 from uuid import UUID
 
@@ -106,7 +107,10 @@ async def _generate_plan_summary(
 ) -> tuple[str, bool]:
     try:
         workflow = TaskDecompositionWorkflow(None)
-        collaboration_result = await workflow.execute(user_query, enhanced_context)
+        collaboration_result = await asyncio.wait_for(
+            workflow.execute(user_query, enhanced_context),
+            timeout=45,
+        )
         plan_summary = (collaboration_result.final_response or "").strip()
         if plan_summary:
             return plan_summary, False

@@ -5,14 +5,16 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/motion.dart';
-import 'package:sparkle/core/design/widgets/custom_button.dart' show CustomButton, CustomButtonSize;
+import 'package:sparkle/core/design/widgets/custom_button.dart'
+    show CustomButton, CustomButtonSize;
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/focus_action_card.dart';
+import 'package:sparkle/features/community/presentation/widgets/share_resource_sheet.dart';
 import 'package:sparkle/features/plan/presentation/widgets/plan_card.dart';
 import 'package:sparkle/features/task/presentation/widgets/task_card.dart';
-import 'package:sparkle/shared/entities/task_model.dart';
+import 'package:sparkle/shared/utils/entity_card_payloads.dart';
 
 class ActionCard extends StatefulWidget {
   const ActionCard({
@@ -52,7 +54,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _detailsExpanded = !_isCollapsedByDefault(_resolveActionType(widget.action));
+    _detailsExpanded =
+        !_isCollapsedByDefault(_resolveActionType(widget.action));
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
@@ -114,6 +117,21 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     }
   }
 
+  Future<void> _shareResource({
+    required String resourceType,
+    required String resourceId,
+    required String title,
+    String? subtitle,
+  }) async {
+    await showShareResourceSheet(
+      context,
+      resourceType: resourceType,
+      resourceId: resourceId,
+      title: title,
+      subtitle: subtitle,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // focus_card 类型直接使用 FocusActionCard，支持自动启动
@@ -134,16 +152,10 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     if (widget.action.type == 'task_card') {
       try {
         final data = Map<String, dynamic>.from(widget.action.data);
-        // 补全默认值，防止后端数据缺失导致解析失败
-        data['user_id'] ??= 'current_user';
-        data['tags'] ??= <String>[];
-        data['difficulty'] ??= 1;
-        data['energy_cost'] ??= 1;
-        final now = DateTime.now().toIso8601String();
-        data['created_at'] ??= now;
-        data['updated_at'] ??= data['created_at'];
-
-        final task = TaskModel.fromJson(data);
+        final task = taskModelFromEntityPayload(data);
+        if (task == null) {
+          throw StateError('Unable to normalize task payload');
+        }
         final status = data['status']?.toString();
         final isAlreadyActive =
             status == 'IN_PROGRESS' || status == 'COMPLETED';
@@ -156,6 +168,39 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             TaskCard(
               task: task,
               onTap: () => context.push('/tasks/${task.id}'),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(
+                top: DS.spacing4,
+                left: DS.spacing8,
+                right: DS.spacing8,
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: SparkleButton.ghost(
+                      label: '查看任务',
+                      icon: const Icon(Icons.open_in_new_rounded),
+                      onPressed: () => unawaited(context.push('/tasks/${task.id}')),
+                    ),
+                  ),
+                  const SizedBox(width: DS.spacing8),
+                  Expanded(
+                    child: SparkleButton.ghost(
+                      label: '分享卡片',
+                      icon: const Icon(Icons.share_outlined),
+                      onPressed: () => unawaited(
+                        _shareResource(
+                          resourceType: 'task',
+                          resourceId: task.id,
+                          title: task.title,
+                          subtitle: task.guideContent,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
             if (!isAlreadyActive &&
                 canConfirm &&
@@ -171,9 +216,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                   label: _confirmingTasks ? '确认中...' : '确认任务',
                   onPressed: _confirmingTasks
                       ? null
-                      : () {
-                          _handleConfirmTasks(toolResultId);
-                        },
+                      : () => unawaited(_handleConfirmTasks(toolResultId)),
                 ),
               ),
           ],
@@ -189,12 +232,27 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     final confirmLabel = _getConfirmLabel(widget.action.type);
     final dismissLabel = _getDismissLabel(widget.action.type);
     final isCollapsible = _isCollapsedByDefault(resolvedType);
+    final supportsTapToggle = isCollapsible;
+    final isPressable = hasAction || supportsTapToggle;
+
+    void toggleDetails() {
+      setState(() {
+        _detailsExpanded = !_detailsExpanded;
+      });
+    }
 
     return GestureDetector(
-      onTapDown: hasAction ? (_) => _pressController.forward() : null,
-      onTapUp: hasAction ? (_) => _pressController.reverse() : null,
-      onTapCancel: hasAction ? () => _pressController.reverse() : null,
-      onTap: hasAction ? HapticFeedback.selectionClick : null,
+      onTapDown: isPressable ? (_) => _pressController.forward() : null,
+      onTapUp: isPressable ? (_) => _pressController.reverse() : null,
+      onTapCancel: isPressable ? () => _pressController.reverse() : null,
+      onTap: supportsTapToggle
+          ? () {
+              unawaited(HapticFeedback.selectionClick());
+              toggleDetails();
+            }
+          : hasAction
+              ? HapticFeedback.selectionClick
+              : null,
       child: SparkleMotion.pressScale(
         animation: _pressController,
         child: DecoratedBox(
@@ -287,8 +345,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                             ),
                           ),
                           const SizedBox(width: DS.spacing12),
-                      Expanded(
-                        child: Text(
+                          Expanded(
+                            child: Text(
                               _getTitleForAction(widget.action.type),
                               style: Theme.of(context)
                                   .textTheme
@@ -756,6 +814,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       case 'next_actions':
       case 'continuity_banner':
       case 'mode_explanation':
+      case 'execution_summary':
         return true;
       default:
         return false;
@@ -799,6 +858,10 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             action.data['description']?.toString() ??
             action.data['label']?.toString() ??
             l10n.viewDetails;
+      case 'execution_summary':
+        return action.data['summary']?.toString() ??
+            action.data['title']?.toString() ??
+            l10n.chatActionTitleExecutionSummary;
       default:
         return '';
     }
@@ -811,72 +874,111 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
 
     final toolResultId = action.data['tool_result_id']?.toString() ??
         action.data['id']?.toString();
-    final canConfirm =
-        toolResultId != null && toolResultId.trim().isNotEmpty;
+    final canConfirm = toolResultId != null && toolResultId.trim().isNotEmpty;
+    final planId = action.data['plan_id']?.toString();
+    final planTitle = action.data['plan_title']?.toString() ??
+        action.data['plan_name']?.toString();
+    final ragQuality = action.data['rag_quality']?.toString();
+
+    final taskItems = tasks.take(5).map((item) {
+      final task = Map<String, dynamic>.from(item as Map);
+      final taskId = task['id']?.toString();
+      final title = task['title']?.toString() ?? l10n.taskUntitled;
+      final taskModel = taskModelFromEntityPayload(task);
+
+      return Padding(
+        padding: const EdgeInsets.only(bottom: DS.spacing10),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (taskModel != null)
+              TaskCard(
+                task: taskModel,
+                compact: true,
+                onTap: taskId == null ? null : () => context.push('/tasks/$taskId'),
+              )
+            else
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(DS.spacing12),
+                decoration: BoxDecoration(
+                  color: DS.neutral100,
+                  borderRadius: DS.borderRadius12,
+                  border: Border.all(color: DS.neutral200),
+                ),
+                child: Text(title),
+              ),
+            if (taskId != null)
+              Padding(
+                padding: const EdgeInsets.only(
+                  top: DS.spacing4,
+                  left: DS.spacing8,
+                  right: DS.spacing8,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: SparkleButton.ghost(
+                        label: '打开',
+                        icon: const Icon(Icons.open_in_new_rounded),
+                        onPressed: () => unawaited(context.push('/tasks/$taskId')),
+                      ),
+                    ),
+                    const SizedBox(width: DS.spacing8),
+                    Expanded(
+                      child: SparkleButton.ghost(
+                        label: '分享',
+                        icon: const Icon(Icons.share_outlined),
+                        onPressed: () => unawaited(
+                          _shareResource(
+                            resourceType: 'task',
+                            resourceId: taskId,
+                            title: title,
+                            subtitle: taskModel?.guideContent,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      );
+    }).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        ...tasks.take(5).map((item) {
-          final task = item as Map<String, dynamic>;
-          final title = task['title']?.toString() ?? l10n.taskUntitled;
-          final minutes = task['estimated_minutes']?.toString() ?? '30';
-          final minutesValue = int.tryParse(minutes);
-          final minutesLabel =
-              minutesValue != null ? l10n.durationMinutes(minutesValue) : minutes;
-
-          return Padding(
-            padding: const EdgeInsets.only(bottom: DS.spacing8),
-            child: Container(
-              padding: const EdgeInsets.all(DS.spacing12),
-              decoration: BoxDecoration(
-                color: DS.neutral100,
-                borderRadius: DS.borderRadius12,
-                border: Border.all(color: DS.neutral200),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(DS.spacing4),
-                    decoration: BoxDecoration(
-                      color: DS.primaryBase.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.check_rounded,
-                      size: 16,
-                      color: DS.primaryBase,
-                    ),
-                  ),
-                  const SizedBox(width: DS.spacing12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          style:
-                              Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    fontWeight: DS.fontWeightSemibold,
-                                    color: DS.neutral900,
-                                  ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          minutesLabel,
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: DS.neutral600,
-                                  ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+        if (planTitle != null || ragQuality != null) ...[
+          Wrap(
+            spacing: DS.spacing8,
+            runSpacing: DS.spacing8,
+            children: [
+              if (planTitle != null)
+                _buildMetaChip(
+                  icon: Icons.flag_outlined,
+                  label: planTitle,
+                ),
+              if (ragQuality != null)
+                _buildMetaChip(
+                  icon: Icons.psychology_alt_outlined,
+                  label: '规划质量: $ragQuality',
+                ),
+            ],
+          ),
+          const SizedBox(height: DS.spacing12),
+        ],
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 420),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: taskItems,
             ),
-          );
-        }),
+          ),
+        ),
         if (tasks.length > 5)
           Padding(
             padding: const EdgeInsets.only(top: DS.spacing4),
@@ -888,9 +990,37 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                   ),
             ),
           ),
-        if (canConfirm &&
-            widget.onConfirmAllTasks != null &&
-            !_confirmedTasks)
+        if (planId != null)
+          Padding(
+            padding: const EdgeInsets.only(top: DS.spacing8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: SparkleButton.ghost(
+                    label: '查看计划',
+                    icon: const Icon(Icons.map_outlined),
+                    onPressed: () => unawaited(context.push('/plans/$planId')),
+                  ),
+                ),
+                const SizedBox(width: DS.spacing8),
+                Expanded(
+                  child: SparkleButton.ghost(
+                    label: '分享计划',
+                    icon: const Icon(Icons.share_outlined),
+                    onPressed: () => unawaited(
+                      _shareResource(
+                        resourceType: 'plan',
+                        resourceId: planId,
+                        title: planTitle ?? '学习计划',
+                        subtitle: '由 AI 生成的任务计划',
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        if (canConfirm && widget.onConfirmAllTasks != null && !_confirmedTasks)
           Padding(
             padding: const EdgeInsets.only(top: DS.spacing12),
             child: SparkleButton(
@@ -898,9 +1028,22 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
               icon: const Icon(Icons.check_circle_outline),
               onPressed: _confirmingTasks
                   ? null
-                  : () {
-                      _handleConfirmAllTasks(toolResultId);
-                    },
+                  : () => unawaited(_handleConfirmAllTasks(toolResultId)),
+            ),
+          ),
+        if ((!canConfirm || widget.onConfirmAllTasks == null) &&
+            widget.onConfirm != null)
+          Padding(
+            padding: const EdgeInsets.only(top: DS.spacing12),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: CustomButton.primary(
+                text: _getConfirmLabel(action.type),
+                icon: Icons.check_rounded,
+                onPressed: widget.onConfirm,
+                size: CustomButtonSize.small,
+                customGradient: _getActionGradientFor(action),
+              ),
             ),
           ),
       ],
@@ -914,26 +1057,60 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        PlanCard(data: action.data),
-        if (planId != null)
-          Padding(
-            padding: const EdgeInsets.only(
-              top: DS.spacing4,
-              left: DS.spacing8,
-              right: DS.spacing8,
-            ),
-            child: TextButton.icon(
-              icon: const Icon(Icons.arrow_forward),
-              label: const Text('查看计划详情'),
-              onPressed: () {
-                context.push('/plans/$planId');
-                widget.onPlanNavigation?.call(planId);
-              },
-            ),
-          ),
+        PlanCard(
+          data: action.data,
+          onTap: planId == null
+              ? null
+              : () {
+                  unawaited(context.push('/plans/$planId'));
+                  widget.onPlanNavigation?.call(planId);
+                },
+          onShare: planId == null
+              ? null
+              : () => unawaited(
+                    _shareResource(
+                      resourceType: 'plan',
+                      resourceId: planId,
+                      title: action.data['title']?.toString() ??
+                          action.data['name']?.toString() ??
+                          '学习计划',
+                      subtitle: action.data['description']?.toString(),
+                    ),
+                  ),
+        ),
       ],
     );
   }
+
+  Widget _buildMetaChip({
+    required IconData icon,
+    required String label,
+  }) =>
+      Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing10,
+          vertical: DS.spacing6,
+        ),
+        decoration: BoxDecoration(
+          color: DS.neutral100,
+          borderRadius: DS.borderRadius12,
+          border: Border.all(color: DS.neutral200),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: DS.iconSizeXs, color: DS.textSecondary),
+            const SizedBox(width: DS.spacing4),
+            Text(
+              label,
+              style: TextStyle(
+                color: DS.textSecondary,
+                fontSize: DS.fontSizeXs,
+              ),
+            ),
+          ],
+        ),
+      );
 
   Widget _buildNightlyReviewContent(
     BuildContext context,
@@ -1232,7 +1409,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       bool secondary = false,
     }) {
       final label = item['label']?.toString() ?? '';
-      final style = item['style']?.toString() ?? (secondary ? 'secondary' : 'primary');
+      final style =
+          item['style']?.toString() ?? (secondary ? 'secondary' : 'primary');
       final isPrimary = style == 'primary' && !secondary;
       final isGhost = style == 'ghost';
       final backgroundColor = isPrimary
@@ -1345,8 +1523,10 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     final insightText = action.data['insight_text']?.toString() ?? '';
     final evidenceSummary = action.data['evidence_summary']?.toString() ?? '';
     final weeklySummary = action.data['weekly_summary']?.toString() ?? '';
-    final oneKeyAdjustment = action.data['one_key_adjustment']?.toString() ?? '';
-    final comparisonHighlight = action.data['comparison_highlight']?.toString() ?? '';
+    final oneKeyAdjustment =
+        action.data['one_key_adjustment']?.toString() ?? '';
+    final comparisonHighlight =
+        action.data['comparison_highlight']?.toString() ?? '';
     final periodRange = action.data['period_range']?.toString() ?? '';
     final reasoningSummary = action.data['reasoning_summary']?.toString() ?? '';
     final alignmentSummary = action.data['alignment_summary']?.toString() ?? '';
@@ -1498,7 +1678,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
               l10n.chatEvolutionNextWeekPlan(oneKeyAdjustment),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DS.neutral700,
-              ),
+                  ),
             ),
           ],
           if (evidenceSummary.isNotEmpty) ...[
@@ -1534,7 +1714,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             ),
           ],
         ],
-        if (evolutionKind == 'progress_comparison' && comparison.isNotEmpty) ...[
+        if (evolutionKind == 'progress_comparison' &&
+            comparison.isNotEmpty) ...[
           const SizedBox(height: DS.spacing12),
           Text(
             comparison['delta_text']?.toString() ?? '',
@@ -1570,7 +1751,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             ),
           ],
         ],
-        if ((evolutionKind == 'plan_reasoning' || reasoningSummary.isNotEmpty) &&
+        if ((evolutionKind == 'plan_reasoning' ||
+                reasoningSummary.isNotEmpty) &&
             reasoningSummary.isNotEmpty) ...[
           const SizedBox(height: DS.spacing12),
           Text(
@@ -1578,7 +1760,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: DS.neutral900,
                   fontWeight: DS.fontWeightSemibold,
-              ),
+                ),
           ),
         ],
         if (alignmentSummary.isNotEmpty) ...[
@@ -1619,11 +1801,15 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                     fontWeight: DS.fontWeightSemibold,
                   ),
             ),
-            children: reasoningDetails.map((detail) => buildDetailBlock({
-                'what_changed': detail['label'],
-                'why': detail['evidence'],
-                'expected_effect': detail['impact'],
-              }),).toList(),
+            children: reasoningDetails
+                .map(
+                  (detail) => buildDetailBlock({
+                    'what_changed': detail['label'],
+                    'why': detail['evidence'],
+                    'expected_effect': detail['impact'],
+                  }),
+                )
+                .toList(),
           ),
         ],
         if (recommendedAction != null) ...[
@@ -1668,14 +1854,13 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         .map((e) => '$e')
         .where((e) => e.isNotEmpty)
         .toList();
-    final streakInfo =
-        (action.data['streak_info'] as Map<dynamic, dynamic>? ?? const <dynamic, dynamic>{})
-            .map<String, dynamic>((key, value) => MapEntry('$key', value));
-    final comparisons =
-        (action.data['comparisons'] as Map<dynamic, dynamic>? ?? const <dynamic, dynamic>{})
-            .map<String, dynamic>((key, value) => MapEntry('$key', value));
-    final currentStreak =
-        (streakInfo['current_streak'] as num?)?.toInt() ?? 0;
+    final streakInfo = (action.data['streak_info'] as Map<dynamic, dynamic>? ??
+            const <dynamic, dynamic>{})
+        .map<String, dynamic>((key, value) => MapEntry('$key', value));
+    final comparisons = (action.data['comparisons'] as Map<dynamic, dynamic>? ??
+            const <dynamic, dynamic>{})
+        .map<String, dynamic>((key, value) => MapEntry('$key', value));
+    final currentStreak = (streakInfo['current_streak'] as num?)?.toInt() ?? 0;
     final maxStreak = (streakInfo['max_streak'] as num?)?.toInt() ?? 0;
 
     return Column(
@@ -1717,7 +1902,9 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             ),
             children: comparisons.entries.map((entry) {
               final value = entry.value is Map<dynamic, dynamic>
-                  ? Map<String, dynamic>.from(entry.value as Map<dynamic, dynamic>)
+                  ? Map<String, dynamic>.from(
+                      entry.value as Map<dynamic, dynamic>,
+                    )
                   : const <String, dynamic>{};
               final currentValue = value['current']?.toString() ?? '-';
               final previousValue = value['previous']?.toString() ?? '-';
@@ -1880,7 +2067,14 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     final reason = action.data['reason']?.toString() ?? '';
     final recoveryMessage = action.data['recovery_message']?.toString() ?? '';
     final retryOptions = (action.data['retry_options'] as List<dynamic>? ?? [])
-        .map((e) => e is Map ? Map<String, dynamic>.from(e) : {'label': '$e', 'type': 'prompt', 'payload': {'prompt': '$e'}})
+        .map((e) => e is Map
+            ? Map<String, dynamic>.from(e)
+            : {
+                'label': '$e',
+                'type': 'prompt',
+                'payload': {'prompt': '$e'},
+              },
+        )
         .where((e) => (e['label']?.toString() ?? '').isNotEmpty)
         .toList();
 
@@ -1918,48 +2112,46 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
           Wrap(
             spacing: DS.spacing8,
             runSpacing: DS.spacing8,
-            children: retryOptions
-                .map(
-                  (item) {
-                    final nestedPayload = item['payload'];
-                    final actionPayload = nestedPayload is Map
-                        ? <String, dynamic>{
-                            ...Map<String, dynamic>.from(nestedPayload),
-                            'label': item['label'],
-                            'type': item['type'],
-                          }
-                        : item;
+            children: retryOptions.map(
+              (item) {
+                final nestedPayload = item['payload'];
+                final actionPayload = nestedPayload is Map
+                    ? <String, dynamic>{
+                        ...Map<String, dynamic>.from(nestedPayload),
+                        'label': item['label'],
+                        'type': item['type'],
+                      }
+                    : item;
 
-                    return InkWell(
-                      onTap: () => unawaited(
-                        widget.onWidgetAction?.call(
-                          item['type']?.toString() ?? 'prompt',
-                          actionPayload,
-                        ),
-                      ),
-                    borderRadius: DS.borderRadius20,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: DS.spacing12,
-                        vertical: DS.spacing8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: DS.surfaceTertiary,
-                        borderRadius: DS.borderRadius20,
-                        border: Border.all(color: DS.neutral200),
-                      ),
-                      child: Text(
-                        item['label']?.toString() ?? '',
-                        style: TextStyle(
-                          color: DS.neutral700,
-                          fontWeight: DS.fontWeightSemibold,
-                        ),
+                return InkWell(
+                  onTap: () => unawaited(
+                    widget.onWidgetAction?.call(
+                      item['type']?.toString() ?? 'prompt',
+                      actionPayload,
+                    ),
+                  ),
+                  borderRadius: DS.borderRadius20,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: DS.spacing12,
+                      vertical: DS.spacing8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: DS.surfaceTertiary,
+                      borderRadius: DS.borderRadius20,
+                      border: Border.all(color: DS.neutral200),
+                    ),
+                    child: Text(
+                      item['label']?.toString() ?? '',
+                      style: TextStyle(
+                        color: DS.neutral700,
+                        fontWeight: DS.fontWeightSemibold,
                       ),
                     ),
-                  );
-                  },
-                )
-                .toList(),
+                  ),
+                );
+              },
+            ).toList(),
           ),
         ],
       ],

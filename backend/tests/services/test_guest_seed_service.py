@@ -180,3 +180,34 @@ async def test_guest_seed_populates_full_demo_state(db_session):
     assert plan_share_messages >= 2
     assert forwarded_group_messages >= 1
     assert forwarded_private_messages >= 1
+
+
+@pytest.mark.asyncio
+async def test_guest_seed_can_reseed_existing_guest_with_chat_history(db_session):
+    guest = User(
+        username="guest_seed_repeat",
+        email="guest_seed_repeat@guest.local",
+        hashed_password="hashed",
+        password_login_enabled=False,
+        nickname="访客",
+        registration_source="guest",
+        is_active=True,
+    )
+    db_session.add(guest)
+    await db_session.flush()
+
+    await seed_guest_user_data(db_session, guest)
+    await db_session.commit()
+
+    await seed_guest_user_data(db_session, guest)
+    await db_session.commit()
+
+    notification_count = await db_session.scalar(
+        select(func.count(Notification.id)).where(Notification.user_id == guest.id)
+    )
+    intervention_count = await db_session.scalar(
+        select(func.count(InterventionRequest.id)).where(InterventionRequest.user_id == guest.id)
+    )
+
+    assert notification_count >= 4
+    assert intervention_count >= 2
