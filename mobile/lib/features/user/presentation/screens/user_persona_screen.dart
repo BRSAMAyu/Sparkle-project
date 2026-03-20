@@ -40,7 +40,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final profileAsync = ref.watch(transparentProfileProvider);
-    ref.watch(profileContextProvider);
+    final profileContextAsync = ref.watch(profileContextProvider);
     final inferredAsync = ref.watch(inferredPreferencesProvider);
     final policiesAsync = ref.watch(activePoliciesProvider);
     final onboardingCompleted = ref.watch(onboardingCompletedProvider);
@@ -53,6 +53,13 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
       role: SparklePageRole.settings,
       appBar: AppBar(
         title: Text(l10n.personaMyProfile),
+        actions: [
+          IconButton(
+            tooltip: '刷新画像',
+            onPressed: () => unawaited(_refreshPersona(ref)),
+            icon: const Icon(Icons.refresh_rounded),
+          ),
+        ],
       ),
       child: profileAsync.when(
         data: (data) => _buildContent(
@@ -61,11 +68,9 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
           l10n,
           data,
           onboardingCompleted,
-          inferredItems,
-          policiesAsync.maybeWhen(
-            data: (items) => items,
-            orElse: () => const <Map<String, dynamic>>[],
-          ),
+          profileContextAsync,
+          inferredAsync,
+          policiesAsync,
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(
@@ -81,8 +86,9 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
     AppLocalizations l10n,
     Map<String, dynamic> data,
     bool completed,
-    List<Map<String, dynamic>> inferredPreferences,
-    List<Map<String, dynamic>> activePolicies,
+    AsyncValue<Map<String, dynamic>> profileContextAsync,
+    AsyncValue<List<Map<String, dynamic>>> inferredPreferencesAsync,
+    AsyncValue<List<Map<String, dynamic>>> activePoliciesAsync,
   ) {
     final layer1 = data['layer_1'] as Map<String, dynamic>? ?? {};
     final layer2 = data['layer_2'] as Map<String, dynamic>? ?? {};
@@ -97,97 +103,308 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
     final fragments = _normalizeEntries(layer3['fragments']);
 
     return ContentConstraint(
-      child: ListView(
-        controller: _scrollController,
-        padding: const EdgeInsets.all(DS.spacing16),
-        children: [
-          _buildOnboardingBanner(context, l10n, completed),
-          _sectionTitle(l10n.personaL1Title),
-          _subSectionList(
-            l10n.personaPreferences,
-            preferences
-                .map((item) => _preferenceRow(ref, context, l10n, item))
-                .toList(),
-            l10n,
-          ),
-          _subSectionList(
-            l10n.personaGoals,
-            goals.map((item) => _goalRow(ref, context, l10n, item)).toList(),
-            l10n,
-          ),
-          const SizedBox(height: DS.spacing24),
-          _sectionTitle('System Inference'),
-          _subSectionList(
-            'Inferred Preferences',
-            inferredPreferences
-                .map((item) => _inferredPreferenceRow(ref, context, l10n, item))
-                .toList(),
-            l10n,
-          ),
-          _subSectionList(
-            'Active Policies',
-            activePolicies
-                .map((item) => _policyRow(l10n, item))
-                .toList(),
-            l10n,
-          ),
-          const SizedBox(height: DS.spacing24),
-          _sectionTitle(l10n.personaL2Title),
-          _subSectionList(
-            l10n.personaTags,
-            tags
-                .map(
-                  (item) => _suggestableRow(
-                    ref,
-                    context,
-                    l10n: l10n,
-                    label: item['value']?.toString() ?? '',
-                    metadata: item['metadata'] as Map<String, dynamic>? ?? {},
-                    targetType: 'persona_tag',
-                  ),
-                )
-                .toList(),
-            l10n,
-          ),
-          _subSectionList(
-            l10n.personaCapabilities,
-            capabilities
-                .map(
-                  (item) => _suggestableRow(
-                    ref,
-                    context,
-                    l10n: l10n,
-                    label: '${item['key']}: ${item['value']}',
-                    metadata: item['metadata'] as Map<String, dynamic>? ?? {},
-                    targetType: 'persona_capability',
-                    fieldName: item['key']?.toString(),
-                  ),
-                )
-                .toList(),
-            l10n,
-          ),
-          const SizedBox(height: DS.spacing24),
-          _sectionTitle(l10n.personaL3Title),
-          Padding(
-            padding: const EdgeInsets.only(bottom: DS.spacing8),
-            child: Text(
-              l10n.personaL3Hint,
-              style: TextStyle(color: DS.neutral500, fontSize: DS.fontSizeSm),
+      child: RefreshIndicator(
+        onRefresh: () => _refreshPersona(ref),
+        child: ListView(
+          controller: _scrollController,
+          padding: const EdgeInsets.all(DS.spacing16),
+          children: [
+            _buildOnboardingBanner(context, l10n, completed),
+            _buildQuickAccessCard(context),
+            const SizedBox(height: DS.spacing16),
+            _buildAsyncSection(
+              ref,
+              context,
+              title: 'Context Snapshot',
+              asyncValue: profileContextAsync,
+              builder: (data) => _buildContextSummaryRows(l10n, data),
+              onRetry: () => ref.invalidate(profileContextProvider),
             ),
-          ),
-          _subSectionList(
-            l10n.personaPatterns,
-            patterns.map((item) => _readonlyRow(l10n, item)).toList(),
-            l10n,
-          ),
-          _subSectionList(
-            l10n.personaFragments,
-            fragments.map((item) => _readonlyRow(l10n, item)).toList(),
-            l10n,
-          ),
-        ],
+            const SizedBox(height: DS.spacing24),
+            _sectionTitle(l10n.personaL1Title),
+            _subSectionList(
+              l10n.personaPreferences,
+              preferences
+                  .map((item) => _preferenceRow(ref, context, l10n, item))
+                  .toList(),
+              l10n,
+            ),
+            _subSectionList(
+              l10n.personaGoals,
+              goals.map((item) => _goalRow(ref, context, l10n, item)).toList(),
+              l10n,
+            ),
+            const SizedBox(height: DS.spacing24),
+            _sectionTitle('System Inference'),
+            _buildAsyncSection(
+              ref,
+              context,
+              title: 'Inferred Preferences',
+              asyncValue: inferredPreferencesAsync,
+              builder: (items) => items
+                  .map((item) =>
+                      _inferredPreferenceRow(ref, context, l10n, item))
+                  .toList(),
+              onRetry: () => ref.invalidate(inferredPreferencesProvider),
+            ),
+            _buildAsyncSection(
+              ref,
+              context,
+              title: 'Active Policies',
+              asyncValue: activePoliciesAsync,
+              builder: (items) =>
+                  items.map((item) => _policyRow(l10n, item)).toList(),
+              onRetry: () => ref.invalidate(activePoliciesProvider),
+            ),
+            const SizedBox(height: DS.spacing24),
+            _sectionTitle(l10n.personaL2Title),
+            _subSectionList(
+              l10n.personaTags,
+              tags
+                  .map(
+                    (item) => _suggestableRow(
+                      ref,
+                      context,
+                      l10n: l10n,
+                      label: item['value']?.toString() ?? '',
+                      metadata: item['metadata'] as Map<String, dynamic>? ?? {},
+                      targetType: 'persona_tag',
+                    ),
+                  )
+                  .toList(),
+              l10n,
+            ),
+            _subSectionList(
+              l10n.personaCapabilities,
+              capabilities
+                  .map(
+                    (item) => _suggestableRow(
+                      ref,
+                      context,
+                      l10n: l10n,
+                      label: '${item['key']}: ${item['value']}',
+                      metadata: item['metadata'] as Map<String, dynamic>? ?? {},
+                      targetType: 'persona_capability',
+                      fieldName: item['key']?.toString(),
+                    ),
+                  )
+                  .toList(),
+              l10n,
+            ),
+            const SizedBox(height: DS.spacing24),
+            _sectionTitle(l10n.personaL3Title),
+            Padding(
+              padding: const EdgeInsets.only(bottom: DS.spacing8),
+              child: Text(
+                l10n.personaL3Hint,
+                style: TextStyle(color: DS.neutral500, fontSize: DS.fontSizeSm),
+              ),
+            ),
+            _subSectionList(
+              l10n.personaPatterns,
+              patterns.map((item) => _readonlyRow(l10n, item)).toList(),
+              l10n,
+            ),
+            _subSectionList(
+              l10n.personaFragments,
+              fragments.map((item) => _readonlyRow(l10n, item)).toList(),
+              l10n,
+            ),
+          ],
+        ),
       ),
     );
+  }
+
+  Widget _buildQuickAccessCard(BuildContext context) => GraphiteCardSurface(
+        surfaceRole: SparkleSurfaceRole.panel,
+        padding: const EdgeInsets.all(DS.spacing12),
+        child: Wrap(
+          spacing: DS.spacing8,
+          runSpacing: DS.spacing8,
+          children: [
+            SparkleButton.ghost(
+              onPressed: () => context.push(UserRoutes.systemUpdates),
+              label: '系统更新',
+            ),
+            SparkleButton.ghost(
+              onPressed: () => context.push(MemoryRoutes.settings),
+              label: '记忆设置',
+            ),
+          ],
+        ),
+      );
+
+  Widget _buildAsyncSection<T>(
+    WidgetRef ref,
+    BuildContext context, {
+    required String title,
+    required AsyncValue<T> asyncValue,
+    required List<Widget> Function(T data) builder,
+    required VoidCallback onRetry,
+  }) {
+    final l10n = context.l10n;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: DS.spacing16),
+      child: GraphiteCardSurface(
+        surfaceRole: SparkleSurfaceRole.card,
+        padding: const EdgeInsets.all(DS.spacing12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      fontWeight: DS.fontWeightSemibold,
+                      color: DS.textSecondary,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: '刷新',
+                  onPressed: onRetry,
+                  icon: const Icon(Icons.refresh_rounded, size: 18),
+                ),
+              ],
+            ),
+            const SizedBox(height: DS.spacing8),
+            ...asyncValue.when(
+              data: (data) {
+                final rows = builder(data);
+                if (rows.isEmpty) {
+                  return [
+                    Text(
+                      l10n.personaNoData,
+                      style: TextStyle(color: DS.neutral500),
+                    ),
+                  ];
+                }
+                return rows;
+              },
+              loading: () => [
+                Row(
+                  children: [
+                    const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    const SizedBox(width: DS.spacing8),
+                    Text(
+                      '加载中…',
+                      style: TextStyle(color: DS.neutral500),
+                    ),
+                  ],
+                ),
+              ],
+              error: (error, stack) => [
+                Text(
+                  '加载失败：${_friendlyError(error)}',
+                  style: TextStyle(color: DS.error),
+                ),
+                const SizedBox(height: DS.spacing8),
+                SparkleButton.ghost(
+                  onPressed: onRetry,
+                  label: '重试',
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildContextSummaryRows(
+    AppLocalizations l10n,
+    Map<String, dynamic> contextData,
+  ) {
+    final preferences =
+        contextData['preferences'] as Map<String, dynamic>? ?? {};
+    final preferenceVersion = contextData['preference_version'];
+    final knowledgeSummary =
+        contextData['knowledge_summary'] as Map<String, dynamic>? ?? {};
+    final cognitiveSummary =
+        contextData['cognitive_summary'] as Map<String, dynamic>? ?? {};
+
+    final rows = <Widget>[
+      _metadataRow(
+        l10n,
+        'Preference Version: ${preferenceVersion ?? 0}',
+        const <String, dynamic>{
+          'level': 'readonly',
+          'reason': '当前显式偏好与画像上下文版本。',
+        },
+      ),
+    ];
+
+    if (preferences.isNotEmpty) {
+      rows.add(
+        _metadataRow(
+          l10n,
+          'Active Preferences: ${preferences.entries.map((entry) => '${entry.key}=${entry.value}').join(', ')}',
+          const <String, dynamic>{
+            'level': 'readonly',
+            'reason': '当前用于 AI 与系统联动的显式偏好。',
+          },
+        ),
+      );
+    }
+
+    final overallMastery = knowledgeSummary['overall_mastery'];
+    final weakSpots =
+        (knowledgeSummary['weak_spots'] as List<dynamic>? ?? const [])
+            .map((item) => item.toString())
+            .where((item) => item.isNotEmpty)
+            .toList();
+    final activeSubjects =
+        (knowledgeSummary['active_learning_subjects'] as List<dynamic>? ??
+                const [])
+            .map((item) => item.toString())
+            .where((item) => item.isNotEmpty)
+            .toList();
+    rows.add(
+      _metadataRow(
+        l10n,
+        'Knowledge Summary: mastery=${overallMastery ?? '-'}'
+        '${weakSpots.isNotEmpty ? ', weak=${weakSpots.join(' / ')}' : ''}'
+        '${activeSubjects.isNotEmpty ? ', active=${activeSubjects.join(' / ')}' : ''}',
+        const <String, dynamic>{
+          'level': 'readonly',
+          'reason': '知识掌握度与当前活跃学习主题摘要。',
+        },
+      ),
+    );
+
+    final dominantPattern =
+        cognitiveSummary['dominant_pattern_type']?.toString();
+    final activePatterns =
+        (cognitiveSummary['active_patterns'] as List<dynamic>? ?? const [])
+            .map((item) => item.toString())
+            .where((item) => item.isNotEmpty)
+            .toList();
+    final riskSignals =
+        (cognitiveSummary['risk_signals'] as List<dynamic>? ?? const [])
+            .map((item) => item.toString())
+            .where((item) => item.isNotEmpty)
+            .toList();
+    rows.add(
+      _metadataRow(
+        l10n,
+        'Cognitive Summary: dominant=${dominantPattern ?? '-'}'
+        '${activePatterns.isNotEmpty ? ', patterns=${activePatterns.join(' / ')}' : ''}'
+        '${riskSignals.isNotEmpty ? ', risks=${riskSignals.join(' / ')}' : ''}',
+        const <String, dynamic>{
+          'level': 'readonly',
+          'reason': '当前认知模式与风险信号摘要。',
+        },
+      ),
+    );
+
+    return rows;
   }
 
   Widget _inferredPreferenceRow(
@@ -204,51 +421,58 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
     final overridden = item['overridden'] == true;
     final metadata = <String, dynamic>{
       'level': adjustable ? 'editable' : 'readonly',
-      'reason': explanation.isNotEmpty ? explanation : 'Inferred from recent behavior.',
+      'reason': explanation.isNotEmpty
+          ? explanation
+          : 'Inferred from recent behavior.',
       'confidence': null,
     };
+    final actions = <Widget>[
+      SparkleButton.ghost(
+        onPressed: () => context.push(
+          MemoryRoutes.detail,
+          extra: MemoryDetailArgs.preferenceKey(key),
+        ),
+        label: 'History',
+      ),
+      if (adjustable)
+        SparkleButton.ghost(
+          onPressed: () => _openOverrideInferredDialog(
+            ref,
+            context,
+            key,
+            value,
+          ),
+          label: overridden ? 'Update' : 'Adjust',
+        ),
+      if (overridden)
+        SparkleButton.ghost(
+          onPressed: () => _resetOverride(ref, context, key),
+          label: 'Reset',
+        ),
+    ];
     return KeyedSubtree(
       key: _itemKeyFor(key),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: _metadataRow(
-              l10n,
-              '$key: ${_formatValue(value)} (${overridden ? 'override' : source})',
-              metadata,
-            ),
+          _metadataRow(
+            l10n,
+            '$key: ${_formatValue(value)} (${overridden ? 'override' : source})',
+            metadata,
           ),
-          const SizedBox(width: DS.spacing8),
-          SizedBox(
-            width: 88,
-            child: Wrap(
-              alignment: WrapAlignment.end,
-              runSpacing: DS.spacing8,
-              children: [
-                SparkleButton.ghost(
-                  onPressed: () => context.push(
-                    MemoryRoutes.detail,
-                    extra: MemoryDetailArgs.preferenceKey(key),
-                  ),
-                  label: 'History',
-                ),
-                if (adjustable)
-                  SparkleButton.ghost(
-                    onPressed: () => _openOverrideInferredDialog(
-                      ref,
-                      context,
-                      key,
-                      value,
-                    ),
-                    label: overridden ? 'Update' : 'Adjust',
-                  ),
-                if (overridden)
-                  SparkleButton.ghost(
-                    onPressed: () => _resetOverride(ref, context, key),
-                    label: 'Reset',
-                  ),
-              ],
+          Padding(
+            padding: const EdgeInsets.only(
+              left: DS.spacing16,
+              bottom: DS.spacing8,
+            ),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Wrap(
+                spacing: DS.spacing8,
+                runSpacing: DS.spacing8,
+                alignment: WrapAlignment.end,
+                children: actions,
+              ),
             ),
           ),
         ],
@@ -295,7 +519,8 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
       if (matchedItem == null) {
         return;
       }
-      await _openOverrideInferredDialog(ref, context, key, matchedItem['value']);
+      await _openOverrideInferredDialog(
+          ref, context, key, matchedItem['value']);
     });
   }
 
@@ -316,7 +541,8 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
     );
   }
 
-  Widget _buildOnboardingBanner(BuildContext context, AppLocalizations l10n, bool completed) =>
+  Widget _buildOnboardingBanner(
+          BuildContext context, AppLocalizations l10n, bool completed) =>
       Padding(
         padding: const EdgeInsets.only(bottom: DS.spacing16),
         child: GraphiteCardSurface(
@@ -361,7 +587,9 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
         ),
       );
 
-  Widget _subSectionList(String title, List<Widget> items, AppLocalizations l10n) => Padding(
+  Widget _subSectionList(
+          String title, List<Widget> items, AppLocalizations l10n) =>
+      Padding(
         padding: const EdgeInsets.only(bottom: DS.spacing16),
         child: GraphiteCardSurface(
           surfaceRole: SparkleSurfaceRole.card,
@@ -400,22 +628,38 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
     final meta = item['metadata'] as Map<String, dynamic>? ?? {};
     final canRollback = item['can_rollback'] == true;
     final canEdit = meta['level']?.toString() == 'editable';
-    return Row(
+    final actions = <Widget>[
+      if (canEdit)
+        SparkleButton.ghost(
+          onPressed: () =>
+              _openEditPreferenceDialog(ref, context, l10n, key, value),
+          label: l10n.personaEdit,
+        ),
+      if (canRollback)
+        SparkleButton.ghost(
+          onPressed: () => _confirmRollback(ref, context, l10n, key),
+          label: l10n.personaRollback,
+        ),
+    ];
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: _metadataRow(l10n, '$key: ${_formatValue(value)}', meta),
-        ),
-        if (canEdit)
-          SparkleButton.ghost(
-            onPressed: () =>
-                _openEditPreferenceDialog(ref, context, l10n, key, value),
-            label: l10n.personaEdit,
-          ),
-        if (canRollback)
-          SparkleButton.ghost(
-            onPressed: () => _confirmRollback(ref, context, l10n, key),
-            label: l10n.personaRollback,
+        _metadataRow(l10n, '$key: ${_formatValue(value)}', meta),
+        if (actions.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(
+              left: DS.spacing16,
+              bottom: DS.spacing8,
+            ),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Wrap(
+                spacing: DS.spacing8,
+                runSpacing: DS.spacing8,
+                alignment: WrapAlignment.end,
+                children: actions,
+              ),
+            ),
           ),
       ],
     );
@@ -427,22 +671,36 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
     AppLocalizations l10n,
     Map<String, dynamic> item,
   ) {
-    final title =
-        item['title']?.toString() ?? item['value']?.toString() ?? l10n.personaGoals;
+    final title = item['title']?.toString() ??
+        item['value']?.toString() ??
+        l10n.personaGoals;
     final status = item['status']?.toString() ?? 'unknown';
     final meta = item['metadata'] as Map<String, dynamic>? ?? {};
     final goalId = item['id']?.toString();
-    return Row(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: _metadataRow(l10n, '$title ($status)', meta),
-        ),
+        _metadataRow(l10n, '$title ($status)', meta),
         if (goalId != null)
-          SparkleButton.ghost(
-            onPressed: () =>
-                _openEditGoalDialog(ref, context, l10n, goalId, title, status),
-            label: l10n.personaEdit,
+          Padding(
+            padding: const EdgeInsets.only(
+              left: DS.spacing16,
+              bottom: DS.spacing8,
+            ),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: SparkleButton.ghost(
+                onPressed: () => _openEditGoalDialog(
+                  ref,
+                  context,
+                  l10n,
+                  goalId,
+                  title,
+                  status,
+                ),
+                label: l10n.personaEdit,
+              ),
+            ),
           ),
       ],
     );
@@ -490,7 +748,8 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
     );
   }
 
-  Widget _metadataRow(AppLocalizations l10n, String label, Map<String, dynamic> metadata) {
+  Widget _metadataRow(
+      AppLocalizations l10n, String label, Map<String, dynamic> metadata) {
     final reason = metadata['reason']?.toString() ?? '';
     final level = metadata['level']?.toString() ?? 'readonly';
     final confidence = metadata['confidence'];
@@ -625,17 +884,23 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
           ),
           SparkleButton(
             onPressed: () async {
-              await repo.submitProfileCorrection({
-                'target_type': targetType,
-                'field_name': fieldName,
-                'suggested_value': controller.text.trim(),
-                'reason': reasonController.text.trim(),
-              });
-              if (context.mounted) {
-                AppFeedback.success(context, l10n.personaCorrectionSubmitted);
-              }
-              if (context.mounted) {
-                Navigator.of(context).pop();
+              try {
+                await repo.submitProfileCorrection({
+                  'target_type': targetType,
+                  'field_name': fieldName,
+                  'suggested_value': controller.text.trim(),
+                  'reason': reasonController.text.trim(),
+                });
+                if (context.mounted) {
+                  AppFeedback.success(context, l10n.personaCorrectionSubmitted);
+                }
+                if (context.mounted) {
+                  Navigator.of(context).pop();
+                }
+              } catch (error) {
+                if (context.mounted) {
+                  AppFeedback.error(context, '提交修正失败：${_friendlyError(error)}');
+                }
               }
             },
             label: l10n.confirm,
@@ -665,7 +930,8 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
             const SizedBox(height: DS.spacing12),
             TextField(
               controller: controller,
-              decoration: InputDecoration(labelText: l10n.personaNewPreferenceValue),
+              decoration:
+                  InputDecoration(labelText: l10n.personaNewPreferenceValue),
             ),
           ],
         ),
@@ -683,16 +949,23 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
                 }
                 return;
               }
-              await repo.updateTransparentPreference(
-                prefKey: prefKey,
-                value: nextValue,
-              );
-              ref.invalidate(transparentProfileProvider);
-              ref.invalidate(profileContextProvider);
-              ref.invalidate(inferredPreferencesProvider);
-              ref.invalidate(activePoliciesProvider);
-              if (context.mounted) {
-                Navigator.of(context).pop();
+              try {
+                await repo.updateTransparentPreference(
+                  prefKey: prefKey,
+                  value: nextValue,
+                );
+                ref.invalidate(transparentProfileProvider);
+                ref.invalidate(profileContextProvider);
+                ref.invalidate(inferredPreferencesProvider);
+                ref.invalidate(activePoliciesProvider);
+                if (context.mounted) {
+                  AppFeedback.success(context, '偏好已更新');
+                  Navigator.of(context).pop();
+                }
+              } catch (error) {
+                if (context.mounted) {
+                  AppFeedback.error(context, '偏好更新失败：${_friendlyError(error)}');
+                }
               }
             },
             label: l10n.confirm,
@@ -727,11 +1000,20 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
       ),
     );
     if (result ?? false) {
-      await repo.rollbackTransparentPreference(prefKey);
-      ref.invalidate(transparentProfileProvider);
-      ref.invalidate(profileContextProvider);
-      ref.invalidate(inferredPreferencesProvider);
-      ref.invalidate(activePoliciesProvider);
+      try {
+        await repo.rollbackTransparentPreference(prefKey);
+        ref.invalidate(transparentProfileProvider);
+        ref.invalidate(profileContextProvider);
+        ref.invalidate(inferredPreferencesProvider);
+        ref.invalidate(activePoliciesProvider);
+        if (context.mounted) {
+          AppFeedback.success(context, '已回滚到上一版本');
+        }
+      } catch (error) {
+        if (context.mounted) {
+          AppFeedback.error(context, '回滚失败：${_friendlyError(error)}');
+        }
+      }
     }
   }
 
@@ -764,9 +1046,13 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
                 initialValue: nextStatus,
                 decoration: InputDecoration(labelText: l10n.personaGoalStatus),
                 items: [
-                  DropdownMenuItem(value: 'active', child: Text(l10n.personaStatusActive)),
-                  DropdownMenuItem(value: 'completed', child: Text(l10n.personaStatusCompleted)),
-                  DropdownMenuItem(value: 'paused', child: Text(l10n.personaStatusPaused)),
+                  DropdownMenuItem(
+                      value: 'active', child: Text(l10n.personaStatusActive)),
+                  DropdownMenuItem(
+                      value: 'completed',
+                      child: Text(l10n.personaStatusCompleted)),
+                  DropdownMenuItem(
+                      value: 'paused', child: Text(l10n.personaStatusPaused)),
                 ],
                 onChanged: (value) {
                   if (value != null) {
@@ -792,16 +1078,24 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
                   }
                   return;
                 }
-                await repo.updateGoal(
-                  goalId: goalId,
-                  title: nextTitle,
-                  status: nextStatus,
-                );
-                ref.invalidate(transparentProfileProvider);
-                ref.invalidate(profileContextProvider);
-                ref.invalidate(activePoliciesProvider);
-                if (context.mounted) {
-                  Navigator.of(context).pop();
+                try {
+                  await repo.updateGoal(
+                    goalId: goalId,
+                    title: nextTitle,
+                    status: nextStatus,
+                  );
+                  ref.invalidate(transparentProfileProvider);
+                  ref.invalidate(profileContextProvider);
+                  ref.invalidate(activePoliciesProvider);
+                  if (context.mounted) {
+                    AppFeedback.success(context, '目标已更新');
+                    Navigator.of(context).pop();
+                  }
+                } catch (error) {
+                  if (context.mounted) {
+                    AppFeedback.error(
+                        context, '目标更新失败：${_friendlyError(error)}');
+                  }
                 }
               },
               label: l10n.confirm,
@@ -879,20 +1173,28 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
               final nextValue = controller.text.trim();
               if (nextValue.isEmpty) {
                 if (context.mounted) {
-                  AppFeedback.info(context, context.l10n.personaPleaseEnterValue);
+                  AppFeedback.info(
+                      context, context.l10n.personaPleaseEnterValue);
                 }
                 return;
               }
-              await repo.overrideInferredPreference(
-                key: key,
-                value: nextValue,
-              );
-              ref.invalidate(transparentProfileProvider);
-              ref.invalidate(profileContextProvider);
-              ref.invalidate(inferredPreferencesProvider);
-              ref.invalidate(activePoliciesProvider);
-              if (context.mounted) {
-                Navigator.of(context).pop();
+              try {
+                await repo.overrideInferredPreference(
+                  key: key,
+                  value: nextValue,
+                );
+                ref.invalidate(transparentProfileProvider);
+                ref.invalidate(profileContextProvider);
+                ref.invalidate(inferredPreferencesProvider);
+                ref.invalidate(activePoliciesProvider);
+                if (context.mounted) {
+                  AppFeedback.success(context, '推断偏好已调整');
+                  Navigator.of(context).pop();
+                }
+              } catch (error) {
+                if (context.mounted) {
+                  AppFeedback.error(context, '调整失败：${_friendlyError(error)}');
+                }
               }
             },
             label: context.l10n.confirm,
@@ -908,10 +1210,47 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
     String key,
   ) async {
     final repo = ref.read(userRepositoryProvider);
-    await repo.resetInferredOverride(key);
+    try {
+      await repo.resetInferredOverride(key);
+      ref.invalidate(transparentProfileProvider);
+      ref.invalidate(profileContextProvider);
+      ref.invalidate(inferredPreferencesProvider);
+      ref.invalidate(activePoliciesProvider);
+      if (context.mounted) {
+        AppFeedback.success(context, '已恢复系统推断值');
+      }
+    } catch (error) {
+      if (context.mounted) {
+        AppFeedback.error(context, '恢复失败：${_friendlyError(error)}');
+      }
+    }
+  }
+
+  Future<void> _refreshPersona(WidgetRef ref) async {
     ref.invalidate(transparentProfileProvider);
     ref.invalidate(profileContextProvider);
     ref.invalidate(inferredPreferencesProvider);
     ref.invalidate(activePoliciesProvider);
+
+    for (final future in <Future<dynamic>>[
+      ref.read(transparentProfileProvider.future),
+      ref.read(profileContextProvider.future),
+      ref.read(inferredPreferencesProvider.future),
+      ref.read(activePoliciesProvider.future),
+    ]) {
+      try {
+        await future;
+      } catch (_) {
+        // Let each section render its own error state.
+      }
+    }
+  }
+
+  String _friendlyError(Object error) {
+    final message = error.toString().trim();
+    if (message.isEmpty) {
+      return '未知错误';
+    }
+    return message.replaceFirst('Exception: ', '');
   }
 }

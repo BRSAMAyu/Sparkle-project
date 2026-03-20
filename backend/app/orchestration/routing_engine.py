@@ -13,7 +13,7 @@ from app.core.metrics import ADAPTIVE_ROUTING_ADJUSTMENTS_TOTAL, ROUTING_SUMMARY
 from app.core.unified_intent_router import UnifiedIntentType
 from app.orchestration.chat_modes import CHAT_MODE_STANDARD
 from app.orchestration.context_focus import infer_route_intent_from_chat_mode
-from app.orchestration.dual_core_router import DualCoreRoutingInput
+from app.orchestration.dual_core_router import DualCoreDecision, DualCoreRoutingInput
 from app.orchestration.mode_workflow_config import get_mode_strategy, get_workflow_config
 from app.orchestration.route_adapter import to_route_decision
 from app.orchestration.schemas import RouteDecision
@@ -194,7 +194,15 @@ class RoutingEngineMixin:
             unified_routing_result=unified_routing_result,
             information_sufficient=information_sufficient,
         )
-        decision = self.dual_core_router.route(routing_input)
+        if routing_input.intent == "chat" and route_decision.execution_mode == "direct":
+            decision = DualCoreDecision(
+                mode="execution_first",
+                reason="通用知识问答优先直接回答，避免把认知调制或任务背景混入基础解释。",
+                cognitive_adjustments=[],
+                execution_constraints=[],
+            )
+        else:
+            decision = self.dual_core_router.route(routing_input)
         state.context_data["dual_core_decision"] = decision.to_dict()
         state.context_data["dual_core_prompt_instruction"] = decision.prompt_instruction
         state.context_data["dual_core_signal_snapshot"] = {

@@ -50,7 +50,10 @@ class TaskDaySummary {
 
   @override
   int get hashCode =>
-      pending.hashCode ^ inProgress.hashCode ^ completed.hashCode ^ overdue.hashCode;
+      pending.hashCode ^
+      inProgress.hashCode ^
+      completed.hashCode ^
+      overdue.hashCode;
 }
 
 class CalendarState {
@@ -90,6 +93,7 @@ class CalendarNotifier extends StateNotifier<CalendarState> {
   final CalendarRepository _repository;
 
   Future<void> loadEvents() async {
+    if (!mounted) return;
     state = state.copyWith(
       isLoading: true,
       clearError: true,
@@ -97,13 +101,18 @@ class CalendarNotifier extends StateNotifier<CalendarState> {
     );
     try {
       final events = await _repository.getEvents();
+      if (!mounted) return;
       state = state.copyWith(events: events, isLoading: false);
     } catch (e) {
+      if (!mounted) return;
       state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
 
   Future<CalendarMutationResult> addEvent(CalendarEventModel event) async {
+    if (!mounted) {
+      throw StateError('CalendarNotifier is disposed');
+    }
     state = state.copyWith(
       isLoading: true,
       clearError: true,
@@ -112,12 +121,16 @@ class CalendarNotifier extends StateNotifier<CalendarState> {
     try {
       final result = await _repository.addEvent(event);
       await loadEvents();
+      if (!mounted) {
+        throw StateError('CalendarNotifier is disposed');
+      }
       state = state.copyWith(
         isLoading: false,
         lastMutationMessage: result.message,
       );
       return result;
     } catch (e) {
+      if (!mounted) rethrow;
       state = state.copyWith(isLoading: false, error: e.toString());
       rethrow;
     }
@@ -181,7 +194,8 @@ class TaskCalendarNotifier extends StateNotifier<TaskCalendarState> {
   /// Load tasks for a specific month and calculate summaries
   Future<void> loadTasksForMonth(DateTime month, {bool force = false}) async {
     try {
-      final monthKey = '${month.year}-${month.month.toString().padLeft(2, '0')}';
+      final monthKey =
+          '${month.year}-${month.month.toString().padLeft(2, '0')}';
       if (!force && state.loadedMonths.contains(monthKey)) {
         return;
       }
@@ -261,7 +275,8 @@ final taskCalendarProvider =
 ///
 /// Persists the user's selected date in the calendar view.
 final selectedCalendarDateProvider =
-    StateNotifierProvider<SelectedCalendarDateNotifier, DateTime>((ref) => SelectedCalendarDateNotifier());
+    StateNotifierProvider<SelectedCalendarDateNotifier, DateTime>(
+        (ref) => SelectedCalendarDateNotifier());
 
 /// Notifier for the selected calendar date
 class SelectedCalendarDateNotifier extends PersistentNotifier<DateTime> {

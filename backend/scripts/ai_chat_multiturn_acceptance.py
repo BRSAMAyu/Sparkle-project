@@ -29,6 +29,19 @@ def _assert(condition: bool, message: str) -> None:
         raise RuntimeError(message)
 
 
+def _has_standard_context_leak(text: str) -> bool:
+    lowered = (text or "").lower()
+    leak_markers = (
+        "根据你的计划",
+        "你之前提到",
+        "今日专注",
+        "番茄钟次数",
+        "当前有 2 个计划",
+        "当前有2个计划",
+    )
+    return any(marker.lower() in lowered for marker in leak_markers)
+
+
 async def _collect_chat(
     ws: websockets.WebSocketClientProtocol,
     *,
@@ -136,6 +149,7 @@ async def main() -> int:
         _assert(turn1_text != "", "standard turn 1 returned empty text")
         _assert(any(e.get("type") == "done" or e.get("finish_reason") for e in turn1_events), "standard turn 1 did not terminate cleanly")
         _assert(turn1_meta["elapsed_seconds"] <= STANDARD_TURN_MAX_SECONDS, f"standard turn 1 too slow: {turn1_meta['elapsed_seconds']}s")
+        _assert(not _has_standard_context_leak(turn1_text), "standard turn 1 leaked unrelated personal plan/focus context")
 
         turn2_events, turn2_text, turn2_meta = await _send_ws_message(
             token,
@@ -149,6 +163,7 @@ async def main() -> int:
             turn2_meta["elapsed_seconds"] <= STANDARD_TURN_MAX_SECONDS,
             f"standard turn 2 too slow: {turn2_meta['elapsed_seconds']}s",
         )
+        _assert(not _has_standard_context_leak(turn2_text), "standard turn 2 leaked unrelated personal plan/focus context")
 
         deep_events, deep_text, deep_meta = await _send_ws_message(
             token,
@@ -203,7 +218,7 @@ async def main() -> int:
         )
         omnibar_resp.raise_for_status()
         omnibar_data = omnibar_resp.json()
-        _assert(omnibar_data.get("action_type") in {"TASK", "CHAT", "CAPSULE"}, "omnibar returned unknown action type")
+        _assert(omnibar_data.get("action_type") == "TASK", f"omnibar should create a task for reminder input, got {omnibar_data.get('action_type')}")
         _assert("data" in omnibar_data, "omnibar missing data payload")
 
     print(

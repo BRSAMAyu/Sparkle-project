@@ -7,6 +7,7 @@ from app.agents.standard_workflow import (
     _classify_user_intent,
     _should_disable_tools_for_deep_analysis,
     _should_disable_tools_for_light_standard_reply,
+    _should_use_slim_standard_context,
     _should_use_slim_deep_analysis_context,
     _sanitize_community_sendable_response,
     collaboration_post_process_node,
@@ -55,6 +56,16 @@ class _ToolLoopGenerationLLM(_FakeGenerationLLM):
             tool_name="get_plan_state",
             full_arguments={"plan_id": "current"},
         )
+
+
+class _ToolCaptureGenerationLLM(_FakeGenerationLLM):
+    def __init__(self):
+        super().__init__()
+        self.tools_seen = None
+
+    async def chat_stream_with_tools(self, system_prompt, user_message, tools, user_context):
+        self.tools_seen = tools
+        yield SimpleNamespace(type="text", content="这是基于已查询计划整理出的最终执行建议。")
 
 
 class _FailIfCalledLLM(_FakeGenerationLLM):
@@ -283,6 +294,48 @@ def test_standard_knowledge_question_disables_tools():
     assert _should_disable_tools_for_light_standard_reply(state, "番茄钟学习法是什么？") is True
 
 
+def test_standard_review_request_disables_tools_even_without_explicit_knowledge_keyword():
+    state = WorkflowState(
+        messages=[{"role": "user", "content": "我想快速复习一下 Python 列表推导式，给我一个 5 分钟版本。"}],
+        context_data={
+            "chat_mode": "standard",
+        },
+    )
+
+    assert _should_disable_tools_for_light_standard_reply(
+        state,
+        "我想快速复习一下 Python 列表推导式，给我一个 5 分钟版本。",
+    ) is True
+
+
+def test_standard_personal_plan_request_keeps_tools_enabled():
+    state = WorkflowState(
+        messages=[{"role": "user", "content": "结合我的计划和任务，告诉我今天该先做什么。"}],
+        context_data={
+            "chat_mode": "standard",
+        },
+    )
+
+    assert _should_disable_tools_for_light_standard_reply(
+        state,
+        "结合我的计划和任务，告诉我今天该先做什么。",
+    ) is False
+
+
+def test_standard_knowledge_question_uses_slim_context():
+    state = WorkflowState(
+        messages=[{"role": "user", "content": "请用三条简洁要点告诉我番茄钟学习法是什么。"}],
+        context_data={
+            "chat_mode": "standard",
+        },
+    )
+
+    assert _should_use_slim_standard_context(
+        state,
+        "请用三条简洁要点告诉我番茄钟学习法是什么。",
+    ) is True
+
+
 def test_generic_deep_analysis_uses_slim_context():
     state = WorkflowState(
         messages=[{"role": "user", "content": "请深度分析栈和队列的区别"}],
@@ -335,7 +388,9 @@ async def test_generation_node_batches_stream_deltas(monkeypatch):
 async def test_generation_node_stops_after_tool_loop_cap(monkeypatch):
     fake_llm = _ToolLoopGenerationLLM()
     get_llm_mock = AsyncMock(return_value=fake_llm)
+    get_tier_mock = AsyncMock(return_value=fake_llm)
     monkeypatch.setattr("app.agents.standard_workflow.get_configured_llm_service", get_llm_mock)
+    monkeypatch.setattr("app.agents.standard_workflow.get_configured_llm_service_for_tier", get_tier_mock)
     monkeypatch.setattr("app.agents.standard_workflow.build_system_prompt", lambda *args, **kwargs: "SYSTEM")
 
     state = WorkflowState(
@@ -352,7 +407,34 @@ async def test_generation_node_stops_after_tool_loop_cap(monkeypatch):
     new_state = await generation_node(state)
 
     assert new_state.next_step == "__end__"
-    assert new_state.context_data["tool_calls"] == []
+    assert new_state.context_data.get("tool_calls", []) == []
+
+
+@pytest.mark.asyncio
+async def test_generation_node_disables_tools_for_final_study_plan_synthesis(monkeypatch):
+    fake_llm = _ToolCaptureGenerationLLM()
+    get_llm_mock = AsyncMock(return_value=fake_llm)
+    get_tier_mock = AsyncMock(return_value=fake_llm)
+    monkeypatch.setattr("app.agents.standard_workflow.get_configured_llm_service", get_llm_mock)
+    monkeypatch.setattr("app.agents.standard_workflow.get_configured_llm_service_for_tier", get_tier_mock)
+    monkeypatch.setattr("app.agents.standard_workflow.build_system_prompt", lambda *args, **kwargs: "SYSTEM")
+
+    state = WorkflowState(
+        messages=[{"role": "user", "content": "结合我现有计划，给我一份 7 天 Python 学习拆解。"}],
+        context_data={
+            "chat_mode": "study_plan",
+            "user_context": {},
+            "conversation_context": {"messages": []},
+            "tools_schema": [{"name": "get_plan_state"}, {"name": "get_task_summary"}],
+            "tool_loop_count": 1,
+        },
+    )
+
+    new_state = await generation_node(state)
+
+    assert fake_llm.tools_seen == []
+    assert new_state.next_step == "__end__"
+    assert new_state.messages[-1]["content"] == "这是基于已查询计划整理出的最终执行建议。"
 
 
 @pytest.mark.asyncio

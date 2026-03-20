@@ -32,6 +32,22 @@ def test_should_not_skip_review_for_study_plan_with_tools():
     assert _should_skip_review(state) is False
 
 
+def test_should_skip_review_for_final_study_plan_response_without_pending_tools():
+    state = {
+        "messages": [
+            {"role": "user", "content": "帮我做一个 7 天学习计划。"},
+            {"role": "assistant", "content": "下面是结合你当前计划和任务整理出的 7 天执行拆解。"},
+        ],
+        "context_data": {
+            "chat_mode": "study_plan",
+            "workflow_type": "task_decomposition",
+            "tool_calls": [],
+        },
+    }
+
+    assert _should_skip_review(state) is True
+
+
 def test_should_not_skip_review_for_explicit_expert_response():
     state = {
         "messages": [

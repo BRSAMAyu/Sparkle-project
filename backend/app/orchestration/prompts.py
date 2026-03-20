@@ -1327,12 +1327,15 @@ def _format_plan_context(
 
     focus_decision = ContextFocusDecision.from_dict(context_focus)
     detail_level = "medium"
+    query_is_plan_related = _is_query_plan_related(query_text, plan_context)
     if focus_decision is not None:
         detail_level = str(focus_decision.section_weights.get("plan_context", "medium"))
         if detail_level == "off":
             return ""
-        if detail_level == "low" and not _is_query_plan_related(query_text, plan_context):
+        if detail_level == "low" and not query_is_plan_related:
             return ""
+    elif not query_is_plan_related:
+        return ""
 
     # 【强调标题】让 LLM 注意到这部分的重要性
     lines = ["## 用户学习计划 [L2 引导]（请在回复中适当引用以下信息）"]
@@ -1429,7 +1432,10 @@ def _format_plan_context(
 
     # 【显式引用指令】引导 LLM 在回复中引用这些信息
     lines.append("\n**回复要求**:")
-    lines.append("- 如果用户问题与计划相关，请用'根据你的计划...'或'你之前提到...'来引用")
+    if query_is_plan_related:
+        lines.append("- 仅在当前问题与这些计划/任务信息直接相关时，再用'根据你的计划...'或'你之前提到...'来引用")
+    else:
+        lines.append("- 如果当前问题与这些计划信息不直接相关，不要主动把计划、任务、进度塞进回答")
     lines.append("- 避免重复询问已知信息")
     lines.append("- 优先使用上述偏好信息来调整回复风格和深度")
 

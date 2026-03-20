@@ -64,6 +64,35 @@ _STREAM_DELTA_FLUSH_SECONDS = 0.12
 _MAX_TOOL_LOOPS_PER_TURN = 2
 
 
+def _max_tool_loops_for_state(state: WorkflowState) -> int:
+    chat_mode = str(state.context_data.get("chat_mode", "standard")).strip().lower()
+    if chat_mode in {"study_plan", "error_diagnosis"}:
+        return 1
+    return _MAX_TOOL_LOOPS_PER_TURN
+
+
+def _should_force_final_synthesis_without_tools(state: WorkflowState) -> bool:
+    chat_mode = str(state.context_data.get("chat_mode", "standard")).strip().lower()
+    tool_loop_count = int(state.context_data.get("tool_loop_count") or 0)
+    return chat_mode in {"study_plan", "error_diagnosis"} and tool_loop_count >= 1
+
+
+def _build_minimal_user_context_for_grounded_synthesis(user_context: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(user_context, dict):
+        return {}
+
+    allowed_keys = {
+        "preferences",
+        "next_actions",
+        "active_plans",
+        "task_status_summary",
+        "profile_context",
+        "recent_progress",
+        "context_focus",
+    }
+    return {key: user_context.get(key) for key in allowed_keys if key in user_context}
+
+
 def _resolve_generation_agent_role(state: WorkflowState) -> str:
     explicit_role = state.context_data.get("agent_role")
     if explicit_role:
@@ -511,6 +540,36 @@ def _build_generation_fallback_response(
     )
 
 
+async def _build_fast_model_rescue_response(
+    *,
+    agent_role: str,
+    system_prompt: str,
+    user_message: str,
+    task_type: TaskType,
+) -> str:
+    rescue_task_type = TaskType.QUICK_QUERY if task_type is TaskType.STANDARD_RESPONSE else task_type
+    rescue_llm = await get_configured_llm_service_for_tier(
+        agent_role,
+        ModelTier.FAST,
+        task_type=rescue_task_type,
+    )
+    rescue_prompt = (
+        system_prompt
+        + "\n\n## 紧急回退要求\n"
+        "主生成链当前不可用时，你需要直接输出一版可靠、简洁、可执行的最终回答。\n"
+        "不要暴露内部错误、工具失败、检索过程或“我来帮你查一下”这类过程性话术。\n"
+        "优先给结论、步骤和关键提醒，保持短段落。"
+    )
+    response = await rescue_llm.chat(
+        [
+            {"role": "system", "content": rescue_prompt},
+            {"role": "user", "content": user_message},
+        ],
+        temperature=0.35,
+    )
+    return str(response or "").strip()
+
+
 def _extract_community_prompt_context(user_message: str) -> dict[str, str]:
     text = str(user_message or "")
     if not text:
@@ -828,6 +887,7 @@ async def generation_node(state: WorkflowState) -> WorkflowState:
     explicit_runtime = None
     user_message = state.messages[-1]["content"] or ""
     use_slim_deep_context = _should_use_slim_deep_analysis_context(state, user_message)
+    use_fast_grounded_synthesis = _should_force_final_synthesis_without_tools(state)
     memory_answer = _resolve_recent_memory_answer(conversation_context, user_message)
 
     if memory_answer:
@@ -867,6 +927,13 @@ async def generation_node(state: WorkflowState) -> WorkflowState:
                     task_type=task_type,
                 )
                 state.context_data["first_touch_model_tier"] = ModelTier.FAST.value
+            elif use_fast_grounded_synthesis:
+                generation_llm = await get_configured_llm_service_for_tier(
+                    agent_role,
+                    ModelTier.FAST,
+                    task_type=task_type,
+                )
+                state.context_data["final_synthesis_model_tier"] = ModelTier.FAST.value
             else:
                 generation_llm = await get_configured_llm_service(agent_role, task_type)
     except Exception as e:
@@ -875,8 +942,20 @@ async def generation_node(state: WorkflowState) -> WorkflowState:
 
     # Extract plan_context from state if available
     plan_context = state.context_data.get("plan_context")
-    prompt_user_context = _build_slim_user_context_for_deep_analysis(user_context) if use_slim_deep_context else user_context
-    prompt_conversation_context = {"messages": []} if use_slim_deep_context else conversation_context
+    use_slim_standard_context = _should_use_slim_standard_context(state, user_message)
+    if use_fast_grounded_synthesis:
+        prompt_user_context = _build_minimal_user_context_for_grounded_synthesis(user_context)
+        prompt_conversation_context = {
+            "messages": (conversation_context.get("messages") or [])[-4:],
+        }
+    elif use_slim_standard_context:
+        prompt_user_context = _build_slim_user_context_for_standard_reply(user_context)
+        prompt_conversation_context = {
+            "messages": (conversation_context.get("messages") or [])[-6:],
+        }
+    else:
+        prompt_user_context = _build_slim_user_context_for_deep_analysis(user_context) if use_slim_deep_context else user_context
+        prompt_conversation_context = {"messages": []} if use_slim_deep_context else conversation_context
 
     # Extract intent instruction from plan_metadata (Vision Item 4b)
     # P1 Improvement: Enhanced intent instructions with stronger constraints
@@ -916,13 +995,13 @@ Ask about their available time and current tasks if needed.
         prompt_version=prompt_version,
         agent_role=_coerce_agent_role(getattr(generation_llm, "agent_role", agent_role)),
         model_key=getattr(generation_llm, "model_key", None),
-        plan_context=None if use_slim_deep_context else plan_context,
+        plan_context=None if (use_slim_deep_context or use_fast_grounded_synthesis or use_slim_standard_context) else plan_context,
         intent_instruction=intent_instruction, # Vision Item 4b
         session_feedback_instruction=str(state.context_data.get("session_feedback_instruction") or ""),
         dual_core_instruction=str(state.context_data.get("dual_core_prompt_instruction") or ""),
-        context_focus=state.context_data.get("context_focus"),
+        context_focus=None if use_slim_standard_context else state.context_data.get("context_focus"),
         context_briefing_note=str(state.context_data.get("context_briefing_note") or ""),
-        context_level="light" if use_slim_deep_context else "full",
+        context_level="light" if (use_slim_deep_context or use_fast_grounded_synthesis or use_slim_standard_context) else "full",
         chat_mode=str(state.context_data.get("chat_mode", "standard") or "standard"),
     )
     if explicit_runtime and explicit_runtime.get("system_prompt"):
@@ -934,12 +1013,34 @@ Ask about their available time and current tasks if needed.
             "输出格式固定为：1. 关键结论；2. 类比；3. 反例；4. 最易混淆点；5. 一个立即可用的判断口诀。\n"
             "总长度尽量控制在 700 个中文字符以内；每一部分 1-2 个要点即可，用短段落，不要写成长篇教程。"
         )
+    elif use_fast_grounded_synthesis:
+        system_prompt += (
+            "\n\n## 工具落地收口约束\n"
+            "你正在基于已经查到的计划/任务结果给出最终可执行答案。\n"
+            "不要再次发起工具或重新铺陈背景，直接输出一版可执行结论。\n"
+            "优先给出：1. 今天先做什么；2. 接下来 7 天/诊断步骤；3. 一个最关键提醒。\n"
+            "总长度尽量控制在 700 个中文字符以内，使用短段落和项目符号。"
+        )
+    elif use_slim_standard_context:
+        system_prompt += (
+            "\n\n## 通用知识问答约束\n"
+            "这是一个通用概念解释或轻量建议问题。\n"
+            "除非用户明确询问，否则不要引入当前计划、任务、专注统计、画像或系统状态。\n"
+            "先直接回答问题本身，再决定是否补一个很轻的下一步建议。"
+        )
+    else:
+        system_prompt += (
+            "\n\n## 对话呈现约束\n"
+            "不要把内部动作写给用户，例如“我先帮你查一下”“让我获取一下计划状态”。\n"
+            "如果需要工具，直接调用，等待结果后再给结论。\n"
+            "如果工具失败，不要原样转述内部错误堆栈；只用一句自然的话说明相关数据暂时不可用，并继续给出可执行建议。"
+        )
 
-    knowledge_context = "" if use_slim_deep_context else (state.context_data.get("knowledge_context") or "")
+    knowledge_context = "" if (use_slim_deep_context or use_fast_grounded_synthesis or use_slim_standard_context) else (state.context_data.get("knowledge_context") or "")
     if knowledge_context:
         system_prompt += f"\n\n## Retrieved Knowledge\n{knowledge_context}"
 
-    document_context = "" if use_slim_deep_context else (state.context_data.get("document_context") or "")
+    document_context = "" if (use_slim_deep_context or use_fast_grounded_synthesis or use_slim_standard_context) else (state.context_data.get("document_context") or "")
     if document_context:
         system_prompt += f"\n\n## Retrieved Documents\n{document_context}"
 
@@ -1017,13 +1118,18 @@ Ask about their available time and current tasks if needed.
                 emit_snapshot=False,
             )
 
+    effective_tools = tools
+    if _should_force_final_synthesis_without_tools(state):
+        logger.info("Disabling tools for final synthesis after first tool loop")
+        effective_tools = []
+
     try:
         usage_prompt_tokens = 0
         usage_completion_tokens = 0
         async for chunk in generation_llm.chat_stream_with_tools(
             system_prompt=system_prompt,
             user_message=user_message,
-            tools=tools,
+            tools=effective_tools,
             user_context=user_context,
         ):
             if chunk.type == "text":
@@ -1075,10 +1181,34 @@ Ask about their available time and current tasks if needed.
                         )
                     ))
     except Exception as e:
-        logger.warning(f"Generation streaming failed, using retrieval fallback: {e}")
+        logger.warning(f"Generation streaming failed, attempting fast rescue response: {e}")
         state.context_data["generation_fallback_reason"] = str(e)
         usage_prompt_tokens = 0
         usage_completion_tokens = 0
+        try:
+            rescued_response = await _build_fast_model_rescue_response(
+                agent_role=agent_role,
+                system_prompt=system_prompt,
+                user_message=user_message,
+                task_type=task_type,
+            )
+            if rescued_response:
+                full_response = rescued_response
+                if stream_callback:
+                    await stream_callback(agent_service_pb2.ChatResponse(
+                        delta=rescued_response,
+                        status_update=agent_service_pb2.AgentStatus(
+                            state=agent_service_pb2.AgentStatus.GENERATING,
+                            details="主生成链波动，已切到快速备援回复...",
+                            current_agent_name="Sparkle Rescue",
+                        ),
+                        metadata={
+                            "generation_rescue": "true",
+                            "generation_rescue_tier": ModelTier.FAST.value,
+                        },
+                    ))
+        except Exception as rescue_error:
+            logger.warning(f"Fast rescue response also failed, using retrieval fallback: {rescue_error}")
 
     retrieval_grounded_response = _build_generation_fallback_response(
         user_message=user_message,
@@ -1097,8 +1227,23 @@ Ask about their available time and current tasks if needed.
             logger.info("Replacing low-information generation response with community prompt fallback")
             full_response = community_fallback
         else:
-            logger.info("Replacing low-information generation response with retrieval-grounded answer")
-            full_response = retrieval_grounded_response
+            try:
+                rescued_response = await _build_fast_model_rescue_response(
+                    agent_role=agent_role,
+                    system_prompt=system_prompt,
+                    user_message=user_message,
+                    task_type=task_type,
+                )
+            except Exception as rescue_error:
+                logger.warning(f"Low-information rescue failed, using retrieval-grounded answer: {rescue_error}")
+                rescued_response = ""
+
+            if rescued_response and not _is_low_information_generation_response(rescued_response):
+                logger.info("Replacing low-information generation response with fast rescue answer")
+                full_response = rescued_response
+            else:
+                logger.info("Replacing low-information generation response with retrieval-grounded answer")
+                full_response = retrieval_grounded_response
 
     if not full_response:
         fallback_response = retrieval_grounded_response
@@ -1147,7 +1292,8 @@ Ask about their available time and current tasks if needed.
     state.append_message("assistant", full_response)
     if tool_calls:
         tool_loop_count = int(state.context_data.get("tool_loop_count") or 0)
-        if tool_loop_count >= _MAX_TOOL_LOOPS_PER_TURN:
+        max_tool_loops = _max_tool_loops_for_state(state)
+        if tool_loop_count >= max_tool_loops:
             logger.warning(f"Stopping tool loop after {tool_loop_count} rounds; returning current response directly")
             state.context_data["tool_calls"] = []
             state.next_step = "__end__"
@@ -1554,30 +1700,40 @@ def _should_disable_tools_for_light_standard_reply(state: WorkflowState, user_me
         return False
 
     text = (user_message or "").strip().lower()
-    if not text or len(text) > 160:
+    if not text:
         return False
 
-    action_keywords = (
-        "创建", "新建", "添加", "保存", "同步", "提醒", "日程", "任务", "计划",
-        "创建任务", "创建计划", "加入日历", "开始专注", "focus",
-        "schedule", "remind", "calendar", "task", "plan", "create",
+    explicit_tool_intents = (
+        "创建", "新建", "添加", "保存", "同步", "提醒", "加入日历", "开始专注",
+        "帮我建", "帮我加", "帮我创建", "帮我安排", "设个提醒", "预约",
+        "schedule", "remind", "create", "add", "save", "sync", "start focus",
     )
-    if any(keyword in text for keyword in action_keywords):
+    personal_data_intents = (
+        "我的计划", "我现在的计划", "我的任务", "我当前的任务", "我的日程", "我的日历",
+        "我的知识星图", "我的画像", "我的专注", "我的进度", "我的状态", "结合我现在",
+        "根据我的", "看看我的", "查一下我的", "我今天要做什么", "我今天该做什么",
+        "my plan", "my task", "my tasks", "my schedule", "my calendar", "my progress",
+        "my profile", "based on my", "check my",
+    )
+    if any(keyword in text for keyword in explicit_tool_intents + personal_data_intents):
         return False
 
-    follow_up_keywords = (
-        "基于刚才", "根据刚才", "再给我", "换个说法", "举个例子", "再解释", "简化一下",
-        "再来一个", "继续说", "继续", "补充", "follow", "based on", "another", "example",
-    )
-    if any(keyword in text for keyword in follow_up_keywords):
-        return True
+    # 标准闲聊 / 概念解释默认不暴露工具，避免把用户历史工具偏好误带入无关问题。
+    return True
 
-    knowledge_keywords = (
-        "是什么", "什么意思", "为什么", "区别", "解释", "原理", "例子",
-        "怎么理解", "如何理解", "介绍一下", "概念", "define", "what is",
-        "difference", "explain", "concept",
-    )
-    return any(keyword in text for keyword in knowledge_keywords)
+
+def _should_use_slim_standard_context(state: WorkflowState, user_message: str) -> bool:
+    context_data = state.context_data or {}
+    chat_mode = str(context_data.get("chat_mode") or "standard").strip().lower()
+    if chat_mode not in {"standard", "chat"}:
+        return False
+    if context_data.get("planned_tool_sequence"):
+        return False
+    if context_data.get("selected_experts") or context_data.get("answer_experts"):
+        return False
+    if context_data.get("knowledge_context") or context_data.get("document_context"):
+        return False
+    return _should_disable_tools_for_light_standard_reply(state, user_message)
 
 
 def _should_disable_tools_for_deep_analysis(state: WorkflowState) -> bool:
@@ -1632,6 +1788,10 @@ def _build_slim_user_context_for_deep_analysis(user_context: dict[str, Any]) -> 
     if current_query:
         slim["current_query"] = current_query
     return slim
+
+
+def _build_slim_user_context_for_standard_reply(user_context: dict[str, Any]) -> dict[str, Any]:
+    return {}
 
 
 async def _flush_stream_text_buffer(

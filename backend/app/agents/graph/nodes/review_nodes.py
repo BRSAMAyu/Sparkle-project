@@ -379,6 +379,14 @@ def _should_skip_review(state: SparkleState) -> bool:
     ):
         return True
 
+    if (
+        chat_mode in {"study_plan", "error_diagnosis"}
+        and not has_tool_calls
+        and not has_selected_experts
+        and workflow_type in {"", "task_decomposition", "error_diagnosis"}
+    ):
+        return True
+
     # 标准轻对话优先保证首轮响应速度：无工具、无显式专家、无复杂工作流时跳过重审查。
     if (
         chat_mode in {"standard", "chat"}

@@ -159,9 +159,15 @@ class FocusStatisticsState {
 class FocusStatistics extends _$FocusStatistics {
   FocusStatisticsRepository? _localRepo;
   FocusRepository? _apiRepo;
+  bool _isDisposed = false;
 
   @override
   FocusStatisticsState build() {
+    _isDisposed = false;
+    ref.onDispose(() {
+      _isDisposed = true;
+    });
+
     // Initialize repositories
     final db = ref.read(localDatabaseProvider);
     _localRepo = FocusStatisticsRepository(db.isar);
@@ -170,15 +176,17 @@ class FocusStatistics extends _$FocusStatistics {
     // Get the persisted period
     final persistedPeriod = ref.watch(statsViewPeriodProvider);
 
-    // Load initial data based on persisted period
-    switch (persistedPeriod) {
-      case StatsViewPeriod.today:
-        loadTodayStats();
-      case StatsViewPeriod.week:
-        loadWeeklyStats();
-      case StatsViewPeriod.month:
-        loadMonthlyStats();
-    }
+    Future.microtask(() {
+      if (_isDisposed) return;
+      switch (persistedPeriod) {
+        case StatsViewPeriod.today:
+          loadTodayStats();
+        case StatsViewPeriod.week:
+          loadWeeklyStats();
+        case StatsViewPeriod.month:
+          loadMonthlyStats();
+      }
+    });
 
     return FocusStatisticsState(period: persistedPeriod);
   }
@@ -499,7 +507,8 @@ FocusStatisticsRepository localStatisticsRepo(Ref ref) {
 /// Persists the user's selected statistics view period (today/week/month).
 final statsViewPeriodProvider =
     StateNotifierProvider<StatsViewPeriodNotifier, StatsViewPeriod>(
-        (ref) => StatsViewPeriodNotifier(),);
+  (ref) => StatsViewPeriodNotifier(),
+);
 
 /// Notifier for the stats view period
 class StatsViewPeriodNotifier extends EnumPersistentNotifier<StatsViewPeriod> {
