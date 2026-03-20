@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import json
 from datetime import timezone, datetime, timedelta
 from typing import Any
@@ -93,11 +92,9 @@ class ProfileContextService:
             except Exception as exc:
                 logger.warning(f"ProfileContext cache read failed: {exc}")
 
-        preferences, knowledge_summary, cognitive_summary = await asyncio.gather(
-            self._get_preferences(user_id),
-            self._get_knowledge_summary(user_id),
-            self._get_cognitive_summary(user_id),
-        )
+        preferences = await self._get_preferences(user_id)
+        knowledge_summary = await self._get_knowledge_summary(user_id)
+        cognitive_summary = await self._get_cognitive_summary(user_id)
 
         context = ProfileContext(
             preferences=preferences.get("explicit") or {},

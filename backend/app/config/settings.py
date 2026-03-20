@@ -221,6 +221,9 @@ class Settings(BaseSettings):
     AI_MODE_DEEP_DAILY_REQUEST_LIMIT: int = 24
     AI_PREDICTION_FREE_TIMEOUT_SECONDS: float = 1.5
     AI_PREDICTION_FREE_FAST_TIMEOUT_SECONDS: float = 2.5
+    FRONTEND_TELEMETRY_ENABLED: bool = True
+    FRONTEND_TELEMETRY_SAMPLE_RATE: float = 1.0
+    PRODUCTION_BACKUP_DIR: str = "./backups"
     # LLM Tier Routing (comma-separated model keys from LLMRouter)
     LLM_TIER_FREE: str = ""
     LLM_TIER_FREE_FAST: str = ""

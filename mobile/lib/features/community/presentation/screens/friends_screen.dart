@@ -11,9 +11,11 @@ import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/features/community/community_routes.dart';
 import 'package:sparkle/features/community/data/models/accountability_model.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
+import 'package:sparkle/features/community/data/repositories/community_repository.dart';
 import 'package:sparkle/features/community/presentation/providers/accountability_provider.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
 import 'package:sparkle/features/community/presentation/widgets/friends_hub_view.dart';
+import 'package:sparkle/features/community/presentation/widgets/recommendation_feedback_widgets.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
 class FriendsScreen extends StatelessWidget {
@@ -343,48 +345,136 @@ class _RecommendationsTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final recommendationsState = ref.watch(friendRecommendationsProvider);
+    final strategy = ref.watch(friendRecommendationStrategyProvider);
+    final promptsState = ref.watch(recommendationFeedbackPromptsProvider);
+    final insightsState = ref.watch(recommendationFeedbackInsightsProvider);
+    final friendPrompts = (promptsState.valueOrNull ?? const [])
+        .where((prompt) => prompt.itemType == RecommendationItemType.friend)
+        .toList();
+    final friendInsight = (insightsState.valueOrNull ?? const [])
+        .where((insight) => insight.itemType == RecommendationItemType.friend)
+        .cast<RecommendationFeedbackInsight?>()
+        .firstWhere((insight) => insight != null, orElse: () => null);
 
     return recommendationsState.when(
       data: (recommendations) {
-        if (recommendations.isEmpty) {
-          return const Center(child: Text('No recommendations available'));
-        }
         return RefreshIndicator(
           onRefresh: () =>
               ref.read(friendRecommendationsProvider.notifier).refresh(),
-          child: ListView.builder(
-            itemCount: recommendations.length,
+          child: ListView(
             padding: const EdgeInsets.all(DS.lg),
-            itemBuilder: (context, index) {
-              final rec = recommendations[index];
-              return Card(
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundImage: rec.user.avatarUrl != null
-                        ? NetworkImage(rec.user.avatarUrl!)
-                        : null,
-                    child: rec.user.avatarUrl == null
-                        ? Text(rec.user.displayName[0])
-                        : null,
-                  ),
-                  title: Text(rec.user.displayName),
-                  subtitle: Text('Match: ${(rec.matchScore * 100).toInt()}%'),
-                  trailing: SparkleIconButton(
-                    variant: ButtonVariant.ghost,
-                    size: 36,
-                    icon: const Icon(Icons.person_add),
-                    onPressed: () {
+            children: [
+              Text(
+                '责任伙伴匹配',
+                style: DS.titleLarge.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: DS.xs),
+              Text(
+                '系统会结合公开画像、学习主题、社群重合度与责任伙伴状态，优先推荐适合作为核心责任伙伴的人。',
+                style: DS.bodyMedium.copyWith(color: DS.textSecondary),
+              ),
+              const SizedBox(height: DS.md),
+              Wrap(
+                spacing: DS.sm,
+                runSpacing: DS.sm,
+                children: FriendMatchStrategy.values.map((item) {
+                  final selected = strategy == item;
+                  return FilterChip(
+                    label: Text(_strategyLabel(item)),
+                    selected: selected,
+                    onSelected: (_) {
+                      ref
+                          .read(friendRecommendationStrategyProvider.notifier)
+                          .state = item;
                       ref
                           .read(friendRecommendationsProvider.notifier)
-                          .sendRequest(rec.user.id);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Request sent')),
-                      );
+                          .setStrategy(item);
                     },
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: DS.md),
+              Container(
+                padding: const EdgeInsets.all(DS.md),
+                decoration: BoxDecoration(
+                  color: DS.surfaceSecondary,
+                  borderRadius: BorderRadius.circular(DS.borderRadiusLG),
+                  border: Border.all(color: DS.neutral200),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.privacy_tip_outlined,
+                      size: 18,
+                      color: DS.brandPrimaryConst,
+                    ),
+                    const SizedBox(width: DS.sm),
+                    Expanded(
+                      child: Text(
+                        '仅展示允许公开发现的用户，推荐理由来自可解释的画像摘要，不会暴露私密原始数据。',
+                        style: DS.bodySmall.copyWith(color: DS.textSecondary),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (friendPrompts.isNotEmpty) ...[
+                const SizedBox(height: DS.md),
+                Text(
+                  '待你校准',
+                  style: DS.titleLarge.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: DS.xs),
+                Text(
+                  '分阶段反馈会直接调整你后续的好友与责任伙伴匹配。',
+                  style: DS.bodySmall.copyWith(color: DS.textSecondary),
+                ),
+                const SizedBox(height: DS.sm),
+                ...friendPrompts.take(2).map(
+                      (prompt) => Padding(
+                        padding: const EdgeInsets.only(bottom: DS.sm),
+                        child: RecommendationFeedbackPromptCard(
+                          prompt: prompt,
+                          onRespond: () => _handlePromptFeedback(
+                            context,
+                            ref,
+                            prompt,
+                          ),
+                        ),
+                      ),
+                    ),
+              ],
+              if (friendInsight != null && friendInsight.recentFeedbackCount > 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: DS.md),
+                  child: RecommendationFeedbackInsightCard(
+                    insight: friendInsight,
                   ),
                 ),
-              );
-            },
+              const SizedBox(height: DS.md),
+              if (recommendations.isEmpty)
+                const EmptyState(
+                  icon: Icons.people_outline,
+                  title: '暂时没有合适候选人',
+                  description: '换个匹配策略或稍后刷新，我们会持续根据最新画像和社群活跃度更新推荐。',
+                )
+              else
+                ...recommendations.map(
+                  (rec) => Padding(
+                    padding: const EdgeInsets.only(bottom: DS.md),
+                    child: _RecommendationCard(
+                      recommendation: rec,
+                      onPrimaryAction: () =>
+                          _handlePrimaryAction(context, ref, rec),
+                      onDismiss: () =>
+                          _dismissRecommendation(context, ref, rec),
+                      onFeedback: () =>
+                          _handleInlineFeedback(context, ref, rec),
+                    ),
+                  ),
+                ),
+            ],
           ),
         );
       },
@@ -395,6 +485,495 @@ class _RecommendationsTab extends ConsumerWidget {
           message: e.toString(),
           onRetry: () =>
               ref.read(friendRecommendationsProvider.notifier).refresh(),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handlePromptFeedback(
+    BuildContext context,
+    WidgetRef ref,
+    RecommendationFeedbackPrompt prompt,
+  ) async {
+    final draft = await showRecommendationFeedbackSheet(
+      context: context,
+      itemType: RecommendationItemType.friend,
+      prompt: prompt,
+      user: prompt.user,
+      strategy: prompt.strategy,
+      target: prompt.target,
+    );
+    if (draft == null) return;
+
+    await _submitFriendFeedback(
+      context,
+      ref,
+      targetUserId: prompt.user?.id ?? prompt.itemId,
+      strategy: _parseStrategy(prompt.strategy),
+      target: _parseTarget(prompt.target),
+      action: _friendActionFromTrigger(prompt.triggerAction),
+      source: 'friends_prompt',
+      draft: draft,
+    );
+  }
+
+  Future<void> _handleInlineFeedback(
+    BuildContext context,
+    WidgetRef ref,
+    FriendRecommendation recommendation,
+  ) async {
+    final draft = await showRecommendationFeedbackSheet(
+      context: context,
+      itemType: RecommendationItemType.friend,
+      user: recommendation.user,
+      strategy: recommendation.strategy,
+      target: recommendation.target,
+    );
+    if (draft == null) return;
+
+    await _submitFriendFeedback(
+      context,
+      ref,
+      targetUserId: recommendation.user.id,
+      strategy: _parseStrategy(recommendation.strategy),
+      target: _parseTarget(recommendation.target),
+      action: 'view',
+      source: 'friends_card_feedback',
+      draft: draft,
+      score: recommendation.matchScore,
+    );
+  }
+
+  Future<void> _submitFriendFeedback(
+    BuildContext context,
+    WidgetRef ref, {
+    required String targetUserId,
+    required FriendMatchStrategy strategy,
+    required FriendRecommendationTarget target,
+    required String action,
+    required String source,
+    required RecommendationFeedbackDraft draft,
+    double? score,
+  }) async {
+    try {
+      await ref.read(communityRepositoryProvider).sendFriendRecommendationFeedback(
+            targetUserId: targetUserId,
+            strategy: strategy,
+            target: target,
+            action: action,
+            source: source,
+            score: score,
+            promptId: draft.promptId,
+            stage: draft.stage,
+            questionnaireVersion: 1,
+            overallScore: draft.overallScore,
+            relevanceScore: draft.relevanceScore,
+            explanationScore: draft.explanationScore,
+            actionabilityScore: draft.actionabilityScore,
+            similarityScore: draft.similarityScore,
+            complementaryScore: draft.complementaryScore,
+            comfortScore: draft.comfortScore,
+            selectedIssues: draft.selectedIssues,
+            selectedStrengths: draft.selectedStrengths,
+            freeText: draft.freeText,
+          );
+      ref.invalidate(recommendationFeedbackPromptsProvider);
+      ref.invalidate(recommendationFeedbackInsightsProvider);
+      ref.invalidate(friendRecommendationsProvider);
+      if (context.mounted) {
+        AppFeedback.success(context, '反馈已提交，后续推荐会更贴近你的偏好');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        AppFeedback.error(context, '提交失败: $e');
+      }
+    }
+  }
+
+  Future<void> _dismissRecommendation(
+    BuildContext context,
+    WidgetRef ref,
+    FriendRecommendation recommendation,
+  ) async {
+    try {
+      await ref
+          .read(friendRecommendationsProvider.notifier)
+          .dismiss(recommendation);
+      if (context.mounted) {
+        AppFeedback.info(context, '已隐藏这条推荐');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        AppFeedback.error(context, '操作失败: $e');
+      }
+    }
+  }
+
+  Future<void> _handlePrimaryAction(
+    BuildContext context,
+    WidgetRef ref,
+    FriendRecommendation recommendation,
+  ) async {
+    try {
+      if (recommendation.canInviteAccountability) {
+        final invited = await _showAccountabilityInvite(
+          context,
+          ref,
+          recommendation.user,
+        );
+        if (invited) {
+          await ref
+              .read(friendRecommendationsProvider.notifier)
+              .recordAccountabilityInvite(recommendation);
+        }
+        return;
+      }
+      if (!recommendation.isExistingFriend) {
+        await ref
+            .read(friendRecommendationsProvider.notifier)
+            .sendRequest(recommendation);
+        if (context.mounted) {
+          AppFeedback.success(context, '好友请求已发送');
+        }
+        return;
+      }
+      if (context.mounted) {
+        unawaited(context.push(
+          '/community/users/${recommendation.user.id}?name=${Uri.encodeComponent(recommendation.user.displayName)}',
+        ));
+      }
+    } catch (e) {
+      if (context.mounted) {
+        AppFeedback.error(context, '操作失败: $e');
+      }
+    }
+  }
+
+  Future<bool> _showAccountabilityInvite(
+    BuildContext context,
+    WidgetRef ref,
+    UserBrief user,
+  ) async {
+    final goalController = TextEditingController();
+    var checkInDays = 1;
+
+    final confirmed = await showSensoryDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) => AlertDialog(
+          title: const Text('发起责任伙伴邀请'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '邀请 ${user.displayName} 成为你的责任伙伴',
+                style: TextStyle(color: DS.textSecondary, fontSize: 13),
+              ),
+              const SizedBox(height: DS.spacing16),
+              TextField(
+                controller: goalController,
+                decoration: const InputDecoration(
+                  labelText: '我的目标',
+                  hintText: '例如：每天学习英语 30 分钟',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 2,
+              ),
+              const SizedBox(height: DS.spacing16),
+              const Text(
+                '打卡频率:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: DS.xs),
+              Wrap(
+                spacing: DS.sm,
+                children: [1, 2, 3, 7].map((d) {
+                  final selected = checkInDays == d;
+                  return FilterChip(
+                    label: Text(d == 1 ? '每天' : '每 $d 天'),
+                    selected: selected,
+                    onSelected: (_) => setState(() => checkInDays = d),
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('发送邀请'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (confirmed != true) return false;
+    final goal = goalController.text.trim();
+    if (goal.isEmpty) {
+      if (context.mounted) AppFeedback.info(context, '请填写目标');
+      return false;
+    }
+
+    await ref.read(myPartnershipsProvider.notifier).requestPartnership(
+          partnerId: user.id,
+          initiatorGoal: goal,
+          checkInDays: checkInDays,
+        );
+    ref.invalidate(accountabilityOverviewProvider);
+    if (context.mounted) {
+      AppFeedback.success(context, '责任伙伴邀请已发送！');
+    }
+    return true;
+  }
+
+  String _strategyLabel(FriendMatchStrategy strategy) {
+    switch (strategy) {
+      case FriendMatchStrategy.compatibility:
+        return '契合度';
+      case FriendMatchStrategy.complementary:
+        return '互补型';
+    }
+  }
+
+  FriendMatchStrategy _parseStrategy(String? raw) {
+    return FriendMatchStrategy.values.firstWhere(
+      (item) => item.name == raw,
+      orElse: () => FriendMatchStrategy.compatibility,
+    );
+  }
+
+  FriendRecommendationTarget _parseTarget(String? raw) {
+    return FriendRecommendationTarget.values.firstWhere(
+      (item) => item.name == raw,
+      orElse: () => FriendRecommendationTarget.accountability,
+    );
+  }
+
+  String _friendActionFromTrigger(String trigger) {
+    if (trigger.contains('accountability_invite')) {
+      return 'accountability_invite';
+    }
+    if (trigger.contains('friend_request')) {
+      return 'friend_request';
+    }
+    if (trigger.contains('dismiss')) {
+      return 'dismiss';
+    }
+    return 'view';
+  }
+}
+
+class _RecommendationCard extends StatelessWidget {
+  const _RecommendationCard({
+    required this.recommendation,
+    required this.onPrimaryAction,
+    required this.onDismiss,
+    required this.onFeedback,
+  });
+
+  final FriendRecommendation recommendation;
+  final VoidCallback onPrimaryAction;
+  final VoidCallback onDismiss;
+  final VoidCallback onFeedback;
+
+  @override
+  Widget build(BuildContext context) {
+    final accentColor = recommendation.canInviteAccountability
+        ? DS.brandPrimaryConst
+        : DS.warning;
+    return Container(
+      padding: const EdgeInsets.all(DS.md),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(DS.borderRadiusLG),
+        gradient: LinearGradient(
+          colors: recommendation.canInviteAccountability
+              ? [
+                  DS.brandPrimary.withValues(alpha: 0.12),
+                  DS.brandPrimary.withValues(alpha: 0.04),
+                ]
+              : [
+                  DS.warning.withValues(alpha: 0.12),
+                  DS.surfaceSecondary,
+                ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(
+          color: recommendation.canInviteAccountability
+              ? DS.brandPrimary.withValues(alpha: 0.25)
+              : DS.warning.withValues(alpha: 0.25),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CircleAvatar(
+                radius: 24,
+                backgroundImage: recommendation.user.avatarUrl != null
+                    ? NetworkImage(recommendation.user.avatarUrl!)
+                    : null,
+                child: recommendation.user.avatarUrl == null
+                    ? Text(recommendation.user.displayName[0])
+                    : null,
+              ),
+              const SizedBox(width: DS.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            recommendation.user.displayName,
+                            style: DS.titleLarge
+                                .copyWith(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: DS.sm,
+                            vertical: DS.xs,
+                          ),
+                          decoration: BoxDecoration(
+                            color: accentColor.withValues(alpha: 0.12),
+                            borderRadius: DS.borderRadiusFull,
+                          ),
+                          child: Text(
+                            '${(recommendation.matchScore * 100).round()}%',
+                            style: DS.labelSmall.copyWith(
+                              color: accentColor,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: DS.xs),
+                    Text(
+                      recommendation.summary ?? '适合作为下一位学习搭子',
+                      style: DS.bodySmall.copyWith(color: DS.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: onDismiss,
+                icon: const Icon(Icons.close),
+                tooltip: '隐藏',
+              ),
+            ],
+          ),
+          const SizedBox(height: DS.sm),
+          Wrap(
+            spacing: DS.sm,
+            runSpacing: DS.sm,
+            children: [
+              _RecommendationBadge(
+                label: recommendation.canInviteAccountability
+                    ? '可直接邀请伙伴'
+                    : recommendation.isExistingFriend
+                        ? '已是好友'
+                        : '先加好友',
+                color: accentColor,
+              ),
+              _RecommendationBadge(
+                label: recommendation.strategy == 'complementary'
+                    ? '互补推荐'
+                    : '契合推荐',
+                color: DS.info,
+              ),
+            ],
+          ),
+          const SizedBox(height: DS.sm),
+          ...recommendation.matchReasons.map(
+            (reason) => Padding(
+              padding: const EdgeInsets.only(bottom: DS.xs),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.auto_awesome,
+                    size: 16,
+                    color: accentColor,
+                  ),
+                  const SizedBox(width: DS.xs),
+                  Expanded(
+                    child: Text(
+                      reason,
+                      style: DS.bodySmall,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: DS.sm),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton(
+                  onPressed: onPrimaryAction,
+                  child: Text(_primaryActionLabel(recommendation)),
+                ),
+              ),
+              const SizedBox(width: DS.sm),
+              OutlinedButton(
+                onPressed: onFeedback,
+                child: const Text('评价推荐'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _primaryActionLabel(FriendRecommendation recommendation) {
+    if (recommendation.canInviteAccountability) {
+      return '发起责任伙伴';
+    }
+    if (!recommendation.isExistingFriend) {
+      return '先加好友';
+    }
+    return '查看详情';
+  }
+}
+
+class _RecommendationBadge extends StatelessWidget {
+  const _RecommendationBadge({
+    required this.label,
+    required this.color,
+  });
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: DS.sm,
+        vertical: DS.xs,
+      ),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: DS.borderRadiusFull,
+      ),
+      child: Text(
+        label,
+        style: DS.labelSmall.copyWith(
+          color: color,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );

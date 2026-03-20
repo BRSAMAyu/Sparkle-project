@@ -14,6 +14,7 @@ from uuid import UUID
 from sqlalchemy import desc, func, inspect, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.cache import cache_service
 from app.models.community import Friendship, FriendshipStatus, Group, GroupMember, GroupMessage, GroupType
 from app.models.plan import Plan
 from app.models.recommendation import RecommendationCache, UserItemInteraction
@@ -23,8 +24,10 @@ from app.schemas.community import (
     GroupRecommendationFeedbackRequest,
     GroupRecommendationItem,
     GroupRecommendationReason,
+    RecommendationItemTypeEnum,
     GroupTypeEnum,
 )
+from app.services.personalization.preference_service import PreferenceService
 
 
 def _utcnow() -> datetime:
@@ -111,9 +114,9 @@ class GroupRecommendationService:
         db: AsyncSession,
         user_id: UUID,
         feedback: GroupRecommendationFeedbackRequest,
-    ) -> None:
+    ) -> UserItemInteraction | None:
         if not await cls._table_exists(db, UserItemInteraction.__tablename__):
-            return
+            return None
 
         interaction = UserItemInteraction(
             user_id=user_id,
@@ -132,6 +135,7 @@ class GroupRecommendationService:
 
         if feedback.action in {"dismiss", "join"}:
             await cls._clear_cache(db, user_id)
+        return interaction
 
     @classmethod
     async def _get_cached_recommendations(
@@ -216,6 +220,7 @@ class GroupRecommendationService:
         friend_counts = await cls._get_friend_counts(db, group_ids, friend_ids)
         msg_counts = await cls._get_message_counts(db, group_ids, now)
         user_tags = await cls._collect_user_tags(db, user_id)
+        tuning = await cls._load_feedback_tuning(db, user_id)
 
         activity_raw = {
             group.id: msg_counts.get(group.id, 0) + group.today_checkin_count * 2
@@ -235,16 +240,30 @@ class GroupRecommendationService:
         quality_scores = _normalize_scores(quality_raw)
         friend_scores = _normalize_scores(friend_raw)
 
-        tag_weight = 0.35
-        friend_weight = 0.25
-        activity_weight = 0.20
-        quality_weight = 0.10
-        freshness_weight = 0.10
+        tag_weight = 0.35 * float((tuning.get("feature_weights") or {}).get("tag_score", 1.0))
+        friend_weight = 0.25 * float((tuning.get("feature_weights") or {}).get("friend_affinity", 1.0))
+        activity_weight = 0.20 * float((tuning.get("feature_weights") or {}).get("activity", 1.0))
+        quality_weight = 0.10 * float((tuning.get("feature_weights") or {}).get("quality", 1.0))
+        freshness_weight = 0.10 * float((tuning.get("feature_weights") or {}).get("freshness", 1.0))
+
+        weight_sum = tag_weight + friend_weight + activity_weight + quality_weight + freshness_weight
+        if weight_sum > 0:
+            tag_weight /= weight_sum
+            friend_weight /= weight_sum
+            activity_weight /= weight_sum
+            quality_weight /= weight_sum
+            freshness_weight /= weight_sum
 
         if not user_tags:
             activity_weight += tag_weight * 0.5
             quality_weight += tag_weight * 0.5
             tag_weight = 0.0
+            weight_sum = friend_weight + activity_weight + quality_weight + freshness_weight
+            if weight_sum > 0:
+                friend_weight /= weight_sum
+                activity_weight /= weight_sum
+                quality_weight /= weight_sum
+                freshness_weight /= weight_sum
 
         candidates = []
         for group in eligible_groups:
@@ -623,6 +642,27 @@ class GroupRecommendationService:
             reasons=reasons,
             requires_approval=group.join_requires_approval,
         )
+
+    @classmethod
+    async def _load_feedback_tuning(
+        cls,
+        db: AsyncSession,
+        user_id: UUID,
+    ) -> dict[str, dict[str, float]]:
+        from app.services.recommendation_feedback_service import RecommendationFeedbackService
+
+        preference_service = PreferenceService(db, cache_service.redis)
+        prefs = await preference_service.get_preferences(user_id)
+        tuning_root = dict((prefs.explicit or {}).get(RecommendationFeedbackService.TUNING_PREF_KEY) or {})
+        user_tuning = dict(tuning_root.get("group") or {})
+        global_adjustments = await RecommendationFeedbackService.get_global_adjustments(
+            db,
+            RecommendationItemTypeEnum.GROUP,
+        )
+        merged_features = dict(user_tuning.get("feature_weights") or {})
+        for key, value in (global_adjustments or {}).items():
+            merged_features[key] = float(merged_features.get(key, 1.0)) * float(value)
+        return {"feature_weights": merged_features}
 
     @classmethod
     def _build_reasons(

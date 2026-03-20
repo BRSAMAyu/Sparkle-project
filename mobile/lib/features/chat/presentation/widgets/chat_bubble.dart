@@ -30,6 +30,7 @@ import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart'
 import 'package:sparkle/features/plan/presentation/widgets/plan_context_summary.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
+import 'package:sparkle/shared/utils/entity_card_payloads.dart';
 
 class ChatBubble extends ConsumerStatefulWidget {
   const ChatBubble({
@@ -1190,8 +1191,15 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
           .adoptResource(sharedResourceId: sharedResourceId);
       if (!context.mounted) return;
       AppFeedback.success(context, '已采纳，跳转中...');
+      final entityCard = result['entity_card'] is Map<String, dynamic>
+          ? EntityCardPayload.fromRaw(
+              {'entity_card': result['entity_card'] as Map<String, dynamic>},
+              fallbackType: resourceType,
+            )
+          : null;
       final newId = result['new_resource_id'] as String;
-      final route = resourceType == 'plan' ? '/plans/$newId' : '/tasks/$newId';
+      final route = entityCard?.detailRoute ??
+          (resourceType == 'plan' ? '/plans/$newId' : '/tasks/$newId');
       unawaited(context.push(route));
     } catch (e) {
       if (!context.mounted) return;

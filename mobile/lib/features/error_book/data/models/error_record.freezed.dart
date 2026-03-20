@@ -21,13 +21,13 @@ ErrorRecord _$ErrorRecordFromJson(Map<String, dynamic> json) {
 /// @nodoc
 mixin _$ErrorRecord {
   String get id => throw _privateConstructorUsedError;
-  @JsonKey(name: 'question_text')
+  @JsonKey(name: 'question_text', fromJson: _stringFromJson)
   String get questionText => throw _privateConstructorUsedError;
-  @JsonKey(name: 'user_answer')
+  @JsonKey(name: 'user_answer', fromJson: _stringFromJson)
   String get userAnswer => throw _privateConstructorUsedError;
-  @JsonKey(name: 'correct_answer')
+  @JsonKey(name: 'correct_answer', fromJson: _stringFromJson)
   String get correctAnswer => throw _privateConstructorUsedError;
-  @JsonKey(name: 'subject_code')
+  @JsonKey(name: 'subject_code', fromJson: _stringFromJson)
   String get subject => throw _privateConstructorUsedError;
   @JsonKey(name: 'mastery_level')
   double get masteryLevel => throw _privateConstructorUsedError;
@@ -69,10 +69,13 @@ abstract class $ErrorRecordCopyWith<$Res> {
   @useResult
   $Res call(
       {String id,
-      @JsonKey(name: 'question_text') String questionText,
-      @JsonKey(name: 'user_answer') String userAnswer,
-      @JsonKey(name: 'correct_answer') String correctAnswer,
-      @JsonKey(name: 'subject_code') String subject,
+      @JsonKey(name: 'question_text', fromJson: _stringFromJson)
+      String questionText,
+      @JsonKey(name: 'user_answer', fromJson: _stringFromJson)
+      String userAnswer,
+      @JsonKey(name: 'correct_answer', fromJson: _stringFromJson)
+      String correctAnswer,
+      @JsonKey(name: 'subject_code', fromJson: _stringFromJson) String subject,
       @JsonKey(name: 'mastery_level') double masteryLevel,
       @JsonKey(name: 'review_count') int reviewCount,
       @JsonKey(name: 'created_at') DateTime createdAt,
@@ -221,10 +224,13 @@ abstract class _$$ErrorRecordImplCopyWith<$Res>
   @useResult
   $Res call(
       {String id,
-      @JsonKey(name: 'question_text') String questionText,
-      @JsonKey(name: 'user_answer') String userAnswer,
-      @JsonKey(name: 'correct_answer') String correctAnswer,
-      @JsonKey(name: 'subject_code') String subject,
+      @JsonKey(name: 'question_text', fromJson: _stringFromJson)
+      String questionText,
+      @JsonKey(name: 'user_answer', fromJson: _stringFromJson)
+      String userAnswer,
+      @JsonKey(name: 'correct_answer', fromJson: _stringFromJson)
+      String correctAnswer,
+      @JsonKey(name: 'subject_code', fromJson: _stringFromJson) String subject,
       @JsonKey(name: 'mastery_level') double masteryLevel,
       @JsonKey(name: 'review_count') int reviewCount,
       @JsonKey(name: 'created_at') DateTime createdAt,
@@ -355,10 +361,14 @@ class __$$ErrorRecordImplCopyWithImpl<$Res>
 class _$ErrorRecordImpl implements _ErrorRecord {
   const _$ErrorRecordImpl(
       {required this.id,
-      @JsonKey(name: 'question_text') required this.questionText,
-      @JsonKey(name: 'user_answer') required this.userAnswer,
-      @JsonKey(name: 'correct_answer') required this.correctAnswer,
-      @JsonKey(name: 'subject_code') required this.subject,
+      @JsonKey(name: 'question_text', fromJson: _stringFromJson)
+      required this.questionText,
+      @JsonKey(name: 'user_answer', fromJson: _stringFromJson)
+      required this.userAnswer,
+      @JsonKey(name: 'correct_answer', fromJson: _stringFromJson)
+      required this.correctAnswer,
+      @JsonKey(name: 'subject_code', fromJson: _stringFromJson)
+      required this.subject,
       @JsonKey(name: 'mastery_level') required this.masteryLevel,
       @JsonKey(name: 'review_count') required this.reviewCount,
       @JsonKey(name: 'created_at') required this.createdAt,
@@ -383,16 +393,16 @@ class _$ErrorRecordImpl implements _ErrorRecord {
   @override
   final String id;
   @override
-  @JsonKey(name: 'question_text')
+  @JsonKey(name: 'question_text', fromJson: _stringFromJson)
   final String questionText;
   @override
-  @JsonKey(name: 'user_answer')
+  @JsonKey(name: 'user_answer', fromJson: _stringFromJson)
   final String userAnswer;
   @override
-  @JsonKey(name: 'correct_answer')
+  @JsonKey(name: 'correct_answer', fromJson: _stringFromJson)
   final String correctAnswer;
   @override
-  @JsonKey(name: 'subject_code')
+  @JsonKey(name: 'subject_code', fromJson: _stringFromJson)
   final String subject;
   @override
   @JsonKey(name: 'mastery_level')
@@ -529,10 +539,14 @@ class _$ErrorRecordImpl implements _ErrorRecord {
 abstract class _ErrorRecord implements ErrorRecord {
   const factory _ErrorRecord(
       {required final String id,
-      @JsonKey(name: 'question_text') required final String questionText,
-      @JsonKey(name: 'user_answer') required final String userAnswer,
-      @JsonKey(name: 'correct_answer') required final String correctAnswer,
-      @JsonKey(name: 'subject_code') required final String subject,
+      @JsonKey(name: 'question_text', fromJson: _stringFromJson)
+      required final String questionText,
+      @JsonKey(name: 'user_answer', fromJson: _stringFromJson)
+      required final String userAnswer,
+      @JsonKey(name: 'correct_answer', fromJson: _stringFromJson)
+      required final String correctAnswer,
+      @JsonKey(name: 'subject_code', fromJson: _stringFromJson)
+      required final String subject,
       @JsonKey(name: 'mastery_level') required final double masteryLevel,
       @JsonKey(name: 'review_count') required final int reviewCount,
       @JsonKey(name: 'created_at') required final DateTime createdAt,
@@ -556,16 +570,16 @@ abstract class _ErrorRecord implements ErrorRecord {
   @override
   String get id;
   @override
-  @JsonKey(name: 'question_text')
+  @JsonKey(name: 'question_text', fromJson: _stringFromJson)
   String get questionText;
   @override
-  @JsonKey(name: 'user_answer')
+  @JsonKey(name: 'user_answer', fromJson: _stringFromJson)
   String get userAnswer;
   @override
-  @JsonKey(name: 'correct_answer')
+  @JsonKey(name: 'correct_answer', fromJson: _stringFromJson)
   String get correctAnswer;
   @override
-  @JsonKey(name: 'subject_code')
+  @JsonKey(name: 'subject_code', fromJson: _stringFromJson)
   String get subject;
   @override
   @JsonKey(name: 'mastery_level')

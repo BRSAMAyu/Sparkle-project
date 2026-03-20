@@ -788,6 +788,186 @@
         "title": "AiModeUsageItem",
         "type": "object"
       },
+      "AiOpsDashboardResponse": {
+        "properties": {
+          "generated_at": {
+            "format": "date-time",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AiOpsModeItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "window_days": {
+            "title": "Window Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "window_days",
+          "items",
+          "generated_at"
+        ],
+        "title": "AiOpsDashboardResponse",
+        "type": "object"
+      },
+      "AiOpsModeItem": {
+        "properties": {
+          "avg_first_token_ms": {
+            "default": 0.0,
+            "title": "Avg First Token Ms",
+            "type": "number"
+          },
+          "avg_stream_duration_ms": {
+            "default": 0.0,
+            "title": "Avg Stream Duration Ms",
+            "type": "number"
+          },
+          "avg_total_duration_ms": {
+            "default": 0.0,
+            "title": "Avg Total Duration Ms",
+            "type": "number"
+          },
+          "chat_mode": {
+            "title": "Chat Mode",
+            "type": "string"
+          },
+          "execution_conversion_rate_percent": {
+            "default": 0.0,
+            "title": "Execution Conversion Rate Percent",
+            "type": "number"
+          },
+          "execution_count": {
+            "default": 0,
+            "title": "Execution Count",
+            "type": "integer"
+          },
+          "fallback_rate_percent": {
+            "default": 0.0,
+            "title": "Fallback Rate Percent",
+            "type": "number"
+          },
+          "feedback_coverage_percent": {
+            "default": 0.0,
+            "title": "Feedback Coverage Percent",
+            "type": "number"
+          },
+          "negative_feedback_count": {
+            "default": 0,
+            "title": "Negative Feedback Count",
+            "type": "integer"
+          },
+          "plan_conversion_rate_percent": {
+            "default": 0.0,
+            "title": "Plan Conversion Rate Percent",
+            "type": "number"
+          },
+          "plan_count": {
+            "default": 0,
+            "title": "Plan Count",
+            "type": "integer"
+          },
+          "positive_feedback_count": {
+            "default": 0,
+            "title": "Positive Feedback Count",
+            "type": "integer"
+          },
+          "positive_feedback_rate_percent": {
+            "default": 0.0,
+            "title": "Positive Feedback Rate Percent",
+            "type": "number"
+          },
+          "reasoning_mode_breakdown": {
+            "items": {
+              "$ref": "#/components/schemas/AiOpsReasoningBreakdownItem"
+            },
+            "title": "Reasoning Mode Breakdown",
+            "type": "array"
+          },
+          "requests_failed": {
+            "default": 0,
+            "title": "Requests Failed",
+            "type": "integer"
+          },
+          "requests_success": {
+            "default": 0,
+            "title": "Requests Success",
+            "type": "integer"
+          },
+          "requests_total": {
+            "default": 0,
+            "title": "Requests Total",
+            "type": "integer"
+          },
+          "success_rate_percent": {
+            "default": 0.0,
+            "title": "Success Rate Percent",
+            "type": "number"
+          },
+          "task_conversion_rate_percent": {
+            "default": 0.0,
+            "title": "Task Conversion Rate Percent",
+            "type": "number"
+          },
+          "task_count": {
+            "default": 0,
+            "title": "Task Count",
+            "type": "integer"
+          },
+          "total_cost_usd": {
+            "default": 0.0,
+            "title": "Total Cost Usd",
+            "type": "number"
+          },
+          "total_tokens": {
+            "default": 0,
+            "title": "Total Tokens",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "chat_mode"
+        ],
+        "title": "AiOpsModeItem",
+        "type": "object"
+      },
+      "AiOpsReasoningBreakdownItem": {
+        "properties": {
+          "fallback_count": {
+            "default": 0,
+            "title": "Fallback Count",
+            "type": "integer"
+          },
+          "mode": {
+            "title": "Mode",
+            "type": "string"
+          },
+          "requests_success": {
+            "default": 0,
+            "title": "Requests Success",
+            "type": "integer"
+          },
+          "requests_total": {
+            "default": 0,
+            "title": "Requests Total",
+            "type": "integer"
+          },
+          "total_cost_usd": {
+            "default": 0.0,
+            "title": "Total Cost Usd",
+            "type": "number"
+          }
+        },
+        "required": [
+          "mode"
+        ],
+        "title": "AiOpsReasoningBreakdownItem",
+        "type": "object"
+      },
       "AiUsageExportResponse": {
         "properties": {
           "chat_mode_timing": {
@@ -3093,6 +3273,91 @@
           "group_checkin_count"
         ],
         "title": "CheckinResponse",
+        "type": "object"
+      },
+      "ClientTelemetryEventRequest": {
+        "properties": {
+          "category": {
+            "default": "general",
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Category",
+            "type": "string"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "maximum": 600000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "event_type": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Event Type",
+            "type": "string"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata"
+          },
+          "occurred_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occurred At"
+          },
+          "route": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Route"
+          },
+          "severity": {
+            "default": "info",
+            "maxLength": 16,
+            "minLength": 1,
+            "title": "Severity",
+            "type": "string"
+          },
+          "status": {
+            "default": "ok",
+            "maxLength": 16,
+            "minLength": 1,
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "event_type"
+        ],
+        "title": "ClientTelemetryEventRequest",
         "type": "object"
       },
       "CloseToUnlockAchievementListResponse": {
@@ -6648,9 +6913,30 @@
         "title": "ForgotPasswordRequest",
         "type": "object"
       },
+      "FriendMatchStrategyEnum": {
+        "description": "好友/责任伙伴匹配策略",
+        "enum": [
+          "compatibility",
+          "complementary"
+        ],
+        "title": "FriendMatchStrategyEnum",
+        "type": "string"
+      },
       "FriendRecommendation": {
         "description": "好友推荐",
         "properties": {
+          "can_invite_accountability": {
+            "default": false,
+            "description": "是否可直接邀请为责任伙伴",
+            "title": "Can Invite Accountability",
+            "type": "boolean"
+          },
+          "is_existing_friend": {
+            "default": false,
+            "description": "是否已经是好友",
+            "title": "Is Existing Friend",
+            "type": "boolean"
+          },
           "match_reasons": {
             "description": "匹配原因列表",
             "items": {
@@ -6666,6 +6952,50 @@
             "title": "Match Score",
             "type": "number"
           },
+          "recommended_action": {
+            "default": "send_friend_request",
+            "description": "推荐动作",
+            "title": "Recommended Action",
+            "type": "string"
+          },
+          "relationship_status": {
+            "default": "none",
+            "description": "当前关系状态",
+            "title": "Relationship Status",
+            "type": "string"
+          },
+          "score_breakdown": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "description": "评分拆解",
+            "title": "Score Breakdown",
+            "type": "object"
+          },
+          "strategy": {
+            "default": "compatibility",
+            "description": "匹配策略",
+            "title": "Strategy",
+            "type": "string"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "推荐摘要",
+            "title": "Summary"
+          },
+          "target": {
+            "default": "accountability",
+            "description": "推荐目标",
+            "title": "Target",
+            "type": "string"
+          },
           "user": {
             "$ref": "#/components/schemas/UserBrief",
             "description": "推荐用户"
@@ -6678,6 +7008,268 @@
         ],
         "title": "FriendRecommendation",
         "type": "object"
+      },
+      "FriendRecommendationFeedbackRequest": {
+        "description": "好友推荐反馈",
+        "properties": {
+          "action": {
+            "description": "反馈动作",
+            "enum": [
+              "view",
+              "dismiss",
+              "friend_request",
+              "accountability_invite"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "actionability_score": {
+            "anyOf": [
+              {
+                "maximum": 5.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "推荐可行动性评分",
+            "title": "Actionability Score"
+          },
+          "activity_score": {
+            "anyOf": [
+              {
+                "maximum": 5.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "活跃度评分",
+            "title": "Activity Score"
+          },
+          "atmosphere_score": {
+            "anyOf": [
+              {
+                "maximum": 5.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "社群氛围评分",
+            "title": "Atmosphere Score"
+          },
+          "comfort_score": {
+            "anyOf": [
+              {
+                "maximum": 5.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "信任/舒适度评分",
+            "title": "Comfort Score"
+          },
+          "complementary_score": {
+            "anyOf": [
+              {
+                "maximum": 5.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "互补性预期评分",
+            "title": "Complementary Score"
+          },
+          "explanation_score": {
+            "anyOf": [
+              {
+                "maximum": 5.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "推荐理由解释性评分",
+            "title": "Explanation Score"
+          },
+          "free_text": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "自然语言补充反馈",
+            "title": "Free Text"
+          },
+          "interest_match_score": {
+            "anyOf": [
+              {
+                "maximum": 5.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "兴趣匹配评分",
+            "title": "Interest Match Score"
+          },
+          "overall_score": {
+            "anyOf": [
+              {
+                "maximum": 5.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "总体满意度",
+            "title": "Overall Score"
+          },
+          "prompt_id": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "待反馈提示ID",
+            "title": "Prompt Id"
+          },
+          "questionnaire_version": {
+            "default": 1,
+            "description": "问卷版本",
+            "minimum": 1.0,
+            "title": "Questionnaire Version",
+            "type": "integer"
+          },
+          "relevance_score": {
+            "anyOf": [
+              {
+                "maximum": 5.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "相关度评分",
+            "title": "Relevance Score"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "展示时的匹配分",
+            "title": "Score"
+          },
+          "selected_issues": {
+            "description": "用户勾选的问题点",
+            "items": {
+              "type": "string"
+            },
+            "title": "Selected Issues",
+            "type": "array"
+          },
+          "selected_strengths": {
+            "description": "用户勾选的优点",
+            "items": {
+              "type": "string"
+            },
+            "title": "Selected Strengths",
+            "type": "array"
+          },
+          "similarity_score": {
+            "anyOf": [
+              {
+                "maximum": 5.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "相似度预期评分",
+            "title": "Similarity Score"
+          },
+          "source": {
+            "default": "friends_discover",
+            "description": "来源位置",
+            "maxLength": 64,
+            "title": "Source",
+            "type": "string"
+          },
+          "stage": {
+            "$ref": "#/components/schemas/RecommendationFeedbackStageEnum",
+            "default": "immediate",
+            "description": "反馈阶段"
+          },
+          "strategy": {
+            "$ref": "#/components/schemas/FriendMatchStrategyEnum",
+            "description": "匹配策略"
+          },
+          "target": {
+            "$ref": "#/components/schemas/FriendRecommendationTargetEnum",
+            "description": "推荐目标"
+          },
+          "target_user_id": {
+            "description": "被推荐用户ID",
+            "format": "uuid",
+            "title": "Target User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "target_user_id",
+          "strategy",
+          "target",
+          "action"
+        ],
+        "title": "FriendRecommendationFeedbackRequest",
+        "type": "object"
+      },
+      "FriendRecommendationTargetEnum": {
+        "description": "好友推荐目标",
+        "enum": [
+          "friend",
+          "accountability"
+        ],
+        "title": "FriendRecommendationTargetEnum",
+        "type": "string"
       },
       "FriendRequest": {
         "description": "发起好友请求",
@@ -7072,6 +7664,80 @@
         ],
         "title": "GroupCreate",
         "type": "object"
+      },
+      "GroupDirectoryResponse": {
+        "description": "公开群组目录聚合响应",
+        "properties": {
+          "applied_tags": {
+            "description": "当前筛选标签",
+            "items": {
+              "type": "string"
+            },
+            "title": "Applied Tags",
+            "type": "array"
+          },
+          "available_tags": {
+            "description": "可浏览标签",
+            "items": {
+              "type": "string"
+            },
+            "title": "Available Tags",
+            "type": "array"
+          },
+          "groups": {
+            "description": "公开群组目录结果",
+            "items": {
+              "$ref": "#/components/schemas/GroupListItem"
+            },
+            "title": "Groups",
+            "type": "array"
+          },
+          "keyword": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "搜索关键词",
+            "title": "Keyword"
+          },
+          "recommendations": {
+            "description": "个性化推荐",
+            "items": {
+              "$ref": "#/components/schemas/GroupRecommendationItem"
+            },
+            "title": "Recommendations",
+            "type": "array"
+          },
+          "sort_by": {
+            "$ref": "#/components/schemas/GroupDirectorySortEnum",
+            "description": "当前排序方式"
+          },
+          "total_count": {
+            "default": 0,
+            "description": "符合筛选条件的群组总数",
+            "title": "Total Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "sort_by"
+        ],
+        "title": "GroupDirectoryResponse",
+        "type": "object"
+      },
+      "GroupDirectorySortEnum": {
+        "description": "群组目录排序方式",
+        "enum": [
+          "hot",
+          "latest",
+          "random"
+        ],
+        "title": "GroupDirectorySortEnum",
+        "type": "string"
       },
       "GroupFileCategoryStat": {
         "description": "群文件分类统计",
@@ -7533,6 +8199,18 @@
       "GroupListItem": {
         "description": "群组列表项（简要信息）",
         "properties": {
+          "activity_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "目录排序用活跃度得分",
+            "title": "Activity Score"
+          },
           "days_remaining": {
             "anyOf": [
               {
@@ -7558,6 +8236,18 @@
             "description": "冲刺截止日期",
             "title": "Deadline"
           },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "群组简介",
+            "title": "Description"
+          },
           "focus_tags": {
             "description": "关注标签",
             "items": {
@@ -7571,6 +8261,18 @@
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "is_public": {
+            "default": true,
+            "description": "是否公开",
+            "title": "Is Public",
+            "type": "boolean"
+          },
+          "join_requires_approval": {
+            "default": false,
+            "description": "加入是否需要审批",
+            "title": "Join Requires Approval",
+            "type": "boolean"
           },
           "member_count": {
             "description": "成员数量",
@@ -7592,6 +8294,12 @@
             "description": "群组名称",
             "title": "Name",
             "type": "string"
+          },
+          "today_checkin_count": {
+            "default": 0,
+            "description": "今日打卡数量",
+            "title": "Today Checkin Count",
+            "type": "integer"
           },
           "total_flame_power": {
             "description": "火苗总能量",
@@ -7767,11 +8475,156 @@
             "title": "Action",
             "type": "string"
           },
+          "actionability_score": {
+            "anyOf": [
+              {
+                "maximum": 5.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "推荐可行动性评分",
+            "title": "Actionability Score"
+          },
+          "activity_score": {
+            "anyOf": [
+              {
+                "maximum": 5.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "活跃度评分",
+            "title": "Activity Score"
+          },
+          "atmosphere_score": {
+            "anyOf": [
+              {
+                "maximum": 5.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "社群氛围评分",
+            "title": "Atmosphere Score"
+          },
+          "comfort_score": {
+            "anyOf": [
+              {
+                "maximum": 5.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "信任/舒适度评分",
+            "title": "Comfort Score"
+          },
+          "complementary_score": {
+            "anyOf": [
+              {
+                "maximum": 5.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "互补性预期评分",
+            "title": "Complementary Score"
+          },
+          "explanation_score": {
+            "anyOf": [
+              {
+                "maximum": 5.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "推荐理由解释性评分",
+            "title": "Explanation Score"
+          },
+          "free_text": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "自然语言补充反馈",
+            "title": "Free Text"
+          },
           "group_id": {
             "description": "群组ID",
             "format": "uuid",
             "title": "Group Id",
             "type": "string"
+          },
+          "interest_match_score": {
+            "anyOf": [
+              {
+                "maximum": 5.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "兴趣匹配评分",
+            "title": "Interest Match Score"
+          },
+          "overall_score": {
+            "anyOf": [
+              {
+                "maximum": 5.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "总体满意度",
+            "title": "Overall Score"
+          },
+          "prompt_id": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "待反馈提示ID",
+            "title": "Prompt Id"
+          },
+          "questionnaire_version": {
+            "default": 1,
+            "description": "问卷版本",
+            "minimum": 1.0,
+            "title": "Questionnaire Version",
+            "type": "integer"
           },
           "reason_types": {
             "anyOf": [
@@ -7788,6 +8641,50 @@
             "description": "展示的理由类型",
             "title": "Reason Types"
           },
+          "relevance_score": {
+            "anyOf": [
+              {
+                "maximum": 5.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "相关度评分",
+            "title": "Relevance Score"
+          },
+          "selected_issues": {
+            "description": "用户勾选的问题点",
+            "items": {
+              "type": "string"
+            },
+            "title": "Selected Issues",
+            "type": "array"
+          },
+          "selected_strengths": {
+            "description": "用户勾选的优点",
+            "items": {
+              "type": "string"
+            },
+            "title": "Selected Strengths",
+            "type": "array"
+          },
+          "similarity_score": {
+            "anyOf": [
+              {
+                "maximum": 5.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "相似度预期评分",
+            "title": "Similarity Score"
+          },
           "source": {
             "description": "来源位置",
             "enum": [
@@ -7796,6 +8693,11 @@
             ],
             "title": "Source",
             "type": "string"
+          },
+          "stage": {
+            "$ref": "#/components/schemas/RecommendationFeedbackStageEnum",
+            "default": "immediate",
+            "description": "反馈阶段"
           }
         },
         "required": [
@@ -14565,6 +15467,219 @@
         "title": "ReactionActionEnum",
         "type": "string"
       },
+      "RealtimeNextStepRequest": {
+        "properties": {
+          "active_plan_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "当前激活计划 ID",
+            "title": "Active Plan Id"
+          },
+          "partial_text": {
+            "default": "",
+            "description": "当前输入或最近一句话",
+            "title": "Partial Text",
+            "type": "string"
+          },
+          "surface": {
+            "default": "chat_input",
+            "description": "触发预测的界面",
+            "title": "Surface",
+            "type": "string"
+          }
+        },
+        "title": "RealtimeNextStepRequest",
+        "type": "object"
+      },
+      "RecommendationFeedbackInsight": {
+        "description": "推荐反馈洞察摘要",
+        "properties": {
+          "average_scores": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "description": "各维度平均分",
+            "title": "Average Scores",
+            "type": "object"
+          },
+          "global_adjustments": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "description": "全局算法调优参数",
+            "title": "Global Adjustments",
+            "type": "object"
+          },
+          "item_type": {
+            "$ref": "#/components/schemas/RecommendationItemTypeEnum"
+          },
+          "recent_feedback_count": {
+            "default": 0,
+            "description": "近期反馈数",
+            "title": "Recent Feedback Count",
+            "type": "integer"
+          },
+          "top_negative_signals": {
+            "description": "高频负向信号",
+            "items": {
+              "type": "string"
+            },
+            "title": "Top Negative Signals",
+            "type": "array"
+          },
+          "top_positive_signals": {
+            "description": "高频正向信号",
+            "items": {
+              "type": "string"
+            },
+            "title": "Top Positive Signals",
+            "type": "array"
+          },
+          "user_tuning": {
+            "additionalProperties": true,
+            "description": "用户个性化调优参数",
+            "title": "User Tuning",
+            "type": "object"
+          }
+        },
+        "required": [
+          "item_type"
+        ],
+        "title": "RecommendationFeedbackInsight",
+        "type": "object"
+      },
+      "RecommendationFeedbackPrompt": {
+        "description": "待处理的推荐反馈提示",
+        "properties": {
+          "due_at": {
+            "description": "建议反馈时间",
+            "format": "date-time",
+            "title": "Due At",
+            "type": "string"
+          },
+          "group": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GroupListItem"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "社群候选快照"
+          },
+          "item_id": {
+            "description": "对象ID",
+            "format": "uuid",
+            "title": "Item Id",
+            "type": "string"
+          },
+          "item_type": {
+            "$ref": "#/components/schemas/RecommendationItemTypeEnum"
+          },
+          "prompt_id": {
+            "description": "提示ID",
+            "title": "Prompt Id",
+            "type": "string"
+          },
+          "reason_tags": {
+            "description": "展示过的理由标签",
+            "items": {
+              "type": "string"
+            },
+            "title": "Reason Tags",
+            "type": "array"
+          },
+          "stage": {
+            "$ref": "#/components/schemas/RecommendationFeedbackStageEnum",
+            "description": "当前反馈阶段"
+          },
+          "strategy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "对应的推荐策略",
+            "title": "Strategy"
+          },
+          "subtitle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "提示副标题",
+            "title": "Subtitle"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "对应推荐目标",
+            "title": "Target"
+          },
+          "title": {
+            "description": "提示标题",
+            "title": "Title",
+            "type": "string"
+          },
+          "trigger_action": {
+            "description": "触发提示的行为",
+            "title": "Trigger Action",
+            "type": "string"
+          },
+          "user": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UserBrief"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "好友候选快照"
+          }
+        },
+        "required": [
+          "prompt_id",
+          "item_type",
+          "item_id",
+          "stage",
+          "trigger_action",
+          "title",
+          "due_at"
+        ],
+        "title": "RecommendationFeedbackPrompt",
+        "type": "object"
+      },
+      "RecommendationFeedbackStageEnum": {
+        "description": "推荐反馈阶段",
+        "enum": [
+          "immediate",
+          "follow_up",
+          "outcome"
+        ],
+        "title": "RecommendationFeedbackStageEnum",
+        "type": "string"
+      },
       "RecommendationItemType": {
         "description": "推荐物品类型",
         "enum": [
@@ -14575,6 +15690,15 @@
           "subject"
         ],
         "title": "RecommendationItemType",
+        "type": "string"
+      },
+      "RecommendationItemTypeEnum": {
+        "description": "推荐对象类型",
+        "enum": [
+          "friend",
+          "group"
+        ],
+        "title": "RecommendationItemTypeEnum",
         "type": "string"
       },
       "RecordMetricRequest": {
@@ -25484,6 +26608,106 @@
         ]
       }
     },
+    "/api/v1/client-telemetry/events": {
+      "post": {
+        "operationId": "ingest_client_telemetry_api_v1_client_telemetry_events_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClientTelemetryEventRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Ingest Client Telemetry Api V1 Client Telemetry Events Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Ingest Client Telemetry",
+        "tags": [
+          "client-telemetry"
+        ]
+      }
+    },
+    "/api/v1/client-telemetry/summary": {
+      "get": {
+        "operationId": "get_client_telemetry_summary_api_v1_client_telemetry_summary_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 7,
+              "maximum": 30,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Client Telemetry Summary Api V1 Client Telemetry Summary Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Client Telemetry Summary",
+        "tags": [
+          "client-telemetry"
+        ]
+      }
+    },
     "/api/v1/cognitive/fragments": {
       "get": {
         "description": "获取用户的认知碎片列表",
@@ -26245,7 +27469,7 @@
     },
     "/api/v1/community/friends/recommendations": {
       "get": {
-        "description": "基于以下因素推荐好友：\n1. 共同群组成员\n2. 相似的学习偏好/标签\n3. 地理位置（如果可用）",
+        "description": "基于用户画像、学习轨迹和责任伙伴可用性推荐潜在好友/责任伙伴。",
         "operationId": "get_friend_recommendations_api_v1_community_friends_recommendations_get",
         "parameters": [
           {
@@ -26258,6 +27482,24 @@
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "strategy",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/FriendMatchStrategyEnum",
+              "default": "compatibility"
+            }
+          },
+          {
+            "in": "query",
+            "name": "target",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/FriendRecommendationTargetEnum",
+              "default": "accountability"
             }
           }
         ],
@@ -26293,6 +27535,50 @@
           }
         ],
         "summary": "获取好友推荐",
+        "tags": [
+          "community"
+        ]
+      }
+    },
+    "/api/v1/community/friends/recommendations/feedback": {
+      "post": {
+        "operationId": "submit_friend_recommendation_feedback_api_v1_community_friends_recommendations_feedback_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FriendRecommendationFeedbackRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "提交好友推荐反馈",
         "tags": [
           "community"
         ]
@@ -26716,6 +28002,128 @@
         ]
       }
     },
+    "/api/v1/community/groups/directory": {
+      "get": {
+        "description": "公开群组目录，整合推荐、标签和公开浏览。",
+        "operationId": "get_group_directory_api_v1_community_groups_directory_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "keyword",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Keyword"
+            }
+          },
+          {
+            "in": "query",
+            "name": "group_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/GroupTypeEnum"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Group Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tags",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tags"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort_by",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/GroupDirectorySortEnum",
+              "default": "hot"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupDirectoryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "公开群组目录",
+        "tags": [
+          "community"
+        ]
+      }
+    },
     "/api/v1/community/groups/recommendations": {
       "get": {
         "description": "获取群组推荐列表",
@@ -26885,6 +28293,15 @@
           },
           {
             "in": "query",
+            "name": "sort_by",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/GroupDirectorySortEnum",
+              "default": "latest"
+            }
+          },
+          {
+            "in": "query",
             "name": "limit",
             "required": false,
             "schema": {
@@ -26892,6 +28309,17 @@
               "maximum": 100,
               "minimum": 1,
               "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
               "type": "integer"
             }
           }
@@ -26922,6 +28350,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "搜索公开群组",
         "tags": [
           "community"
@@ -29429,6 +30862,146 @@
           }
         ],
         "summary": "点赞/取消点赞",
+        "tags": [
+          "community"
+        ]
+      }
+    },
+    "/api/v1/community/recommendations/feedback/insights": {
+      "get": {
+        "operationId": "get_recommendation_feedback_insights_api_v1_community_recommendations_feedback_insights_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "item_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/RecommendationItemTypeEnum"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Item Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 180,
+              "minimum": 7,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RecommendationFeedbackInsight"
+                  },
+                  "title": "Response Get Recommendation Feedback Insights Api V1 Community Recommendations Feedback Insights Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "获取推荐反馈洞察",
+        "tags": [
+          "community"
+        ]
+      }
+    },
+    "/api/v1/community/recommendations/feedback/prompts": {
+      "get": {
+        "operationId": "get_recommendation_feedback_prompts_api_v1_community_recommendations_feedback_prompts_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "item_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/RecommendationItemTypeEnum"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Item Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RecommendationFeedbackPrompt"
+                  },
+                  "title": "Response Get Recommendation Feedback Prompts Api V1 Community Recommendations Feedback Prompts Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "获取待处理推荐反馈提示",
         "tags": [
           "community"
         ]
@@ -33492,6 +35065,35 @@
           }
         ],
         "summary": "Health Check",
+        "tags": [
+          "Health",
+          "Health"
+        ]
+      }
+    },
+    "/api/v1/health/health/capacity": {
+      "get": {
+        "operationId": "capacity_overview_api_v1_health_health_capacity_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Capacity Overview Api V1 Health Health Capacity Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Capacity Overview",
         "tags": [
           "Health",
           "Health"
@@ -37954,6 +39556,52 @@
         ]
       }
     },
+    "/api/v1/predictive/analytics": {
+      "get": {
+        "operationId": "get_prediction_analytics_api_v1_predictive_analytics_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 7,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Prediction Analytics",
+        "tags": [
+          "predictive"
+        ]
+      }
+    },
     "/api/v1/predictive/dashboard": {
       "get": {
         "description": "获取预测分析仪表板（综合数据）\n\nReturns:\n    - engagement_forecast: 活跃度预测\n    - dropout_risk: 流失风险\n    - optimal_time: 最佳学习时间\n    - upcoming_topics: 即将学习的主题难度预测",
@@ -38120,6 +39768,50 @@
           }
         ],
         "summary": "Get Optimal Time Recommendation",
+        "tags": [
+          "predictive"
+        ]
+      }
+    },
+    "/api/v1/predictive/realtime-next-step": {
+      "post": {
+        "operationId": "get_realtime_next_step_prediction_api_v1_predictive_realtime_next_step_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RealtimeNextStepRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Realtime Next Step Prediction",
         "tags": [
           "predictive"
         ]
@@ -43333,6 +45025,56 @@
           }
         ],
         "summary": "Replace User Settings",
+        "tags": [
+          "user_settings"
+        ]
+      }
+    },
+    "/api/v1/user/settings/ai-ops": {
+      "get": {
+        "operationId": "get_user_ai_ops_dashboard_api_v1_user_settings_ai_ops_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 7,
+              "maximum": 30,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiOpsDashboardResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get User Ai Ops Dashboard",
         "tags": [
           "user_settings"
         ]

@@ -55,6 +55,9 @@ class TokenTracker:
         model_tier: str | None = None,
         chat_mode: str | None = None,
         timing_stats: dict[str, Any] | None = None,
+        success: bool = True,
+        fallback_used: bool = False,
+        outcome_stats: dict[str, Any] | None = None,
     ) -> int:
         """
         记录 Token 使用量
@@ -88,6 +91,9 @@ class TokenTracker:
             "model_tier": model_tier or "",
             "chat_mode": chat_mode or "standard",
             "timing_stats": timing_stats or {},
+            "success": bool(success),
+            "fallback_used": bool(fallback_used),
+            "outcome_stats": outcome_stats or {},
             "timestamp": timestamp,
         }
 
@@ -150,6 +156,37 @@ class TokenTracker:
                 await self.redis.hincrby(aggregate_key, "stream_duration_ms_sum", stream_duration_ms)
             await self.redis.expire(aggregate_key, 86400 * 14)
 
+        ops_key = f"user:ai_ops:{user_id}:{today}:{mode}:{chat_mode or 'standard'}"
+        await self.redis.hincrby(ops_key, "requests_total", 1)
+        await self.redis.hincrby(ops_key, "requests_success", 1 if success else 0)
+        await self.redis.hincrby(ops_key, "requests_failed", 0 if success else 1)
+        if fallback_used:
+            await self.redis.hincrby(ops_key, "fallback_count", 1)
+        await self.redis.hincrby(ops_key, "total_tokens_sum", total_tokens)
+        if cost is not None:
+            await self.redis.hincrby(ops_key, "total_cost_micro_usd", int(round(float(cost) * 1_000_000)))
+        if timing_stats:
+            if total_duration_ms > 0:
+                await self.redis.hincrby(ops_key, "total_duration_ms_sum", total_duration_ms)
+            if first_token_ms > 0:
+                await self.redis.hincrby(ops_key, "first_token_ms_sum", first_token_ms)
+            if stream_duration_ms > 0:
+                await self.redis.hincrby(ops_key, "stream_duration_ms_sum", stream_duration_ms)
+        outcome_stats = outcome_stats or {}
+        task_count = self._safe_int(outcome_stats.get("task_count"))
+        plan_count = self._safe_int(outcome_stats.get("plan_count"))
+        execution_count = self._safe_int(outcome_stats.get("execution_count"))
+        if task_count > 0:
+            await self.redis.hincrby(ops_key, "task_count_sum", task_count)
+            await self.redis.hincrby(ops_key, "task_request_count", 1)
+        if plan_count > 0:
+            await self.redis.hincrby(ops_key, "plan_count_sum", plan_count)
+            await self.redis.hincrby(ops_key, "plan_request_count", 1)
+        if execution_count > 0:
+            await self.redis.hincrby(ops_key, "execution_count_sum", execution_count)
+            await self.redis.hincrby(ops_key, "execution_request_count", 1)
+        await self.redis.expire(ops_key, 86400 * 30)
+
         # 5. 记录到历史明细（可选，用于详细分析）
         detail_key = f"user:details:{user_id}:{today}"
         detail = {
@@ -163,6 +200,9 @@ class TokenTracker:
             "reasoning_mode": mode,
             "chat_mode": chat_mode or "standard",
             "timing_stats": timing_stats or {},
+            "success": bool(success),
+            "fallback_used": bool(fallback_used),
+            "outcome_stats": outcome_stats or {},
             "timestamp": timestamp,
         }
         await self.redis.rpush(detail_key, json.dumps(detail))
@@ -558,6 +598,248 @@ class TokenTracker:
             ),
             reverse=True,
         )
+        return summaries
+
+    async def get_ai_ops_summary(
+        self,
+        user_id: str,
+        *,
+        days: int = 7,
+    ) -> list[dict[str, Any]]:
+        buckets: dict[str, dict[str, Any]] = {}
+        for day_offset in range(days):
+            date = (datetime.now() - timedelta(days=day_offset)).strftime("%Y-%m-%d")
+            pattern = f"user:ai_ops:{user_id}:{date}:*"
+            async for key in self.redis.scan_iter(match=pattern):
+                decoded_key = key.decode() if isinstance(key, bytes) else str(key)
+                parts = decoded_key.split(":")
+                if len(parts) < 6:
+                    continue
+                reasoning_mode = parts[4]
+                chat_mode = parts[5]
+                raw = await self.redis.hgetall(decoded_key)
+                if not raw:
+                    continue
+                bucket = buckets.setdefault(
+                    chat_mode,
+                    {
+                        "chat_mode": chat_mode,
+                        "requests_total": 0,
+                        "requests_success": 0,
+                        "requests_failed": 0,
+                        "fallback_count": 0,
+                        "total_tokens": 0,
+                        "total_cost_usd": 0.0,
+                        "total_duration_ms": 0,
+                        "first_token_ms_sum": 0,
+                        "stream_duration_ms_sum": 0,
+                        "task_count": 0,
+                        "plan_count": 0,
+                        "execution_count": 0,
+                        "task_request_count": 0,
+                        "plan_request_count": 0,
+                        "execution_request_count": 0,
+                        "reasoning_mode_breakdown": {},
+                    },
+                )
+                requests_total = int(raw.get("requests_total") or 0)
+                requests_success = int(raw.get("requests_success") or 0)
+                requests_failed = int(raw.get("requests_failed") or 0)
+                fallback_count = int(raw.get("fallback_count") or 0)
+                total_tokens = int(raw.get("total_tokens_sum") or 0)
+                total_cost_micro = int(raw.get("total_cost_micro_usd") or 0)
+                total_duration_ms = int(raw.get("total_duration_ms_sum") or 0)
+                first_token_ms = int(raw.get("first_token_ms_sum") or 0)
+                stream_duration_ms = int(raw.get("stream_duration_ms_sum") or 0)
+                task_count = int(raw.get("task_count_sum") or 0)
+                plan_count = int(raw.get("plan_count_sum") or 0)
+                execution_count = int(raw.get("execution_count_sum") or 0)
+                task_request_count = int(raw.get("task_request_count") or 0)
+                plan_request_count = int(raw.get("plan_request_count") or 0)
+                execution_request_count = int(raw.get("execution_request_count") or 0)
+                bucket["requests_total"] += requests_total
+                bucket["requests_success"] += requests_success
+                bucket["requests_failed"] += requests_failed
+                bucket["fallback_count"] += fallback_count
+                bucket["total_tokens"] += total_tokens
+                bucket["total_cost_usd"] += total_cost_micro / 1_000_000.0
+                bucket["total_duration_ms"] += total_duration_ms
+                bucket["first_token_ms_sum"] += first_token_ms
+                bucket["stream_duration_ms_sum"] += stream_duration_ms
+                bucket["task_count"] += task_count
+                bucket["plan_count"] += plan_count
+                bucket["execution_count"] += execution_count
+                bucket["task_request_count"] += task_request_count
+                bucket["plan_request_count"] += plan_request_count
+                bucket["execution_request_count"] += execution_request_count
+                reasoning_bucket = bucket["reasoning_mode_breakdown"].setdefault(
+                    reasoning_mode,
+                    {
+                        "requests_total": 0,
+                        "requests_success": 0,
+                        "fallback_count": 0,
+                        "total_cost_usd": 0.0,
+                    },
+                )
+                reasoning_bucket["requests_total"] += requests_total
+                reasoning_bucket["requests_success"] += requests_success
+                reasoning_bucket["fallback_count"] += fallback_count
+                reasoning_bucket["total_cost_usd"] += total_cost_micro / 1_000_000.0
+
+        summaries: list[dict[str, Any]] = []
+        for chat_mode, bucket in buckets.items():
+            requests_total = int(bucket["requests_total"])
+            requests_success = int(bucket["requests_success"])
+            fallback_count = int(bucket["fallback_count"])
+            task_request_count = int(bucket["task_request_count"])
+            plan_request_count = int(bucket["plan_request_count"])
+            execution_request_count = int(bucket["execution_request_count"])
+            summaries.append(
+                {
+                    "chat_mode": chat_mode,
+                    "requests_total": requests_total,
+                    "requests_success": requests_success,
+                    "requests_failed": int(bucket["requests_failed"]),
+                    "success_rate_percent": round((requests_success / requests_total) * 100, 2)
+                    if requests_total > 0
+                    else 0.0,
+                    "fallback_rate_percent": round((fallback_count / requests_total) * 100, 2)
+                    if requests_total > 0
+                    else 0.0,
+                    "total_tokens": int(bucket["total_tokens"]),
+                    "total_cost_usd": round(float(bucket["total_cost_usd"]), 6),
+                    "avg_total_duration_ms": round(int(bucket["total_duration_ms"]) / requests_total, 2)
+                    if requests_total > 0
+                    else 0.0,
+                    "avg_first_token_ms": round(int(bucket["first_token_ms_sum"]) / requests_total, 2)
+                    if requests_total > 0
+                    else 0.0,
+                    "avg_stream_duration_ms": round(int(bucket["stream_duration_ms_sum"]) / requests_total, 2)
+                    if requests_total > 0
+                    else 0.0,
+                    "task_count": int(bucket["task_count"]),
+                    "plan_count": int(bucket["plan_count"]),
+                    "execution_count": int(bucket["execution_count"]),
+                    "task_conversion_rate_percent": round((task_request_count / requests_total) * 100, 2)
+                    if requests_total > 0
+                    else 0.0,
+                    "plan_conversion_rate_percent": round((plan_request_count / requests_total) * 100, 2)
+                    if requests_total > 0
+                    else 0.0,
+                    "execution_conversion_rate_percent": round((execution_request_count / requests_total) * 100, 2)
+                    if requests_total > 0
+                    else 0.0,
+                    "reasoning_mode_breakdown": [
+                        {
+                            "mode": mode,
+                            "requests_total": int(mode_bucket["requests_total"]),
+                            "requests_success": int(mode_bucket["requests_success"]),
+                            "fallback_count": int(mode_bucket["fallback_count"]),
+                            "total_cost_usd": round(float(mode_bucket["total_cost_usd"]), 6),
+                        }
+                        for mode, mode_bucket in sorted(bucket["reasoning_mode_breakdown"].items())
+                    ],
+                }
+            )
+        summaries.sort(key=lambda item: item["requests_total"], reverse=True)
+        return summaries
+
+    async def get_ai_ops_trend_summary(
+        self,
+        user_id: str,
+        *,
+        days: int = 7,
+    ) -> list[dict[str, Any]]:
+        buckets: dict[tuple[str, str], dict[str, Any]] = {}
+        for day_offset in range(days):
+            date = (datetime.now() - timedelta(days=day_offset)).strftime("%Y-%m-%d")
+            pattern = f"user:ai_ops:{user_id}:{date}:*"
+            async for key in self.redis.scan_iter(match=pattern):
+                decoded_key = key.decode() if isinstance(key, bytes) else str(key)
+                parts = decoded_key.split(":")
+                if len(parts) < 6:
+                    continue
+                reasoning_mode = parts[4]
+                chat_mode = parts[5]
+                raw = await self.redis.hgetall(decoded_key)
+                if not raw:
+                    continue
+                bucket = buckets.setdefault(
+                    (date, chat_mode),
+                    {
+                        "date": date,
+                        "chat_mode": chat_mode,
+                        "requests_total": 0,
+                        "requests_success": 0,
+                        "requests_failed": 0,
+                        "fallback_count": 0,
+                        "total_cost_usd": 0.0,
+                        "total_duration_ms": 0,
+                        "first_token_ms_sum": 0,
+                        "stream_duration_ms_sum": 0,
+                        "execution_request_count": 0,
+                        "reasoning_modes": set(),
+                    },
+                )
+                requests_total = int(raw.get("requests_total") or 0)
+                requests_success = int(raw.get("requests_success") or 0)
+                requests_failed = int(raw.get("requests_failed") or 0)
+                fallback_count = int(raw.get("fallback_count") or 0)
+                total_cost_micro = int(raw.get("total_cost_micro_usd") or 0)
+                total_duration_ms = int(raw.get("total_duration_ms_sum") or 0)
+                first_token_ms = int(raw.get("first_token_ms_sum") or 0)
+                stream_duration_ms = int(raw.get("stream_duration_ms_sum") or 0)
+                execution_request_count = int(raw.get("execution_request_count") or 0)
+                bucket["requests_total"] += requests_total
+                bucket["requests_success"] += requests_success
+                bucket["requests_failed"] += requests_failed
+                bucket["fallback_count"] += fallback_count
+                bucket["total_cost_usd"] += total_cost_micro / 1_000_000.0
+                bucket["total_duration_ms"] += total_duration_ms
+                bucket["first_token_ms_sum"] += first_token_ms
+                bucket["stream_duration_ms_sum"] += stream_duration_ms
+                bucket["execution_request_count"] += execution_request_count
+                bucket["reasoning_modes"].add(reasoning_mode)
+
+        summaries: list[dict[str, Any]] = []
+        for (_date, _chat_mode), bucket in buckets.items():
+            requests_total = int(bucket["requests_total"])
+            requests_success = int(bucket["requests_success"])
+            fallback_count = int(bucket["fallback_count"])
+            execution_request_count = int(bucket["execution_request_count"])
+            summaries.append(
+                {
+                    "date": bucket["date"],
+                    "chat_mode": bucket["chat_mode"],
+                    "requests_total": requests_total,
+                    "requests_success": requests_success,
+                    "requests_failed": int(bucket["requests_failed"]),
+                    "success_rate_percent": round((requests_success / requests_total) * 100, 2)
+                    if requests_total > 0
+                    else 0.0,
+                    "fallback_rate_percent": round((fallback_count / requests_total) * 100, 2)
+                    if requests_total > 0
+                    else 0.0,
+                    "total_cost_usd": round(float(bucket["total_cost_usd"]), 6),
+                    "avg_total_duration_ms": round(int(bucket["total_duration_ms"]) / requests_total, 2)
+                    if requests_total > 0
+                    else 0.0,
+                    "avg_first_token_ms": round(int(bucket["first_token_ms_sum"]) / requests_total, 2)
+                    if requests_total > 0
+                    else 0.0,
+                    "avg_stream_duration_ms": round(int(bucket["stream_duration_ms_sum"]) / requests_total, 2)
+                    if requests_total > 0
+                    else 0.0,
+                    "execution_conversion_rate_percent": round(
+                        (execution_request_count / requests_total) * 100,
+                        2,
+                    )
+                    if requests_total > 0
+                    else 0.0,
+                    "reasoning_modes": sorted(bucket["reasoning_modes"]),
+                }
+            )
+        summaries.sort(key=lambda item: (item["chat_mode"], item["date"]))
         return summaries
 
 

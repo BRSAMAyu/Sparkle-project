@@ -6,13 +6,10 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
-import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/features/community/data/models/community_model.dart';
-import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
 import 'package:sparkle/features/community/presentation/providers/focus_mode_provider.dart';
-import 'package:sparkle/features/community/presentation/widgets/community_widgets.dart';
 import 'package:sparkle/features/community/presentation/widgets/friends_hub_view.dart';
+import 'package:sparkle/features/community/presentation/widgets/groups_hub_view.dart';
 
 // Provider for last selected tab
 final communityTabIndexProvider = StateProvider<int>((ref) => 0);
@@ -62,7 +59,7 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
                 title: Text(context.l10n.communitySearchGroups),
                 onTap: () {
                   Navigator.pop(context);
-                  context.push('/community/groups/search');
+                  context.push('/community/groups/discover');
                 },
               ),
             ],
@@ -273,100 +270,8 @@ class _FriendsListTab extends ConsumerWidget {
 class _GroupsListTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final groupsAsync = ref.watch(myGroupsProvider);
-
-    return groupsAsync.when(
-      data: (groups) {
-        if (groups.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.group_outlined, size: 64, color: DS.neutral300),
-                const SizedBox(height: DS.lg),
-                Text(
-                  context.l10n.communityNoGroups,
-                  style: TextStyle(color: DS.neutral500),
-                ),
-              ],
-            ),
-          );
-        }
-        return ListView.builder(
-          padding: const EdgeInsets.all(DS.lg),
-          itemCount: groups.length,
-          itemBuilder: (context, index) {
-            final g = groups[index];
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: GraphiteCardSurface(
-                onTap: () => context.push('/chat/group/${g.id}'),
-                child: Row(
-                  children: [
-                    SparkleAvatar(
-                      radius: 24,
-                      backgroundColor: DS.surfacePanel,
-                      fallbackText: g.name,
-                    ),
-                    const SizedBox(width: DS.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            g.name,
-                            style: DS.bodyLarge.copyWith(
-                              color: DS.textPrimary,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: DS.xs),
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.people,
-                                size: 14,
-                                color: DS.textSecondary,
-                              ),
-                              const SizedBox(width: DS.xs),
-                              Text(
-                                context.l10n.communityMembers(g.memberCount),
-                                style: TextStyle(
-                                  color: DS.textSecondary,
-                                  fontSize: 12,
-                                ),
-                              ),
-                              const SizedBox(width: DS.md),
-                              Icon(
-                                Icons.local_fire_department,
-                                size: 14,
-                                color: DS.brandPrimaryConst,
-                              ),
-                              const SizedBox(width: DS.xs),
-                              Text(
-                                '${g.totalFlamePower}',
-                                style: TextStyle(
-                                  color: DS.textSecondary,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    Icon(Icons.chevron_right, color: DS.neutral400),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(
-        child: Text('${context.l10n.loadingFailed}: $e'),
-      ),
+    return const GroupsHubView(
+      padding: EdgeInsets.fromLTRB(12, 12, 12, 28),
     );
   }
 }

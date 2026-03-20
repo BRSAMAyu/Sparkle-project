@@ -26,6 +26,11 @@ from app.schemas.task import TaskCreate
 from app.services.graph_reasoning_service import GraphReasoningService
 from app.services.plan_service import PlanService
 from app.services.task_service import TaskService
+from app.tools.entity_cards import (
+    build_learning_path_entity_card,
+    build_plan_entity_card,
+    build_task_list_entity_card,
+)
 from app.tools.plan_tools import GenerateTasksForPlanTool
 from app.tools.schemas import GenerateTasksForPlanParams
 
@@ -288,6 +293,22 @@ async def generate_learning_path_plan(
             "tasks": [],
             "retry": True,
             "message": tool_result.error_message or "任务生成失败，可稍后重试",
+            "entity_card": build_learning_path_entity_card(
+                plan={
+                    "id": plan_id,
+                    "name": plan.name,
+                    "description": plan.description,
+                    "type": plan.type.value if plan.type else None,
+                    "subject": plan.subject,
+                    "source": plan.source,
+                    "is_active": True,
+                    "task_count": 0,
+                },
+                tasks=[],
+                target_name=target_name,
+                tool_name="generate_learning_path_plan",
+                source_channel="learning_path",
+            ),
         }
 
     tasks = tool_result.data.get("tasks", []) if tool_result.data else []
@@ -300,6 +321,16 @@ async def generate_learning_path_plan(
         for task in tasks
         if isinstance(task, dict)
     ]
+    plan_payload = {
+        "id": plan_id,
+        "name": plan.name,
+        "description": plan.description,
+        "type": plan.type.value if plan.type else None,
+        "subject": plan.subject,
+        "source": plan.source,
+        "is_active": True,
+        "task_count": len(tasks_payload),
+    }
 
     return {
         "plan_id": plan_id,
@@ -307,6 +338,25 @@ async def generate_learning_path_plan(
         "tasks": tasks_payload,
         "retry": summary_fallback_used,
         "message": "已使用稳定兜底方案生成学习计划" if summary_fallback_used else None,
+        "entity_card": build_learning_path_entity_card(
+            plan=plan_payload,
+            tasks=tasks_payload,
+            target_name=target_name,
+            tool_name="generate_learning_path_plan",
+            source_channel="learning_path",
+        ),
+        "plan_entity_card": build_plan_entity_card(
+            plan_payload,
+            tool_name="generate_learning_path_plan",
+            source_channel="learning_path",
+        ),
+        "task_list_entity_card": build_task_list_entity_card(
+            tasks_payload,
+            tool_name="generate_learning_path_plan",
+            plan_id=plan_id,
+            plan_title=plan.name,
+            source_channel="learning_path",
+        ),
     }
 
 
@@ -496,12 +546,51 @@ async def generate_full_path_plan(
 
     await db.commit()
 
+    full_plan_payload = {
+        "id": str(plan.id),
+        "name": plan.name,
+        "description": plan.description,
+        "type": plan.type.value if plan.type else None,
+        "subject": plan.subject,
+        "source": plan.source,
+        "is_active": True,
+        "task_count": order - 1,
+    }
+    parent_task_payload = {
+        "id": str(parent_task.id),
+        "title": parent_task.title,
+        "type": parent_task.type.value if parent_task.type else None,
+        "estimated_minutes": parent_task.estimated_minutes,
+        "difficulty": parent_task.difficulty,
+        "plan_id": str(plan.id),
+        "status": parent_task.status.value if parent_task.status else "pending",
+    }
+
     return {
         "plan_id": str(plan.id),
         "plan_summary": plan_summary,
         "parent_task_id": str(parent_task.id),
         "subtask_count": order - 1,
         "fallback_used": summary_fallback_used,
+        "entity_card": build_learning_path_entity_card(
+            plan=full_plan_payload,
+            tasks=[parent_task_payload],
+            target_name=str(target_name),
+            tool_name="generate_full_path_plan",
+            source_channel="learning_path",
+        ),
+        "plan_entity_card": build_plan_entity_card(
+            full_plan_payload,
+            tool_name="generate_full_path_plan",
+            source_channel="learning_path",
+        ),
+        "task_list_entity_card": build_task_list_entity_card(
+            [parent_task_payload],
+            tool_name="generate_full_path_plan",
+            plan_id=str(plan.id),
+            plan_title=plan.name,
+            source_channel="learning_path",
+        ),
     }
 
 

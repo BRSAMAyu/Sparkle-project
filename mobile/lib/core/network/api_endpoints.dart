@@ -78,6 +78,13 @@ class ApiEndpoints {
   static const String chatSessions = '/chat/sessions';
   static String chatHistory(String sessionId) => '/chat/history/$sessionId';
   static String sessionMessages(String id) => '/chat/sessions/$id/messages';
+  static const String clientTelemetryEvents = '/client-telemetry/events';
+  static const String clientTelemetryEventsBatch =
+      '/client-telemetry/events/batch';
+  static const String clientTelemetrySummary = '/client-telemetry/summary';
+  static const String eventsIngest = '/events/ingest';
+  static const String healthCapacity = '/health/capacity';
+  static const String healthPrometheusAlerts = '/health/prometheus/alerts';
 
   // Statistics
   static const String statsOverview = '/statistics/overview';
@@ -119,6 +126,12 @@ class ApiEndpoints {
   static const String friendsPending = '/community/friends/pending';
   static const String friendsRecommendations =
       '/community/friends/recommendations';
+  static const String friendsRecommendationsFeedback =
+      '/community/friends/recommendations/feedback';
+  static const String recommendationsFeedbackPrompts =
+      '/community/recommendations/feedback/prompts';
+  static const String recommendationsFeedbackInsights =
+      '/community/recommendations/feedback/insights';
   static String privateMessages(String friendId) =>
       '/community/friends/$friendId/messages';
   static String revokePrivateMessage(String messageId) =>
@@ -142,6 +155,7 @@ class ApiEndpoints {
       '/community/groups/recommendations';
   static const String groupsRecommendationsFeedback =
       '/community/groups/recommendations/feedback';
+  static const String groupsDirectory = '/community/groups/directory';
   static const String groupsSearch = '/community/groups/search';
   static String group(String id) => '/community/groups/$id';
   static String groupJoin(String id) => '/community/groups/$id/join';
@@ -256,6 +270,10 @@ class ApiEndpoints {
   // Dashboard
   static const String dashboardStatus = '/dashboard/status';
   static const String predictiveDashboard = '/predictive/dashboard';
+  static const String predictiveNextIntent = '/predictive/next-intent';
+  static const String predictiveRealtimeNextStep =
+      '/predictive/realtime-next-step';
+  static const String predictiveAnalytics = '/predictive/analytics';
 
   // Nightly Reviews
   static const String nightlyReviewLatest = '/reviews/nightly/latest';

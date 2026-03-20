@@ -1362,6 +1362,12 @@ class ChatOrchestrator(
                     total_prompt_tokens=total_prompt_tokens,
                     total_completion_tokens=total_completion_tokens,
                     final_state=result_holder.get("final_state") if "result_holder" in locals() else None,
+                    chat_mode_hint=chat_mode if "chat_mode" in locals() else None,
+                    reasoning_mode_hint=(
+                        str((context_data or {}).get("reasoning_mode") or "balanced")
+                        if isinstance(context_data, dict)
+                        else None
+                    ),
                 )
         finally:
             span.end()

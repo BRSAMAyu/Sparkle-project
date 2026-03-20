@@ -59,3 +59,85 @@ class AiUsageExportResponse(BaseModel):
     items: list[AiModeUsageItem]
     chat_mode_timing: list[AiChatModeTimingItem]
     generated_at: datetime
+
+
+class AiOpsReasoningBreakdownItem(BaseModel):
+    mode: str
+    requests_total: int = 0
+    requests_success: int = 0
+    fallback_count: int = 0
+    total_cost_usd: float = 0.0
+
+
+class AiOpsModeItem(BaseModel):
+    chat_mode: str
+    requests_total: int = 0
+    requests_success: int = 0
+    requests_failed: int = 0
+    success_rate_percent: float = 0.0
+    fallback_rate_percent: float = 0.0
+    total_tokens: int = 0
+    total_cost_usd: float = 0.0
+    avg_total_duration_ms: float = 0.0
+    avg_first_token_ms: float = 0.0
+    avg_stream_duration_ms: float = 0.0
+    positive_feedback_count: int = 0
+    negative_feedback_count: int = 0
+    positive_feedback_rate_percent: float = 0.0
+    feedback_coverage_percent: float = 0.0
+    task_count: int = 0
+    plan_count: int = 0
+    execution_count: int = 0
+    task_conversion_rate_percent: float = 0.0
+    plan_conversion_rate_percent: float = 0.0
+    execution_conversion_rate_percent: float = 0.0
+    reasoning_mode_breakdown: list[AiOpsReasoningBreakdownItem] = Field(default_factory=list)
+
+
+class AiOpsOverviewItem(BaseModel):
+    requests_total: int = 0
+    requests_success: int = 0
+    requests_failed: int = 0
+    success_rate_percent: float = 0.0
+    fallback_rate_percent: float = 0.0
+    total_cost_usd: float = 0.0
+    avg_total_duration_ms: float = 0.0
+    avg_first_token_ms: float = 0.0
+    avg_stream_duration_ms: float = 0.0
+    task_count: int = 0
+    plan_count: int = 0
+    execution_count: int = 0
+    task_conversion_rate_percent: float = 0.0
+    plan_conversion_rate_percent: float = 0.0
+    execution_conversion_rate_percent: float = 0.0
+
+
+class AiOpsTrendPoint(BaseModel):
+    date: str
+    requests_total: int = 0
+    success_rate_percent: float = 0.0
+    fallback_rate_percent: float = 0.0
+    total_cost_usd: float = 0.0
+    avg_total_duration_ms: float = 0.0
+    avg_first_token_ms: float = 0.0
+    avg_stream_duration_ms: float = 0.0
+    execution_conversion_rate_percent: float = 0.0
+
+
+class AiOpsTrendSeries(BaseModel):
+    chat_mode: str
+    points: list[AiOpsTrendPoint] = Field(default_factory=list)
+
+
+class AiOpsDashboardResponse(BaseModel):
+    window_days: int
+    items: list[AiOpsModeItem]
+    generated_at: datetime
+
+
+class AiOpsExportResponse(BaseModel):
+    window_days: int
+    overview: AiOpsOverviewItem
+    items: list[AiOpsModeItem]
+    trend_series: list[AiOpsTrendSeries] = Field(default_factory=list)
+    generated_at: datetime

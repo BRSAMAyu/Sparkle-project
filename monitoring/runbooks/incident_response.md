@@ -40,6 +40,44 @@
 2. Check Redis CPU/memory and pending list growth.
 3. Restart lagging consumers; validate lag drops under threshold.
 
+## P2: AI First Token Latency High
+
+1. Check AI ops dashboard by `chat_mode` and `reasoning_mode`.
+2. Inspect provider health, fallback rate, and recent routing changes.
+3. If only one mode regressed, temporarily lower its routing tier.
+4. If all modes regressed, inspect gateway first-event latency and upstream LLM status.
+
+## P2: AI Total Duration High
+
+1. Confirm whether the regression is isolated to `study_plan / deep_analysis / error_diagnosis`.
+2. Inspect retrieval latency, tool-call count, and review-node blocking.
+3. Reduce expensive background jobs or lower high-cost AI mode usage temporarily.
+4. Roll back the recent prompt/routing change if regression is confirmed.
+
+## P2: Prediction Rules Fallback Spike
+
+1. Check `free` and `free_fast` provider availability and timeout trends.
+2. Verify whether 429 or upstream latency caused the spike.
+3. Keep rules fallback enabled and reduce front-end dependency on AI prediction until recovered.
+
+## P2: Outbox Backlog High
+
+1. Check DB write pressure and Redis health.
+2. Inspect consumer lag and DLQ growth.
+3. Pause non-critical async fan-out until backlog drops.
+
+## P2: Backend Memory High
+
+1. Determine whether growth is traffic-driven or leak-like.
+2. Check cache growth, batch jobs, and worker side effects.
+3. Drain and recycle the unhealthy instance if memory keeps climbing.
+
+## P3: Gateway Goroutines High
+
+1. Inspect reconnect storms, blocked upstream calls, and duplicate client sessions.
+2. Check logs for retry loops or websocket fan-out anomalies.
+3. Drain traffic and restart the unhealthy color if needed.
+
 ## P3: ContextPackOverBudgetSpike
 
 1. Review recent prompt/context budget policy changes.

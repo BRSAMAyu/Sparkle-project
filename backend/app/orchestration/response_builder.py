@@ -28,6 +28,48 @@ from app.orchestration.ux_envelope import ux_envelope_builder
 class ResponseBuilderMixin:
     """Mixin providing response-building and cleanup helpers for the Orchestrator."""
 
+    def _extract_response_outcome_stats(self, final_state: WorkflowState | None) -> dict[str, int]:
+        if final_state is None:
+            return {"task_count": 0, "plan_count": 0, "execution_count": 0}
+
+        seen_entity_keys: set[str] = set()
+        task_count = 0
+        plan_count = 0
+        execution_count = 0
+
+        def visit(value: Any) -> None:
+            nonlocal task_count, plan_count, execution_count
+            if isinstance(value, dict):
+                if "entity_card" in value and isinstance(value["entity_card"], dict):
+                    visit(value["entity_card"])
+                entity_type = str(value.get("entity_type") or "").strip().lower()
+                entity_id = str(value.get("entity_id") or "").strip()
+                schema_version = str(value.get("schema_version") or "").strip()
+                if entity_type and schema_version:
+                    entity_key = f"{entity_type}:{entity_id or id(value)}"
+                    if entity_key not in seen_entity_keys:
+                        seen_entity_keys.add(entity_key)
+                        if entity_type == "task":
+                            task_count += 1
+                        elif entity_type == "plan":
+                            plan_count += 1
+                        if value.get("primary_action") or value.get("secondary_actions"):
+                            execution_count += 1
+                for nested in value.values():
+                    visit(nested)
+                return
+            if isinstance(value, list):
+                for item in value:
+                    visit(item)
+
+        visit(final_state.messages)
+        visit(final_state.context_data)
+        return {
+            "task_count": task_count,
+            "plan_count": plan_count,
+            "execution_count": execution_count,
+        }
+
     async def _build_final_response(
         self,
         *,
@@ -100,6 +142,8 @@ class ResponseBuilderMixin:
         response_metadata["chat_mode"] = chat_mode
         if used_fallback_response:
             response_metadata["response_fallback"] = "generated"
+        final_state.context_data["response_fallback_used"] = used_fallback_response
+        final_state.context_data["response_outcome_stats"] = self._extract_response_outcome_stats(final_state)
         if route_decision and "sprint" in route_decision.reason.lower():
             response_metadata["switch_to_sprint"] = True
         if plan_switched and plan_id:
@@ -439,6 +483,8 @@ class ResponseBuilderMixin:
         total_prompt_tokens: int,
         total_completion_tokens: int,
         final_state: WorkflowState | None = None,
+        chat_mode_hint: str | None = None,
+        reasoning_mode_hint: str | None = None,
     ) -> None:
         ACTIVE_SESSIONS.dec()
         latency = time.time() - start_time
@@ -465,7 +511,16 @@ class ResponseBuilderMixin:
                     or ""
                 )
                 reasoning_mode = str(context_data.get("reasoning_mode") or "balanced")
+                if not reasoning_mode.strip():
+                    reasoning_mode = str(reasoning_mode_hint or "balanced")
                 chat_mode = str(context_data.get("chat_mode") or "standard")
+                if not chat_mode.strip():
+                    chat_mode = str(chat_mode_hint or "standard")
+                fallback_used = bool(context_data.get("response_fallback_used") or False)
+                outcome_stats = context_data.get("response_outcome_stats") or self._extract_response_outcome_stats(
+                    final_state
+                )
+                success = final_state is not None
                 AI_RESPONSE_TOTAL_DURATION.labels(
                     chat_mode=chat_mode or "standard",
                     reasoning_mode=reasoning_mode or "balanced",
@@ -503,6 +558,9 @@ class ResponseBuilderMixin:
                         timing_stats={
                             "total_duration_ms": int(round(latency * 1000)),
                         },
+                        success=success,
+                        fallback_used=fallback_used,
+                        outcome_stats=outcome_stats,
                     ),
                     task_name="token_usage_record",
                     user_id=str(user_id),

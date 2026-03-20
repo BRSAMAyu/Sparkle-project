@@ -288,6 +288,9 @@ class GroupService:
         group_type: Any | None = None,
         tags: list[str] | None = None,
         limit: int = 20,
+        offset: int = 0,
+        sort_by: str = "latest",
+        user_id: UUID | None = None,
     ) -> list[dict[str, Any]]:
         """搜索公开群组并返回轻量列表数据。"""
         member_count_subquery = (
@@ -299,16 +302,118 @@ class GroupService:
             .group_by(GroupMember.group_id)
             .subquery()
         )
+        recent_window_start = _utcnow() - timedelta(days=7)
+        message_count_subquery = (
+            select(
+                GroupMessage.group_id.label("group_id"),
+                func.count(GroupMessage.id).label("message_count"),
+            )
+            .where(
+                GroupMessage.created_at >= recent_window_start,
+                GroupMessage.not_deleted_filter(),
+            )
+            .group_by(GroupMessage.group_id)
+            .subquery()
+        )
+        membership_subquery = None
+        if user_id is not None:
+            membership_subquery = (
+                select(
+                    GroupMember.group_id.label("group_id"),
+                    GroupMember.role.label("my_role"),
+                )
+                .where(
+                    GroupMember.user_id == user_id,
+                    GroupMember.not_deleted_filter(),
+                )
+                .subquery()
+            )
+
+        activity_score = (
+            func.coalesce(message_count_subquery.c.message_count, 0) * 2
+            + Group.today_checkin_count * 4
+            + func.coalesce(member_count_subquery.c.member_count, 0)
+            + (Group.total_flame_power / 100.0)
+        )
 
         stmt = (
             select(
                 Group,
                 func.coalesce(member_count_subquery.c.member_count, 0).label("member_count"),
+                func.coalesce(message_count_subquery.c.message_count, 0).label("message_count"),
+                activity_score.label("activity_score"),
             )
             .outerjoin(member_count_subquery, member_count_subquery.c.group_id == Group.id)
+            .outerjoin(message_count_subquery, message_count_subquery.c.group_id == Group.id)
             .where(Group.is_public.is_(True), Group.not_deleted_filter())
-            .order_by(desc(Group.updated_at))
-            .limit(limit)
+        )
+        if membership_subquery is not None:
+            stmt = stmt.add_columns(membership_subquery.c.my_role).outerjoin(
+                membership_subquery,
+                membership_subquery.c.group_id == Group.id,
+            )
+
+        if keyword:
+            pattern = f"%{keyword}%"
+            stmt = stmt.where(
+                or_(
+                    Group.name.ilike(pattern),
+                    Group.description.ilike(pattern),
+                )
+            )
+        if group_type is not None:
+            stmt = stmt.where(Group.type == group_type)
+        if tags:
+            stmt = stmt.where(Group.focus_tags.contains(tags))
+
+        if sort_by == "hot":
+            stmt = stmt.order_by(desc(activity_score), desc(Group.updated_at))
+        elif sort_by == "random":
+            stmt = stmt.order_by(func.random())
+        else:
+            stmt = stmt.order_by(desc(Group.created_at), desc(Group.updated_at))
+
+        stmt = stmt.offset(offset).limit(limit)
+
+        result = await db.execute(stmt)
+        rows = result.all()
+        groups = []
+        for row in rows:
+            if membership_subquery is not None:
+                group, member_count, message_count, score, my_role = row
+            else:
+                group, member_count, message_count, score = row
+                my_role = None
+            groups.append(
+                {
+                    "id": group.id,
+                    "name": group.name,
+                    "description": group.description,
+                    "type": group.type,
+                    "member_count": int(member_count or 0),
+                    "total_flame_power": group.total_flame_power,
+                    "today_checkin_count": group.today_checkin_count,
+                    "deadline": group.deadline,
+                    "focus_tags": group.focus_tags or [],
+                    "is_public": group.is_public,
+                    "join_requires_approval": group.join_requires_approval,
+                    "activity_score": float(score or 0.0),
+                    "message_count_7d": int(message_count or 0),
+                    "my_role": my_role,
+                }
+            )
+        return groups
+
+    @staticmethod
+    async def count_public_groups(
+        db: AsyncSession,
+        keyword: str | None = None,
+        group_type: Any | None = None,
+        tags: list[str] | None = None,
+    ) -> int:
+        stmt = select(func.count(Group.id)).where(
+            Group.is_public.is_(True),
+            Group.not_deleted_filter(),
         )
 
         if keyword:
@@ -325,18 +430,35 @@ class GroupService:
             stmt = stmt.where(Group.focus_tags.contains(tags))
 
         result = await db.execute(stmt)
-        rows = result.all()
+        return int(result.scalar() or 0)
+
+    @staticmethod
+    async def get_public_group_tags(
+        db: AsyncSession,
+        *,
+        limit: int = 24,
+    ) -> list[str]:
+        result = await db.execute(
+            select(Group.focus_tags).where(
+                Group.is_public.is_(True),
+                Group.not_deleted_filter(),
+            )
+        )
+        tag_counts: dict[str, int] = {}
+        for tags in result.scalars().all():
+            if not tags:
+                continue
+            for tag in tags:
+                normalized = str(tag).strip()
+                if not normalized:
+                    continue
+                tag_counts[normalized] = tag_counts.get(normalized, 0) + 1
         return [
-            {
-                "id": group.id,
-                "name": group.name,
-                "type": group.type,
-                "member_count": int(member_count or 0),
-                "total_flame_power": group.total_flame_power,
-                "deadline": group.deadline,
-                "focus_tags": group.focus_tags or [],
-            }
-            for group, member_count in rows
+            tag
+            for tag, _ in sorted(
+                tag_counts.items(),
+                key=lambda item: (-item[1], item[0].lower()),
+            )[:limit]
         ]
 
     @staticmethod

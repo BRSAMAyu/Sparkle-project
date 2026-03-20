@@ -149,6 +149,35 @@ async def main() -> int:
         json={"friendship_id": friendship_id, "accept": True},
     )
 
+    recommendations = request_json(
+        session,
+        "GET",
+        "/community/friends/recommendations",
+        token=owner["token"],
+        params={"strategy": "compatibility", "target": "accountability", "limit": 5},
+    )
+    ensure(recommendations, "friend/accountability recommendations should not be empty")
+    ensure(
+        any(item["user"]["id"] == partner["id"] for item in recommendations),
+        f"accepted friend should surface in accountability recommendations: {recommendations}",
+    )
+    first_recommendation = recommendations[0]
+    request_json(
+        session,
+        "POST",
+        "/community/friends/recommendations/feedback",
+        token=owner["token"],
+        expected=200,
+        json={
+            "target_user_id": first_recommendation["user"]["id"],
+            "strategy": first_recommendation["strategy"],
+            "target": first_recommendation["target"],
+            "action": "view",
+            "source": "acceptance",
+            "score": first_recommendation["match_score"],
+        },
+    )
+
     partnership = request_json(
         session,
         "POST",

@@ -4,6 +4,7 @@ import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/task_notification_scheduler.dart'
     show TaskReminderConfig;
 import 'package:sparkle/features/auth/auth.dart';
+import 'package:sparkle/features/home/data/repositories/prediction_repository.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 
@@ -320,6 +321,111 @@ final aiUsageSummaryProvider =
   return repo.fetchAiUsageSummary();
 });
 
+final aiOpsDashboardProvider =
+    FutureProvider<Map<String, dynamic>>((ref) async {
+  final user = ref.watch(authProvider).user;
+  if (user == null) {
+    return {
+      'window_days': 7,
+      'items': <Map<String, dynamic>>[],
+    };
+  }
+  final repo = ref.watch(userRepositoryProvider);
+  return repo.fetchAiOpsDashboard();
+});
+
+final aiOpsExportProvider =
+    FutureProvider.family<Map<String, dynamic>, int>((ref, days) async {
+  final user = ref.watch(authProvider).user;
+  if (user == null) {
+    return {
+      'window_days': days,
+      'overview': <String, dynamic>{},
+      'items': <Map<String, dynamic>>[],
+      'trend_series': <Map<String, dynamic>>[],
+    };
+  }
+  final repo = ref.watch(userRepositoryProvider);
+  return repo.fetchAiOpsExport(days: days);
+});
+
+final predictionAnalyticsDashboardProvider =
+    FutureProvider<Map<String, dynamic>>((ref) async {
+  final user = ref.watch(authProvider).user;
+  if (user == null) {
+    return {
+      'window_days': 7,
+      'overall': <String, dynamic>{},
+      'funnel': <String, dynamic>{},
+      'by_surface': <String, dynamic>{},
+      'by_action_type': <String, dynamic>{},
+      'top_actions': <Map<String, dynamic>>[],
+    };
+  }
+  final repo = ref.watch(predictionRepositoryProvider);
+  return repo.getPredictionAnalytics();
+});
+
+final predictionAnalyticsByDaysProvider =
+    FutureProvider.family<Map<String, dynamic>, int>((ref, days) async {
+  final user = ref.watch(authProvider).user;
+  if (user == null) {
+    return {
+      'window_days': days,
+      'overall': <String, dynamic>{},
+      'funnel': <String, dynamic>{},
+      'by_surface': <String, dynamic>{},
+      'by_action_type': <String, dynamic>{},
+      'top_actions': <Map<String, dynamic>>[],
+    };
+  }
+  final repo = ref.watch(predictionRepositoryProvider);
+  return repo.getPredictionAnalytics(days: days);
+});
+
+final clientTelemetrySummaryProvider =
+    FutureProvider.family<Map<String, dynamic>, int>((ref, days) async {
+  final user = ref.watch(authProvider).user;
+  if (user == null) {
+    return {
+      'days': days,
+      'overall': <String, dynamic>{},
+      'daily_totals': <Map<String, dynamic>>[],
+      'by_event_type': <Map<String, dynamic>>[],
+      'recent_events': <Map<String, dynamic>>[],
+    };
+  }
+  final repo = ref.watch(userRepositoryProvider);
+  return repo.fetchClientTelemetrySummary(days: days);
+});
+
+final healthCapacityProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+  final user = ref.watch(authProvider).user;
+  if (user == null) {
+    return {
+      'database': <String, dynamic>{},
+      'redis': <String, dynamic>{},
+      'queues': <String, dynamic>{},
+      'disk': <String, dynamic>{},
+      'recommendations': <String>[],
+    };
+  }
+  final repo = ref.watch(userRepositoryProvider);
+  return repo.fetchHealthCapacity();
+});
+
+final prometheusAlertsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+  final user = ref.watch(authProvider).user;
+  if (user == null) {
+    return {
+      'alerts': <Map<String, dynamic>>[],
+      'firing': false,
+    };
+  }
+  final repo = ref.watch(userRepositoryProvider);
+  return repo.fetchPrometheusAlerts();
+});
+
 class EnterToSendNotifier extends StateNotifier<bool> {
   EnterToSendNotifier() : super(true) {
     _loadSettings();
@@ -578,6 +684,10 @@ class AiReasoningModeNotifier extends StateNotifier<String> {
         });
       }
       _ref.invalidate(aiUsageSummaryProvider);
+      _ref.invalidate(aiOpsDashboardProvider);
+      _ref.invalidate(aiOpsExportProvider);
+      _ref.invalidate(predictionAnalyticsDashboardProvider);
+      _ref.invalidate(predictionAnalyticsByDaysProvider);
     } catch (_) {
       state = previous;
     }
@@ -596,6 +706,10 @@ class AiReasoningModeNotifier extends StateNotifier<String> {
         await prefs.setString(kAiReasoningModeKey, value);
       }
       _ref.invalidate(aiUsageSummaryProvider);
+      _ref.invalidate(aiOpsDashboardProvider);
+      _ref.invalidate(aiOpsExportProvider);
+      _ref.invalidate(predictionAnalyticsDashboardProvider);
+      _ref.invalidate(predictionAnalyticsByDaysProvider);
     } catch (_) {
       // Silent fail
     }

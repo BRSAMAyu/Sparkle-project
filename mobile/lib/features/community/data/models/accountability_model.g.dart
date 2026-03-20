@@ -75,15 +75,15 @@ AccountabilityCheckinInfo _$AccountabilityCheckinInfoFromJson(
       mood: (json['mood'] as num).toInt(),
       minutes: (json['minutes'] as num).toInt(),
       createdAt: DateTime.parse(json['created_at'] as String),
-      author: json['author'] == null
-          ? null
-          : UserBrief.fromJson(json['author'] as Map<String, dynamic>),
       likes: (json['likes'] as num?)?.toInt() ?? 0,
       encouragements: (json['encouragements'] as List<dynamic>?)
               ?.map((e) =>
                   EncouragementMessage.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
+      author: json['author'] == null
+          ? null
+          : UserBrief.fromJson(json['author'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$AccountabilityCheckinInfoToJson(
@@ -146,23 +146,19 @@ AccountabilityOverviewInfo _$AccountabilityOverviewInfoFromJson(
       activePartnership: json['active_partnership'] == null
           ? null
           : AccountabilityPartnershipInfo.fromJson(
-              json['active_partnership'] as Map<String, dynamic>,
-            ),
+              json['active_partnership'] as Map<String, dynamic>),
       pendingPartnerships: (json['pending_partnerships'] as List<dynamic>?)
               ?.map((e) => AccountabilityPartnershipInfo.fromJson(
                   e as Map<String, dynamic>))
               .toList() ??
           const [],
       achievementsSummary:
-          (json['achievements_summary'] as Map?)?.cast<String, dynamic>() ??
-              const {},
+          json['achievements_summary'] as Map<String, dynamic>? ?? const {},
       leaderboardSummary:
-          (json['leaderboard_summary'] as Map?)?.cast<String, dynamic>() ??
-              const {},
+          json['leaderboard_summary'] as Map<String, dynamic>? ?? const {},
       relationshipSummary:
-          (json['relationship_summary'] as Map?)?.cast<String, dynamic>(),
-      quickActions:
-          (json['quick_actions'] as Map?)?.cast<String, dynamic>() ?? const {},
+          json['relationship_summary'] as Map<String, dynamic>?,
+      quickActions: json['quick_actions'] as Map<String, dynamic>? ?? const {},
     );
 
 Map<String, dynamic> _$AccountabilityOverviewInfoToJson(
@@ -189,21 +185,17 @@ AccountabilityDashboardInfo _$AccountabilityDashboardInfoFromJson(
                   AccountabilityCheckinInfo.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
-      heatmap: (json['heatmap'] as Map?)?.cast<String, dynamic>() ?? const {},
-      achievements:
-          (json['achievements'] as Map?)?.cast<String, dynamic>() ?? const {},
+      heatmap: json['heatmap'] as Map<String, dynamic>? ?? const {},
+      achievements: json['achievements'] as Map<String, dynamic>? ?? const {},
       leaderboardSummary:
-          (json['leaderboard_summary'] as Map?)?.cast<String, dynamic>() ??
-              const {},
+          json['leaderboard_summary'] as Map<String, dynamic>? ?? const {},
       relationshipSummary:
-          (json['relationship_summary'] as Map?)?.cast<String, dynamic>() ??
-              const {},
+          json['relationship_summary'] as Map<String, dynamic>? ?? const {},
       recentShares: (json['recent_shares'] as List<dynamic>?)
-              ?.map((e) => Map<String, dynamic>.from(e as Map))
+              ?.map((e) => e as Map<String, dynamic>)
               .toList() ??
           const [],
-      quickActions:
-          (json['quick_actions'] as Map?)?.cast<String, dynamic>() ?? const {},
+      quickActions: json['quick_actions'] as Map<String, dynamic>? ?? const {},
     );
 
 Map<String, dynamic> _$AccountabilityDashboardInfoToJson(

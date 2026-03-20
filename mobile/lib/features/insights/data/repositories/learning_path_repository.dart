@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/network/response_parser.dart';
+import 'package:sparkle/core/services/app_event_stream_service.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/insights/data/models/learning_path_node.dart';
 import 'package:sparkle/features/insights/data/models/learning_path_plan_response.dart';
@@ -10,12 +11,14 @@ import 'package:sparkle/shared/entities/galaxy_model.dart';
 
 final learningPathRepositoryProvider = Provider<LearningPathRepository>((ref) {
   final apiClient = ref.watch(apiClientProvider);
-  return LearningPathRepository(apiClient);
+  final eventStream = ref.watch(appEventStreamServiceProvider);
+  return LearningPathRepository(apiClient, eventStream);
 });
 
 class LearningPathRepository {
-  LearningPathRepository(this._apiClient);
+  LearningPathRepository(this._apiClient, this._eventStream);
   final ApiClient _apiClient;
+  final AppEventStreamService _eventStream;
 
   Future<List<LearningPathNode>> getLearningPath(String targetNodeId) async {
     if (DemoDataService.isDemoMode) {
@@ -65,7 +68,13 @@ class LearningPathRepository {
         response.data,
         action: 'generateLearningPlan',
       );
-      return LearningPathPlanResponse.fromJson(data);
+      final parsed = LearningPathPlanResponse.fromJson(data);
+      await _eventStream.recordLearningPathGenerated(
+        targetNodeId: targetNodeId,
+        planId: parsed.planId,
+        taskIds: parsed.tasks.map((task) => task.id).toList(),
+      );
+      return parsed;
     } on DioException catch (e) {
       throw Exception(
         _extractDioMessage(e, 'Failed to generate learning plan'),
@@ -95,7 +104,13 @@ class LearningPathRepository {
         response.data,
         action: 'generateFullPathPlan',
       );
-      return FullPlanResponse.fromJson(data);
+      final parsed = FullPlanResponse.fromJson(data);
+      await _eventStream.recordLearningPathGenerated(
+        targetNodeId: targetNodeId,
+        planId: parsed.planId,
+        taskIds: [parsed.parentTaskId],
+      );
+      return parsed;
     } on DioException catch (e) {
       throw Exception(
         _extractDioMessage(e, 'Failed to generate full path learning plan'),

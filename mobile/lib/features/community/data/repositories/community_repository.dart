@@ -95,10 +95,17 @@ class CommunityRepository {
 
   Future<List<FriendRecommendation>> getFriendRecommendations({
     int limit = 10,
+    FriendMatchStrategy strategy = FriendMatchStrategy.compatibility,
+    FriendRecommendationTarget target =
+        FriendRecommendationTarget.accountability,
   }) async {
     final response = await _apiClient.get<dynamic>(
       ApiEndpoints.friendsRecommendations,
-      queryParameters: {'limit': limit},
+      queryParameters: {
+        'limit': limit,
+        'strategy': strategy.name,
+        'target': target.name,
+      },
     );
     if (response.statusCode == 200) {
       final data = ApiResponseParser.unwrapList(response.data,
@@ -108,6 +115,61 @@ class CommunityRepository {
           .toList();
     }
     throw Exception('Failed to load recommendations');
+  }
+
+  Future<void> sendFriendRecommendationFeedback({
+    required String targetUserId,
+    required FriendMatchStrategy strategy,
+    required FriendRecommendationTarget target,
+    required String action,
+    required String source,
+    double? score,
+    String? promptId,
+    RecommendationFeedbackStage? stage,
+    int? questionnaireVersion,
+    int? overallScore,
+    int? relevanceScore,
+    int? explanationScore,
+    int? actionabilityScore,
+    int? similarityScore,
+    int? complementaryScore,
+    int? comfortScore,
+    List<String>? selectedIssues,
+    List<String>? selectedStrengths,
+    String? freeText,
+  }) async {
+    await _apiClient.post<dynamic>(
+      ApiEndpoints.friendsRecommendationsFeedback,
+      data: {
+        'target_user_id': targetUserId,
+        'strategy': strategy.name,
+        'target': target.name,
+        'action': action,
+        'source': source,
+        if (score != null) 'score': score,
+        if (promptId != null) 'prompt_id': promptId,
+        if (stage != null) 'stage': stage.name == 'followUp'
+            ? 'follow_up'
+            : stage.name == 'immediate'
+                ? 'immediate'
+                : 'outcome',
+        if (questionnaireVersion != null)
+          'questionnaire_version': questionnaireVersion,
+        if (overallScore != null) 'overall_score': overallScore,
+        if (relevanceScore != null) 'relevance_score': relevanceScore,
+        if (explanationScore != null) 'explanation_score': explanationScore,
+        if (actionabilityScore != null)
+          'actionability_score': actionabilityScore,
+        if (similarityScore != null) 'similarity_score': similarityScore,
+        if (complementaryScore != null)
+          'complementary_score': complementaryScore,
+        if (comfortScore != null) 'comfort_score': comfortScore,
+        if (selectedIssues != null) 'selected_issues': selectedIssues,
+        if (selectedStrengths != null) 'selected_strengths': selectedStrengths,
+        if (freeText != null && freeText.trim().isNotEmpty)
+          'free_text': freeText.trim(),
+      },
+    );
   }
 
   Future<void> sendFriendRequest(String targetUserId, {String? message}) async {
@@ -192,13 +254,17 @@ class CommunityRepository {
     String? keyword,
     GroupType? type,
     List<String>? tags,
+    GroupDirectorySort sortBy = GroupDirectorySort.latest,
     int limit = 20,
+    int offset = 0,
   }) async {
     final query = <String, dynamic>{
       if (keyword != null && keyword.isNotEmpty) 'keyword': keyword,
       if (type != null) 'group_type': type.name,
       if (tags != null && tags.isNotEmpty) 'tags': tags,
+      'sort_by': sortBy.name,
       'limit': limit,
+      'offset': offset,
     };
     final response = await _apiClient.get<dynamic>(
       ApiEndpoints.groupsSearch,
@@ -212,6 +278,34 @@ class CommunityRepository {
           .toList();
     }
     throw Exception('Failed to search groups');
+  }
+
+  Future<GroupDirectoryInfo> getGroupDirectory({
+    String? keyword,
+    GroupType? type,
+    List<String>? tags,
+    GroupDirectorySort sortBy = GroupDirectorySort.hot,
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    final query = <String, dynamic>{
+      if (keyword != null && keyword.isNotEmpty) 'keyword': keyword,
+      if (type != null) 'group_type': type.name,
+      if (tags != null && tags.isNotEmpty) 'tags': tags,
+      'sort_by': sortBy.name,
+      'limit': limit,
+      'offset': offset,
+    };
+    final response = await _apiClient.get<dynamic>(
+      ApiEndpoints.groupsDirectory,
+      queryParameters: query,
+    );
+    if (response.statusCode == 200) {
+      final payload = ApiResponseParser.unwrapMap(response.data,
+          action: 'getGroupDirectory');
+      return GroupDirectoryInfo.fromJson(payload);
+    }
+    throw Exception('Failed to load group directory');
   }
 
   Future<List<GroupRecommendationItem>> getGroupRecommendations({
@@ -243,6 +337,19 @@ class CommunityRepository {
     required String action,
     required String source,
     List<String>? reasonTypes,
+    String? promptId,
+    RecommendationFeedbackStage? stage,
+    int? questionnaireVersion,
+    int? overallScore,
+    int? relevanceScore,
+    int? explanationScore,
+    int? actionabilityScore,
+    int? interestMatchScore,
+    int? activityScore,
+    int? atmosphereScore,
+    List<String>? selectedIssues,
+    List<String>? selectedStrengths,
+    String? freeText,
   }) async {
     await _apiClient.post<dynamic>(
       ApiEndpoints.groupsRecommendationsFeedback,
@@ -251,8 +358,84 @@ class CommunityRepository {
         'action': action,
         'source': source,
         if (reasonTypes != null) 'reason_types': reasonTypes,
+        if (promptId != null) 'prompt_id': promptId,
+        if (stage != null) 'stage': stage.name == 'followUp'
+            ? 'follow_up'
+            : stage.name == 'immediate'
+                ? 'immediate'
+                : 'outcome',
+        if (questionnaireVersion != null)
+          'questionnaire_version': questionnaireVersion,
+        if (overallScore != null) 'overall_score': overallScore,
+        if (relevanceScore != null) 'relevance_score': relevanceScore,
+        if (explanationScore != null) 'explanation_score': explanationScore,
+        if (actionabilityScore != null)
+          'actionability_score': actionabilityScore,
+        if (interestMatchScore != null)
+          'interest_match_score': interestMatchScore,
+        if (activityScore != null) 'activity_score': activityScore,
+        if (atmosphereScore != null) 'atmosphere_score': atmosphereScore,
+        if (selectedIssues != null) 'selected_issues': selectedIssues,
+        if (selectedStrengths != null) 'selected_strengths': selectedStrengths,
+        if (freeText != null && freeText.trim().isNotEmpty)
+          'free_text': freeText.trim(),
       },
     );
+  }
+
+  Future<List<RecommendationFeedbackPrompt>> getRecommendationFeedbackPrompts({
+    RecommendationItemType? itemType,
+    int limit = 20,
+  }) async {
+    final response = await _apiClient.get<dynamic>(
+      ApiEndpoints.recommendationsFeedbackPrompts,
+      queryParameters: {
+        if (itemType != null) 'item_type': itemType.name,
+        'limit': limit,
+      },
+    );
+    if (response.statusCode == 200) {
+      final data = ApiResponseParser.unwrapList(
+        response.data,
+        action: 'getRecommendationFeedbackPrompts',
+      );
+      return data
+          .map(
+            (e) => RecommendationFeedbackPrompt.fromJson(
+              e as Map<String, dynamic>,
+            ),
+          )
+          .toList();
+    }
+    throw Exception('Failed to load recommendation feedback prompts');
+  }
+
+  Future<List<RecommendationFeedbackInsight>>
+      getRecommendationFeedbackInsights({
+    RecommendationItemType? itemType,
+    int days = 30,
+  }) async {
+    final response = await _apiClient.get<dynamic>(
+      ApiEndpoints.recommendationsFeedbackInsights,
+      queryParameters: {
+        if (itemType != null) 'item_type': itemType.name,
+        'days': days,
+      },
+    );
+    if (response.statusCode == 200) {
+      final data = ApiResponseParser.unwrapList(
+        response.data,
+        action: 'getRecommendationFeedbackInsights',
+      );
+      return data
+          .map(
+            (e) => RecommendationFeedbackInsight.fromJson(
+              e as Map<String, dynamic>,
+            ),
+          )
+          .toList();
+    }
+    throw Exception('Failed to load recommendation feedback insights');
   }
 
   Future<List<GroupMemberInfo>> getGroupMembers(String groupId) async {

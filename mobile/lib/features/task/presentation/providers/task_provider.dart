@@ -3,8 +3,14 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/services/app_event_stream_service.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
-import 'package:sparkle/core/services/task_notification_scheduler.dart' show TaskNotificationScheduler, taskNotificationSchedulerProvider, taskReminderConfigProvider;
+import 'package:sparkle/core/services/prediction_attribution_service.dart';
+import 'package:sparkle/core/services/task_notification_scheduler.dart'
+    show
+        TaskNotificationScheduler,
+        taskNotificationSchedulerProvider,
+        taskReminderConfigProvider;
 import 'package:sparkle/features/calendar/data/repositories/calendar_repository.dart';
 import 'package:sparkle/features/calendar/presentation/providers/calendar_provider.dart';
 import 'package:sparkle/features/calendar/presentation/providers/unified_calendar_provider.dart';
@@ -85,9 +91,10 @@ class TaskNotifier extends StateNotifier<TaskListState> {
           await _taskRepository.getTasks(filters: {}); // Add filter logic later
       if (!mounted) return;
       state = state.copyWith(
-          isLoading: false,
-          tasks: paginatedResponse.items,
-          currentFilter: filter,);
+        isLoading: false,
+        tasks: paginatedResponse.items,
+        currentFilter: filter,
+      );
     });
   }
 
@@ -156,8 +163,11 @@ class TaskNotifier extends StateNotifier<TaskListState> {
     return taskDay == today;
   }
 
-  Future<void> updateTask(String id, TaskUpdate taskUpdate,
-      {bool refresh = true,}) async {
+  Future<void> updateTask(
+    String id,
+    TaskUpdate taskUpdate, {
+    bool refresh = true,
+  }) async {
     await _runWithErrorHandling(() async {
       final previousTask = state.tasks.cast<TaskModel?>().firstWhere(
             (task) => task?.id == id,
@@ -230,7 +240,10 @@ class TaskNotifier extends StateNotifier<TaskListState> {
 
   /// 完成任务 - 乐观更新（v2.1 增强）
   Future<TaskCompletionResult?> completeTask(
-      String id, int minutes, String? note,) async {
+    String id,
+    int minutes,
+    String? note,
+  ) async {
     // Cancel reminders when completing task
     try {
       await _notificationScheduler.cancelTaskReminders(id);
@@ -262,6 +275,32 @@ class TaskNotifier extends StateNotifier<TaskListState> {
           syncStatus: TaskSyncStatus.synced,
           // retryToken: updatedTask.retryToken, // Repo needs to return this or we assume updatedTask has it
         ),
+      );
+
+      final linkedPrediction = await _ref
+          .read(predictionAttributionServiceProvider)
+          .consumeForExecution(
+            executionType: 'task',
+            entityType: 'task',
+            entityId: id,
+          );
+      await _ref.read(appEventStreamServiceProvider).recordEntityExecution(
+        entityType: 'task',
+        entityId: id,
+        actionType: 'complete_task',
+        source: 'task_provider',
+        payload: {
+          'minutes': minutes,
+          if (note != null && note.isNotEmpty) 'note': note,
+          if (linkedPrediction != null) ...{
+            'prediction_id': linkedPrediction['prediction_id'],
+            'candidate_id': linkedPrediction['candidate_id'],
+            'prediction_action_type': linkedPrediction['action_type'],
+            'prediction_surface': linkedPrediction['surface'],
+            'prediction_horizon': linkedPrediction['horizon'],
+            'prediction_source': linkedPrediction['source'],
+          },
+        },
       );
 
       return result;
@@ -323,6 +362,31 @@ class TaskNotifier extends StateNotifier<TaskListState> {
         (task) => updatedTask.copyWith(
           syncStatus: TaskSyncStatus.synced,
         ),
+      );
+      final linkedPrediction = await _ref
+          .read(predictionAttributionServiceProvider)
+          .consumeForExecution(
+            executionType: 'task',
+            entityType: 'task',
+            entityId: id,
+          );
+      await _ref.read(appEventStreamServiceProvider).recordEntityExecution(
+        entityType: 'task',
+        entityId: id,
+        actionType: 'complete_task',
+        source: 'task_provider',
+        payload: {
+          'minutes': minutes,
+          if (note != null && note.isNotEmpty) 'note': note,
+          if (linkedPrediction != null) ...{
+            'prediction_id': linkedPrediction['prediction_id'],
+            'candidate_id': linkedPrediction['candidate_id'],
+            'prediction_action_type': linkedPrediction['action_type'],
+            'prediction_surface': linkedPrediction['surface'],
+            'prediction_horizon': linkedPrediction['horizon'],
+            'prediction_source': linkedPrediction['source'],
+          },
+        },
       );
     } catch (e) {
       var errorMsg = '重试失败';
@@ -448,13 +512,15 @@ class TaskNotifier extends StateNotifier<TaskListState> {
 // 3. Providers
 
 final taskListProvider = StateNotifierProvider<TaskNotifier, TaskListState>(
-    (ref) => TaskNotifier(
-      ref.watch(taskRepositoryProvider),
-      ref.watch(taskNotificationSchedulerProvider),
-      ref,
-    ),);
+  (ref) => TaskNotifier(
+    ref.watch(taskRepositoryProvider),
+    ref.watch(taskNotificationSchedulerProvider),
+    ref,
+  ),
+);
 
-final taskDetailProvider = FutureProvider.family<TaskModel, String>((ref, id) async {
+final taskDetailProvider =
+    FutureProvider.family<TaskModel, String>((ref, id) async {
   final taskRepo = ref.watch(taskRepositoryProvider);
 
   try {

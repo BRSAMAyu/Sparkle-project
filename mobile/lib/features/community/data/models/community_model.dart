@@ -24,6 +24,15 @@ enum GroupRole {
   member,
 }
 
+enum GroupDirectorySort {
+  @JsonValue('hot')
+  hot,
+  @JsonValue('latest')
+  latest,
+  @JsonValue('random')
+  random,
+}
+
 @HiveType(typeId: 11)
 enum MessageType {
   @JsonValue('text')
@@ -68,6 +77,36 @@ enum FriendshipStatus {
   accepted,
   @JsonValue('blocked')
   blocked,
+}
+
+enum FriendMatchStrategy {
+  @JsonValue('compatibility')
+  compatibility,
+  @JsonValue('complementary')
+  complementary,
+}
+
+enum FriendRecommendationTarget {
+  @JsonValue('friend')
+  friend,
+  @JsonValue('accountability')
+  accountability,
+}
+
+enum RecommendationItemType {
+  @JsonValue('friend')
+  friend,
+  @JsonValue('group')
+  group,
+}
+
+enum RecommendationFeedbackStage {
+  @JsonValue('immediate')
+  immediate,
+  @JsonValue('follow_up')
+  followUp,
+  @JsonValue('outcome')
+  outcome,
 }
 
 // ============ 举报相关枚举 ============
@@ -237,6 +276,14 @@ class FriendRecommendation {
     required this.user,
     required this.matchScore,
     required this.matchReasons,
+    this.strategy = 'compatibility',
+    this.target = 'accountability',
+    this.summary,
+    this.relationshipStatus = 'none',
+    this.isExistingFriend = false,
+    this.canInviteAccountability = false,
+    this.recommendedAction = 'send_friend_request',
+    this.scoreBreakdown = const {},
   });
 
   factory FriendRecommendation.fromJson(Map<String, dynamic> json) =>
@@ -246,7 +293,100 @@ class FriendRecommendation {
   final double matchScore;
   @JsonKey(name: 'match_reasons')
   final List<String> matchReasons;
+  final String strategy;
+  final String target;
+  final String? summary;
+  @JsonKey(name: 'relationship_status')
+  final String relationshipStatus;
+  @JsonKey(name: 'is_existing_friend')
+  final bool isExistingFriend;
+  @JsonKey(name: 'can_invite_accountability')
+  final bool canInviteAccountability;
+  @JsonKey(name: 'recommended_action')
+  final String recommendedAction;
+  @JsonKey(name: 'score_breakdown')
+  final Map<String, double> scoreBreakdown;
   Map<String, dynamic> toJson() => _$FriendRecommendationToJson(this);
+}
+
+@JsonSerializable()
+class RecommendationFeedbackPrompt {
+  RecommendationFeedbackPrompt({
+    required this.promptId,
+    required this.itemType,
+    required this.itemId,
+    required this.stage,
+    required this.triggerAction,
+    required this.title,
+    required this.dueAt,
+    this.subtitle,
+    this.strategy,
+    this.target,
+    this.user,
+    this.group,
+    this.reasonTags = const [],
+  });
+
+  factory RecommendationFeedbackPrompt.fromJson(Map<String, dynamic> json) =>
+      _$RecommendationFeedbackPromptFromJson(json);
+
+  @JsonKey(name: 'prompt_id')
+  final String promptId;
+  @JsonKey(name: 'item_type')
+  final RecommendationItemType itemType;
+  @JsonKey(name: 'item_id')
+  final String itemId;
+  final RecommendationFeedbackStage stage;
+  @JsonKey(name: 'trigger_action')
+  final String triggerAction;
+  final String title;
+  final String? subtitle;
+  @JsonKey(name: 'due_at')
+  final DateTime dueAt;
+  final String? strategy;
+  final String? target;
+  final UserBrief? user;
+  final GroupListItem? group;
+  @JsonKey(name: 'reason_tags')
+  final List<String> reasonTags;
+
+  Map<String, dynamic> toJson() => _$RecommendationFeedbackPromptToJson(this);
+
+  bool get isFriend => itemType == RecommendationItemType.friend;
+  bool get isGroup => itemType == RecommendationItemType.group;
+}
+
+@JsonSerializable()
+class RecommendationFeedbackInsight {
+  RecommendationFeedbackInsight({
+    required this.itemType,
+    required this.recentFeedbackCount,
+    this.averageScores = const {},
+    this.topPositiveSignals = const [],
+    this.topNegativeSignals = const [],
+    this.userTuning = const {},
+    this.globalAdjustments = const {},
+  });
+
+  factory RecommendationFeedbackInsight.fromJson(Map<String, dynamic> json) =>
+      _$RecommendationFeedbackInsightFromJson(json);
+
+  @JsonKey(name: 'item_type')
+  final RecommendationItemType itemType;
+  @JsonKey(name: 'recent_feedback_count')
+  final int recentFeedbackCount;
+  @JsonKey(name: 'average_scores')
+  final Map<String, double> averageScores;
+  @JsonKey(name: 'top_positive_signals')
+  final List<String> topPositiveSignals;
+  @JsonKey(name: 'top_negative_signals')
+  final List<String> topNegativeSignals;
+  @JsonKey(name: 'user_tuning')
+  final Map<String, dynamic> userTuning;
+  @JsonKey(name: 'global_adjustments')
+  final Map<String, double> globalAdjustments;
+
+  Map<String, dynamic> toJson() => _$RecommendationFeedbackInsightToJson(this);
 }
 
 // ============ 群组 ============
@@ -328,8 +468,13 @@ class GroupListItem {
     required this.memberCount,
     required this.totalFlamePower,
     required this.focusTags,
+    this.description,
+    this.todayCheckinCount = 0,
     this.deadline,
     this.daysRemaining,
+    this.isPublic = true,
+    this.joinRequiresApproval = false,
+    this.activityScore,
     this.myRole,
   });
 
@@ -337,21 +482,31 @@ class GroupListItem {
       _$GroupListItemFromJson(json);
   final String id;
   final String name;
+  final String? description;
   final GroupType type;
   @JsonKey(name: 'member_count')
   final int memberCount;
   @JsonKey(name: 'total_flame_power')
   final int totalFlamePower;
+  @JsonKey(name: 'today_checkin_count')
+  final int todayCheckinCount;
   final DateTime? deadline;
   @JsonKey(name: 'days_remaining')
   final int? daysRemaining;
   @JsonKey(name: 'focus_tags')
   final List<String> focusTags;
+  @JsonKey(name: 'is_public')
+  final bool isPublic;
+  @JsonKey(name: 'join_requires_approval')
+  final bool joinRequiresApproval;
+  @JsonKey(name: 'activity_score')
+  final double? activityScore;
   @JsonKey(name: 'my_role')
   final GroupRole? myRole;
   Map<String, dynamic> toJson() => _$GroupListItemToJson(this);
 
   bool get isSprint => type == GroupType.sprint;
+  bool get isJoined => myRole != null;
 }
 
 @JsonSerializable()
@@ -385,6 +540,36 @@ class GroupRecommendationItem {
   @JsonKey(name: 'requires_approval')
   final bool requiresApproval;
   Map<String, dynamic> toJson() => _$GroupRecommendationItemToJson(this);
+}
+
+@JsonSerializable()
+class GroupDirectoryInfo {
+  GroupDirectoryInfo({
+    required this.sortBy,
+    required this.availableTags,
+    required this.totalCount,
+    required this.recommendations,
+    required this.groups,
+    this.keyword,
+    this.appliedTags = const [],
+  });
+
+  factory GroupDirectoryInfo.fromJson(Map<String, dynamic> json) =>
+      _$GroupDirectoryInfoFromJson(json);
+
+  @JsonKey(name: 'sort_by')
+  final GroupDirectorySort sortBy;
+  final String? keyword;
+  @JsonKey(name: 'applied_tags')
+  final List<String> appliedTags;
+  @JsonKey(name: 'available_tags')
+  final List<String> availableTags;
+  @JsonKey(name: 'total_count')
+  final int totalCount;
+  final List<GroupRecommendationItem> recommendations;
+  final List<GroupListItem> groups;
+
+  Map<String, dynamic> toJson() => _$GroupDirectoryInfoToJson(this);
 }
 
 @JsonSerializable()

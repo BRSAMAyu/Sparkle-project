@@ -5,6 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user, get_db
 from app.models.user import User
 from app.schemas.user_settings import (
+    AiOpsDashboardResponse,
+    AiOpsExportResponse,
     AiUsageExportResponse,
     AiUsageSummaryResponse,
     UserSettingsResponse,
@@ -119,3 +121,25 @@ async def export_user_ai_usage(
     service = UserSettingsService(db)
     payload = await service.get_ai_usage_export(current_user.id, days=days)
     return AiUsageExportResponse(**payload)
+
+
+@router.get("/settings/ai-ops", response_model=AiOpsDashboardResponse)
+async def get_user_ai_ops_dashboard(
+    days: int = Query(default=7, ge=1, le=30),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> AiOpsDashboardResponse:
+    service = UserSettingsService(db)
+    payload = await service.get_ai_ops_dashboard(current_user.id, days=days)
+    return AiOpsDashboardResponse(**payload)
+
+
+@router.get("/settings/ai-ops/export", response_model=AiOpsExportResponse)
+async def export_user_ai_ops_dashboard(
+    days: int = Query(default=14, ge=1, le=30),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> AiOpsExportResponse:
+    service = UserSettingsService(db)
+    payload = await service.get_ai_ops_export(current_user.id, days=days)
+    return AiOpsExportResponse(**payload)

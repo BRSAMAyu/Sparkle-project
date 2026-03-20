@@ -26,6 +26,9 @@ class DashboardRepository {
         'dropout_risk': <String, dynamic>{},
         'optimal_time': <String, dynamic>{},
         'next_intent_forecast': {
+          'schema_version': 'prediction.v1',
+          'prediction_id': 'demo-prediction-next-intent',
+          'horizon': 'long_horizon',
           'title': '系统预测你接下来会继续推进最关键任务',
           'summary': '根据最近 24 小时的节奏，先推进当前重点任务最合适。',
           'confidence': 0.72,
@@ -36,6 +39,30 @@ class DashboardRepository {
           'prediction_source': 'rules',
           'prediction_tier': 'rules',
           'fallback_used': true,
+          'explanations': {
+            'recent_24h': ['最近24小时持续活跃'],
+            'recent_7d': ['过去7天保持稳定推进'],
+            'profile': ['你更容易承接已有重点任务'],
+            'plan': ['当前仍有重点待办'],
+            'focus': ['先推进一个25分钟小段更自然'],
+          },
+          'recommended_actions': [
+            {
+              'id': 'demo-prediction-next-intent:primary',
+              'label': '继续重点任务',
+              'action_type': 'resume_priority_task',
+              'target_route': '/chat',
+              'suggested_prompt': '帮我继续推进今天最关键的任务',
+              'resource_type': 'chat',
+              'resource_id': null,
+              'surface': 'dashboard',
+            },
+          ],
+          'tracking': {
+            'candidate_id': 'demo-prediction-next-intent',
+            'action_type': 'resume_priority_task',
+            'surface': 'dashboard',
+          },
           'generated_at': DateTime.now().toIso8601String(),
         },
       };

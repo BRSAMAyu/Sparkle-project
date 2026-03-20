@@ -171,8 +171,9 @@ class FriendsNotifier extends StateNotifier<AsyncValue<List<FriendshipInfo>>> {
 }
 
 final pendingRequestsProvider = StateNotifierProvider<PendingRequestsNotifier,
-        AsyncValue<List<FriendshipInfo>>>(
-    (ref) => PendingRequestsNotifier(ref.watch(communityRepositoryProvider)),);
+    AsyncValue<List<FriendshipInfo>>>(
+  (ref) => PendingRequestsNotifier(ref.watch(communityRepositoryProvider)),
+);
 
 class PendingRequestsNotifier
     extends StateNotifier<AsyncValue<List<FriendshipInfo>>> {
@@ -209,9 +210,14 @@ class PendingRequestsNotifier
 
 // 2. Recommendations Provider
 final friendRecommendationsProvider = StateNotifierProvider<
-        FriendRecommendationsNotifier, AsyncValue<List<FriendRecommendation>>>(
-    (ref) =>
-        FriendRecommendationsNotifier(ref.watch(communityRepositoryProvider)),);
+    FriendRecommendationsNotifier, AsyncValue<List<FriendRecommendation>>>(
+  (ref) =>
+      FriendRecommendationsNotifier(ref.watch(communityRepositoryProvider)),
+);
+
+final friendRecommendationStrategyProvider = StateProvider<FriendMatchStrategy>(
+  (_) => FriendMatchStrategy.compatibility,
+);
 
 class FriendRecommendationsNotifier
     extends StateNotifier<AsyncValue<List<FriendRecommendation>>> {
@@ -220,14 +226,26 @@ class FriendRecommendationsNotifier
     loadRecommendations();
   }
   final CommunityRepository _repository;
+  final Set<String> _viewed = {};
+  FriendMatchStrategy _strategy = FriendMatchStrategy.compatibility;
+  final FriendRecommendationTarget _target =
+      FriendRecommendationTarget.accountability;
 
   Future<void> loadRecommendations() async {
     if (!mounted) return;
     state = const AsyncValue.loading();
     try {
-      final recommendations = await _repository.getFriendRecommendations();
+      final recommendations = await _repository.getFriendRecommendations(
+        strategy: _strategy,
+        target: _target,
+      );
       if (!mounted) return;
       state = AsyncValue.data(recommendations);
+      try {
+        await _recordViews(recommendations);
+      } catch (e) {
+        debugPrint('Friend recommendation view feedback failed: $e');
+      }
     } catch (e, st) {
       if (!mounted) return;
       state = AsyncValue.error(e, st);
@@ -236,12 +254,59 @@ class FriendRecommendationsNotifier
 
   Future<void> refresh() => loadRecommendations();
 
-  Future<void> sendRequest(String targetUserId) async {
-    try {
-      await _repository.sendFriendRequest(targetUserId);
-    } catch (e) {
-      rethrow;
+  Future<void> setStrategy(FriendMatchStrategy strategy) async {
+    if (_strategy == strategy) return;
+    _strategy = strategy;
+    _viewed.clear();
+    await loadRecommendations();
+  }
+
+  Future<void> sendRequest(FriendRecommendation recommendation) async {
+    await _repository.sendFriendRequest(recommendation.user.id);
+    await _sendFeedback(recommendation, action: 'friend_request');
+    _removeRecommendation(recommendation.user.id);
+  }
+
+  Future<void> dismiss(FriendRecommendation recommendation) async {
+    await _sendFeedback(recommendation, action: 'dismiss');
+    _removeRecommendation(recommendation.user.id);
+  }
+
+  Future<void> recordAccountabilityInvite(
+    FriendRecommendation recommendation,
+  ) async {
+    await _sendFeedback(recommendation, action: 'accountability_invite');
+    _removeRecommendation(recommendation.user.id);
+  }
+
+  Future<void> _recordViews(List<FriendRecommendation> recommendations) async {
+    for (final recommendation in recommendations) {
+      if (!_viewed.add(recommendation.user.id)) {
+        continue;
+      }
+      await _sendFeedback(recommendation, action: 'view');
     }
+  }
+
+  Future<void> _sendFeedback(
+    FriendRecommendation recommendation, {
+    required String action,
+  }) async {
+    await _repository.sendFriendRecommendationFeedback(
+      targetUserId: recommendation.user.id,
+      strategy: _strategy,
+      target: _target,
+      action: action,
+      source: 'friends_discover',
+      score: recommendation.matchScore,
+    );
+  }
+
+  void _removeRecommendation(String userId) {
+    state.whenData((items) {
+      final updated = items.where((item) => item.user.id != userId).toList();
+      state = AsyncValue.data(updated);
+    });
   }
 }
 
@@ -255,14 +320,79 @@ final groupRecommendationsProvider = StateNotifierProvider<
   ),
 );
 
-final groupDiscoverProvider = StateNotifierProvider<
-    GroupRecommendationsNotifier, AsyncValue<List<GroupRecommendationItem>>>(
-  (ref) => GroupRecommendationsNotifier(
+final groupDiscoverProvider = StateNotifierProvider<GroupDirectoryNotifier,
+    AsyncValue<GroupDirectoryInfo>>(
+  (ref) => GroupDirectoryNotifier(
     ref.watch(communityRepositoryProvider),
-    source: 'discover',
-    limit: 20,
+    ref,
   ),
 );
+
+final recommendationFeedbackPromptsProvider = StateNotifierProvider<
+    RecommendationFeedbackPromptsNotifier,
+    AsyncValue<List<RecommendationFeedbackPrompt>>>(
+  (ref) => RecommendationFeedbackPromptsNotifier(
+    ref.watch(communityRepositoryProvider),
+  ),
+);
+
+final recommendationFeedbackInsightsProvider = StateNotifierProvider<
+    RecommendationFeedbackInsightsNotifier,
+    AsyncValue<List<RecommendationFeedbackInsight>>>(
+  (ref) => RecommendationFeedbackInsightsNotifier(
+    ref.watch(communityRepositoryProvider),
+  ),
+);
+
+class RecommendationFeedbackPromptsNotifier
+    extends StateNotifier<AsyncValue<List<RecommendationFeedbackPrompt>>> {
+  RecommendationFeedbackPromptsNotifier(this._repository)
+      : super(const AsyncValue.loading()) {
+    loadPrompts();
+  }
+
+  final CommunityRepository _repository;
+
+  Future<void> loadPrompts() async {
+    if (!mounted) return;
+    state = const AsyncValue.loading();
+    try {
+      final prompts = await _repository.getRecommendationFeedbackPrompts();
+      if (!mounted) return;
+      state = AsyncValue.data(prompts);
+    } catch (e, st) {
+      if (!mounted) return;
+      state = AsyncValue.error(e, st);
+    }
+  }
+
+  Future<void> refresh() => loadPrompts();
+}
+
+class RecommendationFeedbackInsightsNotifier
+    extends StateNotifier<AsyncValue<List<RecommendationFeedbackInsight>>> {
+  RecommendationFeedbackInsightsNotifier(this._repository)
+      : super(const AsyncValue.loading()) {
+    loadInsights();
+  }
+
+  final CommunityRepository _repository;
+
+  Future<void> loadInsights() async {
+    if (!mounted) return;
+    state = const AsyncValue.loading();
+    try {
+      final insights = await _repository.getRecommendationFeedbackInsights();
+      if (!mounted) return;
+      state = AsyncValue.data(insights);
+    } catch (e, st) {
+      if (!mounted) return;
+      state = AsyncValue.error(e, st);
+    }
+  }
+
+  Future<void> refresh() => loadInsights();
+}
 
 class GroupRecommendationsNotifier
     extends StateNotifier<AsyncValue<List<GroupRecommendationItem>>> {
@@ -330,12 +460,14 @@ class GroupRecommendationsNotifier
     for (final item in items) {
       if (_viewed.contains(item.group.id)) continue;
       _viewed.add(item.group.id);
-      pending.add(_repository.sendGroupRecommendationFeedback(
-        groupId: item.group.id,
-        action: 'view',
-        source: source,
-        reasonTypes: item.reasons.map((reason) => reason.type).toList(),
-      ),);
+      pending.add(
+        _repository.sendGroupRecommendationFeedback(
+          groupId: item.group.id,
+          action: 'view',
+          source: source,
+          reasonTypes: item.reasons.map((reason) => reason.type).toList(),
+        ),
+      );
     }
     if (pending.isNotEmpty) {
       await Future.wait(pending);
@@ -354,10 +486,92 @@ class GroupRecommendationsNotifier
   }
 }
 
+class GroupDirectoryNotifier
+    extends StateNotifier<AsyncValue<GroupDirectoryInfo>> {
+  GroupDirectoryNotifier(this._repository, this._ref)
+      : super(const AsyncValue.loading()) {
+    loadDirectory();
+  }
+
+  final CommunityRepository _repository;
+  final Ref _ref;
+
+  GroupDirectorySort _sortBy = GroupDirectorySort.hot;
+  GroupType? _type;
+  String _keyword = '';
+  final Set<String> _selectedTags = <String>{};
+
+  GroupDirectorySort get sortBy => _sortBy;
+  GroupType? get type => _type;
+  String get keyword => _keyword;
+  Set<String> get selectedTags => _selectedTags;
+
+  Future<void> loadDirectory() async {
+    if (!mounted) return;
+    state = const AsyncValue.loading();
+    try {
+      final directory = await _repository.getGroupDirectory(
+        keyword: _keyword.isEmpty ? null : _keyword,
+        type: _type,
+        tags: _selectedTags.isEmpty ? null : _selectedTags.toList(),
+        sortBy: _sortBy,
+      );
+      if (!mounted) return;
+      state = AsyncValue.data(directory);
+    } catch (e, st) {
+      if (!mounted) return;
+      state = AsyncValue.error(e, st);
+    }
+  }
+
+  Future<void> refresh() => loadDirectory();
+
+  Future<void> setSortBy(GroupDirectorySort sortBy) async {
+    if (_sortBy == sortBy) return;
+    _sortBy = sortBy;
+    await loadDirectory();
+  }
+
+  Future<void> setKeyword(String keyword) async {
+    _keyword = keyword.trim();
+    await loadDirectory();
+  }
+
+  Future<void> setType(GroupType? type) async {
+    _type = type;
+    await loadDirectory();
+  }
+
+  Future<void> toggleTag(String tag) async {
+    if (_selectedTags.contains(tag)) {
+      _selectedTags.remove(tag);
+    } else {
+      _selectedTags.add(tag);
+    }
+    await loadDirectory();
+  }
+
+  Future<void> clearFilters() async {
+    _sortBy = GroupDirectorySort.hot;
+    _type = null;
+    _keyword = '';
+    _selectedTags.clear();
+    await loadDirectory();
+  }
+
+  Future<void> join(String groupId) async {
+    await _repository.joinGroup(groupId);
+    _ref.invalidate(myGroupsProvider);
+    _ref.invalidate(groupRecommendationsProvider);
+    await loadDirectory();
+  }
+}
+
 // 3. User Search Provider
 final userSearchProvider =
     StateNotifierProvider<UserSearchNotifier, AsyncValue<List<UserBrief>>>(
-        (ref) => UserSearchNotifier(ref.watch(communityRepositoryProvider)),);
+  (ref) => UserSearchNotifier(ref.watch(communityRepositoryProvider)),
+);
 
 class UserSearchNotifier extends StateNotifier<AsyncValue<List<UserBrief>>> {
   UserSearchNotifier(this._repository) : super(const AsyncValue.data([]));
@@ -381,12 +595,14 @@ class UserSearchNotifier extends StateNotifier<AsyncValue<List<UserBrief>>> {
 // 4. My Groups Provider
 final myGroupsProvider =
     StateNotifierProvider<MyGroupsNotifier, AsyncValue<List<GroupListItem>>>(
-        (ref) => MyGroupsNotifier(ref.watch(communityRepositoryProvider)),);
+  (ref) => MyGroupsNotifier(ref.watch(communityRepositoryProvider)),
+);
 
 final groupDetailProvider = StateNotifierProvider.family<GroupDetailNotifier,
-        AsyncValue<GroupInfo>, String>(
-    (ref, groupId) =>
-        GroupDetailNotifier(ref.watch(communityRepositoryProvider), groupId),);
+    AsyncValue<GroupInfo>, String>(
+  (ref, groupId) =>
+      GroupDetailNotifier(ref.watch(communityRepositoryProvider), groupId),
+);
 
 class GroupDetailNotifier extends StateNotifier<AsyncValue<GroupInfo>> {
   GroupDetailNotifier(this._repository, this._groupId)
@@ -428,8 +644,11 @@ class GroupDetailNotifier extends StateNotifier<AsyncValue<GroupInfo>> {
 
   Future<CheckinResponse> checkin(int minutes, String? message) async {
     try {
-      final response = await _repository.checkin(_groupId,
-          todayDurationMinutes: minutes, message: message,);
+      final response = await _repository.checkin(
+        _groupId,
+        todayDurationMinutes: minutes,
+        message: message,
+      );
       await loadDetail();
       return response;
     } catch (e) {
@@ -481,9 +700,10 @@ class MyGroupsNotifier extends StateNotifier<AsyncValue<List<GroupListItem>>> {
 
 // 4.5. Group Members Provider (Family)
 final groupMembersProvider = StateNotifierProvider.family<GroupMembersNotifier,
-        AsyncValue<List<GroupMemberInfo>>, String>(
-    (ref, groupId) =>
-        GroupMembersNotifier(ref.watch(communityRepositoryProvider), groupId),);
+    AsyncValue<List<GroupMemberInfo>>, String>(
+  (ref, groupId) =>
+      GroupMembersNotifier(ref.watch(communityRepositoryProvider), groupId),
+);
 
 class GroupMembersNotifier
     extends StateNotifier<AsyncValue<List<GroupMemberInfo>>> {
@@ -556,8 +776,11 @@ final groupChatProvider = StateNotifierProvider.family<GroupChatNotifier,
 
 class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
   GroupChatNotifier(
-      this._repository, this._authRepository, this._groupId, this._ref,)
-      : super(const AsyncValue.loading()) {
+    this._repository,
+    this._authRepository,
+    this._groupId,
+    this._ref,
+  ) : super(const AsyncValue.loading()) {
     _initialize();
   }
   final CommunityRepository _repository;
@@ -576,7 +799,8 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
   String? _currentUserId;
 
   // WebSocket reconnection state
-  WebSocketConnectionState _connectionState = WebSocketConnectionState.disconnected;
+  WebSocketConnectionState _connectionState =
+      WebSocketConnectionState.disconnected;
   WebSocketConnectionState get connectionState => _connectionState;
   int _retryCount = 0;
   static const int _maxRetries = 5;
@@ -634,10 +858,15 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
                 final nonce = jsonData['nonce'];
                 if (nonce != null && _pendingNonces.contains(nonce)) {
                   _pendingNonces.remove(nonce);
-                  Future(() => _cacheService.removePendingGroupMessage(
-                      _groupId, nonce.toString(),),);
+                  Future(
+                    () => _cacheService.removePendingGroupMessage(
+                      _groupId,
+                      nonce.toString(),
+                    ),
+                  );
                   state.whenData(
-                      (messages) => state = AsyncValue.data([...messages]),);
+                    (messages) => state = AsyncValue.data([...messages]),
+                  );
                 }
                 return;
               }
@@ -665,7 +894,9 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
                 final reactions = jsonData['reactions'];
                 if (messageId != null) {
                   _handleReactionUpdate(
-                      messageId.toString(), reactions as Map<String, dynamic>?,);
+                    messageId.toString(),
+                    reactions as Map<String, dynamic>?,
+                  );
                 }
                 return;
               }
@@ -698,7 +929,8 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
               state.whenData((messages) {
                 if (!messages.any((m) => m.id == message.id)) {
                   state = AsyncValue.data([message, ...messages]);
-                  unawaited(_markVisibleMessagesAsRead(upToMessageId: message.id));
+                  unawaited(
+                      _markVisibleMessagesAsRead(upToMessageId: message.id));
 
                   // Trigger in-app notification for incoming group messages
                   // Only notify if message is from someone else
@@ -747,8 +979,11 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
     _connectionState = WebSocketConnectionState.disconnected;
     if (_retryCount < _maxRetries) {
       _retryCount++;
-      final delay = Duration(seconds: 1 << _retryCount); // Exponential backoff: 2s, 4s, 8s, 16s, 32s
-      debugPrint('WS reconnecting in ${delay.inSeconds}s (attempt $_retryCount/$_maxRetries)');
+      final delay = Duration(
+          seconds:
+              1 << _retryCount); // Exponential backoff: 2s, 4s, 8s, 16s, 32s
+      debugPrint(
+          'WS reconnecting in ${delay.inSeconds}s (attempt $_retryCount/$_maxRetries)');
       Future.delayed(delay, () {
         if (mounted) {
           _connectWebSocket(isRetry: true);
@@ -788,7 +1023,9 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
           nonce: payload['nonce']?.toString(),
         );
         await _cacheService.removePendingGroupMessage(
-            _groupId, payload['nonce']?.toString() ?? '',);
+          _groupId,
+          payload['nonce']?.toString() ?? '',
+        );
         state.whenData((messages) {
           if (!messages.any((m) => m.id == message.id)) {
             state = AsyncValue.data([message, ...messages]);
@@ -931,7 +1168,8 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
   Future<List<MessageInfo>> getThreadMessages(String threadRootId) async =>
       _repository.getThreadMessages(_groupId, threadRootId);
 
-  Future<void> _markVisibleMessagesAsRead({required String upToMessageId}) async {
+  Future<void> _markVisibleMessagesAsRead(
+      {required String upToMessageId}) async {
     final currentUserId = await _resolveCurrentUserId();
     if (currentUserId == null || currentUserId.isEmpty) {
       return;
@@ -1011,7 +1249,9 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
   }
 
   void _handleReactionUpdate(
-      String messageId, Map<String, dynamic>? reactions,) {
+    String messageId,
+    Map<String, dynamic>? reactions,
+  ) {
     state.whenData((messages) {
       final index = messages.indexWhere((m) => m.id == messageId);
       if (index != -1) {
@@ -1110,7 +1350,8 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
 // 6. Group Search Provider
 final groupSearchProvider =
     StateNotifierProvider<GroupSearchNotifier, AsyncValue<List<GroupListItem>>>(
-        (ref) => GroupSearchNotifier(ref.watch(communityRepositoryProvider)),);
+  (ref) => GroupSearchNotifier(ref.watch(communityRepositoryProvider)),
+);
 
 class GroupSearchNotifier
     extends StateNotifier<AsyncValue<List<GroupListItem>>> {
@@ -1130,9 +1371,10 @@ class GroupSearchNotifier
 
 // 7. Group Tasks Provider (Family)
 final groupTasksProvider = StateNotifierProvider.family<GroupTasksNotifier,
-        AsyncValue<List<GroupTaskInfo>>, String>(
-    (ref, groupId) =>
-        GroupTasksNotifier(ref.watch(communityRepositoryProvider), groupId),);
+    AsyncValue<List<GroupTaskInfo>>, String>(
+  (ref, groupId) =>
+      GroupTasksNotifier(ref.watch(communityRepositoryProvider), groupId),
+);
 
 class GroupTasksNotifier
     extends StateNotifier<AsyncValue<List<GroupTaskInfo>>> {
@@ -1190,8 +1432,11 @@ final privateChatProvider = StateNotifierProvider.autoDispose
 class PrivateChatNotifier
     extends StateNotifier<AsyncValue<List<PrivateMessageInfo>>> {
   PrivateChatNotifier(
-      this._repository, this._friendId, Stream<dynamic> events, this._ref,)
-      : super(const AsyncValue.loading()) {
+    this._repository,
+    this._friendId,
+    Stream<dynamic> events,
+    this._ref,
+  ) : super(const AsyncValue.loading()) {
     _initialize(events);
   }
   final CommunityRepository _repository;
@@ -1219,14 +1464,18 @@ class PrivateChatNotifier
   void _handleEvent(dynamic data) {
     if (data is String) {
       try {
-            final jsonData = jsonDecode(data) as Map<String, dynamic>;
+        final jsonData = jsonDecode(data) as Map<String, dynamic>;
 
         if (jsonData['type'] == 'ack') {
           final nonce = jsonData['nonce'];
           if (nonce != null && _pendingNonces.contains(nonce)) {
             _pendingNonces.remove(nonce);
-            Future(() => _cacheService.removePendingPrivateMessage(
-                _friendId, nonce.toString(),),);
+            Future(
+              () => _cacheService.removePendingPrivateMessage(
+                _friendId,
+                nonce.toString(),
+              ),
+            );
             state
                 .whenData((messages) => state = AsyncValue.data([...messages]));
           }
@@ -1274,7 +1523,9 @@ class PrivateChatNotifier
           final reactions = jsonData['reactions'];
           if (messageId != null) {
             _handleReactionUpdate(
-                messageId.toString(), reactions as Map<String, dynamic>?,);
+              messageId.toString(),
+              reactions as Map<String, dynamic>?,
+            );
           }
           return;
         }
@@ -1341,7 +1592,9 @@ class PrivateChatNotifier
           ),
         );
         await _cacheService.removePendingPrivateMessage(
-            _friendId, payload['nonce']?.toString() ?? '',);
+          _friendId,
+          payload['nonce']?.toString() ?? '',
+        );
         state.whenData((messages) {
           final tempId = 'local_${payload['nonce'] ?? ''}';
           final filtered = messages.where((m) => m.id != tempId).toList();
@@ -1386,7 +1639,9 @@ class PrivateChatNotifier
   }
 
   void _handleReactionUpdate(
-      String messageId, Map<String, dynamic>? reactions,) {
+    String messageId,
+    Map<String, dynamic>? reactions,
+  ) {
     state.whenData((messages) {
       final index = messages.indexWhere((m) => m.id == messageId);
       if (index != -1) {
@@ -1459,7 +1714,8 @@ class PrivateChatNotifier
     );
 
     state.whenData(
-        (messages) => state = AsyncValue.data([tempMessage, ...messages]),);
+      (messages) => state = AsyncValue.data([tempMessage, ...messages]),
+    );
 
     try {
       final message = await _repository.sendPrivateMessage(
@@ -1488,7 +1744,9 @@ class PrivateChatNotifier
     } catch (e) {
       _pendingNonces.remove(nonce);
       await _cacheService.enqueuePendingPrivateMessage(
-          _friendId, pendingPayload,);
+        _friendId,
+        pendingPayload,
+      );
       state.whenData((messages) {
         final updated = messages.map((m) {
           if (m.id == tempId) {
@@ -1617,8 +1875,9 @@ class PrivateChatNotifier
 
 // 9. Current User Status Provider
 final currentUserStatusProvider =
-    StateNotifierProvider<CurrentUserStatusNotifier, UserStatus>((ref) =>
-        CurrentUserStatusNotifier(ref.watch(communityRepositoryProvider)),);
+    StateNotifierProvider<CurrentUserStatusNotifier, UserStatus>(
+  (ref) => CurrentUserStatusNotifier(ref.watch(communityRepositoryProvider)),
+);
 
 class CurrentUserStatusNotifier extends StateNotifier<UserStatus> {
   CurrentUserStatusNotifier(this._repository) : super(UserStatus.online);

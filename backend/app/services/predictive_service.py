@@ -9,11 +9,13 @@ Predictive Learning Intelligence Service - 预测学习智能服务
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import statistics
+from collections import defaultdict
 from datetime import timezone, datetime, timedelta
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from loguru import logger
 from sqlalchemy import and_, func, select
@@ -22,11 +24,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.agent_profiles import AgentRole, ModelTier, TaskType
 from app.core.cache import cache_service
 from app.core.llm_router import llm_router
+from app.models.candidate_action_feedback import CandidateActionFeedback
+from app.models.event import TrackingEvent
 from app.models.focus import FocusSession, FocusStatus
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.models.galaxy import StudyRecord
 from app.models.task import Task, TaskStatus
 from app.services.llm_service import get_llm_service_for_specific_model
+from app.tools.entity_cards import build_prediction_entity_card
 
 
 class EngagementForecast:
@@ -91,6 +96,8 @@ class PredictiveService:
     """预测学习智能服务"""
     LONG_HORIZON_CACHE_TTL_SECONDS = 60 * 60 * 6
     LONG_HORIZON_SOFT_STALE_SECONDS = 60 * 30
+    REALTIME_FREE_TIMEOUT_SECONDS = 1.2
+    REALTIME_FREE_FAST_TIMEOUT_SECONDS = 1.8
 
     def __init__(self, db: AsyncSession):
         self.db = db
@@ -541,7 +548,15 @@ class PredictiveService:
         if cached is not None:
             return cached
 
-        rule_based = await self._build_rule_based_next_intent(user_id)
+        rule_based = self._finalize_prediction(
+            user_id=user_id,
+            forecast=await self._build_rule_based_next_intent(user_id),
+            horizon="long_horizon",
+            source="rules",
+            tier="rules",
+            fallback_used=True,
+            surface="dashboard",
+        )
         await self._cache_forecast(
             cache_key,
             rule_based,
@@ -549,6 +564,35 @@ class PredictiveService:
         )
         await self._schedule_long_horizon_refresh(user_id)
         return rule_based
+
+    async def get_realtime_next_step_forecast(
+        self,
+        user_id: UUID,
+        *,
+        partial_text: str,
+        active_plan_id: str | None = None,
+        surface: str = "chat_input",
+    ) -> dict[str, Any]:
+        normalized_text = partial_text.strip()
+        base = await self._build_rule_based_realtime_next_step(
+            user_id,
+            partial_text=normalized_text,
+            active_plan_id=active_plan_id,
+            surface=surface,
+        )
+
+        if len(normalized_text) < 3:
+            return base
+
+        forecast = await self._generate_realtime_llm_prediction(
+            user_id,
+            partial_text=normalized_text,
+            base=base,
+            surface=surface,
+        )
+        if forecast is not None:
+            return forecast
+        return base
 
     async def generate_long_horizon_forecast(self, user_id: UUID) -> dict[str, Any]:
         base = await self._build_rule_based_next_intent(user_id)
@@ -603,22 +647,26 @@ class PredictiveService:
                 temperature=0.3,
             )
             if isinstance(payload, dict) and payload.get("title") and payload.get("summary"):
-                enriched = {
-                    **base,
-                    "title": str(payload.get("title") or base["title"]),
-                    "summary": str(payload.get("summary") or base["summary"]),
-                    "confidence": float(payload.get("confidence") or base["confidence"]),
-                    "predicted_action_type": str(
-                        payload.get("predicted_action_type") or base["predicted_action_type"]
-                    ),
-                    "predicted_window": str(payload.get("predicted_window") or base["predicted_window"]),
-                    "reasons": list(payload.get("reasons") or base["reasons"]),
-                    "suggested_prompt": str(payload.get("suggested_prompt") or base["suggested_prompt"]),
-                    "prediction_source": "glm_batch",
-                    "prediction_tier": selection.model_key,
-                    "fallback_used": False,
-                    "generated_at": self._get_current_time().isoformat(),
-                }
+                enriched = self._finalize_prediction(
+                    user_id=user_id,
+                    forecast={
+                        **base,
+                        "title": str(payload.get("title") or base["title"]),
+                        "summary": str(payload.get("summary") or base["summary"]),
+                        "confidence": float(payload.get("confidence") or base["confidence"]),
+                        "predicted_action_type": str(
+                            payload.get("predicted_action_type") or base["predicted_action_type"]
+                        ),
+                        "predicted_window": str(payload.get("predicted_window") or base["predicted_window"]),
+                        "reasons": list(payload.get("reasons") or base["reasons"]),
+                        "suggested_prompt": str(payload.get("suggested_prompt") or base["suggested_prompt"]),
+                    },
+                    horizon="long_horizon",
+                    source="glm_batch",
+                    tier=selection.model_key,
+                    fallback_used=False,
+                    surface="dashboard",
+                )
                 await self._cache_forecast(
                     f"predictive:next_intent:{user_id}",
                     enriched,
@@ -628,13 +676,15 @@ class PredictiveService:
         except Exception as exc:
             logger.warning(f"Long horizon prediction failed for user {user_id}: {exc}")
 
-        fallback = {
-            **base,
-            "prediction_source": "rules",
-            "prediction_tier": "rules",
-            "fallback_used": True,
-            "generated_at": self._get_current_time().isoformat(),
-        }
+        fallback = self._finalize_prediction(
+            user_id=user_id,
+            forecast=base,
+            horizon="long_horizon",
+            source="rules",
+            tier="rules",
+            fallback_used=True,
+            surface="dashboard",
+        )
         await self._cache_forecast(
             f"predictive:next_intent:{user_id}",
             fallback,
@@ -645,6 +695,7 @@ class PredictiveService:
     async def _build_rule_based_next_intent(self, user_id: UUID) -> dict[str, Any]:
         now = self._get_current_time().replace(tzinfo=None)
         last_24h = now - timedelta(hours=24)
+        last_7d = now - timedelta(days=7)
 
         pending_stmt = (
             select(Task)
@@ -677,6 +728,11 @@ class PredictiveService:
             StudyRecord.created_at >= last_24h,
         )
         study_count = int((await self.db.execute(study_stmt)).scalar() or 0)
+        study_7d_stmt = select(func.count(StudyRecord.id)).where(
+            StudyRecord.user_id == user_id,
+            StudyRecord.created_at >= last_7d,
+        )
+        study_count_7d = int((await self.db.execute(study_7d_stmt)).scalar() or 0)
 
         top_task = pending_tasks[0] if pending_tasks else None
         overdue_count = sum(
@@ -710,6 +766,24 @@ class PredictiveService:
                     "completed_last_24h": completed_last_24h,
                     "focus_minutes_last_24h": total_focus_minutes,
                     "study_records_last_24h": study_count,
+                    "study_records_last_7d": study_count_7d,
+                },
+                "explanations": {
+                    "recent_24h": [
+                        f"最近24小时完成了 {completed_last_24h} 个任务",
+                        f"最近24小时专注了 {total_focus_minutes} 分钟",
+                    ],
+                    "recent_7d": [
+                        f"最近7天累计留下了 {study_count_7d} 条学习记录",
+                    ],
+                    "profile": ["你最近更像在推进已有任务，而不是重新开新坑"],
+                    "plan": [
+                        f"当前还有 {len(pending_tasks)} 个待办未完成",
+                        *([f"其中 {overdue_count} 个已经逾期"] if overdue_count > 0 else []),
+                    ],
+                    "focus": [
+                        "先推进 25 分钟的小段，比直接做大块任务更容易进入状态",
+                    ],
                 },
             }
         else:
@@ -730,15 +804,539 @@ class PredictiveService:
                     "completed_last_24h": completed_last_24h,
                     "focus_minutes_last_24h": total_focus_minutes,
                     "study_records_last_24h": study_count,
+                    "study_records_last_7d": study_count_7d,
+                },
+                "explanations": {
+                    "recent_24h": [
+                        f"最近24小时完成了 {completed_last_24h} 个任务",
+                        f"最近24小时专注了 {total_focus_minutes} 分钟",
+                    ],
+                    "recent_7d": [
+                        f"最近7天累计留下了 {study_count_7d} 条学习记录",
+                    ],
+                    "profile": ["你当前没有被高优先级任务强绑定，适合先整理节奏"],
+                    "plan": ["当前没有明确的最高优先级待办需要立刻承接"],
+                    "focus": ["短复盘能帮助系统更准确地给出下一步建议"],
                 },
             }
 
+        return forecast
+
+    async def _build_rule_based_realtime_next_step(
+        self,
+        user_id: UUID,
+        *,
+        partial_text: str,
+        active_plan_id: str | None,
+        surface: str,
+    ) -> dict[str, Any]:
+        now = self._get_current_time().replace(tzinfo=None)
+        normalized = partial_text.strip()
+        lowered = normalized.lower()
+        last_24h = now - timedelta(hours=24)
+
+        pending_stmt = (
+            select(Task)
+            .where(
+                Task.user_id == user_id,
+                Task.status.in_([TaskStatus.PENDING, TaskStatus.IN_PROGRESS]),
+            )
+            .order_by(Task.priority.desc(), Task.due_date, Task.created_at.desc())
+            .limit(3)
+        )
+        pending_tasks = (await self.db.execute(pending_stmt)).scalars().all()
+        top_task = pending_tasks[0] if pending_tasks else None
+
+        focus_stmt = select(func.count(FocusSession.id)).where(
+            FocusSession.user_id == user_id,
+            FocusSession.start_time >= last_24h,
+            FocusSession.status == FocusStatus.COMPLETED,
+        )
+        focus_count_last_24h = int((await self.db.execute(focus_stmt)).scalar() or 0)
+
+        action_type = "continue_chat"
+        title = "系统预测你接下来会继续让 AI 帮你推进这件事"
+        summary = "这句话更像是一个需要立刻承接的意图，继续让 AI 帮你收束成下一步最省力。"
+        suggested_prompt = normalized
+        reasons = ["你正在连续输入，当前最需要的是立刻给出下一步动作"]
+        confidence = 0.66
+        primary_route = "/chat"
+
+        if any(keyword in normalized for keyword in ["任务", "待办", "提醒", "todo", "task"]):
+            action_type = "create_task"
+            title = "系统预测你想先把这件事落成任务"
+            summary = "这段输入更像一个可执行待办，直接落到任务列表会更容易继续推进。"
+            suggested_prompt = normalized
+            reasons = ["输入里出现了明确的任务/提醒语义"]
+            confidence = 0.82
+            primary_route = "/tasks/new"
+        elif any(keyword in normalized for keyword in ["计划", "学习路径", "复习", "学", "study", "plan"]):
+            action_type = "study_plan"
+            title = "系统预测你想把它收成一个学习计划"
+            summary = "当前输入更像在请求结构化规划，先收成计划会比直接闲聊更高效。"
+            suggested_prompt = normalized if normalized else "请帮我制定一个可执行的学习计划"
+            reasons = ["输入里有明显的规划/学习语义"]
+            confidence = 0.78
+        elif any(keyword in lowered for keyword in ["why", "error", "bug", "报错", "为什么", "问题", "错题"]):
+            action_type = "error_diagnosis"
+            title = "系统预测你接下来想做一次问题诊断"
+            summary = "这更像是在定位问题根因，直接进入诊断型回答会更省时间。"
+            suggested_prompt = normalized
+            reasons = ["输入里出现了问题定位或报错语义"]
+            confidence = 0.8
+        elif any(keyword in normalized for keyword in ["翻译", "单词", "英文", "translate"]):
+            action_type = "translate"
+            title = "系统预测你接下来想要一个即时语言结果"
+            summary = "这是时效性很强的即时需求，直接拿到结果比展开讨论更重要。"
+            suggested_prompt = normalized
+            reasons = ["输入里出现了翻译/语言学习语义"]
+            confidence = 0.77
+        elif top_task is not None and len(normalized) < 10:
+            action_type = "resume_task"
+            title = "系统预测你想继续当前重点任务"
+            summary = f"你最近仍在围绕「{top_task.title}」推进，系统建议直接承接这条主线。"
+            suggested_prompt = f"帮我继续推进任务：{top_task.title}"
+            reasons = [f"当前最高优先级待办仍是「{top_task.title}」"]
+            confidence = 0.72
+
+        explanations = {
+            "recent_24h": [
+                f"最近24小时你完成了 {focus_count_last_24h} 次完整专注",
+            ],
+            "recent_7d": [
+                f"当前仍有 {len(pending_tasks)} 个任务处于待推进状态",
+            ],
+            "profile": [
+                "系统会优先把你的输入推向最省力、最容易继续行动的路径",
+            ],
+            "plan": [
+                *([f"当前活跃计划 ID：{active_plan_id}"] if active_plan_id else []),
+                *([f"最近最需要推进的任务是「{top_task.title}」"] if top_task else []),
+            ],
+            "focus": [
+                "实时预测更看重 5 秒内可执行的下一步，而不是复杂分析",
+            ],
+        }
+
+        return self._finalize_prediction(
+            user_id=user_id,
+            forecast={
+                "title": title,
+                "summary": summary,
+                "confidence": confidence,
+                "predicted_action_type": action_type,
+                "predicted_window": "now",
+                "reasons": reasons,
+                "suggested_prompt": suggested_prompt,
+                "signals": {
+                    "active_plan_id": active_plan_id,
+                    "surface": surface,
+                    "input_text": normalized,
+                    "pending_task_count": len(pending_tasks),
+                    "focus_sessions_last_24h": focus_count_last_24h,
+                    "top_task_title": top_task.title if top_task else None,
+                },
+                "explanations": explanations,
+                "primary_route": primary_route,
+            },
+            horizon="realtime",
+            source="rules",
+            tier="rules",
+            fallback_used=True,
+            surface=surface,
+        )
+
+    async def _generate_realtime_llm_prediction(
+        self,
+        user_id: UUID,
+        *,
+        partial_text: str,
+        base: dict[str, Any],
+        surface: str,
+    ) -> dict[str, Any] | None:
+        async def _attempt(force_tier: ModelTier, timeout_seconds: float) -> dict[str, Any] | None:
+            selection = llm_router.select_model(
+                AgentRole.GENERATION,
+                TaskType.PREDICT_NEXT_ACTIONS,
+                force_tier=force_tier,
+            )
+            llm = await get_llm_service_for_specific_model(
+                selection.model_key,
+                agent_role=AgentRole.GENERATION,
+            )
+            payload = await asyncio.wait_for(
+                llm.chat_json(
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": (
+                                "你是 Sparkle 的实时下一步预测器。"
+                                "目标是 2 秒左右给出用户最可能马上要做的事情。"
+                                "输出 JSON，字段必须包含 title, summary, confidence, "
+                                "predicted_action_type, predicted_window, reasons(list), suggested_prompt。"
+                                "不要输出冗长解释。"
+                            ),
+                        },
+                        {
+                            "role": "user",
+                            "content": json.dumps(
+                                {
+                                    "input": partial_text,
+                                    "base_signals": base.get("signals", {}),
+                                    "base_reasons": base.get("reasons", []),
+                                },
+                                ensure_ascii=False,
+                            ),
+                        },
+                    ],
+                    schema={
+                        "type": "object",
+                        "properties": {
+                            "title": {"type": "string"},
+                            "summary": {"type": "string"},
+                            "confidence": {"type": "number"},
+                            "predicted_action_type": {"type": "string"},
+                            "predicted_window": {"type": "string"},
+                            "reasons": {"type": "array", "items": {"type": "string"}},
+                            "suggested_prompt": {"type": "string"},
+                        },
+                        "required": [
+                            "title",
+                            "summary",
+                            "confidence",
+                            "predicted_action_type",
+                            "predicted_window",
+                            "reasons",
+                            "suggested_prompt",
+                        ],
+                    },
+                    temperature=0.2,
+                ),
+                timeout=timeout_seconds,
+            )
+            if not isinstance(payload, dict):
+                return None
+            if not payload.get("title") or not payload.get("summary"):
+                return None
+            return self._finalize_prediction(
+                user_id=user_id,
+                forecast={
+                    **base,
+                    "title": str(payload.get("title") or base["title"]),
+                    "summary": str(payload.get("summary") or base["summary"]),
+                    "confidence": float(payload.get("confidence") or base["confidence"]),
+                    "predicted_action_type": str(
+                        payload.get("predicted_action_type") or base["predicted_action_type"]
+                    ),
+                    "predicted_window": str(payload.get("predicted_window") or base["predicted_window"]),
+                    "reasons": list(payload.get("reasons") or base["reasons"]),
+                    "suggested_prompt": str(payload.get("suggested_prompt") or base["suggested_prompt"]),
+                },
+                horizon="realtime",
+                source=force_tier.value,
+                tier=selection.model_key,
+                fallback_used=False,
+                surface=surface,
+            )
+
+        try:
+            return await _attempt(ModelTier.FREE, self.REALTIME_FREE_TIMEOUT_SECONDS)
+        except Exception as exc:
+            logger.debug(f"Realtime prediction free tier skipped for user {user_id}: {exc}")
+
+        try:
+            return await _attempt(ModelTier.FREE_FAST, self.REALTIME_FREE_FAST_TIMEOUT_SECONDS)
+        except Exception as exc:
+            logger.debug(f"Realtime prediction free_fast tier skipped for user {user_id}: {exc}")
+
+        return None
+
+    def _finalize_prediction(
+        self,
+        *,
+        user_id: UUID,
+        forecast: dict[str, Any],
+        horizon: str,
+        source: str,
+        tier: str,
+        fallback_used: bool,
+        surface: str | None = None,
+    ) -> dict[str, Any]:
+        generated_at = self._get_current_time().isoformat()
+        prediction_id = str(uuid4())
+        action_type = str(forecast.get("predicted_action_type") or "continue_chat")
+        suggested_prompt = str(forecast.get("suggested_prompt") or "").strip()
+        primary_route = str(forecast.get("primary_route") or self._route_for_action(action_type))
+        explanations = self._normalize_explanations(forecast.get("explanations"))
+        reasons = [str(item) for item in list(forecast.get("reasons") or []) if str(item).strip()]
+
+        recommended_actions = self._build_prediction_actions(
+            prediction_id=prediction_id,
+            action_type=action_type,
+            suggested_prompt=suggested_prompt,
+            primary_route=primary_route,
+            surface=surface,
+        )
+
         return {
-            **forecast,
-            "prediction_source": "rules",
-            "prediction_tier": "rules",
-            "fallback_used": True,
+            "schema_version": "prediction.v1",
+            "prediction_id": prediction_id,
+            "horizon": horizon,
+            "surface": surface,
+            "title": str(forecast.get("title") or ""),
+            "summary": str(forecast.get("summary") or ""),
+            "confidence": round(float(forecast.get("confidence") or 0.0), 3),
+            "predicted_action_type": action_type,
+            "predicted_window": str(forecast.get("predicted_window") or "now"),
+            "reasons": reasons,
+            "suggested_prompt": suggested_prompt,
+            "prediction_source": source,
+            "prediction_tier": tier,
+            "fallback_used": fallback_used,
+            "generated_at": generated_at,
+            "signals": forecast.get("signals") or {},
+            "explanations": explanations,
+            "recommended_actions": recommended_actions,
+            "tracking": {
+                "candidate_id": prediction_id,
+                "action_type": action_type,
+                "surface": surface,
+            },
+            "entity_card": build_prediction_entity_card(
+                prediction_id=prediction_id,
+                title=str(forecast.get("title") or ""),
+                summary=str(forecast.get("summary") or ""),
+                action_type=action_type,
+                suggested_prompt=suggested_prompt,
+                predicted_window=str(forecast.get("predicted_window") or "now"),
+                confidence=round(float(forecast.get("confidence") or 0.0), 3),
+                surface=surface,
+                reasons=reasons,
+                source=source,
+                tier=tier,
+                recommended_actions=recommended_actions,
+            ),
+            "user_id": str(user_id),
+        }
+
+    def _build_prediction_actions(
+        self,
+        *,
+        prediction_id: str,
+        action_type: str,
+        suggested_prompt: str,
+        primary_route: str,
+        surface: str | None,
+    ) -> list[dict[str, Any]]:
+        primary_label = {
+            "create_task": "落成任务",
+            "study_plan": "生成计划",
+            "error_diagnosis": "开始诊断",
+            "resume_task": "继续任务",
+            "light_review": "开始复盘",
+            "start_focus": "开始专注",
+            "translate": "立即获取结果",
+        }.get(action_type, "继续让 AI 帮我推进")
+
+        actions = [
+            {
+                "id": f"{prediction_id}:primary",
+                "label": primary_label,
+                "action_type": action_type,
+                "target_route": primary_route,
+                "suggested_prompt": suggested_prompt,
+                "resource_type": "chat" if primary_route == "/chat" else "navigation",
+                "resource_id": None,
+                "surface": surface,
+            },
+        ]
+
+        if suggested_prompt:
+            actions.append(
+                {
+                    "id": f"{prediction_id}:chat",
+                    "label": "交给 AI 承接",
+                    "action_type": "continue_chat",
+                    "target_route": "/chat",
+                    "suggested_prompt": suggested_prompt,
+                    "resource_type": "chat",
+                    "resource_id": None,
+                    "surface": surface,
+                },
+            )
+
+        if action_type not in {"light_review", "start_focus"}:
+            actions.append(
+                {
+                    "id": f"{prediction_id}:focus",
+                    "label": "先专注 25 分钟",
+                    "action_type": "start_focus",
+                    "target_route": "/focus",
+                    "suggested_prompt": "",
+                    "resource_type": "focus_session",
+                    "resource_id": None,
+                    "surface": surface,
+                },
+            )
+
+        return actions[:3]
+
+    def _normalize_explanations(self, value: Any) -> dict[str, list[str]]:
+        base = {
+            "recent_24h": [],
+            "recent_7d": [],
+            "profile": [],
+            "plan": [],
+            "focus": [],
+        }
+        if not isinstance(value, dict):
+            return base
+        for key in base:
+            raw = value.get(key)
+            if isinstance(raw, list):
+                base[key] = [str(item) for item in raw if str(item).strip()]
+        return base
+
+    def _route_for_action(self, action_type: str) -> str:
+        return {
+            "create_task": "/tasks/new",
+            "resume_task": "/tasks",
+            "resume_priority_task": "/tasks",
+            "study_plan": "/chat",
+            "error_diagnosis": "/chat",
+            "light_review": "/chat",
+            "start_focus": "/focus",
+            "translate": "/chat",
+        }.get(action_type, "/chat")
+
+    async def get_prediction_analytics(
+        self,
+        user_id: UUID,
+        *,
+        days: int = 7,
+    ) -> dict[str, Any]:
+        since = self._get_current_time().replace(tzinfo=None) - timedelta(days=max(1, min(days, 30)))
+        stmt = select(CandidateActionFeedback).where(
+            CandidateActionFeedback.user_id == user_id,
+            CandidateActionFeedback.created_at >= since,
+            CandidateActionFeedback.deleted_at.is_(None),
+        )
+        rows = (await self.db.execute(stmt)).scalars().all()
+
+        def _blank_bucket() -> dict[str, Any]:
+            return {
+                "impressions": 0,
+                "accepts": 0,
+                "dismisses": 0,
+                "ignores": 0,
+                "executed_accepts": 0,
+                "linked_executions": 0,
+            }
+
+        overall = _blank_bucket()
+        by_surface: dict[str, dict[str, Any]] = defaultdict(_blank_bucket)
+        by_horizon: dict[str, dict[str, Any]] = defaultdict(_blank_bucket)
+        by_source: dict[str, dict[str, Any]] = defaultdict(_blank_bucket)
+        by_action_type: dict[str, dict[str, Any]] = defaultdict(_blank_bucket)
+
+        for row in rows:
+            ctx = row.context_snapshot or {}
+            prediction_ctx = ctx.get("prediction") if isinstance(ctx.get("prediction"), dict) else {}
+            surface = str(prediction_ctx.get("surface") or "unknown")
+            horizon = str(prediction_ctx.get("horizon") or "unknown")
+            source = str(prediction_ctx.get("source") or "unknown")
+            action_type = str(row.action_type or "unknown")
+            buckets = [overall, by_surface[surface], by_horizon[horizon], by_source[source], by_action_type[action_type]]
+            for bucket in buckets:
+                if row.feedback_type == "impression":
+                    bucket["impressions"] += 1
+                elif row.feedback_type == "accept":
+                    bucket["accepts"] += 1
+                elif row.feedback_type == "dismiss":
+                    bucket["dismisses"] += 1
+                elif row.feedback_type == "ignore":
+                    bucket["ignores"] += 1
+                if row.feedback_type == "accept" and row.executed:
+                    bucket["executed_accepts"] += 1
+
+        event_stmt = select(TrackingEvent).where(
+            TrackingEvent.user_id == user_id,
+            TrackingEvent.received_at >= since,
+        )
+        events = (await self.db.execute(event_stmt)).scalars().all()
+        for event in events:
+            if event.event_type != "entity_execution":
+                continue
+            payload = event.payload if isinstance(event.payload, dict) else {}
+            prediction_id = str(payload.get("prediction_id") or "").strip()
+            if not prediction_id:
+                continue
+            surface = str(payload.get("prediction_surface") or payload.get("surface") or "unknown")
+            horizon = str(payload.get("prediction_horizon") or "unknown")
+            source = str(payload.get("prediction_source") or "unknown")
+            action_type = str(payload.get("prediction_action_type") or payload.get("action_type") or "unknown")
+            buckets = [
+                overall,
+                by_surface[surface],
+                by_horizon[horizon],
+                by_source[source],
+                by_action_type[action_type],
+            ]
+            for bucket in buckets:
+                bucket["linked_executions"] += 1
+
+        def _finalize(bucket: dict[str, Any]) -> dict[str, Any]:
+            impressions = int(bucket["impressions"])
+            accepts = int(bucket["accepts"])
+            executed_accepts = int(bucket["executed_accepts"])
+            linked_executions = int(bucket["linked_executions"])
+            total_executions = linked_executions if linked_executions > 0 else executed_accepts
+            return {
+                **bucket,
+                "ctr_percent": round((accepts / impressions) * 100, 2) if impressions > 0 else 0.0,
+                "execution_rate_percent": round((total_executions / accepts) * 100, 2)
+                if accepts > 0
+                else 0.0,
+                "impression_to_execution_percent": round((total_executions / impressions) * 100, 2)
+                if impressions > 0
+                else 0.0,
+            }
+
+        overall_final = _finalize(overall)
+        by_surface_final = {key: _finalize(value) for key, value in by_surface.items()}
+        by_horizon_final = {key: _finalize(value) for key, value in by_horizon.items()}
+        by_source_final = {key: _finalize(value) for key, value in by_source.items()}
+        by_action_type_final = {key: _finalize(value) for key, value in by_action_type.items()}
+
+        top_actions = sorted(
+            (
+                {
+                    "action_type": key,
+                    **value,
+                }
+                for key, value in by_action_type_final.items()
+            ),
+            key=lambda item: (item.get("accepts", 0), item.get("linked_executions", 0)),
+            reverse=True,
+        )[:5]
+
+        return {
             "generated_at": self._get_current_time().isoformat(),
+            "window_days": max(1, min(days, 30)),
+            "overall": overall_final,
+            "funnel": {
+                "impressions": overall_final["impressions"],
+                "accepts": overall_final["accepts"],
+                "executions": overall_final["linked_executions"],
+                "ctr_percent": overall_final["ctr_percent"],
+                "accept_to_execution_percent": overall_final["execution_rate_percent"],
+                "impression_to_execution_percent": overall_final["impression_to_execution_percent"],
+            },
+            "by_surface": by_surface_final,
+            "by_horizon": by_horizon_final,
+            "by_source": by_source_final,
+            "by_action_type": by_action_type_final,
+            "top_actions": top_actions,
         }
 
     async def _get_cached_forecast(self, cache_key: str) -> dict[str, Any] | None:

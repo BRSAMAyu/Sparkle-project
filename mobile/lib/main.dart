@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -5,7 +8,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/app/app.dart';
 import 'package:sparkle/core/design/tokens_v2/theme_manager.dart';
 import 'package:sparkle/core/offline/local_database.dart';
+import 'package:sparkle/core/services/client_observability_service.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
+import 'package:sparkle/core/services/performance_monitor.dart';
 import 'package:sparkle/core/services/performance_service.dart';
 import 'package:sparkle/core/services/social_auth_service.dart';
 import 'package:sparkle/core/services/user_preferences_service.dart';
@@ -20,6 +25,23 @@ const _startupErrorPadding = 24.0;
 void main() async {
   try {
     WidgetsFlutterBinding.ensureInitialized();
+
+    FlutterError.onError = (details) {
+      FlutterError.presentError(details);
+      PerformanceMonitor().reportCrash(
+        details.exception,
+        details.stack ?? StackTrace.current,
+        context: 'flutter_error',
+      );
+    };
+    PlatformDispatcher.instance.onError = (error, stack) {
+      PerformanceMonitor().reportCrash(
+        error,
+        stack,
+        context: 'platform_dispatcher',
+      );
+      return true;
+    };
 
     // Initialize Performance Monitoring
     PerformanceService.instance.startMonitoring();
@@ -81,6 +103,17 @@ void main() async {
           ),
         ],
         child: const SparkleApp(),
+      ),
+    );
+
+    unawaited(
+      ClientObservabilityService.instance.recordEvent(
+        eventType: 'app_launch',
+        category: 'lifecycle',
+        route: 'bootstrap',
+        metadata: <String, dynamic>{
+          'demo_mode': DemoDataService.isDemoMode,
+        },
       ),
     );
   } catch (e, stack) {

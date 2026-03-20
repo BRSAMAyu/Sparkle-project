@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/features/home/data/repositories/dashboard_repository.dart';
+import 'package:sparkle/features/home/data/models/prediction_insight_data.dart';
 
 // Data models for dashboard state
 class DashboardState {
@@ -43,7 +44,7 @@ class DashboardState {
   final GrowthData? growth; // Added Growth Plan
   final List<TaskData> nextActions;
   final CognitiveData cognitive;
-  final NextIntentForecastData? nextIntentForecast;
+  final PredictionInsightData? nextIntentForecast;
   final bool isLoading;
   final String? error;
 
@@ -54,7 +55,7 @@ class DashboardState {
     GrowthData? growth,
     List<TaskData>? nextActions,
     CognitiveData? cognitive,
-    NextIntentForecastData? nextIntentForecast,
+    PredictionInsightData? nextIntentForecast,
     bool? isLoading,
     String? error,
   }) =>
@@ -150,30 +151,6 @@ class CognitiveData {
   final String? solutionText;
   final String status;
   final bool hasNewInsight;
-}
-
-class NextIntentForecastData {
-  NextIntentForecastData({
-    required this.title,
-    required this.summary,
-    required this.confidence,
-    required this.predictedActionType,
-    required this.predictedWindow,
-    required this.reasons,
-    required this.suggestedPrompt,
-    required this.predictionSource,
-    this.generatedAt,
-  });
-
-  final String title;
-  final String summary;
-  final double confidence;
-  final String predictedActionType;
-  final String predictedWindow;
-  final List<String> reasons;
-  final String suggestedPrompt;
-  final String predictionSource;
-  final DateTime? generatedAt;
 }
 
 // Provider
@@ -286,25 +263,7 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
           predictiveData['next_intent_forecast'] as Map<String, dynamic>?;
       final nextIntent = nextIntentMap == null
           ? null
-          : NextIntentForecastData(
-              title: nextIntentMap['title']?.toString() ?? '',
-              summary: nextIntentMap['summary']?.toString() ?? '',
-              confidence: (nextIntentMap['confidence'] as num?)?.toDouble() ?? 0,
-              predictedActionType:
-                  nextIntentMap['predicted_action_type']?.toString() ?? '',
-              predictedWindow:
-                  nextIntentMap['predicted_window']?.toString() ?? '',
-              reasons: ((nextIntentMap['reasons'] as List<dynamic>?) ?? const [])
-                  .map((item) => item.toString())
-                  .toList(),
-              suggestedPrompt:
-                  nextIntentMap['suggested_prompt']?.toString() ?? '',
-              predictionSource:
-                  nextIntentMap['prediction_source']?.toString() ?? 'rules',
-              generatedAt: DateTime.tryParse(
-                nextIntentMap['generated_at']?.toString() ?? '',
-              ),
-            );
+          : PredictionInsightData.fromJson(nextIntentMap);
 
       state = DashboardState(
         weather: weather,

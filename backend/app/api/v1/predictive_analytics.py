@@ -8,10 +8,12 @@ Endpoints:
 - GET /predictive/dropout-risk - 流失风险评估
 """
 
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from loguru import logger
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
@@ -20,6 +22,12 @@ from app.models.user import User
 from app.services.predictive_service import PredictiveService
 
 router = APIRouter()
+
+
+class RealtimeNextStepRequest(BaseModel):
+    partial_text: str = Field(default="", description="当前输入或最近一句话")
+    active_plan_id: str | None = Field(default=None, description="当前激活计划 ID")
+    surface: str = Field(default="chat_input", description="触发预测的界面")
 
 
 @router.get("/engagement")
@@ -247,4 +255,48 @@ async def get_next_intent_forecast(
         }
     except Exception as e:
         logger.error(f"Next intent prediction failed for user {current_user.id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/realtime-next-step")
+async def get_realtime_next_step_prediction(
+    request: RealtimeNextStepRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        service = PredictiveService(db)
+        forecast = await service.get_realtime_next_step_forecast(
+            current_user.id,
+            partial_text=request.partial_text,
+            active_plan_id=request.active_plan_id,
+            surface=request.surface,
+        )
+        return {
+            "status": "success",
+            "data": forecast,
+        }
+    except Exception as e:
+        logger.error(f"Realtime next-step prediction failed for user {current_user.id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/analytics")
+async def get_prediction_analytics(
+    days: int = 7,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        service = PredictiveService(db)
+        analytics: dict[str, Any] = await service.get_prediction_analytics(
+            current_user.id,
+            days=days,
+        )
+        return {
+            "status": "success",
+            "data": analytics,
+        }
+    except Exception as e:
+        logger.error(f"Predictive analytics failed for user {current_user.id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))

@@ -1,9 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/network/dio_provider.dart';
+import 'package:sparkle/core/services/app_event_stream_service.dart';
+import 'package:sparkle/core/services/prediction_attribution_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
+import 'package:sparkle/features/focus/data/services/candidate_feedback_service.dart';
+import 'package:sparkle/features/home/data/models/prediction_insight_data.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 
 class PredictedIntentCard extends ConsumerStatefulWidget {
@@ -16,13 +23,28 @@ class PredictedIntentCard extends ConsumerStatefulWidget {
 
 class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
   bool _isContinuing = false;
+  late final CandidateFeedbackService _feedbackService;
+  late final AppEventStreamService _eventStream;
+  late final PredictionAttributionService _predictionAttribution;
+  String? _lastImpressionPredictionId;
+
+  @override
+  void initState() {
+    super.initState();
+    _feedbackService = CandidateFeedbackService(ref.read(dioProvider));
+    _eventStream = ref.read(appEventStreamServiceProvider);
+    _predictionAttribution = ref.read(predictionAttributionServiceProvider);
+  }
 
   @override
   Widget build(BuildContext context) {
     final forecast = ref.watch(dashboardProvider).nextIntentForecast;
-    if (forecast == null || forecast.title.isEmpty || forecast.summary.isEmpty) {
+    if (forecast == null ||
+        forecast.title.isEmpty ||
+        forecast.summary.isEmpty) {
       return const SizedBox.shrink();
     }
+    _recordImpressionIfNeeded(forecast);
 
     final confidencePercent = (forecast.confidence * 100).round();
     final sourceLabel = switch (forecast.predictionSource) {
@@ -33,6 +55,9 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
     final windowLabel = _windowLabel(forecast.predictedWindow);
     final actionLabel = _actionLabel(forecast.predictedActionType);
     final freshnessLabel = _freshnessLabel(forecast.generatedAt);
+    final primaryAction = forecast.recommendedActions.isNotEmpty
+        ? forecast.recommendedActions.first
+        : null;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final promptPreview = forecast.suggestedPrompt.trim();
     final gradientStart = isDark
@@ -121,13 +146,15 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
                           children: [
                             Text(
                               '系统预测',
-                              style: context.sparkleTypography.labelLarge.copyWith(
+                              style:
+                                  context.sparkleTypography.labelLarge.copyWith(
                                 fontWeight: DS.fontWeightBold,
                               ),
                             ),
                             Text(
                               '基于画像、最近 24 小时行为与任务节奏',
-                              style: context.sparkleTypography.labelSmall.copyWith(
+                              style:
+                                  context.sparkleTypography.labelSmall.copyWith(
                                 color: DS.textSecondary,
                               ),
                             ),
@@ -178,7 +205,9 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
                         ),
                         const SizedBox(height: DS.spacing6),
                         Text(
-                          promptPreview.isEmpty ? '预测结果已生成，等待可继续指令' : promptPreview,
+                          promptPreview.isEmpty
+                              ? '预测结果已生成，等待可继续指令'
+                              : promptPreview,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: context.sparkleTypography.bodyMedium.copyWith(
@@ -199,8 +228,7 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
                             minHeight: 6,
                             value: forecast.confidence.clamp(0.0, 1.0),
                             backgroundColor: DS.surfaceTertiary,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(DS.info),
+                            valueColor: AlwaysStoppedAnimation<Color>(DS.info),
                           ),
                         ),
                       ),
@@ -219,17 +247,64 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
                     Wrap(
                       spacing: DS.spacing8,
                       runSpacing: DS.spacing8,
-                      children: forecast.reasons.take(3).map(
-                        (reason) => _Chip(
-                          label: reason,
-                          subdued: true,
-                        ),
-                      ).toList(),
+                      children: forecast.reasons
+                          .take(3)
+                          .map(
+                            (reason) => _Chip(
+                              label: reason,
+                              subdued: true,
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  ],
+                  if (forecast.allExplanationLines.isNotEmpty) ...[
+                    const SizedBox(height: DS.spacing12),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(DS.spacing12),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? Colors.white.withValues(alpha: 0.03)
+                            : DS.surfaceSecondary,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '为什么这样预测',
+                            style:
+                                context.sparkleTypography.labelSmall.copyWith(
+                              color: DS.textTertiary,
+                              fontWeight: DS.fontWeightBold,
+                            ),
+                          ),
+                          const SizedBox(height: DS.spacing6),
+                          ...forecast.allExplanationLines.take(3).map(
+                                (line) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 4),
+                                  child: Text(
+                                    '• $line',
+                                    style: context.sparkleTypography.bodyMedium
+                                        .copyWith(
+                                      color: DS.textSecondary,
+                                      height: 1.45,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                        ],
+                      ),
                     ),
                   ],
                   const SizedBox(height: 14),
                   SparkleButton(
-                    label: _isContinuing ? '正在衔接到对话…' : '按这个继续',
+                    label: _isContinuing
+                        ? '正在衔接…'
+                        : ((primaryAction?.label.isNotEmpty ?? false)
+                            ? primaryAction!.label
+                            : '按这个继续'),
                     icon: Icon(
                       _isContinuing
                           ? Icons.sync_rounded
@@ -237,8 +312,10 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
                     ),
                     loading: _isContinuing,
                     expand: true,
-                    disabled: _isContinuing || promptPreview.isEmpty,
-                    onPressed: _isContinuing || promptPreview.isEmpty
+                    disabled: _isContinuing ||
+                        (promptPreview.isEmpty && primaryAction == null),
+                    onPressed: _isContinuing ||
+                            (promptPreview.isEmpty && primaryAction == null)
                         ? null
                         : () => _handleContinue(forecast),
                   ),
@@ -263,11 +340,37 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
     );
   }
 
-  Future<void> _handleContinue(NextIntentForecastData forecast) async {
-    final prompt = forecast.suggestedPrompt.trim();
-    if (prompt.isEmpty || _isContinuing) {
+  void _recordImpressionIfNeeded(PredictionInsightData forecast) {
+    if (_lastImpressionPredictionId == forecast.predictionId) {
       return;
     }
+    _lastImpressionPredictionId = forecast.predictionId;
+    unawaited(_feedbackService.recordFeedback(
+      candidateId: forecast.trackingCandidateId,
+      actionType: forecast.trackingActionType,
+      feedbackType: 'impression',
+      contextSnapshot: _feedbackContext(forecast),
+    ));
+    unawaited(_eventStream.recordPredictionFeedback(
+      predictionId: forecast.predictionId,
+      feedbackType: 'impression',
+      actionType: forecast.trackingActionType,
+      surface: forecast.surface ?? 'dashboard',
+      suggestedPrompt: forecast.suggestedPrompt,
+      entityType: forecast.entityCard?.entityType,
+      entityId: forecast.entityCard?.entityId,
+    ));
+  }
+
+  Future<void> _handleContinue(PredictionInsightData forecast) async {
+    if (_isContinuing) {
+      return;
+    }
+    final primaryAction = forecast.recommendedActions.isNotEmpty
+        ? forecast.recommendedActions.first
+        : null;
+    final prompt =
+        (primaryAction?.suggestedPrompt ?? forecast.suggestedPrompt).trim();
 
     final chatNotifier = ref.read(chatProvider.notifier);
     setState(() {
@@ -275,11 +378,43 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
     });
 
     try {
+      _feedbackService.recordFeedback(
+        candidateId: forecast.trackingCandidateId,
+        actionType: forecast.trackingActionType,
+        feedbackType: 'accept',
+        contextSnapshot: _feedbackContext(forecast),
+      );
+      unawaited(_eventStream.recordPredictionFeedback(
+        predictionId: forecast.predictionId,
+        feedbackType: 'accept',
+        actionType: forecast.trackingActionType,
+        surface: forecast.surface ?? 'dashboard',
+        suggestedPrompt: prompt,
+        entityType: forecast.entityCard?.entityType,
+        entityId: forecast.entityCard?.entityId,
+      ));
+      unawaited(
+        _predictionAttribution.rememberAcceptedPrediction(
+          predictionId: forecast.predictionId,
+          candidateId: forecast.trackingCandidateId,
+          actionType: forecast.trackingActionType,
+          surface: forecast.surface ?? 'dashboard',
+          horizon: forecast.horizon,
+          source: forecast.predictionSource,
+          suggestedPrompt: prompt,
+          entityType: forecast.entityCard?.entityType,
+          entityId: forecast.entityCard?.entityId,
+        ),
+      );
       await SensoryFeedbackService.emit(SensoryFeedbackEvent.navigation);
       if (!mounted) return;
-      context.go('/chat');
+      final route = primaryAction?.targetRoute ?? '/chat';
+      context.go(route);
       await Future<void>.delayed(const Duration(milliseconds: 280));
-      await chatNotifier.sendMessage(prompt);
+      if (route == '/chat' && prompt.isNotEmpty) {
+        await chatNotifier.sendMessage(prompt);
+      }
+      ref.invalidate(dashboardProvider);
     } catch (_) {
       if (mounted) {
         AppFeedback.error(context, '继续对话时出现问题，请稍后重试');
@@ -293,10 +428,30 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
     }
   }
 
+  Map<String, dynamic> _feedbackContext(PredictionInsightData forecast) => {
+        'prediction': {
+          'prediction_id': forecast.predictionId,
+          'horizon': forecast.horizon,
+          'surface': forecast.surface ?? 'dashboard',
+          'source': forecast.predictionSource,
+          'tier': forecast.predictionTier,
+          'action_type': forecast.predictedActionType,
+        },
+      };
+
   String _actionLabel(String actionType) {
     switch (actionType) {
       case 'resume_priority_task':
+      case 'resume_task':
         return '继续重点任务';
+      case 'study_plan':
+        return '生成学习计划';
+      case 'error_diagnosis':
+        return '问题诊断';
+      case 'create_task':
+        return '落成任务';
+      case 'translate':
+        return '即时结果';
       case 'review_progress':
         return '复盘进展';
       case 'plan_next_step':
@@ -310,12 +465,16 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
 
   String _windowLabel(String window) {
     switch (window) {
+      case 'now':
+        return '就是现在';
       case 'next_30m':
         return '未来 30 分钟';
       case 'next_1h':
         return '未来 1 小时';
       case 'next_2h':
         return '未来 2 小时';
+      case 'next_6h':
+        return '未来 6 小时';
       case 'today':
         return '今天内';
       default:
@@ -350,23 +509,23 @@ class _Chip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: DS.spacing8,
-        vertical: DS.spacing6,
-      ),
-      decoration: BoxDecoration(
-        color: subdued ? DS.surfaceOverlay : DS.info.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: subdued ? DS.borderSubtle : DS.info.withValues(alpha: 0.18),
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing8,
+          vertical: DS.spacing6,
         ),
-      ),
-      child: Text(
-        label,
-        style: context.sparkleTypography.labelSmall.copyWith(
-          color: subdued ? DS.textSecondary : DS.info,
-          fontWeight: DS.fontWeightBold,
+        decoration: BoxDecoration(
+          color: subdued ? DS.surfaceOverlay : DS.info.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: subdued ? DS.borderSubtle : DS.info.withValues(alpha: 0.18),
+          ),
         ),
-      ),
-    );
+        child: Text(
+          label,
+          style: context.sparkleTypography.labelSmall.copyWith(
+            color: subdued ? DS.textSecondary : DS.info,
+            fontWeight: DS.fontWeightBold,
+          ),
+        ),
+      );
 }

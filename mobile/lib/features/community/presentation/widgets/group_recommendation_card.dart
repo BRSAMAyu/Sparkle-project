@@ -11,12 +11,14 @@ class GroupRecommendationCard extends StatelessWidget {
     this.onTap,
     this.onJoin,
     this.onDismiss,
+    this.onFeedback,
   });
 
   final GroupRecommendationItem recommendation;
   final VoidCallback? onTap;
   final VoidCallback? onJoin;
   final VoidCallback? onDismiss;
+  final VoidCallback? onFeedback;
 
   @override
   Widget build(BuildContext context) {
@@ -115,6 +117,17 @@ class GroupRecommendationCard extends StatelessWidget {
                         .toList(),
                   ),
                 ],
+                if (group.description != null &&
+                    group.description!.isNotEmpty) ...[
+                  SizedBox(height: context.space.sm),
+                  Text(
+                    group.description!,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.typo.bodyMedium
+                        .copyWith(color: DS.textSecondary, height: 1.35),
+                  ),
+                ],
                 SizedBox(height: context.space.md),
                 Row(
                   children: [
@@ -130,6 +143,15 @@ class GroupRecommendationCard extends StatelessWidget {
                       )
                     else
                       const Spacer(),
+                    if (onFeedback != null) ...[
+                      SparkleButton(
+                        label: '评价',
+                        size: ButtonSize.small,
+                        variant: ButtonVariant.secondary,
+                        onPressed: onFeedback,
+                      ),
+                      SizedBox(width: context.space.xs),
+                    ],
                     SparkleButton(
                       label: joinLabel,
                       size: ButtonSize.small,

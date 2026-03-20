@@ -3,8 +3,10 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/app/routes.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/offline/offline_providers.dart';
 import 'package:sparkle/core/providers/locale_provider.dart';
+import 'package:sparkle/core/services/client_observability_service.dart';
 import 'package:sparkle/core/providers/theme_provider.dart';
 import 'package:sparkle/core/services/unified_push_service.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
@@ -21,7 +23,9 @@ class SparkleApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final apiClient = ref.watch(apiClientProvider);
     final router = ref.watch(routerProvider);
+    ClientObservabilityService.instance.attachDio(apiClient.dio);
     // Watch the manager to rebuild when theme changes (colors, high contrast, etc.)
     ref.watch(themeManagerProvider);
     // Initialize sync engine early.

@@ -61,7 +61,13 @@ from app.schemas.community import (
     EncryptionKeyInfo,
     FlameStatus,
     FriendRecommendation,
+    FriendRecommendationFeedbackRequest,
+    FriendMatchStrategyEnum,
+    FriendRecommendationTargetEnum,
     AccountabilityFriendSummary,
+    RecommendationFeedbackInsight,
+    RecommendationFeedbackPrompt,
+    RecommendationItemTypeEnum,
     # 好友
     FriendRequest,
     FriendResponse,
@@ -70,6 +76,8 @@ from app.schemas.community import (
     GroupAnnouncementUpdate,
     # 群组
     GroupCreate,
+    GroupDirectoryResponse,
+    GroupDirectorySortEnum,
     GroupFileCategoryStat,
     GroupFileInfo,
     GroupFilePermissions,
@@ -164,7 +172,14 @@ from app.services.streak_signal_processor import StreakSignalProcessor
 from app.services.task_service import TaskService
 from app.services.group_file_service import GroupFileService
 from app.services.group_recommendation_service import GroupRecommendationService
+from app.services.friend_match_service import FriendMatchService
+from app.services.recommendation_feedback_service import RecommendationFeedbackService
 from app.models.community import Post, PostLike
+from app.tools.entity_cards import (
+    build_plan_entity_card,
+    build_shared_resource_entity_card,
+    build_task_entity_card,
+)
 
 router = APIRouter()
 
@@ -1145,174 +1160,74 @@ async def get_privacy_settings(
 async def get_friend_recommendations(
     request: Request,
     limit: int = Query(default=10, ge=1, le=50),
+    strategy: FriendMatchStrategyEnum = Query(default=FriendMatchStrategyEnum.COMPATIBILITY),
+    target: FriendRecommendationTargetEnum = Query(default=FriendRecommendationTargetEnum.ACCOUNTABILITY),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    """
-    基于以下因素推荐好友：
-    1. 共同群组成员
-    2. 相似的学习偏好/标签
-    3. 地理位置（如果可用）
-    """
-    from app.models.community import Friendship, GroupMember
-
-    recommendations = []
-    seen_user_ids = set()
-
-    # 首先获取已经是好友或已发送请求的用户ID
-    friendship_stmt = select(Friendship.friend_id).where(
-        and_(
-            Friendship.user_id == current_user.id,
-            Friendship.status.in_(['accepted', 'pending'])
-        )
+    """基于用户画像、学习轨迹和责任伙伴可用性推荐潜在好友/责任伙伴。"""
+    recommendations = await FriendMatchService.get_recommendations(
+        db,
+        current_user,
+        limit=limit,
+        strategy=strategy,
+        target=target,
     )
-    friendship_result = await db.execute(friendship_stmt)
-    for row in friendship_result.fetchall():
-        seen_user_ids.add(row[0])
-
-    # 获取用户已加入的群组
-    user_groups_stmt = select(GroupMember.group_id).where(
-        GroupMember.user_id == current_user.id
-    )
-    user_groups_result = await db.execute(user_groups_stmt)
-    user_group_ids = [row[0] for row in user_groups_result.fetchall()]
-
-    # 获取共同群组的成员
-    if user_group_ids:
-        common_groups_stmt = select(
-            GroupMember.user_id,
-            func.count(GroupMember.group_id).label('common_groups')
-        ).select_from(
-            GroupMember
-        ).where(
-            and_(
-                GroupMember.group_id.in_(user_group_ids),
-                GroupMember.user_id != current_user.id,
-                GroupMember.user_id.notin_(seen_user_ids) if seen_user_ids else True
-            )
-        ).group_by(
-            GroupMember.user_id
-        ).order_by(
-            func.count(GroupMember.group_id).desc()
-        ).limit(limit * 2)
-
-        common_groups_result = await db.execute(common_groups_stmt)
-        common_members = common_groups_result.fetchall()
-
-        for row in common_members:
-            user_id, common_count = row[0], row[1]
-            if user_id in seen_user_ids:
-                continue
-
-            user_stmt = select(User).where(User.id == user_id)
-            user_result = await db.execute(user_stmt)
-            user_obj = user_result.scalar_one_or_none()
-
-            if user_obj and user_obj.is_active:
-                seen_user_ids.add(user_id)
-                match_score = min(1.0, common_count * 0.25)  # Normalize to 0-1 range
-
-                recommendations.append(FriendRecommendation(
-                    user=UserBrief(
-                        id=user_obj.id,
-                        username=user_obj.username,
-                        nickname=user_obj.nickname,
-                        avatar_url=user_obj.avatar_url,
-                        flame_level=user_obj.flame_level,
-                        flame_brightness=user_obj.flame_brightness
-                    ),
-                    match_score=match_score,
-                    match_reasons=[f"在 {common_count} 个相同的学习群组"]
-                ))
-
-                if len(recommendations) >= limit:
-                    break
-
-    # 如果推荐不足，基于学习标签补充推荐
-    current_tags = set(getattr(current_user, "learning_tags", None) or [])
-    if len(recommendations) < limit and current_tags:
-        remaining_limit = limit - len(recommendations)
-
-        # 获取所有活跃用户，在Python中过滤标签匹配
-        active_users_stmt = select(User).where(
-            and_(
-                User.id != current_user.id,
-                User.id.notin_(seen_user_ids) if seen_user_ids else True,
-                User.is_active
-            )
-        ).limit(100)
-
-        tag_result = await db.execute(active_users_stmt)
-        tag_users = tag_result.scalars().all()
-
-        # 计算标签匹配度并排序
-        tag_matches = []
-        for user_obj in tag_users:
-            if user_obj.id in seen_user_ids:
-                continue
-
-            user_tags = set(getattr(user_obj, "learning_tags", None) or [])
-            common_tags = user_tags & current_tags
-
-            if common_tags:
-                tag_matches.append((user_obj, len(common_tags)))
-
-        tag_matches.sort(key=lambda x: x[1], reverse=True)
-
-        for user_obj, common_count in tag_matches[:remaining_limit]:
-            match_score = min(1.0, common_count * 0.2)  # Normalize to 0-1 range
-
-            recommendations.append(FriendRecommendation(
-                user=UserBrief(
-                    id=user_obj.id,
-                    username=user_obj.username,
-                    nickname=user_obj.nickname,
-                    avatar_url=user_obj.avatar_url,
-                    flame_level=user_obj.flame_level,
-                    flame_brightness=user_obj.flame_brightness
-                ),
-                match_score=match_score,
-                match_reasons=[f"有 {common_count} 个相同的学习兴趣"]
-            ))
-
-            seen_user_ids.add(user_obj.id)
-
-            if len(recommendations) >= limit:
-                break
-
-    # 如果仍然不足，返回活跃用户（按最近登录时间排序）
-    if len(recommendations) < limit:
-        remaining_limit = limit - len(recommendations)
-
-        active_users_stmt = select(User).where(
-            and_(
-                User.id != current_user.id,
-                User.id.notin_(seen_user_ids) if seen_user_ids else True,
-                User.is_active,
-                User.last_login_at.isnot(None)
-            )
-        ).order_by(
-            User.last_login_at.desc()
-        ).limit(remaining_limit)
-
-        active_result = await db.execute(active_users_stmt)
-        active_users = active_result.scalars().all()
-
-        for user_obj in active_users:
-            recommendations.append(FriendRecommendation(
-                user=UserBrief(
-                    id=user_obj.id,
-                    username=user_obj.username,
-                    nickname=user_obj.nickname,
-                    avatar_url=user_obj.avatar_url,
-                    flame_level=user_obj.flame_level,
-                    flame_brightness=user_obj.flame_brightness
-                ),
-                match_score=0.5,  # Normalize to 0-1 range
-                match_reasons=["活跃用户"]
-            ))
-
+    await db.commit()
     return recommendations
+
+
+@router.post("/friends/recommendations/feedback", summary="提交好友推荐反馈")
+async def submit_friend_recommendation_feedback(
+    data: FriendRecommendationFeedbackRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    await RecommendationFeedbackService.record_friend_feedback(db, current_user.id, data)
+    await db.commit()
+    return {"success": True}
+
+
+@router.get(
+    "/recommendations/feedback/prompts",
+    response_model=list[RecommendationFeedbackPrompt],
+    summary="获取待处理推荐反馈提示",
+)
+async def get_recommendation_feedback_prompts(
+    item_type: RecommendationItemTypeEnum | None = Query(default=None),
+    limit: int = Query(default=20, ge=1, le=50),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    prompts = await RecommendationFeedbackService.get_pending_prompts(
+        db,
+        current_user.id,
+        item_type=item_type,
+        limit=limit,
+    )
+    await db.commit()
+    return prompts
+
+
+@router.get(
+    "/recommendations/feedback/insights",
+    response_model=list[RecommendationFeedbackInsight],
+    summary="获取推荐反馈洞察",
+)
+async def get_recommendation_feedback_insights(
+    item_type: RecommendationItemTypeEnum | None = Query(default=None),
+    days: int = Query(default=30, ge=7, le=180),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    insights = await RecommendationFeedbackService.get_feedback_insights(
+        db,
+        current_user.id,
+        item_type=item_type,
+        days=days,
+    )
+    await db.commit()
+    return insights
 
 
 # ============ WebSocket ============
@@ -1429,12 +1344,24 @@ async def search_groups(
     keyword: str | None = None,
     group_type: GroupTypeEnum | None = None,
     tags: list[str] | None = Query(default=None),
+    sort_by: GroupDirectorySortEnum = Query(default=GroupDirectorySortEnum.LATEST),
     limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """搜索公开群组"""
     model_type = GroupType(group_type.value) if group_type else None
-    groups = await GroupService.search_groups(db, keyword, model_type, tags, limit)
+    groups = await GroupService.search_groups(
+        db,
+        keyword,
+        model_type,
+        tags,
+        limit,
+        offset=offset,
+        sort_by=sort_by.value,
+        user_id=current_user.id,
+    )
 
     result = []
     for group_dict in groups:
@@ -1447,14 +1374,97 @@ async def search_groups(
         result.append(GroupListItem(
             id=group_dict['id'],
             name=group_dict['name'],
+            description=group_dict.get('description'),
             type=GroupTypeEnum(group_dict['type'].value),
             member_count=group_dict['member_count'],
             total_flame_power=group_dict['total_flame_power'],
+            today_checkin_count=group_dict.get('today_checkin_count', 0),
             deadline=deadline,
             days_remaining=days_remaining,
-            focus_tags=group_dict.get('focus_tags', [])
+            focus_tags=group_dict.get('focus_tags', []),
+            is_public=group_dict.get('is_public', True),
+            join_requires_approval=group_dict.get('join_requires_approval', False),
+            activity_score=group_dict.get('activity_score'),
+            my_role=group_dict.get('my_role'),
         ))
     return result
+
+
+@router.get("/groups/directory", response_model=GroupDirectoryResponse, summary="公开群组目录")
+async def get_group_directory(
+    keyword: str | None = None,
+    group_type: GroupTypeEnum | None = None,
+    tags: list[str] | None = Query(default=None),
+    sort_by: GroupDirectorySortEnum = Query(default=GroupDirectorySortEnum.HOT),
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """公开群组目录，整合推荐、标签和公开浏览。"""
+    model_type = GroupType(group_type.value) if group_type else None
+    groups = await GroupService.search_groups(
+        db,
+        keyword,
+        model_type,
+        tags,
+        limit,
+        offset=offset,
+        sort_by=sort_by.value,
+        user_id=current_user.id,
+    )
+    total_count = await GroupService.count_public_groups(
+        db,
+        keyword=keyword,
+        group_type=model_type,
+        tags=tags,
+    )
+    available_tags = await GroupService.get_public_group_tags(db)
+    recommendations: list[GroupRecommendationItem] = []
+    if offset == 0 and not keyword and not tags and group_type is None:
+        recommendations = await GroupRecommendationService.get_recommendations(
+            db,
+            current_user.id,
+            limit=6,
+            cursor=0,
+        )
+
+    items: list[GroupListItem] = []
+    for group_dict in groups:
+        days_remaining = None
+        deadline = group_dict.get("deadline")
+        if deadline:
+            delta = deadline - _utcnow()
+            days_remaining = max(0, delta.days)
+        items.append(
+            GroupListItem(
+                id=group_dict["id"],
+                name=group_dict["name"],
+                description=group_dict.get("description"),
+                type=GroupTypeEnum(group_dict["type"].value),
+                member_count=group_dict["member_count"],
+                total_flame_power=group_dict["total_flame_power"],
+                today_checkin_count=group_dict.get("today_checkin_count", 0),
+                deadline=deadline,
+                days_remaining=days_remaining,
+                focus_tags=group_dict.get("focus_tags", []),
+                is_public=group_dict.get("is_public", True),
+                join_requires_approval=group_dict.get("join_requires_approval", False),
+                activity_score=group_dict.get("activity_score"),
+                my_role=group_dict.get("my_role"),
+            )
+        )
+
+    await db.commit()
+    return GroupDirectoryResponse(
+        sort_by=sort_by,
+        keyword=keyword,
+        applied_tags=tags or [],
+        available_tags=available_tags,
+        total_count=total_count,
+        recommendations=recommendations,
+        groups=items,
+    )
 
 
 @router.get("/groups/recommendations", response_model=list[GroupRecommendationItem], summary="群组推荐")
@@ -1482,7 +1492,7 @@ async def group_recommendations_feedback(
     db: AsyncSession = Depends(get_db),
 ):
     """记录群组推荐反馈"""
-    await GroupRecommendationService.record_feedback(db, current_user.id, data)
+    await RecommendationFeedbackService.record_group_feedback(db, current_user.id, data)
     await db.commit()
     return {"success": True}
 
@@ -2627,7 +2637,19 @@ async def share_resource(
             save_count=shared.save_count,
             sharer=UserBrief.model_validate(current_user),
             resource_title=brief["title"],
-            resource_summary=brief["summary"]
+            resource_summary=brief["summary"],
+            entity_card=build_shared_resource_entity_card(
+                shared_resource_id=str(shared.id),
+                resource_type=data.resource_type.value,
+                resource_id=str(data.resource_id),
+                title=brief["title"],
+                summary=brief["summary"],
+                permission=shared.permission,
+                comment=shared.comment,
+                meta=brief["meta"],
+                target_group_id=str(data.target_group_id) if data.target_group_id else None,
+                target_user_id=str(data.target_user_id) if data.target_user_id else None,
+            ),
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -2723,7 +2745,24 @@ async def get_group_resources(
             save_count=res.save_count,
             sharer=UserBrief.model_validate(res.sharer) if res.sharer else None,
             resource_title=resource_title,
-            resource_summary=resource_summary
+            resource_summary=resource_summary,
+            entity_card=build_shared_resource_entity_card(
+                shared_resource_id=str(res.id),
+                resource_type=r_type_str,
+                resource_id=(
+                    str(res.plan_id or res.task_id or res.knowledge_node_id or res.seed_library_id or res.seed_item_id
+                        or res.cognitive_fragment_id or res.curiosity_capsule_id or res.behavior_pattern_id)
+                    if (
+                        res.plan_id or res.task_id or res.knowledge_node_id or res.seed_library_id or res.seed_item_id
+                        or res.cognitive_fragment_id or res.curiosity_capsule_id or res.behavior_pattern_id
+                    )
+                    else None
+                ),
+                title=resource_title or "共享资源",
+                summary=resource_summary,
+                permission=res.permission,
+                comment=res.comment,
+            ),
         ))
     return result
 
@@ -2792,10 +2831,39 @@ async def adopt_shared_resource(
     db.add(shared)
     await db.commit()
 
+    entity_card = (
+        build_task_entity_card(
+            {
+                "id": str(new_id),
+                "title": new_task.title,
+                "type": new_task.type.value if new_task.type else None,
+                "status": new_task.status.value if new_task.status else "pending",
+                "estimated_minutes": new_task.estimated_minutes,
+            },
+            tool_name="adopt_shared_resource",
+            source_channel="community_share",
+        )
+        if resource_type == "task"
+        else build_plan_entity_card(
+            {
+                "id": str(new_id),
+                "name": new_plan.name,
+                "description": new_plan.description,
+                "type": new_plan.type.value if new_plan.type else None,
+                "subject": new_plan.subject,
+                "source": new_plan.source,
+                "is_active": True,
+            },
+            tool_name="adopt_shared_resource",
+            source_channel="community_share",
+        )
+    )
+
     return {
         "success": True,
         "resource_type": resource_type,
         "new_resource_id": str(new_id),
+        "entity_card": entity_card,
     }
 
 

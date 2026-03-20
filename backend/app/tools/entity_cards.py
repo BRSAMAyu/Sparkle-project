@@ -373,3 +373,228 @@ def build_knowledge_entity_card(
         tags=[str(tag) for tag in tags] if isinstance(tags, list) else None,
         raw=node,
     )
+
+
+def build_learning_path_entity_card(
+    *,
+    plan: dict[str, Any],
+    tasks: list[dict[str, Any]],
+    target_name: str,
+    tool_name: str,
+    tool_result_id: str | None = None,
+    source_channel: str = "learning_path",
+) -> dict[str, Any]:
+    plan_card = build_plan_entity_card(
+        plan,
+        tool_name=tool_name,
+        tool_result_id=tool_result_id,
+        source_channel=source_channel,
+    )
+    task_list_card = build_task_list_entity_card(
+        tasks,
+        tool_name=tool_name,
+        tool_result_id=tool_result_id,
+        plan_id=str(plan.get("id") or plan.get("plan_id") or ""),
+        plan_title=str(plan.get("name") or plan.get("title") or f"学习路径：{target_name}"),
+        source_channel=source_channel,
+    )
+    plan_id = plan_card.get("entity_id")
+    return build_entity_card(
+        entity_type="learning_path",
+        entity_id=plan_id,
+        title=f"学习路径：{target_name}",
+        summary=plan_card.get("summary") or "AI 已生成学习路径与可执行任务",
+        status="generated",
+        execution_state="draft",
+        source=_compact_dict({"channel": source_channel, "tool_name": tool_name}),
+        primary_action=build_entity_action(
+            action_id="open_learning_path_plan",
+            action_type="open_detail",
+            label="查看学习计划",
+            route=f"/plans/{plan_id}" if plan_id else "/plans",
+        ),
+        secondary_actions=[
+            build_entity_action(
+                action_id="share_learning_path",
+                action_type="share_resource",
+                label="分享学习路径",
+                payload={"resource_type": "plan", "resource_id": plan_id},
+            )
+        ]
+        if plan_id
+        else None,
+        share=build_share_payload(
+            resource_type="plan",
+            resource_id=plan_id or "",
+            title=f"学习路径：{target_name}",
+            subtitle=plan_card.get("summary"),
+            meta=_compact_dict({"task_count": len(tasks), "target_name": target_name}),
+        )
+        if plan_id
+        else None,
+        feedback=build_feedback_payload(
+            tool_result_id=tool_result_id,
+            confirmation_required=bool(tool_result_id),
+            can_confirm_all=bool(tool_result_id),
+        ),
+        linked_entities=_compact_dict({"plan_id": plan_id, "target_name": target_name}),
+        metrics=_compact_dict({"task_count": len(tasks)}),
+        children=[plan_card, task_list_card],
+        raw=_compact_dict({"plan": plan, "tasks": tasks, "target_name": target_name}),
+    )
+
+
+def build_prediction_entity_card(
+    *,
+    prediction_id: str,
+    title: str,
+    summary: str,
+    action_type: str,
+    suggested_prompt: str,
+    predicted_window: str,
+    confidence: float,
+    surface: str | None,
+    reasons: list[str] | None = None,
+    source: str | None = None,
+    tier: str | None = None,
+    recommended_actions: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    primary_route = "/chat"
+    if recommended_actions:
+        first_route = recommended_actions[0].get("target_route")
+        if isinstance(first_route, str) and first_route.strip():
+            primary_route = first_route
+
+    return build_entity_card(
+        entity_type="prediction",
+        entity_id=prediction_id,
+        title=title,
+        summary=summary,
+        status=predicted_window,
+        execution_state="suggested",
+        source=_compact_dict({"channel": "prediction", "source": source, "tier": tier}),
+        primary_action=build_entity_action(
+            action_id="apply_prediction",
+            action_type="continue_chat" if primary_route == "/chat" else "open_detail",
+            label="按预测继续",
+            route=primary_route,
+            payload=_compact_dict(
+                {
+                    "prediction_id": prediction_id,
+                    "predicted_action_type": action_type,
+                    "suggested_prompt": suggested_prompt,
+                    "surface": surface,
+                }
+            ),
+        ),
+        secondary_actions=[
+            build_entity_action(
+                action_id="view_prediction_reason",
+                action_type="show_explanation",
+                label="查看原因",
+                payload={"reasons": reasons or []},
+            )
+        ]
+        if reasons
+        else None,
+        linked_entities=_compact_dict(
+            {
+                "predicted_action_type": action_type,
+                "surface": surface,
+            }
+        ),
+        metrics=_compact_dict(
+            {
+                "confidence": round(confidence, 3),
+                "recommended_action_count": len(recommended_actions or []),
+            }
+        ),
+        tags=[reason for reason in (reasons or [])[:3] if reason],
+        raw=_compact_dict(
+            {
+                "prediction_id": prediction_id,
+                "predicted_action_type": action_type,
+                "suggested_prompt": suggested_prompt,
+                "predicted_window": predicted_window,
+                "recommended_actions": recommended_actions,
+            }
+        ),
+    )
+
+
+def build_shared_resource_entity_card(
+    *,
+    shared_resource_id: str,
+    resource_type: str,
+    resource_id: str | None,
+    title: str,
+    summary: str | None = None,
+    permission: str | None = None,
+    comment: str | None = None,
+    meta: dict[str, Any] | None = None,
+    target_group_id: str | None = None,
+    target_user_id: str | None = None,
+) -> dict[str, Any]:
+    default_route = (
+        f"/plans/{resource_id}"
+        if resource_type == "plan" and resource_id
+        else f"/tasks/{resource_id}"
+        if resource_type == "task" and resource_id
+        else f"/galaxy?nodeId={resource_id}"
+        if resource_type == "knowledge_node" and resource_id
+        else "/community"
+    )
+    return build_entity_card(
+        entity_type="shared_resource",
+        entity_id=shared_resource_id,
+        title=title,
+        summary=comment or summary,
+        status=permission,
+        execution_state="shared",
+        source=_compact_dict({"channel": "community_share", "resource_type": resource_type}),
+        primary_action=build_entity_action(
+            action_id="open_shared_resource",
+            action_type="open_detail",
+            label="查看资源",
+            route=default_route,
+        ),
+        secondary_actions=[
+            build_entity_action(
+                action_id="adopt_shared_resource",
+                action_type="adopt_resource",
+                label="采纳到我的空间",
+                payload={
+                    "shared_resource_id": shared_resource_id,
+                    "resource_type": resource_type,
+                    "resource_id": resource_id,
+                },
+            )
+        ]
+        if resource_type in {"task", "plan"}
+        else None,
+        share=build_share_payload(
+            resource_type=resource_type,
+            resource_id=resource_id or shared_resource_id,
+            title=title,
+            subtitle=summary,
+            meta=meta,
+        ),
+        linked_entities=_compact_dict(
+            {
+                "resource_type": resource_type,
+                "resource_id": resource_id,
+                "target_group_id": target_group_id,
+                "target_user_id": target_user_id,
+            }
+        ),
+        metrics=_compact_dict({"permission": permission}),
+        raw=_compact_dict(
+            {
+                "shared_resource_id": shared_resource_id,
+                "resource_type": resource_type,
+                "resource_id": resource_id,
+                "comment": comment,
+                "meta": meta,
+            }
+        ),
+    )

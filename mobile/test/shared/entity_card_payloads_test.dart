@@ -90,5 +90,37 @@ void main() {
       expect(task!.id, 'task-7');
       expect(task.title, '阅读一章线代');
     });
+
+    test('parses learning path entity payload with nested plan and task list',
+        () {
+      final payload = EntityCardPayload.fromRaw(
+        {
+          'entity_card': {
+            'entity_type': 'learning_path',
+            'entity_id': 'plan-lp-1',
+            'title': '学习路径：概率论',
+            'linked_entities': {'target_name': '概率论', 'plan_id': 'plan-lp-1'},
+            'children': [
+              {
+                'entity_type': 'plan',
+                'entity_id': 'plan-lp-1',
+                'title': '学习路径：概率论',
+              },
+              {
+                'entity_type': 'task_list',
+                'entity_id': 'tool-1',
+                'title': '2 个可执行任务',
+              },
+            ],
+          },
+        },
+        fallbackType: 'learning_path',
+      );
+
+      expect(payload.entityType, 'learning_path');
+      expect(payload.planId, 'plan-lp-1');
+      expect(payload.children, hasLength(2));
+      expect(payload.children.last.entityType, 'task_list');
+    });
   });
 }

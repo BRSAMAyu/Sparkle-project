@@ -209,7 +209,10 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		community.GET("/friends", h.proxyWithHeaders)
 		community.GET("/friends/pending", h.proxyWithHeaders)
 		community.GET("/friends/recommendations", h.proxyWithHeaders)
+		community.POST("/friends/recommendations/feedback", h.proxyWithHeaders)
 		community.GET("/friends/:friend_id/profile", h.proxyWithHeaders)
+		community.GET("/recommendations/feedback/prompts", h.proxyWithHeaders)
+		community.GET("/recommendations/feedback/insights", h.proxyWithHeaders)
 		community.DELETE("/friends/:friendshipId", h.proxyWithHeaders)
 		// Block System
 		community.POST("/users/block", h.proxyWithHeaders)
@@ -220,6 +223,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		community.GET("/users/privacy", h.proxyWithHeaders)
 		// Search
 		community.GET("/users/search", h.proxyWithHeaders)
+		community.GET("/groups/directory", h.proxyWithHeaders)
 		community.GET("/groups/search", h.proxyWithHeaders)
 		// Group System
 		community.POST("/groups", h.proxyWithHeaders)

@@ -362,6 +362,10 @@ extension ChatNotifierActions on ChatNotifier {
       traceId: message.traceId,
       meta: {
         'message_id': message.id,
+        if ((message.meta?.chatMode?.isNotEmpty ?? false))
+          'chat_mode': message.meta!.chatMode!,
+        if ((message.meta?.reasoningMode?.isNotEmpty ?? false))
+          'reasoning_mode': message.meta!.reasoningMode!,
         if (selectedExpertsMeta != null)
           'selected_experts': selectedExpertsMeta,
       },

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/features/memory/presentation/screens/memory_settings_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/account_security_screen.dart';
+import 'package:sparkle/features/user/presentation/screens/admin_operations_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/delete_account_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/edit_profile_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/guest_upgrade_screen.dart';
@@ -50,6 +51,7 @@ class UserRoutes {
   static const String accountSecurity = '/profile/account-security';
   static const String deleteAccount = '/profile/delete-account';
   static const String guestUpgrade = '/profile/upgrade-guest';
+  static const String adminOperations = '/profile/admin-operations';
 
   static void popOrGo(BuildContext context, {required String fallback}) {
     final navigator = Navigator.of(context);
@@ -166,6 +168,14 @@ class UserRoutes {
             state: state,
             child: const DeleteAccountScreen(),
             type: SharedAxisTransitionType.scaled,
+          ),
+        ),
+        GoRoute(
+          path: adminOperations,
+          name: 'adminOperations',
+          pageBuilder: (context, state) => _buildTransitionPage(
+            state: state,
+            child: const AdminOperationsScreen(),
           ),
         ),
         GoRoute(

@@ -164,6 +164,14 @@ class _FakeUserRepository implements UserRepository {
   Future<void> updateUserSettings(Map<String, dynamic> payload) async {}
 
   @override
+  Future<Map<String, dynamic>> fetchAiUsageSummary() async =>
+      <String, dynamic>{'current_mode': 'balanced', 'items': <dynamic>[]};
+
+  @override
+  Future<Map<String, dynamic>> fetchAiOpsDashboard({int days = 7}) async =>
+      <String, dynamic>{'window_days': days, 'items': <dynamic>[]};
+
+  @override
   Future<UserModel> updateUserPreferences(UserPreferences preferences) {
     throw UnimplementedError();
   }

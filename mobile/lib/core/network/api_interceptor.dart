@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logger/logger.dart';
 import 'package:sparkle/core/constants/api_constants.dart';
 import 'package:sparkle/core/network/http_client_pinning.dart';
+import 'package:sparkle/core/services/client_observability_service.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/device_identity_service.dart';
 import 'package:sparkle/features/auth/auth.dart';
@@ -69,12 +70,14 @@ class AuthInterceptor extends Interceptor {
   /// This instance has SSL pinning but no AuthInterceptor to avoid infinite recursion.
   Dio _getRetryDio() {
     if (_retryDio == null) {
-      _retryDio = Dio(BaseOptions(
-        baseUrl: ApiConstants.baseUrl,
-        connectTimeout: const Duration(seconds: 10),
-        receiveTimeout: const Duration(seconds: 30),
-        contentType: 'application/json',
-      ),);
+      _retryDio = Dio(
+        BaseOptions(
+          baseUrl: ApiConstants.baseUrl,
+          connectTimeout: const Duration(seconds: 10),
+          receiveTimeout: const Duration(seconds: 30),
+          contentType: 'application/json',
+        ),
+      );
       // Configure SSL pinning for secure communication
       configureDioForPinning(_retryDio!, ApiConstants.apiCertSha256);
       // Add only logging and retry interceptors (not auth)
@@ -156,9 +159,11 @@ class AuthInterceptor extends Interceptor {
         } catch (e) {
           _refreshCompleter?.completeError(e);
           // Refresh token failed, logout user
-          unawaited(_ref.read(authRepositoryProvider).logout(
-                keepDemoMode: DemoDataService.isDemoMode,
-              ),);
+          unawaited(
+            _ref.read(authRepositoryProvider).logout(
+                  keepDemoMode: DemoDataService.isDemoMode,
+                ),
+          );
           return super.onError(err, handler);
         } finally {
           // Clear the completer after a short delay to allow any waiting requests to complete
@@ -185,6 +190,8 @@ class LoggingInterceptor extends Interceptor {
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    options.extra['request_started_at_ms'] =
+        DateTime.now().millisecondsSinceEpoch;
     if (kDebugMode) {
       _logger.i('Request: ${options.method} ${options.uri}');
       if (options.data != null) {
@@ -199,6 +206,22 @@ class LoggingInterceptor extends Interceptor {
     Response<dynamic> response,
     ResponseInterceptorHandler handler,
   ) {
+    if (response.requestOptions.extra['skip_client_telemetry'] != true) {
+      final startedAt =
+          response.requestOptions.extra['request_started_at_ms'] as int?;
+      final durationMs = startedAt == null
+          ? 0
+          : DateTime.now().millisecondsSinceEpoch - startedAt;
+      unawaited(
+        ClientObservabilityService.instance.trackApiRequest(
+          path: response.requestOptions.path,
+          method: response.requestOptions.method,
+          status: 'ok',
+          durationMs: durationMs,
+          statusCode: response.statusCode,
+        ),
+      );
+    }
     if (kDebugMode) {
       _logger
           .i('Response: ${response.statusCode} ${response.requestOptions.uri}');
@@ -211,6 +234,23 @@ class LoggingInterceptor extends Interceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
+    if (err.requestOptions.extra['skip_client_telemetry'] != true) {
+      final startedAt =
+          err.requestOptions.extra['request_started_at_ms'] as int?;
+      final durationMs = startedAt == null
+          ? 0
+          : DateTime.now().millisecondsSinceEpoch - startedAt;
+      unawaited(
+        ClientObservabilityService.instance.trackApiRequest(
+          path: err.requestOptions.path,
+          method: err.requestOptions.method,
+          status: 'error',
+          durationMs: durationMs,
+          statusCode: err.response?.statusCode,
+          message: err.message,
+        ),
+      );
+    }
     if (kDebugMode) {
       _logger.e(
         'Error: ${err.response?.statusCode} ${err.requestOptions.uri}',

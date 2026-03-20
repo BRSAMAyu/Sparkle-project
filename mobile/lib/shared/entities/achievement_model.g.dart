@@ -444,6 +444,18 @@ AchievementUnlockEvent _$AchievementUnlockEventFromJson(
           ?.map((e) => e as Map<String, dynamic>)
           .toList(),
       isFirst: json['is_first'] as bool? ?? false,
+      rewardPreview: (json['reward_preview'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+      surfacePreview: (json['surface_preview'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+      gloryLines: (json['glory_lines'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
     );
 
 Map<String, dynamic> _$AchievementUnlockEventToJson(
@@ -458,4 +470,7 @@ Map<String, dynamic> _$AchievementUnlockEventToJson(
           _$VisualEffectTypeEnumMap[instance.visualEffectType],
       'rewards': instance.rewards,
       'is_first': instance.isFirst,
+      'reward_preview': instance.rewardPreview,
+      'surface_preview': instance.surfacePreview,
+      'glory_lines': instance.gloryLines,
     };

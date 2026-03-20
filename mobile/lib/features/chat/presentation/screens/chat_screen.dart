@@ -915,8 +915,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final aiSystemPreferences =
         ref.watch(transparencyPreferencesProvider).valueOrNull ??
             _defaultAiSystemPreferences;
+    final intentPredictionState = ref.watch(intentPredictionProvider);
     final isCompactMobile = _isCompactMobileContext(context);
     final showExpandedContext = !isCompactMobile || _showContextControls;
+    final showIntentPredictionBar =
+        intentPredictionState.isTyping || showExpandedContext;
     final showAiSystemPanel = aiSystemPreferences.enabled;
     final currentMode = ref.watch(chatModeProvider);
     final dynamicPrompts = _buildPromptStarters(context, currentMode.apiValue);
@@ -990,7 +993,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             const SizedBox(height: DS.spacing18),
             const ChatModeSelectorPill(),
           ],
-          if (showExpandedContext) const IntentPredictionBar(showIdle: false),
+          if (showIntentPredictionBar)
+            IntentPredictionBar(showIdle: showExpandedContext),
           if (showExpandedContext &&
               !chatState.hasActiveRun &&
               dynamicPrompts.isNotEmpty)

@@ -11,6 +11,7 @@ import 'package:sparkle/core/utils/chaos/chaos_control_dialog.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/capsule_provider.dart';
 import 'package:sparkle/features/cognitive/presentation/widgets/capsule/capsule_generation_preview.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
+import 'package:sparkle/features/user/presentation/screens/ai_ops_analysis_screen.dart';
 import 'package:sparkle/features/user/presentation/widgets/learning_mode_control.dart';
 import 'package:sparkle/features/user/presentation/widgets/preference_controller_2d.dart';
 import 'package:sparkle/features/user/presentation/widgets/weekly_agenda_grid.dart';
@@ -58,6 +59,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     final systemUpdateLevel = ref.watch(systemUpdateLevelProvider);
     final aiReasoningMode = ref.watch(aiReasoningModeProvider);
     final aiUsageSummary = ref.watch(aiUsageSummaryProvider);
+    final aiOpsDashboard = ref.watch(aiOpsDashboardProvider);
+    final predictionAnalytics = ref.watch(predictionAnalyticsDashboardProvider);
     final learningPrefs = ref.watch(learningPreferencesProvider);
     final pushPrefs = ref.watch(pushPreferencesProvider);
     final weeklyAgenda = ref.watch(weeklyAgendaProvider);
@@ -274,6 +277,35 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                         ),
                         child: const Text(
                           '额度面板暂时不可用，但档位切换仍可正常生效。',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: DS.spacing12),
+                    aiOpsDashboard.when(
+                      data: (dashboard) => Column(
+                        children: [
+                          _buildAiUserViewPanel(
+                            dashboard,
+                            predictionAnalytics.valueOrNull,
+                          ),
+                          const SizedBox(height: DS.spacing12),
+                          _buildAiDeveloperViewPanel(
+                            dashboard,
+                            predictionAnalytics.valueOrNull,
+                          ),
+                        ],
+                      ),
+                      loading: () =>
+                          const LinearProgressIndicator(minHeight: 3),
+                      error: (_, __) => Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: DS.surfaceSecondary,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Text(
+                          '运营面板暂时不可用，但 AI 档位和使用统计仍可继续使用。',
                         ),
                       ),
                     ),
@@ -936,4 +968,305 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
       ),
     );
   }
+
+  Widget _buildAiUserViewPanel(
+    Map<String, dynamic> payload,
+    Map<String, dynamic>? predictionPayload,
+  ) {
+    final theme = Theme.of(context);
+    final items = (payload['items'] as List<dynamic>? ?? const <dynamic>[])
+        .whereType<Map<String, dynamic>>()
+        .toList();
+    if (items.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: DS.surfaceSecondary,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Text('模式级运营指标还在累积中。'),
+      );
+    }
+
+    final totalRequests = items.fold<int>(
+      0,
+      (sum, item) => sum + ((item['requests_total'] as num?)?.toInt() ?? 0),
+    );
+    final totalSuccess = items.fold<int>(
+      0,
+      (sum, item) => sum + ((item['requests_success'] as num?)?.toInt() ?? 0),
+    );
+    final weightedFirstToken = items.fold<double>(
+      0,
+      (sum, item) =>
+          sum +
+          (((item['avg_first_token_ms'] as num?)?.toDouble() ?? 0) *
+              ((item['requests_total'] as num?)?.toDouble() ?? 0)),
+    );
+    final weightedTotalDuration = items.fold<double>(
+      0,
+      (sum, item) =>
+          sum +
+          (((item['avg_total_duration_ms'] as num?)?.toDouble() ?? 0) *
+              ((item['requests_total'] as num?)?.toDouble() ?? 0)),
+    );
+    final weightedExecutionConv = items.fold<double>(
+      0,
+      (sum, item) =>
+          sum +
+          (((item['execution_conversion_rate_percent'] as num?)?.toDouble() ??
+                  0) *
+              ((item['requests_total'] as num?)?.toDouble() ?? 0)),
+    );
+    final successRate =
+        totalRequests > 0 ? (totalSuccess / totalRequests) * 100 : 0.0;
+    final avgFirstToken =
+        totalRequests > 0 ? weightedFirstToken / totalRequests : 0.0;
+    final avgTotalDuration =
+        totalRequests > 0 ? weightedTotalDuration / totalRequests : 0.0;
+    final executionRate =
+        totalRequests > 0 ? weightedExecutionConv / totalRequests : 0.0;
+    final topMode = [...items]..sort(
+        (a, b) => ((b['requests_total'] as num?)?.toInt() ?? 0)
+            .compareTo((a['requests_total'] as num?)?.toInt() ?? 0),
+      );
+    final topChatMode =
+        topMode.isNotEmpty ? _labelForChatMode(topMode.first['chat_mode']) : '标准对话';
+    final funnel = (predictionPayload?['funnel'] as Map<String, dynamic>?) ??
+        const <String, dynamic>{};
+    final acceptToExecution =
+        (funnel['accept_to_execution_percent'] as num?)?.toDouble() ?? 0.0;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: DS.surfaceSecondary,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '用户视角',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: DS.spacing8),
+          Text(
+            '重点看 AI 是否回得快、够稳、能把建议真正推成执行，而不是只看模型层参数。',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.78),
+            ),
+          ),
+          const SizedBox(height: DS.spacing10),
+          Wrap(
+            spacing: DS.spacing8,
+            runSpacing: DS.spacing8,
+            children: [
+              _MetricChip(
+                label: '成功率',
+                value: '${successRate.toStringAsFixed(1)}%',
+              ),
+              _MetricChip(
+                label: '平均首包',
+                value: '${avgFirstToken.toStringAsFixed(0)}ms',
+              ),
+              _MetricChip(
+                label: '平均总耗时',
+                value: '${avgTotalDuration.toStringAsFixed(0)}ms',
+              ),
+              _MetricChip(
+                label: '执行转化',
+                value: '${executionRate.toStringAsFixed(1)}%',
+              ),
+              _MetricChip(
+                label: '预测接受后执行',
+                value: '${acceptToExecution.toStringAsFixed(1)}%',
+              ),
+            ],
+          ),
+          const SizedBox(height: DS.spacing10),
+          Text(
+            '最近最常用的是「$topChatMode」这条链，说明它已经是用户日常体验里的主力工作流。',
+            style: theme.textTheme.bodySmall,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAiDeveloperViewPanel(
+    Map<String, dynamic> payload,
+    Map<String, dynamic>? predictionPayload,
+  ) {
+    final theme = Theme.of(context);
+    final windowDays = payload['window_days'] as int? ?? 7;
+    final items = (payload['items'] as List<dynamic>? ?? const <dynamic>[])
+        .whereType<Map<String, dynamic>>()
+        .toList();
+    final totalCost = items.fold<double>(
+      0,
+      (sum, item) => sum + ((item['total_cost_usd'] as num?)?.toDouble() ?? 0),
+    );
+    final totalRequests = items.fold<int>(
+      0,
+      (sum, item) => sum + ((item['requests_total'] as num?)?.toInt() ?? 0),
+    );
+    final weightedFallback = items.fold<double>(
+      0,
+      (sum, item) =>
+          sum +
+          (((item['fallback_rate_percent'] as num?)?.toDouble() ?? 0) *
+              ((item['requests_total'] as num?)?.toDouble() ?? 0)),
+    );
+    final fallbackRate =
+        totalRequests > 0 ? weightedFallback / totalRequests : 0.0;
+    final topActions =
+        (predictionPayload?['top_actions'] as List<dynamic>? ?? const <dynamic>[])
+            .whereType<Map<String, dynamic>>()
+            .toList();
+    final topAction = topActions.isNotEmpty
+        ? topActions.first['action_type']?.toString() ?? 'unknown'
+        : 'unknown';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: DS.surfaceSecondary,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '开发运营视角',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: DS.spacing8),
+          Text(
+            '这里专门看速度、成本、fallback 和预测转化，用来决定下一轮要优化哪条模式链。',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.78),
+            ),
+          ),
+          const SizedBox(height: DS.spacing10),
+          Wrap(
+            spacing: DS.spacing8,
+            runSpacing: DS.spacing8,
+            children: [
+              _MetricChip(
+                label: '监控模式',
+                value: '${items.length}',
+              ),
+              _MetricChip(
+                label: '请求总量',
+                value: '$totalRequests',
+              ),
+              _MetricChip(
+                label: 'fallback',
+                value: '${fallbackRate.toStringAsFixed(1)}%',
+              ),
+              _MetricChip(
+                label: '总成本',
+                value: '\$${totalCost.toStringAsFixed(4)}',
+              ),
+            ],
+          ),
+          const SizedBox(height: DS.spacing10),
+          Text(
+            '近 $windowDays 天里，当前最值得继续盯的预测动作是「$topAction」。',
+            style: theme.textTheme.bodySmall,
+          ),
+          const SizedBox(height: DS.spacing12),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: SparkleButton.ghost(
+              label: '打开 AI 运营分析页',
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const AiOpsAnalysisScreen(),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: DS.spacing8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: SparkleButton.ghost(
+              label: '打开管理员运营面板',
+              onPressed: () => context.push(UserRoutes.adminOperations),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _labelForChatMode(Object? value) {
+    switch (value?.toString()) {
+      case 'standard':
+        return '标准对话';
+      case 'study_plan':
+        return '学习规划';
+      case 'deep_analysis':
+        return '深度分析';
+      case 'error_diagnosis':
+        return '诊断纠错';
+      case 'expert_auto':
+        return '专家协作';
+      default:
+        return value?.toString() ?? 'standard';
+    }
+  }
+
+}
+
+class _MetricChip extends StatelessWidget {
+  const _MetricChip({
+    required this.label,
+    required this.value,
+  });
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing10,
+          vertical: DS.spacing8,
+        ),
+        decoration: BoxDecoration(
+          color: DS.surfacePrimary,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: DS.borderSubtle),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: DS.textSecondary,
+                  ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              value,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+          ],
+        ),
+      );
 }

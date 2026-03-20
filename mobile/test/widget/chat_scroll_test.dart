@@ -85,7 +85,10 @@ void main() {
     await tester.pumpAndSettle();
 
     // Initial check - find ListView
-    final listFinder = find.byType(ListView);
+    final listFinder = find.byWidgetPredicate(
+      (widget) => widget is ListView && widget.reverse,
+      description: 'reversed chat message list',
+    );
     expect(listFinder, findsOneWidget);
     final scrollFinder = find.descendant(
       of: listFinder,
@@ -108,7 +111,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Scroll up (visually) -> offset increases
-    await tester.drag(find.byType(ListView), const Offset(0, 300));
+    await tester.drag(listFinder, const Offset(0, 300));
     await tester.pumpAndSettle();
 
     // Add new message
