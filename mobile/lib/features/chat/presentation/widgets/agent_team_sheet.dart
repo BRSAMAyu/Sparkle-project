@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/chat/data/models/chat_mode.dart';
@@ -103,7 +104,9 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (catalog.customTeams.where((e) => e.enabled).isNotEmpty) ...[
+                      if (catalog.customTeams
+                          .where((e) => e.enabled)
+                          .isNotEmpty) ...[
                         Text(
                           '已保存团队',
                           style: TextStyle(
@@ -113,15 +116,16 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
                           ),
                         ),
                         const SizedBox(height: DS.spacing8),
-                        _buildSavedTeams(catalog.customTeams.where((e) => e.enabled).toList()),
+                        _buildSavedTeams(catalog.customTeams
+                            .where((e) => e.enabled)
+                            .toList()),
                         const SizedBox(height: DS.spacing12),
                       ],
                       _buildExpertGrid(experts),
                     ],
                   );
                 },
-                loading: () =>
-                    _emptyHint(context.l10n.chatTeamSheetLoading),
+                loading: () => _emptyHint(context.l10n.chatTeamSheetLoading),
                 error: (_, __) =>
                     _emptyHint(context.l10n.chatTeamSheetLoadFailed),
               ),
@@ -149,8 +153,7 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    context
-                        .l10n
+                    context.l10n
                         .chatTeamSheetSelectedExperts(_selectedAgents.length),
                     style: TextStyle(
                       fontSize: DS.fontSizeSm,
@@ -241,7 +244,9 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
           return FilterChip(
             selected: isSelected,
             label: Text(
-              expert.official ? expert.displayName : '${expert.displayName} · 自定义',
+              expert.official
+                  ? expert.displayName
+                  : '${expert.displayName} · 自定义',
             ),
             avatar: isSelected
                 ? null
@@ -271,26 +276,30 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
   Widget _buildSavedTeams(List<ExpertCatalogTeam> teams) => Wrap(
         spacing: DS.spacing8,
         runSpacing: DS.spacing8,
-        children: teams.map((team) => ActionChip(
-            label: Text(team.name),
-            avatar: const Icon(Icons.collections_bookmark_outlined, size: 16),
-            onPressed: () {
-              setState(() {
-                _selectedAgents
-                  ..clear()
-                  ..addAll(team.expertIds);
-                _answerAgents
-                  ..clear()
-                  ..addAll(
-                    team.answerExpertIds.isEmpty
-                        ? team.expertIds
-                        : team.answerExpertIds,
-                  );
-                _collaborationMode = team.collaborationMode;
-              });
-            },
-          ),
-        ).toList(),
+        children: teams
+            .map(
+              (team) => ActionChip(
+                label: Text(team.name),
+                avatar:
+                    const Icon(Icons.collections_bookmark_outlined, size: 16),
+                onPressed: () {
+                  setState(() {
+                    _selectedAgents
+                      ..clear()
+                      ..addAll(team.expertIds);
+                    _answerAgents
+                      ..clear()
+                      ..addAll(
+                        team.answerExpertIds.isEmpty
+                            ? team.expertIds
+                            : team.answerExpertIds,
+                      );
+                    _collaborationMode = team.collaborationMode;
+                  });
+                },
+              ),
+            )
+            .toList(),
       );
 
   Widget _buildModeSelector() => Column(
@@ -484,103 +493,106 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
     final nameController = TextEditingController();
     final descriptionController = TextEditingController();
     final promptController = TextEditingController();
-    final enabledExperts =
-        catalog?.experts.where((e) => e.enabled).toList() ?? const <ExpertCatalogExpert>[];
+    final enabledExperts = catalog?.experts.where((e) => e.enabled).toList() ??
+        const <ExpertCatalogExpert>[];
     final modelOptions = catalog?.modelOptions ?? const <ModelOption>[];
     var selectedBaseExpert =
         enabledExperts.isNotEmpty ? enabledExperts.first.id : null;
-    var selectedModelKey = modelOptions.isNotEmpty ? modelOptions.first.key : null;
+    var selectedModelKey =
+        modelOptions.isNotEmpty ? modelOptions.first.key : null;
     var selectedReasoningMode = 'balanced';
 
-    final created = await showDialog<ExpertCatalogExpert>(
+    final created = await showSensoryDialog<ExpertCatalogExpert>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
-          builder: (context, setLocalState) => AlertDialog(
-            title: const Text('创建自定义专家'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: nameController,
-                    decoration: const InputDecoration(labelText: '专家名称'),
+        builder: (context, setLocalState) => AlertDialog(
+          title: const Text('创建自定义专家'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(labelText: '专家名称'),
+                ),
+                TextField(
+                  controller: descriptionController,
+                  decoration: const InputDecoration(labelText: '简介'),
+                ),
+                DropdownButtonFormField<String>(
+                  initialValue: selectedBaseExpert,
+                  decoration: const InputDecoration(labelText: '基底专家'),
+                  items: enabledExperts
+                      .map(
+                        (expert) => DropdownMenuItem<String>(
+                          value: expert.id,
+                          child: Text(expert.displayName),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) =>
+                      setLocalState(() => selectedBaseExpert = value),
+                ),
+                DropdownButtonFormField<String>(
+                  initialValue: selectedModelKey,
+                  decoration: const InputDecoration(labelText: '模型'),
+                  items: modelOptions
+                      .map(
+                        (item) => DropdownMenuItem<String>(
+                          value: item.key,
+                          child: Text('${item.modelName} · ${item.tier}'),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) =>
+                      setLocalState(() => selectedModelKey = value),
+                ),
+                DropdownButtonFormField<String>(
+                  initialValue: selectedReasoningMode,
+                  decoration: const InputDecoration(labelText: '档位'),
+                  items: const [
+                    DropdownMenuItem(value: 'fast', child: Text('敏捷')),
+                    DropdownMenuItem(value: 'balanced', child: Text('均衡')),
+                    DropdownMenuItem(value: 'deep', child: Text('深思')),
+                  ],
+                  onChanged: (value) => setLocalState(
+                    () => selectedReasoningMode = value ?? 'balanced',
                   ),
-                  TextField(
-                    controller: descriptionController,
-                    decoration: const InputDecoration(labelText: '简介'),
+                ),
+                TextField(
+                  controller: promptController,
+                  decoration: const InputDecoration(
+                    labelText: '系统提示词',
+                    alignLabelWithHint: true,
                   ),
-                  DropdownButtonFormField<String>(
-                    initialValue: selectedBaseExpert,
-                    decoration: const InputDecoration(labelText: '基底专家'),
-                    items: enabledExperts
-                        .map(
-                          (expert) => DropdownMenuItem<String>(
-                            value: expert.id,
-                            child: Text(expert.displayName),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) => setLocalState(() => selectedBaseExpert = value),
-                  ),
-                  DropdownButtonFormField<String>(
-                    initialValue: selectedModelKey,
-                    decoration: const InputDecoration(labelText: '模型'),
-                    items: modelOptions
-                        .map(
-                          (item) => DropdownMenuItem<String>(
-                            value: item.key,
-                            child: Text('${item.modelName} · ${item.tier}'),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) => setLocalState(() => selectedModelKey = value),
-                  ),
-                  DropdownButtonFormField<String>(
-                    initialValue: selectedReasoningMode,
-                    decoration: const InputDecoration(labelText: '档位'),
-                    items: const [
-                      DropdownMenuItem(value: 'fast', child: Text('敏捷')),
-                      DropdownMenuItem(value: 'balanced', child: Text('均衡')),
-                      DropdownMenuItem(value: 'deep', child: Text('深思')),
-                    ],
-                    onChanged: (value) => setLocalState(
-                      () => selectedReasoningMode = value ?? 'balanced',
-                    ),
-                  ),
-                  TextField(
-                    controller: promptController,
-                    decoration: const InputDecoration(
-                      labelText: '系统提示词',
-                      alignLabelWithHint: true,
-                    ),
-                    minLines: 4,
-                    maxLines: 8,
-                  ),
-                ],
-              ),
+                  minLines: 4,
+                  maxLines: 8,
+                ),
+              ],
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('取消'),
-              ),
-              FilledButton(
-                onPressed: () async {
-                  final expert = await repository.createCustomExpert(
-                    name: nameController.text.trim(),
-                    description: descriptionController.text.trim(),
-                    systemPrompt: promptController.text.trim(),
-                    baseExpertId: selectedBaseExpert,
-                    preferredModelKey: selectedModelKey,
-                    reasoningMode: selectedReasoningMode,
-                  );
-                  if (!dialogContext.mounted) return;
-                  Navigator.pop(dialogContext, expert);
-                },
-                child: const Text('创建'),
-              ),
-            ],
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final expert = await repository.createCustomExpert(
+                  name: nameController.text.trim(),
+                  description: descriptionController.text.trim(),
+                  systemPrompt: promptController.text.trim(),
+                  baseExpertId: selectedBaseExpert,
+                  preferredModelKey: selectedModelKey,
+                  reasoningMode: selectedReasoningMode,
+                );
+                if (!dialogContext.mounted) return;
+                Navigator.pop(dialogContext, expert);
+              },
+              child: const Text('创建'),
+            ),
+          ],
+        ),
       ),
     );
 
@@ -597,7 +609,7 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
     final repository = ref.read(chatRepositoryProvider);
     final nameController = TextEditingController();
     final descriptionController = TextEditingController();
-    final saved = await showDialog<bool>(
+    final saved = await showSensoryDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('保存专家团队'),

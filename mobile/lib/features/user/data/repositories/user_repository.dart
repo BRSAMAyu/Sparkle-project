@@ -278,6 +278,10 @@ class UserRepository {
             'requests_remaining': 108,
             'total_tokens': 18420,
             'total_cost_usd': 0.0184,
+            'total_duration_ms': 32540,
+            'avg_total_duration_ms': 2711.67,
+            'avg_first_token_ms': 652.0,
+            'avg_stream_duration_ms': 2059.67,
           },
           {
             'mode': 'balanced',
@@ -287,6 +291,10 @@ class UserRepository {
             'requests_remaining': 54,
             'total_tokens': 14310,
             'total_cost_usd': 0.0267,
+            'total_duration_ms': 28460,
+            'avg_total_duration_ms': 4743.33,
+            'avg_first_token_ms': 1124.0,
+            'avg_stream_duration_ms': 3387.67,
           },
           {
             'mode': 'deep',
@@ -296,6 +304,10 @@ class UserRepository {
             'requests_remaining': 23,
             'total_tokens': 6120,
             'total_cost_usd': 0.0153,
+            'total_duration_ms': 9430,
+            'avg_total_duration_ms': 9430.0,
+            'avg_first_token_ms': 1820.0,
+            'avg_stream_duration_ms': 7110.0,
           },
         ],
       };

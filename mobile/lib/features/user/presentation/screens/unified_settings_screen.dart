@@ -890,6 +890,10 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
             final limit = item['requests_limit'] ?? 0;
             final tokens = item['total_tokens'] ?? 0;
             final cost = (item['total_cost_usd'] as num?)?.toDouble() ?? 0.0;
+            final avgTotalMs =
+                (item['avg_total_duration_ms'] as num?)?.toDouble() ?? 0.0;
+            final avgFirstTokenMs =
+                (item['avg_first_token_ms'] as num?)?.toDouble() ?? 0.0;
             return Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Row(
@@ -905,9 +909,23 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                     ),
                   ),
                   Expanded(
-                    child: Text(
-                      '$used/$limit 次 · $tokens tokens · \$${cost.toStringAsFixed(4)}',
-                      style: theme.textTheme.bodySmall,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '$used/$limit 次 · $tokens tokens · \$${cost.toStringAsFixed(4)}',
+                          style: theme.textTheme.bodySmall,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '平均首 token ${avgFirstTokenMs.toStringAsFixed(0)}ms · 平均总耗时 ${avgTotalMs.toStringAsFixed(0)}ms',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.textTheme.bodySmall?.color?.withValues(
+                              alpha: 0.72,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],

@@ -11,6 +11,18 @@ final myPartnershipsProvider = StateNotifierProvider.autoDispose<
       ref.watch(accountabilityRepositoryProvider),);
 });
 
+final accountabilityOverviewProvider =
+    FutureProvider.autoDispose<AccountabilityOverviewInfo>((ref) async {
+  final repo = ref.watch(accountabilityRepositoryProvider);
+  return repo.getOverview();
+});
+
+final accountabilityDashboardProvider = FutureProvider.autoDispose
+    .family<AccountabilityDashboardInfo, String>((ref, partnershipId) async {
+  final repo = ref.watch(accountabilityRepositoryProvider);
+  return repo.getDashboard(partnershipId);
+});
+
 class MyPartnershipsNotifier extends StateNotifier<
     AsyncValue<List<AccountabilityPartnershipInfo>>> {
   MyPartnershipsNotifier(this._repo) : super(const AsyncValue.loading()) {
@@ -173,6 +185,15 @@ class AccountabilityActions {
     );
 
     return result;
+  }
+
+  Future<Map<String, dynamic>> nudgePartner(
+    WidgetRef ref,
+    String partnershipId, {
+    String? message,
+  }) async {
+    final repo = ref.read(accountabilityRepositoryProvider);
+    return repo.nudgePartner(partnershipId, message: message);
   }
 }
 

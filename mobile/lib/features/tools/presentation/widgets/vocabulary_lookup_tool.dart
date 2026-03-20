@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/features/knowledge/data/repositories/vocabulary_repository.dart';
 import 'package:sparkle/features/knowledge/presentation/providers/vocabulary_provider.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
@@ -172,8 +173,9 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
     });
     try {
       final repository = ref.read(vocabularyRepositoryProvider);
-      final targetId =
-          packageId ?? _preferredStarterPackageId() ?? _firstAvailablePackageId();
+      final targetId = packageId ??
+          _preferredStarterPackageId() ??
+          _firstAvailablePackageId();
       if (targetId == null) {
         throw Exception('暂无可下载的离线词典包');
       }
@@ -225,7 +227,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
       for (final package in _installedPackages) package.id: package,
     };
 
-    await showModalBottomSheet<void>(
+    await showSensoryModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       builder: (context) {
@@ -286,7 +288,8 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                                   Expanded(
                                     child: Text(
                                       package.name,
-                                      style: theme.textTheme.titleMedium?.copyWith(
+                                      style:
+                                          theme.textTheme.titleMedium?.copyWith(
                                         fontWeight: DS.fontWeightBold,
                                       ),
                                     ),
@@ -298,12 +301,14 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                                         vertical: DS.spacing4,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: DS.prismBlue.withValues(alpha: 0.12),
+                                        color: DS.prismBlue
+                                            .withValues(alpha: 0.12),
                                         borderRadius: DS.borderRadiusFull,
                                       ),
                                       child: Text(
                                         '已安装',
-                                        style: theme.textTheme.labelSmall?.copyWith(
+                                        style: theme.textTheme.labelSmall
+                                            ?.copyWith(
                                           color: DS.prismBlue,
                                           fontWeight: DS.fontWeightBold,
                                         ),
@@ -329,7 +334,8 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                                   _buildMetaChip('${package.entryCount} 词条'),
                                   _buildMetaChip(package.packageScope),
                                   if (package.sizeBytes != null)
-                                    _buildMetaChip(_formatBytes(package.sizeBytes!)),
+                                    _buildMetaChip(
+                                        _formatBytes(package.sizeBytes!)),
                                   if (installed != null)
                                     _buildMetaChip(
                                       '安装于 ${_formatInstalledAt(installed.installedAt)}',
@@ -341,7 +347,8 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                                 children: [
                                   Expanded(
                                     child: SparkleButton(
-                                      label: installed != null ? '重新下载' : '下载到本地',
+                                      label:
+                                          installed != null ? '重新下载' : '下载到本地',
                                       onPressed: _isDownloadingDictionary
                                           ? null
                                           : () async {
@@ -367,9 +374,11 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                                         variant: ButtonVariant.ghost,
                                         onPressed: () async {
                                           Navigator.of(context).pop();
-                                          await _removeDictionaryPackage(package.id);
+                                          await _removeDictionaryPackage(
+                                              package.id);
                                         },
-                                        icon: const Icon(Icons.delete_outline_rounded),
+                                        icon: const Icon(
+                                            Icons.delete_outline_rounded),
                                         expand: true,
                                       ),
                                     ),
@@ -550,7 +559,8 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                                   if (phonetic != null || partOfSpeech != null)
                                     Padding(
                                       padding: const EdgeInsets.only(
-                                          top: DS.spacing8,),
+                                        top: DS.spacing8,
+                                      ),
                                       child: Wrap(
                                         spacing: DS.spacing8,
                                         runSpacing: DS.spacing8,
@@ -572,12 +582,14 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                                             DecoratedBox(
                                               decoration: BoxDecoration(
                                                 color: accent.withValues(
-                                                    alpha: 0.12,),
+                                                  alpha: 0.12,
+                                                ),
                                                 borderRadius:
                                                     DS.borderRadiusFull,
                                                 border: Border.all(
                                                   color: accent.withValues(
-                                                      alpha: 0.18,),
+                                                    alpha: 0.18,
+                                                  ),
                                                 ),
                                               ),
                                               child: Padding(
@@ -642,7 +654,8 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                             ...examples.take(3).map(
                                   (example) => Padding(
                                     padding: const EdgeInsets.only(
-                                        bottom: DS.spacing8,),
+                                      bottom: DS.spacing8,
+                                    ),
                                     child: Text(
                                       '• $example',
                                       style: Theme.of(context)
@@ -804,23 +817,23 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
   }
 
   Widget _buildMetaChip(String label) => DecoratedBox(
-      decoration: BoxDecoration(
-        color: DS.surfaceTertiary,
-        borderRadius: DS.borderRadiusFull,
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing8,
-          vertical: DS.spacing6,
+        decoration: BoxDecoration(
+          color: DS.surfaceTertiary,
+          borderRadius: DS.borderRadiusFull,
         ),
-        child: Text(
-          label,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: DS.textSecondary,
-              ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing8,
+            vertical: DS.spacing6,
+          ),
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: DS.textSecondary,
+                ),
+          ),
         ),
-      ),
-    );
+      );
 
   String _formatBytes(int bytes) {
     if (bytes < 1024) {

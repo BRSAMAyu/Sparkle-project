@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
 import 'package:sparkle/features/tools/providers/tool_preferences_provider.dart';
 import 'package:sparkle/features/tools/tool_registry.dart';
@@ -47,7 +48,7 @@ Future<void> launchTool(
   };
 
   if (shouldOpenSheet) {
-    await showModalBottomSheet<void>(
+    await showSensoryModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: DS.surfacePrimary.withValues(alpha: 0),

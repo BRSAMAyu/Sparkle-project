@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
@@ -103,12 +104,10 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                             )
                           : null,
                       border: OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.circular(DS.borderRadiusMD),
+                        borderRadius: BorderRadius.circular(DS.borderRadiusMD),
                       ),
                       filled: true,
-                      fillColor:
-                          DS.surfaceRoleColor(SparkleSurfaceRole.panel),
+                      fillColor: DS.surfaceRoleColor(SparkleSurfaceRole.panel),
                     ),
                     onChanged: (value) =>
                         setState(() => _searchQuery = value.toLowerCase()),
@@ -132,45 +131,47 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                               )
                               .toList();
 
-                  if (filteredMembers.isEmpty) {
-                    return Center(
-                      child: Text(
-                        _searchQuery.isEmpty
-                            ? 'No members yet'
-                            : 'No members found',
-                        style: TextStyle(color: DS.neutral500, fontSize: 16),
-                      ),
-                    );
-                  }
+                      if (filteredMembers.isEmpty) {
+                        return Center(
+                          child: Text(
+                            _searchQuery.isEmpty
+                                ? 'No members yet'
+                                : 'No members found',
+                            style:
+                                TextStyle(color: DS.neutral500, fontSize: 16),
+                          ),
+                        );
+                      }
 
-                  // Group by role
-                  final owners = filteredMembers
-                      .where((m) => m.role == GroupRole.owner)
-                      .toList();
-                  final admins = filteredMembers
-                      .where((m) => m.role == GroupRole.admin)
-                      .toList();
-                  final regularMembers = filteredMembers
-                      .where((m) => m.role == GroupRole.member)
-                      .toList();
+                      // Group by role
+                      final owners = filteredMembers
+                          .where((m) => m.role == GroupRole.owner)
+                          .toList();
+                      final admins = filteredMembers
+                          .where((m) => m.role == GroupRole.admin)
+                          .toList();
+                      final regularMembers = filteredMembers
+                          .where((m) => m.role == GroupRole.member)
+                          .toList();
 
-                  return ListView(
-                    children: [
-                      if (owners.isNotEmpty) ...[
-                        _buildSectionHeader('Owner (${owners.length})'),
-                        ...owners.map(_buildMemberTile),
-                      ],
-                      if (admins.isNotEmpty) ...[
-                        _buildSectionHeader('Admins (${admins.length})'),
-                        ...admins.map(_buildMemberTile),
-                      ],
-                      if (regularMembers.isNotEmpty) ...[
-                        _buildSectionHeader(
-                            'Members (${regularMembers.length})',),
-                        ...regularMembers.map(_buildMemberTile),
-                      ],
-                    ],
-                  );
+                      return ListView(
+                        children: [
+                          if (owners.isNotEmpty) ...[
+                            _buildSectionHeader('Owner (${owners.length})'),
+                            ...owners.map(_buildMemberTile),
+                          ],
+                          if (admins.isNotEmpty) ...[
+                            _buildSectionHeader('Admins (${admins.length})'),
+                            ...admins.map(_buildMemberTile),
+                          ],
+                          if (regularMembers.isNotEmpty) ...[
+                            _buildSectionHeader(
+                              'Members (${regularMembers.length})',
+                            ),
+                            ...regularMembers.map(_buildMemberTile),
+                          ],
+                        ],
+                      );
                     },
                     loading: () => const Center(
                       child: CircularProgressIndicator(),
@@ -236,12 +237,18 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
           Expanded(
             child: TabBarView(
               children: [
-                _buildRankList(byFlame,
-                    value: (m) => '${m.flameContribution} 🔥',),
-                _buildRankList(byStreak,
-                    value: (m) => '${m.checkinStreak} 天',),
-                _buildRankList(byTasks,
-                    value: (m) => '${m.tasksCompleted} 任务',),
+                _buildRankList(
+                  byFlame,
+                  value: (m) => '${m.flameContribution} 🔥',
+                ),
+                _buildRankList(
+                  byStreak,
+                  value: (m) => '${m.checkinStreak} 天',
+                ),
+                _buildRankList(
+                  byTasks,
+                  value: (m) => '${m.tasksCompleted} 任务',
+                ),
               ],
             ),
           ),
@@ -359,9 +366,10 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                 child: Text(
                   'OWNER',
                   style: TextStyle(
-                      fontSize: 10,
-                      color: DS.neutral900,
-                      fontWeight: FontWeight.bold,),
+                    fontSize: 10,
+                    color: DS.neutral900,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ] else if (isAdmin) ...[
@@ -375,9 +383,10 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                 child: Text(
                   'ADMIN',
                   style: TextStyle(
-                      fontSize: 10,
-                      color: DS.brandPrimaryConst,
-                      fontWeight: FontWeight.bold,),
+                    fontSize: 10,
+                    color: DS.brandPrimaryConst,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],
@@ -443,11 +452,16 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                         value: 'transfer',
                         child: Row(
                           children: [
-                            Icon(Icons.supervisor_account,
-                                size: 18, color: DS.warning,),
+                            Icon(
+                              Icons.supervisor_account,
+                              size: 18,
+                              color: DS.warning,
+                            ),
                             const SizedBox(width: DS.sm),
-                            Text('Transfer Ownership',
-                                style: TextStyle(color: DS.warning),),
+                            Text(
+                              'Transfer Ownership',
+                              style: TextStyle(color: DS.warning),
+                            ),
                           ],
                         ),
                       ),
@@ -464,8 +478,10 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                         children: [
                           Icon(Icons.mic_off, size: 18, color: DS.warning),
                           const SizedBox(width: DS.sm),
-                          Text('禁言',
-                              style: TextStyle(color: DS.warning),),
+                          Text(
+                            '禁言',
+                            style: TextStyle(color: DS.warning),
+                          ),
                         ],
                       ),
                     ),
@@ -492,8 +508,10 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                         children: [
                           Icon(Icons.person_remove, size: 18, color: DS.error),
                           const SizedBox(width: DS.sm),
-                          Text('移出群组',
-                              style: TextStyle(color: DS.error),),
+                          Text(
+                            '移出群组',
+                            style: TextStyle(color: DS.error),
+                          ),
                         ],
                       ),
                     ),
@@ -532,7 +550,9 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
   }
 
   Future<void> _handleMemberAction(
-      GroupMemberInfo member, String action,) async {
+    GroupMemberInfo member,
+    String action,
+  ) async {
     switch (action) {
       case 'promote':
         final confirmed = await _showConfirmDialog(
@@ -637,9 +657,12 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
     }
   }
 
-  Future<bool?> _showConfirmDialog(String title, String message,
-          {bool isDestructive = false,}) =>
-      showDialog<bool>(
+  Future<bool?> _showConfirmDialog(
+    String title,
+    String message, {
+    bool isDestructive = false,
+  }) =>
+      showSensoryDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
           title: Text(title),
@@ -664,7 +687,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
     var durationMinutes = 60;
     final reasonController = TextEditingController();
 
-    await showDialog<void>(
+    await showSensoryDialog<void>(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setState) => AlertDialog(
@@ -681,8 +704,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                     ChoiceChip(
                       label: Text(m >= 1440 ? '24小时' : '$m 分钟'),
                       selected: durationMinutes == m,
-                      onSelected: (_) =>
-                          setState(() => durationMinutes = m),
+                      onSelected: (_) => setState(() => durationMinutes = m),
                     ),
                 ],
               ),
@@ -706,9 +728,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
               onPressed: () async {
                 Navigator.pop(ctx);
                 try {
-                  await ref
-                      .read(communityRepositoryProvider)
-                      .muteMember(
+                  await ref.read(communityRepositoryProvider).muteMember(
                         widget.groupId,
                         member.user.id,
                         durationMinutes,
@@ -718,7 +738,9 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                       );
                   if (!mounted) return;
                   AppFeedback.success(
-                      context, '${member.user.displayName} 已被禁言',);
+                    context,
+                    '${member.user.displayName} 已被禁言',
+                  );
                 } catch (e) {
                   if (!mounted) return;
                   AppFeedback.error(context, '操作失败: $e');
@@ -735,7 +757,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
   Future<void> _showWarnDialog(GroupMemberInfo member) async {
     final reasonController = TextEditingController();
 
-    await showDialog<void>(
+    await showSensoryDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('警告 ${member.user.displayName}'),
@@ -768,7 +790,9 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                     .warnMember(widget.groupId, member.user.id, reason);
                 if (!mounted) return;
                 AppFeedback.success(
-                    context, '已向 ${member.user.displayName} 发出警告',);
+                  context,
+                  '已向 ${member.user.displayName} 发出警告',
+                );
               } catch (e) {
                 if (!mounted) return;
                 AppFeedback.error(context, '操作失败: $e');

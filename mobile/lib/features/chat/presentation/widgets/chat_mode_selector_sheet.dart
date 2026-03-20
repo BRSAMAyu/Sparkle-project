@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/chat/data/models/chat_mode.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/expert_catalog_provider.dart';
@@ -34,7 +35,17 @@ class ChatModeSelectorSheet extends ConsumerWidget {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: isDark ? DS.surfaceSecondary : DS.surfacePrimaryElevated,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            isDark ? DS.surfaceSecondary : DS.surfacePrimaryElevated,
+            Color.alphaBlend(
+              DS.info.withValues(alpha: 0.04),
+              DS.surfacePrimary,
+            ),
+          ],
+        ),
         borderRadius: const BorderRadius.vertical(
           top: Radius.circular(DS.spacing24),
         ),
@@ -177,7 +188,9 @@ class _TeamEntryTile extends StatelessWidget {
     final color = context.colorExtensions.chatModeIndigo;
     return InkWell(
       onTap: () {
-        unawaited(HapticFeedback.lightImpact());
+        unawaited(
+          SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen),
+        );
         // Pop with sentinel string — the caller (pill) handles opening
         // the team sheet to avoid using a dead context.
         Navigator.pop(context, openTeamBuilderSentinel);
@@ -251,7 +264,9 @@ class _ModeListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) => InkWell(
         onTap: () {
-          unawaited(HapticFeedback.lightImpact());
+          unawaited(
+            SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+          );
           Navigator.pop(context, mode);
         },
         child: Container(

@@ -315,6 +315,19 @@ class CommunityRepository {
     throw Exception('Failed to load user profile');
   }
 
+  Future<FriendProfileDetail> getFriendProfile(String userId) async {
+    final response =
+        await _apiClient.get<dynamic>(ApiEndpoints.friendProfile(userId));
+    if (response.statusCode == 200) {
+      final data = ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'getFriendProfile',
+      );
+      return FriendProfileDetail.fromJson(data);
+    }
+    throw Exception('Failed to load friend profile');
+  }
+
   Future<void> updateAnnouncement(String groupId, String? announcement) async {
     final response = await _apiClient.put<dynamic>(
       ApiEndpoints.groupAnnouncement(groupId),

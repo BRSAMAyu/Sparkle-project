@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
@@ -12,8 +13,8 @@ import 'package:sparkle/features/community/data/repositories/community_repositor
 
 // ─── Provider ────────────────────────────────────────────────────────────────
 
-final favoritesProvider = StateNotifierProvider.autoDispose<
-    FavoritesNotifier, AsyncValue<List<MessageFavoriteInfo>>>((ref) {
+final favoritesProvider = StateNotifierProvider.autoDispose<FavoritesNotifier,
+    AsyncValue<List<MessageFavoriteInfo>>>((ref) {
   return FavoritesNotifier(ref.watch(communityRepositoryProvider));
 });
 
@@ -38,8 +39,7 @@ class FavoritesNotifier
   Future<void> remove(String favoriteId) async {
     await _repo.removeFavorite(favoriteId);
     state.whenData((list) {
-      state =
-          AsyncValue.data(list.where((f) => f.id != favoriteId).toList());
+      state = AsyncValue.data(list.where((f) => f.id != favoriteId).toList());
     });
   }
 }
@@ -66,8 +66,7 @@ class FavoritesScreen extends ConsumerWidget {
           SparkleIconButton(
             variant: ButtonVariant.ghost,
             icon: const Icon(Icons.refresh),
-            onPressed: () =>
-                ref.read(favoritesProvider.notifier).load(),
+            onPressed: () => ref.read(favoritesProvider.notifier).load(),
           ),
         ],
       ),
@@ -77,13 +76,11 @@ class FavoritesScreen extends ConsumerWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text('加载失败: $e',
-                  style: TextStyle(color: DS.error)),
+              Text('加载失败: $e', style: TextStyle(color: DS.error)),
               const SizedBox(height: DS.md),
               SparkleButton.primary(
                 label: '重试',
-                onPressed: () =>
-                    ref.read(favoritesProvider.notifier).load(),
+                onPressed: () => ref.read(favoritesProvider.notifier).load(),
               ),
             ],
           ),
@@ -101,10 +98,8 @@ class FavoritesScreen extends ConsumerWidget {
             child: ListView.separated(
               padding: const EdgeInsets.all(DS.spacing16),
               itemCount: favorites.length,
-              separatorBuilder: (_, __) =>
-                  const SizedBox(height: DS.spacing8),
-              itemBuilder: (ctx, i) =>
-                  _FavoriteTile(favorite: favorites[i]),
+              separatorBuilder: (_, __) => const SizedBox(height: DS.spacing8),
+              itemBuilder: (ctx, i) => _FavoriteTile(favorite: favorites[i]),
             ),
           );
         },
@@ -122,10 +117,8 @@ class _FavoriteTile extends ConsumerWidget {
     final content = favorite.groupMessage?.content ??
         favorite.privateMessage?.content ??
         '（富媒体消息）';
-    final sender = favorite.groupMessage?.sender?.displayName ??
-        '未知用户';
-    final dateStr =
-        DateFormat('yyyy-MM-dd HH:mm').format(favorite.createdAt);
+    final sender = favorite.groupMessage?.sender?.displayName ?? '未知用户';
+    final dateStr = DateFormat('yyyy-MM-dd HH:mm').format(favorite.createdAt);
 
     return GraphiteCardSurface(
       surfaceRole: SparkleSurfaceRole.card,
@@ -145,7 +138,7 @@ class _FavoriteTile extends ConsumerWidget {
           variant: ButtonVariant.ghost,
           icon: Icon(Icons.delete_outline, color: DS.error),
           onPressed: () async {
-            final confirmed = await showDialog<bool>(
+            final confirmed = await showSensoryDialog<bool>(
               context: context,
               builder: (ctx) => AlertDialog(
                 title: const Text('取消收藏'),
@@ -180,7 +173,7 @@ class _FavoriteTile extends ConsumerWidget {
         ),
         onTap: () {
           if (favorite.note != null && favorite.note!.isNotEmpty) {
-            showDialog<void>(
+            showSensoryDialog<void>(
               context: context,
               builder: (ctx) => AlertDialog(
                 title: const Text('收藏备注'),

@@ -70,6 +70,29 @@ class AccountabilityRepository {
     throw Exception('Failed to load partnerships');
   }
 
+  Future<AccountabilityOverviewInfo> getOverview() async {
+    final response =
+        await _apiClient.get<dynamic>(ApiEndpoints.accountabilityOverview);
+    if (response.statusCode == 200) {
+      final data =
+          ApiResponseParser.unwrapMap(response.data, action: 'getOverview');
+      return AccountabilityOverviewInfo.fromJson(data);
+    }
+    throw Exception('Failed to load accountability overview');
+  }
+
+  Future<AccountabilityDashboardInfo> getDashboard(String partnershipId) async {
+    final response = await _apiClient.get<dynamic>(
+      ApiEndpoints.accountabilityDashboard(partnershipId),
+    );
+    if (response.statusCode == 200) {
+      final data =
+          ApiResponseParser.unwrapMap(response.data, action: 'getDashboard');
+      return AccountabilityDashboardInfo.fromJson(data);
+    }
+    throw Exception('Failed to load accountability dashboard');
+  }
+
   Future<void> endPartnership(String partnershipId) async {
     await _apiClient.delete<dynamic>(
         ApiEndpoints.accountabilityEnd(partnershipId),);
@@ -167,6 +190,25 @@ class AccountabilityRepository {
           response.data, action: 'encourageCheckin',);
     }
     throw Exception('Failed to send encouragement');
+  }
+
+  Future<Map<String, dynamic>> nudgePartner(
+    String partnershipId, {
+    String? message,
+  }) async {
+    final response = await _apiClient.post<dynamic>(
+      ApiEndpoints.accountabilityNudge(partnershipId),
+      data: {
+        if (message != null && message.trim().isNotEmpty) 'message': message,
+      },
+    );
+    if (response.statusCode == 200) {
+      return ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'nudgePartner',
+      );
+    }
+    throw Exception('Failed to nudge partner');
   }
 
   Future<Map<String, dynamic>> getAchievements() async {

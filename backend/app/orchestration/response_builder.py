@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.core.metrics import (
     ACTIVE_SESSIONS,
+    AI_RESPONSE_TOTAL_DURATION,
     REQUEST_LATENCY,
     RESPONSE_FALLBACK_GENERATED_TOTAL,
     SESSION_FEEDBACK_VISIBLE_HINT_TOTAL,
@@ -80,6 +81,23 @@ class ResponseBuilderMixin:
             "verbosity_target": llm_profile_meta.get("verbosity_target", "balanced"),
             "experiment_cohort": (user_context_payload or {}).get("experiment_cohort", ""),
         }
+        generation_model_key = str(
+            final_state.context_data.get("generation_model_key")
+            or final_state.context_data.get("model_used")
+            or "default"
+        )
+        generation_model_tier = str(
+            final_state.context_data.get("generation_model_tier")
+            or final_state.context_data.get("final_synthesis_model_tier")
+            or final_state.context_data.get("first_touch_model_tier")
+            or ""
+        )
+        reasoning_mode = str(final_state.context_data.get("reasoning_mode") or "balanced")
+        chat_mode = str(final_state.context_data.get("chat_mode") or "standard")
+        response_metadata["generation_model_key"] = generation_model_key
+        response_metadata["generation_model_tier"] = generation_model_tier
+        response_metadata["reasoning_mode"] = reasoning_mode
+        response_metadata["chat_mode"] = chat_mode
         if used_fallback_response:
             response_metadata["response_fallback"] = "generated"
         if route_decision and "sprint" in route_decision.reason.lower():
@@ -363,6 +381,13 @@ class ResponseBuilderMixin:
                 return str(msg.get("content") or "")
         return ""
 
+    @staticmethod
+    def _estimate_text_tokens(text: str) -> int:
+        normalized = "".join(str(text or "").split())
+        if not normalized:
+            return 0
+        return max(1, int(round(len(normalized) * 0.9)))
+
     def _build_nonempty_fallback_response(
         self,
         *,
@@ -429,7 +454,7 @@ class ResponseBuilderMixin:
         if lock_acquired:
             await self._release_session_lock(session_id, request_id)
 
-        if self.token_tracker and total_prompt_tokens > 0:
+        if self.token_tracker:
             try:
                 context_data = final_state.context_data if final_state is not None else {}
                 model_key = str(context_data.get("generation_model_key") or context_data.get("model_used") or "default")
@@ -441,9 +466,26 @@ class ResponseBuilderMixin:
                 )
                 reasoning_mode = str(context_data.get("reasoning_mode") or "balanced")
                 chat_mode = str(context_data.get("chat_mode") or "standard")
+                AI_RESPONSE_TOTAL_DURATION.labels(
+                    chat_mode=chat_mode or "standard",
+                    reasoning_mode=reasoning_mode or "balanced",
+                    model_tier=model_tier or "unknown",
+                ).observe(latency)
+                prompt_tokens = total_prompt_tokens
+                completion_tokens = total_completion_tokens
+                if final_state is not None and prompt_tokens <= 0 and completion_tokens <= 0:
+                    prompt_tokens = self._estimate_text_tokens(
+                        self._extract_latest_user_message(final_state.messages),
+                    )
+                    assistant_text = ""
+                    for msg in reversed(final_state.messages):
+                        if msg.get("role") == "assistant":
+                            assistant_text = str(msg.get("content") or "")
+                            break
+                    completion_tokens = self._estimate_text_tokens(assistant_text)
                 estimated_cost = await self.token_tracker.estimate_cost(
-                    prompt_tokens=total_prompt_tokens,
-                    completion_tokens=total_completion_tokens,
+                    prompt_tokens=prompt_tokens,
+                    completion_tokens=completion_tokens,
                     model=model_key,
                 )
                 await task_manager.spawn(
@@ -451,21 +493,24 @@ class ResponseBuilderMixin:
                         user_id=user_id,
                         session_id=session_id,
                         request_id=request_id,
-                        prompt_tokens=total_prompt_tokens,
-                        completion_tokens=total_completion_tokens,
+                        prompt_tokens=prompt_tokens,
+                        completion_tokens=completion_tokens,
                         model=model_key,
                         cost=estimated_cost,
                         reasoning_mode=reasoning_mode,
                         model_tier=model_tier,
                         chat_mode=chat_mode,
+                        timing_stats={
+                            "total_duration_ms": int(round(latency * 1000)),
+                        },
                     ),
                     task_name="token_usage_record",
                     user_id=str(user_id),
                 )
                 logger.info(
                     f"Token usage recorded for user {user_id}: "
-                    f"{total_prompt_tokens} + {total_completion_tokens} = "
-                    f"{total_prompt_tokens + total_completion_tokens} tokens, "
+                    f"{prompt_tokens} + {completion_tokens} = "
+                    f"{prompt_tokens + completion_tokens} tokens, "
                     f"est. cost: ${estimated_cost:.6f}"
                 )
             except Exception as e:

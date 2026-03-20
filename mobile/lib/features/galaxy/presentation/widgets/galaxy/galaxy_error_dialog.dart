@@ -39,7 +39,7 @@ class GalaxyErrorDialog extends StatelessWidget {
     return AlertDialog(
         backgroundColor: DS.surfaceHigh,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(20),
           side: BorderSide(
             color: _getErrorColor().withValues(alpha: 0.3),
           ),
@@ -68,11 +68,28 @@ class GalaxyErrorDialog extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              error.userMessage,
-              style: TextStyle(
-                color: DS.textSecondary,
-                fontSize: 14,
+            Container(
+              padding: const EdgeInsets.all(DS.spacing12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    _getErrorColor().withValues(alpha: 0.08),
+                    DS.surfacePrimary,
+                  ],
+                ),
+                borderRadius: DS.borderRadius12,
+                border: Border.all(
+                  color: _getErrorColor().withValues(alpha: 0.14),
+                ),
+              ),
+              child: Text(
+                error.userMessage,
+                style: TextStyle(
+                  color: DS.textSecondary,
+                  fontSize: 14,
+                ),
               ),
             ),
             if (error.isRetryable) ...[
@@ -169,7 +186,10 @@ class GalaxyErrorSnackBar {
           ),
         ],
       ),
-      backgroundColor: _getErrorColor(error.type),
+      backgroundColor: Color.alphaBlend(
+        _getErrorColor(error.type).withValues(alpha: 0.92),
+        DS.surfacePrimary,
+      ),
       duration: duration,
       action: onRetry != null && error.isRetryable
           ? SnackBarAction(
@@ -180,7 +200,7 @@ class GalaxyErrorSnackBar {
           : null,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(14),
       ),
       margin: const EdgeInsets.all(DS.lg),
     );
@@ -236,9 +256,16 @@ class OfflineIndicator extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: isOffline
-            ? DS.error.withValues(alpha: 0.9)
-            : DS.warning.withValues(alpha: 0.9),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            isOffline
+                ? DS.error.withValues(alpha: 0.9)
+                : DS.warning.withValues(alpha: 0.9),
+            DS.surfacePrimary.withValues(alpha: 0.14),
+          ],
+        ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -314,7 +341,13 @@ class GalaxyErrorPlaceholder extends StatelessWidget {
                 width: 80,
                 height: 80,
                 decoration: BoxDecoration(
-                  color: _getErrorColor().withValues(alpha: 0.1),
+                  gradient: RadialGradient(
+                    colors: [
+                      _getErrorColor().withValues(alpha: 0.16),
+                      _getErrorColor().withValues(alpha: 0.05),
+                      Colors.transparent,
+                    ],
+                  ),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(

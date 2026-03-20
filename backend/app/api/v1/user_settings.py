@@ -1,10 +1,15 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
 from app.models.user import User
-from app.schemas.user_settings import AiUsageSummaryResponse, UserSettingsResponse, UserSettingsUpdate
+from app.schemas.user_settings import (
+    AiUsageExportResponse,
+    AiUsageSummaryResponse,
+    UserSettingsResponse,
+    UserSettingsUpdate,
+)
 from app.services.state_notification_service import state_notification_service
 from app.services.user_settings_service import UserSettingsService
 
@@ -103,3 +108,14 @@ async def get_user_ai_usage(
     service = UserSettingsService(db)
     summary = await service.get_ai_usage_summary(current_user.id)
     return AiUsageSummaryResponse(**summary)
+
+
+@router.get("/settings/ai-usage/export", response_model=AiUsageExportResponse)
+async def export_user_ai_usage(
+    days: int = Query(default=7, ge=1, le=30),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> AiUsageExportResponse:
+    service = UserSettingsService(db)
+    payload = await service.get_ai_usage_export(current_user.id, days=days)
+    return AiUsageExportResponse(**payload)

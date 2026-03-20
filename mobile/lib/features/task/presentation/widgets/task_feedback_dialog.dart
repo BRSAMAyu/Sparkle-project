@@ -6,7 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/task/data/models/next_action.dart';
 import 'package:sparkle/features/task/data/models/task_completion_result.dart';
 import 'package:sparkle/features/task/data/models/task_feedback_response.dart';
@@ -62,6 +64,7 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
 
     TaskFeedbackResponse? response;
     if (_rating != null || _feedbackController.text.trim().isNotEmpty) {
+      await SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm);
       response = await ref
           .read(taskListProvider.notifier)
           .submitTaskFeedbackWithResponse(
@@ -80,6 +83,7 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
 
     // Show success message
     if (mounted) {
+      unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.success));
       _showFeedbackSuccess(response);
     }
     widget.onClose();
@@ -141,7 +145,7 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
     final l10n = context.l10n;
 
     unawaited(
-      showDialog<void>(
+      showSensoryDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
           title: Text(l10n.taskFeedbackPreferenceDialogTitle),
@@ -197,6 +201,9 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
 
     // Record the selection with displayedActionsCount
     unawaited(
+      SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+    );
+    unawaited(
       ref.read(taskListProvider.notifier).recordNextActionSelection(
             widget.taskId,
             action,
@@ -242,7 +249,17 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
                     Container(
                       padding: const EdgeInsets.all(DS.sm),
                       decoration: BoxDecoration(
-                        color: DS.surfaceSecondary,
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            DS.surfaceSecondary,
+                            Color.alphaBlend(
+                              DS.info.withValues(alpha: 0.04),
+                              DS.surfacePrimary,
+                            ),
+                          ],
+                        ),
                         shape: BoxShape.circle,
                         border: Border.all(color: DS.borderSubtle),
                       ),

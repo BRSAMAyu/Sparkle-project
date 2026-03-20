@@ -15,6 +15,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
+	wsmetrics "github.com/sparkle/gateway/internal/metrics"
 	"github.com/sparkle/gateway/internal/service"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -408,6 +409,9 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 	var segmentRecorded int64
 	var segmentIndex int
 	var outputRuneCount int
+	var responseEventCount int64
+	var firstEventAt time.Time
+	var firstTokenAt time.Time
 	segmentSize := getEnvInt64("STREAM_TOKEN_SEGMENT", 200)
 	for {
 		// Trace each streaming response
@@ -433,14 +437,24 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		}
 
 		// Accumulate full text for persistence using pooled builder
+		if firstEventAt.IsZero() {
+			firstEventAt = time.Now()
+		}
+		responseEventCount++
 		if delta := resp.GetDelta(); delta != "" {
 			textBuilder.WriteString(delta)
 			outputRuneCount += countRunes(delta)
+			if firstTokenAt.IsZero() {
+				firstTokenAt = time.Now()
+			}
 		}
 		if ft := resp.GetFullText(); ft != "" {
 			textBuilder.Reset()
 			textBuilder.WriteString(ft)
 			outputRuneCount = countRunes(ft)
+			if firstTokenAt.IsZero() {
+				firstTokenAt = time.Now()
+			}
 		}
 		if usage := resp.GetUsage(); usage != nil {
 			usageTotalTokens = int64(usage.TotalTokens)
@@ -524,14 +538,42 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 
 	// Add metadata for the final state
 	latency := time.Since(startTime).Milliseconds()
+	firstEventMs := int64(0)
+	firstTokenMs := int64(0)
+	streamDurationMs := int64(0)
+	if !firstEventAt.IsZero() {
+		firstEventMs = firstEventAt.Sub(startTime).Milliseconds()
+	}
+	if !firstTokenAt.IsZero() {
+		firstTokenMs = firstTokenAt.Sub(startTime).Milliseconds()
+		streamDurationMs = time.Since(firstTokenAt).Milliseconds()
+	} else if !firstEventAt.IsZero() {
+		streamDurationMs = time.Since(firstEventAt).Milliseconds()
+	}
+	normalizedMode := normalizedChatMode
+	wsmetrics.AIChatTotalDuration.WithLabelValues(normalizedMode).Observe(float64(latency) / 1000.0)
+	if firstEventMs > 0 {
+		wsmetrics.AIChatFirstEventDuration.WithLabelValues(normalizedMode).Observe(float64(firstEventMs) / 1000.0)
+	}
+	if firstTokenMs > 0 {
+		wsmetrics.AIChatFirstTokenDuration.WithLabelValues(normalizedMode).Observe(float64(firstTokenMs) / 1000.0)
+	}
+	if streamDurationMs > 0 {
+		wsmetrics.AIChatStreamDuration.WithLabelValues(normalizedMode).Observe(float64(streamDurationMs) / 1000.0)
+	}
 	qLen, _ := h.chatHistory.GetQueueLength(ctx)
 	threshold := h.chatHistory.GetBreakerThreshold()
 
 	meta := map[string]interface{}{
-		"latency_ms":     latency,
-		"is_cache_hit":   isCacheHit,
-		"cost_saved":     0.0,
-		"breaker_status": "closed",
+		"latency_ms":           latency,
+		"total_duration_ms":    latency,
+		"first_event_ms":       firstEventMs,
+		"first_token_ms":       firstTokenMs,
+		"stream_duration_ms":   streamDurationMs,
+		"response_event_count": responseEventCount,
+		"is_cache_hit":         isCacheHit,
+		"cost_saved":           0.0,
+		"breaker_status":       "closed",
 	}
 	if qLen >= threshold {
 		meta["breaker_status"] = "open"

@@ -141,7 +141,10 @@ class _AchievementDetailScreenState
     return SliverAppBar(
       expandedHeight: 200,
       pinned: true,
-      backgroundColor: rarityColor.withValues(alpha: 0.1),
+      backgroundColor: Color.alphaBlend(
+        rarityColor.withValues(alpha: 0.06),
+        DS.surfacePrimary,
+      ),
       flexibleSpace: FlexibleSpaceBar(
         background: Stack(
           fit: StackFit.expand,
@@ -225,7 +228,7 @@ class _AchievementDetailScreenState
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              rarityColor.withValues(alpha: 0.3),
+              rarityColor.withValues(alpha: 0.26),
               rarityColor.withValues(alpha: 0.05),
               DS.surfacePrimary,
             ],
@@ -269,9 +272,9 @@ class _AchievementDetailScreenState
         boxShadow: achievement.isUnlocked
             ? [
                 BoxShadow(
-                  color: rarityColor.withValues(alpha: 0.5),
-                  blurRadius: 32,
-                  spreadRadius: 8,
+                  color: rarityColor.withValues(alpha: 0.34),
+                  blurRadius: 28,
+                  spreadRadius: 5,
                 ),
               ]
             : null,
@@ -292,6 +295,20 @@ class _AchievementDetailScreenState
 
     return Container(
       padding: const EdgeInsets.all(DS.spacing20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.transparent,
+            Color.alphaBlend(
+              RarityColorProvider.getColor(achievement.achievement.rarity)
+                  .withValues(alpha: 0.015),
+              DS.surfacePrimary,
+            ),
+          ],
+        ),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -487,9 +504,27 @@ class _AchievementDetailScreenState
       Container(
         padding: const EdgeInsets.all(DS.spacing16),
         decoration: BoxDecoration(
-          color: DS.surfaceSecondary,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              DS.surfaceSecondary,
+              Color.alphaBlend(
+                RarityColorProvider.getColor(achievement.achievement.rarity)
+                    .withValues(alpha: 0.03),
+                DS.surfacePrimary,
+              ),
+            ],
+          ),
           borderRadius: DS.borderRadius16,
-          border: Border.all(color: DS.border),
+          border: Border.all(color: DS.border.withValues(alpha: 0.55)),
+          boxShadow: [
+            BoxShadow(
+              color: DS.textPrimary.withValues(alpha: 0.04),
+              blurRadius: 14,
+              offset: const Offset(0, 8),
+            ),
+          ],
         ),
         child: Text(
           achievement.achievement.description ?? l10n.achievementNoDescription,
@@ -549,9 +584,19 @@ class _AchievementDetailScreenState
     return Container(
       padding: const EdgeInsets.all(DS.spacing16),
       decoration: BoxDecoration(
-        color: DS.surfaceSecondary,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            DS.surfaceSecondary,
+            Color.alphaBlend(
+              statusColor.withValues(alpha: 0.04),
+              DS.surfacePrimary,
+            ),
+          ],
+        ),
         borderRadius: DS.borderRadius16,
-        border: Border.all(color: DS.border),
+        border: Border.all(color: DS.border.withValues(alpha: 0.55)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -624,9 +669,19 @@ class _AchievementDetailScreenState
     return Container(
       padding: const EdgeInsets.all(DS.spacing16),
       decoration: BoxDecoration(
-        color: DS.surfaceSecondary,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            DS.surfaceSecondary,
+            Color.alphaBlend(
+              rarityColor.withValues(alpha: 0.04),
+              DS.surfacePrimary,
+            ),
+          ],
+        ),
         borderRadius: DS.borderRadius16,
-        border: Border.all(color: DS.border),
+        border: Border.all(color: DS.border.withValues(alpha: 0.55)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -733,9 +788,19 @@ class _AchievementDetailScreenState
     return Container(
       padding: const EdgeInsets.all(DS.spacing16),
       decoration: BoxDecoration(
-        color: DS.surfaceSecondary,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            DS.surfaceSecondary,
+            Color.alphaBlend(
+              DS.info.withValues(alpha: 0.025),
+              DS.surfacePrimary,
+            ),
+          ],
+        ),
         borderRadius: DS.borderRadius16,
-        border: Border.all(color: DS.border),
+        border: Border.all(color: DS.border.withValues(alpha: 0.55)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

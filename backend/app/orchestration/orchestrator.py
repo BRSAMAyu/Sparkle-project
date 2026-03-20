@@ -981,6 +981,8 @@ class ChatOrchestrator(
                     prompt_version=prompt_version,
                     run_ledger=run_ledger,
                 )
+                if context_data:
+                    state.context_data.update(context_data)
                 state.context_data["chat_mode"] = chat_mode
                 orchestration_trace = OrchestrationTrace(trace_id=trace_id or request_id or str(uuid.uuid4()))
                 self._sync_orchestration_trace(

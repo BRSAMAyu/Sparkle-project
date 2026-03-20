@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/galaxy/presentation/providers/galaxy_provider.dart';
@@ -79,7 +80,8 @@ class _QuickSharePickerSheetState extends ConsumerState<QuickSharePickerSheet>
   @override
   void initState() {
     super.initState();
-    _selectedCategory = widget.initialCategory ?? QuickShareCategory.achievements;
+    _selectedCategory =
+        widget.initialCategory ?? QuickShareCategory.achievements;
     _tabController = TabController(
       length: 4,
       vsync: this,
@@ -206,8 +208,8 @@ class _QuickSharePickerSheetState extends ConsumerState<QuickSharePickerSheet>
     final completedTasks = state.tasks
         .where((t) => t.status == TaskStatus.completed)
         .toList()
-      ..sort((a, b) =>
-          (b.completedAt ?? DateTime(1970)).compareTo(a.completedAt ?? DateTime(1970)));
+      ..sort((a, b) => (b.completedAt ?? DateTime(1970))
+          .compareTo(a.completedAt ?? DateTime(1970)));
 
     return completedTasks.take(10).map((task) {
       return QuickShareItem(
@@ -427,7 +429,7 @@ Future<void> showQuickSharePicker(
   required void Function(UniversalSharePayload payload) onShare,
   QuickShareCategory? initialCategory,
 }) async {
-  await showModalBottomSheet<void>(
+  await showSensoryModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     backgroundColor: DS.surfacePrimary.withValues(alpha: 0),

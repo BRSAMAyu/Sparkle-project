@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart'
     hide ButtonVariant;
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/success_animation.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/plan/presentation/widgets/plan_context_summary.dart';
@@ -85,11 +86,12 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
-                      context.l10n.taskExecutionStartFailed(
-                        error is DioException
-                            ? (error.message ?? error.toString())
-                            : error.toString(),
-                      ),),
+                    context.l10n.taskExecutionStartFailed(
+                      error is DioException
+                          ? (error.message ?? error.toString())
+                          : error.toString(),
+                    ),
+                  ),
                   backgroundColor: DS.error,
                 ),
               );
@@ -124,7 +126,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
     final elapsedSeconds = DateTime.now().difference(_pageEnterTime!).inSeconds;
     final elapsedMinutes = (elapsedSeconds / 60).floor();
 
-    final shouldPop = await showDialog<bool>(
+    final shouldPop = await showSensoryDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (context) => _TaskExitConfirmationDialog(
@@ -198,7 +200,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
     }
 
     final task = ref.read(activeTaskProvider);
-    showDialog<void>(
+    showSensoryDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (context) => TaskFeedbackDialog(
@@ -480,9 +482,8 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                                         ),
                                       ),
                                       child: MarkdownBody(
-                                        data:
-                                            activeTask.guideContent ??
-                                                l10n.taskExecutionGuideEmpty,
+                                        data: activeTask.guideContent ??
+                                            l10n.taskExecutionGuideEmpty,
                                         styleSheet: MarkdownStyleSheet(
                                           p: Theme.of(context)
                                               .textTheme
@@ -856,7 +857,7 @@ class _BottomControls extends ConsumerWidget {
     final noteController = TextEditingController();
     final minutes = Duration(seconds: elapsedSeconds).inMinutes;
 
-    showDialog<void>(
+    showSensoryDialog<void>(
       context: context,
       builder: (ctx) => Dialog(
         backgroundColor: Colors.transparent,
@@ -953,7 +954,7 @@ class _BottomControls extends ConsumerWidget {
   }
 
   void _abandonTask(BuildContext context, WidgetRef ref) {
-    showDialog<void>(
+    showSensoryDialog<void>(
       context: context,
       builder: (ctx) => BlockingInterceptorDialog(
         taskId: task.id,

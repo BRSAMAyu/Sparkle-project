@@ -3,18 +3,18 @@ part of 'chat_provider.dart';
 extension ChatNotifierActions on ChatNotifier {
   void setTransparencyExpanded(bool expanded) {
     state = state.copyWith(
-      transparencyPresentationState: state.transparencyPresentationState
-          .copyWith(isExpanded: expanded),
+      transparencyPresentationState:
+          state.transparencyPresentationState.copyWith(isExpanded: expanded),
     );
   }
 
   void dismissTransparencyForCurrentRun() {
     state = state.copyWith(
-      transparencyPresentationState: state.transparencyPresentationState
-          .copyWith(
-            isDismissed: true,
-            isExpanded: false,
-          ),
+      transparencyPresentationState:
+          state.transparencyPresentationState.copyWith(
+        isDismissed: true,
+        isExpanded: false,
+      ),
     );
   }
 
@@ -182,7 +182,7 @@ extension ChatNotifierActions on ChatNotifier {
       final targetPlanName = await _getPlanName(planId);
       if (!context.mounted) return;
 
-      final confirmed = await showDialog<bool>(
+      final confirmed = await showSensoryDialog<bool>(
         context: context,
         barrierColor: Colors.black54,
         builder: (ctx) => PlanSwitchConfirmationDialog(

@@ -457,6 +457,29 @@ def promote_perceptible_cohort(self):
         raise self.retry(exc=exc, countdown=120)
 
 
+@celery_app.task(bind=True, max_retries=2, name="generate_long_horizon_prediction")
+def generate_long_horizon_prediction(self, user_id: str):
+    """使用 GLM batch 生成后台长期行为预测，并写入缓存。"""
+    import asyncio
+    from uuid import UUID
+
+    from app.db.session import AsyncSessionLocal
+    from app.services.predictive_service import PredictiveService
+
+    async def _run():
+        async with AsyncSessionLocal() as session:
+            service = PredictiveService(session)
+            return await service.generate_long_horizon_forecast(UUID(user_id))
+
+    try:
+        result = asyncio.run(_run())
+        logger.info(f"✅ Long horizon prediction generated for user {user_id}")
+        return result
+    except Exception as exc:
+        logger.error(f"❌ Long horizon prediction failed for user {user_id}: {exc}")
+        raise self.retry(exc=exc, countdown=120)
+
+
 @celery_app.task(
     bind=True,
     max_retries=3,

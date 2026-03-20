@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 
 /// 责任伙伴打卡互动组件
 ///
@@ -66,15 +67,15 @@ class CheckinInteraction extends StatelessWidget {
               Text(
                 authorName,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                      fontWeight: FontWeight.bold,
+                    ),
               ),
               if (isMyCheckin)
                 Text(
                   '我的打卡',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                 ),
             ],
           ),
@@ -141,8 +142,8 @@ class CheckinInteraction extends StatelessWidget {
         Text(
           '$likes 点赞',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
         ),
       ],
     );
@@ -182,8 +183,8 @@ class CheckinInteraction extends StatelessWidget {
         Text(
           '${encouragements.length} 条鼓励',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
         ),
       ],
     );
@@ -196,9 +197,9 @@ class CheckinInteraction extends StatelessWidget {
         Text(
           '鼓励消息',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
         ),
         const SizedBox(height: 8),
         ...encouragements.map((e) => _buildEncouragementItem(context, e)),
@@ -206,7 +207,8 @@ class CheckinInteraction extends StatelessWidget {
     );
   }
 
-  Widget _buildEncouragementItem(BuildContext context, EncouragementMessage encouragement) {
+  Widget _buildEncouragementItem(
+      BuildContext context, EncouragementMessage encouragement) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Container(
@@ -222,21 +224,22 @@ class CheckinInteraction extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 10,
-                  child: Text(_encouragementAuthor(encouragement)[0].toUpperCase()),
+                  child: Text(
+                      _encouragementAuthor(encouragement)[0].toUpperCase()),
                 ),
                 const SizedBox(width: 6),
                 Text(
                   _encouragementAuthor(encouragement),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
                 const Spacer(),
                 Text(
                   _formatTime(encouragement.createdAt),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                 ),
               ],
             ),
@@ -261,7 +264,7 @@ class CheckinInteraction extends StatelessWidget {
   void _showEncourageDialog(BuildContext context) {
     final controller = TextEditingController();
 
-    showDialog<void>(
+    showSensoryDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('发送鼓励'),
@@ -413,8 +416,8 @@ class CheckinInteractionCompact extends StatelessWidget {
         Text(
           count.toString(),
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
         ),
       ],
     );
@@ -486,8 +489,8 @@ class CheckinInteractionList extends StatelessWidget {
             Text(
               '暂无打卡记录',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
             ),
           ],
         ),

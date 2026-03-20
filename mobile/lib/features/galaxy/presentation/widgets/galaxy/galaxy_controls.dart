@@ -48,7 +48,17 @@ class GalaxyControls extends StatelessWidget {
         filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: backgroundColor,
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                backgroundColor,
+                Color.alphaBlend(
+                  glowColor.withValues(alpha: isDarkMode ? 0.08 : 0.04),
+                  backgroundColor,
+                ),
+              ],
+            ),
             borderRadius: BorderRadius.circular(24),
             border: Border.all(color: borderColor),
             boxShadow: [
@@ -216,8 +226,15 @@ class _ControlButton extends StatelessWidget {
           decoration: BoxDecoration(
             color: isActive
                 ? (activeGlowColor ?? iconColor).withValues(alpha: 0.14)
-                : Colors.transparent,
+                : (Colors.white.withValues(
+                    alpha: isActive ? 0 : (Theme.of(context).brightness == Brightness.dark ? 0.02 : 0.015),
+                  )),
             borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isActive
+                  ? (activeGlowColor ?? iconColor).withValues(alpha: 0.18)
+                  : Colors.transparent,
+            ),
             boxShadow: [
               if (isActive)
                 BoxShadow(

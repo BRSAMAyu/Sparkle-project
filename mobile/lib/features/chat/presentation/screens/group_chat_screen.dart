@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -52,7 +53,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
     final groups = await ref.read(communityRepositoryProvider).getMyGroups();
     if (!mounted) return;
 
-    await showModalBottomSheet<void>(
+    await showSensoryModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
@@ -69,9 +70,11 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('转发到群组',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: DS.fontSizeLg),),
+                const Text(
+                  '转发到群组',
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: DS.fontSizeLg),
+                ),
                 const SizedBox(height: DS.spacing16),
                 SizedBox(
                   height: 300,
@@ -119,7 +122,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
     var selectedReason = ReportReason.spam;
     final descController = TextEditingController();
 
-    await showModalBottomSheet<void>(
+    await showSensoryModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
@@ -142,9 +145,11 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('举报消息',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: DS.fontSizeLg),),
+                  const Text(
+                    '举报消息',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: DS.fontSizeLg),
+                  ),
                   const SizedBox(height: DS.spacing8),
                   ...[
                     (ReportReason.spam, '垃圾信息'),
@@ -153,13 +158,14 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                     (ReportReason.hateSpeech, '仇恨言论'),
                     (ReportReason.misinformation, '虚假信息'),
                     (ReportReason.other, '其他'),
-                  ].map((entry) => RadioListTile<ReportReason>(
-                        title: Text(entry.$2),
-                        value: entry.$1,
-                        groupValue: selectedReason,
-                        onChanged: (v) =>
-                            setState(() => selectedReason = v!),
-                      ),),
+                  ].map(
+                    (entry) => RadioListTile<ReportReason>(
+                      title: Text(entry.$2),
+                      value: entry.$1,
+                      groupValue: selectedReason,
+                      onChanged: (v) => setState(() => selectedReason = v!),
+                    ),
+                  ),
                   const SizedBox(height: DS.spacing8),
                   TextField(
                     controller: descController,
@@ -210,7 +216,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
     final messageController = TextEditingController();
 
     unawaited(
-      showDialog<void>(
+      showSensoryDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
           title: Text(context.l10n.communityCheckInTitle),
@@ -296,12 +302,16 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(group.name,
-                    style: const TextStyle(fontSize: DS.fontSizeBase),),
+                Text(
+                  group.name,
+                  style: const TextStyle(fontSize: DS.fontSizeBase),
+                ),
                 Text(
                   context.l10n.communityGroupMembersCount(group.memberCount),
                   style: TextStyle(
-                      fontSize: DS.fontSizeXs, color: DS.brandPrimary54,),
+                    fontSize: DS.fontSizeXs,
+                    color: DS.brandPrimary54,
+                  ),
                 ),
               ],
             ),
@@ -382,62 +392,66 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                       itemCount:
                           mergedMessages.length + (showAgentStatus ? 1 : 0),
                       itemBuilder: (context, index) {
-                      if (showAgentStatus && index == 0) {
-                        return Padding(
-                          padding: EdgeInsets.only(bottom: DS.spacing16),
-                          child: AiStatusIndicator(
-                            status: 'THINKING',
-                            details: context.l10n.communityAgentThinking,
-                          ),
-                        );
-                      }
+                        if (showAgentStatus && index == 0) {
+                          return Padding(
+                            padding: EdgeInsets.only(bottom: DS.spacing16),
+                            child: AiStatusIndicator(
+                              status: 'THINKING',
+                              details: context.l10n.communityAgentThinking,
+                            ),
+                          );
+                        }
 
-                      final messageIndex = showAgentStatus ? index - 1 : index;
-                      final message = mergedMessages[messageIndex];
-                      return GroupChatBubble(
-                        message: message,
-                        groupId: widget.groupId,
-                        onQuote: isCommunityAgentMessage(message)
-                            ? null
-                            : (msg) => setState(() {
-                                  _quotedMessage = msg;
-                                  ref
-                                      .read(
-                                        groupChatProvider(widget.groupId)
-                                            .notifier,
-                                      )
-                                      .setQuote(msg);
-                                }),
-                        onRevoke: isCommunityAgentMessage(message)
-                            ? null
-                            : (msg) => ref
-                                .read(
-                                    groupChatProvider(widget.groupId).notifier,)
-                                .revokeMessage(msg.id),
-                        onEdit: isCommunityAgentMessage(message)
-                            ? null
-                            : (msg, content) => ref
-                                .read(
-                                    groupChatProvider(widget.groupId).notifier,)
-                                .editMessage(msg.id, content),
-                        onReaction: isCommunityAgentMessage(message)
-                            ? null
-                            : (msg, emoji) => ref
-                                .read(
-                                    groupChatProvider(widget.groupId).notifier,)
-                                .toggleReaction(msg.id, emoji),
-                        onThread: _openThread,
-                        onFavorite: isCommunityAgentMessage(message)
-                            ? null
-                            : _handleFavorite,
-                        onForward: isCommunityAgentMessage(message)
-                            ? null
-                            : _handleForward,
-                        onReport: isCommunityAgentMessage(message)
-                            ? null
-                            : _handleReport,
-                      );
-                    },
+                        final messageIndex =
+                            showAgentStatus ? index - 1 : index;
+                        final message = mergedMessages[messageIndex];
+                        return GroupChatBubble(
+                          message: message,
+                          groupId: widget.groupId,
+                          onQuote: isCommunityAgentMessage(message)
+                              ? null
+                              : (msg) => setState(() {
+                                    _quotedMessage = msg;
+                                    ref
+                                        .read(
+                                          groupChatProvider(widget.groupId)
+                                              .notifier,
+                                        )
+                                        .setQuote(msg);
+                                  }),
+                          onRevoke: isCommunityAgentMessage(message)
+                              ? null
+                              : (msg) => ref
+                                  .read(
+                                    groupChatProvider(widget.groupId).notifier,
+                                  )
+                                  .revokeMessage(msg.id),
+                          onEdit: isCommunityAgentMessage(message)
+                              ? null
+                              : (msg, content) => ref
+                                  .read(
+                                    groupChatProvider(widget.groupId).notifier,
+                                  )
+                                  .editMessage(msg.id, content),
+                          onReaction: isCommunityAgentMessage(message)
+                              ? null
+                              : (msg, emoji) => ref
+                                  .read(
+                                    groupChatProvider(widget.groupId).notifier,
+                                  )
+                                  .toggleReaction(msg.id, emoji),
+                          onThread: _openThread,
+                          onFavorite: isCommunityAgentMessage(message)
+                              ? null
+                              : _handleFavorite,
+                          onForward: isCommunityAgentMessage(message)
+                              ? null
+                              : _handleForward,
+                          onReport: isCommunityAgentMessage(message)
+                              ? null
+                              : _handleReport,
+                        );
+                      },
                     ),
                   );
                 },
@@ -572,7 +586,8 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
   MessageInfo _buildStreamingAgentMessage(String content) => MessageInfo(
         id: 'agent_streaming_${DateTime.now().millisecondsSinceEpoch}',
         messageType: MessageType.text,
-        sender: buildCommunityAgentUser(localizedName: context.l10n.communityAgentName),
+        sender: buildCommunityAgentUser(
+            localizedName: context.l10n.communityAgentName),
         content: content,
         contentData: {kAgentMetadataKey: true, 'agent_streaming': true},
         createdAt: DateTime.now(),
@@ -622,7 +637,11 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
   }) =>
       Padding(
         padding: const EdgeInsets.fromLTRB(
-            DS.spacing16, DS.spacing8, DS.spacing16, 0,),
+          DS.spacing16,
+          DS.spacing8,
+          DS.spacing16,
+          0,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -657,14 +676,18 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                   Text(
                     context.l10n.communityAgentOnlyYou,
                     style: TextStyle(
-                        fontSize: DS.fontSizeSm, color: DS.neutral500,),
+                      fontSize: DS.fontSizeSm,
+                      color: DS.neutral500,
+                    ),
                   ),
                 const Spacer(),
                 if (agentState.isSending)
                   Text(
                     context.l10n.communityAgentProcessing,
                     style: TextStyle(
-                        fontSize: DS.fontSizeSm, color: DS.brandPrimary70,),
+                      fontSize: DS.fontSizeSm,
+                      color: DS.brandPrimary70,
+                    ),
                   ),
               ],
             ),
@@ -711,7 +734,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
 
   void _openThread(MessageInfo message) {
     unawaited(
-      showModalBottomSheet<void>(
+      showSensoryModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
         backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
@@ -728,7 +751,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
     var isLoading = false;
 
     try {
-      await showModalBottomSheet<void>(
+      await showSensoryModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
         backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
@@ -790,7 +813,8 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                             final msg = results[index];
                             return ListTile(
                               title: Text(
-                                msg.content ?? context.l10n.communityMessageFallback,
+                                msg.content ??
+                                    context.l10n.communityMessageFallback,
                               ),
                               subtitle: Text(
                                 '${msg.sender?.displayName ?? context.l10n.communityMemberFallback} • ${msg.createdAt}',
@@ -821,8 +845,10 @@ class _AgentQuickChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ActionChip(
-        label: Text(label,
-            style: TextStyle(fontSize: DS.fontSizeSm, color: DS.brandPrimary),),
+        label: Text(
+          label,
+          style: TextStyle(fontSize: DS.fontSizeSm, color: DS.brandPrimary),
+        ),
         backgroundColor: DS.brandPrimary.withValues(alpha: 0.1),
         onPressed: onTap,
       );

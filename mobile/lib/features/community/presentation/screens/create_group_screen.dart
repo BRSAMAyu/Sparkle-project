@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
 
@@ -53,9 +55,14 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
   Future<bool> _onWillPop() async {
     if (!_isDirty || _isSubmitting) return true;
 
-    final shouldPop = await showDialog<bool>(
+    final shouldPop = await showSensoryDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: DS.surfacePrimary,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: DS.border.withValues(alpha: 0.5)),
+        ),
         title: const Text('Discard Group?'),
         content: const Text(
           'You have unsaved changes. Are you sure you want to discard them?',
@@ -101,6 +108,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
     });
 
     try {
+      await SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm);
       final groupData = GroupCreate(
         name: _nameController.text.trim(),
         description: _descController.text.trim().isEmpty
@@ -118,10 +126,12 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
           await ref.read(myGroupsProvider.notifier).createGroup(groupData);
 
       if (mounted) {
+        await SensoryFeedbackService.emit(SensoryFeedbackEvent.success);
         context.go('/community/groups/${group.id}');
       }
     } catch (e) {
       if (mounted) {
+        await SensoryFeedbackService.emit(SensoryFeedbackEvent.error);
         AppFeedback.error(context, 'Error creating group: $e');
       }
     } finally {
@@ -146,6 +156,9 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
         },
         child: Scaffold(
           appBar: AppBar(
+            backgroundColor: DS.surfaceOverlay.withValues(alpha: 0.94),
+            surfaceTintColor: Colors.transparent,
+            scrolledUnderElevation: 0,
             leading: SparkleIconButton(
               variant: ButtonVariant.ghost,
               icon: const Icon(Icons.arrow_back),
@@ -218,6 +231,9 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                       ],
                       onChanged: (value) {
                         if (value != null) {
+                          SensoryFeedbackService.emit(
+                            SensoryFeedbackEvent.selection,
+                          );
                           setState(() {
                             _type = value;
                           });
@@ -265,6 +281,9 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         onTap: () async {
+                          await SensoryFeedbackService.emit(
+                            SensoryFeedbackEvent.dialogOpen,
+                          );
                           final date = await showDatePicker(
                             context: context,
                             initialDate:
@@ -274,6 +293,9 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                                 DateTime.now().add(const Duration(days: 365)),
                           );
                           if (date != null) {
+                            await SensoryFeedbackService.emit(
+                              SensoryFeedbackEvent.selection,
+                            );
                             setState(() {
                               _deadline = date;
                             });

@@ -125,6 +125,50 @@ enum OfflineMessageStatus {
 // ============ 好友系统 ============
 
 @JsonSerializable()
+class AccountabilityFriendSummary {
+  AccountabilityFriendSummary({
+    required this.partnershipId,
+    required this.slotType,
+    required this.status,
+    this.myRole,
+    this.myCheckedInToday,
+    this.partnerCheckedInToday,
+    this.myStreakDays,
+    this.partnerStreakDays,
+    this.lastCheckinAt,
+    this.goalPreview,
+  });
+
+  factory AccountabilityFriendSummary.fromJson(Map<String, dynamic> json) =>
+      _$AccountabilityFriendSummaryFromJson(json);
+
+  @JsonKey(name: 'partnership_id')
+  final String partnershipId;
+  @JsonKey(name: 'slot_type')
+  final String slotType;
+  final String status;
+  @JsonKey(name: 'my_role')
+  final String? myRole;
+  @JsonKey(name: 'my_checked_in_today')
+  final bool? myCheckedInToday;
+  @JsonKey(name: 'partner_checked_in_today')
+  final bool? partnerCheckedInToday;
+  @JsonKey(name: 'my_streak_days')
+  final int? myStreakDays;
+  @JsonKey(name: 'partner_streak_days')
+  final int? partnerStreakDays;
+  @JsonKey(name: 'last_checkin_at')
+  final DateTime? lastCheckinAt;
+  @JsonKey(name: 'goal_preview')
+  final String? goalPreview;
+
+  Map<String, dynamic> toJson() => _$AccountabilityFriendSummaryToJson(this);
+
+  bool get isActive => status == 'active';
+  bool get isPending => status == 'pending';
+}
+
+@JsonSerializable()
 class FriendshipInfo {
   FriendshipInfo({
     required this.id,
@@ -134,6 +178,7 @@ class FriendshipInfo {
     required this.updatedAt,
     this.matchReason,
     this.initiatedByMe = false,
+    this.accountability,
   });
 
   factory FriendshipInfo.fromJson(Map<String, dynamic> json) =>
@@ -145,11 +190,45 @@ class FriendshipInfo {
   final Map<String, dynamic>? matchReason;
   @JsonKey(name: 'initiated_by_me')
   final bool initiatedByMe;
+  final AccountabilityFriendSummary? accountability;
   @JsonKey(name: 'created_at')
   final DateTime createdAt;
   @JsonKey(name: 'updated_at')
   final DateTime updatedAt;
   Map<String, dynamic> toJson() => _$FriendshipInfoToJson(this);
+}
+
+@JsonSerializable()
+class FriendProfileDetail {
+  FriendProfileDetail({
+    required this.user,
+    required this.friendship,
+    this.accountability,
+    this.relationshipSummary,
+    this.achievementsSummary,
+    this.leaderboardSummary,
+    this.recentShares = const [],
+    this.quickActions = const {},
+  });
+
+  factory FriendProfileDetail.fromJson(Map<String, dynamic> json) =>
+      _$FriendProfileDetailFromJson(json);
+
+  final UserBrief user;
+  final Map<String, dynamic> friendship;
+  final Map<String, dynamic>? accountability;
+  @JsonKey(name: 'relationship_summary')
+  final Map<String, dynamic>? relationshipSummary;
+  @JsonKey(name: 'achievements_summary')
+  final Map<String, dynamic>? achievementsSummary;
+  @JsonKey(name: 'leaderboard_summary')
+  final Map<String, dynamic>? leaderboardSummary;
+  @JsonKey(name: 'recent_shares')
+  final List<Map<String, dynamic>> recentShares;
+  @JsonKey(name: 'quick_actions')
+  final Map<String, dynamic> quickActions;
+
+  Map<String, dynamic> toJson() => _$FriendProfileDetailToJson(this);
 }
 
 @JsonSerializable()

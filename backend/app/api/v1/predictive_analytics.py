@@ -223,10 +223,28 @@ async def get_predictive_dashboard(
                     "best_hours": optimal["best_hours"],
                     "best_weekdays": optimal["best_weekdays"],
                 },
+                "next_intent_forecast": await service.get_next_intent_forecast(current_user.id),
                 "generated_at": service._get_current_time().isoformat(),
             }
         }
 
     except Exception as e:
         logger.error(f"Predictive dashboard generation failed for user {current_user.id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/next-intent")
+async def get_next_intent_forecast(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        service = PredictiveService(db)
+        forecast = await service.get_next_intent_forecast(current_user.id)
+        return {
+            "status": "success",
+            "data": forecast,
+        }
+    except Exception as e:
+        logger.error(f"Next intent prediction failed for user {current_user.id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))

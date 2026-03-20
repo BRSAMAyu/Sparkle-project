@@ -70,17 +70,33 @@ const _$MessageRoleEnumMap = {
 
 MessageMeta _$MessageMetaFromJson(Map<String, dynamic> json) => MessageMeta(
       latencyMs: (json['latency_ms'] as num?)?.toInt(),
+      totalDurationMs: (json['total_duration_ms'] as num?)?.toInt(),
+      firstEventMs: (json['first_event_ms'] as num?)?.toInt(),
+      firstTokenMs: (json['first_token_ms'] as num?)?.toInt(),
+      streamDurationMs: (json['stream_duration_ms'] as num?)?.toInt(),
+      responseEventCount: (json['response_event_count'] as num?)?.toInt(),
       isCacheHit: json['is_cache_hit'] as bool?,
       costSaved: (json['cost_saved'] as num?)?.toDouble(),
       breakerStatus: json['breaker_status'] as String?,
+      modelTier: json['generation_model_tier'] as String?,
+      reasoningMode: json['reasoning_mode'] as String?,
+      chatMode: json['chat_mode'] as String?,
     );
 
 Map<String, dynamic> _$MessageMetaToJson(MessageMeta instance) =>
     <String, dynamic>{
       'latency_ms': instance.latencyMs,
+      'total_duration_ms': instance.totalDurationMs,
+      'first_event_ms': instance.firstEventMs,
+      'first_token_ms': instance.firstTokenMs,
+      'stream_duration_ms': instance.streamDurationMs,
+      'response_event_count': instance.responseEventCount,
       'is_cache_hit': instance.isCacheHit,
       'cost_saved': instance.costSaved,
       'breaker_status': instance.breakerStatus,
+      'generation_model_tier': instance.modelTier,
+      'reasoning_mode': instance.reasoningMode,
+      'chat_mode': instance.chatMode,
     };
 
 WidgetPayload _$WidgetPayloadFromJson(Map<String, dynamic> json) =>

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/achievement/achievement_routes.dart';
@@ -570,8 +571,7 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
                   itemCount: limited.length,
                   separatorBuilder: (_, __) =>
                       const SizedBox(width: DS.spacing12),
-                  itemBuilder: (context, index) =>
-                      _AnimatedLimitedCard(
+                  itemBuilder: (context, index) => _AnimatedLimitedCard(
                     index: index,
                     child: _LimitedAchievementCard(
                       achievement: limited[index],
@@ -663,9 +663,8 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
             final achievement = filteredAchievements[index];
             return Padding(
               padding: EdgeInsets.only(
-                bottom: index < filteredAchievements.length - 1
-                    ? DS.spacing12
-                    : 0,
+                bottom:
+                    index < filteredAchievements.length - 1 ? DS.spacing12 : 0,
               ),
               child: AnimatedAchievementCard(
                 index: index,
@@ -885,20 +884,22 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
   }
 
   void _showFilterSheet(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
-      builder: (context) => _AchievementFilterSheet(
-        currentOptions: _filterOptions,
-        onApply: (options) {
-          setState(() => _filterOptions = options);
-          Navigator.pop(context);
-        },
-        onClear: () {
-          setState(() => _filterOptions = const AchievementFilterOptions());
-          Navigator.pop(context);
-        },
+    unawaited(
+      showSensoryModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
+        builder: (context) => _AchievementFilterSheet(
+          currentOptions: _filterOptions,
+          onApply: (options) {
+            setState(() => _filterOptions = options);
+            Navigator.pop(context);
+          },
+          onClear: () {
+            setState(() => _filterOptions = const AchievementFilterOptions());
+            Navigator.pop(context);
+          },
+        ),
       ),
     );
   }
@@ -1301,7 +1302,8 @@ class _LimitedAchievementCard extends StatelessWidget {
               )
             else ...[
               TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0, end: achievement.progressPercentage / 100),
+                tween:
+                    Tween(begin: 0, end: achievement.progressPercentage / 100),
                 duration: const Duration(milliseconds: 800),
                 curve: Curves.easeOutCubic,
                 builder: (context, value, _) {
@@ -1577,7 +1579,8 @@ class _AchievementFilterSheetState extends State<_AchievementFilterSheet> {
           vertical: DS.spacing8,
         ),
         decoration: BoxDecoration(
-          color: isSelected ? color.withValues(alpha: 0.12) : DS.surfaceSecondary,
+          color:
+              isSelected ? color.withValues(alpha: 0.12) : DS.surfaceSecondary,
           borderRadius: DS.borderRadiusFull,
           border: Border.all(color: isSelected ? color : DS.border),
         ),
@@ -1586,7 +1589,8 @@ class _AchievementFilterSheetState extends State<_AchievementFilterSheet> {
           style: TextStyle(
             fontSize: DS.fontSizeSm,
             color: isSelected ? color : DS.textSecondary,
-            fontWeight: isSelected ? DS.fontWeightSemibold : DS.fontWeightRegular,
+            fontWeight:
+                isSelected ? DS.fontWeightSemibold : DS.fontWeightRegular,
           ),
         ),
       ),
@@ -1606,7 +1610,8 @@ class _AchievementFilterSheetState extends State<_AchievementFilterSheet> {
     }
   }
 
-  String _getStatusDisplayName(AchievementStatus status, AppLocalizations l10n) {
+  String _getStatusDisplayName(
+      AchievementStatus status, AppLocalizations l10n) {
     switch (status) {
       case AchievementStatus.all:
         return l10n.achievementAll;

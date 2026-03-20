@@ -219,6 +219,8 @@ class Settings(BaseSettings):
     AI_MODE_FAST_DAILY_REQUEST_LIMIT: int = 120
     AI_MODE_BALANCED_DAILY_REQUEST_LIMIT: int = 60
     AI_MODE_DEEP_DAILY_REQUEST_LIMIT: int = 24
+    AI_PREDICTION_FREE_TIMEOUT_SECONDS: float = 1.5
+    AI_PREDICTION_FREE_FAST_TIMEOUT_SECONDS: float = 2.5
     # LLM Tier Routing (comma-separated model keys from LLMRouter)
     LLM_TIER_FREE: str = ""
     LLM_TIER_FREE_FAST: str = ""

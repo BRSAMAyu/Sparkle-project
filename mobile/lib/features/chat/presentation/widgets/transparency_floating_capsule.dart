@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_state.dart';
 import 'package:sparkle/features/chat/presentation/widgets/transparency_panel.dart';
@@ -68,8 +69,9 @@ class TransparencyFloatingCapsule extends StatelessWidget {
     }
 
     final tone = _toneColor;
-    final secondaryText =
-        Theme.of(context).brightness == Brightness.dark ? DS.neutral300 : DS.neutral700;
+    final secondaryText = Theme.of(context).brightness == Brightness.dark
+        ? DS.neutral300
+        : DS.neutral700;
     final stepCount = transparencyData?.steps.length ?? 0;
     final stepLabel = stepCount > 0 && currentStepIndex != null
         ? '${currentStepIndex! + 1}/$stepCount'
@@ -88,7 +90,7 @@ class TransparencyFloatingCapsule extends StatelessWidget {
           borderRadius: DS.borderRadius20,
           onTap: () async {
             onExpandedChanged?.call(true);
-            await showModalBottomSheet<void>(
+            await showSensoryModalBottomSheet<void>(
               context: context,
               isScrollControlled: true,
               backgroundColor: Colors.transparent,

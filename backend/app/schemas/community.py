@@ -92,12 +92,27 @@ class FriendResponse(BaseModel):
     accept: bool = Field(description="是否接受")
 
 
+class AccountabilityFriendSummary(BaseModel):
+    """好友列表中的责任伙伴摘要"""
+    partnership_id: UUID = Field(description="伙伴关系ID")
+    slot_type: str = Field(description="伙伴槽位类型")
+    status: str = Field(description="伙伴关系状态")
+    my_role: str | None = Field(default=None, description="我在伙伴关系中的角色")
+    my_checked_in_today: bool | None = Field(default=None, description="我今天是否已打卡")
+    partner_checked_in_today: bool | None = Field(default=None, description="对方今天是否已打卡")
+    my_streak_days: int | None = Field(default=None, description="我的连续打卡天数")
+    partner_streak_days: int | None = Field(default=None, description="对方连续打卡天数")
+    last_checkin_at: datetime | None = Field(default=None, description="最近一次打卡时间")
+    goal_preview: str | None = Field(default=None, description="伙伴目标摘要")
+
+
 class FriendshipInfo(BaseSchema):
     """好友关系信息"""
     friend: UserBrief = Field(description="好友信息")
     status: FriendshipStatusEnum = Field(description="关系状态")
     match_reason: dict[str, Any] | None = Field(default=None, description="匹配原因")
     initiated_by_me: bool = Field(default=False, description="是否由我发起")
+    accountability: AccountabilityFriendSummary | None = Field(default=None, description="责任伙伴摘要")
 
 
 class FriendRecommendation(BaseModel):

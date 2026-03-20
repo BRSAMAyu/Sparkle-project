@@ -11,12 +11,14 @@ class AssistantMessageMetadataTray extends StatefulWidget {
     required this.isLatestMessage,
     super.key,
     this.status,
+    this.messageMeta,
     this.onWidgetAction,
   });
 
   final List<WidgetPayload> actions;
   final bool isLatestMessage;
   final String? status;
+  final MessageMeta? messageMeta;
   final Future<void> Function(String actionType, Map<String, dynamic> payload)?
       onWidgetAction;
 
@@ -38,6 +40,7 @@ class _AssistantMessageMetadataTrayState
     final nextActions =
         widget.isLatestMessage ? _findAction('next_actions') : null;
     final hasSources = _hasSourceDetails(sources?.data);
+    final hasTiming = _hasTiming(widget.messageMeta);
 
     if (widget.status != null && widget.status!.trim().isNotEmpty) {
       badges.add(
@@ -92,6 +95,17 @@ class _AssistantMessageMetadataTrayState
           onTap: () => _toggle(nextActions.type),
           iconOnlyWhenCollapsed: true,
           emphasize: true,
+        ),
+      );
+    }
+    if (hasTiming) {
+      badges.add(
+        _MetadataBadge(
+          icon: Icons.timer_outlined,
+          label: '耗时',
+          selected: _expandedKey == 'timing',
+          onTap: () => _toggle('timing'),
+          iconOnlyWhenCollapsed: true,
         ),
       );
     }
@@ -171,6 +185,14 @@ class _AssistantMessageMetadataTrayState
             onWidgetAction: widget.onWidgetAction,
           ),
         );
+      case 'timing':
+        if (!_hasTiming(widget.messageMeta)) {
+          return const SizedBox.shrink();
+        }
+        return _MetadataPanel(
+          key: const ValueKey('timing'),
+          child: _TimingContent(meta: widget.messageMeta!),
+        );
       default:
         return const SizedBox.shrink();
     }
@@ -199,6 +221,15 @@ class _AssistantMessageMetadataTrayState
     final headline = data['headline']?.toString().trim() ?? '';
     final evidenceSummary = data['evidence_summary']?.toString().trim() ?? '';
     return headline.isNotEmpty || evidenceSummary.isNotEmpty;
+  }
+
+  bool _hasTiming(MessageMeta? meta) {
+    if (meta == null) return false;
+    return (meta.firstTokenMs ?? 0) > 0 ||
+        (meta.totalDurationMs ?? meta.latencyMs ?? 0) > 0 ||
+        (meta.streamDurationMs ?? 0) > 0 ||
+        (meta.responseEventCount ?? 0) > 0 ||
+        (meta.modelTier?.isNotEmpty ?? false);
   }
 
   void _toggle(String key) {
@@ -246,6 +277,73 @@ class _AssistantMessageMetadataTrayState
       default:
         return status;
     }
+  }
+}
+
+class _TimingContent extends StatelessWidget {
+  const _TimingContent({required this.meta});
+
+  final MessageMeta meta;
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = <MapEntry<String, String>>[
+      if ((meta.firstTokenMs ?? 0) > 0)
+        MapEntry('首包延迟', _formatDuration(meta.firstTokenMs!)),
+      if ((meta.totalDurationMs ?? meta.latencyMs ?? 0) > 0)
+        MapEntry(
+          '总耗时',
+          _formatDuration(meta.totalDurationMs ?? meta.latencyMs!),
+        ),
+      if ((meta.streamDurationMs ?? 0) > 0)
+        MapEntry('流式阶段', _formatDuration(meta.streamDurationMs!)),
+      if ((meta.responseEventCount ?? 0) > 0)
+        MapEntry('事件数', '${meta.responseEventCount}'),
+      if ((meta.modelTier?.isNotEmpty ?? false))
+        MapEntry('模型层级', meta.modelTier!),
+      if ((meta.reasoningMode?.isNotEmpty ?? false))
+        MapEntry('档位', meta.reasoningMode!),
+      if (meta.isCacheHit != null)
+        MapEntry('缓存', meta.isCacheHit! ? '命中' : '未命中'),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: rows
+          .map(
+            (row) => Padding(
+              padding: const EdgeInsets.only(bottom: DS.spacing6),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 72,
+                    child: Text(
+                      row.key,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: DS.textSecondary,
+                          ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      row.value,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: DS.textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+          .toList(),
+    );
+  }
+
+  String _formatDuration(int ms) {
+    if (ms < 1000) return '${ms}ms';
+    return '${(ms / 1000).toStringAsFixed(1)}s';
   }
 }
 
@@ -340,19 +438,19 @@ class _MetadataPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-      padding: const EdgeInsets.only(top: DS.spacing6),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: DS.surfacePanel,
-          borderRadius: DS.borderRadius12,
-          border: Border.all(color: DS.borderSubtle),
+        padding: const EdgeInsets.only(top: DS.spacing6),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: DS.surfacePanel,
+            borderRadius: DS.borderRadius12,
+            border: Border.all(color: DS.borderSubtle),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(DS.spacing12),
+            child: child,
+          ),
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(DS.spacing12),
-          child: child,
-        ),
-      ),
-    );
+      );
 }
 
 class _SourceSummaryContent extends StatelessWidget {
@@ -395,7 +493,8 @@ class _SourceSummaryContent extends StatelessWidget {
                       const SizedBox(width: DS.spacing4),
                       Expanded(
                         child: Text(
-                          citation['title']?.toString().trim().isNotEmpty ?? false
+                          citation['title']?.toString().trim().isNotEmpty ??
+                                  false
                               ? citation['title'].toString()
                               : (citation['content']?.toString() ?? ''),
                           maxLines: 2,

@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
@@ -10,6 +13,7 @@ import 'package:sparkle/features/community/data/models/accountability_model.dart
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/presentation/providers/accountability_provider.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
+import 'package:sparkle/features/community/presentation/widgets/friends_hub_view.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
 class FriendsScreen extends StatelessWidget {
@@ -55,131 +59,8 @@ class _MyFriendsTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final friendsState = ref.watch(friendsProvider);
-    final partnershipsState = ref.watch(myPartnershipsProvider);
-
-    return Column(
-      children: [
-        // 责任伙伴入口卡片（置顶）
-        _AccountabilityPartnersCard(partnershipsState: partnershipsState),
-        // 好友列表
-        Expanded(
-          child: friendsState.when(
-            data: (friends) {
-              if (friends.isEmpty) {
-                return const Center(
-                  child: CompactEmptyState(
-                    message: 'No friends yet',
-                    icon: Icons.people_outline,
-                  ),
-                );
-              }
-              return RefreshIndicator(
-                onRefresh: () => ref.read(friendsProvider.notifier).refresh(),
-                child: ListView.builder(
-                  itemCount: friends.length,
-                  padding: const EdgeInsets.all(DS.lg),
-                  itemBuilder: (context, index) {
-                    final friendInfo = friends[index];
-                    final friend = friendInfo.friend;
-                    return GestureDetector(
-                      onLongPress: () =>
-                          _showFriendContextMenu(context, ref, friendInfo),
-                      child: InkWell(
-                        onTap: () {
-                          context.push(
-                            '/chat/private/${friend.id}?name=${Uri.encodeComponent(friend.displayName)}',
-                          );
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 12),
-                          child: Row(
-                            children: [
-                              DecoratedBox(
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                      color: DS.brandPrimaryConst, width: 2),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: DS.brandPrimaryConst
-                                          .withValues(alpha: 0.05),
-                                      blurRadius: 4,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: CircleAvatar(
-                                  backgroundImage: friend.avatarUrl != null
-                                      ? NetworkImage(friend.avatarUrl!)
-                                      : null,
-                                  child: friend.avatarUrl == null
-                                      ? Text(friend.displayName[0])
-                                      : null,
-                                ),
-                              ),
-                              const SizedBox(width: DS.md),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      friend.displayName,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w500,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                    Text(
-                                      'Lv.${friend.flameLevel}',
-                                      style: TextStyle(
-                                        color: DS.brandPrimaryConst,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              SparkleIconButton(
-                                variant: ButtonVariant.ghost,
-                                size: 32,
-                                icon: Icon(
-                                  Icons.person_outline,
-                                  size: 18,
-                                  color: DS.neutral500,
-                                ),
-                                onPressed: () {
-                                  context.push(
-                                    '/community/users/${friend.id}?name=${Uri.encodeComponent(friend.displayName)}',
-                                  );
-                                },
-                              ),
-                              Icon(
-                                Icons.chevron_right,
-                                size: 20,
-                                color: DS.brandPrimaryConst,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              );
-            },
-            loading: () => const Center(child: LoadingIndicator()),
-            error: (e, s) => Center(
-              child: CustomErrorWidget.page(
-                context: context,
-                message: e.toString(),
-                onRetry: () => ref.read(friendsProvider.notifier).refresh(),
-              ),
-            ),
-          ),
-        ),
-      ],
+    return const FriendsHubView(
+      padding: EdgeInsets.fromLTRB(16, 16, 16, 24),
     );
   }
 
@@ -189,7 +70,7 @@ class _MyFriendsTab extends ConsumerWidget {
     FriendshipInfo friendInfo,
   ) {
     final friend = friendInfo.friend;
-    showModalBottomSheet<void>(
+    unawaited(showSensoryModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
@@ -248,8 +129,7 @@ class _MyFriendsTab extends ConsumerWidget {
               // Block user option
               ListTile(
                 leading: Icon(Icons.block, color: DS.error),
-                title: Text('拉黑用户',
-                    style: TextStyle(color: DS.error)),
+                title: Text('拉黑用户', style: TextStyle(color: DS.error)),
                 onTap: () {
                   Navigator.pop(ctx);
                   _handleBlockUser(context, ref, friendInfo);
@@ -269,7 +149,7 @@ class _MyFriendsTab extends ConsumerWidget {
           ),
         ),
       ),
-    );
+    ));
   }
 
   Future<void> _handleDeleteFriend(
@@ -277,7 +157,7 @@ class _MyFriendsTab extends ConsumerWidget {
     WidgetRef ref,
     FriendshipInfo friendInfo,
   ) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showSensoryDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('删除好友'),
@@ -325,7 +205,7 @@ class _MyFriendsTab extends ConsumerWidget {
     WidgetRef ref,
     FriendshipInfo friendInfo,
   ) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showSensoryDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('拉黑用户'),

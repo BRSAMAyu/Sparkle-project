@@ -31,6 +31,11 @@ from app.models.community import (
     SharedResource,
     SharedResourceType,
 )
+from app.models.accountability import (
+    AccountabilityPartnership,
+    AccountabilitySlotType,
+    AccountabilityStatus,
+)
 from app.models.curiosity_capsule import CuriosityCapsule
 from app.models.galaxy import KnowledgeNode
 from app.models.group_files import GroupFile
@@ -54,6 +59,7 @@ from app.schemas.community import (
     EncryptionKeyInfo,
     FlameStatus,
     FriendRecommendation,
+    AccountabilityFriendSummary,
     # 好友
     FriendRequest,
     FriendResponse,
@@ -121,6 +127,14 @@ from app.schemas.community import (
 from app.services.collaboration_service import collaboration_service
 from app.services.seed_library_service import SeedLibraryService
 from app.services.community_signal_bridge import CommunitySignalBridge
+from app.api.v1.accountability import (
+    _build_leaderboard_summary,
+    _build_partnership_achievements_payload,
+    _build_partnership_stats_payload,
+    _build_relationship_summary,
+    _get_last_checkin_at,
+    _slot_type_value,
+)
 from app.services.community_advanced_service import (
     BroadcastService,
     EncryptionService,
@@ -385,6 +399,7 @@ def _build_friendship_info(
     friendship,
     friend: User,
     current_user_id: UUID,
+    accountability: AccountabilityFriendSummary | None = None,
 ) -> FriendshipInfo:
     return FriendshipInfo(
         id=friendship.id,
@@ -402,7 +417,48 @@ def _build_friendship_info(
         status=friendship.status,
         match_reason=friendship.match_reason,
         initiated_by_me=friendship.initiated_by == current_user_id,
+        accountability=accountability,
     )
+
+
+async def _build_accountability_summary_for_friend(
+    db: AsyncSession,
+    partnership: AccountabilityPartnership,
+    current_user: User,
+) -> AccountabilityFriendSummary:
+    stats = None
+    if partnership.status == AccountabilityStatus.ACTIVE:
+        stats = await _build_partnership_stats_payload(db, partnership, current_user)
+    last_checkin_at = await _get_last_checkin_at(db, partnership.id)
+    my_role = "initiator" if str(partnership.initiator_id) == str(current_user.id) else "partner"
+    goal_preview = (
+        partnership.partner_goal
+        if my_role == "initiator"
+        else partnership.initiator_goal
+    )
+    return AccountabilityFriendSummary(
+        partnership_id=partnership.id,
+        slot_type=_slot_type_value(partnership.slot_type),
+        status=partnership.status.value if hasattr(partnership.status, "value") else str(partnership.status),
+        my_role=my_role,
+        my_checked_in_today=stats.my_checked_in_today if stats else None,
+        partner_checked_in_today=stats.partner_checked_in_today if stats else None,
+        my_streak_days=stats.my_streak_days if stats else None,
+        partner_streak_days=stats.partner_streak_days if stats else None,
+        last_checkin_at=last_checkin_at,
+        goal_preview=goal_preview,
+    )
+
+
+def _friendship_sort_key(friendship_info: FriendshipInfo) -> tuple[int, float]:
+    summary = friendship_info.accountability
+    if summary is None:
+        return (2, -friendship_info.updated_at.timestamp())
+    if summary.status == AccountabilityStatus.ACTIVE.value:
+        return (0, -friendship_info.updated_at.timestamp())
+    if summary.status == AccountabilityStatus.PENDING.value:
+        return (1, -friendship_info.updated_at.timestamp())
+    return (2, -friendship_info.updated_at.timestamp())
 
 
 def _build_private_message_info(msg: PrivateMessage) -> PrivateMessageInfo:
@@ -754,10 +810,53 @@ async def get_friends(
 ):
     """获取当前用户的好友列表"""
     friends = await FriendshipService.get_friends(db, current_user.id, limit=limit, offset=offset)
-    return [
-        _build_friendship_info(friendship, friend, current_user.id)
+    friend_ids = [friend.id for _, friend in friends]
+    accountability_map: dict[str, AccountabilityFriendSummary] = {}
+    if friend_ids:
+        partnership_result = await db.execute(
+            select(AccountabilityPartnership).where(
+                and_(
+                    AccountabilityPartnership.slot_type == AccountabilitySlotType.CORE,
+                    AccountabilityPartnership.status.in_([
+                        AccountabilityStatus.ACTIVE,
+                        AccountabilityStatus.PENDING,
+                    ]),
+                    or_(
+                        and_(
+                            AccountabilityPartnership.initiator_id == current_user.id,
+                            AccountabilityPartnership.partner_id.in_(friend_ids),
+                        ),
+                        and_(
+                            AccountabilityPartnership.partner_id == current_user.id,
+                            AccountabilityPartnership.initiator_id.in_(friend_ids),
+                        ),
+                    ),
+                )
+            )
+        )
+        for partnership in partnership_result.scalars().all():
+            friend_id = (
+                str(partnership.partner_id)
+                if str(partnership.initiator_id) == str(current_user.id)
+                else str(partnership.initiator_id)
+            )
+            accountability_map[friend_id] = await _build_accountability_summary_for_friend(
+                db,
+                partnership,
+                current_user,
+            )
+
+    payload = [
+        _build_friendship_info(
+            friendship,
+            friend,
+            current_user.id,
+            accountability=accountability_map.get(str(friend.id)),
+        )
         for friendship, friend in friends
     ]
+    payload.sort(key=_friendship_sort_key)
+    return payload
 
 
 @router.get("/friends/pending", response_model=list[FriendshipInfo], summary="获取待处理的好友请求")
@@ -772,6 +871,110 @@ async def get_pending_requests(
         for friendship in requests
         if friendship.initiator is not None
     ]
+
+
+@router.get("/friends/{friend_id}/profile", summary="获取好友详情资料")
+async def get_friend_profile(
+    friend_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """获取好友公开资料及责任伙伴摘要。"""
+    friendship_result = await db.execute(
+        select(Friendship).where(
+            and_(
+                Friendship.status == FriendshipStatus.ACCEPTED,
+                Friendship.not_deleted_filter(),
+                or_(
+                    and_(
+                        Friendship.user_id == current_user.id,
+                        Friendship.friend_id == friend_id,
+                    ),
+                    and_(
+                        Friendship.user_id == friend_id,
+                        Friendship.friend_id == current_user.id,
+                    ),
+                ),
+            )
+        )
+    )
+    friendship = friendship_result.scalar_one_or_none()
+    if not friendship:
+        raise HTTPException(status_code=404, detail="Friendship not found")
+
+    friend = await db.get(User, friend_id)
+    if friend is None:
+        raise HTTPException(status_code=404, detail="Friend not found")
+
+    partnership_result = await db.execute(
+        select(AccountabilityPartnership).where(
+            and_(
+                AccountabilityPartnership.slot_type == AccountabilitySlotType.CORE,
+                or_(
+                    and_(
+                        AccountabilityPartnership.initiator_id == current_user.id,
+                        AccountabilityPartnership.partner_id == friend_id,
+                    ),
+                    and_(
+                        AccountabilityPartnership.initiator_id == friend_id,
+                        AccountabilityPartnership.partner_id == current_user.id,
+                    ),
+                ),
+            )
+        ).order_by(AccountabilityPartnership.updated_at.desc())
+    )
+    partnership = partnership_result.scalars().first()
+    relationship_summary = None
+    accountability = None
+    achievements_summary = {"my_total_unlocked": 0, "partner_total_unlocked": 0}
+    leaderboard_summary = await _build_leaderboard_summary(
+        db,
+        current_user_id=current_user.id,
+        partner_id=friend_id,
+    )
+    recent_shares = await _build_recent_shares_payload(
+        db,
+        current_user_id=current_user.id,
+        partner_id=friend_id,
+    )
+    if partnership is not None:
+        relationship_summary = await _build_relationship_summary(db, partnership, current_user)
+        accountability = await _build_partnership_out(db, partnership, current_user)
+        achievements_payload = await _build_partnership_achievements_payload(db, partnership, current_user)
+        achievements_summary = {
+            "my_total_unlocked": achievements_payload["my_total_unlocked"],
+            "partner_total_unlocked": achievements_payload["partner_total_unlocked"],
+            "partner_achievements": achievements_payload["partner_achievements"],
+        }
+
+    return {
+        "user": {
+            "id": str(friend.id),
+            "username": friend.username,
+            "nickname": friend.nickname,
+            "avatar_url": friend.avatar_url,
+            "flame_level": friend.flame_level,
+            "flame_brightness": friend.flame_brightness,
+            "status": friend.status.value if friend.status else "offline",
+        },
+        "friendship": {
+            "id": str(friendship.id),
+            "status": friendship.status.value if hasattr(friendship.status, "value") else str(friendship.status),
+            "initiated_by_me": str(friendship.initiated_by) == str(current_user.id),
+            "created_at": friendship.created_at.isoformat() if friendship.created_at else None,
+        },
+        "accountability": accountability.model_dump(mode="json") if accountability else None,
+        "relationship_summary": relationship_summary,
+        "achievements_summary": achievements_summary,
+        "leaderboard_summary": leaderboard_summary,
+        "recent_shares": recent_shares,
+        "quick_actions": {
+            "can_invite_accountability": partnership is None or partnership.status == AccountabilityStatus.ENDED,
+            "can_open_dashboard": partnership is not None and partnership.status == AccountabilityStatus.ACTIVE,
+            "can_chat": True,
+            "can_share": True,
+        },
+    }
 
 
 @router.get("/users/search", response_model=list[UserBrief], summary="搜索用户")

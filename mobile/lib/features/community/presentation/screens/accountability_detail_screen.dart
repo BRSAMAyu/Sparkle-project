@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/community/data/models/accountability_model.dart';
@@ -56,8 +57,7 @@ class _AccountabilityDetailScreenState
     );
 
     final isInitiator = partnership?.initiatorId == currentUserId;
-    final partner =
-        isInitiator ? partnership?.partner : partnership?.initiator;
+    final partner = isInitiator ? partnership?.partner : partnership?.initiator;
 
     return SparklePageScaffold(
       role: SparklePageRole.content,
@@ -75,7 +75,9 @@ class _AccountabilityDetailScreenState
             },
             itemBuilder: (_) => [
               const PopupMenuItem(
-                  value: 'end', child: Text('结束伙伴关系'),),
+                value: 'end',
+                child: Text('结束伙伴关系'),
+              ),
             ],
           ),
         ],
@@ -84,7 +86,8 @@ class _AccountabilityDetailScreenState
         children: [
           // ── Top: Dual avatar + streaks ──────────────────────────────
           statsAsync.when(
-            loading: () => const SizedBox(height: 120, child: Center(child: LoadingIndicator())),
+            loading: () => const SizedBox(
+                height: 120, child: Center(child: LoadingIndicator())),
             error: (e, _) => const SizedBox.shrink(),
             data: (stats) => Container(
               padding: const EdgeInsets.all(DS.spacing16),
@@ -105,9 +108,11 @@ class _AccountabilityDetailScreenState
                             fontWeight: FontWeight.bold,
                             color: DS.brandPrimary),
                       ),
-                      Text('总打卡',
-                          style: TextStyle(
-                              fontSize: DS.fontSizeXs, color: DS.neutral500),),
+                      Text(
+                        '总打卡',
+                        style: TextStyle(
+                            fontSize: DS.fontSizeXs, color: DS.neutral500),
+                      ),
                     ],
                   ),
                   _PersonStat(
@@ -125,7 +130,8 @@ class _AccountabilityDetailScreenState
             child: timelineAsync.when(
               loading: () => const Center(child: LoadingIndicator()),
               error: (e, _) => Center(
-                  child: Text('$e', style: TextStyle(color: DS.error)),),
+                child: Text('$e', style: TextStyle(color: DS.error)),
+              ),
               data: (checkins) => ListView(
                 padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
                 children: [
@@ -159,9 +165,11 @@ class _AccountabilityDetailScreenState
                       ),
                       data: (data) => AccountabilityHeatmap(
                         year: (data['year'] as int?) ?? DateTime.now().year,
-                        heatmap: ((data['heatmap'] as List<dynamic>?) ?? const [])
-                            .map((item) => Map<String, dynamic>.from(item as Map))
-                            .toList(),
+                        heatmap:
+                            ((data['heatmap'] as List<dynamic>?) ?? const [])
+                                .map((item) =>
+                                    Map<String, dynamic>.from(item as Map))
+                                .toList(),
                       ),
                     ),
                   ),
@@ -196,14 +204,15 @@ class _AccountabilityDetailScreenState
                                     ),
                                   )
                                   .toList();
-                          final partnerUnlocked = ((partnershipPayload[
-                                          'partner_achievements']
-                                      as List<dynamic>?) ??
-                                  const [])
-                              .map((item) => item.toString())
-                              .toSet();
+                          final partnerUnlocked =
+                              ((partnershipPayload['partner_achievements']
+                                          as List<dynamic>?) ??
+                                      const [])
+                                  .map((item) => item.toString())
+                                  .toSet();
                           final partnerAchievements = achievements
-                              .where((item) => partnerUnlocked.contains(item.id))
+                              .where(
+                                  (item) => partnerUnlocked.contains(item.id))
                               .map(
                                 (item) => AchievementInfo(
                                   id: item.id,
@@ -274,8 +283,7 @@ class _AccountabilityDetailScreenState
                 ),
                 data: (stats) => SparkleButton(
                   label: stats.myCheckedInToday ? '今天已打卡' : '今日打卡',
-                  onPressed:
-                      stats.myCheckedInToday ? null : _showCheckinSheet,
+                  onPressed: stats.myCheckedInToday ? null : _showCheckinSheet,
                   disabled: stats.myCheckedInToday,
                   expand: true,
                 ),
@@ -288,7 +296,7 @@ class _AccountabilityDetailScreenState
   }
 
   void _showCheckinSheet() {
-    unawaited(showModalBottomSheet<void>(
+    unawaited(showSensoryModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
@@ -304,7 +312,7 @@ class _AccountabilityDetailScreenState
   }
 
   Future<void> _confirmEnd() async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showSensoryDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('结束伙伴关系'),
@@ -378,19 +386,24 @@ class _PersonStat extends StatelessWidget {
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white, width: 2),
                     ),
-                    child: const Icon(Icons.check,
-                        size: 10, color: Colors.white,),
+                    child: const Icon(
+                      Icons.check,
+                      size: 10,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
             ],
           ),
           const SizedBox(height: DS.xs),
-          Text(name,
-              style: const TextStyle(fontWeight: FontWeight.bold),),
-          Text('$streakDays 天',
-              style: TextStyle(
-                  fontSize: DS.fontSizeXs,
-                  color: DS.brandPrimary),),
+          Text(
+            name,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          Text(
+            '$streakDays 天',
+            style: TextStyle(fontSize: DS.fontSizeXs, color: DS.brandPrimary),
+          ),
         ],
       );
 }
@@ -459,8 +472,7 @@ class _CheckinTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final dateStr =
-        DateFormat('MM-dd HH:mm').format(checkin.createdAt);
+    final dateStr = DateFormat('MM-dd HH:mm').format(checkin.createdAt);
     final moodEmojis = ['😔', '😕', '😐', '😊', '😄'];
     final moodIdx = (checkin.mood - 1).clamp(0, 4);
     final authorName = checkin.author?.displayName ?? (isMe ? '我' : '伙伴');
@@ -490,24 +502,30 @@ class _CheckinTile extends ConsumerWidget {
               Text(moodEmojis[moodIdx], style: const TextStyle(fontSize: 16)),
               const SizedBox(width: DS.sm),
               if (checkin.minutes > 0)
-                Text('${checkin.minutes}分钟',
-                    style: TextStyle(
-                        fontSize: DS.fontSizeXs, color: DS.textSecondary),),
-              const Spacer(),
-              Text(dateStr,
+                Text(
+                  '${checkin.minutes}分钟',
                   style: TextStyle(
-                      fontSize: DS.fontSizeXs, color: DS.neutral400),),
+                      fontSize: DS.fontSizeXs, color: DS.textSecondary),
+                ),
+              const Spacer(),
+              Text(
+                dateStr,
+                style: TextStyle(fontSize: DS.fontSizeXs, color: DS.neutral400),
+              ),
             ],
           ),
           const SizedBox(height: DS.xs),
-          Text(checkin.content,
-              style: const TextStyle(fontSize: DS.fontSizeSm),),
+          Text(
+            checkin.content,
+            style: const TextStyle(fontSize: DS.fontSizeSm),
+          ),
           const SizedBox(height: DS.spacing12),
           Row(
             children: [
               Icon(Icons.favorite, size: 16, color: DS.error),
               const SizedBox(width: DS.xs),
-              Text('${checkin.likes}', style: TextStyle(color: DS.textSecondary)),
+              Text('${checkin.likes}',
+                  style: TextStyle(color: DS.textSecondary)),
               const SizedBox(width: DS.spacing16),
               Icon(Icons.chat_bubble_outline, size: 16, color: DS.neutral500),
               const SizedBox(width: DS.xs),
@@ -561,7 +579,9 @@ class _CheckinTile extends ConsumerWidget {
 
   Future<void> _likeCheckin(BuildContext context, WidgetRef ref) async {
     try {
-      await ref.read(accountabilityActionsProvider).likeCheckin(ref, checkin.id);
+      await ref
+          .read(accountabilityActionsProvider)
+          .likeCheckin(ref, checkin.id);
       ref.invalidate(partnershipTimelineProvider(checkin.partnershipId));
       if (context.mounted) {
         AppFeedback.success(context, '已为伙伴点亮鼓励');
@@ -575,7 +595,7 @@ class _CheckinTile extends ConsumerWidget {
 
   Future<void> _encourageCheckin(BuildContext context, WidgetRef ref) async {
     final controller = TextEditingController();
-    final message = await showDialog<String>(
+    final message = await showSensoryDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('发送鼓励'),
@@ -652,8 +672,7 @@ class _AccountabilityCheckinSheetState
     return DecoratedBox(
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
-        borderRadius:
-            const BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: SafeArea(
         top: false,
@@ -662,16 +681,17 @@ class _AccountabilityCheckinSheetState
             left: DS.spacing16,
             right: DS.spacing16,
             top: DS.spacing16,
-            bottom:
-                MediaQuery.of(context).viewInsets.bottom + DS.spacing16,
+            bottom: MediaQuery.of(context).viewInsets.bottom + DS.spacing16,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('今日打卡',
-                  style: TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: DS.fontSizeLg),),
+              const Text(
+                '今日打卡',
+                style: TextStyle(
+                    fontWeight: FontWeight.bold, fontSize: DS.fontSizeLg),
+              ),
               const SizedBox(height: DS.spacing16),
 
               // Content input
@@ -687,8 +707,10 @@ class _AccountabilityCheckinSheetState
               const SizedBox(height: DS.spacing16),
 
               // Mood selector
-              const Text('今日心情:',
-                  style: TextStyle(fontWeight: FontWeight.bold),),
+              const Text(
+                '今日心情:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: DS.sm),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -702,14 +724,15 @@ class _AccountabilityCheckinSheetState
                         color: selected
                             ? DS.brandPrimary.withValues(alpha: 0.15)
                             : Colors.transparent,
-                        borderRadius:
-                            BorderRadius.circular(DS.borderRadiusMD),
+                        borderRadius: BorderRadius.circular(DS.borderRadiusMD),
                         border: selected
                             ? Border.all(color: DS.brandPrimary)
                             : null,
                       ),
-                      child: Text(moodEmojis[i],
-                          style: const TextStyle(fontSize: 28),),
+                      child: Text(
+                        moodEmojis[i],
+                        style: const TextStyle(fontSize: 28),
+                      ),
                     ),
                   );
                 }),
@@ -719,9 +742,10 @@ class _AccountabilityCheckinSheetState
               // Minutes slider
               Row(
                 children: [
-                  Text('投入时长: $_minutes 分钟',
-                      style:
-                          const TextStyle(fontWeight: FontWeight.bold),),
+                  Text(
+                    '投入时长: $_minutes 分钟',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ],
               ),
               Slider(
@@ -730,8 +754,7 @@ class _AccountabilityCheckinSheetState
                 max: 360,
                 divisions: 72,
                 label: '$_minutes 分钟',
-                onChanged: (v) =>
-                    setState(() => _minutes = v.toInt()),
+                onChanged: (v) => setState(() => _minutes = v.toInt()),
               ),
               const SizedBox(height: DS.spacing16),
 
@@ -739,7 +762,11 @@ class _AccountabilityCheckinSheetState
                 width: double.infinity,
                 child: SparkleButton.primary(
                   label: _isLoading ? '提交中...' : '提交打卡',
-                  onPressed: _isLoading ? () {} : () { unawaited(_submit()); },
+                  onPressed: _isLoading
+                      ? () {}
+                      : () {
+                          unawaited(_submit());
+                        },
                 ),
               ),
             ],

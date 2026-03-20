@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/theme_utils.dart';
 
 /// Sparkle Button V2 - 原子组件
@@ -107,6 +110,12 @@ class SparkleButton extends StatelessWidget {
   final String? semanticLabel;
   final FocusNode? focusNode;
 
+  void _handlePressed() {
+    if (disabled || loading || onPressed == null) return;
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));
+    onPressed?.call();
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = ThemeManager().current;
@@ -125,7 +134,7 @@ class SparkleButton extends StatelessWidget {
           elevation: _getElevation(info),
           shadowColor: _getShadowColor(theme.colors, info),
           child: InkWell(
-            onTap: disabled || loading ? null : onPressed,
+            onTap: disabled || loading ? null : _handlePressed,
             borderRadius: _getBorderRadius(info),
             focusNode: focusNode,
             child: Container(
@@ -378,7 +387,14 @@ class SparkleIconButton extends StatelessWidget {
         color: _getBackgroundColor(theme.colors),
         borderRadius: BorderRadius.circular(size / 2),
         child: InkWell(
-          onTap: disabled ? null : onPressed,
+          onTap: disabled
+              ? null
+              : () {
+                  unawaited(
+                    SensoryFeedbackService.emit(SensoryFeedbackEvent.tap),
+                  );
+                  onPressed?.call();
+                },
           borderRadius: BorderRadius.circular(size / 2),
           child: Container(
             width: size,

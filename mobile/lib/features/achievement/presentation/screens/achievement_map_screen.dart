@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
@@ -7,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/animation_lifecycle_mixin.dart';
 import 'package:sparkle/core/design/widgets/global_particle_counter.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/achievement_milestone_badge.dart';
@@ -115,11 +118,13 @@ class _AchievementMapScreenState extends ConsumerState<AchievementMapScreen> {
   }
 
   void _showNodePreview(BuildContext context, AchievementMapNode node) {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) => _AchievementNodeBottomSheet(node: node),
+    unawaited(
+      showSensoryModalBottomSheet<void>(
+        context: context,
+        backgroundColor: Colors.transparent,
+        isScrollControlled: true,
+        builder: (context) => _AchievementNodeBottomSheet(node: node),
+      ),
     );
   }
 }
@@ -641,115 +646,116 @@ class _CosmicConstellationCanvasState extends State<_CosmicConstellationCanvas>
             child: Stack(
               clipBehavior: Clip.none,
               children: [
-            // Layer 0 - Deep space background + star field.
-            Positioned.fill(
-              child: reduceMotion
-                  ? CustomPaint(
-                      painter: _StarFieldPainter(
-                        stars: _stars,
-                        animValue: 0.0,
-                        startColor: starStartColor,
-                        endColor: starEndColor,
-                        starColor: starColor,
-                        reduceMotion: true,
-                      ),
-                    )
-                  : AnimatedBuilder(
-                      animation: _twinkleController,
-                      builder: (context, _) => CustomPaint(
-                        painter: _StarFieldPainter(
-                          stars: _stars,
-                          animValue: _twinkleController.value,
-                          startColor: starStartColor,
-                          endColor: starEndColor,
-                          starColor: starColor,
-                          reduceMotion: false,
+                // Layer 0 - Deep space background + star field.
+                Positioned.fill(
+                  child: reduceMotion
+                      ? CustomPaint(
+                          painter: _StarFieldPainter(
+                            stars: _stars,
+                            animValue: 0.0,
+                            startColor: starStartColor,
+                            endColor: starEndColor,
+                            starColor: starColor,
+                            reduceMotion: true,
+                          ),
+                        )
+                      : AnimatedBuilder(
+                          animation: _twinkleController,
+                          builder: (context, _) => CustomPaint(
+                            painter: _StarFieldPainter(
+                              stars: _stars,
+                              animValue: _twinkleController.value,
+                              startColor: starStartColor,
+                              endColor: starEndColor,
+                              starColor: starColor,
+                              reduceMotion: false,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-            ),
+                ),
 
-            // Layer 1 - Connection lines (gradient + glow + pulse dots).
-            Positioned.fill(
-              child: reduceMotion
-                  ? CustomPaint(
-                      painter: _ConstellationLinesPainter(
-                        connections: widget.connections,
-                        positions: positions,
-                        nodeMap: nodeMap,
-                        progressById: widget.progressById,
-                        pulseValue: 0.0,
-                        showPulseDots: false,
-                      ),
-                    )
-                  : AnimatedBuilder(
+                // Layer 1 - Connection lines (gradient + glow + pulse dots).
+                Positioned.fill(
+                  child: reduceMotion
+                      ? CustomPaint(
+                          painter: _ConstellationLinesPainter(
+                            connections: widget.connections,
+                            positions: positions,
+                            nodeMap: nodeMap,
+                            progressById: widget.progressById,
+                            pulseValue: 0.0,
+                            showPulseDots: false,
+                          ),
+                        )
+                      : AnimatedBuilder(
+                          animation: _pulseController,
+                          builder: (context, _) => CustomPaint(
+                            painter: _ConstellationLinesPainter(
+                              connections: widget.connections,
+                              positions: positions,
+                              nodeMap: nodeMap,
+                              progressById: widget.progressById,
+                              pulseValue: _pulseController.value,
+                              showPulseDots: true,
+                            ),
+                          ),
+                        ),
+                ),
+
+                // Layer 2 - Floating orbital particles around unlocked nodes.
+                if (_orbitalParticlesEnabled)
+                  Positioned.fill(
+                    child: AnimatedBuilder(
                       animation: _pulseController,
                       builder: (context, _) => CustomPaint(
-                        painter: _ConstellationLinesPainter(
-                          connections: widget.connections,
+                        painter: _OrbitalParticlesPainter(
+                          nodes: widget.nodes,
                           positions: positions,
-                          nodeMap: nodeMap,
-                          progressById: widget.progressById,
-                          pulseValue: _pulseController.value,
-                          showPulseDots: true,
+                          animValue: _pulseController.value,
+                          isDark: isDark,
                         ),
                       ),
                     ),
-            ),
-
-            // Layer 2 - Floating orbital particles around unlocked nodes.
-            if (_orbitalParticlesEnabled)
-              Positioned.fill(
-                child: AnimatedBuilder(
-                  animation: _pulseController,
-                  builder: (context, _) => CustomPaint(
-                    painter: _OrbitalParticlesPainter(
-                      nodes: widget.nodes,
-                      positions: positions,
-                      animValue: _pulseController.value,
-                      isDark: isDark,
-                    ),
                   ),
-                ),
-              ),
 
-            // Layer 3 - Node widgets.
-            ...List.generate(widget.nodes.length, (index) {
-              final node = widget.nodes[index];
-              final offset = positions[node.id] ?? Offset.zero;
-              final progress =
-                  widget.progressById[node.id] ?? (node.isUnlocked ? 1.0 : 0.0);
+                // Layer 3 - Node widgets.
+                ...List.generate(widget.nodes.length, (index) {
+                  final node = widget.nodes[index];
+                  final offset = positions[node.id] ?? Offset.zero;
+                  final progress = widget.progressById[node.id] ??
+                      (node.isUnlocked ? 1.0 : 0.0);
 
-              // Staggered entrance timing.
-              final delayMs = index * 40;
-              final totalMs = _nodeEntranceController.duration!.inMilliseconds;
-              final start = delayMs / totalMs;
-              final end = math.min((delayMs + 600) / totalMs, 1.0);
+                  // Staggered entrance timing.
+                  final delayMs = index * 40;
+                  final totalMs =
+                      _nodeEntranceController.duration!.inMilliseconds;
+                  final start = delayMs / totalMs;
+                  final end = math.min((delayMs + 600) / totalMs, 1.0);
 
-              final entranceAnim = CurvedAnimation(
-                parent: _nodeEntranceController,
-                curve: Interval(start, end, curve: Curves.elasticOut),
-              );
+                  final entranceAnim = CurvedAnimation(
+                    parent: _nodeEntranceController,
+                    curve: Interval(start, end, curve: Curves.elasticOut),
+                  );
 
-              final nodeWidget = _CosmicNodeWidget(
-                node: node,
-                progress: progress,
-                reduceMotion: reduceMotion,
-                pulseController: _pulseController,
-                onTap: widget.onNodeTap,
-              );
+                  final nodeWidget = _CosmicNodeWidget(
+                    node: node,
+                    progress: progress,
+                    reduceMotion: reduceMotion,
+                    pulseController: _pulseController,
+                    onTap: widget.onNodeTap,
+                  );
 
-              return Positioned(
-                left: offset.dx - 44,
-                top: offset.dy - 44,
-                child: reduceMotion
-                    ? nodeWidget
-                    : ScaleTransition(
-                        scale: entranceAnim,
-                        child: nodeWidget,
-                      ),
-              );
-            }),
+                  return Positioned(
+                    left: offset.dx - 44,
+                    top: offset.dy - 44,
+                    child: reduceMotion
+                        ? nodeWidget
+                        : ScaleTransition(
+                            scale: entranceAnim,
+                            child: nodeWidget,
+                          ),
+                  );
+                }),
               ],
             ),
           ),

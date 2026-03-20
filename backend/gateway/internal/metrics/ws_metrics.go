@@ -87,6 +87,30 @@ var (
 		Help: "Total duplicate messages detected and dropped",
 	})
 
+	AIChatTotalDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Name:    "sparkle_ai_chat_total_duration_seconds",
+		Help:    "Total AI chat request duration from gateway receipt to final completion",
+		Buckets: []float64{0.25, 0.5, 1, 2.5, 5, 10, 20, 40, 80},
+	}, []string{"chat_mode"})
+
+	AIChatFirstEventDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Name:    "sparkle_ai_chat_first_event_duration_seconds",
+		Help:    "Time to first chat stream event",
+		Buckets: []float64{0.1, 0.25, 0.5, 1, 2.5, 5, 10, 20},
+	}, []string{"chat_mode"})
+
+	AIChatFirstTokenDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Name:    "sparkle_ai_chat_first_token_duration_seconds",
+		Help:    "Time to first visible chat token or full text payload",
+		Buckets: []float64{0.1, 0.25, 0.5, 1, 2.5, 5, 10, 20},
+	}, []string{"chat_mode"})
+
+	AIChatStreamDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Name:    "sparkle_ai_chat_stream_duration_seconds",
+		Help:    "Streaming phase duration after first token or first event",
+		Buckets: []float64{0.1, 0.25, 0.5, 1, 2.5, 5, 10, 20, 40},
+	}, []string{"chat_mode"})
+
 	// ========== Community WebSocket Metrics ==========
 
 	WSCommunityConnectionTotal = promauto.NewCounterVec(prometheus.CounterOpts{

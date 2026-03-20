@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
 /// Review feedback types
 enum ReviewFeedbackType {
@@ -90,7 +92,7 @@ class ReviewRatingDialog extends StatefulWidget {
     int? initialRating,
     bool showDetailedFeedback = false,
   }) =>
-      showModalBottomSheet<ReviewFeedbackData>(
+      showSensoryModalBottomSheet<ReviewFeedbackData>(
         context: context,
         isScrollControlled: true,
         backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
@@ -146,7 +148,17 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
 
     return Container(
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            theme.colorScheme.surface,
+            Color.alphaBlend(
+              DS.info.withValues(alpha: 0.03),
+              DS.surfacePrimary,
+            ),
+          ],
+        ),
         borderRadius:
             const BorderRadius.vertical(top: Radius.circular(DS.spacing20)),
       ),
@@ -249,7 +261,14 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
             // Cancel button
             SparkleButton(
               label: context.l10n.cancel,
-              onPressed: _isSubmitting ? null : () => Navigator.pop(context),
+              onPressed: _isSubmitting
+                  ? null
+                  : () {
+                      SensoryFeedbackService.emit(
+                        SensoryFeedbackEvent.tap,
+                      );
+                      Navigator.pop(context);
+                    },
               variant: ButtonVariant.ghost,
               expand: true,
             ),
@@ -267,6 +286,7 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
 
           return GestureDetector(
             onTap: () {
+              SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
               setState(() {
                 _rating = starValue;
                 // Auto-set helpful based on rating
@@ -305,6 +325,7 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
               label: context.l10n.reviewRatingHelpful,
               isSelected: _wasHelpful ?? false,
               onTap: () {
+                SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
                 setState(() {
                   _wasHelpful = _wasHelpful ?? false ? null : true;
                 });
@@ -321,6 +342,7 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
               isSelected: _wasHelpful == false,
               isNegative: true,
               onTap: () {
+                SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
                 setState(() {
                   _wasHelpful = _wasHelpful == false ? null : false;
                 });
@@ -399,6 +421,7 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
                   icon: Icons.check_circle_outline,
                   isSelected: _wasAccurate ?? false,
                   onTap: () {
+                    SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
                     setState(() {
                       _wasAccurate = _wasAccurate ?? false ? null : true;
                     });
@@ -414,6 +437,7 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
                   isSelected: _wasAccurate == false,
                   isNegative: true,
                   onTap: () {
+                    SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
                     setState(() {
                       _wasAccurate = _wasAccurate == false ? null : false;
                     });
@@ -451,6 +475,9 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
                         label: level.label(context),
                         isSelected: _specificityLevel == level,
                         onTap: () {
+                          SensoryFeedbackService.emit(
+                            SensoryFeedbackEvent.selection,
+                          );
                           setState(() {
                             _specificityLevel =
                                 _specificityLevel == level ? null : level;
@@ -586,6 +613,7 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
   void _addInaccuratePoint(String point) {
     final trimmed = point.trim();
     if (trimmed.isNotEmpty && !_inaccuratePoints.contains(trimmed)) {
+      SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
       setState(() {
         _inaccuratePoints.add(trimmed);
         _inaccuratePointController.clear();
@@ -610,6 +638,7 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
                 label: Text(tag),
                 selected: isSelected,
                 onSelected: (selected) {
+                  SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
                   setState(() {
                     if (selected) {
                       _selectedTags.add(tag);
@@ -678,13 +707,16 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
     );
 
     try {
+      await SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm);
       final success = await widget.onSubmit(feedback);
 
       if (mounted) {
         if (success) {
+          await SensoryFeedbackService.emit(SensoryFeedbackEvent.success);
           Navigator.pop(context, feedback);
           AppFeedback.success(context, context.l10n.reviewRatingSubmitSuccess);
         } else {
+          await SensoryFeedbackService.emit(SensoryFeedbackEvent.error);
           AppFeedback.error(context, context.l10n.reviewRatingSubmitFailed);
         }
       }

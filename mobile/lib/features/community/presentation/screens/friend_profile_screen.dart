@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
+import 'package:sparkle/features/community/community_routes.dart';
+import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
 import 'package:sparkle/features/community/presentation/providers/accountability_provider.dart';
 import 'package:sparkle/shared/entities/user_brief.dart';
@@ -23,13 +26,13 @@ class FriendProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
-  late Future<UserBrief> _profileFuture;
+  late Future<FriendProfileDetail> _profileFuture;
 
   @override
   void initState() {
     super.initState();
     _profileFuture =
-        ref.read(communityRepositoryProvider).getUserProfile(widget.userId);
+        ref.read(communityRepositoryProvider).getFriendProfile(widget.userId);
   }
 
   @override
@@ -42,9 +45,9 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        title: Text(widget.displayName ?? ''),
+        title: Text(widget.displayName ?? '好友详情'),
       ),
-      child: FutureBuilder<UserBrief>(
+      child: FutureBuilder<FriendProfileDetail>(
         future: _profileFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -68,28 +71,38 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
                     onPressed: () => setState(() {
                       _profileFuture = ref
                           .read(communityRepositoryProvider)
-                          .getUserProfile(widget.userId);
+                          .getFriendProfile(widget.userId);
                     }),
                   ),
                 ],
               ),
             );
           }
-          final user = snapshot.data!;
-          return _buildContent(context, user);
+          final profile = snapshot.data!;
+          return _buildContent(context, profile);
         },
       ),
     );
   }
 
-  Widget _buildContent(BuildContext context, UserBrief user) {
+  Widget _buildContent(BuildContext context, FriendProfileDetail profile) {
     final theme = Theme.of(context);
+    final user = profile.user;
+    final relationshipSummary = profile.relationshipSummary ?? const {};
+    final achievementsSummary = profile.achievementsSummary ?? const {};
+    final accountability = profile.accountability ?? const {};
+    final quickActions = profile.quickActions;
+    final canOpenDashboard =
+        quickActions['can_open_dashboard'] == true &&
+        accountability['id'] != null;
+    final canInviteAccountability =
+        quickActions['can_invite_accountability'] != false;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(DS.spacing24),
       child: Column(
         children: [
           const SizedBox(height: DS.spacing16),
-          // Avatar
           DecoratedBox(
             decoration: BoxDecoration(
               shape: BoxShape.circle,
@@ -103,21 +116,18 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
             ),
           ),
           const SizedBox(height: DS.spacing16),
-          // Display name
           Text(
             user.displayName,
             style: theme.textTheme.headlineSmall
                 ?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: DS.xs),
-          // Username
           Text(
             '@${user.username}',
-            style: theme.textTheme.bodyMedium
-                ?.copyWith(color: DS.textSecondary),
+            style:
+                theme.textTheme.bodyMedium?.copyWith(color: DS.textSecondary),
           ),
           const SizedBox(height: DS.spacing16),
-          // Flame level badge
           Container(
             padding: const EdgeInsets.symmetric(
               horizontal: DS.spacing12,
@@ -150,8 +160,15 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
               ],
             ),
           ),
-          const SizedBox(height: DS.spacing32),
-          // Action buttons
+          const SizedBox(height: DS.spacing24),
+          if (relationshipSummary.isNotEmpty || achievementsSummary.isNotEmpty)
+            _RelationshipPanel(
+              relationshipSummary: relationshipSummary,
+              achievementsSummary: achievementsSummary,
+              recentShares: profile.recentShares,
+              hasAccountability: accountability.isNotEmpty,
+            ),
+          const SizedBox(height: DS.spacing24),
           Row(
             children: [
               Expanded(
@@ -168,9 +185,22 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
               const SizedBox(width: DS.md),
               Expanded(
                 child: CustomButton.secondary(
-                  text: 'Add Friend',
-                  icon: Icons.person_add_outlined,
-                  onPressed: () => _sendFriendRequest(context, user),
+                  text: canOpenDashboard ? '工作台' : '分享',
+                  icon: canOpenDashboard
+                      ? Icons.handshake_outlined
+                      : Icons.share_outlined,
+                  onPressed: () {
+                    if (canOpenDashboard) {
+                      final id = accountability['id']?.toString();
+                      if (id == null) return;
+                      context.push(
+                        CommunityRoutes.accountabilityDetail
+                            .replaceFirst(':id', id),
+                      );
+                    } else {
+                      context.push('/achievements');
+                    }
+                  },
                 ),
               ),
             ],
@@ -179,9 +209,19 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
           SizedBox(
             width: double.infinity,
             child: CustomButton.secondary(
-              text: '发起责任伙伴',
+              text: canInviteAccountability ? '发起责任伙伴' : '进入伙伴工作台',
               icon: Icons.handshake_outlined,
-              onPressed: () => _showAccountabilityInvite(context, user),
+              onPressed: () {
+                if (canInviteAccountability) {
+                  _showAccountabilityInvite(context, user);
+                  return;
+                }
+                final id = accountability['id']?.toString();
+                if (id == null) return;
+                context.push(
+                  CommunityRoutes.accountabilityDetail.replaceFirst(':id', id),
+                );
+              },
             ),
           ),
         ],
@@ -190,11 +230,13 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
   }
 
   Future<void> _showAccountabilityInvite(
-      BuildContext context, UserBrief user) async {
+    BuildContext context,
+    UserBrief user,
+  ) async {
     final goalController = TextEditingController();
     var checkInDays = 1;
 
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showSensoryDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setState) => AlertDialog(
@@ -203,8 +245,10 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('邀请 ${user.displayName} 成为你的责任伙伴',
-                  style: TextStyle(color: DS.textSecondary, fontSize: 13)),
+              Text(
+                '邀请 ${user.displayName} 成为你的责任伙伴',
+                style: TextStyle(color: DS.textSecondary, fontSize: 13),
+              ),
               const SizedBox(height: DS.spacing16),
               TextField(
                 controller: goalController,
@@ -216,8 +260,10 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
                 maxLines: 2,
               ),
               const SizedBox(height: DS.spacing16),
-              const Text('打卡频率:',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text(
+                '打卡频率:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: DS.xs),
               Wrap(
                 spacing: DS.sm,
@@ -259,6 +305,7 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
             initiatorGoal: goal,
             checkInDays: checkInDays,
           );
+      ref.invalidate(accountabilityOverviewProvider);
       if (context.mounted) {
         AppFeedback.success(context, '责任伙伴邀请已发送！');
       }
@@ -266,19 +313,116 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
       if (context.mounted) AppFeedback.error(context, '发送失败: $e');
     }
   }
+}
 
-  Future<void> _sendFriendRequest(BuildContext context, UserBrief user) async {
-    try {
-      await ref
-          .read(communityRepositoryProvider)
-          .sendFriendRequest(user.id);
-      if (context.mounted) {
-        AppFeedback.success(context, 'Friend request sent!');
-      }
-    } catch (e) {
-      if (context.mounted) {
-        AppFeedback.error(context, 'Failed to send request: $e');
-      }
-    }
+class _RelationshipPanel extends StatelessWidget {
+  const _RelationshipPanel({
+    required this.relationshipSummary,
+    required this.achievementsSummary,
+    required this.recentShares,
+    required this.hasAccountability,
+  });
+
+  final Map<String, dynamic> relationshipSummary;
+  final Map<String, dynamic> achievementsSummary;
+  final List<Map<String, dynamic>> recentShares;
+  final bool hasAccountability;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(DS.spacing16),
+      decoration: BoxDecoration(
+        color: DS.surfaceSecondary,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: DS.brandPrimary.withValues(alpha: 0.18),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                hasAccountability
+                    ? Icons.handshake_outlined
+                    : Icons.people_outline,
+                color: DS.brandPrimary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                hasAccountability ? '责任伙伴关系' : '好友关系',
+                style: DS.titleMedium.copyWith(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _InfoChip('一起 ${relationshipSummary['days_together'] ?? 0} 天'),
+              _InfoChip('我 ${relationshipSummary['my_streak_days'] ?? 0} 天'),
+              _InfoChip('TA ${relationshipSummary['partner_streak_days'] ?? 0} 天'),
+            ],
+          ),
+          if (achievementsSummary.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Text(
+              '伙伴共成长',
+              style: DS.labelLarge.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '我解锁了 ${achievementsSummary['my_total_unlocked'] ?? 0} 个责任伙伴成就，TA 解锁了 ${achievementsSummary['partner_total_unlocked'] ?? 0} 个。',
+              style: DS.bodySmall.copyWith(color: DS.textSecondary),
+            ),
+          ],
+          if (recentShares.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Text(
+              '最近共享',
+              style: DS.labelLarge.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 6),
+            ...recentShares.take(2).map(
+                  (share) => Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(
+                      '• ${share['title'] ?? '已分享内容'}',
+                      style: DS.bodySmall.copyWith(color: DS.textSecondary),
+                    ),
+                  ),
+                ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoChip extends StatelessWidget {
+  const _InfoChip(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: DS.brandPrimary.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: DS.labelSmall.copyWith(
+          color: DS.brandPrimary,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
   }
 }

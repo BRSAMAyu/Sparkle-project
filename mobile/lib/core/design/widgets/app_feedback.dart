@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/notification_service.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/theme_utils.dart';
 
 /// Unified in-app feedback entry for snack bars.
@@ -65,6 +68,16 @@ class AppFeedback {
     String? actionLabel,
     VoidCallback? onAction,
   }) {
+    final event = switch (role) {
+      SparkleFeedbackRole.success => SensoryFeedbackEvent.success,
+      SparkleFeedbackRole.warning => SensoryFeedbackEvent.warning,
+      SparkleFeedbackRole.error => SensoryFeedbackEvent.error,
+      SparkleFeedbackRole.undoable => SensoryFeedbackEvent.confirm,
+      SparkleFeedbackRole.loading => SensoryFeedbackEvent.dialogOpen,
+      SparkleFeedbackRole.info => SensoryFeedbackEvent.selection,
+    };
+    unawaited(SensoryFeedbackService.emit(event));
+
     final messenger = _resolveMessenger(context);
     if (messenger == null) return;
     final style = DS.feedbackStyle(role);

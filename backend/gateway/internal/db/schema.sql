@@ -46,6 +46,17 @@ COMMENT ON EXTENSION vector IS 'vector data type and ivfflat and hnsw access met
 
 
 --
+-- Name: accountabilityslottype; Type: TYPE; Schema: public; Owner: postgres
+--
+
+CREATE TYPE accountabilityslottype AS ENUM (
+    'core'
+);
+
+
+ALTER TYPE accountabilityslottype OWNER TO postgres;
+
+--
 -- Name: accountabilitystatus; Type: TYPE; Schema: public; Owner: postgres
 --
 
@@ -617,6 +628,7 @@ CREATE TABLE accountability_partnership (
     initiator_goal text NOT NULL,
     partner_goal text,
     check_in_days integer DEFAULT 1 NOT NULL,
+    slot_type accountabilityslottype DEFAULT 'core'::accountabilityslottype NOT NULL,
     status accountabilitystatus DEFAULT 'pending'::accountabilitystatus NOT NULL,
     started_at timestamp with time zone,
     ended_at timestamp with time zone,
@@ -5771,6 +5783,13 @@ CREATE INDEX idx_accountability_initiator_status ON accountability_partnership U
 --
 
 CREATE INDEX idx_accountability_partner_status ON accountability_partnership USING btree (partner_id, status);
+
+
+--
+-- Name: idx_accountability_slot_status; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_accountability_slot_status ON accountability_partnership USING btree (slot_type, status);
 
 
 --
@@ -11538,5 +11557,4 @@ ALTER TABLE ONLY word_books
 --
 -- PostgreSQL database dump complete
 --
-
 

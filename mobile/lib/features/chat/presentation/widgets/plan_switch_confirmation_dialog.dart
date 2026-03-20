@@ -3,6 +3,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
 /// Plan Switch Confirmation Dialog
 ///
@@ -31,7 +32,17 @@ class PlanSwitchConfirmationDialog extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 24),
         decoration: BoxDecoration(
-          color: DS.surfacePrimary,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              DS.surfacePrimary,
+              Color.alphaBlend(
+                DS.warning.withValues(alpha: 0.04),
+                DS.surfaceSecondary,
+              ),
+            ],
+          ),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: DS.borderSubtle,
@@ -135,7 +146,10 @@ class PlanSwitchConfirmationDialog extends StatelessWidget {
                   Expanded(
                     child: CustomButton.secondary(
                       text: context.l10n.cancel,
-                      onPressed: onCancel,
+                      onPressed: () {
+                        SensoryFeedbackService.emit(SensoryFeedbackEvent.tap);
+                        onCancel();
+                      },
                       size: CustomButtonSize.medium,
                     ),
                   ),
@@ -144,7 +158,12 @@ class PlanSwitchConfirmationDialog extends StatelessWidget {
                   Expanded(
                     child: CustomButton.primary(
                       text: context.l10n.confirm,
-                      onPressed: onConfirm,
+                      onPressed: () {
+                        SensoryFeedbackService.emit(
+                          SensoryFeedbackEvent.confirm,
+                        );
+                        onConfirm();
+                      },
                       size: CustomButtonSize.medium,
                     ),
                   ),

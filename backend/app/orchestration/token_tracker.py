@@ -54,6 +54,7 @@ class TokenTracker:
         reasoning_mode: str | None = None,
         model_tier: str | None = None,
         chat_mode: str | None = None,
+        timing_stats: dict[str, Any] | None = None,
     ) -> int:
         """
         记录 Token 使用量
@@ -86,6 +87,7 @@ class TokenTracker:
             "reasoning_mode": reasoning_mode or "balanced",
             "model_tier": model_tier or "",
             "chat_mode": chat_mode or "standard",
+            "timing_stats": timing_stats or {},
             "timestamp": timestamp,
         }
 
@@ -120,6 +122,34 @@ class TokenTracker:
             await self.redis.incrby(mode_cost_key, int(round(float(cost) * 1_000_000)))
             await self.redis.expire(mode_cost_key, 86400)
 
+        if timing_stats:
+            total_duration_ms = self._safe_int(timing_stats.get("total_duration_ms"))
+            first_token_ms = self._safe_int(timing_stats.get("first_token_ms"))
+            stream_duration_ms = self._safe_int(timing_stats.get("stream_duration_ms"))
+
+            await self._record_timing_metric(
+                key=f"user:daily_ai_mode_total_duration_ms:{user_id}:{today}:{mode}",
+                value=total_duration_ms,
+            )
+            await self._record_timing_metric(
+                key=f"user:daily_ai_mode_first_token_ms:{user_id}:{today}:{mode}",
+                value=first_token_ms,
+            )
+            await self._record_timing_metric(
+                key=f"user:daily_ai_mode_stream_duration_ms:{user_id}:{today}:{mode}",
+                value=stream_duration_ms,
+            )
+
+            aggregate_key = f"ai:daily_timing:{today}:{mode}:{chat_mode or 'standard'}"
+            await self.redis.hincrby(aggregate_key, "requests", 1)
+            if total_duration_ms > 0:
+                await self.redis.hincrby(aggregate_key, "total_duration_ms_sum", total_duration_ms)
+            if first_token_ms > 0:
+                await self.redis.hincrby(aggregate_key, "first_token_ms_sum", first_token_ms)
+            if stream_duration_ms > 0:
+                await self.redis.hincrby(aggregate_key, "stream_duration_ms_sum", stream_duration_ms)
+            await self.redis.expire(aggregate_key, 86400 * 14)
+
         # 5. 记录到历史明细（可选，用于详细分析）
         detail_key = f"user:details:{user_id}:{today}"
         detail = {
@@ -132,6 +162,7 @@ class TokenTracker:
             "model_tier": model_tier,
             "reasoning_mode": mode,
             "chat_mode": chat_mode or "standard",
+            "timing_stats": timing_stats or {},
             "timestamp": timestamp,
         }
         await self.redis.rpush(detail_key, json.dumps(detail))
@@ -142,6 +173,19 @@ class TokenTracker:
         )
 
         return total_tokens
+
+    @staticmethod
+    def _safe_int(value: Any) -> int:
+        try:
+            return max(0, int(float(value)))
+        except (TypeError, ValueError):
+            return 0
+
+    async def _record_timing_metric(self, *, key: str, value: int) -> None:
+        if value <= 0:
+            return
+        await self.redis.incrby(key, value)
+        await self.redis.expire(key, 86400 * 14)
 
     @staticmethod
     def _normalize_mode(value: str | None) -> str:
@@ -410,15 +454,31 @@ class TokenTracker:
             date = datetime.now().strftime("%Y-%m-%d")
         normalized_mode = self._normalize_mode(mode)
 
-        requests_raw, tokens_raw, cost_raw = await self.redis.mget(
+        (
+            requests_raw,
+            tokens_raw,
+            cost_raw,
+            total_duration_raw,
+            first_token_raw,
+            stream_duration_raw,
+        ) = await self.redis.mget(
             f"user:daily_ai_mode_requests:{user_id}:{date}:{normalized_mode}",
             f"user:daily_ai_mode_tokens:{user_id}:{date}:{normalized_mode}",
             f"user:daily_ai_mode_cost_micro_usd:{user_id}:{date}:{normalized_mode}",
+            f"user:daily_ai_mode_total_duration_ms:{user_id}:{date}:{normalized_mode}",
+            f"user:daily_ai_mode_first_token_ms:{user_id}:{date}:{normalized_mode}",
+            f"user:daily_ai_mode_stream_duration_ms:{user_id}:{date}:{normalized_mode}",
         )
         requests_used = int(requests_raw or 0)
         total_tokens = int(tokens_raw or 0)
         total_cost_usd = round(int(cost_raw or 0) / 1_000_000.0, 6)
+        total_duration_ms = int(total_duration_raw or 0)
+        total_first_token_ms = int(first_token_raw or 0)
+        total_stream_duration_ms = int(stream_duration_raw or 0)
         remaining = max(0, request_limit - requests_used) if request_limit > 0 else 0
+        avg_total_duration_ms = round(total_duration_ms / requests_used, 2) if requests_used > 0 else 0.0
+        avg_first_token_ms = round(total_first_token_ms / requests_used, 2) if requests_used > 0 else 0.0
+        avg_stream_duration_ms = round(total_stream_duration_ms / requests_used, 2) if requests_used > 0 else 0.0
 
         return {
             "mode": normalized_mode,
@@ -428,6 +488,10 @@ class TokenTracker:
             "requests_remaining": remaining,
             "total_tokens": total_tokens,
             "total_cost_usd": total_cost_usd,
+            "total_duration_ms": total_duration_ms,
+            "avg_total_duration_ms": avg_total_duration_ms,
+            "avg_first_token_ms": avg_first_token_ms,
+            "avg_stream_duration_ms": avg_stream_duration_ms,
         }
 
     async def get_ai_usage_summary(
@@ -446,6 +510,55 @@ class TokenTracker:
             )
             for mode, limit in mode_limits.items()
         ]
+
+    async def get_chat_mode_timing_summary(
+        self,
+        *,
+        days: int = 7,
+    ) -> list[dict[str, Any]]:
+        summaries: list[dict[str, Any]] = []
+        for day_offset in range(days):
+            date = (datetime.now() - timedelta(days=day_offset)).strftime("%Y-%m-%d")
+            pattern = f"ai:daily_timing:{date}:*"
+            async for key in self.redis.scan_iter(pattern):
+                decoded_key = key.decode() if isinstance(key, bytes) else str(key)
+                parts = decoded_key.split(":")
+                if len(parts) < 5:
+                    continue
+                _, _, key_date, mode, chat_mode = parts[:5]
+                raw = await self.redis.hgetall(decoded_key)
+                if not raw:
+                    continue
+                requests = int(raw.get("requests") or 0)
+                total_duration = int(raw.get("total_duration_ms_sum") or 0)
+                first_token = int(raw.get("first_token_ms_sum") or 0)
+                stream_duration = int(raw.get("stream_duration_ms_sum") or 0)
+                summaries.append(
+                    {
+                        "date": key_date,
+                        "mode": mode,
+                        "chat_mode": chat_mode,
+                        "requests": requests,
+                        "avg_total_duration_ms": round(total_duration / requests, 2)
+                        if requests > 0
+                        else 0.0,
+                        "avg_first_token_ms": round(first_token / requests, 2)
+                        if requests > 0
+                        else 0.0,
+                        "avg_stream_duration_ms": round(stream_duration / requests, 2)
+                        if requests > 0
+                        else 0.0,
+                    }
+                )
+        summaries.sort(
+            key=lambda item: (
+                item["date"],
+                item["mode"],
+                item["chat_mode"],
+            ),
+            reverse=True,
+        )
+        return summaries
 
 
 # 单例实例

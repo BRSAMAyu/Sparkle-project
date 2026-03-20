@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/widgets/ai_rich_text.dart';
@@ -325,6 +326,24 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ),
         child: Stack(
           children: [
+            Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      center: const Alignment(0.8, -0.55),
+                      radius: 1.08,
+                      colors: [
+                        DS.info.withValues(alpha: 0.08),
+                        DS.brandPrimary.withValues(alpha: 0.035),
+                        Colors.transparent,
+                      ],
+                      stops: const [0.0, 0.4, 1.0],
+                    ),
+                  ),
+                ),
+              ),
+            ),
             SafeArea(
               child: ContentConstraint(
                 child: Column(
@@ -373,6 +392,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                     child: AiStatusIndicator(
                                       status: chatState.aiStatus,
                                       details: chatState.aiStatusDetails,
+                                      startedAtEpochMs: chatState
+                                          .activeRunSummary?.startedAtEpochMs,
                                     ),
                                   );
                                 }
@@ -495,8 +516,27 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     if (chatState.error != null)
                       Container(
                         width: double.infinity,
+                        margin: const EdgeInsets.fromLTRB(
+                          DS.spacing16,
+                          0,
+                          DS.spacing16,
+                          DS.spacing8,
+                        ),
                         padding: const EdgeInsets.all(DS.sm),
-                        color: DS.error.withValues(alpha: 0.1),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              DS.error.withValues(alpha: 0.1),
+                              DS.surfacePrimary,
+                            ],
+                          ),
+                          borderRadius: DS.borderRadius16,
+                          border: Border.all(
+                            color: DS.error.withValues(alpha: 0.18),
+                          ),
+                        ),
                         child: Row(
                           children: [
                             Expanded(
@@ -571,6 +611,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                         file.fileName,
                                         overflow: TextOverflow.ellipsis,
                                       ),
+                                      backgroundColor: Color.alphaBlend(
+                                        DS.info.withValues(alpha: 0.04),
+                                        DS.surfacePrimary,
+                                      ),
+                                      side: BorderSide(
+                                        color: DS.border.withValues(alpha: 0.4),
+                                      ),
                                       onDeleted: () => ref
                                           .read(chatProvider.notifier)
                                           .removeAttachment(file.id),
@@ -601,7 +648,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   void _showHistoryBottomSheet(BuildContext context) {
     unawaited(
-      showModalBottomSheet<void>(
+      showSensoryModalBottomSheet<void>(
         context: context,
         backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
         useRootNavigator: true,
@@ -690,8 +737,25 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 Container(
                   padding: const EdgeInsets.all(DS.spacing20),
                   decoration: BoxDecoration(
-                    color: DS.primaryBase.withValues(alpha: 0.1),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        DS.primaryBase.withValues(alpha: 0.12),
+                        DS.info.withValues(alpha: 0.08),
+                      ],
+                    ),
                     shape: BoxShape.circle,
+                    border: Border.all(
+                      color: DS.primaryBase.withValues(alpha: 0.18),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: DS.primaryBase.withValues(alpha: 0.08),
+                        blurRadius: 18,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
                   ),
                   child: Icon(
                     Icons.auto_awesome,
@@ -710,8 +774,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 const SizedBox(height: DS.sm),
                 Text(
                   context.l10n.chatWelcomeSubtitle,
+                  textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: DS.textSecondary,
+                        height: 1.5,
                       ),
                 ),
                 const SizedBox(height: DS.spacing40),
@@ -990,7 +1056,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   void _showAiSystemSettings(BuildContext context) {
     unawaited(
-      showModalBottomSheet<void>(
+      showSensoryModalBottomSheet<void>(
         context: context,
         backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
         useRootNavigator: true,
@@ -1275,7 +1341,17 @@ class _ChatHistorySheetState extends ConsumerState<_ChatHistorySheet> {
               children: [
                 DecoratedBox(
                   decoration: BoxDecoration(
-                    color: DS.surfaceOverlay,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        DS.surfaceOverlay,
+                        Color.alphaBlend(
+                          DS.info.withValues(alpha: 0.04),
+                          DS.surfacePrimary,
+                        ),
+                      ],
+                    ),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: DS.borderSubtle),
                   ),
@@ -1361,6 +1437,7 @@ class _ChatHistorySheetState extends ConsumerState<_ChatHistorySheet> {
                           borderColor: isCurrent
                               ? DS.primaryBase.withValues(alpha: 0.22)
                               : DS.borderSubtle,
+                          surfaceRole: SparkleSurfaceRole.card,
                           child: ListTile(
                             enabled: !isOpening && _openingSessionId == null,
                             leading: Container(
@@ -1449,6 +1526,8 @@ class _InlineChatHistoryError extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Center(
         child: GraphiteCardSurface(
+          borderColor: DS.error.withValues(alpha: 0.14),
+          surfaceRole: SparkleSurfaceRole.card,
           child: Padding(
             padding: const EdgeInsets.all(DS.md),
             child: Column(

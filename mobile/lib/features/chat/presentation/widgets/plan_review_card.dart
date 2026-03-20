@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/motion.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 
@@ -370,7 +371,8 @@ class _PlanReviewCardState extends State<PlanReviewCard>
                                     colors: [
                                       DS.surfacePrimary.withValues(alpha: 0),
                                       color.withValues(
-                                          alpha: 0.03 + (progress * 0.05),),
+                                        alpha: 0.03 + (progress * 0.05),
+                                      ),
                                       DS.surfacePrimary.withValues(alpha: 0),
                                     ],
                                     stops: const [0.2, 0.5, 0.8],
@@ -485,11 +487,13 @@ class _PlanReviewCardState extends State<PlanReviewCard>
                               ),
                             ),
                           ],
-                          if ((widget.review.reasoningSummary ?? '').isNotEmpty) ...[
+                          if ((widget.review.reasoningSummary ?? '')
+                              .isNotEmpty) ...[
                             const SizedBox(height: DS.spacing12),
                             _buildReasoningSummary(color),
                           ],
-                          if ((widget.review.alignmentSummary ?? '').isNotEmpty) ...[
+                          if ((widget.review.alignmentSummary ?? '')
+                              .isNotEmpty) ...[
                             const SizedBox(height: DS.spacing12),
                             _buildAlignmentSummary(),
                           ],
@@ -556,44 +560,48 @@ class _PlanReviewCardState extends State<PlanReviewCard>
           context.l10n.chatViewPlanRationale,
           style: const TextStyle(fontWeight: DS.fontWeightSemibold),
         ),
-        children: widget.review.reasoningDetails.map((detail) => Container(
-            margin: const EdgeInsets.only(top: DS.spacing8),
-            padding: const EdgeInsets.all(DS.spacing12),
-            decoration: BoxDecoration(
-              color: DS.neutral100,
-              borderRadius: DS.borderRadius12,
-              border: Border.all(color: DS.neutral200),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  detail.label,
-                  style: const TextStyle(fontWeight: DS.fontWeightSemibold),
+        children: widget.review.reasoningDetails
+            .map(
+              (detail) => Container(
+                margin: const EdgeInsets.only(top: DS.spacing8),
+                padding: const EdgeInsets.all(DS.spacing12),
+                decoration: BoxDecoration(
+                  color: DS.neutral100,
+                  borderRadius: DS.borderRadius12,
+                  border: Border.all(color: DS.neutral200),
                 ),
-                if (detail.evidence.isNotEmpty) ...[
-                  const SizedBox(height: DS.spacing6),
-                  Text(
-                    context.l10n.planReviewEvidenceLabel(detail.evidence),
-                  ),
-                ],
-                if (detail.impact.isNotEmpty) ...[
-                  const SizedBox(height: DS.spacing6),
-                  Text(
-                    context.l10n.planReviewImpactLabel(detail.impact),
-                  ),
-                ],
-                if ((detail.confidenceTier ?? '').isNotEmpty) ...[
-                  const SizedBox(height: DS.spacing6),
-                  Text(
-                    context.l10n.planReviewConfidenceTierLabel(
-                      detail.confidenceTier!,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      detail.label,
+                      style: const TextStyle(fontWeight: DS.fontWeightSemibold),
                     ),
-                  ),
-                ],
-              ],
-            ),
-          ),).toList(),
+                    if (detail.evidence.isNotEmpty) ...[
+                      const SizedBox(height: DS.spacing6),
+                      Text(
+                        context.l10n.planReviewEvidenceLabel(detail.evidence),
+                      ),
+                    ],
+                    if (detail.impact.isNotEmpty) ...[
+                      const SizedBox(height: DS.spacing6),
+                      Text(
+                        context.l10n.planReviewImpactLabel(detail.impact),
+                      ),
+                    ],
+                    if ((detail.confidenceTier ?? '').isNotEmpty) ...[
+                      const SizedBox(height: DS.spacing6),
+                      Text(
+                        context.l10n.planReviewConfidenceTierLabel(
+                          detail.confidenceTier!,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            )
+            .toList(),
       );
 
   Widget _buildAlignmentSummary() => Container(
@@ -726,7 +734,10 @@ class _PlanReviewCardState extends State<PlanReviewCard>
   }
 
   Widget _buildCommentGroup(
-          String title, List<ReviewComment> comments, Color color,) =>
+    String title,
+    List<ReviewComment> comments,
+    Color color,
+  ) =>
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1051,7 +1062,7 @@ extension on _PlanReviewCardState {
     var showError = false;
 
     try {
-      return await showModalBottomSheet<_RejectionFeedback>(
+      return await showSensoryModalBottomSheet<_RejectionFeedback>(
         context: context,
         backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
         isScrollControlled: true,
@@ -1068,7 +1079,9 @@ extension on _PlanReviewCardState {
               }
               Navigator.of(context).pop(
                 _RejectionFeedback(
-                    category: selected!, note: note.isEmpty ? null : note,),
+                  category: selected!,
+                  note: note.isEmpty ? null : note,
+                ),
               );
             }
 
@@ -1099,11 +1112,14 @@ extension on _PlanReviewCardState {
                       ),
                       Padding(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: DS.spacing20,),
+                          horizontal: DS.spacing20,
+                        ),
                         child: Row(
                           children: [
-                            Icon(Icons.feedback_outlined,
-                                color: DS.primaryBase,),
+                            Icon(
+                              Icons.feedback_outlined,
+                              color: DS.primaryBase,
+                            ),
                             const SizedBox(width: DS.spacing12),
                             Text(
                               l10n.planReviewRejectReasonTitle,
@@ -1208,7 +1224,8 @@ extension on _PlanReviewCardState {
                       const SizedBox(height: DS.spacing16),
                       Padding(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: DS.spacing20,),
+                          horizontal: DS.spacing20,
+                        ),
                         child: Row(
                           children: [
                             Expanded(

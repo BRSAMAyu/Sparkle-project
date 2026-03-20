@@ -133,6 +133,20 @@ def _resolve_reasoning_mode(state: WorkflowState, default: str = "balanced") -> 
     return default
 
 
+def _needs_fast_standard_guard(
+    *,
+    use_slim_standard_context: bool,
+    reasoning_mode: str,
+    selection: Any | None,
+) -> bool:
+    if not use_slim_standard_context or reasoning_mode != "fast" or selection is None:
+        return False
+    tier_value = str(getattr(getattr(selection, "config", None), "tier", "") or "").strip().lower()
+    if not tier_value and hasattr(getattr(selection, "config", None), "tier"):
+        tier_value = str(getattr(selection.config.tier, "value", "") or "").strip().lower()
+    return tier_value not in {"fast", "standard"}
+
+
 def _should_force_fast_first_touch(
     state: WorkflowState,
     *,
@@ -1372,6 +1386,24 @@ Ask about their available time and current tasks if needed.
         if sanitized_community_response != full_response:
             logger.info("Sanitized community generation response into direct sendable content")
             full_response = sanitized_community_response
+        if _needs_fast_standard_guard(
+            use_slim_standard_context=use_slim_standard_context,
+            reasoning_mode=reasoning_mode,
+            selection=selection,
+        ):
+            logger.info("Fast standard reply escaped to a higher tier; forcing fast rescue response")
+            try:
+                rescued_response, _ = await _build_mode_rescue_response(
+                    agent_role=agent_role,
+                    system_prompt=system_prompt,
+                    user_message=user_message,
+                    task_type=TaskType.QUICK_QUERY,
+                    reasoning_mode="fast",
+                )
+                if rescued_response:
+                    full_response = rescued_response
+            except Exception as rescue_error:
+                logger.warning(f"Fast standard tier guard rescue failed: {rescue_error}")
         if use_slim_standard_context and (
             _has_standard_tool_or_system_leak(full_response)
             or _has_standard_personal_context_leak(full_response, user_context)

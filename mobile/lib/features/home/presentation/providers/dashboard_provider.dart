@@ -10,6 +10,7 @@ class DashboardState {
     required this.sprint,
     required this.nextActions,
     required this.cognitive,
+    this.nextIntentForecast,
     this.growth,
     this.isLoading = false,
     this.error,
@@ -22,6 +23,7 @@ class DashboardState {
         growth = null,
         nextActions = const [],
         cognitive = CognitiveData(status: 'empty'),
+        nextIntentForecast = null,
         isLoading = true,
         error = null;
 
@@ -32,6 +34,7 @@ class DashboardState {
         growth = null,
         nextActions = const [],
         cognitive = CognitiveData(status: 'empty'),
+        nextIntentForecast = null,
         isLoading = false,
         error = errorMessage;
   final WeatherData weather;
@@ -40,6 +43,7 @@ class DashboardState {
   final GrowthData? growth; // Added Growth Plan
   final List<TaskData> nextActions;
   final CognitiveData cognitive;
+  final NextIntentForecastData? nextIntentForecast;
   final bool isLoading;
   final String? error;
 
@@ -50,6 +54,7 @@ class DashboardState {
     GrowthData? growth,
     List<TaskData>? nextActions,
     CognitiveData? cognitive,
+    NextIntentForecastData? nextIntentForecast,
     bool? isLoading,
     String? error,
   }) =>
@@ -60,6 +65,7 @@ class DashboardState {
         growth: growth ?? this.growth,
         nextActions: nextActions ?? this.nextActions,
         cognitive: cognitive ?? this.cognitive,
+        nextIntentForecast: nextIntentForecast ?? this.nextIntentForecast,
         isLoading: isLoading ?? this.isLoading,
         error: error ?? this.error,
       );
@@ -146,6 +152,30 @@ class CognitiveData {
   final bool hasNewInsight;
 }
 
+class NextIntentForecastData {
+  NextIntentForecastData({
+    required this.title,
+    required this.summary,
+    required this.confidence,
+    required this.predictedActionType,
+    required this.predictedWindow,
+    required this.reasons,
+    required this.suggestedPrompt,
+    required this.predictionSource,
+    this.generatedAt,
+  });
+
+  final String title;
+  final String summary;
+  final double confidence;
+  final String predictedActionType;
+  final String predictedWindow;
+  final List<String> reasons;
+  final String suggestedPrompt;
+  final String predictionSource;
+  final DateTime? generatedAt;
+}
+
 // Provider
 final dashboardProvider =
     StateNotifierProvider<DashboardNotifier, DashboardState>(
@@ -154,7 +184,7 @@ final dashboardProvider =
 
 class DashboardNotifier extends StateNotifier<DashboardState> {
   DashboardNotifier(this._repository) : super(DashboardState.loading()) {
-    fetchData();
+    Future<void>.microtask(fetchData);
   }
   final DashboardRepository _repository;
 
@@ -164,6 +194,12 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
       state = DashboardState.loading();
 
       final dashboardData = await _repository.getDashboardStatus();
+      var predictiveData = <String, dynamic>{};
+      try {
+        predictiveData = await _repository.getPredictiveDashboard();
+      } catch (e) {
+        debugPrint('Predictive dashboard unavailable: $e');
+      }
       if (!mounted) return;
 
       // Parse weather data
@@ -246,6 +282,30 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
         hasNewInsight: cognitiveMap['has_new_insight'] as bool? ?? false,
       );
 
+      final nextIntentMap =
+          predictiveData['next_intent_forecast'] as Map<String, dynamic>?;
+      final nextIntent = nextIntentMap == null
+          ? null
+          : NextIntentForecastData(
+              title: nextIntentMap['title']?.toString() ?? '',
+              summary: nextIntentMap['summary']?.toString() ?? '',
+              confidence: (nextIntentMap['confidence'] as num?)?.toDouble() ?? 0,
+              predictedActionType:
+                  nextIntentMap['predicted_action_type']?.toString() ?? '',
+              predictedWindow:
+                  nextIntentMap['predicted_window']?.toString() ?? '',
+              reasons: ((nextIntentMap['reasons'] as List<dynamic>?) ?? const [])
+                  .map((item) => item.toString())
+                  .toList(),
+              suggestedPrompt:
+                  nextIntentMap['suggested_prompt']?.toString() ?? '',
+              predictionSource:
+                  nextIntentMap['prediction_source']?.toString() ?? 'rules',
+              generatedAt: DateTime.tryParse(
+                nextIntentMap['generated_at']?.toString() ?? '',
+              ),
+            );
+
       state = DashboardState(
         weather: weather,
         flame: flame,
@@ -253,6 +313,7 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
         growth: growth,
         nextActions: nextActions,
         cognitive: cognitive,
+        nextIntentForecast: nextIntent,
       );
     } catch (e) {
       debugPrint('Error loading dashboard: $e');

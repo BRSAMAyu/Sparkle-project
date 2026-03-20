@@ -255,6 +255,38 @@ class MessageTypeAdapter extends TypeAdapter<MessageType> {
 // JsonSerializableGenerator
 // **************************************************************************
 
+AccountabilityFriendSummary _$AccountabilityFriendSummaryFromJson(
+        Map<String, dynamic> json) =>
+    AccountabilityFriendSummary(
+      partnershipId: json['partnership_id'] as String,
+      slotType: json['slot_type'] as String,
+      status: json['status'] as String,
+      myRole: json['my_role'] as String?,
+      myCheckedInToday: json['my_checked_in_today'] as bool?,
+      partnerCheckedInToday: json['partner_checked_in_today'] as bool?,
+      myStreakDays: (json['my_streak_days'] as num?)?.toInt(),
+      partnerStreakDays: (json['partner_streak_days'] as num?)?.toInt(),
+      lastCheckinAt: json['last_checkin_at'] == null
+          ? null
+          : DateTime.parse(json['last_checkin_at'] as String),
+      goalPreview: json['goal_preview'] as String?,
+    );
+
+Map<String, dynamic> _$AccountabilityFriendSummaryToJson(
+        AccountabilityFriendSummary instance) =>
+    <String, dynamic>{
+      'partnership_id': instance.partnershipId,
+      'slot_type': instance.slotType,
+      'status': instance.status,
+      'my_role': instance.myRole,
+      'my_checked_in_today': instance.myCheckedInToday,
+      'partner_checked_in_today': instance.partnerCheckedInToday,
+      'my_streak_days': instance.myStreakDays,
+      'partner_streak_days': instance.partnerStreakDays,
+      'last_checkin_at': instance.lastCheckinAt?.toIso8601String(),
+      'goal_preview': instance.goalPreview,
+    };
+
 FriendshipInfo _$FriendshipInfoFromJson(Map<String, dynamic> json) =>
     FriendshipInfo(
       id: json['id'] as String,
@@ -264,6 +296,11 @@ FriendshipInfo _$FriendshipInfoFromJson(Map<String, dynamic> json) =>
       updatedAt: DateTime.parse(json['updated_at'] as String),
       matchReason: json['match_reason'] as Map<String, dynamic>?,
       initiatedByMe: json['initiated_by_me'] as bool? ?? false,
+      accountability: json['accountability'] == null
+          ? null
+          : AccountabilityFriendSummary.fromJson(
+              json['accountability'] as Map<String, dynamic>,
+            ),
     );
 
 Map<String, dynamic> _$FriendshipInfoToJson(FriendshipInfo instance) =>
@@ -273,6 +310,7 @@ Map<String, dynamic> _$FriendshipInfoToJson(FriendshipInfo instance) =>
       'status': _$FriendshipStatusEnumMap[instance.status]!,
       'match_reason': instance.matchReason,
       'initiated_by_me': instance.initiatedByMe,
+      'accountability': instance.accountability,
       'created_at': instance.createdAt.toIso8601String(),
       'updated_at': instance.updatedAt.toIso8601String(),
     };
@@ -299,6 +337,38 @@ Map<String, dynamic> _$FriendRecommendationToJson(
       'user': instance.user,
       'match_score': instance.matchScore,
       'match_reasons': instance.matchReasons,
+    };
+
+FriendProfileDetail _$FriendProfileDetailFromJson(Map<String, dynamic> json) =>
+    FriendProfileDetail(
+      user: UserBrief.fromJson(json['user'] as Map<String, dynamic>),
+      friendship: Map<String, dynamic>.from(json['friendship'] as Map),
+      accountability: (json['accountability'] as Map?)?.cast<String, dynamic>(),
+      relationshipSummary:
+          (json['relationship_summary'] as Map?)?.cast<String, dynamic>(),
+      achievementsSummary:
+          (json['achievements_summary'] as Map?)?.cast<String, dynamic>(),
+      leaderboardSummary:
+          (json['leaderboard_summary'] as Map?)?.cast<String, dynamic>(),
+      recentShares: (json['recent_shares'] as List<dynamic>?)
+              ?.map((e) => Map<String, dynamic>.from(e as Map))
+              .toList() ??
+          const [],
+      quickActions:
+          (json['quick_actions'] as Map?)?.cast<String, dynamic>() ?? const {},
+    );
+
+Map<String, dynamic> _$FriendProfileDetailToJson(
+        FriendProfileDetail instance) =>
+    <String, dynamic>{
+      'user': instance.user,
+      'friendship': instance.friendship,
+      'accountability': instance.accountability,
+      'relationship_summary': instance.relationshipSummary,
+      'achievements_summary': instance.achievementsSummary,
+      'leaderboard_summary': instance.leaderboardSummary,
+      'recent_shares': instance.recentShares,
+      'quick_actions': instance.quickActions,
     };
 
 GroupInfo _$GroupInfoFromJson(Map<String, dynamic> json) => GroupInfo(

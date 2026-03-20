@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
 /// Sparkle pressable surface that reads semantic tokens from ThemeExtension.
-class SparklePressable extends StatelessWidget {
+class SparklePressable extends StatefulWidget {
   const SparklePressable({
     required this.child,
     super.key,
@@ -30,33 +33,66 @@ class SparklePressable extends StatelessWidget {
   final String? semanticLabel;
 
   @override
+  State<SparklePressable> createState() => _SparklePressableState();
+}
+
+class _SparklePressableState extends State<SparklePressable> {
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
-    final radius = borderRadius ?? context.radius.smRadius;
-    final background = backgroundColor ?? DS.neutral0.withValues(alpha: 0);
-    final side = border ?? BorderSide.none;
+    final radius = widget.borderRadius ?? context.radius.smRadius;
+    final background =
+        widget.backgroundColor ?? DS.neutral0.withValues(alpha: 0);
+    final side = widget.border ?? BorderSide.none;
 
     return Semantics(
-      button: onTap != null,
-      enabled: enabled && onTap != null,
-      label: semanticLabel,
+      button: widget.onTap != null,
+      enabled: widget.enabled && widget.onTap != null,
+      label: widget.semanticLabel,
       child: Container(
-        margin: margin,
-        child: Material(
-          color: background,
-          shape: RoundedRectangleBorder(borderRadius: radius, side: side),
-          child: InkWell(
-            onTap: enabled ? onTap : null,
-            onLongPress: enabled ? onLongPress : null,
-            borderRadius: radius,
-            splashColor: DS.brandPrimary.withValues(alpha: 0.12),
-            highlightColor: DS.brandPrimary.withValues(alpha: 0.06),
-            child: Padding(
-              padding: padding ??
-                  context.space.edge(
-                    horizontal: context.space.sm,
-                    vertical: context.space.xs,
-                  ),
-              child: child,
+        margin: widget.margin,
+        child: AnimatedScale(
+          scale: _pressed ? 0.985 : 1,
+          duration: DS.durationFast,
+          curve: Curves.easeOutCubic,
+          child: Material(
+            color: background,
+            shape: RoundedRectangleBorder(borderRadius: radius, side: side),
+            child: InkWell(
+              onTap: widget.enabled && widget.onTap != null
+                  ? () {
+                      unawaited(
+                        SensoryFeedbackService.emit(SensoryFeedbackEvent.tap),
+                      );
+                      widget.onTap?.call();
+                    }
+                  : null,
+              onLongPress: widget.enabled && widget.onLongPress != null
+                  ? () {
+                      unawaited(
+                        SensoryFeedbackService.emit(
+                          SensoryFeedbackEvent.selection,
+                        ),
+                      );
+                      widget.onLongPress?.call();
+                    }
+                  : null,
+              onHighlightChanged: (highlighted) {
+                if (_pressed == highlighted) return;
+                setState(() => _pressed = highlighted);
+              },
+              borderRadius: radius,
+              splashColor: DS.brandPrimary.withValues(alpha: 0.12),
+              highlightColor: DS.brandPrimary.withValues(alpha: 0.06),
+              child: Padding(
+                padding: widget.padding ??
+                    context.space.edge(
+                      horizontal: context.space.sm,
+                      vertical: context.space.xs,
+                    ),
+                child: widget.child,
+              ),
             ),
           ),
         ),

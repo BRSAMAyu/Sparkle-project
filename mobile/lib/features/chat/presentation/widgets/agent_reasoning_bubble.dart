@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// 智能体推理气泡组件
@@ -81,7 +82,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
   }
 
   void _showCitationDetails(BuildContext context, Map<String, dynamic> cite) {
-    showDialog<void>(
+    showSensoryDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(
@@ -175,7 +176,8 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                     color: DS.brandPrimaryConst,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                        color: widget.agentColor.withValues(alpha: 0.2),),
+                      color: widget.agentColor.withValues(alpha: 0.2),
+                    ),
                     boxShadow: [
                       BoxShadow(
                         color: DS.brandPrimary.withValues(alpha: 0.03),

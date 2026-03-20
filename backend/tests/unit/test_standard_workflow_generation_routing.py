@@ -41,6 +41,9 @@ class _FakeGenerationLLM:
     async def chat_stream_with_tools(self, system_prompt, user_message, tools, user_context):
         yield SimpleNamespace(type="text", content="分析完成")
 
+    async def chat(self, messages, temperature=0.35):
+        return "快速优化完成"
+
 
 class _ChunkedGenerationLLM(_FakeGenerationLLM):
     async def chat_stream_with_tools(self, system_prompt, user_message, tools, user_context):
@@ -78,10 +81,16 @@ class _LowInfoLLM(_FakeGenerationLLM):
     async def chat_stream_with_tools(self, system_prompt, user_message, tools, user_context):
         yield SimpleNamespace(type="text", content="我来帮你查询CS101课程的相关信息。")
 
+    async def chat(self, messages, temperature=0.35):
+        return "CS101 的期末考试占比 40%，期中考试 20%，平时作业 40%。"
+
 
 class _LowInfoPrivateAgentLLM(_FakeGenerationLLM):
     async def chat_stream_with_tools(self, system_prompt, user_message, tools, user_context):
         yield SimpleNamespace(type="text", content="我来帮你给阿泽写一条合适的私聊消息。")
+
+    async def chat(self, messages, temperature=0.35):
+        return "阿泽，我今晚想和你一起过一下 CS101 期末考点，你方便吗？"
 
 
 class _LeadInGroupAgentLLM(_FakeGenerationLLM):
@@ -138,14 +147,19 @@ async def test_generation_node_forces_fast_tier_for_standard_chat(monkeypatch):
 
     new_state = await generation_node(state)
 
-    get_tier_mock.assert_awaited_once_with(
-        "generation",
-        ModelTier.FAST,
-        task_type=TaskType.STANDARD_RESPONSE,
-        reasoning_mode="fast",
-    )
+    assert get_tier_mock.await_count == 2
+    assert get_tier_mock.await_args_list[0].args[:2] == ("generation", ModelTier.FAST)
+    assert get_tier_mock.await_args_list[0].kwargs == {
+        "task_type": TaskType.STANDARD_RESPONSE,
+        "reasoning_mode": "fast",
+    }
+    assert get_tier_mock.await_args_list[1].args[:2] == ("generation", ModelTier.FAST)
+    assert get_tier_mock.await_args_list[1].kwargs == {
+        "task_type": TaskType.QUICK_QUERY,
+        "reasoning_mode": "fast",
+    }
     assert new_state.context_data["first_touch_model_tier"] == ModelTier.FAST.value
-    assert new_state.messages[-1]["content"] == "分析完成"
+    assert new_state.messages[-1]["content"] == "快速优化完成"
 
 
 @pytest.mark.asyncio

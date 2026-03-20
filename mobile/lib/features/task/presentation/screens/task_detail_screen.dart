@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart'
     hide ButtonVariant;
 import 'package:sparkle/core/design/widgets/error_widget.dart';
@@ -601,7 +602,7 @@ class _BottomActionBar extends ConsumerWidget {
                     icon: Icon(Icons.delete_outline, color: DS.error),
                     onPressed: () {
                       HapticFeedback.mediumImpact();
-                      showDialog<void>(
+                      showSensoryDialog<void>(
                         context: context,
                         builder: (ctx) => AlertDialog(
                           shape: const RoundedRectangleBorder(

@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/features/calendar/data/services/smart_schedule_service.dart';
 
 /// Smart Schedule Chip
@@ -62,18 +65,20 @@ class SmartScheduleChip extends ConsumerWidget {
   }
 
   void _showTimePicker(BuildContext context, List<SuggestedTime> suggestions) {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: DS.surfacePrimary,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => _TimeSuggestionSheet(
-        suggestions: suggestions,
-        onSelected: (suggestion) {
-          Navigator.pop(context);
-          onTimeSelected(suggestion);
-        },
+    unawaited(
+      showSensoryModalBottomSheet<void>(
+        context: context,
+        backgroundColor: DS.surfacePrimary,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (context) => _TimeSuggestionSheet(
+          suggestions: suggestions,
+          onSelected: (suggestion) {
+            Navigator.pop(context);
+            onTimeSelected(suggestion);
+          },
+        ),
       ),
     );
   }

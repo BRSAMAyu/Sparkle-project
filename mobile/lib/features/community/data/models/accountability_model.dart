@@ -26,6 +26,7 @@ class AccountabilityPartnershipInfo {
     required this.partnerId,
     required this.initiatorGoal,
     required this.checkInDays,
+    this.slotType = 'core',
     required this.status,
     required this.createdAt,
     this.partnerGoal,
@@ -55,6 +56,8 @@ class AccountabilityPartnershipInfo {
   final String? partnerGoal;
   @JsonKey(name: 'check_in_days')
   final int checkInDays;
+  @JsonKey(name: 'slot_type')
+  final String slotType;
   final AccountabilityStatus status;
   @JsonKey(name: 'started_at')
   final DateTime? startedAt;
@@ -96,6 +99,7 @@ class AccountabilityPartnershipInfo {
         initiatorGoal: initiatorGoal,
         partnerGoal: partnerGoal,
         checkInDays: checkInDays,
+        slotType: slotType,
         status: status,
         startedAt: startedAt,
         endedAt: endedAt,
@@ -196,4 +200,71 @@ class AccountabilityStatsInfo {
   final int totalCheckins;
 
   Map<String, dynamic> toJson() => _$AccountabilityStatsInfoToJson(this);
+}
+
+@JsonSerializable()
+class AccountabilityOverviewInfo {
+  AccountabilityOverviewInfo({
+    required this.slotType,
+    this.activePartnership,
+    this.pendingPartnerships = const [],
+    this.achievementsSummary = const {},
+    this.leaderboardSummary = const {},
+    this.relationshipSummary,
+    this.quickActions = const {},
+  });
+
+  factory AccountabilityOverviewInfo.fromJson(Map<String, dynamic> json) =>
+      _$AccountabilityOverviewInfoFromJson(json);
+
+  @JsonKey(name: 'slot_type')
+  final String slotType;
+  @JsonKey(name: 'active_partnership')
+  final AccountabilityPartnershipInfo? activePartnership;
+  @JsonKey(name: 'pending_partnerships')
+  final List<AccountabilityPartnershipInfo> pendingPartnerships;
+  @JsonKey(name: 'achievements_summary')
+  final Map<String, dynamic> achievementsSummary;
+  @JsonKey(name: 'leaderboard_summary')
+  final Map<String, dynamic> leaderboardSummary;
+  @JsonKey(name: 'relationship_summary')
+  final Map<String, dynamic>? relationshipSummary;
+  @JsonKey(name: 'quick_actions')
+  final Map<String, dynamic> quickActions;
+
+  Map<String, dynamic> toJson() => _$AccountabilityOverviewInfoToJson(this);
+}
+
+@JsonSerializable()
+class AccountabilityDashboardInfo {
+  AccountabilityDashboardInfo({
+    required this.partnership,
+    required this.stats,
+    this.timeline = const [],
+    this.heatmap = const {},
+    this.achievements = const {},
+    this.leaderboardSummary = const {},
+    this.relationshipSummary = const {},
+    this.recentShares = const [],
+    this.quickActions = const {},
+  });
+
+  factory AccountabilityDashboardInfo.fromJson(Map<String, dynamic> json) =>
+      _$AccountabilityDashboardInfoFromJson(json);
+
+  final AccountabilityPartnershipInfo partnership;
+  final AccountabilityStatsInfo stats;
+  final List<AccountabilityCheckinInfo> timeline;
+  final Map<String, dynamic> heatmap;
+  final Map<String, dynamic> achievements;
+  @JsonKey(name: 'leaderboard_summary')
+  final Map<String, dynamic> leaderboardSummary;
+  @JsonKey(name: 'relationship_summary')
+  final Map<String, dynamic> relationshipSummary;
+  @JsonKey(name: 'recent_shares')
+  final List<Map<String, dynamic>> recentShares;
+  @JsonKey(name: 'quick_actions')
+  final Map<String, dynamic> quickActions;
+
+  Map<String, dynamic> toJson() => _$AccountabilityDashboardInfoToJson(this);
 }

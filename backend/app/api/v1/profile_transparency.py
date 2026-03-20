@@ -6,11 +6,14 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
 from app.core.cache import cache_service
+from app.models.accountability import AccountabilityPartnership, AccountabilitySlotType, AccountabilityStatus
 from app.models.user import User
+from app.api.v1.accountability import _build_relationship_summary
 from app.services.cognitive_service import CognitiveService
 from app.services.memory_service import MemoryService
 from app.services.personalization import get_personalization_engine
@@ -442,6 +445,30 @@ async def get_profile_context(
     payload = context.to_prompt_context()
     payload["preferences"] = merged_preferences
     payload["preference_version"] = prefs.version or payload.get("preference_version", 0)
+    partnership_result = await db.execute(
+        select(AccountabilityPartnership).where(
+            and_(
+                AccountabilityPartnership.slot_type == AccountabilitySlotType.CORE,
+                AccountabilityPartnership.status == AccountabilityStatus.ACTIVE,
+                or_(
+                    AccountabilityPartnership.initiator_id == current_user.id,
+                    AccountabilityPartnership.partner_id == current_user.id,
+                ),
+            )
+        ).order_by(AccountabilityPartnership.updated_at.desc())
+    )
+    active_partnership = partnership_result.scalars().first()
+    payload["accountability_summary"] = (
+        await _build_relationship_summary(db, active_partnership, current_user)
+        if active_partnership is not None
+        else {
+            "slot_type": AccountabilitySlotType.CORE.value,
+            "status": "inactive",
+            "has_core_partner": False,
+        }
+    )
+    if active_partnership is not None:
+        payload["accountability_summary"]["has_core_partner"] = True
     return payload
 
 

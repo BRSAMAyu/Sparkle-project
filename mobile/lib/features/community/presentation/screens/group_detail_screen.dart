@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,6 +8,7 @@ import 'package:shimmer/shimmer.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
 import 'package:sparkle/features/community/presentation/widgets/bonfire_widget.dart';
@@ -58,12 +61,18 @@ class GroupDetailScreen extends ConsumerWidget {
             expandedHeight: 200.0,
             pinned: true,
             stretch: true,
+            backgroundColor: DS.surfaceOverlay.withValues(alpha: 0.94),
             flexibleSpace: FlexibleSpaceBar(
               title: Text(
                 group.name,
                 style: TextStyle(
-                  color: DS.brandPrimaryConst,
-                  shadows: [Shadow(color: DS.brandPrimary45, blurRadius: 4)],
+                  color: DS.textPrimary,
+                  shadows: [
+                    Shadow(
+                      color: Colors.black.withValues(alpha: 0.08),
+                      blurRadius: 8,
+                    ),
+                  ],
                 ),
               ),
               background: DecoratedBox(
@@ -77,7 +86,15 @@ class GroupDetailScreen extends ConsumerWidget {
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         )
-                      : DS.pageGradientForRole(SparklePageRole.content),
+                      : LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            DS.surfacePrimary,
+                            Color.lerp(DS.surfaceSecondary, DS.info, 0.04) ??
+                                DS.surfaceSecondary,
+                          ],
+                        ),
                 ),
                 child: Center(
                   child: Hero(
@@ -87,17 +104,31 @@ class GroupDetailScreen extends ConsumerWidget {
                       width: 80,
                       height: 80,
                       decoration: BoxDecoration(
-                        color: DS.brandPrimary.withValues(alpha: 0.2),
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            DS.brandPrimary.withValues(alpha: 0.16),
+                            DS.info.withValues(alpha: 0.08),
+                          ],
+                        ),
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: DS.brandPrimary.withValues(alpha: 0.5),
+                          color: DS.brandPrimary.withValues(alpha: 0.24),
                           width: 2,
                         ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: DS.brandPrimary.withValues(alpha: 0.1),
+                            blurRadius: 18,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
                       ),
                       child: Icon(
                         isSprint ? Icons.timer_outlined : Icons.school_outlined,
                         size: 40,
-                        color: DS.brandPrimaryConst,
+                        color: DS.textPrimary,
                       ),
                     ),
                   ),
@@ -126,14 +157,23 @@ class GroupDetailScreen extends ConsumerWidget {
                           vertical: 8,
                         ),
                         decoration: BoxDecoration(
-                          color: DS.error.shade50,
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              DS.error.withValues(alpha: 0.1),
+                              DS.surfacePrimary,
+                            ],
+                          ),
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: DS.error.shade100),
+                          border: Border.all(
+                            color: DS.error.withValues(alpha: 0.16),
+                          ),
                         ),
                         child: Text(
                           'Sprint ends in ${group.daysRemaining} days',
                           style: TextStyle(
-                            color: DS.error.shade700,
+                            color: DS.error,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -205,7 +245,7 @@ class GroupDetailScreen extends ConsumerWidget {
                   Text(
                     group.description ?? 'No description provided.',
                     style: theme.textTheme.bodyMedium
-                        ?.copyWith(color: DS.neutral700, height: 1.5),
+                        ?.copyWith(color: DS.textSecondary, height: 1.6),
                   ),
 
                   const SizedBox(height: DS.xl),
@@ -219,8 +259,14 @@ class GroupDetailScreen extends ConsumerWidget {
                           .map(
                             (tag) => Chip(
                               label: Text(tag),
-                              backgroundColor: DS.neutral100,
-                              labelStyle: TextStyle(color: DS.neutral800),
+                              backgroundColor: Color.alphaBlend(
+                                DS.info.withValues(alpha: 0.05),
+                                DS.surfacePrimary,
+                              ),
+                              side: BorderSide(
+                                color: DS.border.withValues(alpha: 0.45),
+                              ),
+                              labelStyle: TextStyle(color: DS.textPrimary),
                             ),
                           )
                           .toList(),
@@ -242,7 +288,10 @@ class GroupDetailScreen extends ConsumerWidget {
                         SparkleIconButton(
                           icon: const Icon(Icons.edit_outlined, size: 18),
                           onPressed: () => _showEditAnnouncementDialog(
-                              context, ref, group,),
+                            context,
+                            ref,
+                            group,
+                          ),
                         ),
                     ],
                   ),
@@ -252,7 +301,7 @@ class GroupDetailScreen extends ConsumerWidget {
                         ? group.announcement!
                         : 'No announcement.',
                     style: theme.textTheme.bodyMedium
-                        ?.copyWith(color: DS.neutral700, height: 1.5),
+                        ?.copyWith(color: DS.textSecondary, height: 1.6),
                   ),
 
                   const SizedBox(height: DS.xxl),
@@ -304,7 +353,9 @@ class GroupDetailScreen extends ConsumerWidget {
                               .joinGroup();
                           if (context.mounted) {
                             AppFeedback.success(
-                                context, 'Welcome to the group!',);
+                              context,
+                              'Welcome to the group!',
+                            );
                           }
                         } catch (e) {
                           if (context.mounted) {
@@ -335,7 +386,14 @@ class GroupDetailScreen extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
         child: Column(
           children: [
-            Icon(icon, color: DS.primaryBase, size: 24),
+            Container(
+              padding: const EdgeInsets.all(DS.spacing8),
+              decoration: BoxDecoration(
+                color: DS.primaryBase.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(icon, color: DS.primaryBase, size: 20),
+            ),
             const SizedBox(height: DS.sm),
             Text(
               value,
@@ -359,69 +417,71 @@ class GroupDetailScreen extends ConsumerWidget {
       );
 
   void _showGroupOptions(BuildContext context, WidgetRef ref, GroupInfo group) {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
-      builder: (context) => GraphiteModalSurface(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(DS.sm),
-                decoration: BoxDecoration(
-                  color: DS.error.shade50,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.exit_to_app,
-                  color: DS.error.shade700,
-                  size: 20,
-                ),
-              ),
-              title: Text(
-                'Leave Group',
-                style: TextStyle(
-                  color: DS.error.shade700,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              onTap: () async {
-                Navigator.pop(context);
-                final confirm = await showDialog<bool>(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('Leave Group?'),
-                    content: const Text(
-                      'Are you sure you want to leave this group?',
-                    ),
-                    actions: [
-                      SparkleButton.ghost(
-                        label: 'Cancel',
-                        onPressed: () => Navigator.pop(context, false),
-                      ),
-                      SparkleButton.destructive(
-                        label: 'Leave',
-                        onPressed: () => Navigator.pop(context, true),
-                      ),
-                    ],
+    unawaited(
+      showSensoryModalBottomSheet<void>(
+        context: context,
+        backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
+        builder: (context) => GraphiteModalSurface(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(DS.sm),
+                  decoration: BoxDecoration(
+                    color: DS.error.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
                   ),
-                );
+                  child: Icon(
+                    Icons.exit_to_app,
+                    color: DS.error,
+                    size: 20,
+                  ),
+                ),
+                title: Text(
+                  'Leave Group',
+                  style: TextStyle(
+                    color: DS.error,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final confirm = await showSensoryDialog<bool>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Leave Group?'),
+                      content: const Text(
+                        'Are you sure you want to leave this group?',
+                      ),
+                      actions: [
+                        SparkleButton.ghost(
+                          label: 'Cancel',
+                          onPressed: () => Navigator.pop(context, false),
+                        ),
+                        SparkleButton.destructive(
+                          label: 'Leave',
+                          onPressed: () => Navigator.pop(context, true),
+                        ),
+                      ],
+                    ),
+                  );
 
-                if (confirm ?? false) {
-                  try {
-                    await ref
-                        .read(groupDetailProvider(groupId).notifier)
-                        .leaveGroup();
-                    if (context.mounted) context.pop();
-                  } catch (e) {
-                    // Handle error
+                  if (confirm ?? false) {
+                    try {
+                      await ref
+                          .read(groupDetailProvider(groupId).notifier)
+                          .leaveGroup();
+                      if (context.mounted) context.pop();
+                    } catch (e) {
+                      // Handle error
+                    }
                   }
-                }
-              },
-            ),
-            const SizedBox(height: DS.lg),
-          ],
+                },
+              ),
+              const SizedBox(height: DS.lg),
+            ],
+          ),
         ),
       ),
     );
@@ -432,11 +492,15 @@ class GroupDetailScreen extends ConsumerWidget {
     WidgetRef ref,
     GroupInfo group,
   ) async {
-    final controller =
-        TextEditingController(text: group.announcement ?? '');
-    final result = await showDialog<String?>(
+    final controller = TextEditingController(text: group.announcement ?? '');
+    final result = await showSensoryDialog<String?>(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: DS.surfacePrimary,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: DS.border.withValues(alpha: 0.5)),
+        ),
         title: const Text('Edit Announcement'),
         content: TextField(
           controller: controller,

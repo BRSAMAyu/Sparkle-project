@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
@@ -28,7 +29,8 @@ class BlockedUsersScreen extends ConsumerWidget {
                   const SizedBox(height: 16),
                   Text(
                     '暂无拉黑用户',
-                    style: TextStyle(color: DS.neutral500, fontSize: DS.fontSizeBase),
+                    style: TextStyle(
+                        color: DS.neutral500, fontSize: DS.fontSizeBase),
                   ),
                 ],
               ),
@@ -51,7 +53,8 @@ class BlockedUsersScreen extends ConsumerWidget {
               Text('加载失败: $e', style: TextStyle(color: DS.error)),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: () => ref.read(blockedUsersProvider.notifier).refresh(),
+                onPressed: () =>
+                    ref.read(blockedUsersProvider.notifier).refresh(),
                 child: const Text('重试'),
               ),
             ],
@@ -107,8 +110,9 @@ class _BlockedUserTile extends ConsumerWidget {
   }
 
   Future<void> _handleUnblock(BuildContext context, WidgetRef ref) async {
-    final displayName = blockInfo.blockedUser.nickname ?? blockInfo.blockedUser.username;
-    final confirmed = await showDialog<bool>(
+    final displayName =
+        blockInfo.blockedUser.nickname ?? blockInfo.blockedUser.username;
+    final confirmed = await showSensoryDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('解除拉黑'),
@@ -129,7 +133,9 @@ class _BlockedUserTile extends ConsumerWidget {
 
     if (confirmed == true && context.mounted) {
       try {
-        await ref.read(blockedUsersProvider.notifier).unblockUser(blockInfo.blockedUser.id);
+        await ref
+            .read(blockedUsersProvider.notifier)
+            .unblockUser(blockInfo.blockedUser.id);
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

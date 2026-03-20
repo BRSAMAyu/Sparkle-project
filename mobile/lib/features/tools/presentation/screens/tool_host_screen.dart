@@ -34,6 +34,23 @@ class ToolHostScreen extends StatelessWidget {
         child: Stack(
           children: [
             Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      DS.surfacePrimary,
+                      Color.alphaBlend(
+                        DS.info.withValues(alpha: 0.03),
+                        DS.surfaceCanvas,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Positioned.fill(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(
                   DS.spacing12,
@@ -63,18 +80,36 @@ class ToolHostScreen extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    SparkleIconButton(
-                      variant: ButtonVariant.ghost,
-                      onPressed: () => context.pop(),
-                      icon: const Icon(Icons.arrow_back_rounded),
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: DS.surfaceOverlay.withValues(alpha: 0.9),
+                        borderRadius: DS.borderRadius12,
+                        border: Border.all(
+                          color: DS.border.withValues(alpha: 0.45),
+                        ),
+                      ),
+                      child: SparkleIconButton(
+                        variant: ButtonVariant.ghost,
+                        onPressed: () => context.pop(),
+                        icon: const Icon(Icons.arrow_back_rounded),
+                      ),
                     ),
                     const Spacer(),
                     Tooltip(
                       message: '工具库',
-                      child: SparkleIconButton(
-                        variant: ButtonVariant.ghost,
-                        onPressed: () => context.push('/tools/library'),
-                        icon: const Icon(Icons.grid_view_rounded),
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: DS.surfaceOverlay.withValues(alpha: 0.9),
+                          borderRadius: DS.borderRadius12,
+                          border: Border.all(
+                            color: DS.border.withValues(alpha: 0.45),
+                          ),
+                        ),
+                        child: SparkleIconButton(
+                          variant: ButtonVariant.ghost,
+                          onPressed: () => context.push('/tools/library'),
+                          icon: const Icon(Icons.grid_view_rounded),
+                        ),
                       ),
                     ),
                   ],

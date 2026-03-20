@@ -986,6 +986,45 @@ class MockCommunityRepository implements CommunityRepository {
   }
 
   @override
+  Future<FriendProfileDetail> getFriendProfile(String userId) async {
+    return FriendProfileDetail(
+      user: UserBrief(
+        id: userId,
+        username: 'mock_user',
+        nickname: 'Mock Partner',
+      ),
+      friendship: {
+        'id': 'friendship_$userId',
+        'status': 'accepted',
+        'initiated_by_me': false,
+        'created_at': DateTime.now().toIso8601String(),
+      },
+      accountability: const {
+        'status': 'active',
+        'slot_type': 'core',
+      },
+      relationshipSummary: {
+        'partner_name': 'Mock Partner',
+        'days_together': 12,
+        'my_streak_days': 5,
+        'partner_streak_days': 4,
+      },
+      achievementsSummary: const {
+        'my_total_unlocked': 2,
+        'partner_total_unlocked': 1,
+      },
+      leaderboardSummary: const {},
+      recentShares: const [],
+      quickActions: const {
+        'can_invite_accountability': false,
+        'can_open_dashboard': true,
+        'can_chat': true,
+        'can_share': true,
+      },
+    );
+  }
+
+  @override
   Future<void> updateAnnouncement(String groupId, String? announcement) async {
     return;
   }

@@ -83,6 +83,10 @@ class UserSettingsService:
                     "requests_remaining": limit,
                     "total_tokens": 0,
                     "total_cost_usd": 0.0,
+                    "total_duration_ms": 0,
+                    "avg_total_duration_ms": 0.0,
+                    "avg_first_token_ms": 0.0,
+                    "avg_stream_duration_ms": 0.0,
                 }
                 for mode, limit in mode_limits.items()
             ]
@@ -93,6 +97,23 @@ class UserSettingsService:
             "current_mode": current_mode,
             "items": items,
             "generated_at": datetime.utcnow(),
+        }
+
+    async def get_ai_usage_export(self, user_id: UUID, *, days: int = 7) -> dict[str, Any]:
+        redis_client = await self._ensure_redis()
+        summary = await self.get_ai_usage_summary(user_id)
+        chat_mode_timing: list[dict[str, Any]] = []
+        if redis_client is not None:
+            from app.orchestration.token_tracker import get_token_tracker
+
+            tracker = get_token_tracker(redis_client)
+            chat_mode_timing = await tracker.get_chat_mode_timing_summary(days=days)
+        return {
+            "current_mode": summary["current_mode"],
+            "window_days": days,
+            "items": summary["items"],
+            "chat_mode_timing": chat_mode_timing,
+            "generated_at": summary["generated_at"],
         }
 
     async def _invalidate_cache(self, user_id: UUID) -> None:

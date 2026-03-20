@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/achievement_progress_banner.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/achievement_share_bottom_sheet.dart';
@@ -37,6 +38,11 @@ class MainNavigationShell extends ConsumerStatefulWidget {
 class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
   bool _isShowingAchievementDialog = false;
 
+  void _handleDestinationSelected(int index) {
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.navigation));
+    widget.navigationShell.goBranch(index);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -54,7 +60,7 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
             next != previous &&
             mounted &&
             !_isShowingAchievementDialog) {
-          _showAchievementDialog(next.event, next.comboCount);
+          unawaited(_showAchievementDialog(next.event, next.comboCount));
         }
       },
     );
@@ -73,15 +79,17 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
         comboCount: comboCount,
         onShare: () {
           Navigator.of(context).pop(); // Close unlock dialog first
-          showAchievementShareSheet(
-            context,
-            achievementId: event.achievementId,
-            achievementName: event.name,
+          unawaited(
+            showAchievementShareSheet(
+              context,
+              achievementId: event.achievementId,
+              achievementName: event.name,
+            ),
           );
         },
         onViewRewards: () {
           Navigator.of(context).pop();
-          context.push('/achievements/${event.achievementId}');
+          unawaited(context.push('/achievements/${event.achievementId}'));
         },
       );
     } finally {
@@ -133,7 +141,7 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
             body: widget.navigationShell,
             destinations: destinations,
             currentIndex: widget.navigationShell.currentIndex,
-            onDestinationSelected: widget.navigationShell.goBranch,
+            onDestinationSelected: _handleDestinationSelected,
           ),
         ),
         // Phase 1B: Close-to-unlock progress banner

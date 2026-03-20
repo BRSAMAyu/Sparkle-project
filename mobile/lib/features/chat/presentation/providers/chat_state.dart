@@ -38,6 +38,7 @@ class ActiveRunSummary {
     this.toolCount = 0,
     this.currentStepIndex,
     this.totalSteps,
+    this.startedAtEpochMs,
   });
 
   final String? status;
@@ -46,6 +47,7 @@ class ActiveRunSummary {
   final int toolCount;
   final int? currentStepIndex;
   final int? totalSteps;
+  final int? startedAtEpochMs;
 
   ActiveRunSummary copyWith({
     String? status,
@@ -54,6 +56,7 @@ class ActiveRunSummary {
     int? toolCount,
     int? currentStepIndex,
     int? totalSteps,
+    int? startedAtEpochMs,
   }) =>
       ActiveRunSummary(
         status: status ?? this.status,
@@ -62,6 +65,7 @@ class ActiveRunSummary {
         toolCount: toolCount ?? this.toolCount,
         currentStepIndex: currentStepIndex ?? this.currentStepIndex,
         totalSteps: totalSteps ?? this.totalSteps,
+        startedAtEpochMs: startedAtEpochMs ?? this.startedAtEpochMs,
       );
 }
 

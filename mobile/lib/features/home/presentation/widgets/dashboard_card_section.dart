@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/streak_indicator.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_card_config_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/calendar_heatmap_card.dart';
@@ -56,7 +57,8 @@ class DashboardCardSection extends ConsumerWidget {
                 TextButton.icon(
                   onPressed: () => _openEditSheet(context),
                   icon: const Icon(Icons.tune_rounded, size: 18),
-                  label: Text(AppLocalizations.of(context)!.dashboardCustomizeCards),
+                  label: Text(
+                      AppLocalizations.of(context)!.dashboardCustomizeCards),
                 ),
               ],
             ),
@@ -106,7 +108,7 @@ class DashboardCardSection extends ConsumerWidget {
   }
 
   Future<void> _openEditSheet(BuildContext context) =>
-      showModalBottomSheet<void>(
+      showSensoryModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,

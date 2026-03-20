@@ -203,22 +203,84 @@ class MessageMeta {
 
   MessageMeta({
     this.latencyMs,
+    this.totalDurationMs,
+    this.firstEventMs,
+    this.firstTokenMs,
+    this.streamDurationMs,
+    this.responseEventCount,
     this.isCacheHit,
     this.costSaved,
     this.breakerStatus,
+    this.modelTier,
+    this.reasoningMode,
+    this.chatMode,
   });
 
   factory MessageMeta.fromJson(Map<String, dynamic> json) =>
       _$MessageMetaFromJson(json);
+  factory MessageMeta.fromLooseJson(Map<String, dynamic> json) => MessageMeta(
+        latencyMs: _looseInt(json['latency_ms']),
+        totalDurationMs: _looseInt(json['total_duration_ms']),
+        firstEventMs: _looseInt(json['first_event_ms']),
+        firstTokenMs: _looseInt(json['first_token_ms']),
+        streamDurationMs: _looseInt(json['stream_duration_ms']),
+        responseEventCount: _looseInt(json['response_event_count']),
+        isCacheHit: _looseBool(json['is_cache_hit']),
+        costSaved: _looseDouble(json['cost_saved']),
+        breakerStatus: json['breaker_status']?.toString(),
+        modelTier: json['generation_model_tier']?.toString() ??
+            json['model_tier']?.toString(),
+        reasoningMode: json['reasoning_mode']?.toString(),
+        chatMode: json['chat_mode']?.toString(),
+      );
   @JsonKey(name: 'latency_ms')
   final int? latencyMs;
+  @JsonKey(name: 'total_duration_ms')
+  final int? totalDurationMs;
+  @JsonKey(name: 'first_event_ms')
+  final int? firstEventMs;
+  @JsonKey(name: 'first_token_ms')
+  final int? firstTokenMs;
+  @JsonKey(name: 'stream_duration_ms')
+  final int? streamDurationMs;
+  @JsonKey(name: 'response_event_count')
+  final int? responseEventCount;
   @JsonKey(name: 'is_cache_hit')
   final bool? isCacheHit;
   @JsonKey(name: 'cost_saved')
   final double? costSaved;
   @JsonKey(name: 'breaker_status')
   final String? breakerStatus;
+  @JsonKey(name: 'generation_model_tier')
+  final String? modelTier;
+  @JsonKey(name: 'reasoning_mode')
+  final String? reasoningMode;
+  @JsonKey(name: 'chat_mode')
+  final String? chatMode;
   Map<String, dynamic> toJson() => _$MessageMetaToJson(this);
+}
+
+int? _looseInt(dynamic value) {
+  if (value == null) return null;
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  return int.tryParse(value.toString());
+}
+
+double? _looseDouble(dynamic value) {
+  if (value == null) return null;
+  if (value is double) return value;
+  if (value is num) return value.toDouble();
+  return double.tryParse(value.toString());
+}
+
+bool? _looseBool(dynamic value) {
+  if (value == null) return null;
+  if (value is bool) return value;
+  final normalized = value.toString().trim().toLowerCase();
+  if (normalized == 'true') return true;
+  if (normalized == 'false') return false;
+  return null;
 }
 
 // Helper functions for ReasoningStep serialization

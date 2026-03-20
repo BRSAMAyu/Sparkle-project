@@ -14,6 +14,7 @@ AccountabilityPartnershipInfo _$AccountabilityPartnershipInfoFromJson(
       partnerId: json['partner_id'] as String,
       initiatorGoal: json['initiator_goal'] as String,
       checkInDays: (json['check_in_days'] as num).toInt(),
+      slotType: json['slot_type'] as String? ?? 'core',
       status: $enumDecode(_$AccountabilityStatusEnumMap, json['status']),
       createdAt: DateTime.parse(json['created_at'] as String),
       partnerGoal: json['partner_goal'] as String?,
@@ -45,6 +46,7 @@ Map<String, dynamic> _$AccountabilityPartnershipInfoToJson(
       'initiator_goal': instance.initiatorGoal,
       'partner_goal': instance.partnerGoal,
       'check_in_days': instance.checkInDays,
+      'slot_type': instance.slotType,
       'status': _$AccountabilityStatusEnumMap[instance.status]!,
       'started_at': instance.startedAt?.toIso8601String(),
       'ended_at': instance.endedAt?.toIso8601String(),
@@ -135,4 +137,85 @@ Map<String, dynamic> _$AccountabilityStatsInfoToJson(
       'my_checked_in_today': instance.myCheckedInToday,
       'partner_checked_in_today': instance.partnerCheckedInToday,
       'total_checkins': instance.totalCheckins,
+    };
+
+AccountabilityOverviewInfo _$AccountabilityOverviewInfoFromJson(
+        Map<String, dynamic> json) =>
+    AccountabilityOverviewInfo(
+      slotType: json['slot_type'] as String,
+      activePartnership: json['active_partnership'] == null
+          ? null
+          : AccountabilityPartnershipInfo.fromJson(
+              json['active_partnership'] as Map<String, dynamic>,
+            ),
+      pendingPartnerships: (json['pending_partnerships'] as List<dynamic>?)
+              ?.map((e) => AccountabilityPartnershipInfo.fromJson(
+                  e as Map<String, dynamic>))
+              .toList() ??
+          const [],
+      achievementsSummary:
+          (json['achievements_summary'] as Map?)?.cast<String, dynamic>() ??
+              const {},
+      leaderboardSummary:
+          (json['leaderboard_summary'] as Map?)?.cast<String, dynamic>() ??
+              const {},
+      relationshipSummary:
+          (json['relationship_summary'] as Map?)?.cast<String, dynamic>(),
+      quickActions:
+          (json['quick_actions'] as Map?)?.cast<String, dynamic>() ?? const {},
+    );
+
+Map<String, dynamic> _$AccountabilityOverviewInfoToJson(
+        AccountabilityOverviewInfo instance) =>
+    <String, dynamic>{
+      'slot_type': instance.slotType,
+      'active_partnership': instance.activePartnership,
+      'pending_partnerships': instance.pendingPartnerships,
+      'achievements_summary': instance.achievementsSummary,
+      'leaderboard_summary': instance.leaderboardSummary,
+      'relationship_summary': instance.relationshipSummary,
+      'quick_actions': instance.quickActions,
+    };
+
+AccountabilityDashboardInfo _$AccountabilityDashboardInfoFromJson(
+        Map<String, dynamic> json) =>
+    AccountabilityDashboardInfo(
+      partnership: AccountabilityPartnershipInfo.fromJson(
+          json['partnership'] as Map<String, dynamic>),
+      stats: AccountabilityStatsInfo.fromJson(
+          json['stats'] as Map<String, dynamic>),
+      timeline: (json['timeline'] as List<dynamic>?)
+              ?.map((e) =>
+                  AccountabilityCheckinInfo.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
+      heatmap: (json['heatmap'] as Map?)?.cast<String, dynamic>() ?? const {},
+      achievements:
+          (json['achievements'] as Map?)?.cast<String, dynamic>() ?? const {},
+      leaderboardSummary:
+          (json['leaderboard_summary'] as Map?)?.cast<String, dynamic>() ??
+              const {},
+      relationshipSummary:
+          (json['relationship_summary'] as Map?)?.cast<String, dynamic>() ??
+              const {},
+      recentShares: (json['recent_shares'] as List<dynamic>?)
+              ?.map((e) => Map<String, dynamic>.from(e as Map))
+              .toList() ??
+          const [],
+      quickActions:
+          (json['quick_actions'] as Map?)?.cast<String, dynamic>() ?? const {},
+    );
+
+Map<String, dynamic> _$AccountabilityDashboardInfoToJson(
+        AccountabilityDashboardInfo instance) =>
+    <String, dynamic>{
+      'partnership': instance.partnership,
+      'stats': instance.stats,
+      'timeline': instance.timeline,
+      'heatmap': instance.heatmap,
+      'achievements': instance.achievements,
+      'leaderboard_summary': instance.leaderboardSummary,
+      'relationship_summary': instance.relationshipSummary,
+      'recent_shares': instance.recentShares,
+      'quick_actions': instance.quickActions,
     };

@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/deep_link_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
@@ -243,7 +244,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
         _isUser && DateTime.now().difference(_createdAt).inHours < 24;
 
     unawaited(
-      showModalBottomSheet<void>(
+      showSensoryModalBottomSheet<void>(
         context: context,
         backgroundColor: DS.overlay30.withValues(alpha: 0),
         builder: (context) => DecoratedBox(
@@ -526,9 +527,12 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                             ),
                             if (_metadataWidgets.isNotEmpty ||
                                 (widget.message is ChatMessageModel &&
-                                    (widget.message as ChatMessageModel)
-                                            .aiStatus !=
-                                        null))
+                                    ((widget.message as ChatMessageModel)
+                                                .aiStatus !=
+                                            null ||
+                                        (widget.message as ChatMessageModel)
+                                                .meta !=
+                                            null)))
                               Padding(
                                 padding: const EdgeInsets.only(
                                   top: 8.0,
@@ -543,6 +547,11 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                       ? (widget.message as ChatMessageModel)
                                           .aiStatus
                                       : null,
+                                  messageMeta:
+                                      widget.message is ChatMessageModel
+                                          ? (widget.message as ChatMessageModel)
+                                              .meta
+                                          : null,
                                   onWidgetAction: widget.onWidgetAction,
                                 ),
                               ),
@@ -685,6 +694,10 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                   isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
               children: [
                 if (isUser) _buildMessageStatus(),
+                if (!isUser &&
+                    widget.message is ChatMessageModel &&
+                    (widget.message as ChatMessageModel).meta != null)
+                  _buildTimingBadge((widget.message as ChatMessageModel).meta),
                 const SizedBox(width: DS.xs),
                 Text(
                   timeStr,
@@ -725,6 +738,47 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
       default:
         return const SizedBox.shrink();
     }
+  }
+
+  Widget _buildTimingBadge(MessageMeta? meta) {
+    final durationMs = meta?.totalDurationMs ?? meta?.latencyMs;
+    if (durationMs == null || durationMs <= 0) {
+      return const SizedBox.shrink();
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: DS.spacing6,
+        vertical: DS.spacing2,
+      ),
+      decoration: BoxDecoration(
+        color: DS.surfaceSecondary,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: DS.borderSubtle,
+        ),
+      ),
+      child: Text(
+        _formatDurationBadge(durationMs),
+        style: TextStyle(
+          fontSize: 10,
+          color: DS.textSecondary,
+          fontWeight: DS.fontWeightMedium,
+        ),
+      ),
+    );
+  }
+
+  String _formatDurationBadge(int durationMs) {
+    final seconds = durationMs / 1000.0;
+    if (seconds < 10) {
+      return '${seconds.toStringAsFixed(1)}s';
+    }
+    if (seconds < 60) {
+      return '${seconds.round()}s';
+    }
+    final minutes = durationMs ~/ 60000;
+    final remainingSeconds = (durationMs % 60000) ~/ 1000;
+    return '${minutes}m ${remainingSeconds}s';
   }
 
   Widget _buildQuoteArea(
@@ -844,7 +898,8 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
 
     if (_isAgent) {
       final agent = buildCommunityAgentUser(
-          localizedName: context.l10n.communityAgentName);
+        localizedName: context.l10n.communityAgentName,
+      );
       avatarUrl = agent.avatarUrl;
       initial = 'AI';
     } else if (widget.message is ChatMessageModel) {

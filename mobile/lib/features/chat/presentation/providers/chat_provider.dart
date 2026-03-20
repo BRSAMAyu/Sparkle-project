@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
@@ -96,7 +97,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
     await _chatRepository.reconnect();
   }
 
-  String _nextClientRunId() => 'run_${DateTime.now().microsecondsSinceEpoch}_${_runSequence++}';
+  String _nextClientRunId() =>
+      'run_${DateTime.now().microsecondsSinceEpoch}_${_runSequence++}';
 
   ActiveRunSummary _buildRunSummary({
     String? status,
@@ -105,6 +107,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
     int? currentStepIndex,
     int? totalSteps,
     List<String>? activeTools,
+    int? startedAtEpochMs,
   }) =>
       ActiveRunSummary(
         status: status ?? state.aiStatus,
@@ -115,6 +118,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
         totalSteps: totalSteps ??
             state.transparencyData?.steps.length ??
             state.activeRunSummary?.totalSteps,
+        startedAtEpochMs:
+            startedAtEpochMs ?? state.activeRunSummary?.startedAtEpochMs,
       );
 
   void _invalidateActiveStreamState({
@@ -135,13 +140,13 @@ class ChatNotifier extends StateNotifier<ChatState> {
       clearActiveRunId: true,
       runPhase: phase,
       clearActiveRunSummary: true,
-      transparencyPresentationState: state.transparencyPresentationState
-          .copyWith(
-            isExpanded: false,
-            isDismissed: false,
-            lastCompletedLabel: completedLabel,
-            clearLastCompletedLabel: clearCompletedLabel,
-          ),
+      transparencyPresentationState:
+          state.transparencyPresentationState.copyWith(
+        isExpanded: false,
+        isDismissed: false,
+        lastCompletedLabel: completedLabel,
+        clearLastCompletedLabel: clearCompletedLabel,
+      ),
     );
   }
 
@@ -149,6 +154,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
     required String runId,
     required ChatMessageModel userMessage,
   }) {
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
     state = state.copyWith(
       messages: [...state.messages, userMessage],
       isSending: true,
@@ -160,13 +166,13 @@ class ChatNotifier extends StateNotifier<ChatState> {
       clearError: true,
       activeRunId: runId,
       runPhase: ChatRunPhase.sending,
-      activeRunSummary: const ActiveRunSummary(),
-      transparencyPresentationState: state.transparencyPresentationState
-          .copyWith(
-            isExpanded: false,
-            isDismissed: false,
-            clearLastCompletedLabel: true,
-          ),
+      activeRunSummary: ActiveRunSummary(startedAtEpochMs: nowMs),
+      transparencyPresentationState:
+          state.transparencyPresentationState.copyWith(
+        isExpanded: false,
+        isDismissed: false,
+        clearLastCompletedLabel: true,
+      ),
     );
   }
 
@@ -536,6 +542,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
     String? accumulatedCollaborationNarrative;
     String? accumulatedCollaborationMode;
     List<String>? accumulatedAgentsInvolved;
+    final accumulatedMeta = <String, dynamic>{};
     final accumulatedReasoningSteps = <ReasoningStep>[];
     int? reasoningStartTime;
     String? pendingStreamingContent;
@@ -622,6 +629,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
           );
         }
 
+        final messageMeta = accumulatedMeta.isNotEmpty
+            ? MessageMeta.fromLooseJson(accumulatedMeta)
+            : null;
+
         final aiMessage = ChatMessageModel(
           id: 'ai_${DateTime.now().millisecondsSinceEpoch}',
           userId: 'ai_assistant',
@@ -643,6 +654,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
               : null,
           reasoningSummary: reasoningSummary,
           isReasoningComplete: accumulatedReasoningSteps.isNotEmpty,
+          meta: messageMeta,
           responseId: responseId,
           traceId: traceId,
           workflowId: workflowId,
@@ -667,14 +679,13 @@ class ChatNotifier extends StateNotifier<ChatState> {
         clearActiveRunId: true,
         runPhase: phase,
         clearActiveRunSummary: true,
-        transparencyPresentationState: state.transparencyPresentationState
-            .copyWith(
-              isExpanded: false,
-              isDismissed: false,
-              lastCompletedLabel:
-                  phase == ChatRunPhase.completed ? '已完成' : null,
-              clearLastCompletedLabel: phase != ChatRunPhase.completed,
-            ),
+        transparencyPresentationState:
+            state.transparencyPresentationState.copyWith(
+          isExpanded: false,
+          isDismissed: false,
+          lastCompletedLabel: phase == ChatRunPhase.completed ? '已完成' : null,
+          clearLastCompletedLabel: phase != ChatRunPhase.completed,
+        ),
         error: errorMessage,
         errorCode: errorCode,
         isErrorRetryable: errorMessage == null ? false : isRetryable,
@@ -759,6 +770,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
         if (event is TextEvent) {
           final metadata = event.metadata;
+          if (metadata != null) {
+            accumulatedMeta.addAll(metadata);
+          }
           final uxEnvelope = _extractUxEnvelope(metadata);
           if (uxEnvelope.isNotEmpty) {
             accumulatedUxEnvelope = {
@@ -869,6 +883,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
         } else if (event is FullTextEvent) {
           // 完整文本（通常在流结束时）
           final metadata = event.metadata;
+          if (metadata != null) {
+            accumulatedMeta.addAll(metadata);
+          }
           final uxEnvelope = _extractUxEnvelope(metadata);
           if (uxEnvelope.isNotEmpty) {
             accumulatedUxEnvelope = {
@@ -1011,6 +1028,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
             lastTotalTokens: event.totalTokens,
           );
           await _updateDailyUsage(event);
+        } else if (event is MetaEvent) {
+          accumulatedMeta.addAll(event.meta);
+          flushPending();
         } else if (event is ReasoningStepEvent) {
           // 🆕 推理步骤事件 - Chain of Thought Visualization
           reasoningStartTime ??= DateTime.now().millisecondsSinceEpoch;

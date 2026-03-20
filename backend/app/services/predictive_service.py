@@ -9,6 +9,7 @@ Predictive Learning Intelligence Service - 预测学习智能服务
 """
 from __future__ import annotations
 
+import json
 import statistics
 from datetime import timezone, datetime, timedelta
 from typing import Any
@@ -18,9 +19,14 @@ from loguru import logger
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.agent_profiles import AgentRole, ModelTier, TaskType
+from app.core.cache import cache_service
+from app.core.llm_router import llm_router
+from app.models.focus import FocusSession, FocusStatus
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.models.galaxy import StudyRecord
 from app.models.task import Task, TaskStatus
+from app.services.llm_service import get_llm_service_for_specific_model
 
 
 class EngagementForecast:
@@ -83,6 +89,8 @@ class DifficultyPrediction:
 
 class PredictiveService:
     """预测学习智能服务"""
+    LONG_HORIZON_CACHE_TTL_SECONDS = 60 * 60 * 6
+    LONG_HORIZON_SOFT_STALE_SECONDS = 60 * 30
 
     def __init__(self, db: AsyncSession):
         self.db = db
@@ -526,3 +534,248 @@ class PredictiveService:
                 "recommendation": "检测失败",
                 "metrics": {}
             }
+
+    async def get_next_intent_forecast(self, user_id: UUID) -> dict[str, Any]:
+        cache_key = f"predictive:next_intent:{user_id}"
+        cached = await self._get_cached_forecast(cache_key)
+        if cached is not None:
+            return cached
+
+        rule_based = await self._build_rule_based_next_intent(user_id)
+        await self._cache_forecast(
+            cache_key,
+            rule_based,
+            ttl_seconds=self.LONG_HORIZON_SOFT_STALE_SECONDS,
+        )
+        await self._schedule_long_horizon_refresh(user_id)
+        return rule_based
+
+    async def generate_long_horizon_forecast(self, user_id: UUID) -> dict[str, Any]:
+        base = await self._build_rule_based_next_intent(user_id)
+        try:
+            selection = llm_router.select_model(
+                AgentRole.GENERATION,
+                TaskType.STANDARD_RESPONSE,
+                force_tier=ModelTier.GLM_BATCH,
+            )
+            llm = await get_llm_service_for_specific_model(
+                selection.model_key,
+                agent_role=AgentRole.GENERATION,
+            )
+            payload = await llm.chat_json(
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "你是 Sparkle 的长期行为预测器。"
+                            "请基于输入的用户画像、最近24小时行为、待办和专注信号，"
+                            "预测用户接下来最可能想做的一件事。"
+                            "输出 JSON，字段必须包含 title, summary, confidence, "
+                            "predicted_action_type, predicted_window, reasons(list), suggested_prompt。"
+                        ),
+                    },
+                    {
+                        "role": "user",
+                        "content": json.dumps(base["signals"], ensure_ascii=False),
+                    },
+                ],
+                schema={
+                    "type": "object",
+                    "properties": {
+                        "title": {"type": "string"},
+                        "summary": {"type": "string"},
+                        "confidence": {"type": "number"},
+                        "predicted_action_type": {"type": "string"},
+                        "predicted_window": {"type": "string"},
+                        "reasons": {"type": "array", "items": {"type": "string"}},
+                        "suggested_prompt": {"type": "string"},
+                    },
+                    "required": [
+                        "title",
+                        "summary",
+                        "confidence",
+                        "predicted_action_type",
+                        "predicted_window",
+                        "reasons",
+                        "suggested_prompt",
+                    ],
+                },
+                temperature=0.3,
+            )
+            if isinstance(payload, dict) and payload.get("title") and payload.get("summary"):
+                enriched = {
+                    **base,
+                    "title": str(payload.get("title") or base["title"]),
+                    "summary": str(payload.get("summary") or base["summary"]),
+                    "confidence": float(payload.get("confidence") or base["confidence"]),
+                    "predicted_action_type": str(
+                        payload.get("predicted_action_type") or base["predicted_action_type"]
+                    ),
+                    "predicted_window": str(payload.get("predicted_window") or base["predicted_window"]),
+                    "reasons": list(payload.get("reasons") or base["reasons"]),
+                    "suggested_prompt": str(payload.get("suggested_prompt") or base["suggested_prompt"]),
+                    "prediction_source": "glm_batch",
+                    "prediction_tier": selection.model_key,
+                    "fallback_used": False,
+                    "generated_at": self._get_current_time().isoformat(),
+                }
+                await self._cache_forecast(
+                    f"predictive:next_intent:{user_id}",
+                    enriched,
+                    ttl_seconds=self.LONG_HORIZON_CACHE_TTL_SECONDS,
+                )
+                return enriched
+        except Exception as exc:
+            logger.warning(f"Long horizon prediction failed for user {user_id}: {exc}")
+
+        fallback = {
+            **base,
+            "prediction_source": "rules",
+            "prediction_tier": "rules",
+            "fallback_used": True,
+            "generated_at": self._get_current_time().isoformat(),
+        }
+        await self._cache_forecast(
+            f"predictive:next_intent:{user_id}",
+            fallback,
+            ttl_seconds=self.LONG_HORIZON_CACHE_TTL_SECONDS,
+        )
+        return fallback
+
+    async def _build_rule_based_next_intent(self, user_id: UUID) -> dict[str, Any]:
+        now = self._get_current_time().replace(tzinfo=None)
+        last_24h = now - timedelta(hours=24)
+
+        pending_stmt = (
+            select(Task)
+            .where(
+                Task.user_id == user_id,
+                Task.status.in_([TaskStatus.PENDING, TaskStatus.IN_PROGRESS]),
+            )
+            .order_by(Task.priority.desc(), Task.due_date, Task.created_at.desc())
+            .limit(5)
+        )
+        pending_tasks = (await self.db.execute(pending_stmt)).scalars().all()
+
+        completed_stmt = select(func.count(Task.id)).where(
+            Task.user_id == user_id,
+            Task.status == TaskStatus.COMPLETED,
+            Task.completed_at >= last_24h,
+        )
+        completed_last_24h = int((await self.db.execute(completed_stmt)).scalar() or 0)
+
+        focus_stmt = select(FocusSession).where(
+            FocusSession.user_id == user_id,
+            FocusSession.start_time >= last_24h,
+            FocusSession.status == FocusStatus.COMPLETED,
+        )
+        focus_sessions = (await self.db.execute(focus_stmt)).scalars().all()
+        total_focus_minutes = sum(int(session.duration_minutes or 0) for session in focus_sessions)
+
+        study_stmt = select(func.count(StudyRecord.id)).where(
+            StudyRecord.user_id == user_id,
+            StudyRecord.created_at >= last_24h,
+        )
+        study_count = int((await self.db.execute(study_stmt)).scalar() or 0)
+
+        top_task = pending_tasks[0] if pending_tasks else None
+        overdue_count = sum(
+            1
+            for task in pending_tasks
+            if task.due_date is not None and task.due_date < now.date()
+        )
+
+        if top_task is not None:
+            reasons = [
+                f"当前最高优先级待办是「{top_task.title}」",
+                f"最近24小时已完成 {completed_last_24h} 个任务",
+            ]
+            if total_focus_minutes > 0:
+                reasons.append(f"最近24小时专注了 {total_focus_minutes} 分钟")
+            if overdue_count > 0:
+                reasons.append(f"还有 {overdue_count} 个任务已逾期")
+            forecast = {
+                "title": "系统预测你接下来最想推进当前重点任务",
+                "summary": f"建议直接回到「{top_task.title}」，先推进一个 25 分钟小段。",
+                "confidence": 0.78 if int(top_task.priority or 0) >= 2 else 0.68,
+                "predicted_action_type": "resume_priority_task",
+                "predicted_window": "next_2h",
+                "reasons": reasons,
+                "suggested_prompt": f"帮我继续推进任务：{top_task.title}",
+                "signals": {
+                    "top_task_title": top_task.title,
+                    "top_task_priority": int(top_task.priority or 0),
+                    "pending_task_count": len(pending_tasks),
+                    "overdue_count": overdue_count,
+                    "completed_last_24h": completed_last_24h,
+                    "focus_minutes_last_24h": total_focus_minutes,
+                    "study_records_last_24h": study_count,
+                },
+            }
+        else:
+            forecast = {
+                "title": "系统预测你接下来更适合做一次轻量复盘",
+                "summary": "当前没有强约束待办，先用 10 分钟整理思路，会更容易进入下一轮行动。",
+                "confidence": 0.61,
+                "predicted_action_type": "light_review",
+                "predicted_window": "next_6h",
+                "reasons": [
+                    f"最近24小时已完成 {completed_last_24h} 个任务",
+                    f"最近24小时专注 {total_focus_minutes} 分钟",
+                    f"最近24小时学习记录 {study_count} 条",
+                ],
+                "suggested_prompt": "帮我做一个 10 分钟轻量复盘，并建议下一步行动",
+                "signals": {
+                    "pending_task_count": len(pending_tasks),
+                    "completed_last_24h": completed_last_24h,
+                    "focus_minutes_last_24h": total_focus_minutes,
+                    "study_records_last_24h": study_count,
+                },
+            }
+
+        return {
+            **forecast,
+            "prediction_source": "rules",
+            "prediction_tier": "rules",
+            "fallback_used": True,
+            "generated_at": self._get_current_time().isoformat(),
+        }
+
+    async def _get_cached_forecast(self, cache_key: str) -> dict[str, Any] | None:
+        if not cache_service.redis:
+            return None
+        try:
+            raw = await cache_service.redis.get(cache_key)
+            if not raw:
+                return None
+            payload = json.loads(raw)
+            return payload if isinstance(payload, dict) else None
+        except Exception as exc:
+            logger.warning(f"Failed to read predictive cache {cache_key}: {exc}")
+            return None
+
+    async def _cache_forecast(self, cache_key: str, payload: dict[str, Any], *, ttl_seconds: int) -> None:
+        if not cache_service.redis:
+            return
+        try:
+            await cache_service.redis.setex(cache_key, ttl_seconds, json.dumps(payload, ensure_ascii=False))
+        except Exception as exc:
+            logger.warning(f"Failed to cache predictive forecast {cache_key}: {exc}")
+
+    async def _schedule_long_horizon_refresh(self, user_id: UUID) -> None:
+        if not cache_service.redis:
+            return
+        lock_key = f"predictive:next_intent:refreshing:{user_id}"
+        try:
+            acquired = await cache_service.redis.set(lock_key, "1", ex=300, nx=True)
+            if not acquired:
+                return
+            from app.core.celery_app import celery_app
+
+            celery_app.send_task(
+                "generate_long_horizon_prediction",
+                args=(str(user_id),),
+                queue="glm_batch",
+            )
+        except Exception as exc:
+            logger.warning(f"Failed to schedule long horizon prediction for user {user_id}: {exc}")

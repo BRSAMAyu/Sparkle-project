@@ -12,6 +12,7 @@ import 'package:sparkle/core/constants/api_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_permission_dialog.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/services/share_service.dart';
 import 'package:sparkle/core/services/wechat_share_service.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
@@ -215,6 +216,7 @@ class _AchievementShareBottomSheetState
   void _onTemplateSelected(String templateId) {
     if (_selectedTemplateId == templateId) return;
 
+    SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
     setState(() {
       _selectedTemplateId = templateId;
       _isLoading = true;
@@ -225,6 +227,7 @@ class _AchievementShareBottomSheetState
   void _onPrivacySettingsChanged(ShareCardPrivacySettings settings) {
     if (_privacySettings.settingsHash() == settings.settingsHash()) return;
 
+    SensoryFeedbackService.emit(SensoryFeedbackEvent.toggle);
     setState(() {
       _privacySettings = settings;
       _isLoading = true;
@@ -238,7 +241,17 @@ class _AchievementShareBottomSheetState
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Theme.of(context).scaffoldBackgroundColor,
+            Color.alphaBlend(
+              DS.info.withValues(alpha: 0.03),
+              DS.surfacePrimary,
+            ),
+          ],
+        ),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: SafeArea(
@@ -563,6 +576,7 @@ class _AchievementShareBottomSheetState
   Future<void> _shareToWeChatSession() async {
     if (_shareCardFile == null) return;
 
+    await SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm);
     final result = await _wechatShare.shareImageToSession(_shareCardFile!);
     _handleShareResult(result);
   }
@@ -570,6 +584,7 @@ class _AchievementShareBottomSheetState
   Future<void> _shareToWeChatTimeline() async {
     if (_shareCardFile == null) return;
 
+    await SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm);
     final result = await _wechatShare.shareImageToTimeline(_shareCardFile!);
     _handleShareResult(result);
   }
@@ -578,6 +593,7 @@ class _AchievementShareBottomSheetState
     if (_shareCardFile == null) return;
 
     try {
+      await SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm);
       await share_plus.SharePlus.instance.share(
         share_plus.ShareParams(
           files: [share_plus.XFile(_shareCardFile!.path)],
@@ -592,6 +608,7 @@ class _AchievementShareBottomSheetState
   }
 
   Future<void> _shareToCommunity() async {
+    await SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen);
     Navigator.of(context).pop();
 
     if (widget.onCommunityShare != null) {
@@ -613,6 +630,7 @@ class _AchievementShareBottomSheetState
     if (_shareCardFile == null) return;
 
     try {
+      await SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm);
       // Request permission
       final photoStatus = await Permission.photos.request();
       PermissionStatus? storageStatus;
@@ -656,6 +674,7 @@ class _AchievementShareBottomSheetState
     // Generate deep link for achievement
     final deepLink = 'sparkle://achievement/${widget.achievementId}';
 
+    await SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
     await Clipboard.setData(ClipboardData(text: deepLink));
 
     if (mounted) {

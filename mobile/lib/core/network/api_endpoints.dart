@@ -255,6 +255,7 @@ class ApiEndpoints {
 
   // Dashboard
   static const String dashboardStatus = '/dashboard/status';
+  static const String predictiveDashboard = '/predictive/dashboard';
 
   // Nightly Reviews
   static const String nightlyReviewLatest = '/reviews/nightly/latest';
@@ -397,12 +398,16 @@ class ApiEndpoints {
 
   // Accountability Partners (Phase 3)
   static const String accountabilityMine = '/accountability/mine';
+  static const String accountabilityOverview = '/accountability/overview';
   static const String accountabilityRequest = '/accountability/request';
   static String accountabilityRespond(String id) =>
       '/accountability/$id/respond';
   static String accountabilityEnd(String id) => '/accountability/$id';
   static String accountabilityCheckin(String id) =>
       '/accountability/$id/checkin';
+  static String accountabilityNudge(String id) => '/accountability/$id/nudge';
+  static String accountabilityDashboard(String id) =>
+      '/accountability/$id/dashboard';
   static String accountabilityStats(String id) => '/accountability/$id/stats';
   static String accountabilityTimeline(String id) =>
       '/accountability/$id/timeline';
@@ -416,6 +421,7 @@ class ApiEndpoints {
       '/accountability/achievements';
   static String accountabilityPartnershipAchievements(String id) =>
       '/accountability/$id/achievements';
+  static String friendProfile(String id) => '/community/friends/$id/profile';
 
   // Calendar Events
   static const String calendarEvents = '/calendar';

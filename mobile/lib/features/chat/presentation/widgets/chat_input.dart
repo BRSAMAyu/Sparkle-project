@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/features/chat/presentation/widgets/attachment_picker_sheet.dart';
 import 'package:sparkle/features/chat/presentation/widgets/voice_input_button.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
@@ -48,7 +49,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
   void _showAttachmentSheet() {
     unawaited(
-      showModalBottomSheet<void>(
+      showSensoryModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
@@ -62,7 +63,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
   void _openFileUpload() {
     unawaited(
-      showModalBottomSheet<void>(
+      showSensoryModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
@@ -80,7 +81,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
   void _openDocumentCleaner() {
     unawaited(
-      showModalBottomSheet<void>(
+      showSensoryModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
@@ -192,7 +193,6 @@ class _ChatInputState extends ConsumerState<ChatInput> {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (widget.quotedMessage != null) _buildQuotePreview(isDark),
-
           Padding(
             padding: const EdgeInsets.all(DS.spacing8),
             child: Row(

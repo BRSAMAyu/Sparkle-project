@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/lunar_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
@@ -89,7 +90,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
   /// Handle dropping a task on a calendar date
   Future<void> _handleTaskDropped(TaskModel task, DateTime newDueDate) async {
     // Show confirmation dialog
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showSensoryDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: DS.surfaceBase,
@@ -127,7 +128,9 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
             _focusedDay,
             force: true,
           );
-      await ref.read(unifiedCalendarProvider.notifier).refreshMonth(_focusedDay);
+      await ref
+          .read(unifiedCalendarProvider.notifier)
+          .refreshMonth(_focusedDay);
       if (mounted) {
         AppFeedback.success(
           context,
@@ -187,18 +190,18 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                         : _viewMode == CalendarViewMode.insights
                             ? _buildInsightsView()
                             : Column(
-                            children: [
-                              _buildTableCalendar(notifier),
-                              Divider(color: DS.brandPrimary10),
-                              Expanded(
-                                child: _buildAgendaList(
-                                  selectedEvents,
-                                  selectedTasks,
-                                  notifier,
-                                ),
+                                children: [
+                                  _buildTableCalendar(notifier),
+                                  Divider(color: DS.brandPrimary10),
+                                  Expanded(
+                                    child: _buildAgendaList(
+                                      selectedEvents,
+                                      selectedTasks,
+                                      notifier,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
                   ),
                 ],
               ),
@@ -379,36 +382,36 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
 
     return LayoutBuilder(
       builder: (context, constraints) => GridView.count(
-          crossAxisCount: 7,
-          padding: const EdgeInsets.all(2),
-          physics: const NeverScrollableScrollPhysics(),
-          children: [
-            // Empty slots
-            ...List.generate(startOffset, (_) => const SizedBox()),
-            // Days
-            ...List.generate(daysInMonth, (i) {
-              final day = i + 1;
-              final now = DateTime.now();
-              final isToday = day == now.day &&
-                  monthDate.month == now.month &&
-                  monthDate.year == now.year;
-              return Center(
-                child: Text(
-                  '$day',
-                  style: TextStyle(
-                    fontSize: 8,
-                    color: isToday
-                        ? DS.primaryBase
-                        : isDark
-                            ? DS.textSecondary
-                            : DS.textPrimary,
-                    fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
-                  ),
+        crossAxisCount: 7,
+        padding: const EdgeInsets.all(2),
+        physics: const NeverScrollableScrollPhysics(),
+        children: [
+          // Empty slots
+          ...List.generate(startOffset, (_) => const SizedBox()),
+          // Days
+          ...List.generate(daysInMonth, (i) {
+            final day = i + 1;
+            final now = DateTime.now();
+            final isToday = day == now.day &&
+                monthDate.month == now.month &&
+                monthDate.year == now.year;
+            return Center(
+              child: Text(
+                '$day',
+                style: TextStyle(
+                  fontSize: 8,
+                  color: isToday
+                      ? DS.primaryBase
+                      : isDark
+                          ? DS.textSecondary
+                          : DS.textPrimary,
+                  fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
                 ),
-              );
-            }),
-          ],
-        ),
+              ),
+            );
+          }),
+        ],
+      ),
     );
   }
 
@@ -450,7 +453,9 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
           _focusedDay = focusedDay;
           // Load task summaries for the new month
           unawaited(
-            ref.read(taskCalendarProvider.notifier).loadTasksForMonth(focusedDay),
+            ref
+                .read(taskCalendarProvider.notifier)
+                .loadTasksForMonth(focusedDay),
           );
           unawaited(
             ref.read(unifiedCalendarProvider.notifier).loadMonth(focusedDay),
@@ -532,7 +537,9 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                     right: 1,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 4, vertical: 1,),
+                        horizontal: 4,
+                        vertical: 1,
+                      ),
                       decoration: BoxDecoration(
                         color: markerColor,
                         borderRadius: BorderRadius.circular(8),
@@ -671,120 +678,121 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
     CalendarNotifier notifier,
   ) =>
       Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: DS.spacing16,
-            vertical: DS.spacing8,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                context.l10n.calendarDayScheduleTitle(
-                  _formatMonthDay(_selectedDay ?? _focusedDay),
-                ),
-                style: TextStyle(
-                  color: DS.brandPrimary70Const,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              SparkleButton.ghost(
-                label: context.l10n.calendarViewDetails,
-                onPressed: () {
-                  unawaited(
-                    context.push(
-                      '${CalendarRoutes.dailyDetail}?date=${(_selectedDay ?? _focusedDay).toIso8601String()}',
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.info_outline, size: 16),
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: events.isEmpty && tasks.isEmpty
-              ? Center(
-                  child: Text(
-                    '这一天还没有安排任务或日程',
-                    style: TextStyle(color: DS.textTertiary),
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: DS.spacing16,
+              vertical: DS.spacing8,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  context.l10n.calendarDayScheduleTitle(
+                    _formatMonthDay(_selectedDay ?? _focusedDay),
                   ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
-                  itemCount: tasks.length + events.length,
-                  itemBuilder: (context, index) {
-                    if (index < tasks.length) {
-                      final task = tasks[index];
-                      return _buildTaskAgendaCard(task);
-                    }
-
-                    final event = events[index - tasks.length];
-                    return Dismissible(
-                      key: Key(event.id),
-                      direction: DismissDirection.endToStart,
-                      onDismissed: (direction) {
-                        unawaited(notifier.deleteEvent(event.id));
-                      },
-                      background: Container(
-                        margin: const EdgeInsets.only(bottom: DS.spacing8),
-                        decoration: BoxDecoration(
-                          color: DS.error.withValues(alpha: 0.9),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        alignment: Alignment.centerRight,
-                        padding: const EdgeInsets.only(right: DS.spacing20),
-                        child: Icon(Icons.delete, color: DS.textOnPrimary),
-                      ),
-                      child: Container(
-                        margin: const EdgeInsets.only(bottom: DS.spacing8),
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: DS.spacing16,
-                            vertical: DS.spacing4,
-                          ),
-                          tileColor: DS.surfaceSecondary,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            side: BorderSide(color: DS.borderSubtle),
-                          ),
-                          leading: Container(
-                            width: 12,
-                            height: 12,
-                            decoration: BoxDecoration(
-                              color: _resolveCalendarColor(event.colorValue),
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          title: Text(
-                            event.title,
-                            style: TextStyle(
-                              color: DS.textPrimary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          subtitle: Text(
-                            event.isAllDay
-                                ? context.l10n.calendarAllDay
-                                : Formatters.formatTime24(event.startTime),
-                            style: TextStyle(color: DS.textSecondary),
-                          ),
-                          trailing: event.recurrenceRule != null
-                              ? Icon(
-                                  Icons.repeat,
-                                  color: DS.textTertiary,
-                                  size: 16,
-                                )
-                              : null,
-                        ),
+                  style: TextStyle(
+                    color: DS.brandPrimary70Const,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SparkleButton.ghost(
+                  label: context.l10n.calendarViewDetails,
+                  onPressed: () {
+                    unawaited(
+                      context.push(
+                        '${CalendarRoutes.dailyDetail}?date=${(_selectedDay ?? _focusedDay).toIso8601String()}',
                       ),
                     );
                   },
+                  icon: const Icon(Icons.info_outline, size: 16),
                 ),
-        ),
-      ],
-    );
+              ],
+            ),
+          ),
+          Expanded(
+            child: events.isEmpty && tasks.isEmpty
+                ? Center(
+                    child: Text(
+                      '这一天还没有安排任务或日程',
+                      style: TextStyle(color: DS.textTertiary),
+                    ),
+                  )
+                : ListView.builder(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: DS.spacing16),
+                    itemCount: tasks.length + events.length,
+                    itemBuilder: (context, index) {
+                      if (index < tasks.length) {
+                        final task = tasks[index];
+                        return _buildTaskAgendaCard(task);
+                      }
+
+                      final event = events[index - tasks.length];
+                      return Dismissible(
+                        key: Key(event.id),
+                        direction: DismissDirection.endToStart,
+                        onDismissed: (direction) {
+                          unawaited(notifier.deleteEvent(event.id));
+                        },
+                        background: Container(
+                          margin: const EdgeInsets.only(bottom: DS.spacing8),
+                          decoration: BoxDecoration(
+                            color: DS.error.withValues(alpha: 0.9),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          alignment: Alignment.centerRight,
+                          padding: const EdgeInsets.only(right: DS.spacing20),
+                          child: Icon(Icons.delete, color: DS.textOnPrimary),
+                        ),
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: DS.spacing8),
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: DS.spacing16,
+                              vertical: DS.spacing4,
+                            ),
+                            tileColor: DS.surfaceSecondary,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: BorderSide(color: DS.borderSubtle),
+                            ),
+                            leading: Container(
+                              width: 12,
+                              height: 12,
+                              decoration: BoxDecoration(
+                                color: _resolveCalendarColor(event.colorValue),
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            title: Text(
+                              event.title,
+                              style: TextStyle(
+                                color: DS.textPrimary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            subtitle: Text(
+                              event.isAllDay
+                                  ? context.l10n.calendarAllDay
+                                  : Formatters.formatTime24(event.startTime),
+                              style: TextStyle(color: DS.textSecondary),
+                            ),
+                            trailing: event.recurrenceRule != null
+                                ? Icon(
+                                    Icons.repeat,
+                                    color: DS.textTertiary,
+                                    size: 16,
+                                  )
+                                : null,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      );
 
   Widget _buildInsightsView() {
     final unifiedState = ref.watch(unifiedCalendarProvider);
@@ -797,7 +805,8 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
         !unifiedState.isLoading) {
       unawaited(
         Future.microtask(
-          () => ref.read(unifiedCalendarProvider.notifier).loadMonth(_focusedDay),
+          () =>
+              ref.read(unifiedCalendarProvider.notifier).loadMonth(_focusedDay),
         ),
       );
     }
@@ -824,7 +833,8 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
     );
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(DS.spacing16, 0, DS.spacing16, DS.spacing16),
+      padding: const EdgeInsets.fromLTRB(
+          DS.spacing16, 0, DS.spacing16, DS.spacing16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -855,7 +865,8 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
               ),
               _buildInsightMetric(
                 label: '专注时长',
-                value: '${(aggregate.totalFocusMinutes / 60).toStringAsFixed(1)}h',
+                value:
+                    '${(aggregate.totalFocusMinutes / 60).toStringAsFixed(1)}h',
                 detail: '本月累计专注',
                 icon: Icons.bolt_rounded,
                 color: DS.prismPurple,
@@ -888,7 +899,9 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                 const SizedBox(height: DS.spacing12),
                 Row(
                   children: [
-                    Text('低', style: TextStyle(fontSize: 11, color: DS.textSecondary)),
+                    Text('低',
+                        style:
+                            TextStyle(fontSize: 11, color: DS.textSecondary)),
                     const SizedBox(width: DS.spacing6),
                     ...List.generate(
                       5,
@@ -902,7 +915,9 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                         ),
                       ),
                     ),
-                    Text('高', style: TextStyle(fontSize: 11, color: DS.textSecondary)),
+                    Text('高',
+                        style:
+                            TextStyle(fontSize: 11, color: DS.textSecondary)),
                   ],
                 ),
               ],
@@ -1160,16 +1175,16 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
 
   void _showAddEventDialog(BuildContext context) {
     unawaited(
-      showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: DS.surfaceSecondary,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => _EventEditDialog(
-        selectedDate: _selectedDay ?? DateTime.now(),
-      ),
+      showSensoryModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: DS.surfaceSecondary,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (context) => _EventEditDialog(
+          selectedDate: _selectedDay ?? DateTime.now(),
+        ),
       ),
     );
   }

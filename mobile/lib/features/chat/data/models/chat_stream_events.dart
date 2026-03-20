@@ -113,6 +113,19 @@ class UnknownEvent extends ChatStreamEvent {
   final Map<String, dynamic> data;
 }
 
+class MetaEvent extends ChatStreamEvent {
+  const MetaEvent({
+    required this.meta,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+    super.sessionId,
+  }) : super(metadata: meta);
+
+  final Map<String, dynamic> meta;
+}
+
 /// 状态更新事件（THINKING, GENERATING 等）
 class StatusUpdateEvent extends ChatStreamEvent {
   StatusUpdateEvent({

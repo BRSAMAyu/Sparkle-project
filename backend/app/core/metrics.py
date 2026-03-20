@@ -35,6 +35,45 @@ LLM_CALL_DURATION = get_or_create_metric(
     Histogram, "sparkle_llm_call_duration_seconds", "LLM call duration in seconds", ["model", "provider"]
 )
 
+AI_RESPONSE_TOTAL_DURATION = get_or_create_metric(
+    Histogram,
+    "sparkle_ai_response_total_duration_seconds",
+    "End-to-end AI response duration in seconds",
+    ["chat_mode", "reasoning_mode", "model_tier"],
+    buckets=[0.5, 1.0, 2.0, 3.0, 5.0, 8.0, 13.0, 21.0, 34.0, 55.0, 89.0],
+)
+
+AI_RESPONSE_FIRST_TOKEN_DURATION = get_or_create_metric(
+    Histogram,
+    "sparkle_ai_response_first_token_duration_seconds",
+    "Time to first visible token/event for AI responses in seconds",
+    ["chat_mode", "reasoning_mode"],
+    buckets=[0.1, 0.25, 0.5, 1.0, 2.0, 3.0, 5.0, 8.0, 13.0],
+)
+
+AI_RESPONSE_STREAM_DURATION = get_or_create_metric(
+    Histogram,
+    "sparkle_ai_response_stream_duration_seconds",
+    "Streaming duration after first token/event in seconds",
+    ["chat_mode", "reasoning_mode"],
+    buckets=[0.1, 0.25, 0.5, 1.0, 2.0, 3.0, 5.0, 8.0, 13.0, 21.0, 34.0],
+)
+
+AI_PREDICTION_DURATION = get_or_create_metric(
+    Histogram,
+    "sparkle_ai_prediction_duration_seconds",
+    "Duration of AI/user-behavior prediction pipeline in seconds",
+    ["source", "tier", "fallback"],
+    buckets=[0.05, 0.1, 0.25, 0.5, 1.0, 2.0, 3.0, 5.0, 8.0],
+)
+
+AI_PREDICTION_FALLBACK_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_ai_prediction_fallback_total",
+    "Prediction fallbacks by source transition",
+    ["from_source", "to_source"],
+)
+
 # 3. 缓存指标
 CACHE_HIT_COUNT = get_or_create_metric(
     Counter,

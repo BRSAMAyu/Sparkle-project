@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/chat/data/models/chat_mode.dart';
@@ -53,7 +54,7 @@ class ChatModeSelectorPill extends ConsumerWidget {
   void _showModeSelector(BuildContext context, WidgetRef ref) {
     unawaited(HapticFeedback.lightImpact());
     unawaited(
-      showModalBottomSheet<Object>(
+      showSensoryModalBottomSheet<Object>(
         context: context,
         backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
         isScrollControlled: true,
@@ -62,7 +63,7 @@ class ChatModeSelectorPill extends ConsumerWidget {
         if (!context.mounted) return;
         if (result == openTeamBuilderSentinel) {
           unawaited(
-            showModalBottomSheet<void>(
+            showSensoryModalBottomSheet<void>(
               context: context,
               backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
               isScrollControlled: true,
@@ -73,7 +74,9 @@ class ChatModeSelectorPill extends ConsumerWidget {
         }
         if (result is ChatMode) {
           // Use setModeWithFeedback for visual feedback
-          ref.read(chatModeNotifierProvider.notifier).setModeWithFeedback(result, context);
+          ref
+              .read(chatModeNotifierProvider.notifier)
+              .setModeWithFeedback(result, context);
           if (result.apiValue != 'standard') {
             ref.read(lastMultiAgentModeProvider.notifier).state = result;
           }
@@ -93,47 +96,47 @@ class _UnselectedPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-      padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
-      child: GestureDetector(
-        onTap: onTap,
-        child: MaterialStyler(
-          material: AppMaterials.ceramic.copyWith(
-            // Use surfaceTertiary for consistent theming with Dashboard
-            backgroundColor: DS.surfaceTertiary,
-          ),
-          borderRadius: DS.borderRadius20,
-          padding: const EdgeInsets.symmetric(
-            horizontal: DS.spacing12,
-            vertical: DS.spacing8,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.auto_awesome,
-                size: DS.iconSizeSm,
-                color: DS.textSecondary,
-              ),
-              const SizedBox(width: DS.spacing6),
-              Text(
-                context.l10n.chatModeSelect,
-                style: TextStyle(
+        padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
+        child: GestureDetector(
+          onTap: onTap,
+          child: MaterialStyler(
+            material: AppMaterials.ceramic.copyWith(
+              // Use surfaceTertiary for consistent theming with Dashboard
+              backgroundColor: DS.surfaceTertiary,
+            ),
+            borderRadius: DS.borderRadius20,
+            padding: const EdgeInsets.symmetric(
+              horizontal: DS.spacing12,
+              vertical: DS.spacing8,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.auto_awesome,
+                  size: DS.iconSizeSm,
                   color: DS.textSecondary,
-                  fontSize: DS.fontSizeSm,
-                  fontWeight: DS.fontWeightMedium,
                 ),
-              ),
-              const SizedBox(width: DS.spacing4),
-              Icon(
-                Icons.keyboard_arrow_down_rounded,
-                size: DS.iconSizeSm,
-                color: DS.textSecondary,
-              ),
-            ],
+                const SizedBox(width: DS.spacing6),
+                Text(
+                  context.l10n.chatModeSelect,
+                  style: TextStyle(
+                    color: DS.textSecondary,
+                    fontSize: DS.fontSizeSm,
+                    fontWeight: DS.fontWeightMedium,
+                  ),
+                ),
+                const SizedBox(width: DS.spacing4),
+                Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  size: DS.iconSizeSm,
+                  color: DS.textSecondary,
+                ),
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
 }
 
 class _SelectedPill extends StatelessWidget {

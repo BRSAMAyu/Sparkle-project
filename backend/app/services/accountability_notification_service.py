@@ -33,6 +33,7 @@ class AccountabilityNotificationType(str, Enum):
     STREAK_MILESTONE = "accountability_streak_milestone"
     PARTNER_CHECKED_IN = "accountability_partner_checked_in"
     PARTNERSHIP_ENDED = "accountability_partnership_ended"
+    MANUAL_NUDGE = "accountability_manual_nudge"
 
 
 def _utcnow() -> datetime:
@@ -381,6 +382,40 @@ class AccountabilityNotificationService:
         )
 
         logger.info(f"Sent partnership ended notification to {user_id} for partnership {partnership_id}")
+        return notification
+
+    async def send_manual_nudge(
+        self,
+        db: AsyncSession,
+        user_id: UUID,
+        partnership_id: UUID,
+        sender_name: str,
+        message: str | None = None,
+    ) -> Notification:
+        """发送手动督促提醒。"""
+        title = "⏱️ 伙伴提醒"
+        content = (
+            f"{sender_name} 提醒你看看今天的目标，别让节奏断掉。"
+            if not message
+            else f"{sender_name} 提醒你：{message}"
+        )
+
+        notification_data = NotificationCreate(
+            title=title,
+            content=content,
+            type=AccountabilityNotificationType.MANUAL_NUDGE.value,
+            data={
+                "partnership_id": str(partnership_id),
+                "sender_name": sender_name,
+                "message": message,
+                "kind": "manual_nudge",
+            },
+        )
+
+        notification = await notification_service.create(
+            db, user_id, notification_data, push_via_websocket=True
+        )
+        logger.info(f"Sent manual nudge to {user_id} for partnership {partnership_id}")
         return notification
 
 

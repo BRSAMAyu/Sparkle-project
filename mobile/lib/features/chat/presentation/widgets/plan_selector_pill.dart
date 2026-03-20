@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
@@ -79,7 +80,7 @@ class PlanSelectorPill extends ConsumerWidget {
   ) {
     HapticFeedback.lightImpact();
     unawaited(
-      showModalBottomSheet<void>(
+      showSensoryModalBottomSheet<void>(
         context: context,
         backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
         isScrollControlled: true,

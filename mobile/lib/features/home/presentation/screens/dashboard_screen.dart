@@ -10,6 +10,7 @@ import 'package:sparkle/features/home/presentation/widgets/dashboard_card_sectio
 import 'package:sparkle/features/home/presentation/widgets/home_notification_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/metrics_row.dart';
 import 'package:sparkle/features/home/presentation/widgets/next_actions_card.dart';
+import 'package:sparkle/features/home/presentation/widgets/predicted_intent_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/task_board/task_board_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/unified_omni_bar.dart';
 import 'package:sparkle/features/home/presentation/widgets/weather_header.dart';
@@ -122,6 +123,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       onViewAll: () => context.push('/tasks'),
                     ),
                   ),
+                  const SliverToBoxAdapter(child: PredictedIntentCard()),
                   const SliverToBoxAdapter(child: HomeNotificationCard()),
                   const SliverToBoxAdapter(child: NightlyReviewPanel()),
                   const SliverToBoxAdapter(child: DashboardCardSection()),

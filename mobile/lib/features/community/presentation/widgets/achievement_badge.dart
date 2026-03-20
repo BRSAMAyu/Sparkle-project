@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 
 /// 责任伙伴成就徽章组件
 class AchievementBadge extends StatelessWidget {
@@ -67,7 +68,8 @@ class AchievementBadge extends StatelessWidget {
               )
             : null,
       ),
-      child: isSmall ? _buildSmallContent(context) : _buildMediumContent(context),
+      child:
+          isSmall ? _buildSmallContent(context) : _buildMediumContent(context),
     );
   }
 
@@ -106,18 +108,18 @@ class AchievementBadge extends StatelessWidget {
                   Text(
                     name,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                          fontWeight: FontWeight.bold,
+                        ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   Text(
                     description,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: isUnlocked
-                          ? null
-                          : Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                          color: isUnlocked
+                              ? null
+                              : Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -133,8 +135,8 @@ class AchievementBadge extends StatelessWidget {
             child: Text(
               '解锁于 ${_formatDate(unlockedAt!)}',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.primary,
-              ),
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
             ),
           ),
       ],
@@ -149,7 +151,8 @@ class AchievementBadge extends StatelessWidget {
         color: isUnlocked
             ? Theme.of(context).colorScheme.primaryContainer
             : Theme.of(context).colorScheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(size == AchievementBadgeSize.small ? 6 : 8),
+        borderRadius:
+            BorderRadius.circular(size == AchievementBadgeSize.small ? 6 : 8),
       ),
       child: Center(
         child: Text(
@@ -181,9 +184,9 @@ class AchievementBadge extends StatelessWidget {
           Text(
             '+$points',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
           ),
         ],
       ),
@@ -255,7 +258,9 @@ class AchievementGrid extends StatelessWidget {
           points: achievement.points,
           isUnlocked: achievement.isUnlocked,
           unlockedAt: achievement.unlockedAt,
-          onTap: onAchievementTap != null ? () => onAchievementTap!(achievement.id) : null,
+          onTap: onAchievementTap != null
+              ? () => onAchievementTap!(achievement.id)
+              : null,
         );
       },
     );
@@ -276,15 +281,15 @@ class AchievementGrid extends StatelessWidget {
             Text(
               '暂无成就',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
             ),
             const SizedBox(height: 8),
             Text(
               '开始打卡解锁成就吧！',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
             ),
           ],
         ),
@@ -373,8 +378,8 @@ class AchievementProgressIndicator extends StatelessWidget {
             Text(
               '$current / $total',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
           ],
         ),
@@ -383,7 +388,8 @@ class AchievementProgressIndicator extends StatelessWidget {
           borderRadius: BorderRadius.circular(4),
           child: LinearProgressIndicator(
             value: progress,
-            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+            backgroundColor:
+                Theme.of(context).colorScheme.surfaceContainerHighest,
             valueColor: AlwaysStoppedAnimation(
               color ?? Theme.of(context).colorScheme.primary,
             ),
@@ -430,16 +436,16 @@ class AchievementDetailDialog extends StatelessWidget {
           Text(
             achievement.name,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+                  fontWeight: FontWeight.bold,
+                ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
           Text(
             achievement.description,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
             textAlign: TextAlign.center,
           ),
           if (achievement.isUnlocked) ...[
@@ -458,8 +464,8 @@ class AchievementDetailDialog extends StatelessWidget {
                   Text(
                     '+${achievement.points} 积分',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                 ],
               ),
@@ -477,7 +483,7 @@ class AchievementDetailDialog extends StatelessWidget {
   }
 
   static void show(BuildContext context, AchievementInfo achievement) {
-    showDialog(
+    showSensoryDialog(
       context: context,
       builder: (context) => AchievementDetailDialog(achievement: achievement),
     );

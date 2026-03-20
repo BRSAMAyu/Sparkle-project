@@ -47,9 +47,26 @@ class GalaxySimulationSettingsSheet extends StatelessWidget {
         filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: backgroundColor,
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                backgroundColor,
+                Color.alphaBlend(
+                  const Color(0xFF6B8CFF).withValues(alpha: isDarkMode ? 0.08 : 0.04),
+                  backgroundColor,
+                ),
+              ],
+            ),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
             border: Border(top: BorderSide(color: borderColor)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDarkMode ? 0.26 : 0.08),
+                blurRadius: 26,
+                offset: const Offset(0, -8),
+              ),
+            ],
           ),
           child: SafeArea(
             top: false,
@@ -171,6 +188,21 @@ class _SliderTile extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Container(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 6),
+            decoration: BoxDecoration(
+              color: Color.alphaBlend(
+                colorScheme.primary.withValues(alpha: 0.03),
+                Theme.of(context).colorScheme.surface,
+              ),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: colorScheme.outlineVariant.withValues(alpha: 0.45),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
           Row(
             children: [
               Expanded(
@@ -195,6 +227,9 @@ class _SliderTile extends StatelessWidget {
             min: min,
             max: max,
             onChanged: onChanged,
+          ),
+              ],
+            ),
           ),
         ],
       ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/navigation/sensory_navigation_observer.dart';
 import 'package:sparkle/core/navigation/shell_navigation.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/features/achievement/achievement_routes.dart';
@@ -30,6 +31,8 @@ import 'package:sparkle/features/visual_elements/visual_elements_routes.dart';
 
 /// Router configuration provider
 final routerProvider = Provider<GoRouter>((ref) {
+  final navigationObserver = SensoryNavigationObserver();
+
   // Create a notifier to sync auth state with GoRouter without rebuilding the router itself
   final authStateNotifier = ValueNotifier<AuthState>(ref.read(authProvider));
 
@@ -48,6 +51,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     navigatorKey: navigatorKey, // Set the global navigator key
     initialLocation: '/',
     debugLogDiagnostics: true,
+    observers: [navigationObserver],
     refreshListenable: authStateNotifier,
     redirect: (context, state) {
       // Access the latest value from the notifier

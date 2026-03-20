@@ -90,9 +90,17 @@ func TestProxyRoutesHandler_RegisterProxyRoutes(t *testing.T) {
 		"POST /api/v1/accountability/request",
 		"POST /api/v1/accountability/:id/respond",
 		"GET /api/v1/accountability/mine",
+		"GET /api/v1/accountability/overview",
 		"DELETE /api/v1/accountability/:id",
 		"POST /api/v1/accountability/:id/checkin",
+		"POST /api/v1/accountability/:id/nudge",
+		"GET /api/v1/accountability/:id/dashboard",
 		"GET /api/v1/accountability/:id/stats",
+	}
+
+	expectedCommunityRoutes := []string{
+		"GET /api/v1/community/friends",
+		"GET /api/v1/community/friends/:friendId/profile",
 	}
 
 	// Expected route patterns for tasks
@@ -126,6 +134,12 @@ func TestProxyRoutesHandler_RegisterProxyRoutes(t *testing.T) {
 
 	// Check accountability routes
 	for _, expected := range expectedAccountabilityRoutes {
+		if !routeMap[expected] {
+			t.Errorf("Expected route %s not found", expected)
+		}
+	}
+
+	for _, expected := range expectedCommunityRoutes {
 		if !routeMap[expected] {
 			t.Errorf("Expected route %s not found", expected)
 		}

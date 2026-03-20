@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
@@ -43,15 +44,12 @@ class GroupTasksScreen extends ConsumerWidget {
           }
 
           // Kanban: unclaimed / in-progress / completed
-          final unclaimed =
-              tasks.where((t) => !t.isClaimedByMe).toList();
+          final unclaimed = tasks.where((t) => !t.isClaimedByMe).toList();
           final inProgress = tasks
-              .where((t) =>
-                  t.isClaimedByMe && !(t.myCompletionStatus ?? false))
+              .where((t) => t.isClaimedByMe && !(t.myCompletionStatus ?? false))
               .toList();
           final completed = tasks
-              .where((t) =>
-                  t.isClaimedByMe && (t.myCompletionStatus ?? false))
+              .where((t) => t.isClaimedByMe && (t.myCompletionStatus ?? false))
               .toList();
 
           return ContentConstraint(
@@ -63,39 +61,44 @@ class GroupTasksScreen extends ConsumerWidget {
                 children: [
                   if (inProgress.isNotEmpty) ...[
                     _sectionHeader('进行中', DS.brandPrimary),
-                    ...inProgress.map((t) => _TaskCard(
-                          task: t,
-                          groupId: groupId,
-                          onComplete: () async {
-                            try {
-                              await ref
-                                  .read(communityRepositoryProvider)
-                                  .completeTask(t.id);
-                              ref.invalidate(groupTasksProvider(groupId));
-                              if (context.mounted) {
-                                AppFeedback.success(context, '任务已完成！');
-                              }
-                            } catch (e) {
-                              if (context.mounted) {
-                                AppFeedback.error(context, '操作失败: $e');
-                              }
+                    ...inProgress.map(
+                      (t) => _TaskCard(
+                        task: t,
+                        groupId: groupId,
+                        onComplete: () async {
+                          try {
+                            await ref
+                                .read(communityRepositoryProvider)
+                                .completeTask(t.id);
+                            ref.invalidate(groupTasksProvider(groupId));
+                            if (context.mounted) {
+                              AppFeedback.success(context, '任务已完成！');
                             }
-                          },
-                        ),),
+                          } catch (e) {
+                            if (context.mounted) {
+                              AppFeedback.error(context, '操作失败: $e');
+                            }
+                          }
+                        },
+                      ),
+                    ),
                   ],
                   if (unclaimed.isNotEmpty) ...[
                     _sectionHeader('待认领', DS.neutral500),
-                    ...unclaimed.map((t) => _TaskCard(
-                          task: t,
-                          groupId: groupId,
-                          onClaim: () => ref
-                              .read(groupTasksProvider(groupId).notifier)
-                              .claimTask(t.id),
-                        ),),
+                    ...unclaimed.map(
+                      (t) => _TaskCard(
+                        task: t,
+                        groupId: groupId,
+                        onClaim: () => ref
+                            .read(groupTasksProvider(groupId).notifier)
+                            .claimTask(t.id),
+                      ),
+                    ),
                   ],
                   if (completed.isNotEmpty) ...[
                     _sectionHeader('已完成', DS.success),
-                    ...completed.map((t) => _TaskCard(task: t, groupId: groupId)),
+                    ...completed
+                        .map((t) => _TaskCard(task: t, groupId: groupId)),
                   ],
                 ],
               ),
@@ -128,15 +131,16 @@ class GroupTasksScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(width: DS.sm),
-            Text(title,
-                style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                    fontSize: DS.fontSizeBase),),
+            Text(
+              title,
+              style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                  fontSize: DS.fontSizeBase),
+            ),
           ],
         ),
       );
-
 }
 
 // ─── Task Card ────────────────────────────────────────────────────────────────
@@ -170,38 +174,51 @@ class _TaskCard extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text(task.title,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      decoration: isDone ? TextDecoration.lineThrough : null,
-                    ),),
+                child: Text(
+                  task.title,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    decoration: isDone ? TextDecoration.lineThrough : null,
+                  ),
+                ),
               ),
-              if (isDone)
-                Icon(Icons.check_circle, color: DS.success, size: 20),
+              if (isDone) Icon(Icons.check_circle, color: DS.success, size: 20),
               if (isInProgress)
-                Icon(Icons.hourglass_bottom,
-                    color: DS.brandPrimaryConst, size: 20,),
+                Icon(
+                  Icons.hourglass_bottom,
+                  color: DS.brandPrimaryConst,
+                  size: 20,
+                ),
             ],
           ),
           if (task.description != null) ...[
             const SizedBox(height: DS.xs),
-            Text(task.description!,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeSm),),
+            Text(
+              task.description!,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style:
+                  TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeSm),
+            ),
           ],
           const SizedBox(height: DS.sm),
           Row(
             children: [
               Icon(Icons.timer, size: 14, color: DS.textSecondary),
               const SizedBox(width: DS.xs),
-              Text('${task.estimatedMinutes} 分钟',
-                  style: TextStyle(fontSize: DS.fontSizeSm, color: DS.textSecondary),),
+              Text(
+                '${task.estimatedMinutes} 分钟',
+                style:
+                    TextStyle(fontSize: DS.fontSizeSm, color: DS.textSecondary),
+              ),
               const SizedBox(width: DS.md),
               Icon(Icons.people, size: 14, color: DS.textSecondary),
               const SizedBox(width: DS.xs),
-              Text('${task.totalClaims} 已认领',
-                  style: TextStyle(fontSize: DS.fontSizeSm, color: DS.textSecondary),),
+              Text(
+                '${task.totalClaims} 已认领',
+                style:
+                    TextStyle(fontSize: DS.fontSizeSm, color: DS.textSecondary),
+              ),
               const Spacer(),
               if (onClaim != null)
                 SparkleButton.primary(
@@ -230,7 +247,7 @@ extension on GroupTasksScreen {
     var estimatedMinutes = 30;
     var difficulty = 2;
 
-    showDialog<void>(
+    showSensoryDialog<void>(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(

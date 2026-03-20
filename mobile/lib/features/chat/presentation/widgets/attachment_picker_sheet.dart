@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
 class AttachmentPickerSheet extends StatelessWidget {
   const AttachmentPickerSheet({
@@ -19,7 +20,17 @@ class AttachmentPickerSheet extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.all(DS.spacing12),
         decoration: BoxDecoration(
-          color: isDark ? DS.surfaceOverlay : DS.surfacePrimary,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              isDark ? DS.surfaceOverlay : DS.surfacePrimary,
+              Color.alphaBlend(
+                DS.info.withValues(alpha: 0.03),
+                DS.surfacePrimary,
+              ),
+            ],
+          ),
           borderRadius: BorderRadius.circular(28),
           border: Border.all(color: DS.borderSubtle),
           boxShadow: [
@@ -65,6 +76,7 @@ class AttachmentPickerSheet extends StatelessWidget {
               title: '直接上传文件',
               subtitle: '上传文档或图片到对话中',
               onTap: () {
+                SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
                 Navigator.pop(context);
                 onDirectUpload();
               },
@@ -75,6 +87,7 @@ class AttachmentPickerSheet extends StatelessWidget {
               title: 'AI 文档清洗',
               subtitle: '提取文本、OCR 识别和整理',
               onTap: () {
+                SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
                 Navigator.pop(context);
                 onDocumentClean();
               },

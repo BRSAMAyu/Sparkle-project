@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
@@ -31,7 +34,7 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
   }
 
   void _showUserOptions(UserBrief user) {
-    showModalBottomSheet<void>(
+    unawaited(showSensoryModalBottomSheet<void>(
       context: context,
       builder: (context) => SafeArea(
         child: Column(
@@ -86,7 +89,7 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
           ],
         ),
       ),
-    );
+    ));
   }
 
   @override
@@ -158,9 +161,11 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
                                 ? NetworkImage(user.avatarUrl!)
                                 : null,
                             child: user.avatarUrl == null
-                                ? Text(user.displayName
-                                    .substring(0, 1)
-                                    .toUpperCase(),)
+                                ? Text(
+                                    user.displayName
+                                        .substring(0, 1)
+                                        .toUpperCase(),
+                                  )
                                 : null,
                           ),
                           if (user.status == UserStatus.online)

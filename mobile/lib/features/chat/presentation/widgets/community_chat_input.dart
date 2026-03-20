@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/features/chat/presentation/widgets/attachment_picker_sheet.dart';
@@ -59,7 +60,7 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
 
   void _showAttachmentSheet() {
     unawaited(
-      showModalBottomSheet<void>(
+      showSensoryModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
@@ -73,7 +74,7 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
 
   void _openFileUpload() {
     unawaited(
-      showModalBottomSheet<void>(
+      showSensoryModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
         backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
@@ -184,7 +185,7 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
   }
 
   void _showQuickShare() {
-    showModalBottomSheet<void>(
+    showSensoryModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
@@ -329,9 +330,8 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
           _toolbarExpanded = false;
           _focusNode.unfocus();
         case InputMode.voice:
-          _inputMode = widget.onQuickShare != null
-              ? InputMode.share
-              : InputMode.text;
+          _inputMode =
+              widget.onQuickShare != null ? InputMode.share : InputMode.text;
         case InputMode.share:
           _inputMode = InputMode.text;
       }
@@ -458,9 +458,8 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
                         border: InputBorder.none,
                         isDense: true,
                       ),
-                        onSubmitted: canSend && enterToSend
-                            ? (_) => _handleSend()
-                            : null,
+                      onSubmitted:
+                          canSend && enterToSend ? (_) => _handleSend() : null,
                     ),
                   );
                 },

@@ -35,6 +35,10 @@ class AccountabilityStatus(str, enum.Enum):
     ENDED = "ended"
 
 
+class AccountabilitySlotType(str, enum.Enum):
+    CORE = "core"
+
+
 class AccountabilityPartnership(BaseModel):
     """责任伙伴关系"""
 
@@ -60,6 +64,12 @@ class AccountabilityPartnership(BaseModel):
     initiator_goal = Column(Text, nullable=False)
     partner_goal = Column(Text, nullable=True)
     check_in_days = Column(Integer, nullable=False, default=1)
+    slot_type = Column(
+        Enum(AccountabilitySlotType, values_callable=lambda obj: [e.value for e in obj]),
+        nullable=False,
+        default=AccountabilitySlotType.CORE,
+        index=True,
+    )
     status = Column(
         Enum(AccountabilityStatus, values_callable=lambda obj: [e.value for e in obj]),
         nullable=False,
@@ -92,6 +102,11 @@ class AccountabilityPartnership(BaseModel):
         Index(
             "idx_accountability_partner_status",
             "partner_id",
+            "status",
+        ),
+        Index(
+            "idx_accountability_slot_status",
+            "slot_type",
             "status",
         ),
     )

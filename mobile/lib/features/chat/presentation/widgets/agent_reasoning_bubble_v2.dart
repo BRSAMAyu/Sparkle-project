@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/utils/theme_utils.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
@@ -440,7 +441,8 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                                         ),
                                         const SizedBox(width: 4),
                                         Text(
-                                          context.l10n.chatCitationLabel(citation),
+                                          context.l10n
+                                              .chatCitationLabel(citation),
                                           style: TextStyle(
                                             fontSize: 11,
                                             color: DS.brandPrimary,
@@ -633,7 +635,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
   void _showCitationDialog(String citation) {
     if (!mounted) return;
     unawaited(
-      showDialog<void>(
+      showSensoryDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
           title: Text(context.l10n.chatKnowledgeCitationTitle(citation)),

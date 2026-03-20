@@ -604,13 +604,15 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
 
       case 'meta':
       case 'metadata':
-        // Gateway telemetry (latency_ms, is_cache_hit, etc.) — no UI action needed
-        return UnknownEvent(
-          data: data,
+        return MetaEvent(
+          meta: Map<String, dynamic>.from(
+            (data['meta'] as Map?)?.cast<String, dynamic>() ?? data,
+          ),
           responseId: responseId,
           traceId: traceId,
           workflowId: workflowId,
           promptVersion: promptVersion,
+          sessionId: sessionId,
         );
 
       case 'reasoning_step':

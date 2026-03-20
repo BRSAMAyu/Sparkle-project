@@ -1,14 +1,18 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
 import 'package:sparkle/features/community/presentation/providers/focus_mode_provider.dart';
 import 'package:sparkle/features/community/presentation/widgets/community_widgets.dart';
+import 'package:sparkle/features/community/presentation/widgets/friends_hub_view.dart';
 
 // Provider for last selected tab
 final communityTabIndexProvider = StateProvider<int>((ref) => 0);
@@ -36,64 +40,68 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
   }
 
   void _showSearchOptions() {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => GraphiteModalSurface(
-        title: context.l10n.communitySearch,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: Icon(Icons.person_search, color: DS.primaryBase),
-              title: Text(context.l10n.communitySearchUsers),
-              onTap: () {
-                Navigator.pop(context);
-                context.push('/community/users/search');
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.search, color: DS.primaryBase),
-              title: Text(context.l10n.communitySearchGroups),
-              onTap: () {
-                Navigator.pop(context);
-                context.push('/community/groups/search');
-              },
-            ),
-          ],
+    unawaited(
+      showSensoryModalBottomSheet<void>(
+        context: context,
+        backgroundColor: Colors.transparent,
+        builder: (context) => GraphiteModalSurface(
+          title: context.l10n.communitySearch,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(Icons.person_search, color: DS.primaryBase),
+                title: Text(context.l10n.communitySearchUsers),
+                onTap: () {
+                  Navigator.pop(context);
+                  context.push('/community/users/search');
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.search, color: DS.primaryBase),
+                title: Text(context.l10n.communitySearchGroups),
+                onTap: () {
+                  Navigator.pop(context);
+                  context.push('/community/groups/search');
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
   void _showAddOptions() {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => GraphiteModalSurface(
-        title: context.l10n.communityActions,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: Icon(Icons.person_add, color: DS.primaryBase),
-              title: Text(context.l10n.communityDiscoverFriends),
-              subtitle: Text(context.l10n.communityDiscoverFriendsHint),
-              onTap: () {
-                Navigator.pop(context);
-                context.push('/community/friends/discover');
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.group_add, color: DS.primaryBase),
-              title: Text(context.l10n.communityCreateGroup),
-              subtitle: Text(context.l10n.communityCreateGroupHint),
-              onTap: () {
-                Navigator.pop(context);
-                context.push('/community/groups/create');
-              },
-            ),
-          ],
+    unawaited(
+      showSensoryModalBottomSheet<void>(
+        context: context,
+        backgroundColor: Colors.transparent,
+        builder: (context) => GraphiteModalSurface(
+          title: context.l10n.communityActions,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(Icons.person_add, color: DS.primaryBase),
+                title: Text(context.l10n.communityDiscoverFriends),
+                subtitle: Text(context.l10n.communityDiscoverFriendsHint),
+                onTap: () {
+                  Navigator.pop(context);
+                  context.push('/community/friends/discover');
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.group_add, color: DS.primaryBase),
+                title: Text(context.l10n.communityCreateGroup),
+                subtitle: Text(context.l10n.communityCreateGroupHint),
+                onTap: () {
+                  Navigator.pop(context);
+                  context.push('/community/groups/create');
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -256,106 +264,8 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
 class _FriendsListTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final friendsAsync = ref.watch(friendsProvider);
-
-    return friendsAsync.when(
-      data: (friends) {
-        if (friends.isEmpty) {
-          return Center(
-            child: GraphiteCardSurface(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.people_outline, size: 64, color: DS.neutral300),
-                  const SizedBox(height: DS.lg),
-                  Text(
-                    context.l10n.communityNoFriends,
-                    style: TextStyle(color: DS.neutral500),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }
-        return ListView.builder(
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-          itemCount: friends.length,
-          itemBuilder: (context, index) {
-            final f = friends[index];
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: GraphiteCardSurface(
-                onTap: () => context.push(
-                  '/chat/private/${f.friend.id}?name=${Uri.encodeComponent(f.friend.displayName)}',
-                ),
-                child: Row(
-                  children: [
-                    StatusAvatar(
-                      status: f.friend.status,
-                      url: f.friend.avatarUrl,
-                    ),
-                    const SizedBox(width: DS.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            f.friend.displayName,
-                            style: DS.bodyLarge.copyWith(
-                              color: DS.textPrimary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Row(
-                            children: [
-                              Container(
-                                width: 8,
-                                height: 8,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: f.friend.status == UserStatus.online
-                                      ? DS.success
-                                      : DS.neutral300,
-                                ),
-                              ),
-                              const SizedBox(width: DS.xs),
-                              Text(
-                                f.friend.status == UserStatus.online
-                                    ? context.l10n.communityStatusOnline
-                                    : context.l10n.communityStatusOffline,
-                                style: TextStyle(
-                                  color: f.friend.status == UserStatus.online
-                                      ? DS.success
-                                      : DS.textSecondary,
-                                  fontSize: 12,
-                                ),
-                              ),
-                              const SizedBox(width: DS.sm),
-                              Text(
-                                'Lv.${f.friend.flameLevel}',
-                                style: TextStyle(
-                                  color: DS.textSecondary,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    Icon(Icons.chevron_right, size: 20, color: DS.neutral400),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(
-        child: Text('${context.l10n.loadingFailed}: $e'),
-      ),
+    return const FriendsHubView(
+      padding: EdgeInsets.fromLTRB(12, 12, 12, 28),
     );
   }
 }

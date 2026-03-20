@@ -31,9 +31,31 @@ class AiModeUsageItem(BaseModel):
     requests_remaining: int
     total_tokens: int
     total_cost_usd: float
+    total_duration_ms: int = 0
+    avg_total_duration_ms: float = 0.0
+    avg_first_token_ms: float = 0.0
+    avg_stream_duration_ms: float = 0.0
 
 
 class AiUsageSummaryResponse(BaseModel):
     current_mode: str
     items: list[AiModeUsageItem]
+    generated_at: datetime
+
+
+class AiChatModeTimingItem(BaseModel):
+    date: str
+    mode: str
+    chat_mode: str
+    requests: int
+    avg_total_duration_ms: float = 0.0
+    avg_first_token_ms: float = 0.0
+    avg_stream_duration_ms: float = 0.0
+
+
+class AiUsageExportResponse(BaseModel):
+    current_mode: str
+    window_days: int
+    items: list[AiModeUsageItem]
+    chat_mode_timing: list[AiChatModeTimingItem]
     generated_at: datetime
