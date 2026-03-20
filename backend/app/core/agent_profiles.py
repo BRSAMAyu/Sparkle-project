@@ -72,13 +72,17 @@ class TaskType(str, Enum):
 
 class ModelTier(str, Enum):
     """模型层级（按成本/能力分类）"""
-    FAST = "fast"           # 快速响应（如 mimo-v2-flash, qwen3.5-flash）
-    FREE_FAST = "free_fast" # 免费快速（如 glm-4.7-flash 非思考模式）
-    STANDARD = "standard"   # 标准模型（如 deepseek-chat, qwen3.5-plus）
-    REASONING = "reasoning" # 强推理（如 deepseek-reasoner, qwen3.5-plus）
-    FREE_REASONING = "free_reasoning" # 免费推理（如 glm-4.7-flash 思考模式）
-    GLM_BATCH = "glm_batch" # GLM批量处理（glm-4.7 非思考+思考模式）
-    SPECIALIST = "specialist" # 专家模型（如 OCR、翻译等专用模型）
+    FREE = "free"           # 后台免费层，不直出主聊天
+    FREE_FAST = "free_fast" # 免费试探/低成本层
+    FREE_REASONING = "free_reasoning"  # 兼容旧值，内部会归一到 free_fast
+    FAST = "fast"           # 快速响应，非思考
+    STANDARD = "standard"   # 甜点层，轻思考
+    PLUS = "plus"           # 高质量非思考
+    PRO = "pro"             # 深推理
+    MAX = "max"             # 最高层，显式使用
+    REASONING = "reasoning" # 兼容旧值，内部会归一到 pro
+    GLM_BATCH = "glm_batch" # GLM批量处理层
+    SPECIALIST = "specialist" # OCR、翻译等专用模型
 
 
 @dataclass
@@ -149,7 +153,10 @@ class AgentProfile:
         tier_defaults = {
             ModelTier.FAST: available_models.get("fast_model"),
             ModelTier.STANDARD: available_models.get("standard_model"),
-            ModelTier.REASONING: available_models.get("reasoning_model"),
+            ModelTier.PLUS: available_models.get("plus_model"),
+            ModelTier.PRO: available_models.get("pro_model"),
+            ModelTier.REASONING: available_models.get("pro_model"),
+            ModelTier.MAX: available_models.get("max_model"),
             ModelTier.GLM_BATCH: available_models.get("glm_batch_model"),
         }
         return tier_defaults.get(self.model_tier, {})
@@ -281,11 +288,11 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
         entry_enabled=True,
         entry_rank=20,
         entry_tags=["exam", "strategy", "mock"],
-        model_tier=ModelTier.REASONING,
+        model_tier=ModelTier.PRO,
         model_policy=AgentModelPolicy(
-            preferred_models=["dashscope_reason", "mimo_pro", "deepseek_reason"],
-            preferred_tier=ModelTier.REASONING,
-            fallback_tiers=[ModelTier.STANDARD],
+            preferred_models=["dashscope_reason", "deepseek_reason", "dashscope_chat"],
+            preferred_tier=ModelTier.PRO,
+            fallback_tiers=[ModelTier.PLUS, ModelTier.STANDARD],
         ),
         temperature=0.3,
         allowed_tools=["create_plan", "generate_tasks_for_plan", "create_task", "query_knowledge"],
@@ -337,11 +344,11 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
         entry_enabled=True,
         entry_rank=40,
         entry_tags=["analysis", "reasoning", "evidence"],
-        model_tier=ModelTier.REASONING,
+        model_tier=ModelTier.PRO,
         model_policy=AgentModelPolicy(
-            preferred_models=["dashscope_reason", "mimo_pro", "deepseek_reason"],
-            preferred_tier=ModelTier.REASONING,
-            fallback_tiers=[ModelTier.STANDARD],
+            preferred_models=["dashscope_reason", "deepseek_reason", "dashscope_chat"],
+            preferred_tier=ModelTier.PRO,
+            fallback_tiers=[ModelTier.PLUS, ModelTier.STANDARD],
         ),
         temperature=0.4,
         allowed_tools=["query_knowledge", "create_knowledge_node"],
@@ -361,11 +368,11 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
         entry_enabled=True,
         entry_rank=50,
         entry_tags=["error-diagnosis", "remediation", "root-cause"],
-        model_tier=ModelTier.REASONING,
+        model_tier=ModelTier.PRO,
         model_policy=AgentModelPolicy(
-            preferred_models=["dashscope_reason", "deepseek_reason", "mimo_pro"],
-            preferred_tier=ModelTier.REASONING,
-            fallback_tiers=[ModelTier.STANDARD],
+            preferred_models=["deepseek_reason", "dashscope_reason", "dashscope_chat"],
+            preferred_tier=ModelTier.PRO,
+            fallback_tiers=[ModelTier.PLUS, ModelTier.STANDARD],
         ),
         temperature=0.3,
         allowed_tools=["query_error_history", "record_error", "query_knowledge", "create_task"],
@@ -386,11 +393,11 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
         role=AgentRole.STUDY_PLANNER,
         display_name="学习规划师",
         description="制定宏观学习计划",
-        model_tier=ModelTier.REASONING,
+        model_tier=ModelTier.PLUS,
         model_policy=AgentModelPolicy(
-            preferred_models=["mimo_pro", "deepseek_reason", "dashscope_reason"],
-            preferred_tier=ModelTier.REASONING,
-            fallback_tiers=[ModelTier.STANDARD],
+            preferred_models=["dashscope_chat", "deepseek_chat", "dashscope_reason"],
+            preferred_tier=ModelTier.PLUS,
+            fallback_tiers=[ModelTier.PRO, ModelTier.STANDARD],
         ),
         temperature=0.5,
         system_prompt_template="""你是学习规划师，负责制定宏观学习计划和分析学习状态。"""
@@ -400,11 +407,11 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
         role=AgentRole.PROBLEM_SOLVER,
         display_name="问题解决者",
         description="错题诊断与解题分析",
-        model_tier=ModelTier.REASONING,
+        model_tier=ModelTier.PRO,
         model_policy=AgentModelPolicy(
-            preferred_models=["deepseek_reason", "mimo_pro", "dashscope_reason"],
-            preferred_tier=ModelTier.REASONING,
-            fallback_tiers=[ModelTier.STANDARD],
+            preferred_models=["deepseek_reason", "dashscope_reason", "deepseek_chat"],
+            preferred_tier=ModelTier.PRO,
+            fallback_tiers=[ModelTier.PLUS, ModelTier.STANDARD],
         ),
         temperature=0.3,
         system_prompt_template="""你是问题解决者，负责分析错题和诊断知识缺陷。"""
@@ -475,11 +482,11 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
         role=AgentRole.REVIEWER,
         display_name="审查专家",
         description="AI内容质量审查（使用独立模型）",
-        model_tier=ModelTier.REASONING,  # 使用强推理模型
+        model_tier=ModelTier.PRO,  # 使用深推理层
         model_policy=AgentModelPolicy(
-            preferred_models=["deepseek_reason", "dashscope_reason", "mimo_pro"],
-            preferred_tier=ModelTier.REASONING,
-            fallback_tiers=[ModelTier.STANDARD],
+            preferred_models=["deepseek_reason", "dashscope_reason", "deepseek_chat"],
+            preferred_tier=ModelTier.PRO,
+            fallback_tiers=[ModelTier.PLUS, ModelTier.STANDARD],
         ),
         diversity_hint=ModelDiversityHint(avoid_same_provider_as=[AgentRole.GENERATION]),
         temperature=0.2,  # 低温确保客观
@@ -566,11 +573,11 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
         entry_enabled=True,
         entry_rank=110,
         entry_tags=["science", "concepts", "experiments"],
-        model_tier=ModelTier.REASONING,
+        model_tier=ModelTier.PRO,
         model_policy=AgentModelPolicy(
-            preferred_models=["dashscope_reason", "mimo_pro", "deepseek_reason"],
-            preferred_tier=ModelTier.REASONING,
-            fallback_tiers=[ModelTier.STANDARD],
+            preferred_models=["dashscope_reason", "deepseek_reason", "dashscope_chat"],
+            preferred_tier=ModelTier.PRO,
+            fallback_tiers=[ModelTier.PLUS, ModelTier.STANDARD],
         ),
         temperature=0.5,
         system_prompt_template="""你是科学专家，负责讲解科学概念和设计实验。
@@ -617,15 +624,15 @@ TASK_TO_AGENT_PROFILE: dict[TaskType, dict[str, Any]] = {
     },
     TaskType.DEEP_REASONING: {
         "default_agent": AgentRole.EXAM_ORACLE,
-        "model_tier": ModelTier.REASONING,
+        "model_tier": ModelTier.PRO,
     },
     TaskType.TASK_DECOMPOSITION: {
         "default_agent": AgentRole.STUDY_PLANNER,
-        "model_tier": ModelTier.REASONING,
+        "model_tier": ModelTier.PLUS,
     },
     TaskType.ERROR_DIAGNOSIS: {
         "default_agent": AgentRole.PROBLEM_SOLVER,
-        "model_tier": ModelTier.REASONING,
+        "model_tier": ModelTier.PRO,
     },
     TaskType.COLLABORATION: {
         "default_agent": AgentRole.ORCHESTRATOR,
@@ -633,7 +640,7 @@ TASK_TO_AGENT_PROFILE: dict[TaskType, dict[str, Any]] = {
     },
     TaskType.REVIEW: {
         "default_agent": AgentRole.REVIEWER,
-        "model_tier": ModelTier.REASONING,  # 审查使用强推理模型
+        "model_tier": ModelTier.PRO,  # 审查使用深推理层
     },
 }
 

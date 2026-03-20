@@ -24,8 +24,14 @@ class GalaxyNodePreviewCard extends StatelessWidget {
     final sectorColor = sectorStyle.primaryColorFor(isDarkMode: isDarkMode);
     final glowColor = sectorStyle.glowColorFor(isDarkMode: isDarkMode);
     final backgroundColor = isDarkMode
-        ? const Color(0xE6151D30)
-        : Colors.white.withValues(alpha: 0.92);
+        ? Color.alphaBlend(
+            sectorColor.withValues(alpha: 0.08),
+            const Color(0xE6151D30),
+          )
+        : Color.alphaBlend(
+            sectorColor.withValues(alpha: 0.05),
+            Colors.white.withValues(alpha: 0.94),
+          );
     final borderColor = isDarkMode
         ? Colors.white.withValues(alpha: 0.12)
         : Colors.black.withValues(alpha: 0.08);
@@ -38,12 +44,23 @@ class GalaxyNodePreviewCard extends StatelessWidget {
         constraints: const BoxConstraints(maxWidth: 220),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: backgroundColor,
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                backgroundColor,
+                Color.alphaBlend(
+                  glowColor.withValues(alpha: isDarkMode ? 0.08 : 0.04),
+                  backgroundColor,
+                ),
+              ],
+            ),
             borderRadius: BorderRadius.circular(18),
             border: Border.all(color: borderColor),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.22),
+                color: (isDarkMode ? Colors.black : glowColor)
+                    .withValues(alpha: isDarkMode ? 0.22 : 0.08),
                 blurRadius: 24,
                 offset: const Offset(0, 12),
               ),
@@ -150,7 +167,7 @@ class GalaxyNodePreviewCard extends StatelessWidget {
                       ? Colors.white.withValues(alpha: 0.1)
                       : Colors.black.withValues(alpha: 0.08),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
                 Row(
                   children: [
                     Expanded(
@@ -211,9 +228,10 @@ class _CardActionButton extends StatelessWidget {
   Widget build(BuildContext context) => FilledButton.tonal(
         onPressed: onPressed,
         style: FilledButton.styleFrom(
-          backgroundColor: color.withValues(alpha: 0.12),
+          backgroundColor: color.withValues(alpha: 0.1),
           foregroundColor: color,
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          side: BorderSide(color: color.withValues(alpha: 0.18)),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),

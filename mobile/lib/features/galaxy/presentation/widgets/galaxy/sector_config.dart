@@ -76,8 +76,8 @@ class SectorStyle {
     return HSLColor.fromAHSL(
       1,
       hsl.hue,
-      (hsl.saturation * (isDarkMode ? 0.92 : 0.78)).clamp(0.2, 0.75),
-      (hsl.lightness + (isDarkMode ? 0.1 : 0.12)).clamp(0.34, 0.84),
+      (hsl.saturation * (isDarkMode ? 1.02 : 0.9)).clamp(0.24, 0.82),
+      (hsl.lightness + (isDarkMode ? 0.08 : 0.08)).clamp(0.32, 0.8),
     ).toColor();
   }
 
@@ -86,26 +86,26 @@ class SectorStyle {
     return [
       _shade(
         hsl,
-        saturationMultiplier: 1.15,
+        saturationMultiplier: 1.22,
         lightnessMultiplier: 0.85,
         isDarkMode: isDarkMode,
       ),
       _shade(
         hsl,
-        saturationMultiplier: 1.05,
+        saturationMultiplier: 1.1,
         lightnessMultiplier: 0.92,
         isDarkMode: isDarkMode,
       ),
       primary,
       _shade(
         hsl,
-        saturationMultiplier: 0.90,
+        saturationMultiplier: 0.96,
         lightnessMultiplier: 1.08,
         isDarkMode: isDarkMode,
       ),
       _shade(
         hsl,
-        saturationMultiplier: 0.75,
+        saturationMultiplier: 0.82,
         lightnessMultiplier: 1.15,
         isDarkMode: isDarkMode,
       ),
@@ -122,7 +122,7 @@ class SectorStyle {
     final maxLightness = isDarkMode ? 0.82 : 0.72;
     return color
         .withSaturation(
-          (color.saturation * saturationMultiplier).clamp(0.2, 0.82),
+          (color.saturation * saturationMultiplier).clamp(0.24, 0.88),
         )
         .withLightness(
           (color.lightness * lightnessMultiplier)
@@ -138,56 +138,56 @@ class SectorConfig {
   static final Map<SectorEnum, SectorStyle> styles = {
     SectorEnum.cosmos: SectorStyle(
       name: '理性星域',
-      darkPrimaryColor: const Color(0xFF78A3D1),
-      lightPrimaryColor: const Color(0xFF386494),
+      darkPrimaryColor: const Color(0xFF7EAEE0),
+      lightPrimaryColor: const Color(0xFF3D6EA2),
       baseAngle: 0.0,
       sweepAngle: _sectorSweep,
       keywords: const ['数学', '物理', '化学', '天文', '逻辑学'],
     ),
     SectorEnum.tech: SectorStyle(
       name: '造物星域',
-      darkPrimaryColor: const Color(0xFF5AB8CC),
-      lightPrimaryColor: const Color(0xFF356E7B),
+      darkPrimaryColor: const Color(0xFF48C1C9),
+      lightPrimaryColor: const Color(0xFF2D7C86),
       baseAngle: _sectorSweep,
       sweepAngle: _sectorSweep,
       keywords: const ['计算机', '工程', 'AI', '建筑', '制造'],
     ),
     SectorEnum.art: SectorStyle(
       name: '灵感星域',
-      darkPrimaryColor: const Color(0xFFC97C8F),
-      lightPrimaryColor: const Color(0xFF955061),
+      darkPrimaryColor: const Color(0xFFD97B9E),
+      lightPrimaryColor: const Color(0xFFA74E72),
       baseAngle: _sectorSweep * 2,
       sweepAngle: _sectorSweep,
       keywords: const ['设计', '音乐', '绘画', '文学', 'ACG'],
     ),
     SectorEnum.civilization: SectorStyle(
       name: '文明星域',
-      darkPrimaryColor: const Color(0xFFD0A05F),
-      lightPrimaryColor: const Color(0xFFA16B2A),
+      darkPrimaryColor: const Color(0xFFD6A45A),
+      lightPrimaryColor: const Color(0xFFA86A23),
       baseAngle: _sectorSweep * 3,
       sweepAngle: _sectorSweep,
       keywords: const ['历史', '经济', '政治', '社会学', '法律'],
     ),
     SectorEnum.life: SectorStyle(
       name: '生活星域',
-      darkPrimaryColor: const Color(0xFF5FAF80),
-      lightPrimaryColor: const Color(0xFF3A8552),
+      darkPrimaryColor: const Color(0xFF58B37D),
+      lightPrimaryColor: const Color(0xFF328458),
       baseAngle: _sectorSweep * 4,
       sweepAngle: _sectorSweep,
       keywords: const ['健身', '烹饪', '医学', '心理', '理财'],
     ),
     SectorEnum.wisdom: SectorStyle(
       name: '智慧星域',
-      darkPrimaryColor: const Color(0xFFA181C8),
-      lightPrimaryColor: const Color(0xFF67478F),
+      darkPrimaryColor: const Color(0xFFAD86D7),
+      lightPrimaryColor: const Color(0xFF6D469A),
       baseAngle: _sectorSweep * 5,
       sweepAngle: _sectorSweep,
       keywords: const ['哲学', '宗教', '方法论', '元认知'],
     ),
     SectorEnum.voidSector: SectorStyle(
       name: '暗物质区',
-      darkPrimaryColor: const Color(0xFF70798B),
-      lightPrimaryColor: const Color(0xFF8A93A8),
+      darkPrimaryColor: const Color(0xFF7B8399),
+      lightPrimaryColor: const Color(0xFF9199AD),
       baseAngle: _sectorSweep * 6,
       sweepAngle: _sectorSweep,
       keywords: const ['未归类', '跨领域', '新兴概念'],
@@ -291,7 +291,7 @@ class SectorConfig {
     return HSLColor.fromAHSL(
       hsl.alpha,
       hsl.hue,
-      (hsl.saturation * multipliers.$1).clamp(0.2, 0.82),
+      (hsl.saturation * multipliers.$1).clamp(0.24, 0.88),
       (hsl.lightness * multipliers.$2)
           .clamp(isDarkMode ? 0.24 : 0.18, isDarkMode ? 0.82 : 0.72),
     ).toColor();
@@ -504,7 +504,7 @@ class SectorConfig {
     return HSLColor.fromAHSL(
       1,
       averagedHue,
-      (sumSaturation / totalWeight).clamp(0.2, 0.82),
+      (sumSaturation / totalWeight).clamp(0.24, 0.86),
       (sumLightness / totalWeight).clamp(0.18, 0.82),
     ).toColor();
   }
@@ -547,8 +547,8 @@ class SectorConfig {
       hsl.alpha,
       (hsl.hue + hueDelta + 360) % 360,
       (hsl.saturation + saturationDelta).clamp(
-        isDarkMode ? 0.24 : 0.18,
-        isDarkMode ? 0.88 : 0.8,
+        isDarkMode ? 0.28 : 0.22,
+        isDarkMode ? 0.9 : 0.84,
       ),
       (hsl.lightness + lightnessDelta + unlockLift).clamp(
         isDarkMode ? 0.24 : 0.2,

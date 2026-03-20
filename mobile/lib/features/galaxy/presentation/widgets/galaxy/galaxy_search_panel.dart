@@ -44,9 +44,18 @@ class GalaxySearchPanel extends StatelessWidget {
         filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: isDarkMode
-                ? colors.panelDarkOverlayLighter
-                : Colors.white.withValues(alpha: 0.82),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                isDarkMode
+                    ? colors.panelDarkOverlayLighter
+                    : Colors.white.withValues(alpha: 0.88),
+                isDarkMode
+                    ? Colors.white.withValues(alpha: 0.03)
+                    : DS.info.withValues(alpha: 0.03),
+              ],
+            ),
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
               color: isDarkMode
@@ -104,7 +113,20 @@ class GalaxySearchPanel extends StatelessWidget {
                       prefixIcon: Icon(Icons.search_rounded, color: secondary),
                       filled: true,
                       fillColor: (isDarkMode ? Colors.white : Colors.black)
-                          .withValues(alpha: isDarkMode ? 0.05 : 0.035),
+                          .withValues(alpha: isDarkMode ? 0.05 : 0.03),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide(
+                          color: (isDarkMode ? Colors.white : Colors.black)
+                              .withValues(alpha: 0.08),
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide(
+                          color: DS.info.withValues(alpha: 0.35),
+                        ),
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                         borderSide: BorderSide.none,

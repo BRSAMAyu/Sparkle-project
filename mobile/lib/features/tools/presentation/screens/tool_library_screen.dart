@@ -55,9 +55,21 @@ class _ToolLibraryScreenState extends ConsumerState<ToolLibraryScreen>
     return SparklePageScaffold(
       role: SparklePageRole.content,
       appBar: AppBar(
-        title: Text(l10n.toolsLibraryTitle),
+        backgroundColor: DS.surfaceOverlay.withValues(alpha: 0.94),
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        title: Text(
+          l10n.toolsLibraryTitle,
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: DS.fontWeightBold,
+                color: DS.textPrimary,
+              ),
+        ),
         bottom: TabBar(
           controller: _tabController,
+          dividerColor: Colors.transparent,
+          labelColor: DS.textPrimary,
+          unselectedLabelColor: DS.textSecondary,
           tabs: [
             Tab(text: l10n.toolsTabBrowse),
             Tab(text: l10n.toolsTabManage),
@@ -105,6 +117,11 @@ class _ToolLibraryScreenState extends ConsumerState<ToolLibraryScreen>
         TextField(
           controller: _searchController,
           decoration: InputDecoration(
+            filled: true,
+            fillColor: Color.alphaBlend(
+              DS.info.withValues(alpha: 0.02),
+              DS.surfacePrimary,
+            ),
             hintText: l10n.toolsSearchHint,
             prefixIcon: const Icon(Icons.search_rounded),
             suffixIcon: query.isEmpty
@@ -113,6 +130,18 @@ class _ToolLibraryScreenState extends ConsumerState<ToolLibraryScreen>
                     onPressed: _searchController.clear,
                     icon: const Icon(Icons.close_rounded),
                   ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(18),
+              borderSide: BorderSide(
+                color: DS.border.withValues(alpha: 0.45),
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(18),
+              borderSide: BorderSide(
+                color: DS.info.withValues(alpha: 0.35),
+              ),
+            ),
           ),
         ),
         if (recentTools.isNotEmpty && query.isEmpty) ...[
@@ -225,6 +254,12 @@ class _ToolLibraryScreenState extends ConsumerState<ToolLibraryScreen>
               return Card(
                 key: ValueKey(tool.id),
                 margin: const EdgeInsets.only(bottom: DS.spacing12),
+                elevation: 0,
+                color: Color.lerp(DS.surfacePrimary, DS.info, 0.02),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                  side: BorderSide(color: DS.border.withValues(alpha: 0.45)),
+                ),
                 child: ListTile(
                   leading: Icon(tool.icon, color: DS.brandPrimaryConst),
                   title: Text(tool.title),
@@ -279,6 +314,7 @@ class _SectionHeader extends StatelessWidget {
             title,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: DS.fontWeightBold,
+                  color: DS.textPrimary,
                 ),
           ),
           const Spacer(),
@@ -317,15 +353,33 @@ class _LibraryToolCard extends StatelessWidget {
       width: 168,
       height: 196,
       child: Material(
-        color: background,
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(20),
         child: InkWell(
           borderRadius: BorderRadius.circular(20),
           onTap: onOpen,
           child: Container(
             decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  background,
+                  Color.alphaBlend(
+                    accent.withValues(alpha: 0.04),
+                    DS.surfacePrimary,
+                  ),
+                ],
+              ),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: accent.withValues(alpha: 0.18)),
+              boxShadow: [
+                BoxShadow(
+                  color: DS.textPrimary.withValues(alpha: 0.05),
+                  blurRadius: 16,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
             padding: const EdgeInsets.all(DS.spacing16),
             child: Column(

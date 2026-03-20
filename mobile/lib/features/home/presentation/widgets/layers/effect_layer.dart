@@ -26,9 +26,21 @@ class EffectLayer extends StatelessWidget {
     return AnimatedBuilder(
       animation: mainAnimation,
       builder: (context, child) {
-        return CustomPaint(
-          size: Size.infinite,
-          painter: _getEffectPainter(effectType, config),
+        final color = _parseColor(config['color'] as String? ?? '#FFFFFF');
+        return Stack(
+          children: [
+            CustomPaint(
+              size: Size.infinite,
+              painter: _getEffectPainter(effectType, config),
+            ),
+            CustomPaint(
+              size: Size.infinite,
+              painter: _AmbientVignettePainter(
+                animationValue: mainAnimation.value,
+                color: color.withValues(alpha: 0.16),
+              ),
+            ),
+          ],
         );
       },
     );
@@ -38,15 +50,25 @@ class EffectLayer extends StatelessWidget {
     return AnimatedBuilder(
       animation: mainAnimation,
       builder: (context, child) {
-        return CustomPaint(
-          size: Size.infinite,
-          painter: _PulseGlowPainter(
-            intensity: 0.3,
-            color: const Color(0xFFFFFFFF),
-            position: 'center',
-            radius: 200,
-            animationValue: mainAnimation.value,
-          ),
+        return Stack(
+          children: [
+            CustomPaint(
+              size: Size.infinite,
+              painter: _PulseGlowPainter(
+                intensity: 0.3,
+                color: const Color(0xFFFFFFFF),
+                position: 'center',
+                radius: 200,
+                animationValue: mainAnimation.value,
+              ),
+            ),
+            CustomPaint(
+              size: Size.infinite,
+              painter: _AmbientVignettePainter(
+                animationValue: mainAnimation.value,
+              ),
+            ),
+          ],
         );
       },
     );
@@ -318,4 +340,36 @@ class _SupernovaPainter extends CustomPainter {
   bool shouldRepaint(covariant _SupernovaPainter oldDelegate) {
     return animationValue != oldDelegate.animationValue;
   }
+}
+
+class _AmbientVignettePainter extends CustomPainter {
+  _AmbientVignettePainter({
+    required this.animationValue,
+    this.color = const Color(0x33FFFFFF),
+  });
+
+  final double animationValue;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final shimmer = 0.9 + sin(animationValue * 2 * pi) * 0.08;
+    final paint = Paint()
+      ..shader = RadialGradient(
+        center: const Alignment(0.0, -0.2),
+        radius: 1.08,
+        colors: [
+          Colors.transparent,
+          color.withValues(alpha: color.a * 0.18 * shimmer),
+          color.withValues(alpha: color.a * 0.45 * shimmer),
+        ],
+        stops: const [0.56, 0.82, 1.0],
+      ).createShader(Offset.zero & size);
+
+    canvas.drawRect(Offset.zero & size, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _AmbientVignettePainter oldDelegate) =>
+      animationValue != oldDelegate.animationValue || color != oldDelegate.color;
 }

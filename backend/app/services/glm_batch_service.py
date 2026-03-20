@@ -47,6 +47,26 @@ class GLMBatchService:
     def get_runtime_limit(self) -> int:
         return llm_concurrency.get_runtime_limit("zhipu_coding")
 
+    def _select_batch_model_key(self, *, use_thinking: bool, task_type: str) -> str:
+        preferred_candidates = (
+            ["glm_4_7_thinking", "glm_4_7_no_thinking"]
+            if use_thinking
+            else (
+                ["glm_4_5_air_batch", "glm_4_6_batch", "glm_4_7_no_thinking"]
+                if task_type == "capsule_generation"
+                else ["glm_4_6_batch", "glm_4_5_air_batch", "glm_4_7_no_thinking"]
+            )
+        )
+        for model_key in preferred_candidates:
+            if model_key in llm_router._available_models and llm_router._is_model_healthy(model_key):
+                return model_key
+        fallback = llm_router.select_model(
+            AgentRole.DEEP_ANALYST if use_thinking else AgentRole.GENERATION,
+            TaskType.DEEP_REASONING if use_thinking else TaskType.STANDARD_RESPONSE,
+            force_tier=ModelTier.GLM_BATCH,
+        )
+        return fallback.model_key
+
     def _select_spillover_model(self, *, task_type: str, use_thinking: bool) -> str:
         if task_type == "capsule_generation":
             if use_thinking:
@@ -134,14 +154,14 @@ class GLMBatchService:
         )
 
         # 通过路由器选模型（支持健康感知和 env 覆盖）
-        _task = TaskType.DEEP_REASONING if use_thinking else TaskType.STANDARD_RESPONSE
-        _role = AgentRole.DEEP_ANALYST if use_thinking else AgentRole.GENERATION
-        _selection = llm_router.select_model(_role, _task, force_tier=ModelTier.GLM_BATCH)
-        model_key = _selection.model_key
+        model_key = self._select_batch_model_key(
+            use_thinking=use_thinking,
+            task_type="capsule_generation",
+        )
         reason = (
             f"depth={depth_preference:.2f}, curiosity={curiosity_preference:.2f}, "
             f"requested_count={requested_count}, generation_type={generation_type}, "
-            f"router={_selection.reason}"
+            f"selected_model={model_key}"
         )
         return GLMBatchPlan(
             task_type="capsule_generation",
@@ -182,14 +202,14 @@ class GLMBatchService:
             or has_complex_context
         )
         # 通过路由器选模型（支持健康感知和 env 覆盖）
-        _task = TaskType.ERROR_DIAGNOSIS if use_thinking else TaskType.STANDARD_RESPONSE
-        _role = AgentRole.ERROR_ANALYST if use_thinking else AgentRole.PROBLEM_SOLVER
-        _selection = llm_router.select_model(_role, _task, force_tier=ModelTier.GLM_BATCH)
-        model_key = _selection.model_key
+        model_key = self._select_batch_model_key(
+            use_thinking=use_thinking,
+            task_type="cognitive_analysis",
+        )
         reason = (
             f"severity={severity}, tag_count={tag_count}, "
             f"complex_context={has_complex_context}, "
-            f"router={_selection.reason}"
+            f"selected_model={model_key}"
         )
         return GLMBatchPlan(
             task_type="cognitive_analysis",

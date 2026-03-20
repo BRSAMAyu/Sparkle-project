@@ -8,7 +8,12 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.core.metrics import ACTIVE_SESSIONS, REQUEST_LATENCY, RESPONSE_FALLBACK_GENERATED_TOTAL, SESSION_FEEDBACK_VISIBLE_HINT_TOTAL
+from app.core.metrics import (
+    ACTIVE_SESSIONS,
+    REQUEST_LATENCY,
+    RESPONSE_FALLBACK_GENERATED_TOTAL,
+    SESSION_FEEDBACK_VISIBLE_HINT_TOTAL,
+)
 from app.core.business_metrics import COLLABORATION_LATENCY
 from app.core.task_manager import task_manager
 from app.gen.agent.v1 import agent_service_pb2
@@ -49,7 +54,9 @@ class ResponseBuilderMixin:
                 break
         used_fallback_response = False
         if not full_response or not full_response.strip():
-            full_response = self._build_nonempty_fallback_response(final_state=final_state, executable_plan=executable_plan)
+            full_response = self._build_nonempty_fallback_response(
+                final_state=final_state, executable_plan=executable_plan
+            )
             used_fallback_response = True
             RESPONSE_FALLBACK_GENERATED_TOTAL.labels(source="standard_empty_final").inc()
 
@@ -85,11 +92,7 @@ class ResponseBuilderMixin:
             response_metadata.update(expert_metadata)
         agents_involved = []
         if executable_plan and executable_plan.agents_involved:
-            agents_involved = [
-                str(agent).strip()
-                for agent in executable_plan.agents_involved
-                if str(agent).strip()
-            ]
+            agents_involved = [str(agent).strip() for agent in executable_plan.agents_involved if str(agent).strip()]
         if not agents_involved and isinstance(user_context_payload, dict):
             raw_trace = user_context_payload.get("orchestration_trace")
             if isinstance(raw_trace, str) and raw_trace:
@@ -100,11 +103,7 @@ class ResponseBuilderMixin:
             if isinstance(raw_trace, dict):
                 trace_agents = raw_trace.get("agents")
                 if isinstance(trace_agents, list):
-                    agents_involved = [
-                        str(agent).strip()
-                        for agent in trace_agents
-                        if str(agent).strip()
-                    ]
+                    agents_involved = [str(agent).strip() for agent in trace_agents if str(agent).strip()]
         if agents_involved:
             response_metadata["agents_involved"] = json.dumps(
                 agents_involved,
@@ -113,9 +112,7 @@ class ResponseBuilderMixin:
             if executable_plan and getattr(executable_plan, "collaboration_mode", None):
                 response_metadata["collaboration_mode"] = executable_plan.collaboration_mode
             collaboration_narrative = (
-                getattr(executable_plan, "collaboration_narrative", None)
-                if executable_plan is not None
-                else None
+                getattr(executable_plan, "collaboration_narrative", None) if executable_plan is not None else None
             )
             if collaboration_narrative:
                 response_metadata["collaboration_narrative"] = str(collaboration_narrative)
@@ -171,7 +168,9 @@ class ResponseBuilderMixin:
                         "display_name": agent_id,
                         "description": "参与本轮回答生成与协作",
                         "status": "completed",
-                        "collaboration_mode": getattr(executable_plan, "collaboration_mode", "") if executable_plan else "",
+                        "collaboration_mode": (
+                            getattr(executable_plan, "collaboration_mode", "") if executable_plan else ""
+                        ),
                     },
                     emit_snapshot=False,
                 )
@@ -210,21 +209,25 @@ class ResponseBuilderMixin:
                     "episodic": len(list(focused_memory.get("episodic_memories") or [])),
                 }
                 response_metadata["focused_memory_summary"] = json.dumps(summary, ensure_ascii=False)
-                context_pack_meta = ((focused_memory.get("context_pack") or {}).get("metadata") or {})
+                context_pack_meta = (focused_memory.get("context_pack") or {}).get("metadata") or {}
                 semantic_meta = context_pack_meta.get("semantic_gating")
             if semantic_meta:
                 response_metadata["context_semantic_gating"] = json.dumps(semantic_meta, ensure_ascii=False)
-        understanding_depth = (user_context_payload or {}).get("understanding_depth") if isinstance(user_context_payload, dict) else None
+        understanding_depth = (
+            (user_context_payload or {}).get("understanding_depth") if isinstance(user_context_payload, dict) else None
+        )
         if isinstance(understanding_depth, dict):
             response_metadata["understanding_depth"] = json.dumps(understanding_depth, ensure_ascii=False)
-        returning_context = (user_context_payload or {}).get("returning_context") if isinstance(user_context_payload, dict) else None
+        returning_context = (
+            (user_context_payload or {}).get("returning_context") if isinstance(user_context_payload, dict) else None
+        )
         if isinstance(returning_context, dict):
             response_metadata["returning_after_silence"] = json.dumps(returning_context, ensure_ascii=False)
 
         focused_memory = final_state.context_data.get("focused_memory")
         context_pack_meta = {}
         if isinstance(focused_memory, dict):
-            context_pack_meta = ((focused_memory.get("context_pack") or {}).get("metadata") or {})
+            context_pack_meta = (focused_memory.get("context_pack") or {}).get("metadata") or {}
         if run_ledger is not None:
             evidence_avg = context_pack_meta.get("evidence_score_avg")
             if evidence_avg is None:
@@ -293,12 +296,17 @@ class ResponseBuilderMixin:
 
         if run_ledger is not None:
             estimated_cost = 0.0
+            model_key = str(
+                final_state.context_data.get("generation_model_key")
+                or final_state.context_data.get("model_used")
+                or "default"
+            )
             if self.token_tracker and total_prompt_tokens > 0:
                 try:
                     estimated_cost = await self.token_tracker.estimate_cost(
                         prompt_tokens=total_prompt_tokens,
                         completion_tokens=total_completion_tokens,
-                        model="gpt-4",
+                        model=model_key,
                     )
                 except Exception:
                     estimated_cost = 0.0
@@ -324,6 +332,7 @@ class ResponseBuilderMixin:
             if prism_viewed and active_db and user_id:
                 try:
                     from app.services.cognitive_service import CognitiveService
+
                     cognitive_svc = CognitiveService(active_db)
                     patterns = await cognitive_svc.get_user_patterns(uuid.UUID(user_id), min_confidence=0.5)
                     for p in patterns[:5]:
@@ -404,6 +413,7 @@ class ResponseBuilderMixin:
         user_id: str,
         total_prompt_tokens: int,
         total_completion_tokens: int,
+        final_state: WorkflowState | None = None,
     ) -> None:
         ACTIVE_SESSIONS.dec()
         latency = time.time() - start_time
@@ -421,10 +431,20 @@ class ResponseBuilderMixin:
 
         if self.token_tracker and total_prompt_tokens > 0:
             try:
+                context_data = final_state.context_data if final_state is not None else {}
+                model_key = str(context_data.get("generation_model_key") or context_data.get("model_used") or "default")
+                model_tier = str(
+                    context_data.get("generation_model_tier")
+                    or context_data.get("final_synthesis_model_tier")
+                    or context_data.get("first_touch_model_tier")
+                    or ""
+                )
+                reasoning_mode = str(context_data.get("reasoning_mode") or "balanced")
+                chat_mode = str(context_data.get("chat_mode") or "standard")
                 estimated_cost = await self.token_tracker.estimate_cost(
                     prompt_tokens=total_prompt_tokens,
                     completion_tokens=total_completion_tokens,
-                    model="gpt-4",
+                    model=model_key,
                 )
                 await task_manager.spawn(
                     self.token_tracker.record_usage(
@@ -433,8 +453,11 @@ class ResponseBuilderMixin:
                         request_id=request_id,
                         prompt_tokens=total_prompt_tokens,
                         completion_tokens=total_completion_tokens,
-                        model="gpt-4",
+                        model=model_key,
                         cost=estimated_cost,
+                        reasoning_mode=reasoning_mode,
+                        model_tier=model_tier,
+                        chat_mode=chat_mode,
                     ),
                     task_name="token_usage_record",
                     user_id=str(user_id),

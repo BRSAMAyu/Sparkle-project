@@ -111,7 +111,9 @@ class LLMRouter:
 
     # Tier 降级顺序（从高到低成本）
     _FALLBACK_TIER_ORDER: list[ModelTier] = [
-        ModelTier.REASONING,
+        ModelTier.MAX,
+        ModelTier.PRO,
+        ModelTier.PLUS,
         ModelTier.STANDARD,
         ModelTier.FAST,
         ModelTier.FREE_FAST,
@@ -137,15 +139,64 @@ class LLMRouter:
         agent_profile_registry.register_model_configs(configs)
         logger.info(f"LLMRouter updated with {len(configs)} model configs")
 
+    @staticmethod
+    def _normalize_reasoning_mode(value: str | None) -> str:
+        normalized = str(value or "balanced").strip().lower()
+        if normalized in {"fast", "balanced", "deep"}:
+            return normalized
+        return "balanced"
+
+    @staticmethod
+    def _normalize_tier_value(tier: ModelTier) -> ModelTier:
+        if tier == ModelTier.REASONING:
+            return ModelTier.PRO
+        if tier == ModelTier.FREE_REASONING:
+            return ModelTier.FREE_FAST
+        return tier
+
+    def _preferred_tiers_for_reasoning_mode(
+        self,
+        *,
+        reasoning_mode: str,
+        task_type: TaskType | None,
+        allow_max: bool = False,
+    ) -> list[ModelTier]:
+        mode = self._normalize_reasoning_mode(reasoning_mode)
+        task_type = self._normalize_task_type(task_type)
+
+        if mode == "fast":
+            if task_type in {TaskType.QUICK_QUERY, TaskType.SIMPLE_CHAT, TaskType.ROUTING, TaskType.RETRIEVAL}:
+                ordered = [ModelTier.FAST, ModelTier.STANDARD]
+            else:
+                ordered = [ModelTier.STANDARD, ModelTier.FAST]
+        elif mode == "deep":
+            if task_type in {TaskType.ERROR_DIAGNOSIS, TaskType.DEEP_REASONING, TaskType.REVIEW}:
+                ordered = [ModelTier.PRO, ModelTier.PLUS, ModelTier.STANDARD]
+            elif task_type in {TaskType.TASK_DECOMPOSITION, TaskType.COLLABORATION, TaskType.TOOL_PLANNING}:
+                ordered = [ModelTier.PLUS, ModelTier.STANDARD, ModelTier.PRO]
+            else:
+                ordered = [ModelTier.STANDARD, ModelTier.PLUS, ModelTier.PRO]
+        else:
+            if task_type in {TaskType.QUICK_QUERY, TaskType.SIMPLE_CHAT, TaskType.ROUTING, TaskType.RETRIEVAL}:
+                ordered = [ModelTier.FAST, ModelTier.STANDARD, ModelTier.PLUS, ModelTier.PRO]
+            elif task_type in {TaskType.ERROR_DIAGNOSIS, TaskType.DEEP_REASONING, TaskType.REVIEW}:
+                ordered = [ModelTier.PLUS, ModelTier.PRO, ModelTier.STANDARD, ModelTier.FAST]
+            else:
+                ordered = [ModelTier.STANDARD, ModelTier.FAST, ModelTier.PLUS, ModelTier.PRO]
+
+        if allow_max and ModelTier.MAX not in ordered:
+            ordered = [*ordered, ModelTier.MAX]
+        return ordered
+
     def _load_model_configs(self):
-        """从settings加载所有可用模型配置"""
+        """从 settings 加载所有可用模型配置。"""
         dashscope_base_url = settings.DASHSCOPE_BASE_URL_COMPATIBLE or "https://dashscope.aliyuncs.com/compatible-mode/v1"
         translation_primary = (settings.TRANSLATION_PRIMARY_PROVIDER or "hunyuan").strip().lower()
         translation_backup = (settings.TRANSLATION_BACKUP_PROVIDER or "siliconflow").strip().lower()
         ocr_primary = (settings.OCR_PROVIDER or "zhipu").strip().lower()
         ocr_backup = (settings.OCR_BACKUP_PROVIDER or "siliconflow").strip().lower()
+
         configs = {
-            # ===== XiaoMi MIMO (快速) =====
             "xiaomi_chat": ModelConfig(
                 provider=ModelProvider.XIAOMI,
                 model_name=settings.XIAOMI_CHAT_MODEL,
@@ -155,31 +206,39 @@ class LLMRouter:
                 tier=ModelTier.FAST,
                 cost_per_1k_tokens=0.0001,
                 avg_latency_ms=200,
+                thinking_mode="disabled",
             ),
-
-            # ===== XiaoMi MIMO Pro (标准 + 推理，支持联网搜索) =====
+            "xiaomi_standard_thinking": ModelConfig(
+                provider=ModelProvider.XIAOMI,
+                model_name=settings.XIAOMI_STANDARD_MODEL,
+                base_url=settings.XIAOMI_MIMO_BASE_URL,
+                api_key=settings.XIAOMI_MIMO_API_KEY,
+                temperature=settings.XIAOMI_TEMPERATURE,
+                tier=ModelTier.STANDARD,
+                cost_per_1k_tokens=0.0002,
+                avg_latency_ms=350,
+                thinking_mode="enabled",
+            ),
             "mimo_pro": ModelConfig(
                 provider=ModelProvider.XIAOMI,
                 model_name=settings.XIAOMI_PRO_MODEL,
                 base_url=settings.XIAOMI_MIMO_BASE_URL,
                 api_key=settings.XIAOMI_MIMO_API_KEY,
                 temperature=settings.XIAOMI_PRO_TEMPERATURE,
-                tier=ModelTier.STANDARD,
-                cost_per_1k_tokens=0.002,
-                avg_latency_ms=600,
+                tier=ModelTier.MAX,
+                cost_per_1k_tokens=0.004,
+                avg_latency_ms=1200,
                 enable_web_search=settings.XIAOMI_WEB_SEARCH_ENABLED,
-                thinking_mode="enabled",  # mimo-v2-pro 默认启用思考
+                thinking_mode="enabled",
             ),
-
-            # ===== DeepSeek (标准 + 推理) =====
             "deepseek_chat": ModelConfig(
                 provider=ModelProvider.DEEPSEEK,
                 model_name=settings.DEEPSEEK_CHAT_MODEL,
                 base_url=settings.DEEPSEEK_BASE_URL,
                 api_key=settings.DEEPSEEK_API_KEY,
                 temperature=0.7,
-                tier=ModelTier.STANDARD,
-                cost_per_1k_tokens=0.001,
+                tier=ModelTier.PLUS,
+                cost_per_1k_tokens=0.0008,
                 avg_latency_ms=800,
             ),
             "deepseek_reason": ModelConfig(
@@ -188,37 +247,54 @@ class LLMRouter:
                 base_url=settings.DEEPSEEK_BASE_URL,
                 api_key=settings.DEEPSEEK_API_KEY,
                 temperature=0.2,
-                tier=ModelTier.REASONING,
+                tier=ModelTier.PRO,
                 cost_per_1k_tokens=0.005,
                 avg_latency_ms=3000,
             ),
-
-            # ===== Zhipu GLM Batch (独立层级) =====
-            # GLM-4.7 非思考模式 - 用于批量处理任务
             "glm_4_7_no_thinking": ModelConfig(
                 provider=ModelProvider.ZHIPU,
                 model_name=settings.ZHIPU_CHAT_MODEL,
                 base_url=settings.ZHIPU_CODING_BASE_URL,
                 api_key=settings.ZHIPU_API_KEY,
                 temperature=settings.ZHIPU_TEMPERATURE,
-                clear_thinking=True,  # 关闭思考模式
+                clear_thinking=True,
                 tier=ModelTier.GLM_BATCH,
                 cost_per_1k_tokens=0.001,
                 avg_latency_ms=400,
             ),
-            # GLM-4.7 思考模式 - 用于批量深度推理
             "glm_4_7_thinking": ModelConfig(
                 provider=ModelProvider.ZHIPU,
                 model_name=settings.ZHIPU_CHAT_MODEL,
                 base_url=settings.ZHIPU_CODING_BASE_URL,
                 api_key=settings.ZHIPU_API_KEY,
                 temperature=settings.ZHIPU_TEMPERATURE,
-                clear_thinking=False,  # 开启保留式思考
+                clear_thinking=False,
                 tier=ModelTier.GLM_BATCH,
                 cost_per_1k_tokens=0.002,
-                avg_latency_ms=20000,
+                avg_latency_ms=2000,
             ),
-            # GLM-4.7-Flash 非思考模式 - 快速响应（免费）
+            "glm_4_5_air_batch": ModelConfig(
+                provider=ModelProvider.ZHIPU,
+                model_name=settings.ZHIPU_AIR_MODEL,
+                base_url=settings.ZHIPU_CODING_BASE_URL,
+                api_key=settings.ZHIPU_API_KEY,
+                temperature=settings.ZHIPU_TEMPERATURE,
+                clear_thinking=True,
+                tier=ModelTier.GLM_BATCH,
+                cost_per_1k_tokens=0.0004,
+                avg_latency_ms=250,
+            ),
+            "glm_4_6_batch": ModelConfig(
+                provider=ModelProvider.ZHIPU,
+                model_name=settings.ZHIPU_LIGHT_MODEL,
+                base_url=settings.ZHIPU_CODING_BASE_URL,
+                api_key=settings.ZHIPU_API_KEY,
+                temperature=settings.ZHIPU_TEMPERATURE,
+                clear_thinking=True,
+                tier=ModelTier.GLM_BATCH,
+                cost_per_1k_tokens=0.0006,
+                avg_latency_ms=300,
+            ),
             "glm_4_7_flash_no_thinking": ModelConfig(
                 provider=ModelProvider.ZHIPU,
                 model_name=settings.ZHIPU_FLASH_MODEL,
@@ -226,11 +302,10 @@ class LLMRouter:
                 api_key=settings.ZHIPU_API_KEY,
                 temperature=settings.ZHIPU_TEMPERATURE,
                 clear_thinking=True,
-                tier=ModelTier.FREE_FAST,
+                tier=ModelTier.FAST,
                 cost_per_1k_tokens=0.0001,
                 avg_latency_ms=200,
             ),
-            # GLM-4.7-Flash 思考模式 - 深度推理（免费）
             "glm_4_7_flash_thinking": ModelConfig(
                 provider=ModelProvider.ZHIPU,
                 model_name=settings.GLM_4_7_FLASH_MODEL,
@@ -238,9 +313,31 @@ class LLMRouter:
                 api_key=settings.ZHIPU_API_KEY,
                 temperature=settings.ZHIPU_TEMPERATURE,
                 clear_thinking=False,
-                tier=ModelTier.FREE_REASONING,
+                tier=ModelTier.FREE_FAST,
                 cost_per_1k_tokens=0.0005,
-                avg_latency_ms=15000,
+                avg_latency_ms=1200,
+            ),
+            "glm_4_5_air_free": ModelConfig(
+                provider=ModelProvider.ZHIPU,
+                model_name=settings.ZHIPU_AIR_MODEL,
+                base_url=settings.ZHIPU_CODING_BASE_URL,
+                api_key=settings.ZHIPU_API_KEY,
+                temperature=settings.ZHIPU_TEMPERATURE,
+                clear_thinking=True,
+                tier=ModelTier.FREE_FAST,
+                cost_per_1k_tokens=0.0002,
+                avg_latency_ms=220,
+            ),
+            "glm_5_max": ModelConfig(
+                provider=ModelProvider.ZHIPU,
+                model_name=settings.ZHIPU_MAX_MODEL,
+                base_url=settings.ZHIPU_CODING_BASE_URL,
+                api_key=settings.ZHIPU_API_KEY,
+                temperature=settings.ZHIPU_TEMPERATURE,
+                clear_thinking=False,
+                tier=ModelTier.MAX,
+                cost_per_1k_tokens=0.004,
+                avg_latency_ms=2500,
             ),
             "siliconflow_free": ModelConfig(
                 provider=ModelProvider.SILICONFLOW,
@@ -248,33 +345,10 @@ class LLMRouter:
                 base_url=settings.SILICONFLOW_BASE_URL,
                 api_key=settings.SILICONFLOW_API_KEY,
                 temperature=0.7,
-                tier=ModelTier.FREE_FAST,
+                tier=ModelTier.FREE,
                 cost_per_1k_tokens=0.0,
                 avg_latency_ms=300,
             ),
-
-            # ===== Aliyun DashScope (通义千问) =====
-            "dashscope_chat": ModelConfig(
-                provider=ModelProvider.DASHSCOPE,
-                model_name=settings.DASHSCOPE_CHAT_MODEL,
-                base_url=dashscope_base_url,
-                api_key=settings.DASHSCOPE_API_KEY,
-                temperature=settings.DASHSCOPE_TEMPERATURE,
-                tier=ModelTier.STANDARD,
-                cost_per_1k_tokens=0.0004,
-                avg_latency_ms=500,
-            ),
-            "dashscope_reason": ModelConfig(
-                provider=ModelProvider.DASHSCOPE,
-                model_name=settings.DASHSCOPE_REASON_MODEL,
-                base_url=dashscope_base_url,
-                api_key=settings.DASHSCOPE_API_KEY,
-                temperature=0.2,
-                tier=ModelTier.REASONING,
-                cost_per_1k_tokens=0.001,
-                avg_latency_ms=2000,
-            ),
-            # Qwen3.5-Flash 快速响应
             "dashscope_fast": ModelConfig(
                 provider=ModelProvider.DASHSCOPE,
                 model_name=settings.DASHSCOPE_FAST_MODEL,
@@ -285,8 +359,38 @@ class LLMRouter:
                 cost_per_1k_tokens=0.0001,
                 avg_latency_ms=150,
             ),
-
-            # ===== Specialist Models (OCR、翻译等) =====
+            "dashscope_standard_thinking": ModelConfig(
+                provider=ModelProvider.DASHSCOPE,
+                model_name=settings.DASHSCOPE_STANDARD_MODEL,
+                base_url=dashscope_base_url,
+                api_key=settings.DASHSCOPE_API_KEY,
+                temperature=settings.DASHSCOPE_TEMPERATURE,
+                tier=ModelTier.STANDARD,
+                cost_per_1k_tokens=0.0002,
+                avg_latency_ms=260,
+                thinking_mode="enabled",
+            ),
+            "dashscope_chat": ModelConfig(
+                provider=ModelProvider.DASHSCOPE,
+                model_name=settings.DASHSCOPE_CHAT_MODEL,
+                base_url=dashscope_base_url,
+                api_key=settings.DASHSCOPE_API_KEY,
+                temperature=settings.DASHSCOPE_TEMPERATURE,
+                tier=ModelTier.PLUS,
+                cost_per_1k_tokens=0.0004,
+                avg_latency_ms=500,
+            ),
+            "dashscope_reason": ModelConfig(
+                provider=ModelProvider.DASHSCOPE,
+                model_name=settings.DASHSCOPE_REASON_MODEL,
+                base_url=dashscope_base_url,
+                api_key=settings.DASHSCOPE_API_KEY,
+                temperature=0.2,
+                tier=ModelTier.PRO,
+                cost_per_1k_tokens=0.001,
+                avg_latency_ms=2000,
+                thinking_mode="enabled",
+            ),
             "zhipu_ocr": ModelConfig(
                 provider=ModelProvider.ZHIPU,
                 model_name=settings.ZHIPU_OCR_MODEL,
@@ -327,8 +431,6 @@ class LLMRouter:
                 cost_per_1k_tokens=0.0005,
                 avg_latency_ms=1000,
             ),
-
-            # ===== 通用备用 =====
             "default": ModelConfig(
                 provider=ModelProvider.DEEPSEEK,
                 model_name=settings.DEEPSEEK_CHAT_MODEL,
@@ -341,42 +443,47 @@ class LLMRouter:
 
         self._available_models = configs
 
-        # 按tier分组（优先级从高到低）
-        # - FREE_FAST: 免费快速响应模型
-        # - FREE_REASONING: 免费深度推理模型
-        # - FAST: 付费快速响应模型（mimo-v2-flash, qwen3.5-flash）
-        # - STANDARD: 付费标准模型（mimo-v2-pro, deepseek, qwen3.5-plus）
-        # - REASONING: 付费推理模型（mimo-v2-pro, deepseek-reasoner, qwen3.5-plus）
-        # - GLM_BATCH: GLM批量处理（glm-4.7 非思考+思考）
-        # - SPECIALIST: 专家模型
-        standard_models = ["mimo_pro", "dashscope_chat", "deepseek_chat"]
-        reasoning_models = ["mimo_pro", "dashscope_reason", "deepseek_reason"]
-        fast_models = ["xiaomi_chat", "dashscope_fast"]
+        fast_models = ["xiaomi_chat", "dashscope_fast", "glm_4_7_flash_no_thinking"]
+        standard_models = ["xiaomi_standard_thinking", "dashscope_standard_thinking"]
+        plus_models = ["dashscope_chat", "deepseek_chat"]
+        pro_models = ["dashscope_reason", "deepseek_reason"]
+        max_models = ["mimo_pro", "glm_5_max"]
 
         preferred_provider = (settings.LLM_PROVIDER or "").strip().lower()
         provider_standard_preference = {
+            "qwen": "dashscope_standard_thinking",
+            "dashscope": "dashscope_standard_thinking",
+            "deepseek": "xiaomi_standard_thinking",
+            "zhipu": "xiaomi_standard_thinking",
+            "xiaomi": "xiaomi_standard_thinking",
+        }
+        provider_plus_preference = {
             "qwen": "dashscope_chat",
             "dashscope": "dashscope_chat",
             "deepseek": "deepseek_chat",
-            "zhipu": "deepseek_chat",
-            "xiaomi": "mimo_pro",  # xiaomi 优先使用 mimo_pro
+            "zhipu": "dashscope_chat",
+            "xiaomi": "dashscope_chat",
         }
-        provider_reasoning_preference = {
+        provider_pro_preference = {
             "qwen": "dashscope_reason",
             "dashscope": "dashscope_reason",
             "deepseek": "deepseek_reason",
             "zhipu": "deepseek_reason",
-            "xiaomi": "mimo_pro",  # xiaomi 优先使用 mimo_pro
+            "xiaomi": "dashscope_reason",
         }
 
         preferred_standard = provider_standard_preference.get(preferred_provider)
-        preferred_reasoning = provider_reasoning_preference.get(preferred_provider)
+        preferred_plus = provider_plus_preference.get(preferred_provider)
+        preferred_pro = provider_pro_preference.get(preferred_provider)
         if preferred_standard in standard_models:
             standard_models.remove(preferred_standard)
             standard_models.insert(0, preferred_standard)
-        if preferred_reasoning in reasoning_models:
-            reasoning_models.remove(preferred_reasoning)
-            reasoning_models.insert(0, preferred_reasoning)
+        if preferred_plus in plus_models:
+            plus_models.remove(preferred_plus)
+            plus_models.insert(0, preferred_plus)
+        if preferred_pro in pro_models:
+            pro_models.remove(preferred_pro)
+            pro_models.insert(0, preferred_pro)
 
         specialist_models: list[str] = []
         specialist_aliases = {
@@ -393,34 +500,39 @@ class LLMRouter:
                 specialist_models.append(default_key)
 
         self._tier_mapping = {
-            ModelTier.FREE_FAST: ["glm_4_7_flash_no_thinking", "siliconflow_free"],
-            ModelTier.FREE_REASONING: ["glm_4_7_flash_thinking"],
+            ModelTier.FREE: ["siliconflow_free"],
+            ModelTier.FREE_FAST: ["glm_4_7_flash_thinking", "glm_4_5_air_free", "siliconflow_free"],
+            ModelTier.FREE_REASONING: ["glm_4_7_flash_thinking", "glm_4_5_air_free"],
             ModelTier.FAST: fast_models,
             ModelTier.STANDARD: standard_models,
-            ModelTier.REASONING: reasoning_models,
+            ModelTier.PLUS: plus_models,
+            ModelTier.PRO: pro_models,
+            ModelTier.REASONING: list(pro_models),
+            ModelTier.MAX: max_models,
             ModelTier.GLM_BATCH: [
                 "glm_4_7_no_thinking",
                 "glm_4_7_thinking",
-                "glm_4_7_flash_no_thinking",
-                "glm_4_7_flash_thinking",
+                "glm_4_5_air_batch",
+                "glm_4_6_batch",
             ],
             ModelTier.SPECIALIST: specialist_models,
         }
         self._override_tier_mapping_from_env()
-
-        # 注册到agent_profile_registry
         agent_profile_registry.register_model_configs(configs)
-
         logger.info(f"LLMRouter initialized with {len(configs)} model configs")
 
     def _override_tier_mapping_from_env(self):
         """允许通过 .env 覆盖 tier 映射（逗号分隔模型key）"""
         overrides = {
+            ModelTier.FREE: settings.LLM_TIER_FREE,
             ModelTier.FREE_FAST: settings.LLM_TIER_FREE_FAST,
             ModelTier.FREE_REASONING: settings.LLM_TIER_FREE_REASONING,
             ModelTier.FAST: settings.LLM_TIER_FAST,
             ModelTier.STANDARD: settings.LLM_TIER_STANDARD,
+            ModelTier.PLUS: settings.LLM_TIER_PLUS,
+            ModelTier.PRO: settings.LLM_TIER_PRO,
             ModelTier.REASONING: settings.LLM_TIER_REASONING,
+            ModelTier.MAX: settings.LLM_TIER_MAX,
             ModelTier.GLM_BATCH: settings.LLM_TIER_GLM_BATCH,
             ModelTier.SPECIALIST: settings.LLM_TIER_SPECIALIST,
         }
@@ -447,6 +559,8 @@ class LLMRouter:
         force_tier: ModelTier | None = None,
         user_message: str | None = None,
         avoid_providers: list[ModelProvider] | None = None,
+        reasoning_mode: str | None = None,
+        allow_max: bool = False,
     ) -> LLMSelection:
         """
         选择最合适的模型
@@ -470,7 +584,7 @@ class LLMRouter:
 
         # 2. 确定目标tier / policy
         if force_tier:
-            target_tier = force_tier
+            target_tier = self._normalize_tier_value(force_tier)
             reason = f"强制tier={target_tier.value}"
         elif profile.specific_model:
             # Agent指定了具体模型，直接用
@@ -489,17 +603,31 @@ class LLMRouter:
                 task_type=task_type,
                 avoid_providers=avoid_providers,
                 complexity_level=complexity_level,
+                reasoning_mode=reasoning_mode,
+                allow_max=allow_max,
             )
             if selection is not None:
                 return selection
         elif task_type:
             # 根据任务类型调整tier
             task_config = TASK_TO_AGENT_PROFILE.get(task_type, {})
-            target_tier = task_config.get("model_tier", profile.model_tier)
+            target_tier = self._normalize_tier_value(task_config.get("model_tier", profile.model_tier))
             reason = f"任务类型={task_type.value}, 推荐tier={target_tier.value}"
         else:
-            target_tier = profile.model_tier
+            target_tier = self._normalize_tier_value(profile.model_tier)
             reason = f"Agent角色={agent_role.value}, 默认tier={target_tier.value}"
+
+        if not force_tier and reasoning_mode:
+            preferred_chain = self._preferred_tiers_for_reasoning_mode(
+                reasoning_mode=reasoning_mode,
+                task_type=task_type,
+                allow_max=allow_max,
+            )
+            if target_tier not in preferred_chain:
+                target_tier = preferred_chain[0]
+            else:
+                target_tier = preferred_chain[0]
+            reason += f" | user_mode={self._normalize_reasoning_mode(reasoning_mode)} -> {target_tier.value}"
 
         # 2.5 复杂度感知调整（仅当复杂度路由开关打开且有 user_message）
         if user_message and getattr(settings, "COMPLEXITY_ROUTING_ENABLED", True):
@@ -528,7 +656,7 @@ class LLMRouter:
         if not candidates:
             logger.warning(f"No healthy models for tier {target_tier}, falling back to standard")
             candidates = [
-                k for k in self._tier_mapping.get(ModelTier.STANDARD, ["deepseek_chat"])
+                k for k in self._tier_mapping.get(ModelTier.STANDARD, ["xiaomi_standard_thinking"])
                 if self._is_model_healthy(k)
             ] or ["deepseek_chat"]
             candidates = self._apply_provider_avoidance(candidates, avoid_providers)
@@ -553,6 +681,8 @@ class LLMRouter:
         agent_role: AgentRole | str | Any,
         task_type: TaskType | str | Any | None = None,
         force_tier: ModelTier | None = None,
+        reasoning_mode: str | None = None,
+        allow_max: bool = False,
     ) -> list[str]:
         """返回某个 agent 在当前配置下的候选模型顺序。"""
         agent_role = self._normalize_agent_role(agent_role)
@@ -560,44 +690,72 @@ class LLMRouter:
         profile = agent_profile_registry.get_profile(agent_role)
 
         if force_tier:
-            return list(self._tier_mapping.get(force_tier, []))
+            return list(self._tier_mapping.get(self._normalize_tier_value(force_tier), []))
         if profile.specific_model:
             return [profile.specific_model]
 
         candidates: list[str] = []
         blocked = set(profile.model_policy.blocked_models or []) if profile.model_policy else set()
+        allowed_tiers: set[ModelTier] | None = None
+
+        if reasoning_mode:
+            allowed_tiers = set(
+                self._preferred_tiers_for_reasoning_mode(
+                    reasoning_mode=reasoning_mode,
+                    task_type=task_type,
+                    allow_max=allow_max,
+                )
+            )
 
         def _append(model_key: str) -> None:
             if not model_key or model_key in blocked or model_key not in self._available_models:
+                return
+            if allowed_tiers is not None and self._available_models[model_key].tier not in allowed_tiers:
                 return
             if model_key not in candidates:
                 candidates.append(model_key)
 
         if profile.model_policy:
-            for model_key in profile.model_policy.preferred_models or []:
-                _append(model_key)
-
             tiers: list[ModelTier] = []
             if profile.model_policy.preferred_tier is not None:
-                tiers.append(profile.model_policy.preferred_tier)
+                tiers.append(self._normalize_tier_value(profile.model_policy.preferred_tier))
             elif task_type is not None and not getattr(profile.model_policy, "lock_to_policy", True):
                 task_config = TASK_TO_AGENT_PROFILE.get(task_type, {})
                 task_tier = task_config.get("model_tier")
                 if isinstance(task_tier, ModelTier):
-                    tiers.append(task_tier)
-            if profile.model_tier not in tiers:
-                tiers.append(profile.model_tier)
+                    tiers.append(self._normalize_tier_value(task_tier))
+            normalized_profile_tier = self._normalize_tier_value(profile.model_tier)
+            if normalized_profile_tier not in tiers:
+                tiers.append(normalized_profile_tier)
             for tier in profile.model_policy.fallback_tiers or []:
-                if tier not in tiers:
-                    tiers.append(tier)
+                normalized_tier = self._normalize_tier_value(tier)
+                if normalized_tier not in tiers:
+                    tiers.append(normalized_tier)
+            if reasoning_mode:
+                for tier in self._preferred_tiers_for_reasoning_mode(
+                    reasoning_mode=reasoning_mode,
+                    task_type=task_type,
+                    allow_max=allow_max,
+                ):
+                    if tier not in tiers:
+                        tiers.insert(0, tier)
             for tier in tiers:
                 for model_key in self._tier_mapping.get(tier, []):
                     _append(model_key)
+            for model_key in profile.model_policy.preferred_models or []:
+                _append(model_key)
         else:
-            target_tier = profile.model_tier
+            target_tier = self._normalize_tier_value(profile.model_tier)
             if task_type:
                 task_config = TASK_TO_AGENT_PROFILE.get(task_type, {})
-                target_tier = task_config.get("model_tier", target_tier)
+                target_tier = self._normalize_tier_value(task_config.get("model_tier", target_tier))
+            if reasoning_mode:
+                preferred = self._preferred_tiers_for_reasoning_mode(
+                    reasoning_mode=reasoning_mode,
+                    task_type=task_type,
+                    allow_max=allow_max,
+                )
+                target_tier = preferred[0]
             for model_key in self._tier_mapping.get(target_tier, []):
                 _append(model_key)
 
@@ -610,17 +768,23 @@ class LLMRouter:
         agent_role: AgentRole | str | Any,
         task_type: TaskType | str | Any | None = None,
         force_tier: ModelTier | None = None,
+        reasoning_mode: str | None = None,
+        allow_max: bool = False,
     ) -> dict[str, Any]:
         """提供 agent 当前模型编排的可观测摘要。"""
         candidates = self.resolve_candidate_models(
             agent_role=agent_role,
             task_type=task_type,
             force_tier=force_tier,
+            reasoning_mode=reasoning_mode,
+            allow_max=allow_max,
         )
         selection = self.select_model(
             agent_role=agent_role,
             task_type=task_type,
             force_tier=force_tier,
+            reasoning_mode=reasoning_mode,
+            allow_max=allow_max,
         )
         return {
             "selected_model_key": selection.model_key,
@@ -637,6 +801,8 @@ class LLMRouter:
         task_type: TaskType | None,
         avoid_providers: list[ModelProvider] | None = None,
         complexity_level: str = "unknown",
+        reasoning_mode: str | None = None,
+        allow_max: bool = False,
     ) -> LLMSelection | None:
         policy = getattr(profile, "model_policy", None)
         if policy is None:
@@ -644,9 +810,21 @@ class LLMRouter:
 
         blocked = set(policy.blocked_models or [])
         candidates: list[str] = []
+        allowed_tiers: set[ModelTier] | None = None
+
+        if reasoning_mode:
+            allowed_tiers = set(
+                self._preferred_tiers_for_reasoning_mode(
+                    reasoning_mode=reasoning_mode,
+                    task_type=task_type,
+                    allow_max=allow_max,
+                )
+            )
 
         def _append(model_key: str) -> None:
             if not model_key or model_key in blocked or model_key not in self._available_models:
+                return
+            if allowed_tiers is not None and self._available_models[model_key].tier not in allowed_tiers:
                 return
             if not self._is_model_healthy(model_key):
                 logger.debug(f"Skipping unhealthy model: {model_key}")
@@ -654,26 +832,37 @@ class LLMRouter:
             if model_key not in candidates:
                 candidates.append(model_key)
 
-        for model_key in policy.preferred_models or []:
-            _append(model_key)
-
         tiers: list[ModelTier] = []
         if policy.preferred_tier is not None:
-            tiers.append(policy.preferred_tier)
+            tiers.append(self._normalize_tier_value(policy.preferred_tier))
         elif task_type is not None and not getattr(policy, "lock_to_policy", True):
             task_config = TASK_TO_AGENT_PROFILE.get(task_type, {})
             task_tier = task_config.get("model_tier")
             if isinstance(task_tier, ModelTier):
-                tiers.append(task_tier)
-        if profile.model_tier not in tiers:
-            tiers.append(profile.model_tier)
+                tiers.append(self._normalize_tier_value(task_tier))
+        normalized_profile_tier = self._normalize_tier_value(profile.model_tier)
+        if normalized_profile_tier not in tiers:
+            tiers.append(normalized_profile_tier)
         for tier in policy.fallback_tiers or []:
-            if tier not in tiers:
-                tiers.append(tier)
+            normalized_tier = self._normalize_tier_value(tier)
+            if normalized_tier not in tiers:
+                tiers.append(normalized_tier)
+        if reasoning_mode:
+            preferred_tiers = self._preferred_tiers_for_reasoning_mode(
+                reasoning_mode=reasoning_mode,
+                task_type=task_type,
+                allow_max=allow_max,
+            )
+            for tier in reversed(preferred_tiers):
+                if tier in tiers:
+                    tiers.remove(tier)
+                tiers.insert(0, tier)
 
         for tier in tiers:
             for model_key in self._tier_mapping.get(tier, []):
                 _append(model_key)
+        for model_key in policy.preferred_models or []:
+            _append(model_key)
 
         candidates = self._apply_provider_avoidance(candidates, avoid_providers)
 
@@ -874,13 +1063,14 @@ class LLMRouter:
         """
         获取降级模型
 
-        降级路径：REASONING → STANDARD → FAST → FREE_FAST
+        降级路径：MAX → PRO → PLUS → STANDARD → FAST → FREE_FAST
         FREE_REASONING → FREE_FAST → FAST
         """
-        current_tier = failed_selection.config.tier
+        raw_tier = failed_selection.config.tier
+        current_tier = self._normalize_tier_value(raw_tier)
 
         # 免费推理降级路径
-        if current_tier == ModelTier.FREE_REASONING:
+        if raw_tier == ModelTier.FREE_REASONING:
             next_tier = ModelTier.FREE_FAST
         else:
             # 标准降级链

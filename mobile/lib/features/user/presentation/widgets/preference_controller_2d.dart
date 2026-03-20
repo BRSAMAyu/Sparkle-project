@@ -31,6 +31,16 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
   }
 
   @override
+  void didUpdateWidget(covariant PreferenceController2D oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialCuriosity != widget.initialCuriosity ||
+        oldWidget.initialDepth != widget.initialDepth) {
+      _currentPosition =
+          Offset(widget.initialCuriosity, 1.0 - widget.initialDepth);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) => Column(
         children: [
           LayoutBuilder(

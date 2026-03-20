@@ -125,40 +125,70 @@ class _VisualRendererState extends ConsumerState<VisualRenderer>
   }
 
   Widget _buildWeatherStatus(String type, String condition) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              _getWeatherTitle(type),
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: DS.textSecondary,
-              ),
-            ),
-            const SizedBox(width: 6),
-            _buildWeatherIcon(type),
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: DS.spacing10,
+        vertical: DS.spacing8,
+      ),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            DS.surfacePrimary.withValues(alpha: 0.82),
+            DS.surfaceSecondary.withValues(alpha: 0.72),
           ],
-        )
-            .animate(onPlay: (controller) => controller.repeat(reverse: true))
-            .fadeIn(duration: 2000.ms)
-            .scale(
-              begin: const Offset(0.95, 0.95),
-              end: const Offset(1.0, 1.0),
-              duration: 2000.ms,
+        ),
+        borderRadius: DS.borderRadius12,
+        border: Border.all(
+          color: DS.border.withValues(alpha: 0.5),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: DS.textPrimary.withValues(alpha: 0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                _getWeatherTitle(type),
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: DS.textSecondary,
+                ),
+              ),
+              const SizedBox(width: 6),
+              _buildWeatherIcon(type),
+            ],
+          )
+              .animate(onPlay: (controller) => controller.repeat(reverse: true))
+              .fadeIn(duration: 2000.ms)
+              .scale(
+                begin: const Offset(0.95, 0.95),
+                end: const Offset(1.0, 1.0),
+                duration: 2000.ms,
+              ),
+          if (condition.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                condition,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: DS.textTertiary,
+                ),
+              ).animate().fadeIn(delay: 200.ms),
             ),
-        if (condition.isNotEmpty)
-          Text(
-            condition,
-            style: TextStyle(
-              fontSize: 11,
-              color: DS.textTertiary,
-            ),
-          ).animate().fadeIn(delay: 200.ms),
-      ],
+        ],
+      ),
     );
   }
 
@@ -174,7 +204,7 @@ class _VisualRendererState extends ConsumerState<VisualRenderer>
     return Icon(
       iconData,
       size: 16,
-      color: DS.brandPrimary,
+      color: Color.lerp(DS.info, DS.brandPrimary, 0.45),
     );
   }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -97,9 +98,8 @@ class _GrowthPlanCard extends StatelessWidget {
                 Text(plan.name, style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: DS.xs),
                 if (plan.description != null)
-                  Text(
-                    plan.description!,
-                    style: Theme.of(context).textTheme.bodyMedium,
+                  _PlanMarkdownPreview(
+                    data: plan.description!,
                   ),
                 const SizedBox(height: DS.lg),
                 _buildStatRow(
@@ -153,5 +153,53 @@ class _GrowthPlanCard extends StatelessWidget {
             color: color,
           ),
         ],
+      );
+}
+
+class _PlanMarkdownPreview extends StatelessWidget {
+  const _PlanMarkdownPreview({required this.data});
+
+  final String data;
+
+  @override
+  Widget build(BuildContext context) => MarkdownBody(
+        data: data,
+        shrinkWrap: true,
+        selectable: false,
+        softLineBreak: true,
+        styleSheet: MarkdownStyleSheet(
+          p: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: DS.textSecondary,
+                height: 1.55,
+              ),
+          h1: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: DS.textPrimary,
+                fontWeight: DS.fontWeightBold,
+              ),
+          h2: Theme.of(context).textTheme.titleSmall?.copyWith(
+                color: DS.textPrimary,
+                fontWeight: DS.fontWeightBold,
+              ),
+          h3: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: DS.textPrimary,
+                fontWeight: DS.fontWeightSemiBold,
+              ),
+          listBullet: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: DS.textSecondary,
+              ),
+          strong: const TextStyle(fontWeight: FontWeight.w700),
+          em: const TextStyle(fontStyle: FontStyle.italic),
+          blockSpacing: 8,
+          code: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: DS.textPrimary,
+                backgroundColor: DS.surfaceSecondary,
+                fontFamily: 'monospace',
+              ),
+          codeblockDecoration: BoxDecoration(
+            color: DS.surfaceSecondary,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: DS.borderSubtle),
+          ),
+        ),
       );
 }

@@ -226,14 +226,14 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: DS.brandPrimaryConst,
+                color: DS.textPrimary,
               ),
             ),
             const Spacer(),
             // Year display
             Text(
               DateFormat.y(context.l10n.localeName).format(_focusedDay),
-              style: TextStyle(color: DS.brandPrimary54, fontSize: 16),
+              style: TextStyle(color: DS.textSecondary, fontSize: 16),
             ),
           ],
         ),
@@ -644,7 +644,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                 fontSize: 9,
                 color: isSelected
                     ? DS.textOnPrimary.withValues(alpha: 0.7)
-                    : DS.warningAccent, // Orange for festivals
+                    : DS.warning,
                 fontWeight: FontWeight.bold,
               ),
               maxLines: 1,
@@ -708,7 +708,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
               ? Center(
                   child: Text(
                     '这一天还没有安排任务或日程',
-                    style: TextStyle(color: DS.brandPrimary.withAlpha(100)),
+                    style: TextStyle(color: DS.textTertiary),
                   ),
                 )
               : ListView.builder(
@@ -728,7 +728,11 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                         unawaited(notifier.deleteEvent(event.id));
                       },
                       background: Container(
-                        color: DS.error,
+                        margin: const EdgeInsets.only(bottom: DS.spacing8),
+                        decoration: BoxDecoration(
+                          color: DS.error.withValues(alpha: 0.9),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         alignment: Alignment.centerRight,
                         padding: const EdgeInsets.only(right: DS.spacing20),
                         child: Icon(Icons.delete, color: DS.textOnPrimary),
@@ -740,9 +744,10 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                             horizontal: DS.spacing16,
                             vertical: DS.spacing4,
                           ),
-                          tileColor: DS.brandPrimary10,
+                          tileColor: DS.surfaceSecondary,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(color: DS.borderSubtle),
                           ),
                           leading: Container(
                             width: 12,
@@ -754,18 +759,21 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                           ),
                           title: Text(
                             event.title,
-                            style: TextStyle(color: DS.brandPrimary),
+                            style: TextStyle(
+                              color: DS.textPrimary,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                           subtitle: Text(
                             event.isAllDay
                                 ? context.l10n.calendarAllDay
                                 : Formatters.formatTime24(event.startTime),
-                            style: TextStyle(color: DS.brandPrimary54),
+                            style: TextStyle(color: DS.textSecondary),
                           ),
                           trailing: event.recurrenceRule != null
                               ? Icon(
                                   Icons.repeat,
-                                  color: DS.brandPrimary30,
+                                  color: DS.textTertiary,
                                   size: 16,
                                 )
                               : null,
@@ -1196,6 +1204,30 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
     0xFF9C27B0, // Purple
   ];
 
+  InputDecoration _fieldDecoration({
+    required String hintText,
+    required IconData icon,
+  }) =>
+      InputDecoration(
+        hintText: hintText,
+        hintStyle: TextStyle(color: DS.textTertiary),
+        prefixIcon: Icon(icon, color: DS.textSecondary),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: DS.borderSubtle),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: DS.borderSubtle),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: DS.primaryBase.withValues(alpha: 0.45)),
+        ),
+        filled: true,
+        fillColor: DS.surfacePrimary,
+      );
+
   @override
   void initState() {
     super.initState();
@@ -1244,7 +1276,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: DS.brandPrimaryConst,
+                        color: DS.textPrimary,
                       ),
                     ),
                     SparkleButton.primary(
@@ -1279,14 +1311,10 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
                 TextField(
                   controller: _titleController,
                   enabled: !_isSaving,
-                  style: TextStyle(color: DS.brandPrimary),
-                  decoration: InputDecoration(
+                  style: TextStyle(color: DS.textPrimary),
+                  decoration: _fieldDecoration(
                     hintText: context.l10n.calendarTitleHint,
-                    hintStyle: TextStyle(color: DS.brandPrimary38),
-                    prefixIcon: Icon(Icons.title, color: DS.brandPrimary70),
-                    border: InputBorder.none,
-                    filled: true,
-                    fillColor: DS.brandPrimary10,
+                    icon: Icons.title,
                   ),
                 ),
                 const SizedBox(height: DS.spacing10),
@@ -1299,34 +1327,20 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
                 TextField(
                   controller: _locationController,
                   enabled: !_isSaving,
-                  style: TextStyle(color: DS.brandPrimary),
-                  decoration: InputDecoration(
+                  style: TextStyle(color: DS.textPrimary),
+                  decoration: _fieldDecoration(
                     hintText: context.l10n.calendarLocationHint,
-                    hintStyle: TextStyle(color: DS.brandPrimary38),
-                    prefixIcon: Icon(
-                      Icons.location_on_outlined,
-                      color: DS.brandPrimary70,
-                    ),
-                    border: InputBorder.none,
-                    filled: true,
-                    fillColor: DS.brandPrimary10,
+                    icon: Icons.location_on_outlined,
                   ),
                 ),
                 const SizedBox(height: 10),
                 TextField(
                   controller: _descController,
                   enabled: !_isSaving,
-                  style: TextStyle(color: DS.brandPrimary),
-                  decoration: InputDecoration(
+                  style: TextStyle(color: DS.textPrimary),
+                  decoration: _fieldDecoration(
                     hintText: context.l10n.calendarDescriptionHint,
-                    hintStyle: TextStyle(color: DS.brandPrimary38),
-                    prefixIcon: Icon(
-                      Icons.description_outlined,
-                      color: DS.brandPrimary70,
-                    ),
-                    border: InputBorder.none,
-                    filled: true,
-                    fillColor: DS.brandPrimary10,
+                    icon: Icons.description_outlined,
                   ),
                   maxLines: 3,
                 ),
@@ -1345,20 +1359,21 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
               child: Container(
                 padding: const EdgeInsets.all(DS.md),
                 decoration: BoxDecoration(
-                  color: DS.brandPrimary10Const,
+                  color: DS.surfacePrimary,
                   borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: DS.borderSubtle),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       context.l10n.calendarStartTime,
-                      style: TextStyle(color: DS.brandPrimary54, fontSize: 12),
+                      style: TextStyle(color: DS.textSecondary, fontSize: 12),
                     ),
                     Text(
                       Formatters.formatDateTime(_startTime),
                       style: TextStyle(
-                        color: DS.brandPrimaryConst,
+                        color: DS.textPrimary,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -1368,7 +1383,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
             ),
           ),
           const SizedBox(width: DS.spacing10),
-          Icon(Icons.arrow_forward, color: DS.brandPrimary38Const, size: 16),
+          Icon(Icons.arrow_forward, color: DS.textTertiary, size: 16),
           const SizedBox(width: DS.spacing10),
           Expanded(
             child: GestureDetector(
@@ -1376,20 +1391,21 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
               child: Container(
                 padding: const EdgeInsets.all(DS.md),
                 decoration: BoxDecoration(
-                  color: DS.brandPrimary10Const,
+                  color: DS.surfacePrimary,
                   borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: DS.borderSubtle),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       context.l10n.calendarEndTime,
-                      style: TextStyle(color: DS.brandPrimary54, fontSize: 12),
+                      style: TextStyle(color: DS.textSecondary, fontSize: 12),
                     ),
                     Text(
                       Formatters.formatDateTime(_endTime),
                       style: TextStyle(
-                        color: DS.brandPrimaryConst,
+                        color: DS.textPrimary,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -1406,7 +1422,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
           SwitchListTile(
             title: Text(
               context.l10n.calendarAllDay,
-              style: TextStyle(color: DS.brandPrimary),
+              style: TextStyle(color: DS.textPrimary),
             ),
             value: _isAllDay,
             onChanged: (val) => setState(() => _isAllDay = val),
@@ -1416,12 +1432,12 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
           ListTile(
             title: Text(
               context.l10n.calendarReminder,
-              style: TextStyle(color: DS.brandPrimary),
+              style: TextStyle(color: DS.textPrimary),
             ),
             trailing: DropdownButton<int>(
               value: _reminderMinutes,
               dropdownColor: DS.surfaceTertiary,
-              style: TextStyle(color: DS.brandPrimary),
+              style: TextStyle(color: DS.textPrimary),
               underline: Container(),
               items: [
                 DropdownMenuItem(
@@ -1456,12 +1472,12 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
           ListTile(
             title: Text(
               context.l10n.calendarRepeat,
-              style: TextStyle(color: DS.brandPrimary),
+              style: TextStyle(color: DS.textPrimary),
             ),
             trailing: DropdownButton<String?>(
               value: _recurrenceRule,
               dropdownColor: DS.surfaceTertiary,
-              style: TextStyle(color: DS.brandPrimary),
+              style: TextStyle(color: DS.textPrimary),
               underline: Container(),
               items: [
                 DropdownMenuItem(
@@ -1500,11 +1516,11 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
                 color: _resolveCalendarColor(color),
                 shape: BoxShape.circle,
                 border: isSelected
-                    ? Border.all(color: DS.brandPrimaryConst, width: 2)
+                    ? Border.all(color: DS.textPrimary, width: 2)
                     : null,
               ),
               child: isSelected
-                  ? Icon(Icons.check, size: 16, color: DS.brandPrimary)
+                  ? Icon(Icons.check, size: 16, color: DS.surfacePrimary)
                   : null,
             ),
           );

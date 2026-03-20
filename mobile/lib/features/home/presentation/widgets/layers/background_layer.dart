@@ -43,18 +43,39 @@ class BackgroundLayer extends StatelessWidget {
   }
 
   Widget _buildDefaultBackground() {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFF0a0a1a),
-            Color(0xFF1a1a2e),
-            Color(0xFF16213e),
-          ],
+    return Stack(
+      children: [
+        Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0xFF0A1024),
+                Color(0xFF171C38),
+                Color(0xFF1B2546),
+              ],
+            ),
+          ),
         ),
-      ),
+        Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                center: const Alignment(0.7, -0.4),
+                radius: 1.0,
+                colors: [
+                  const Color(0xFF6B8CFF).withValues(alpha: 0.18),
+                  const Color(0xFF6B8CFF).withValues(alpha: 0.04),
+                  Colors.transparent,
+                ],
+                stops: const [0.0, 0.45, 1.0],
+              ),
+            ),
+          ),
+        ),
+        _buildTextureOverlay('mesh'),
+      ],
     );
   }
 
@@ -155,8 +176,12 @@ class BackgroundLayer extends StatelessWidget {
   }
 
   Widget _buildTextureOverlay(String texture) {
-    // TODO: 实现纹理叠加
-    return const SizedBox.shrink();
+    return IgnorePointer(
+      child: CustomPaint(
+        size: Size.infinite,
+        painter: _TexturePainter(texture: texture),
+      ),
+    );
   }
 
   Color _parseColor(String hexColor) {
@@ -315,4 +340,67 @@ class _NeonPainter extends CustomPainter {
   bool shouldRepaint(covariant _NeonPainter oldDelegate) {
     return animationValue != oldDelegate.animationValue;
   }
+}
+
+class _TexturePainter extends CustomPainter {
+  _TexturePainter({required this.texture});
+
+  final String texture;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    switch (texture) {
+      case 'mesh':
+      case 'grain':
+      case 'grid':
+        _paintMeshTexture(canvas, size);
+        break;
+      default:
+        _paintMeshTexture(canvas, size);
+        break;
+    }
+  }
+
+  void _paintMeshTexture(Canvas canvas, Size size) {
+    final linePaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.035)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+
+    const gap = 28.0;
+    for (double x = -size.height; x < size.width + size.height; x += gap) {
+      canvas.drawLine(
+        Offset(x, 0),
+        Offset(x + size.height * 0.35, size.height),
+        linePaint,
+      );
+    }
+
+    for (double y = 0; y < size.height + size.width * 0.2; y += gap * 1.2) {
+      canvas.drawLine(
+        Offset(0, y),
+        Offset(size.width, y - size.width * 0.08),
+        linePaint..color = Colors.white.withValues(alpha: 0.025),
+      );
+    }
+
+    final glowPaint = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          Colors.white.withValues(alpha: 0.05),
+          Colors.transparent,
+        ],
+      ).createShader(
+        Rect.fromCircle(
+          center: Offset(size.width * 0.82, size.height * 0.18),
+          radius: size.width * 0.35,
+        ),
+      );
+
+    canvas.drawRect(Offset.zero & size, glowPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _TexturePainter oldDelegate) =>
+      texture != oldDelegate.texture;
 }

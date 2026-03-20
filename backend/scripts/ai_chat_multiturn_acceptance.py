@@ -12,11 +12,15 @@ from typing import Any
 import httpx
 import websockets
 
+from app.core.agent_profiles import AgentRole, TaskType
+from app.core.llm_router import llm_router
+
 API_BASE = os.getenv("API_BASE_URL", "http://127.0.0.1:8000/api/v1")
 GATEWAY_BASE = os.getenv("GATEWAY_BASE_URL", "http://127.0.0.1:8080/api/v1")
 WS_URL = os.getenv("WS_CHAT_URL", "ws://127.0.0.1:8080/ws/chat")
 USERNAME = os.getenv("LOCAL_SMOKE_USERNAME", "chat_test")
 PASSWORD = os.getenv("LOCAL_SMOKE_PASSWORD", "Chat123456")
+REASONING_MODE = str(os.getenv("AI_CHAT_REASONING_MODE", "balanced")).strip().lower() or "balanced"
 CHAT_TIMEOUT_SECONDS = float(os.getenv("AI_CHAT_ACCEPTANCE_TIMEOUT_SECONDS", "180"))
 STANDARD_TURN_MAX_SECONDS = float(os.getenv("AI_CHAT_STANDARD_TURN_MAX_SECONDS", "25"))
 DEEP_ANALYSIS_MAX_SECONDS = float(os.getenv("AI_CHAT_DEEP_ANALYSIS_MAX_SECONDS", "45"))
@@ -38,6 +42,18 @@ def _has_standard_context_leak(text: str) -> bool:
         "番茄钟次数",
         "当前有 2 个计划",
         "当前有2个计划",
+        "get_plan_state",
+        "query_plan_tasks",
+        "功能暂时不可用",
+        "错误详情",
+        "我们正在努力恢复服务",
+        "与你当前计划匹配",
+        "待办任务top 1",
+        "根据你的行为模式分析",
+        "当前专注度不足",
+        "从你的待办任务中选择",
+        "当前最重要的学习任务",
+        "你的待办任务",
     )
     return any(marker.lower() in lowered for marker in leak_markers)
 
@@ -66,10 +82,17 @@ async def _collect_chat(
 
 
 def _joined_text(events: list[dict[str, Any]]) -> str:
-    return "".join(
-        (event.get("delta") or "") + (event.get("full_text") or "")
+    full_texts = [
+        str(event.get("full_text") or "").strip()
         for event in events
-        if event.get("type") in {"delta", "full_text"}
+        if event.get("type") == "full_text" and str(event.get("full_text") or "").strip()
+    ]
+    if full_texts:
+        return full_texts[-1]
+    return "".join(
+        str(event.get("delta") or "")
+        for event in events
+        if event.get("type") == "delta"
     ).strip()
 
 
@@ -93,6 +116,31 @@ def _has_tool_or_widget_signal(events: list[dict[str, Any]]) -> bool:
     return False
 
 
+def _routing_snapshot() -> dict[str, Any]:
+    return {
+        "standard": llm_router.describe_agent_routing(
+            AgentRole.GENERATION,
+            TaskType.STANDARD_RESPONSE,
+            reasoning_mode=REASONING_MODE,
+        ),
+        "deep_analysis": llm_router.describe_agent_routing(
+            AgentRole.DEEP_ANALYST,
+            TaskType.DEEP_REASONING,
+            reasoning_mode=REASONING_MODE,
+        ),
+        "study_plan": llm_router.describe_agent_routing(
+            AgentRole.STUDY_PLANNER,
+            TaskType.TASK_DECOMPOSITION,
+            reasoning_mode=REASONING_MODE,
+        ),
+        "error_diagnosis": llm_router.describe_agent_routing(
+            AgentRole.ERROR_ANALYST,
+            TaskType.ERROR_DIAGNOSIS,
+            reasoning_mode=REASONING_MODE,
+        ),
+    }
+
+
 async def _send_ws_message(
     token: str,
     *,
@@ -100,35 +148,53 @@ async def _send_ws_message(
     message: str,
     chat_mode: str = "standard",
     request_id: str | None = None,
+    extra_context: dict[str, Any] | None = None,
 ) -> tuple[list[dict[str, Any]], str, dict[str, Any]]:
     req_id = request_id or f"req-{uuid.uuid4().hex[:12]}"
     ws_uri = f"{WS_URL}?token={token}"
-    started_at = time.monotonic()
-    async with websockets.connect(
-        ws_uri,
-        ping_interval=None,
-        ping_timeout=None,
-        max_size=2**22,
-    ) as ws:
-        await ws.send(
-            json.dumps(
-                {
-                    "type": "message",
-                    "message": message,
-                    "session_id": session_id,
-                    "request_id": req_id,
-                    "chat_mode": chat_mode,
-                },
-                ensure_ascii=False,
-            ),
-        )
-        events = await _collect_chat(ws)
-    metadata = _merge_metadata(events)
-    metadata["elapsed_seconds"] = round(time.monotonic() - started_at, 3)
-    return events, _joined_text(events), metadata
+    last_error: Exception | None = None
+
+    for attempt in range(1, 4):
+        started_at = time.monotonic()
+        try:
+            async with websockets.connect(
+                ws_uri,
+                ping_interval=None,
+                ping_timeout=None,
+                max_size=2**22,
+            ) as ws:
+                await ws.send(
+                    json.dumps(
+                        {
+                            "type": "message",
+                            "message": message,
+                            "session_id": session_id,
+                            "request_id": req_id,
+                            "chat_mode": chat_mode,
+                            "extra_context": extra_context or {},
+                        },
+                        ensure_ascii=False,
+                    ),
+                )
+                events = await _collect_chat(ws)
+            metadata = _merge_metadata(events)
+            metadata["elapsed_seconds"] = round(time.monotonic() - started_at, 3)
+            metadata["ws_attempt"] = attempt
+            return events, _joined_text(events), metadata
+        except websockets.exceptions.ConnectionClosedError as exc:
+            last_error = exc
+            if attempt >= 3:
+                break
+            await asyncio.sleep(0.35 * attempt)
+
+    raise last_error or RuntimeError("websocket chat failed without a concrete error")
 
 
 async def main() -> int:
+    _assert(REASONING_MODE in {"fast", "balanced", "deep"}, f"invalid AI_CHAT_REASONING_MODE={REASONING_MODE}")
+    extra_context = {"reasoning_mode": REASONING_MODE}
+    routing_snapshot = _routing_snapshot()
+
     async with httpx.AsyncClient(timeout=45.0) as client:
         login = await client.post(
             f"{API_BASE}/auth/login",
@@ -145,6 +211,7 @@ async def main() -> int:
             session_id=session_id,
             message="请用三条简洁要点告诉我番茄钟学习法是什么。",
             chat_mode="standard",
+            extra_context=extra_context,
         )
         _assert(turn1_text != "", "standard turn 1 returned empty text")
         _assert(any(e.get("type") == "done" or e.get("finish_reason") for e in turn1_events), "standard turn 1 did not terminate cleanly")
@@ -156,6 +223,7 @@ async def main() -> int:
             session_id=session_id,
             message="基于刚才的解释，再给我一个今天就能执行的 25 分钟开始动作。",
             chat_mode="standard",
+            extra_context=extra_context,
         )
         _assert(turn2_text != "", "standard turn 2 returned empty text")
         _assert(turn2_text != turn1_text, "standard turn 2 duplicated previous answer")
@@ -170,6 +238,7 @@ async def main() -> int:
             session_id=session_id,
             message="请用类比和反例解释栈和队列的区别，并告诉我最容易混淆的点。",
             chat_mode="deep_analysis",
+            extra_context=extra_context,
         )
         _assert(deep_text != "", "deep_analysis returned empty text")
         _assert(deep_meta["elapsed_seconds"] <= DEEP_ANALYSIS_MAX_SECONDS, f"deep_analysis too slow: {deep_meta['elapsed_seconds']}s")
@@ -180,6 +249,7 @@ async def main() -> int:
             session_id=plan_session,
             message="我还有 7 天准备 Python 测验，请结合我现在的计划和任务，给我一个可执行的学习任务拆解。",
             chat_mode="study_plan",
+            extra_context=extra_context,
         )
         _assert(plan_text != "", "study_plan returned empty text")
         _assert(plan_meta["elapsed_seconds"] <= STUDY_PLAN_MAX_SECONDS, f"study_plan too slow: {plan_meta['elapsed_seconds']}s")
@@ -189,6 +259,7 @@ async def main() -> int:
             session_id=str(uuid.uuid4()),
             message="为什么我总是把 TCP 三次握手和四次挥手的顺序记反？请帮我诊断常见误区。",
             chat_mode="error_diagnosis",
+            extra_context=extra_context,
         )
         _assert(diagnosis_text != "", "error_diagnosis returned empty text")
         _assert(
@@ -225,6 +296,8 @@ async def main() -> int:
         json.dumps(
             {
                 "status": "ALL_OK",
+                "reasoning_mode": REASONING_MODE,
+                "routing_snapshot": routing_snapshot,
                 "session_id": session_id,
                 "standard_turn_1_preview": turn1_text[:120],
                 "standard_turn_1_seconds": turn1_meta["elapsed_seconds"],

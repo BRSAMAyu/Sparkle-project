@@ -13,6 +13,7 @@ from collections.abc import AsyncIterator, Callable
 from datetime import timezone, datetime, timedelta
 
 import grpc
+from google.protobuf.json_format import MessageToDict
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -154,6 +155,15 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
 
             # 🔧 根据请求的 chat_mode 选择 workflow
             chat_mode = normalize_chat_mode(getattr(request, "chat_mode", None) or CHAT_MODE_STANDARD)
+            request_extra_context: dict[str, object] = {}
+            if request.HasField("extra_context"):
+                try:
+                    request_extra_context = MessageToDict(request.extra_context)
+                except Exception as exc:
+                    logger.warning(f"Failed to parse request extra_context in StreamChat: {exc}")
+            reasoning_mode = str(request_extra_context.get("reasoning_mode") or "balanced").strip().lower()
+            if reasoning_mode not in {"fast", "balanced", "deep"}:
+                reasoning_mode = "balanced"
             logger.info(f"📋 Chat mode: {chat_mode}")
             workflow_id = self._resolve_workflow_id(chat_mode)
 
@@ -182,6 +192,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                         db_session=db_session,
                         context_data={
                             "chat_mode": chat_mode,
+                            "reasoning_mode": reasoning_mode,
                             "workflow_id": workflow_id,
                             "prompt_version": prompt_version,
                         },

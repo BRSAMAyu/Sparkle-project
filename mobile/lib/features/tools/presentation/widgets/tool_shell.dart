@@ -148,6 +148,11 @@ class _ToolShellState extends State<ToolShell> {
                 blurRadius: isDark ? 28 : 24,
                 offset: const Offset(0, 16),
               ),
+              BoxShadow(
+                color: DS.textPrimary.withValues(alpha: isDark ? 0.08 : 0.04),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
             ],
           ),
           child: Padding(
@@ -280,14 +285,26 @@ class _ToolShellState extends State<ToolShell> {
 
     final root = DecoratedBox(
       decoration: BoxDecoration(
-        color: panelColor,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            panelColor,
+            _mix(panelColor, DS.surfacePrimary, isDark ? 0.18 : 0.3),
+          ],
+        ),
         borderRadius: BorderRadius.circular(_isSheet ? 32 : 32),
-        border: Border.all(color: borderColor),
+        border: Border.all(color: borderColor.withValues(alpha: 0.82)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: isDark ? 0.24 : 0.06),
             blurRadius: isDark ? 40 : 28,
             offset: const Offset(0, 18),
+          ),
+          BoxShadow(
+            color: DS.textPrimary.withValues(alpha: isDark ? 0.05 : 0.03),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
           ),
         ],
       ),

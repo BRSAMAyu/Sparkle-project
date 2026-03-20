@@ -29,6 +29,25 @@ class UnifiedSettingsScreen extends ConsumerStatefulWidget {
 class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   bool _isGenerating = false;
   bool _weeklyAgendaExpanded = false;
+  Timer? _learningPrefsDebounce;
+
+  @override
+  void dispose() {
+    _learningPrefsDebounce?.cancel();
+    super.dispose();
+  }
+
+  void _scheduleLearningPreferenceUpdate({
+    required double depth,
+    required double curiosity,
+  }) {
+    final notifier = ref.read(learningPreferencesProvider.notifier);
+    notifier.previewPreferences(depth: depth, curiosity: curiosity);
+    _learningPrefsDebounce?.cancel();
+    _learningPrefsDebounce = Timer(const Duration(milliseconds: 220), () {
+      notifier.updatePreferences(depth: depth, curiosity: curiosity);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,6 +56,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     final transparentMode = ref.watch(transparentModeProvider);
     final transparencyLevel = ref.watch(transparencyLevelProvider);
     final systemUpdateLevel = ref.watch(systemUpdateLevelProvider);
+    final aiReasoningMode = ref.watch(aiReasoningModeProvider);
+    final aiUsageSummary = ref.watch(aiUsageSummaryProvider);
     final learningPrefs = ref.watch(learningPreferencesProvider);
     final pushPrefs = ref.watch(pushPreferencesProvider);
     final weeklyAgenda = ref.watch(weeklyAgendaProvider);
@@ -85,12 +106,10 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                       depth: learningPrefs.depth,
                       curiosity: learningPrefs.curiosity,
                       onChanged: (d, c) {
-                        ref
-                            .read(learningPreferencesProvider.notifier)
-                            .updatePreferences(
-                              depth: d,
-                              curiosity: c,
-                            );
+                        _scheduleLearningPreferenceUpdate(
+                          depth: d,
+                          curiosity: c,
+                        );
                       },
                     ),
                     const SizedBox(height: DS.spacing32),
@@ -111,12 +130,10 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                       initialDepth: learningPrefs.depth,
                       initialCuriosity: learningPrefs.curiosity,
                       onPreferenceChanged: (offset) {
-                        ref
-                            .read(learningPreferencesProvider.notifier)
-                            .updatePreferences(
-                              depth: offset.dy,
-                              curiosity: offset.dx,
-                            );
+                        _scheduleLearningPreferenceUpdate(
+                          depth: offset.dy,
+                          curiosity: offset.dx,
+                        );
                       },
                     ),
                     const SizedBox(height: DS.spacing16),
@@ -205,6 +222,60 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                       onChanged: (v) =>
                           ref.read(enterToSendProvider.notifier).setEnabled(v),
                       activeThumbColor: DS.primaryBase,
+                    ),
+                    const Divider(height: DS.spacing24),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.tune),
+                      title: const Text('AI 档位'),
+                      subtitle: const Text('敏捷更快，均衡推荐，深思更强分析'),
+                    ),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Wrap(
+                        spacing: DS.spacing8,
+                        runSpacing: DS.spacing8,
+                        children: [
+                          ChoiceChip(
+                            label: const Text('敏捷'),
+                            selected: aiReasoningMode == 'fast',
+                            onSelected: (_) => ref
+                                .read(aiReasoningModeProvider.notifier)
+                                .setMode('fast'),
+                          ),
+                          ChoiceChip(
+                            label: const Text('均衡'),
+                            selected: aiReasoningMode == 'balanced',
+                            onSelected: (_) => ref
+                                .read(aiReasoningModeProvider.notifier)
+                                .setMode('balanced'),
+                          ),
+                          ChoiceChip(
+                            label: const Text('深思'),
+                            selected: aiReasoningMode == 'deep',
+                            onSelected: (_) => ref
+                                .read(aiReasoningModeProvider.notifier)
+                                .setMode('deep'),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: DS.spacing12),
+                    aiUsageSummary.when(
+                      data: (summary) => _buildAiUsageSummary(summary),
+                      loading: () =>
+                          const LinearProgressIndicator(minHeight: 3),
+                      error: (_, __) => Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: DS.surfaceSecondary,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Text(
+                          '额度面板暂时不可用，但档位切换仍可正常生效。',
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -417,7 +488,9 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     } catch (e) {
       if (mounted) {
         AppFeedback.error(
-            context, l10n.generationFailedWithDetail(e.toString()),);
+          context,
+          l10n.generationFailedWithDetail(e.toString()),
+        );
       }
     } finally {
       if (mounted) {
@@ -771,6 +844,76 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
             },
             child: const Text('打开设置'),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAiUsageSummary(Map<String, dynamic> summary) {
+    final theme = Theme.of(context);
+    final items = (summary['items'] as List<dynamic>? ?? const <dynamic>[])
+        .whereType<Map<String, dynamic>>()
+        .toList();
+    if (items.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: DS.surfaceSecondary,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Text('今日额度统计准备中。'),
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: DS.surfaceSecondary,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '今日 AI 额度与消耗',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: DS.spacing8),
+          ...items.map((item) {
+            final label =
+                item['label']?.toString() ?? item['mode']?.toString() ?? '';
+            final used = item['requests_used'] ?? 0;
+            final limit = item['requests_limit'] ?? 0;
+            final tokens = item['total_tokens'] ?? 0;
+            final cost = (item['total_cost_usd'] as num?)?.toDouble() ?? 0.0;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 44,
+                    child: Text(
+                      label,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      '$used/$limit 次 · $tokens tokens · \$${cost.toStringAsFixed(4)}',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
         ],
       ),
     );

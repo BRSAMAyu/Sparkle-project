@@ -26,11 +26,22 @@ class MetricsRow extends ConsumerWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
         child: MaterialStyler(
-          material: AppMaterials.ceramic,
+          material: AppMaterials.ceramic.copyWith(
+            backgroundGradient: LinearGradient(
+              colors: [
+                DS.surfacePrimaryElevated,
+                DS.surfaceSecondary,
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderColor: DS.borderSubtle,
+            borderWidth: 1,
+          ),
           borderRadius: DS.borderRadius20,
           padding: const EdgeInsets.symmetric(horizontal: DS.spacing8),
           child: SizedBox(
-            height: 64,
+            height: 72,
             child: Row(
               children: [
                 Expanded(
@@ -149,9 +160,15 @@ class _MetricCell extends StatelessWidget {
   final VoidCallback onTap;
 
   Color _backgroundColor() {
-    if (color == DS.brandPrimary) return DS.brandPrimary10;
-    if (color == DS.success) return DS.success100;
-    if (color == DS.warning) return DS.warning100;
+    if (color == DS.brandPrimary) {
+      return Color.lerp(DS.surfaceSecondary, DS.brandPrimary, 0.12)!;
+    }
+    if (color == DS.success) {
+      return Color.lerp(DS.surfaceSecondary, DS.success, 0.12)!;
+    }
+    if (color == DS.warning) {
+      return Color.lerp(DS.surfaceSecondary, DS.warning, 0.12)!;
+    }
     return DS.surfacePanel;
   }
 
@@ -173,6 +190,9 @@ class _MetricCell extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: _backgroundColor(),
                   borderRadius: DS.borderRadius12,
+                  border: Border.all(
+                    color: color.withValues(alpha: 0.14),
+                  ),
                 ),
                 child: Icon(icon, size: 16, color: color),
               ),

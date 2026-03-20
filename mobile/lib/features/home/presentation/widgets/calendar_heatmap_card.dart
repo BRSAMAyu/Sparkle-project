@@ -61,6 +61,19 @@ class CalendarHeatmapCard extends ConsumerWidget {
       final peakTasks = monthlySummaries.isEmpty
           ? 0
           : monthlySummaries.map((summary) => summary.total).reduce(max);
+      final totalTasks = monthlySummaries.fold<int>(
+        0,
+        (sum, summary) => sum + summary.total,
+      );
+      final pendingTasks = monthlySummaries.fold<int>(
+        0,
+        (sum, summary) =>
+            sum + summary.pending + summary.inProgress + summary.overdue,
+      );
+      final completedTasks = monthlySummaries.fold<int>(
+        0,
+        (sum, summary) => sum + summary.completed,
+      );
 
       return GestureDetector(
         onTap: () => context.push('/calendar-stats'),
@@ -116,6 +129,9 @@ class CalendarHeatmapCard extends ConsumerWidget {
                           child: _CompactCalendarSidebar(
                             activeDays: activeDays,
                             peakTasks: peakTasks,
+                            totalTasks: totalTasks,
+                            pendingTasks: pendingTasks,
+                            completedTasks: completedTasks,
                             showLegend: showLegend,
                           ),
                         ),
@@ -329,7 +345,7 @@ class CalendarHeatmapCard extends ConsumerWidget {
     final totalCells = rows * columns;
 
     return Align(
-      alignment: Alignment.centerLeft,
+      alignment: Alignment.center,
       child: SizedBox(
         width: cellSize * columns + spacing * (columns - 1),
         height: cellSize * rows + spacing * (rows - 1),
@@ -362,11 +378,17 @@ class _CompactCalendarSidebar extends ConsumerWidget {
   const _CompactCalendarSidebar({
     required this.activeDays,
     required this.peakTasks,
+    required this.totalTasks,
+    required this.pendingTasks,
+    required this.completedTasks,
     required this.showLegend,
   });
 
   final int activeDays;
   final int peakTasks;
+  final int totalTasks;
+  final int pendingTasks;
+  final int completedTasks;
   final bool showLegend;
 
   @override
@@ -379,7 +401,7 @@ class _CompactCalendarSidebar extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: DS.spacing8,
-        vertical: DS.spacing6,
+        vertical: DS.spacing8,
       ),
       decoration: BoxDecoration(
         color: DS.surfaceOverlay,
@@ -387,12 +409,20 @@ class _CompactCalendarSidebar extends ConsumerWidget {
         border: Border.all(color: DS.borderSubtle),
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text(
+            '本月概览',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: DS.textSecondary,
+                  fontWeight: DS.fontWeightBold,
+                ),
+          ),
+          const SizedBox(height: DS.spacing6),
           // Today's overview badge
           if (todayAggregate.hasActivity)
             Container(
+              width: double.infinity,
               padding: const EdgeInsets.symmetric(
                 horizontal: DS.spacing6,
                 vertical: DS.spacing4,
@@ -412,34 +442,104 @@ class _CompactCalendarSidebar extends ConsumerWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-          if (todayAggregate.hasActivity) const SizedBox(height: DS.spacing6),
-          _CompactCalendarStat(label: '活跃', value: '$activeDays天'),
-          const SizedBox(height: DS.spacing6),
-          _CompactCalendarStat(label: '峰值', value: '$peakTasks项'),
+          if (todayAggregate.hasActivity) const SizedBox(height: DS.spacing8),
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final compact = constraints.maxHeight < 126;
+                final statSpacing = compact ? DS.spacing6 : DS.spacing8;
+                return Wrap(
+                  spacing: DS.spacing8,
+                  runSpacing: statSpacing,
+                  children: [
+                    _CompactCalendarStat(
+                      label: '任务总量',
+                      value: '$totalTasks项',
+                      width: (constraints.maxWidth - DS.spacing8) / 2,
+                    ),
+                    _CompactCalendarStat(
+                      label: '待处理',
+                      value: '$pendingTasks项',
+                      width: (constraints.maxWidth - DS.spacing8) / 2,
+                    ),
+                    _CompactCalendarStat(
+                      label: '已完成',
+                      value: '$completedTasks项',
+                      width: (constraints.maxWidth - DS.spacing8) / 2,
+                    ),
+                    _CompactCalendarStat(
+                      label: '活跃日期',
+                      value: '$activeDays天',
+                      width: (constraints.maxWidth - DS.spacing8) / 2,
+                    ),
+                    _CompactCalendarStat(
+                      label: '单日峰值',
+                      value: '$peakTasks项',
+                      width: constraints.maxWidth,
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
           // Active plan indicator
           if (hasActivePlan) ...[
             const SizedBox(height: DS.spacing6),
-            Row(
-              children: [
-                Icon(
-                  Icons.flag_rounded,
-                  size: 12,
-                  color: DS.warningAccent,
-                ),
-                const SizedBox(width: DS.spacing4),
-                Expanded(
-                  child: Text(
-                    todayAggregate.activePlan!.name,
-                    style: TextStyle(
-                      fontSize: 9.5,
-                      color: DS.warningAccent,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(
+                horizontal: DS.spacing6,
+                vertical: 5,
+              ),
+              decoration: BoxDecoration(
+                color: DS.surfacePrimary.withValues(alpha: 0.8),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: DS.borderSubtle),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.flag_rounded,
+                    size: 12,
+                    color: DS.info,
                   ),
+                  const SizedBox(width: DS.spacing4),
+                  Expanded(
+                    child: Text(
+                      todayAggregate.activePlan!.name,
+                      style: TextStyle(
+                        fontSize: 9.5,
+                        color: DS.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ] else ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(
+                horizontal: DS.spacing6,
+                vertical: 5,
+              ),
+              decoration: BoxDecoration(
+                color: DS.surfacePrimary.withValues(alpha: 0.72),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: DS.borderSubtle),
+              ),
+              child: Text(
+                '今天没有活跃计划，适合整理待办与安排节奏。',
+                style: TextStyle(
+                  fontSize: 9.5,
+                  color: DS.textSecondary,
                 ),
-              ],
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
         ],
@@ -452,30 +552,39 @@ class _CompactCalendarStat extends StatelessWidget {
   const _CompactCalendarStat({
     required this.label,
     required this.value,
+    required this.width,
   });
 
   final String label;
   final String value;
+  final double width;
 
   @override
-  Widget build(BuildContext context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: DS.textSecondary,
-                ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: DS.textPrimary,
-                  fontWeight: DS.fontWeightBold,
-                ),
-          ),
-        ],
+  Widget build(BuildContext context) => SizedBox(
+        width: width,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: DS.textSecondary,
+                  ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 2),
+            Text(
+              value,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: DS.textPrimary,
+                    fontWeight: DS.fontWeightBold,
+                  ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
       );
 }
 

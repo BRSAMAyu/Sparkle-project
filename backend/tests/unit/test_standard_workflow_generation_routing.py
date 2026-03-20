@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from app.agents.standard_workflow import (
+    _build_generation_fallback_response,
     _classify_user_intent,
     _should_disable_tools_for_deep_analysis,
     _should_disable_tools_for_light_standard_reply,
@@ -128,6 +129,7 @@ async def test_generation_node_forces_fast_tier_for_standard_chat(monkeypatch):
         messages=[{"role": "user", "content": "帮我快速看一下这段话怎么优化"}],
         context_data={
             "chat_mode": "standard",
+            "reasoning_mode": "fast",
             "user_context": {},
             "conversation_context": {"messages": []},
             "tools_schema": [],
@@ -140,6 +142,7 @@ async def test_generation_node_forces_fast_tier_for_standard_chat(monkeypatch):
         "generation",
         ModelTier.FAST,
         task_type=TaskType.STANDARD_RESPONSE,
+        reasoning_mode="fast",
     )
     assert new_state.context_data["first_touch_model_tier"] == ModelTier.FAST.value
     assert new_state.messages[-1]["content"] == "分析完成"
@@ -252,6 +255,32 @@ def test_exam_fact_query_does_not_trigger_exam_preparation():
     assert community_prompt_intent is None
 
 
+def test_study_plan_fallback_is_structured():
+    response = _build_generation_fallback_response(
+        user_message="帮我做一份 Python 学习拆解",
+        knowledge_context="Relevant Knowledge Base:\n- [kb-1]: 先理解变量、条件、循环，再做小项目巩固。",
+        document_context="",
+        task_type=TaskType.TASK_DECOMPOSITION,
+    )
+
+    assert "今天先做什么" in response
+    assert "接下来怎么拆" in response
+    assert "模型暂时繁忙" not in response
+
+
+def test_error_diagnosis_fallback_is_structured():
+    response = _build_generation_fallback_response(
+        user_message="为什么我总是分不清 TCP 和 UDP？",
+        knowledge_context="Relevant Knowledge Base:\n- [kb-1]: 常见误区是只记结论，不记适用条件。",
+        document_context="",
+        task_type=TaskType.ERROR_DIAGNOSIS,
+    )
+
+    assert "最可能的问题" in response
+    assert "立刻怎么修" in response
+    assert "模型暂时繁忙" not in response
+
+
 def test_light_standard_followup_disables_tools():
     state = WorkflowState(
         messages=[
@@ -265,10 +294,13 @@ def test_light_standard_followup_disables_tools():
         },
     )
 
-    assert _should_disable_tools_for_light_standard_reply(
-        state,
-        "基于刚才的解释，再给我一个今天就能执行的 25 分钟开始动作。",
-    ) is True
+    assert (
+        _should_disable_tools_for_light_standard_reply(
+            state,
+            "基于刚才的解释，再给我一个今天就能执行的 25 分钟开始动作。",
+        )
+        is True
+    )
 
 
 def test_deep_analysis_disables_tools_by_default():
@@ -302,10 +334,13 @@ def test_standard_review_request_disables_tools_even_without_explicit_knowledge_
         },
     )
 
-    assert _should_disable_tools_for_light_standard_reply(
-        state,
-        "我想快速复习一下 Python 列表推导式，给我一个 5 分钟版本。",
-    ) is True
+    assert (
+        _should_disable_tools_for_light_standard_reply(
+            state,
+            "我想快速复习一下 Python 列表推导式，给我一个 5 分钟版本。",
+        )
+        is True
+    )
 
 
 def test_standard_personal_plan_request_keeps_tools_enabled():
@@ -316,10 +351,13 @@ def test_standard_personal_plan_request_keeps_tools_enabled():
         },
     )
 
-    assert _should_disable_tools_for_light_standard_reply(
-        state,
-        "结合我的计划和任务，告诉我今天该先做什么。",
-    ) is False
+    assert (
+        _should_disable_tools_for_light_standard_reply(
+            state,
+            "结合我的计划和任务，告诉我今天该先做什么。",
+        )
+        is False
+    )
 
 
 def test_standard_knowledge_question_uses_slim_context():
@@ -330,10 +368,13 @@ def test_standard_knowledge_question_uses_slim_context():
         },
     )
 
-    assert _should_use_slim_standard_context(
-        state,
-        "请用三条简洁要点告诉我番茄钟学习法是什么。",
-    ) is True
+    assert (
+        _should_use_slim_standard_context(
+            state,
+            "请用三条简洁要点告诉我番茄钟学习法是什么。",
+        )
+        is True
+    )
 
 
 def test_generic_deep_analysis_uses_slim_context():
@@ -507,17 +548,19 @@ async def test_generation_node_replaces_low_information_private_agent_reply(monk
     monkeypatch.setattr("app.agents.standard_workflow.build_system_prompt", lambda *args, **kwargs: "SYSTEM")
 
     state = WorkflowState(
-        messages=[{
-            "role": "user",
-            "content": (
-                "你是Sparkle内置的私聊AI助手，正在协助我与「阿泽」的对话。\n"
-                "请给出简洁、有礼貌、可直接发送的回复建议，避免过度输出。\n\n"
-                "最近对话:\n"
-                "我: 最近在复习期末内容。\n\n"
-                "用户问题:\n"
-                "帮我给阿泽写一条简短、自然、可直接发送的私聊回复，约今晚一起过一下 CS101 期末考点。"
-            ),
-        }],
+        messages=[
+            {
+                "role": "user",
+                "content": (
+                    "你是Sparkle内置的私聊AI助手，正在协助我与「阿泽」的对话。\n"
+                    "请给出简洁、有礼貌、可直接发送的回复建议，避免过度输出。\n\n"
+                    "最近对话:\n"
+                    "我: 最近在复习期末内容。\n\n"
+                    "用户问题:\n"
+                    "帮我给阿泽写一条简短、自然、可直接发送的私聊回复，约今晚一起过一下 CS101 期末考点。"
+                ),
+            }
+        ],
         context_data={
             "user_context": {},
             "conversation_context": {"messages": []},
@@ -555,16 +598,18 @@ async def test_generation_node_sanitizes_group_reply_lead_in(monkeypatch):
     monkeypatch.setattr("app.agents.standard_workflow.build_system_prompt", lambda *args, **kwargs: "SYSTEM")
 
     state = WorkflowState(
-        messages=[{
-            "role": "user",
-            "content": (
-                "你是Sparkle内置的群聊AI助手，正在协助群聊「高数冲刺群」。\n"
-                "最近对话:\n"
-                "小林: 我今天晚上复盘错题。\n\n"
-                "用户问题:\n"
-                "帮我在群里发一条提醒，今晚 8 点前同步复习进度。"
-            ),
-        }],
+        messages=[
+            {
+                "role": "user",
+                "content": (
+                    "你是Sparkle内置的群聊AI助手，正在协助群聊「高数冲刺群」。\n"
+                    "最近对话:\n"
+                    "小林: 我今天晚上复盘错题。\n\n"
+                    "用户问题:\n"
+                    "帮我在群里发一条提醒，今晚 8 点前同步复习进度。"
+                ),
+            }
+        ],
         context_data={
             "user_context": {},
             "conversation_context": {"messages": []},

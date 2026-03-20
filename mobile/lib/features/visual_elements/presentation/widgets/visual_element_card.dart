@@ -265,13 +265,72 @@ class _VisualElementCardState extends State<VisualElementCard>
             colors: _getPreviewGradientColors(),
           ),
         ),
-        child: CustomPaint(
-          painter: _ElementPreviewPainter(
-            elementType: widget.element.elementType,
-            config: widget.element.config,
-            seed: widget.element.id.hashCode,
-            colors: colors,
-          ),
+        child: Stack(
+          children: [
+            CustomPaint(
+              painter: _ElementPreviewPainter(
+                elementType: widget.element.elementType,
+                config: widget.element.config,
+                seed: widget.element.id.hashCode,
+                colors: colors,
+              ),
+            ),
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      colors.border.withValues(alpha: 0.2),
+                      Colors.transparent,
+                      colors.background.withValues(alpha: 0.16),
+                    ],
+                    stops: const [0.0, 0.42, 1.0],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: -24,
+              right: -8,
+              child: IgnorePointer(
+                child: Container(
+                  width: widget.isCompact ? 72 : 92,
+                  height: widget.isCompact ? 72 : 92,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        Colors.white.withValues(alpha: 0.18),
+                        Colors.white.withValues(alpha: 0.04),
+                        Colors.transparent,
+                      ],
+                      stops: const [0.0, 0.45, 1.0],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        DS.surfacePrimary.withValues(alpha: 0.06),
+                        DS.surfacePrimary.withValues(alpha: 0.24),
+                      ],
+                      stops: const [0.0, 0.58, 1.0],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -308,16 +367,35 @@ class _VisualElementCardState extends State<VisualElementCard>
 
   Widget _buildTypeIcon() {
     final icon = _getTypeIcon(widget.element.elementType);
+    final rarityColors = _getRarityColors(widget.element.rarity);
     return Container(
       padding: const EdgeInsets.all(DS.spacing6),
       decoration: BoxDecoration(
-        color: DS.surfacePrimary.withValues(alpha: 0.8),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            DS.surfacePrimary.withValues(alpha: 0.94),
+            rarityColors.background.withValues(alpha: 0.72),
+          ],
+        ),
         borderRadius: DS.borderRadius8,
+        border: Border.all(
+          color: rarityColors.border.withValues(alpha: 0.26),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: rarityColors.border.withValues(alpha: 0.08),
+            blurRadius: 16,
+            spreadRadius: 1,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Icon(
         icon,
         size: widget.isCompact ? DS.iconSizeXs : DS.iconSizeSm,
-        color: DS.textSecondary,
+        color: Color.lerp(DS.textSecondary, rarityColors.text, 0.28),
       ),
     );
   }

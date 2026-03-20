@@ -28,6 +28,16 @@ class _LearningModeControlState extends State<LearningModeControl> {
     _currentCuriosity = widget.curiosity;
   }
 
+  @override
+  void didUpdateWidget(covariant LearningModeControl oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.depth != widget.depth ||
+        oldWidget.curiosity != widget.curiosity) {
+      _currentDepth = widget.depth;
+      _currentCuriosity = widget.curiosity;
+    }
+  }
+
   void _updatePosition(Offset localPosition, Size size) {
     final dx = localPosition.dx.clamp(0.0, size.width);
     final dy = localPosition.dy.clamp(0.0, size.height);

@@ -312,75 +312,132 @@ class _VisualElementUnlockDialogState extends State<VisualElementUnlockDialog>
             animation: _scaleAnimation,
             builder: (context, _) => Transform.scale(
               scale: _scaleAnimation.value,
-              child: Container(
-                width: dialogWidth,
-                padding: EdgeInsets.all(compact ? DS.spacing20 : DS.spacing24),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      colors.primary.withValues(alpha: 0.95),
-                      colors.secondary.withValues(alpha: 0.9),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                    color: colors.border,
-                    width: 2,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: colors.glow,
-                      blurRadius: 32,
-                      spreadRadius: 4,
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Rarity indicator
-                    _buildRarityIndicator(highestRarity, l10n),
-                    const SizedBox(height: DS.spacing16),
-
-                    // Icon
-                    _buildIconContainer(colors, highestRarity, _reduceMotion),
-                    const SizedBox(height: DS.spacing16),
-
-                    // Title
-                    Text(
-                      l10n.visualElementUnlockTitle,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: compact ? DS.fontSizeLg : DS.fontSizeXl,
-                        fontWeight: DS.fontWeightBold,
-                        color: colors.text,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(26),
+                          gradient: RadialGradient(
+                            center: const Alignment(0.0, -0.3),
+                            radius: 1.05,
+                            colors: [
+                              colors.glow.withValues(alpha: 0.28),
+                              colors.glow.withValues(alpha: 0.08),
+                              Colors.transparent,
+                            ],
+                            stops: const [0.0, 0.42, 1.0],
+                          ),
+                        ),
                       ),
                     ),
-                    const SizedBox(height: DS.spacing8),
-
-                    // Subtitle
-                    Text(
-                      l10n.visualElementUnlockSubtitle,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: DS.fontSizeBase,
-                        color: colors.text.withValues(alpha: 0.8),
+                  ),
+                  Positioned(
+                    top: -22,
+                    right: compact ? 12 : 18,
+                    child: IgnorePointer(
+                      child: Container(
+                        width: compact ? 58 : 72,
+                        height: compact ? 58 : 72,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: RadialGradient(
+                            colors: [
+                              Colors.white.withValues(alpha: 0.22),
+                              colors.primary.withValues(alpha: 0.12),
+                              Colors.transparent,
+                            ],
+                            stops: const [0.0, 0.5, 1.0],
+                          ),
+                        ),
                       ),
                     ),
-                    const SizedBox(height: DS.spacing16),
-
-                    // Unlocked elements preview
-                    if (widget.elements.isNotEmpty) ...[
-                      _buildElementsPreview(compact),
-                      const SizedBox(height: DS.spacing20),
-                    ],
-
-                    // Action buttons
-                    _buildActionButtons(context, colors, l10n, compact),
-                  ],
-                ),
+                  ),
+                  Container(
+                    width: dialogWidth,
+                    padding: EdgeInsets.all(compact ? DS.spacing20 : DS.spacing24),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          colors.primary.withValues(alpha: 0.95),
+                          colors.secondary.withValues(alpha: 0.9),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: colors.border,
+                        width: 2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: colors.glow.withValues(alpha: 0.72),
+                          blurRadius: 32,
+                          spreadRadius: 4,
+                        ),
+                      ],
+                    ),
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: IgnorePointer(
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(24),
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Colors.white.withValues(alpha: 0.14),
+                                    Colors.transparent,
+                                    DS.surfacePrimary.withValues(alpha: 0.08),
+                                  ],
+                                  stops: const [0.0, 0.35, 1.0],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _buildRarityIndicator(highestRarity, l10n),
+                            const SizedBox(height: DS.spacing16),
+                            _buildIconContainer(colors, highestRarity, _reduceMotion),
+                            const SizedBox(height: DS.spacing16),
+                            Text(
+                              l10n.visualElementUnlockTitle,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: compact ? DS.fontSizeLg : DS.fontSizeXl,
+                                fontWeight: DS.fontWeightBold,
+                                color: colors.text,
+                              ),
+                            ),
+                            const SizedBox(height: DS.spacing8),
+                            Text(
+                              l10n.visualElementUnlockSubtitle,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: DS.fontSizeBase,
+                                color: colors.text.withValues(alpha: 0.8),
+                              ),
+                            ),
+                            const SizedBox(height: DS.spacing16),
+                            if (widget.elements.isNotEmpty) ...[
+                              _buildElementsPreview(compact),
+                              const SizedBox(height: DS.spacing20),
+                            ],
+                            _buildActionButtons(context, colors, l10n, compact),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -509,11 +566,25 @@ class _VisualElementUnlockDialogState extends State<VisualElementUnlockDialog>
                 vertical: DS.spacing6,
               ),
               decoration: BoxDecoration(
-                color: DS.surfacePrimary.withValues(alpha: 0.9),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    DS.surfacePrimary.withValues(alpha: 0.94),
+                    _getElementColor(element.rarity).withValues(alpha: 0.08),
+                  ],
+                ),
                 borderRadius: DS.borderRadius8,
                 border: Border.all(
-                  color: _getElementColor(element.rarity),
+                  color: _getElementColor(element.rarity).withValues(alpha: 0.5),
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: _getElementColor(element.rarity).withValues(alpha: 0.08),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,

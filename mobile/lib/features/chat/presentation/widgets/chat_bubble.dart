@@ -413,17 +413,24 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                           begin: Alignment.topLeft,
                                           end: Alignment.bottomRight,
                                           colors: [
-                                            DS.brandPrimary,
+                                            Color.lerp(
+                                                  DS.brandPrimary,
+                                                  DS.info,
+                                                  0.16,
+                                                ) ??
+                                                DS.brandPrimary,
                                             DS.brandPrimary
-                                                .withValues(alpha: 0.85),
+                                                .withValues(alpha: 0.9),
                                           ],
                                         ),
+                                        borderColor: Colors.white
+                                            .withValues(alpha: 0.18),
                                         shadows: [
                                           BoxShadow(
                                             color: DS.brandPrimary
-                                                .withValues(alpha: 0.2),
-                                            blurRadius: 4,
-                                            offset: const Offset(0, 2),
+                                                .withValues(alpha: 0.16),
+                                            blurRadius: 14,
+                                            offset: const Offset(0, 8),
                                           ),
                                         ],
                                       )
@@ -946,14 +953,19 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
       );
       return SparkleMaterial(
         backgroundColor: darkSurface,
-        borderColor: DS.border.withValues(alpha: 0.8),
+        borderColor: DS.border.withValues(alpha: 0.72),
+        glowColor: Colors.white.withValues(alpha: 0.04),
       );
     }
 
     // Light mode: use neutral100 for the AI bubble
     return SparkleMaterial(
-      backgroundColor: DS.neutral100,
-      glowColor: DS.brandPrimary.withValues(alpha: 0.1),
+      backgroundColor: Color.alphaBlend(
+        DS.brandPrimary.withValues(alpha: 0.025),
+        DS.neutral100,
+      ),
+      borderColor: DS.border.withValues(alpha: 0.42),
+      glowColor: DS.brandPrimary.withValues(alpha: 0.06),
     );
   }
 

@@ -490,6 +490,7 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
     var selectedBaseExpert =
         enabledExperts.isNotEmpty ? enabledExperts.first.id : null;
     var selectedModelKey = modelOptions.isNotEmpty ? modelOptions.first.key : null;
+    var selectedReasoningMode = 'balanced';
 
     final created = await showDialog<ExpertCatalogExpert>(
       context: context,
@@ -534,6 +535,18 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
                         .toList(),
                     onChanged: (value) => setLocalState(() => selectedModelKey = value),
                   ),
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedReasoningMode,
+                    decoration: const InputDecoration(labelText: '档位'),
+                    items: const [
+                      DropdownMenuItem(value: 'fast', child: Text('敏捷')),
+                      DropdownMenuItem(value: 'balanced', child: Text('均衡')),
+                      DropdownMenuItem(value: 'deep', child: Text('深思')),
+                    ],
+                    onChanged: (value) => setLocalState(
+                      () => selectedReasoningMode = value ?? 'balanced',
+                    ),
+                  ),
                   TextField(
                     controller: promptController,
                     decoration: const InputDecoration(
@@ -559,6 +572,7 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
                     systemPrompt: promptController.text.trim(),
                     baseExpertId: selectedBaseExpert,
                     preferredModelKey: selectedModelKey,
+                    reasoningMode: selectedReasoningMode,
                   );
                   if (!dialogContext.mounted) return;
                   Navigator.pop(dialogContext, expert);

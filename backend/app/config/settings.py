@@ -216,12 +216,19 @@ class Settings(BaseSettings):
     LLM_REASON_MODEL_NAME: str = "deepseek-reasoner"
     LLM_PROVIDER: str = "xiaomi"  # 'xiaomi' | 'deepseek' | 'zhipu' | 'qwen' | 'openai' | 'hunyuan'
     LLM_QUOTA_ENABLED: bool = False  # Disable token quota checks by default for demo recording
+    AI_MODE_FAST_DAILY_REQUEST_LIMIT: int = 120
+    AI_MODE_BALANCED_DAILY_REQUEST_LIMIT: int = 60
+    AI_MODE_DEEP_DAILY_REQUEST_LIMIT: int = 24
     # LLM Tier Routing (comma-separated model keys from LLMRouter)
+    LLM_TIER_FREE: str = ""
     LLM_TIER_FREE_FAST: str = ""
     LLM_TIER_FREE_REASONING: str = ""
     LLM_TIER_FAST: str = ""
     LLM_TIER_STANDARD: str = ""
+    LLM_TIER_PLUS: str = ""
+    LLM_TIER_PRO: str = ""
     LLM_TIER_REASONING: str = ""
+    LLM_TIER_MAX: str = ""
     LLM_TIER_GLM_BATCH: str = ""
     LLM_TIER_SPECIALIST: str = ""
 
@@ -229,9 +236,10 @@ class Settings(BaseSettings):
     XIAOMI_MIMO_API_KEY: str = ""
     XIAOMI_MIMO_BASE_URL: str = "https://api.xiaomimimo.com/v1"
     XIAOMI_CHAT_MODEL: str = "mimo-v2-flash"
+    XIAOMI_STANDARD_MODEL: str = "mimo-v2-flash"
     XIAOMI_TEMPERATURE: float = 0.3
 
-    # XiaoMi MIMO Pro Configuration (标准 + 推理，支持联网搜索)
+    # XiaoMi MIMO Pro Configuration (最高层，支持联网搜索)
     XIAOMI_PRO_MODEL: str = "mimo-v2-pro"
     XIAOMI_PRO_TEMPERATURE: float = 1.0  # mimo-v2-pro 默认值
     XIAOMI_WEB_SEARCH_ENABLED: bool = True  # 启用内置联网搜索
@@ -255,6 +263,9 @@ class Settings(BaseSettings):
     ZHIPU_TOOLS_MODEL: str = "glm-4.7"
     ZHIPU_FLASH_MODEL: str = "glm-4.7-flashx"  # 快速响应模型 (FlashX)
     GLM_4_7_FLASH_MODEL: str = "glm-4.7-flash"  # GLM-4.7-Flash 模型（支持思考模式）
+    ZHIPU_AIR_MODEL: str = "glm-4.5-air"
+    ZHIPU_LIGHT_MODEL: str = "glm-4.6"
+    ZHIPU_MAX_MODEL: str = "glm-5"
     ZHIPU_TEMPERATURE: float = 0.3
     ZHIPU_OCR_BASE_URL: str = "https://open.bigmodel.cn/api/paas/v4"
     ZHIPU_OCR_MODEL: str = "glm-ocr"
@@ -299,6 +310,7 @@ class Settings(BaseSettings):
     DASHSCOPE_CHAT_MODEL: str = "qwen3.5-plus"  # 标准/推理模型
     DASHSCOPE_REASON_MODEL: str = "qwen3.5-plus"
     DASHSCOPE_FAST_MODEL: str = "qwen3.5-flash"  # 快速响应模型
+    DASHSCOPE_STANDARD_MODEL: str = "qwen3.5-flash"
     DASHSCOPE_TEMPERATURE: float = 0.7
     DASHSCOPE_EMBEDDING_MODEL: str = "text-embedding-v4"
     DASHSCOPE_RERANK_MODEL: str = "qwen3-rerank"
@@ -384,12 +396,12 @@ class Settings(BaseSettings):
     NEXT_STEP_DEFAULT_ENERGY: int = 2  # 默认精力消耗
 
     # Complexity-Aware Routing (P3)
-    COMPLEXITY_ROUTING_ENABLED: bool = True    # 总开关
+    COMPLEXITY_ROUTING_ENABLED: bool = True  # 总开关
     COMPLEXITY_DOWNGRADE_ENABLED: bool = True  # 允许简单消息降级到更便宜模型
-    COMPLEXITY_UPGRADE_ENABLED: bool = True    # 允许复杂消息升级到更强模型
+    COMPLEXITY_UPGRADE_ENABLED: bool = True  # 允许复杂消息升级到更强模型
     STANDARD_CHAT_FORCE_FAST_TIER: bool = True  # 标准对话首答强制走 FAST/Flash 层
     FAST_INTERACTION_COPY_ENABLED: bool = True  # 澄清/确认文案优先由 FAST 模型生成
-    EARLY_ACK_PROGRESS_ENABLED: bool = True     # 编排开始前先推送即时状态确认
+    EARLY_ACK_PROGRESS_ENABLED: bool = True  # 编排开始前先推送即时状态确认
 
     # Feature Flags
     USE_CONTEXT_PACK: bool = True

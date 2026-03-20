@@ -148,7 +148,7 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
       role: SparklePageRole.content,
       appBar: AppBar(
         backgroundColor:
-            DS.surfaceOverlay.withValues(alpha: isDark ? 0.9 : 0.96),
+            DS.surfaceOverlay.withValues(alpha: isDark ? 0.88 : 0.94),
         surfaceTintColor: Colors.transparent,
         scrolledUnderElevation: 0,
         leading: SparkleIconButton(
@@ -223,6 +223,10 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
             Tab(text: context.l10n.communityTabGroups),
           ],
           indicatorColor: DS.brandPrimary,
+          indicatorWeight: 2.5,
+          dividerColor: Colors.transparent,
+          labelColor: DS.textPrimary,
+          unselectedLabelColor: DS.textSecondary,
           labelStyle: const TextStyle(fontWeight: FontWeight.bold),
         ),
       ),

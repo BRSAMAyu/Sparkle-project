@@ -119,17 +119,22 @@ class InteractiveTaskCard extends ConsumerWidget {
           BuildContext context, WidgetRef ref, TaskModel task,) =>
       Container(
         padding: const EdgeInsets.fromLTRB(
-            DS.spacing12, 0, DS.spacing12, DS.spacing12,),
-        decoration: BoxDecoration(
-          border: Border(
-            top: BorderSide(
-              color: DS.border.withValues(alpha: 0.3),
-            ),
-          ),
+          DS.spacing12,
+          DS.spacing10,
+          DS.spacing12,
+          DS.spacing12,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Container(
+              height: 1,
+              margin: const EdgeInsets.only(bottom: DS.spacing12),
+              decoration: BoxDecoration(
+                color: DS.border.withValues(alpha: 0.18),
+                borderRadius: DS.borderRadiusFull,
+              ),
+            ),
             // Metadata row
             Wrap(
               spacing: DS.spacing8,
@@ -183,7 +188,7 @@ class InteractiveTaskCard extends ConsumerWidget {
                       ref.read(activeTaskProvider.notifier).state = task;
                       context.push('/tasks/${task.id}/execute');
                     },
-                    color: DS.success,
+                    color: Color.lerp(DS.surfaceSecondary, DS.success, 0.82)!,
                   ),
                 ),
                 const SizedBox(width: DS.spacing8),
@@ -192,7 +197,7 @@ class InteractiveTaskCard extends ConsumerWidget {
                     icon: Icons.edit_rounded,
                     label: '编辑',
                     onTap: () => context.push('/tasks/${task.id}'),
-                    color: DS.info,
+                    color: Color.lerp(DS.surfaceSecondary, DS.info, 0.82)!,
                   ),
                 ),
                 const SizedBox(width: DS.spacing8),
@@ -201,7 +206,7 @@ class InteractiveTaskCard extends ConsumerWidget {
                     icon: Icons.delete_outline_rounded,
                     label: '放弃',
                     onTap: () => _confirmAbandon(context, ref, task),
-                    color: DS.error,
+                    color: Color.lerp(DS.surfaceSecondary, DS.error, 0.86)!,
                   ),
                 ),
               ],

@@ -75,6 +75,24 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               ),
             ),
           ),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: const Alignment(0.82, -0.28),
+                    radius: 1.0,
+                    colors: [
+                      DS.info.withValues(alpha: 0.1),
+                      DS.brandPrimary.withValues(alpha: 0.04),
+                      Colors.transparent,
+                    ],
+                    stops: const [0.0, 0.42, 1.0],
+                  ),
+                ),
+              ),
+            ),
+          ),
           // Layer 1: Weather Background
           const Positioned.fill(child: WeatherHeader()),
 

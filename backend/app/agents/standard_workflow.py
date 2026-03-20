@@ -126,6 +126,13 @@ def _resolve_generation_task_type(state: WorkflowState) -> TaskType:
     return TaskType.STANDARD_RESPONSE
 
 
+def _resolve_reasoning_mode(state: WorkflowState, default: str = "balanced") -> str:
+    value = str(state.context_data.get("reasoning_mode") or default).strip().lower()
+    if value in {"fast", "balanced", "deep"}:
+        return value
+    return default
+
+
 def _should_force_fast_first_touch(
     state: WorkflowState,
     *,
@@ -137,6 +144,8 @@ def _should_force_fast_first_touch(
     if explicit_runtime is not None:
         return False
     if task_type is not TaskType.STANDARD_RESPONSE:
+        return False
+    if _resolve_reasoning_mode(state) != "fast":
         return False
     chat_mode = str(state.context_data.get("chat_mode", "standard")).strip().lower()
     return chat_mode == "standard"
@@ -202,6 +211,7 @@ async def _resolve_llm_for_expert(
         effective_role = _coerce_agent_role(base_role)
         custom_task_type = _reasoning_mode_to_task_type(custom_profile.get("reasoning_mode"), task_type)
         model_key = str(custom_profile.get("preferred_model_key") or "").strip()
+        reasoning_mode = str(custom_profile.get("reasoning_mode") or "balanced").strip().lower()
         if model_key:
             service = await get_llm_service_for_specific_model(model_key, effective_role)
         else:
@@ -211,9 +221,14 @@ async def _resolve_llm_for_expert(
                     effective_role,
                     ModelTier(tier_value),
                     task_type=custom_task_type,
+                    reasoning_mode=reasoning_mode,
                 )
             else:
-                service = await get_configured_llm_service(effective_role, custom_task_type)
+                service = await get_configured_llm_service(
+                    effective_role,
+                    custom_task_type,
+                    reasoning_mode=reasoning_mode,
+                )
         return {
             "service": service,
             "agent_role": effective_role,
@@ -288,14 +303,11 @@ async def _execute_explicit_expert_collaboration(state: WorkflowState) -> Collab
         started_at = time.time()
         runtime = await _resolve_llm_for_expert(expert_id=expert_id, state=state, task_type=task_type)
         few_shot_examples: list[dict[str, Any]] = []
-        if (
-            few_shot_total < 3
-            and should_inject_few_shot(
-                workflow_type="explicit_expert_collaboration",
-                stage="collaboration",
-                agent_role=expert_id,
-                is_final_target=expert_id in answer_targets,
-            )
+        if few_shot_total < 3 and should_inject_few_shot(
+            workflow_type="explicit_expert_collaboration",
+            stage="collaboration",
+            agent_role=expert_id,
+            is_final_target=expert_id in answer_targets,
         ):
             few_shot_examples = await resolve_few_shot_examples(
                 db_session=state.context_data.get("db_session"),
@@ -319,10 +331,7 @@ async def _execute_explicit_expert_collaboration(state: WorkflowState) -> Collab
             workflow_type="explicit_expert_collaboration",
             handoff_packets=handoff_packets,
             few_shot_examples=few_shot_examples,
-            extra_instruction=(
-                "请用你的专业视角回答下面的问题。"
-                "必须保留你的独特判断，不要假装代表其他专家。"
-            ),
+            extra_instruction=("请用你的专业视角回答下面的问题。" "必须保留你的独特判断，不要假装代表其他专家。"),
         )
         try:
             response = await asyncio.wait_for(
@@ -415,9 +424,10 @@ async def _execute_explicit_expert_collaboration(state: WorkflowState) -> Collab
         for item in expert_outputs
         if item["expert_id"] in answer_targets
     )
-    answer_names = "、".join(
-        item["display_name"] for item in expert_outputs if item["expert_id"] in answer_targets
-    ) or synthesis_runtime["display_name"]
+    answer_names = (
+        "、".join(item["display_name"] for item in expert_outputs if item["expert_id"] in answer_targets)
+        or synthesis_runtime["display_name"]
+    )
     try:
         final_response = await asyncio.wait_for(
             synthesis_runtime["service"].chat(
@@ -464,8 +474,7 @@ async def _execute_explicit_expert_collaboration(state: WorkflowState) -> Collab
         final_response = (
             "这轮多专家综合出现波动，我先把已经稳定拿到的观点整理给你：\n\n"
             + "\n".join(
-                f"- {item['display_name']}：{str(item['response']).strip()[:140]}"
-                for item in expert_outputs[:3]
+                f"- {item['display_name']}：{str(item['response']).strip()[:140]}" for item in expert_outputs[:3]
             )
             + "\n\n你可以先按这个版本继续推进，我随后还能继续细化。"
         )
@@ -501,17 +510,81 @@ def _build_generation_fallback_response(
     user_message: str,
     knowledge_context: str,
     document_context: str,
+    task_type: TaskType = TaskType.STANDARD_RESPONSE,
 ) -> str:
     best_fact = _extract_best_retrieval_fact(knowledge_context, document_context)
-    if best_fact:
-        return (
-            f"根据当前检索到的知识，{best_fact}\n\n"
-            "当前生成模型暂时繁忙，所以我先直接返回了检索结果里的关键信息。"
+    snippets = _extract_retrieval_snippets(knowledge_context, document_context)
+
+    if task_type is TaskType.TASK_DECOMPOSITION:
+        evidence = best_fact or (snippets[0] if snippets else "")
+        steps = snippets[:3]
+        lines = [
+            "我先给你一版可直接执行的学习任务拆解：",
+            "",
+            "1. 今天先做什么",
+            (
+                f"- 先聚焦当前主题，拿出 25 分钟完成一个最小闭环。{evidence}"
+                if evidence
+                else "- 先用 25 分钟完成一个最小闭环：明确目标、做 1 个例题、写 3 行总结。"
+            ),
+            "",
+            "2. 接下来怎么拆",
+        ]
+        if steps:
+            lines.extend(f"- 第 {index + 1} 步：{item}" for index, item in enumerate(steps))
+        else:
+            lines.extend(
+                [
+                    "- 第 1 步：先梳理概念和公式/定义。",
+                    "- 第 2 步：立刻做 2-3 个代表题，找出卡点。",
+                    "- 第 3 步：把卡点整理成一张错因清单，明天回看。",
+                ]
+            )
+        lines.extend(
+            [
+                "",
+                "3. 一个关键提醒",
+                "- 先做可完成的最小任务，不要一上来把学习计划写得过满。",
+            ]
         )
+        return "\n".join(lines).strip()
 
+    if task_type is TaskType.ERROR_DIAGNOSIS:
+        evidence = best_fact or (snippets[0] if snippets else "")
+        lines = [
+            "我先给你一版结构化诊断：",
+            "",
+            "1. 最可能的问题",
+            f"- {evidence}" if evidence else "- 你现在更像是概念边界没压实，导致一遇到变体题就开始混淆。",
+            "",
+            "2. 为什么会这样",
+            f"- {snippets[1]}" if len(snippets) > 1 else "- 常见原因是只记结论、不记触发条件，做题时只能靠感觉判断。",
+            "",
+            "3. 立刻怎么修",
+            (
+                f"- {snippets[2]}"
+                if len(snippets) > 2
+                else "- 现在就写出“判断条件 -> 典型反例 -> 一句口诀”三联表，再做 2 题验证。"
+            ),
+            "",
+            "4. 5 分钟自测",
+            "- 任选一道相似题，不看答案先说出判断条件；如果说不完整，说明问题还在概念层。",
+        ]
+        return "\n".join(lines).strip()
+
+    if best_fact:
+        return f"根据当前检索到的可靠信息，{best_fact}"
+
+    if snippets:
+        joined = "\n".join(snippets)
+        return "我先根据已检索到的知识结果直接回答你：\n" f"{joined}"
+
+    return f"我已经收到你的问题“{user_message}”。" "如果你愿意，我可以继续把它整理成更细的步骤、诊断或执行清单。"
+
+
+def _extract_retrieval_snippets(*contexts: str) -> list[str]:
     snippets: list[str] = []
-
-    for raw_context in (knowledge_context, document_context):
+    for raw_context in contexts:
         if not raw_context:
             continue
         for line in raw_context.splitlines():
@@ -520,46 +593,67 @@ def _build_generation_fallback_response(
                 continue
             if cleaned.startswith("Relevant Knowledge Base") or cleaned.startswith("Relevant Documents"):
                 continue
+            if cleaned.startswith("- [") and "]: " in cleaned:
+                cleaned = cleaned.split("]: ", 1)[1].strip()
+            elif cleaned.startswith("- "):
+                cleaned = cleaned[2:].strip()
             snippets.append(cleaned)
             if len(snippets) >= 4:
-                break
-        if len(snippets) >= 4:
-            break
+                return snippets
+    return snippets
 
-    if snippets:
-        joined = "\n".join(snippets)
+
+def _rescue_tier_for_task(task_type: TaskType) -> ModelTier:
+    if task_type is TaskType.ERROR_DIAGNOSIS:
+        return ModelTier.PRO
+    if task_type is TaskType.TASK_DECOMPOSITION:
+        return ModelTier.PLUS
+    return ModelTier.FAST
+
+
+def _build_mode_rescue_instruction(task_type: TaskType) -> str:
+    if task_type is TaskType.TASK_DECOMPOSITION:
         return (
-            "我先根据已检索到的知识结果直接回答你：\n"
-            f"{joined}\n\n"
-            "当前生成模型暂时繁忙，所以我优先返回了检索到的可靠内容。"
+            "你需要直接输出一版高质量、结构化、可执行的学习任务拆解。\n"
+            "固定输出：1. 目标判断；2. 今天先做什么；3. 3-5 步学习拆解；4. 风险提醒。\n"
+            "不要暴露内部错误、工具过程、检索过程、模型忙等信息。"
         )
-
+    if task_type is TaskType.ERROR_DIAGNOSIS:
+        return (
+            "你需要直接输出一版高质量、结构化的错误诊断。\n"
+            "固定输出：1. 最可能误区；2. 为什么会混淆；3. 立刻修正办法；4. 5 分钟自测。\n"
+            "不要暴露内部错误、工具过程、检索过程、模型忙等信息。"
+        )
     return (
-        f"我已经收到你的问题“{user_message}”，但当前生成模型暂时繁忙。"
-        "请稍后再试，或让我先基于已有知识检索结果继续整理。"
+        "主生成链当前不可用时，你需要直接输出一版可靠、简洁、可执行的最终回答。\n"
+        "不要暴露内部错误、工具失败、检索过程或“我来帮你查一下”这类过程性话术。\n"
+        "优先给结论、步骤和关键提醒，保持短段落。"
     )
 
 
-async def _build_fast_model_rescue_response(
+async def _build_mode_rescue_response(
     *,
     agent_role: str,
     system_prompt: str,
     user_message: str,
     task_type: TaskType,
-) -> str:
+    reasoning_mode: str,
+    knowledge_context: str = "",
+    document_context: str = "",
+) -> tuple[str, ModelTier]:
+    rescue_tier = _rescue_tier_for_task(task_type)
     rescue_task_type = TaskType.QUICK_QUERY if task_type is TaskType.STANDARD_RESPONSE else task_type
     rescue_llm = await get_configured_llm_service_for_tier(
         agent_role,
-        ModelTier.FAST,
+        rescue_tier,
         task_type=rescue_task_type,
+        reasoning_mode=reasoning_mode,
     )
-    rescue_prompt = (
-        system_prompt
-        + "\n\n## 紧急回退要求\n"
-        "主生成链当前不可用时，你需要直接输出一版可靠、简洁、可执行的最终回答。\n"
-        "不要暴露内部错误、工具失败、检索过程或“我来帮你查一下”这类过程性话术。\n"
-        "优先给结论、步骤和关键提醒，保持短段落。"
-    )
+    snippets = _extract_retrieval_snippets(knowledge_context, document_context)
+    rescue_context = ""
+    if snippets:
+        rescue_context = "\n\n## 可用知识线索\n" + "\n".join(f"- {item}" for item in snippets[:4])
+    rescue_prompt = system_prompt + "\n\n## 紧急回退要求\n" + _build_mode_rescue_instruction(task_type) + rescue_context
     response = await rescue_llm.chat(
         [
             {"role": "system", "content": rescue_prompt},
@@ -567,7 +661,7 @@ async def _build_fast_model_rescue_response(
         ],
         temperature=0.35,
     )
-    return str(response or "").strip()
+    return str(response or "").strip(), rescue_tier
 
 
 def _extract_community_prompt_context(user_message: str) -> dict[str, str]:
@@ -756,6 +850,7 @@ def _resolve_recent_memory_answer(conversation_context: dict[str, Any] | None, u
 
     return None
 
+
 async def context_builder_node(state: WorkflowState) -> WorkflowState:
     """Build user and conversation context."""
     logger.info("Building context...")
@@ -764,6 +859,7 @@ async def context_builder_node(state: WorkflowState) -> WorkflowState:
         user_context = {"name": "User", "preferences": {}}
     state.context_data["user_context"] = user_context
     return state
+
 
 async def retrieval_node(state: WorkflowState) -> WorkflowState:
     """RAG Retrieval."""
@@ -813,7 +909,7 @@ async def retrieval_node(state: WorkflowState) -> WorkflowState:
                     file_ids=file_uuid_list,
                     vector_query=hyde_query,
                     limit=5,
-                    threshold=0.4
+                    threshold=0.4,
                 )
 
                 if doc_results:
@@ -838,18 +934,20 @@ async def retrieval_node(state: WorkflowState) -> WorkflowState:
                             if chunk.section_title:
                                 title = f"{item.file_name} - {chunk.section_title}"
 
-                            citations.append(agent_service_pb2.Citation(
-                                id=str(chunk.id),
-                                title=title,
-                                content=snippet,
-                                source_type="document",
-                                url="",
-                                score=item.score,
-                                file_id=str(chunk.file_id),
-                                page_number=chunk.page_number or 0,
-                                chunk_index=chunk.chunk_index,
-                                section_title=chunk.section_title or ""
-                            ))
+                            citations.append(
+                                agent_service_pb2.Citation(
+                                    id=str(chunk.id),
+                                    title=title,
+                                    content=snippet,
+                                    source_type="document",
+                                    url="",
+                                    score=item.score,
+                                    file_id=str(chunk.file_id),
+                                    page_number=chunk.page_number or 0,
+                                    chunk_index=chunk.chunk_index,
+                                    section_title=chunk.section_title or "",
+                                )
+                            )
 
                     document_context = "\n".join(lines)
             except Exception as e:
@@ -861,11 +959,12 @@ async def retrieval_node(state: WorkflowState) -> WorkflowState:
     if include_references and citations:
         stream_callback = state.context_data.get("stream_callback")
         if stream_callback:
-            await stream_callback(agent_service_pb2.ChatResponse(
-                citations=agent_service_pb2.CitationBlock(citations=citations)
-            ))
+            await stream_callback(
+                agent_service_pb2.ChatResponse(citations=agent_service_pb2.CitationBlock(citations=citations))
+            )
 
     return state
+
 
 async def generation_node(state: WorkflowState) -> WorkflowState:
     """LLM Generation (Streaming)."""
@@ -892,20 +991,23 @@ async def generation_node(state: WorkflowState) -> WorkflowState:
 
     if memory_answer:
         if stream_callback:
-            await stream_callback(agent_service_pb2.ChatResponse(
-                delta=memory_answer,
-                status_update=agent_service_pb2.AgentStatus(
-                    state=agent_service_pb2.AgentStatus.GENERATING,
-                    details="正在根据最近对话补全答案...",
-                    current_agent_name="Sparkle AI"
+            await stream_callback(
+                agent_service_pb2.ChatResponse(
+                    delta=memory_answer,
+                    status_update=agent_service_pb2.AgentStatus(
+                        state=agent_service_pb2.AgentStatus.GENERATING,
+                        details="正在根据最近对话补全答案...",
+                        current_agent_name="Sparkle AI",
+                    ),
                 )
-            ))
+            )
         state.context_data["generation_shortcut"] = "recent_memory"
         state.append_message("assistant", memory_answer)
         state.next_step = "__end__"
         return state
 
     try:
+        reasoning_mode = _resolve_reasoning_mode(state)
         explicit_expert_id = _single_explicit_expert_id(state)
         if explicit_expert_id:
             explicit_runtime = await _resolve_llm_for_expert(
@@ -925,17 +1027,30 @@ async def generation_node(state: WorkflowState) -> WorkflowState:
                     agent_role,
                     ModelTier.FAST,
                     task_type=task_type,
+                    reasoning_mode=reasoning_mode,
                 )
                 state.context_data["first_touch_model_tier"] = ModelTier.FAST.value
             elif use_fast_grounded_synthesis:
-                generation_llm = await get_configured_llm_service_for_tier(
-                    agent_role,
-                    ModelTier.FAST,
-                    task_type=task_type,
-                )
-                state.context_data["final_synthesis_model_tier"] = ModelTier.FAST.value
+                if reasoning_mode == "fast":
+                    generation_llm = await get_configured_llm_service_for_tier(
+                        agent_role,
+                        ModelTier.FAST,
+                        task_type=task_type,
+                        reasoning_mode=reasoning_mode,
+                    )
+                    state.context_data["final_synthesis_model_tier"] = ModelTier.FAST.value
+                else:
+                    generation_llm = await get_configured_llm_service(
+                        agent_role,
+                        task_type,
+                        reasoning_mode=reasoning_mode,
+                    )
             else:
-                generation_llm = await get_configured_llm_service(agent_role, task_type)
+                generation_llm = await get_configured_llm_service(
+                    agent_role,
+                    task_type,
+                    reasoning_mode=reasoning_mode,
+                )
     except Exception as e:
         logger.warning(f"Failed to configure role-scoped LLM for {agent_role}/{task_type.value}: {e}")
         generation_llm = llm_service
@@ -951,10 +1066,14 @@ async def generation_node(state: WorkflowState) -> WorkflowState:
     elif use_slim_standard_context:
         prompt_user_context = _build_slim_user_context_for_standard_reply(user_context)
         prompt_conversation_context = {
-            "messages": (conversation_context.get("messages") or [])[-6:],
+            # For generic standard Q&A, keep only the current in-session turns to
+            # avoid dragging historical plan/task state into concept explanations.
+            "messages": list(state.messages or [])[-6:],
         }
     else:
-        prompt_user_context = _build_slim_user_context_for_deep_analysis(user_context) if use_slim_deep_context else user_context
+        prompt_user_context = (
+            _build_slim_user_context_for_deep_analysis(user_context) if use_slim_deep_context else user_context
+        )
         prompt_conversation_context = {"messages": []} if use_slim_deep_context else conversation_context
 
     # Extract intent instruction from plan_metadata (Vision Item 4b)
@@ -995,13 +1114,25 @@ Ask about their available time and current tasks if needed.
         prompt_version=prompt_version,
         agent_role=_coerce_agent_role(getattr(generation_llm, "agent_role", agent_role)),
         model_key=getattr(generation_llm, "model_key", None),
-        plan_context=None if (use_slim_deep_context or use_fast_grounded_synthesis or use_slim_standard_context) else plan_context,
-        intent_instruction=intent_instruction, # Vision Item 4b
-        session_feedback_instruction=str(state.context_data.get("session_feedback_instruction") or ""),
-        dual_core_instruction=str(state.context_data.get("dual_core_prompt_instruction") or ""),
+        plan_context=(
+            None
+            if (use_slim_deep_context or use_fast_grounded_synthesis or use_slim_standard_context)
+            else plan_context
+        ),
+        intent_instruction=intent_instruction,  # Vision Item 4b
+        session_feedback_instruction=(
+            "" if use_slim_standard_context else str(state.context_data.get("session_feedback_instruction") or "")
+        ),
+        dual_core_instruction=(
+            "" if use_slim_standard_context else str(state.context_data.get("dual_core_prompt_instruction") or "")
+        ),
         context_focus=None if use_slim_standard_context else state.context_data.get("context_focus"),
-        context_briefing_note=str(state.context_data.get("context_briefing_note") or ""),
-        context_level="light" if (use_slim_deep_context or use_fast_grounded_synthesis or use_slim_standard_context) else "full",
+        context_briefing_note=(
+            "" if use_slim_standard_context else str(state.context_data.get("context_briefing_note") or "")
+        ),
+        context_level=(
+            "light" if (use_slim_deep_context or use_fast_grounded_synthesis or use_slim_standard_context) else "full"
+        ),
         chat_mode=str(state.context_data.get("chat_mode", "standard") or "standard"),
     )
     if explicit_runtime and explicit_runtime.get("system_prompt"):
@@ -1026,7 +1157,8 @@ Ask about their available time and current tasks if needed.
             "\n\n## 通用知识问答约束\n"
             "这是一个通用概念解释或轻量建议问题。\n"
             "除非用户明确询问，否则不要引入当前计划、任务、专注统计、画像或系统状态。\n"
-            "先直接回答问题本身，再决定是否补一个很轻的下一步建议。"
+            "先直接回答问题本身，再决定是否补一个很轻的下一步建议。\n"
+            "如果要给开始动作，也只能给通用、与任何当前待办或计划无关的最小动作，不要点名具体任务。"
         )
     else:
         system_prompt += (
@@ -1036,11 +1168,21 @@ Ask about their available time and current tasks if needed.
             "如果工具失败，不要原样转述内部错误堆栈；只用一句自然的话说明相关数据暂时不可用，并继续给出可执行建议。"
         )
 
-    knowledge_context = "" if (use_slim_deep_context or use_fast_grounded_synthesis or use_slim_standard_context) else (state.context_data.get("knowledge_context") or "")
+    raw_knowledge_context = state.context_data.get("knowledge_context") or ""
+    knowledge_context = (
+        ""
+        if (use_slim_deep_context or use_fast_grounded_synthesis or use_slim_standard_context)
+        else raw_knowledge_context
+    )
     if knowledge_context:
         system_prompt += f"\n\n## Retrieved Knowledge\n{knowledge_context}"
 
-    document_context = "" if (use_slim_deep_context or use_fast_grounded_synthesis or use_slim_standard_context) else (state.context_data.get("document_context") or "")
+    raw_document_context = state.context_data.get("document_context") or ""
+    document_context = (
+        ""
+        if (use_slim_deep_context or use_fast_grounded_synthesis or use_slim_standard_context)
+        else raw_document_context
+    )
     if document_context:
         system_prompt += f"\n\n## Retrieved Documents\n{document_context}"
 
@@ -1052,25 +1194,24 @@ Ask about their available time and current tasks if needed.
         logger.info("Disabling tool exposure for deep analysis generation")
         tools = []
 
-    if (
-        stream_callback
-        and _should_force_fast_first_touch(
-            state,
-            explicit_runtime=explicit_runtime,
-            task_type=task_type,
-        )
+    if stream_callback and _should_force_fast_first_touch(
+        state,
+        explicit_runtime=explicit_runtime,
+        task_type=task_type,
     ):
-        await stream_callback(agent_service_pb2.ChatResponse(
-            status_update=agent_service_pb2.AgentStatus(
-                state=agent_service_pb2.AgentStatus.THINKING,
-                details="已收到，Flash 快响层正在组织首轮回复...",
-                current_agent_name="Sparkle Flash",
-            ),
-            metadata={
-                "fast_first_touch": "true",
-                "first_touch_tier": ModelTier.FAST.value,
-            },
-        ))
+        await stream_callback(
+            agent_service_pb2.ChatResponse(
+                status_update=agent_service_pb2.AgentStatus(
+                    state=agent_service_pb2.AgentStatus.THINKING,
+                    details="已收到，Flash 快响层正在组织首轮回复...",
+                    current_agent_name="Sparkle Flash",
+                ),
+                metadata={
+                    "fast_first_touch": "true",
+                    "first_touch_tier": ModelTier.FAST.value,
+                },
+            )
+        )
 
     # 检查是否使用思考模式，如果是则发送状态更新
     # 这会让前端显示"思考中"提示
@@ -1078,13 +1219,15 @@ Ask about their available time and current tasks if needed.
         is_thinking = generation_llm.is_thinking_mode()
 
         if is_thinking and stream_callback:
-            await stream_callback(agent_service_pb2.ChatResponse(
-                status_update=agent_service_pb2.AgentStatus(
-                    state=agent_service_pb2.AgentStatus.THINKING,
-                    details="正在深度思考中，请稍候...",
-                    current_agent_name="Sparkle AI"
+            await stream_callback(
+                agent_service_pb2.ChatResponse(
+                    status_update=agent_service_pb2.AgentStatus(
+                        state=agent_service_pb2.AgentStatus.THINKING,
+                        details="正在深度思考中，请稍候...",
+                        current_agent_name="Sparkle AI",
+                    )
                 )
-            ))
+            )
     except Exception as e:
         logger.warning(f"Failed to check thinking mode: {e}")
 
@@ -1101,6 +1244,7 @@ Ask about their available time and current tasks if needed.
         state.context_data["active_generation_model"] = selection.config.model_name
         state.context_data["generation_model_key"] = selection.model_key
         state.context_data["generation_provider"] = selection.config.provider.value
+        state.context_data["generation_model_tier"] = selection.config.tier.value
         state.context_data["model_used"] = selection.model_key
         if run_ledger is not None:
             await run_ledger.record_event(
@@ -1156,13 +1300,13 @@ Ask about their available time and current tasks if needed.
                         first_chunk_sent=first_chunk_sent,
                     )
                     last_flush_at = time.monotonic()
-                    await stream_callback(agent_service_pb2.ChatResponse(
-                        tool_call=agent_service_pb2.ToolCall(
-                            id=chunk.tool_call_id,
-                            name=chunk.tool_name,
-                            arguments=json.dumps(chunk.full_arguments)
+                    await stream_callback(
+                        agent_service_pb2.ChatResponse(
+                            tool_call=agent_service_pb2.ToolCall(
+                                id=chunk.tool_call_id, name=chunk.tool_name, arguments=json.dumps(chunk.full_arguments)
+                            )
                         )
-                    ))
+                    )
             elif chunk.type == "usage":
                 usage_prompt_tokens = chunk.prompt_tokens or 0
                 usage_completion_tokens = chunk.completion_tokens or 0
@@ -1173,53 +1317,85 @@ Ask about their available time and current tasks if needed.
                         first_chunk_sent=first_chunk_sent,
                     )
                     last_flush_at = time.monotonic()
-                    await stream_callback(agent_service_pb2.ChatResponse(
-                        usage=agent_service_pb2.Usage(
-                            prompt_tokens=chunk.prompt_tokens or 0,
-                            completion_tokens=chunk.completion_tokens or 0,
-                            total_tokens=(chunk.prompt_tokens or 0) + (chunk.completion_tokens or 0)
+                    await stream_callback(
+                        agent_service_pb2.ChatResponse(
+                            usage=agent_service_pb2.Usage(
+                                prompt_tokens=chunk.prompt_tokens or 0,
+                                completion_tokens=chunk.completion_tokens or 0,
+                                total_tokens=(chunk.prompt_tokens or 0) + (chunk.completion_tokens or 0),
+                            )
                         )
-                    ))
+                    )
     except Exception as e:
         logger.warning(f"Generation streaming failed, attempting fast rescue response: {e}")
         state.context_data["generation_fallback_reason"] = str(e)
         usage_prompt_tokens = 0
         usage_completion_tokens = 0
         try:
-            rescued_response = await _build_fast_model_rescue_response(
+            rescued_response, rescue_tier = await _build_mode_rescue_response(
                 agent_role=agent_role,
                 system_prompt=system_prompt,
                 user_message=user_message,
                 task_type=task_type,
+                reasoning_mode=reasoning_mode,
+                knowledge_context=raw_knowledge_context,
+                document_context=raw_document_context,
             )
             if rescued_response:
                 full_response = rescued_response
                 if stream_callback:
-                    await stream_callback(agent_service_pb2.ChatResponse(
-                        delta=rescued_response,
-                        status_update=agent_service_pb2.AgentStatus(
-                            state=agent_service_pb2.AgentStatus.GENERATING,
-                            details="主生成链波动，已切到快速备援回复...",
-                            current_agent_name="Sparkle Rescue",
-                        ),
-                        metadata={
-                            "generation_rescue": "true",
-                            "generation_rescue_tier": ModelTier.FAST.value,
-                        },
-                    ))
+                    await stream_callback(
+                        agent_service_pb2.ChatResponse(
+                            delta=rescued_response,
+                            status_update=agent_service_pb2.AgentStatus(
+                                state=agent_service_pb2.AgentStatus.GENERATING,
+                                details="主生成链波动，已切到快速备援回复...",
+                                current_agent_name="Sparkle Rescue",
+                            ),
+                            metadata={
+                                "generation_rescue": "true",
+                                "generation_rescue_tier": rescue_tier.value,
+                            },
+                        )
+                    )
         except Exception as rescue_error:
             logger.warning(f"Fast rescue response also failed, using retrieval fallback: {rescue_error}")
 
     retrieval_grounded_response = _build_generation_fallback_response(
         user_message=user_message,
-        knowledge_context=knowledge_context,
-        document_context=document_context,
+        knowledge_context=raw_knowledge_context,
+        document_context=raw_document_context,
+        task_type=task_type,
     )
     if full_response and not tool_calls:
         sanitized_community_response = _sanitize_community_sendable_response(user_message, full_response)
         if sanitized_community_response != full_response:
             logger.info("Sanitized community generation response into direct sendable content")
             full_response = sanitized_community_response
+        if use_slim_standard_context and (
+            _has_standard_tool_or_system_leak(full_response)
+            or _has_standard_personal_context_leak(full_response, user_context)
+        ):
+            logger.info("Replacing standard response that leaked tool/system or unrelated personal context")
+            try:
+                rescued_response, _ = await _build_mode_rescue_response(
+                    agent_role=agent_role,
+                    system_prompt=system_prompt,
+                    user_message=user_message,
+                    task_type=TaskType.QUICK_QUERY,
+                    reasoning_mode="fast",
+                )
+            except Exception as rescue_error:
+                logger.warning(f"Standard leak rescue failed, using retrieval-grounded answer: {rescue_error}")
+                rescued_response = ""
+
+            if rescued_response and not (
+                _has_standard_tool_or_system_leak(rescued_response)
+                or _has_standard_personal_context_leak(rescued_response, user_context)
+            ):
+                full_response = rescued_response
+            else:
+                full_response = retrieval_grounded_response
 
     if full_response and not tool_calls and _is_low_information_generation_response(full_response):
         community_fallback = _build_community_prompt_fallback_response(user_message)
@@ -1228,11 +1404,14 @@ Ask about their available time and current tasks if needed.
             full_response = community_fallback
         else:
             try:
-                rescued_response = await _build_fast_model_rescue_response(
+                rescued_response, _ = await _build_mode_rescue_response(
                     agent_role=agent_role,
                     system_prompt=system_prompt,
                     user_message=user_message,
                     task_type=task_type,
+                    reasoning_mode=reasoning_mode,
+                    knowledge_context=raw_knowledge_context,
+                    document_context=raw_document_context,
                 )
             except Exception as rescue_error:
                 logger.warning(f"Low-information rescue failed, using retrieval-grounded answer: {rescue_error}")
@@ -1250,14 +1429,16 @@ Ask about their available time and current tasks if needed.
         full_response = fallback_response
         if stream_callback:
             if not first_chunk_sent:
-                await stream_callback(agent_service_pb2.ChatResponse(
-                    delta=fallback_response,
-                    status_update=agent_service_pb2.AgentStatus(
-                        state=agent_service_pb2.AgentStatus.GENERATING,
-                        details="正在返回检索结果（生成模型暂时繁忙）...",
-                        current_agent_name="Sparkle AI"
+                await stream_callback(
+                    agent_service_pb2.ChatResponse(
+                        delta=fallback_response,
+                        status_update=agent_service_pb2.AgentStatus(
+                            state=agent_service_pb2.AgentStatus.GENERATING,
+                            details="正在返回检索结果（生成模型暂时繁忙）...",
+                            current_agent_name="Sparkle AI",
+                        ),
                     )
-                ))
+                )
             else:
                 await stream_callback(agent_service_pb2.ChatResponse(delta=fallback_response))
     elif stream_callback:
@@ -1282,9 +1463,9 @@ Ask about their available time and current tasks if needed.
                 "prompt_tokens": usage_prompt_tokens,
                 "completion_tokens": usage_completion_tokens,
                 "total_tokens": total_tokens,
-                "estimated_cost_usd": round((total_tokens / 1000.0) * selection.estimated_cost_per_1k, 6)
-                if total_tokens > 0
-                else 0.0,
+                "estimated_cost_usd": (
+                    round((total_tokens / 1000.0) * selection.estimated_cost_per_1k, 6) if total_tokens > 0 else 0.0
+                ),
             },
             emit_snapshot=False,
         )
@@ -1305,6 +1486,7 @@ Ask about their available time and current tasks if needed.
         state.next_step = "__end__"
 
     return state
+
 
 async def tool_execution_node(state: WorkflowState) -> WorkflowState:
     """Execute Tools with Grounding Validation (Phase 1 & Phase 2).
@@ -1338,9 +1520,11 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
             if not validation_result.is_valid:
                 logger.error(f"LangGraph plan validation failed: {validation_result.failure_reason}")
                 if stream_callback:
-                    await stream_callback(agent_service_pb2.ChatResponse(
-                        delta=f"\n\n⚠️ 计划执行被拒绝: {validation_result.failure_reason}"
-                    ))
+                    await stream_callback(
+                        agent_service_pb2.ChatResponse(
+                            delta=f"\n\n⚠️ 计划执行被拒绝: {validation_result.failure_reason}"
+                        )
+                    )
                 state.context_data["validation_failed"] = True
                 state.next_step = "__end__"
                 return state
@@ -1353,18 +1537,16 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
                     description="高风险操作需要确认",
                     tool_calls=executable_plan.tool_calls,
                     plan_id=executable_plan.plan_id,
-                    snapshot_id=getattr(snapshot, "snapshot_id", None)
+                    snapshot_id=getattr(snapshot, "snapshot_id", None),
                 )
                 if stream_callback:
-                    await stream_callback(agent_service_pb2.ChatResponse(
-                        delta=f"\n\n⚠️ 该操作需要确认才能执行: {', '.join(validation_result.risk_flags)}\n"
-                              f"action_id={action_id}",
-                        metadata={
-                            "requires_hitl": "true",
-                            "action_id": action_id,
-                            "reason": "risk_flags"
-                        }
-                    ))
+                    await stream_callback(
+                        agent_service_pb2.ChatResponse(
+                            delta=f"\n\n⚠️ 该操作需要确认才能执行: {', '.join(validation_result.risk_flags)}\n"
+                            f"action_id={action_id}",
+                            metadata={"requires_hitl": "true", "action_id": action_id, "reason": "risk_flags"},
+                        )
+                    )
                 state.context_data["validation_failed"] = True
                 state.next_step = "__end__"
                 return state
@@ -1401,23 +1583,27 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
                     f"正在执行 DAG 第 {event.get('layer_number', 0)}/{event.get('total_layers', 0)} 层，"
                     f"{len(event.get('tool_names', []))} 个步骤并行"
                 )
-                await stream_callback(agent_service_pb2.ChatResponse(
-                    status_update=agent_service_pb2.AgentStatus(
-                        state=agent_service_pb2.AgentStatus.EXECUTING_TOOL,
-                        details=details,
-                        active_agent=agent_service_pb2.ORCHESTRATOR
-                    ),
-                    metadata={
-                        "dag_execution_event": json.dumps(payload_event, ensure_ascii=False),
-                    },
-                ))
+                await stream_callback(
+                    agent_service_pb2.ChatResponse(
+                        status_update=agent_service_pb2.AgentStatus(
+                            state=agent_service_pb2.AgentStatus.EXECUTING_TOOL,
+                            details=details,
+                            active_agent=agent_service_pb2.ORCHESTRATOR,
+                        ),
+                        metadata={
+                            "dag_execution_event": json.dumps(payload_event, ensure_ascii=False),
+                        },
+                    )
+                )
                 return
 
-            await stream_callback(agent_service_pb2.ChatResponse(
-                metadata={
-                    "dag_execution_event": json.dumps(payload_event, ensure_ascii=False),
-                }
-            ))
+            await stream_callback(
+                agent_service_pb2.ChatResponse(
+                    metadata={
+                        "dag_execution_event": json.dumps(payload_event, ensure_ascii=False),
+                    }
+                )
+            )
 
         plan_result = await executor.execute_plan(
             plan=executable_plan,
@@ -1433,13 +1619,15 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
 
             if stream_callback:
                 status_msg = f"{step_result.tool_name}: {'执行成功' if result.success else '执行失败'}"
-                await stream_callback(agent_service_pb2.ChatResponse(
-                    status_update=agent_service_pb2.AgentStatus(
-                        state=agent_service_pb2.AgentStatus.IDLE,
-                        details=status_msg,
-                        active_agent=agent_service_pb2.ORCHESTRATOR
+                await stream_callback(
+                    agent_service_pb2.ChatResponse(
+                        status_update=agent_service_pb2.AgentStatus(
+                            state=agent_service_pb2.AgentStatus.IDLE,
+                            details=status_msg,
+                            active_agent=agent_service_pb2.ORCHESTRATOR,
+                        )
                     )
-                ))
+                )
 
                 data_struct = struct_pb2.Struct()
                 if isinstance(result.data, dict):
@@ -1448,31 +1636,37 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
                 if isinstance(result.widget_data, dict):
                     widget_struct.update(result.widget_data)
 
-                await stream_callback(agent_service_pb2.ChatResponse(
-                    tool_result=agent_service_pb2.ToolResultPayload(
-                        tool_name=result.tool_name,
-                        success=result.success,
-                        data=data_struct,
-                        error_message=result.error_message or "",
-                        suggestion=result.suggestion or "",
-                        widget_type=result.widget_type or "",
-                        widget_data=widget_struct,
-                        tool_call_id=step_result.step_id
+                await stream_callback(
+                    agent_service_pb2.ChatResponse(
+                        tool_result=agent_service_pb2.ToolResultPayload(
+                            tool_name=result.tool_name,
+                            success=result.success,
+                            data=data_struct,
+                            error_message=result.error_message or "",
+                            suggestion=result.suggestion or "",
+                            widget_type=result.widget_type or "",
+                            widget_data=widget_struct,
+                            tool_call_id=step_result.step_id,
+                        )
                     )
-                ))
+                )
 
-            result_json = json.dumps({
-                "success": result.success,
-                "result": result.data,
-                "error": result.error_message,
-                "fallback": result.data.get("fallback", False) if isinstance(result.data, dict) else False,
-            })
+            result_json = json.dumps(
+                {
+                    "success": result.success,
+                    "result": result.data,
+                    "error": result.error_message,
+                    "fallback": result.data.get("fallback", False) if isinstance(result.data, dict) else False,
+                }
+            )
             state.append_message("tool", result_json, name=step_result.tool_name)
 
         if plan_result.aborted and stream_callback:
-            await stream_callback(agent_service_pb2.ChatResponse(
-                delta=f"\n\n⚠️ 计划执行中断: {plan_result.abort_reason or 'required step failed'}"
-            ))
+            await stream_callback(
+                agent_service_pb2.ChatResponse(
+                    delta=f"\n\n⚠️ 计划执行中断: {plan_result.abort_reason or 'required step failed'}"
+                )
+            )
 
         # Write feedback for LangGraph plan
         await _write_feedback(
@@ -1482,7 +1676,7 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
             redis_client=redis_client,
             start_time=start_time,
             tool_count=len(plan_result.step_results),
-            plan_id=executable_plan.plan_id
+            plan_id=executable_plan.plan_id,
         )
 
         # Clear executable_plan and loop back
@@ -1521,10 +1715,10 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
                     id=tc.tool_call_id or str(uuid.uuid4()),
                     name=tc.tool_name,
                     params=_prepare_params(tc),
-                    point_of_no_return=tc.tool_name in ["delete_task", "delete_plan"]
+                    point_of_no_return=tc.tool_name in ["delete_task", "delete_plan"],
                 )
                 for tc in tool_calls
-            ]
+            ],
         )
 
         validation_result = await validator.validate_plan(plan)
@@ -1532,9 +1726,9 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
         if not validation_result.is_valid:
             logger.error(f"Grounding validation failed: {validation_result.failure_reason}")
             if stream_callback:
-                await stream_callback(agent_service_pb2.ChatResponse(
-                    delta=f"\n\n⚠️ 执行被拒绝: {validation_result.failure_reason}"
-                ))
+                await stream_callback(
+                    agent_service_pb2.ChatResponse(delta=f"\n\n⚠️ 执行被拒绝: {validation_result.failure_reason}")
+                )
             state.context_data["validation_failed"] = True
             state.next_step = "__end__"
             return state
@@ -1547,18 +1741,16 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
                 description="高风险操作需要确认",
                 tool_calls=plan.tool_calls,
                 plan_id=plan.plan_id,
-                snapshot_id=None
+                snapshot_id=None,
             )
             if stream_callback:
-                await stream_callback(agent_service_pb2.ChatResponse(
-                    delta=f"\n\n⚠️ 该操作需要确认才能执行: {', '.join(validation_result.risk_flags)}\n"
-                          f"action_id={action_id}",
-                    metadata={
-                        "requires_hitl": "true",
-                        "action_id": action_id,
-                        "reason": "risk_flags"
-                    }
-                ))
+                await stream_callback(
+                    agent_service_pb2.ChatResponse(
+                        delta=f"\n\n⚠️ 该操作需要确认才能执行: {', '.join(validation_result.risk_flags)}\n"
+                        f"action_id={action_id}",
+                        metadata={"requires_hitl": "true", "action_id": action_id, "reason": "risk_flags"},
+                    )
+                )
             state.context_data["validation_failed"] = True
             state.next_step = "__end__"
             return state
@@ -1597,7 +1789,7 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
         redis_client=redis_client,
         start_time=start_time,
         tool_count=len(tool_calls),
-        plan_id=plan_id
+        plan_id=plan_id,
     )
 
     # Clear tool calls and loop back to generation
@@ -1611,6 +1803,7 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
 # ==========================================
 # Intent Classification & Tool Planning
 # ==========================================
+
 
 def detect_exam_urgency(text: str) -> int | None:
     """Return days until exam, or None if no exam urgency detected."""
@@ -1651,8 +1844,7 @@ def _classify_user_intent(message: str) -> str | None:
     exam_keywords = ["考试", "考研", "期末", "测验", "模拟考", "quiz", "midterm", "final", "exam", "test"]
     exam_planning_keywords = ["准备", "备考", "复习", "冲刺", "计划", "安排", "倒计时", "最后", "提分"]
     if any(keyword in message_lower for keyword in exam_keywords) and (
-        any(keyword in message_lower for keyword in exam_planning_keywords)
-        or detect_exam_urgency(message) is not None
+        any(keyword in message_lower for keyword in exam_planning_keywords) or detect_exam_urgency(message) is not None
     ):
         return "exam_preparation"
 
@@ -1679,12 +1871,7 @@ def _should_use_collaboration(message: str, intent: str | None) -> bool:
         return False
 
     # 这些意图触发协作工作流
-    collaboration_intents = [
-        "exam_preparation",
-        "task_decomposition",
-        "error_diagnosis",
-        "deep_learning"
-    ]
+    collaboration_intents = ["exam_preparation", "task_decomposition", "error_diagnosis", "deep_learning"]
 
     return intent in collaboration_intents
 
@@ -1704,16 +1891,55 @@ def _should_disable_tools_for_light_standard_reply(state: WorkflowState, user_me
         return False
 
     explicit_tool_intents = (
-        "创建", "新建", "添加", "保存", "同步", "提醒", "加入日历", "开始专注",
-        "帮我建", "帮我加", "帮我创建", "帮我安排", "设个提醒", "预约",
-        "schedule", "remind", "create", "add", "save", "sync", "start focus",
+        "创建",
+        "新建",
+        "添加",
+        "保存",
+        "同步",
+        "提醒",
+        "加入日历",
+        "开始专注",
+        "帮我建",
+        "帮我加",
+        "帮我创建",
+        "帮我安排",
+        "设个提醒",
+        "预约",
+        "schedule",
+        "remind",
+        "create",
+        "add",
+        "save",
+        "sync",
+        "start focus",
     )
     personal_data_intents = (
-        "我的计划", "我现在的计划", "我的任务", "我当前的任务", "我的日程", "我的日历",
-        "我的知识星图", "我的画像", "我的专注", "我的进度", "我的状态", "结合我现在",
-        "根据我的", "看看我的", "查一下我的", "我今天要做什么", "我今天该做什么",
-        "my plan", "my task", "my tasks", "my schedule", "my calendar", "my progress",
-        "my profile", "based on my", "check my",
+        "我的计划",
+        "我现在的计划",
+        "我的任务",
+        "我当前的任务",
+        "我的日程",
+        "我的日历",
+        "我的知识星图",
+        "我的画像",
+        "我的专注",
+        "我的进度",
+        "我的状态",
+        "结合我现在",
+        "根据我的",
+        "看看我的",
+        "查一下我的",
+        "我今天要做什么",
+        "我今天该做什么",
+        "my plan",
+        "my task",
+        "my tasks",
+        "my schedule",
+        "my calendar",
+        "my progress",
+        "my profile",
+        "based on my",
+        "check my",
     )
     if any(keyword in text for keyword in explicit_tool_intents + personal_data_intents):
         return False
@@ -1731,9 +1957,69 @@ def _should_use_slim_standard_context(state: WorkflowState, user_message: str) -
         return False
     if context_data.get("selected_experts") or context_data.get("answer_experts"):
         return False
-    if context_data.get("knowledge_context") or context_data.get("document_context"):
-        return False
     return _should_disable_tools_for_light_standard_reply(state, user_message)
+
+
+def _has_standard_tool_or_system_leak(text: str) -> bool:
+    lowered = str(text or "").strip().lower()
+    if not lowered:
+        return False
+    leak_markers = (
+        "get_plan_state",
+        "query_plan_tasks",
+        "功能暂时不可用",
+        "错误详情",
+        "我们正在努力恢复服务",
+        "根据你的计划",
+        "当前有 2 个计划",
+        "当前有2个计划",
+        "今日专注",
+        "番茄钟次数",
+        "与你当前计划匹配",
+        "待办任务top 1",
+        "根据你的行为模式分析",
+        "当前专注度不足",
+        "从你的待办任务中选择",
+        "当前最重要的学习任务",
+        "你的待办任务",
+    )
+    return any(marker.lower() in lowered for marker in leak_markers)
+
+
+def _has_standard_personal_context_leak(text: str, user_context: dict[str, Any] | None) -> bool:
+    lowered = str(text or "").strip().lower()
+    if not lowered or not isinstance(user_context, dict):
+        return False
+
+    generic_markers = (
+        "根据你的待办任务",
+        "根据你当前的待办任务",
+        "从你当前待办任务中",
+        "你的任务列表",
+        "结合你当前计划",
+        "根据你当前计划",
+    )
+    if any(marker.lower() in lowered for marker in generic_markers):
+        return True
+
+    def _iter_titles(items: Any) -> list[str]:
+        titles: list[str] = []
+        if not isinstance(items, list):
+            return titles
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            title = str(item.get("title") or item.get("name") or "").strip()
+            if len(title) >= 4:
+                titles.append(title)
+        return titles
+
+    personal_titles = (
+        _iter_titles(user_context.get("next_actions"))
+        + _iter_titles(user_context.get("active_plans"))
+        + _iter_titles(user_context.get("active_goals"))
+    )
+    return any(title.lower() in lowered for title in personal_titles)
 
 
 def _should_disable_tools_for_deep_analysis(state: WorkflowState) -> bool:
@@ -1763,10 +2049,33 @@ def _should_use_slim_deep_analysis_context(state: WorkflowState, user_message: s
         return False
 
     personal_or_system_keywords = (
-        "我的", "我当前", "我的计划", "我的任务", "根据我的", "结合我的",
-        "你看到我", "我的画像", "我的知识星图", "帮我规划", "上传", "文档",
-        "文件", "笔记", "错题", "计划", "任务", "日程", "calendar", "task",
-        "plan", "profile", "history", "document", "file", "upload", "my ",
+        "我的",
+        "我当前",
+        "我的计划",
+        "我的任务",
+        "根据我的",
+        "结合我的",
+        "你看到我",
+        "我的画像",
+        "我的知识星图",
+        "帮我规划",
+        "上传",
+        "文档",
+        "文件",
+        "笔记",
+        "错题",
+        "计划",
+        "任务",
+        "日程",
+        "calendar",
+        "task",
+        "plan",
+        "profile",
+        "history",
+        "document",
+        "file",
+        "upload",
+        "my ",
     )
     return not any(keyword in text for keyword in personal_or_system_keywords)
 
@@ -1809,14 +2118,16 @@ async def _flush_stream_text_buffer(
         return first_chunk_sent
 
     if not first_chunk_sent:
-        await stream_callback(agent_service_pb2.ChatResponse(
-            delta=content,
-            status_update=agent_service_pb2.AgentStatus(
-                state=agent_service_pb2.AgentStatus.GENERATING,
-                details="正在生成回复...",
-                current_agent_name="Sparkle AI",
-            ),
-        ))
+        await stream_callback(
+            agent_service_pb2.ChatResponse(
+                delta=content,
+                status_update=agent_service_pb2.AgentStatus(
+                    state=agent_service_pb2.AgentStatus.GENERATING,
+                    details="正在生成回复...",
+                    current_agent_name="Sparkle AI",
+                ),
+            )
+        )
         return True
 
     await stream_callback(agent_service_pb2.ChatResponse(delta=content))
@@ -1893,13 +2204,15 @@ async def collaboration_node(state: WorkflowState) -> WorkflowState:
 
         # Send status update
         if stream_callback:
-            await stream_callback(agent_service_pb2.ChatResponse(
-                status_update=agent_service_pb2.AgentStatus(
-                    state=agent_service_pb2.AgentStatus.THINKING,
-                    details=f"Executing {intent} collaboration workflow...",
-                    active_agent=agent_service_pb2.ORCHESTRATOR
+            await stream_callback(
+                agent_service_pb2.ChatResponse(
+                    status_update=agent_service_pb2.AgentStatus(
+                        state=agent_service_pb2.AgentStatus.THINKING,
+                        details=f"Executing {intent} collaboration workflow...",
+                        active_agent=agent_service_pb2.ORCHESTRATOR,
+                    )
                 )
-            ))
+            )
 
         # Execute workflow
         logger.info(f"Executing {WorkflowClass.__name__} for intent: {intent}")
@@ -1916,9 +2229,9 @@ async def collaboration_node(state: WorkflowState) -> WorkflowState:
         state.context_data["workflow_type"] = validated_result.workflow_type
 
         # Emit collaboration timeline metadata for clients
-        if stream_callback and hasattr(validated_result, 'timeline'):
+        if stream_callback and hasattr(validated_result, "timeline"):
             execution_time = 0.0
-            if hasattr(validated_result, 'metadata') and validated_result.metadata:
+            if hasattr(validated_result, "metadata") and validated_result.metadata:
                 execution_time = validated_result.metadata.get("execution_time", 0.0)
             steps = []
             for event in validated_result.timeline:
@@ -1952,15 +2265,15 @@ async def collaboration_node(state: WorkflowState) -> WorkflowState:
                 "execution_time_ms": int(execution_time * 1000),
                 "steps": steps,
             }
-            await stream_callback(agent_service_pb2.ChatResponse(
-                delta="",
-                metadata={
-                    "collaboration_timeline": json.dumps(collaboration_timeline, ensure_ascii=False)
-                }
-            ))
+            await stream_callback(
+                agent_service_pb2.ChatResponse(
+                    delta="",
+                    metadata={"collaboration_timeline": json.dumps(collaboration_timeline, ensure_ascii=False)},
+                )
+            )
 
         # Send collaboration result to client (optional: timeline visualization)
-        if stream_callback and hasattr(validated_result, 'timeline'):
+        if stream_callback and hasattr(validated_result, "timeline"):
             for event in validated_result.timeline:
                 logger.info(f"Timeline event: {event}")
 
@@ -1993,12 +2306,10 @@ async def collaboration_post_process_node(state: WorkflowState) -> WorkflowState
     final_response_text = ""
 
     # Stream the final response
-    if stream_callback and hasattr(collaboration_result, 'final_response'):
+    if stream_callback and hasattr(collaboration_result, "final_response"):
         final_response_text = str(collaboration_result.final_response or "").strip()
-        await stream_callback(agent_service_pb2.ChatResponse(
-            delta=final_response_text
-        ))
-    elif hasattr(collaboration_result, 'final_response'):
+        await stream_callback(agent_service_pb2.ChatResponse(delta=final_response_text))
+    elif hasattr(collaboration_result, "final_response"):
         final_response_text = str(collaboration_result.final_response or "").strip()
 
     if final_response_text:
@@ -2006,11 +2317,11 @@ async def collaboration_post_process_node(state: WorkflowState) -> WorkflowState
 
     # Extract and queue action cards for execution
     action_cards = []
-    if hasattr(collaboration_result, 'outputs'):
+    if hasattr(collaboration_result, "outputs"):
         for output in collaboration_result.outputs:
-            if hasattr(output, 'tool_results'):
+            if hasattr(output, "tool_results"):
                 for tool_result in output.tool_results:
-                    if hasattr(tool_result, 'widget_type') and tool_result.widget_type:
+                    if hasattr(tool_result, "widget_type") and tool_result.widget_type:
                         action_cards.append(tool_result)
 
     if action_cards:
@@ -2039,11 +2350,11 @@ async def _ensure_action_cards(collaboration_result, state: WorkflowState):
     has_action_cards = False
 
     # Check if result already has action cards
-    if hasattr(collaboration_result, 'outputs'):
+    if hasattr(collaboration_result, "outputs"):
         for output in collaboration_result.outputs:
-            if hasattr(output, 'tool_results'):
+            if hasattr(output, "tool_results"):
                 for tr in output.tool_results:
-                    if hasattr(tr, 'widget_type') and tr.widget_type:
+                    if hasattr(tr, "widget_type") and tr.widget_type:
                         has_action_cards = True
                         break
 
@@ -2063,16 +2374,13 @@ Return only valid JSON array, no markdown.
             if action_data and isinstance(action_data, list):
                 # Wrap as ToolResult objects
                 from app.tools.base import ToolResult
+
                 action_cards = [
                     ToolResult(
-                        widget_type="task_list",
-                        widget_data={
-                            "tasks": action_data,
-                            "source": "collaboration_fallback"
-                        }
+                        widget_type="task_list", widget_data={"tasks": action_data, "source": "collaboration_fallback"}
                     )
                 ]
-                if hasattr(collaboration_result, 'outputs') and collaboration_result.outputs:
+                if hasattr(collaboration_result, "outputs") and collaboration_result.outputs:
                     collaboration_result.outputs[0].tool_results = action_cards
                 has_action_cards = True
                 logger.info("Generated fallback action cards")
@@ -2110,46 +2418,18 @@ async def tool_planning_node(state: WorkflowState) -> WorkflowState:
     # Define tool sequences for different intents
     tool_sequences = {
         "exam_preparation": [
-            {
-                "tool": "create_plan",
-                "description": "创建考前冲刺计划",
-                "requires_context": ["subject"]
-            },
-            {
-                "tool": "generate_tasks_for_plan",
-                "description": "自动生成微任务",
-                "requires_context": ["plan_id"]
-            },
-            {
-                "tool": "suggest_focus_session",
-                "description": "建议专注时段",
-                "requires_context": ["task_ids"]
-            }
+            {"tool": "create_plan", "description": "创建考前冲刺计划", "requires_context": ["subject"]},
+            {"tool": "generate_tasks_for_plan", "description": "自动生成微任务", "requires_context": ["plan_id"]},
+            {"tool": "suggest_focus_session", "description": "建议专注时段", "requires_context": ["task_ids"]},
         ],
         "task_decomposition": [
-            {
-                "tool": "breakdown_task",
-                "description": "分解任务为子任务",
-                "requires_context": ["task_description"]
-            },
-            {
-                "tool": "suggest_focus_session",
-                "description": "建议专注时段",
-                "requires_context": ["task_ids"]
-            }
+            {"tool": "breakdown_task", "description": "分解任务为子任务", "requires_context": ["task_description"]},
+            {"tool": "suggest_focus_session", "description": "建议专注时段", "requires_context": ["task_ids"]},
         ],
         "skill_building": [
-            {
-                "tool": "create_plan",
-                "description": "创建学习计划",
-                "requires_context": ["topic", "target_level"]
-            },
-            {
-                "tool": "generate_tasks_for_plan",
-                "description": "生成学习路径",
-                "requires_context": ["plan_id"]
-            }
-        ]
+            {"tool": "create_plan", "description": "创建学习计划", "requires_context": ["topic", "target_level"]},
+            {"tool": "generate_tasks_for_plan", "description": "生成学习路径", "requires_context": ["plan_id"]},
+        ],
     }
 
     if intent and intent in tool_sequences:
@@ -2169,6 +2449,7 @@ async def tool_planning_node(state: WorkflowState) -> WorkflowState:
 # ==========================================
 # Graph Definition
 # ==========================================
+
 
 def create_standard_chat_graph() -> StateGraph:
     graph = StateGraph("StandardChat")
@@ -2202,7 +2483,7 @@ def create_standard_chat_graph() -> StateGraph:
 
     # Router decides next step
     def router_condition(state: WorkflowState) -> str:
-        decision = state.context_data.get('router_decision')
+        decision = state.context_data.get("router_decision")
         # If router logic failed or returned None, fallback to collaboration check
         if not decision:
             return "collaboration"
@@ -2310,6 +2591,7 @@ def create_standard_chat_graph() -> StateGraph:
 
     return graph
 
+
 async def router_node(state: WorkflowState) -> WorkflowState:
     """Intelligent Routing Node."""
     selected_experts = _selected_expert_ids(state)
@@ -2325,6 +2607,7 @@ async def router_node(state: WorkflowState) -> WorkflowState:
         return state
 
     from app.routing.router_node import RouterNode
+
     redis_client = state.context_data.get("redis_client")
     user_id = str(state.context_data.get("user_id", ""))
 
@@ -2338,6 +2621,7 @@ async def router_node(state: WorkflowState) -> WorkflowState:
 # ==========================================
 # Phase 2 Helper Functions
 # ==========================================
+
 
 async def _execute_single_tool(
     tool_name: str,
@@ -2364,13 +2648,15 @@ async def _execute_single_tool(
     # P2: Tool execution start notification with progress
     if stream_callback:
         progress_msg = f"正在执行 ({tool_index + 1}/{total_tools}): {tool_name}..."
-        await stream_callback(agent_service_pb2.ChatResponse(
-            status_update=agent_service_pb2.AgentStatus(
-                state=agent_service_pb2.AgentStatus.EXECUTING_TOOL,
-                details=progress_msg,
-                active_agent=agent_service_pb2.ORCHESTRATOR
+        await stream_callback(
+            agent_service_pb2.ChatResponse(
+                status_update=agent_service_pb2.AgentStatus(
+                    state=agent_service_pb2.AgentStatus.EXECUTING_TOOL,
+                    details=progress_msg,
+                    active_agent=agent_service_pb2.ORCHESTRATOR,
+                )
             )
-        ))
+        )
 
     try:
         result = await executor.execute_tool_call(
@@ -2378,7 +2664,7 @@ async def _execute_single_tool(
             arguments=tool_args,
             user_id=user_id,
             db_session=db_session,
-            compensation_call=compensation_call
+            compensation_call=compensation_call,
         )
 
         # Check if tool execution failed
@@ -2397,18 +2683,17 @@ async def _execute_single_tool(
 
             # Stream fallback result
             if stream_callback and fallback_message:
-                await stream_callback(agent_service_pb2.ChatResponse(
-                    delta=f"\n\n{fallback_message}"
-                ))
+                await stream_callback(agent_service_pb2.ChatResponse(delta=f"\n\n{fallback_message}"))
 
             # Create fallback result
             from app.tools.base import ToolResult
+
             result = ToolResult(
                 success=True,  # Fallback successful
                 tool_name=tool_name,
                 data={"message": fallback_message, "fallback": True},
                 error_message=None,
-                suggestion="如需完整功能，请稍后再试"
+                suggestion="如需完整功能，请稍后再试",
             )
 
     except Exception as e:
@@ -2426,30 +2711,31 @@ async def _execute_single_tool(
 
         # Stream fallback result
         if stream_callback and fallback_message:
-            await stream_callback(agent_service_pb2.ChatResponse(
-                delta=f"\n\n{fallback_message}"
-            ))
+            await stream_callback(agent_service_pb2.ChatResponse(delta=f"\n\n{fallback_message}"))
 
         # Create fallback result
         from app.tools.base import ToolResult
+
         result = ToolResult(
             success=True,  # Fallback successful
             tool_name=tool_name,
             data={"message": fallback_message, "fallback": True},
             error_message=None,
-            suggestion="如需完整功能，请稍后再试"
+            suggestion="如需完整功能，请稍后再试",
         )
 
     # P2: Tool execution result status
     if stream_callback:
         status_msg = f"{tool_name}: {'执行成功' if result.success else '执行失败'}"
-        await stream_callback(agent_service_pb2.ChatResponse(
-            status_update=agent_service_pb2.AgentStatus(
-                state=agent_service_pb2.AgentStatus.IDLE,
-                details=status_msg,
-                active_agent=agent_service_pb2.ORCHESTRATOR
+        await stream_callback(
+            agent_service_pb2.ChatResponse(
+                status_update=agent_service_pb2.AgentStatus(
+                    state=agent_service_pb2.AgentStatus.IDLE,
+                    details=status_msg,
+                    active_agent=agent_service_pb2.ORCHESTRATOR,
+                )
             )
-        ))
+        )
 
         data_struct = struct_pb2.Struct()
         if result.data:
@@ -2458,37 +2744,35 @@ async def _execute_single_tool(
         if result.widget_data:
             widget_struct.update(result.widget_data)
 
-        await stream_callback(agent_service_pb2.ChatResponse(
-            tool_result=agent_service_pb2.ToolResultPayload(
-                tool_name=result.tool_name,
-                success=result.success,
-                data=data_struct,
-                error_message=result.error_message or "",
-                suggestion=result.suggestion or "",
-                widget_type=result.widget_type or "",
-                widget_data=widget_struct,
-                tool_call_id=tool_call_id
+        await stream_callback(
+            agent_service_pb2.ChatResponse(
+                tool_result=agent_service_pb2.ToolResultPayload(
+                    tool_name=result.tool_name,
+                    success=result.success,
+                    data=data_struct,
+                    error_message=result.error_message or "",
+                    suggestion=result.suggestion or "",
+                    widget_type=result.widget_type or "",
+                    widget_data=widget_struct,
+                    tool_call_id=tool_call_id,
+                )
             )
-        ))
+        )
 
     # Add tool result to message history
-    result_json = json.dumps({
-        "success": result.success,
-        "result": result.data,
-        "error": result.error_message,
-        "fallback": result.data.get("fallback", False) if result.data else False
-    })
+    result_json = json.dumps(
+        {
+            "success": result.success,
+            "result": result.data,
+            "error": result.error_message,
+            "fallback": result.data.get("fallback", False) if result.data else False,
+        }
+    )
     state.append_message("tool", result_json, name=tool_name)
 
 
 async def _write_feedback(
-    state: WorkflowState,
-    user_id: str,
-    session_id: str,
-    redis_client,
-    start_time: float,
-    tool_count: int,
-    plan_id: str
+    state: WorkflowState, user_id: str, session_id: str, redis_client, start_time: float, tool_count: int, plan_id: str
 ) -> None:
     """Write feedback payload to Redis and logs.
 
@@ -2512,13 +2796,9 @@ async def _write_feedback(
             "status": "completed",
             "duration_seconds": round(duration_seconds, 2),
             "attempts": 1,
-            "tool_count": tool_count
+            "tool_count": tool_count,
         },
-        signals={
-            "clicked_next": False,
-            "delayed": False,
-            "abandoned": False
-        }
+        signals={"clicked_next": False, "delayed": False, "abandoned": False},
     )
 
     feedback_dict = asdict(feedback)
@@ -2526,11 +2806,7 @@ async def _write_feedback(
     # 1. Write to Redis (TTL 7 days)
     feedback_key = f"feedback:{user_id}:{session_id}:{feedback.task_id}"
     try:
-        await redis_client.setex(
-            feedback_key,
-            7 * 24 * 3600,
-            json.dumps(feedback_dict, ensure_ascii=False)
-        )
+        await redis_client.setex(feedback_key, 7 * 24 * 3600, json.dumps(feedback_dict, ensure_ascii=False))
         logger.info(f"Feedback written to Redis: {feedback_key}")
     except Exception as e:
         logger.warning(f"Failed to write feedback to Redis: {e}")
@@ -2542,7 +2818,7 @@ async def _write_feedback(
         session_id,
         feedback.task_id,
         feedback.completion.get("status"),
-        feedback.completion.get("duration_seconds")
+        feedback.completion.get("duration_seconds"),
     )
 
     TASK_LOOP_COMPLETED.labels(source="standard_workflow").inc()
@@ -2551,12 +2827,14 @@ async def _write_feedback(
 def _serialize_tool_calls(tool_calls: list[Any]) -> list[dict[str, Any]]:
     payload = []
     for tool_call in tool_calls:
-        payload.append({
-            "id": getattr(tool_call, "id", None) or getattr(tool_call, "tool_call_id", None),
-            "name": getattr(tool_call, "name", None) or getattr(tool_call, "tool_name", None),
-            "params": getattr(tool_call, "params", None) or getattr(tool_call, "full_arguments", None),
-            "compensation_call": getattr(tool_call, "compensation_call", None),
-        })
+        payload.append(
+            {
+                "id": getattr(tool_call, "id", None) or getattr(tool_call, "tool_call_id", None),
+                "name": getattr(tool_call, "name", None) or getattr(tool_call, "tool_name", None),
+                "params": getattr(tool_call, "params", None) or getattr(tool_call, "full_arguments", None),
+                "compensation_call": getattr(tool_call, "compensation_call", None),
+            }
+        )
     return payload
 
 
@@ -2567,7 +2845,7 @@ async def _queue_hitl_action(
     description: str,
     tool_calls: list[Any],
     plan_id: str | None = None,
-    snapshot_id: str | None = None
+    snapshot_id: str | None = None,
 ) -> str:
     action_id = await pending_actions_store.save(
         tool_name="__plan__",
@@ -2575,7 +2853,7 @@ async def _queue_hitl_action(
             "plan_id": plan_id,
             "snapshot_id": snapshot_id,
             "tool_calls": _serialize_tool_calls(tool_calls),
-            "reason": reason
+            "reason": reason,
         },
         user_id=user_id,
         description=description,
@@ -2583,8 +2861,8 @@ async def _queue_hitl_action(
             "plan_id": plan_id,
             "snapshot_id": snapshot_id,
             "reason": reason,
-            "tool_calls": _serialize_tool_calls(tool_calls)
-        }
+            "tool_calls": _serialize_tool_calls(tool_calls),
+        },
     )
     HITL_REQUESTED.labels(reason=reason).inc()
     return action_id

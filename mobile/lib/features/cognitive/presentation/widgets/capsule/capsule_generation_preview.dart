@@ -20,11 +20,11 @@ class CapsuleGenerationPreview extends StatelessWidget {
 
   /// 根据深度偏好获取深度级别与预估模型
   (String Function(BuildContext) label, String model) get _depthLevel {
-    final useThinking =
-        depthPreference >= 0.8 || (depthPreference >= 0.6 && curiosityPreference >= 0.8);
+    final composite = depthPreference * 0.7 + curiosityPreference * 0.3;
+    final useThinking = composite >= 0.8;
     if (depthPreference < 0.3) {
       return ((context) => context.l10n.capsuleDepthShallow, 'GLM-4.7 FlashX');
-    } else if (depthPreference < 0.7) {
+    } else if (composite < 0.72) {
       return ((context) => context.l10n.capsuleDepthMedium, 'GLM-4.7');
     } else if (useThinking) {
       return ((context) => context.l10n.capsuleDepthDeep, 'GLM-4.7 Thinking');
@@ -127,6 +127,7 @@ class CapsuleGenerationPreview extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
           padding: const EdgeInsets.all(DS.sm),
@@ -150,12 +151,18 @@ class CapsuleGenerationPreview extends StatelessWidget {
             ),
           ),
         ),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: isDark ? DS.textPrimary : DS.textPrimary,
+        const SizedBox(width: DS.spacing8),
+        Flexible(
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: isDark ? DS.textPrimary : DS.textPrimary,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],

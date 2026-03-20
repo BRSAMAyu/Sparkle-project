@@ -52,8 +52,8 @@ class _FocusCardState extends ConsumerState<FocusCard>
         material: AppMaterials.ceramic.copyWith(
           backgroundGradient: LinearGradient(
             colors: [
-              DS.warning100,
-              DS.brandPrimary10,
+              Color.lerp(DS.surfaceSecondary, DS.warning, 0.08)!,
+              Color.lerp(DS.surfaceSecondary, DS.brandPrimary, 0.08)!,
               DS.surfaceSecondary,
             ],
             begin: Alignment.topLeft,
@@ -87,7 +87,8 @@ class _FocusCardState extends ConsumerState<FocusCard>
                     vertical: 2,
                   ),
                   decoration: BoxDecoration(
-                    color: DS.flameCore.withValues(alpha: 0.2),
+                    color: Color.lerp(DS.surfaceSecondary, DS.flameCore, 0.18) ??
+                        DS.surfaceSecondary,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(

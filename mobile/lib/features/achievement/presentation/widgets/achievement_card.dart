@@ -306,21 +306,41 @@ class AchievementCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(DS.spacing12),
         decoration: BoxDecoration(
-          color: isUnlocked ? DS.surfacePrimary : DS.surfaceSecondary,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              isUnlocked ? DS.surfacePrimary : DS.surfaceSecondary,
+              Color.lerp(
+                    DS.surfaceSecondary,
+                    rarityColor,
+                    isUnlocked ? 0.06 : 0.03,
+                  ) ??
+                  DS.surfaceSecondary,
+            ],
+          ),
           borderRadius: DS.borderRadius12,
           border: Border.all(
-            color: isUnlocked ? rarityColor : DS.border,
+            color: isUnlocked
+                ? rarityColor.withValues(alpha: 0.72)
+                : DS.border.withValues(alpha: 0.72),
             width: isUnlocked ? 1.5 : 1,
           ),
           boxShadow: isUnlocked
               ? [
                   BoxShadow(
-                    color: rarityColor.withValues(alpha: 0.15),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+                    color: rarityColor.withValues(alpha: 0.12),
+                    blurRadius: 14,
+                    offset: const Offset(0, 8),
                   ),
                 ]
-              : null,
+              : [
+                  BoxShadow(
+                    color: DS.textPrimary.withValues(alpha: 0.04),
+                    blurRadius: 10,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
         ),
         child: Row(
           children: [

@@ -13,6 +13,7 @@ const String kTransparentModeKey = 'settings_transparent_mode';
 const String kTransparencyLevelKey = 'settings_transparency_level';
 const String kOnboardingCompletedKey = 'settings_onboarding_completed';
 const String kSystemUpdateLevelKey = 'settings_system_update_level';
+const String kAiReasoningModeKey = 'settings_ai_reasoning_mode';
 
 /// Learning preferences model
 class LearningPreferences {
@@ -238,6 +239,13 @@ class LearningPreferencesNotifier extends StateNotifier<LearningPreferences> {
     }
   }
 
+  void previewPreferences({
+    double? depth,
+    double? curiosity,
+  }) {
+    state = state.copyWith(depth: depth, curiosity: curiosity);
+  }
+
   Future<void> updatePreferences({
     double? depth,
     double? curiosity,
@@ -293,6 +301,24 @@ final systemUpdateLevelProvider =
     StateNotifierProvider<SystemUpdateLevelNotifier, int>(
   SystemUpdateLevelNotifier.new,
 );
+
+final aiReasoningModeProvider =
+    StateNotifierProvider<AiReasoningModeNotifier, String>(
+  (ref) => AiReasoningModeNotifier(ref),
+);
+
+final aiUsageSummaryProvider =
+    FutureProvider<Map<String, dynamic>>((ref) async {
+  final user = ref.watch(authProvider).user;
+  if (user == null) {
+    return {
+      'current_mode': ref.watch(aiReasoningModeProvider),
+      'items': <Map<String, dynamic>>[],
+    };
+  }
+  final repo = ref.watch(userRepositoryProvider);
+  return repo.fetchAiUsageSummary();
+});
 
 class EnterToSendNotifier extends StateNotifier<bool> {
   EnterToSendNotifier() : super(true) {
@@ -501,6 +527,75 @@ class SystemUpdateLevelNotifier extends StateNotifier<int> {
       await repo.updateUserSettings({
         if (level != null) 'system_update_level': level,
       });
+    } catch (_) {
+      // Silent fail
+    }
+  }
+}
+
+class AiReasoningModeNotifier extends StateNotifier<String> {
+  AiReasoningModeNotifier(this._ref) : super('balanced') {
+    _ref.listen<AuthState>(authProvider, (prev, next) {
+      if (next.user != null && prev?.user?.id != next.user?.id) {
+        _syncFromServer();
+      }
+    });
+    _loadSettings();
+  }
+
+  final Ref _ref;
+
+  Future<void> _loadSettings() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final value = prefs.getString(kAiReasoningModeKey);
+      if (value != null && {'fast', 'balanced', 'deep'}.contains(value)) {
+        state = value;
+      }
+    } catch (_) {
+      state = 'balanced';
+    }
+    await _syncFromServer();
+  }
+
+  Future<void> setMode(String mode) async {
+    final normalized =
+        {'fast', 'balanced', 'deep'}.contains(mode) ? mode : 'balanced';
+    if (state == normalized) return;
+    final previous = state;
+    state = normalized;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(kAiReasoningModeKey, normalized);
+    } catch (_) {
+      // Silent fail for persistence
+    }
+    try {
+      final user = _ref.read(authProvider).user;
+      if (user != null) {
+        await _ref.read(userRepositoryProvider).updateUserSettings({
+          'ai_reasoning_mode': normalized,
+        });
+      }
+      _ref.invalidate(aiUsageSummaryProvider);
+    } catch (_) {
+      state = previous;
+    }
+  }
+
+  Future<void> _syncFromServer() async {
+    final user = _ref.read(authProvider).user;
+    if (user == null) return;
+    try {
+      final settings =
+          await _ref.read(userRepositoryProvider).fetchUserSettings();
+      final value = settings['ai_reasoning_mode'] as String?;
+      if (value != null && {'fast', 'balanced', 'deep'}.contains(value)) {
+        state = value;
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(kAiReasoningModeKey, value);
+      }
+      _ref.invalidate(aiUsageSummaryProvider);
     } catch (_) {
       // Silent fail
     }

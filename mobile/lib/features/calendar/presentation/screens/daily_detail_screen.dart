@@ -144,31 +144,31 @@ class DailyDetailScreen extends ConsumerWidget {
         child: Container(
           margin: const EdgeInsets.only(bottom: DS.spacing8),
           padding: const EdgeInsets.all(DS.md),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                DS.warningAccent.withValues(alpha: 0.1),
-                DS.warningAccent.withValues(alpha: 0.05),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: DS.warningAccent.withValues(alpha: 0.3),
-            ),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              DS.surfaceSecondary,
+              Color.lerp(DS.surfaceSecondary, DS.info, 0.08)!,
+            ],
           ),
-          child: Row(
-            children: [
-              Container(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+              color: DS.borderSubtle,
+            ),
+        ),
+        child: Row(
+          children: [
+            Container(
                 padding: const EdgeInsets.all(DS.spacing8),
                 decoration: BoxDecoration(
-                  color: DS.warningAccent.withValues(alpha: 0.2),
+                  color: DS.info.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
                   plan.type == PlanType.sprint
                       ? Icons.flash_on_rounded
                       : Icons.trending_up_rounded,
-                  color: DS.warningAccent,
+                  color: DS.info,
                   size: 20,
                 ),
               ),
@@ -193,8 +193,8 @@ class DailyDetailScreen extends ConsumerWidget {
                             borderRadius: BorderRadius.circular(4),
                             child: LinearProgressIndicator(
                               value: plan.progress / 100,
-                              backgroundColor: DS.warningAccent.withValues(alpha: 0.2),
-                              valueColor: AlwaysStoppedAnimation<Color>(DS.warningAccent),
+                              backgroundColor: DS.info.withValues(alpha: 0.16),
+                              valueColor: AlwaysStoppedAnimation<Color>(DS.info),
                               minHeight: 4,
                             ),
                           ),
@@ -205,7 +205,7 @@ class DailyDetailScreen extends ConsumerWidget {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: DS.warningAccent,
+                            color: DS.info,
                           ),
                         ),
                       ],
@@ -230,16 +230,16 @@ class DailyDetailScreen extends ConsumerWidget {
   ) =>
       Container(
         padding: const EdgeInsets.all(DS.md),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              DS.brandSecondary.withValues(alpha: 0.1),
-              DS.brandSecondary.withValues(alpha: 0.05),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: DS.brandSecondary.withValues(alpha: 0.3),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            DS.surfaceSecondary,
+            Color.lerp(DS.surfaceSecondary, DS.brandSecondary, 0.08)!,
+          ],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+            color: DS.borderSubtle,
           ),
         ),
         child: Column(
@@ -288,7 +288,7 @@ class DailyDetailScreen extends ConsumerWidget {
                               '还差 ${remaining.toInt()}%',
                               style: TextStyle(
                                 fontSize: 11,
-                                color: DS.brandSecondary,
+                                color: DS.textSecondary,
                               ),
                             ),
                           ],
@@ -332,7 +332,7 @@ class DailyDetailScreen extends ConsumerWidget {
               style: TextStyle(
                 fontSize: 48,
                 fontWeight: FontWeight.bold,
-                color: DS.brandPrimaryConst,
+                color: DS.textPrimary,
               ),
             ),
             const SizedBox(width: DS.lg),
@@ -343,13 +343,13 @@ class DailyDetailScreen extends ConsumerWidget {
                   DateFormat('EEEE', 'zh_CN').format(date),
                   style: TextStyle(
                     fontSize: 18,
-                    color: DS.brandPrimaryConst,
+                    color: DS.textPrimary,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
                 Text(
                   '${lunar.lunarMonth}${lunar.lunarDay} ${lunar.term} ${lunar.festivals.join(" ")}',
-                  style: TextStyle(fontSize: 14, color: DS.brandPrimary70),
+                  style: TextStyle(fontSize: 14, color: DS.textSecondary),
                 ),
               ],
             ),
@@ -409,13 +409,13 @@ class DailyDetailScreen extends ConsumerWidget {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: DS.brandPrimaryConst,
+                color: DS.textPrimary,
               ),
             ),
             const SizedBox(height: DS.xs),
             Text(
               label,
-              style: TextStyle(fontSize: 12, color: DS.brandPrimary54),
+              style: TextStyle(fontSize: 12, color: DS.textSecondary),
             ),
           ],
         ),
@@ -441,7 +441,7 @@ class DailyDetailScreen extends ConsumerWidget {
               Text(
                 context.l10n.dailyDetailPrismTitle,
                 style: TextStyle(
-                  color: DS.brandPrimaryConst,
+                  color: DS.textPrimary,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -451,13 +451,13 @@ class DailyDetailScreen extends ConsumerWidget {
           Text(
             state.cognitive.weeklyPattern ??
                 context.l10n.dailyDetailPrismFallback,
-            style: TextStyle(color: DS.brandPrimaryConst, fontSize: 15),
+            style: TextStyle(color: DS.textPrimary, fontSize: 15),
           ),
           if (state.cognitive.description != null) ...[
             const SizedBox(height: DS.sm),
             Text(
               state.cognitive.description!,
-              style: TextStyle(color: DS.brandPrimary70Const, fontSize: 13),
+              style: TextStyle(color: DS.textSecondary, fontSize: 13),
             ),
           ],
         ],
@@ -477,7 +477,7 @@ class DailyDetailScreen extends ConsumerWidget {
           Text(
             title,
             style: TextStyle(
-              color: DS.brandPrimaryConst,
+              color: DS.textPrimary,
               fontSize: 16,
               fontWeight: FontWeight.bold,
             ),
@@ -502,7 +502,7 @@ class DailyDetailScreen extends ConsumerWidget {
           margin: const EdgeInsets.only(bottom: DS.spacing8),
           padding: const EdgeInsets.all(DS.md),
           decoration: BoxDecoration(
-            color: DS.brandPrimary10Const,
+            color: DS.surfaceSecondary,
             borderRadius: BorderRadius.circular(12),
             border: Border(
               left: BorderSide(
@@ -518,7 +518,7 @@ class DailyDetailScreen extends ConsumerWidget {
                     Text(
                       event.title,
                       style: TextStyle(
-                        color: DS.brandPrimaryConst,
+                        color: DS.textPrimary,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -527,7 +527,7 @@ class DailyDetailScreen extends ConsumerWidget {
                       event.isAllDay
                           ? context.l10n.calendarAllDay
                           : '${Formatters.formatTime24(event.startTime)} - ${Formatters.formatTime24(event.endTime)}',
-                      style: TextStyle(color: DS.brandPrimary54, fontSize: 12),
+                      style: TextStyle(color: DS.textSecondary, fontSize: 12),
                     ),
                   ],
                 ),
@@ -560,8 +560,9 @@ class DailyDetailScreen extends ConsumerWidget {
           margin: const EdgeInsets.only(bottom: DS.spacing8),
           padding: const EdgeInsets.all(DS.md),
           decoration: BoxDecoration(
-            color: DS.brandPrimary.withValues(alpha: 0.1),
+            color: DS.surfaceSecondary,
             borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: DS.borderSubtle),
           ),
           child: Row(
             children: [
@@ -578,8 +579,8 @@ class DailyDetailScreen extends ConsumerWidget {
                   task.title,
                   style: TextStyle(
                     color: isCompleted
-                        ? DS.brandPrimary.withValues(alpha: 0.38)
-                        : DS.brandPrimary,
+                        ? DS.textTertiary
+                        : DS.textPrimary,
                     decoration: isCompleted ? TextDecoration.lineThrough : null,
                   ),
                 ),
@@ -601,14 +602,14 @@ class DailyDetailScreen extends ConsumerWidget {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: DS.spacing20),
         decoration: BoxDecoration(
-          color: DS.brandPrimary.withAlpha(5),
+          color: DS.surfaceSecondary,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: DS.brandPrimary.withAlpha(10),
+            color: DS.borderSubtle,
           ), // Dashed border needs CustomPainter
         ),
         child: Center(
-          child: Text(text, style: TextStyle(color: DS.brandPrimary38)),
+          child: Text(text, style: TextStyle(color: DS.textSecondary)),
         ),
       );
 

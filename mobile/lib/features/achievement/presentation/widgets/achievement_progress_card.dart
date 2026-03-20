@@ -33,6 +33,7 @@ class _AchievementProgressCardState
   Widget build(BuildContext context) {
     final state = ref.watch(homeCloseToUnlockProvider);
     final l10n = AppLocalizations.of(context)!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     // Hide when loading with no previous data, or when list is empty
     if (state.items.isEmpty && !state.isLoading) return const SizedBox.shrink();
@@ -44,13 +45,17 @@ class _AchievementProgressCardState
           material: AppMaterials.ceramic.copyWith(
             backgroundGradient: LinearGradient(
               colors: [
-                DS.brandPrimary.withValues(alpha: 0.08),
+                Color.lerp(
+                  DS.surfaceSecondary,
+                  DS.warning,
+                  isDark ? 0.12 : 0.06,
+                )!,
                 DS.surfaceSecondary,
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            borderColor: DS.brandPrimary.withValues(alpha: 0.18),
+            borderColor: DS.warning.withValues(alpha: isDark ? 0.22 : 0.14),
             borderWidth: 1,
           ),
           borderRadius: DS.borderRadius20,
@@ -88,7 +93,7 @@ class _Header extends StatelessWidget {
         children: [
           Icon(
             Icons.emoji_events_outlined,
-            color: DS.brandPrimary,
+            color: DS.warning,
             size: 16,
           ),
           const SizedBox(width: DS.spacing6),
@@ -106,13 +111,13 @@ class _Header extends StatelessWidget {
                 Text(
                   l10n.achievementViewAll,
                   style: context.sparkleTypography.labelSmall.copyWith(
-                    color: DS.brandPrimary,
+                    color: DS.textSecondary,
                   ),
                 ),
                 const SizedBox(width: 2),
                 Icon(
                   Icons.chevron_right_rounded,
-                  color: DS.brandPrimary,
+                  color: DS.textSecondary,
                   size: 14,
                 ),
               ],
@@ -146,79 +151,94 @@ class _AchievementRow extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       child: Padding(
         padding: const EdgeInsets.only(bottom: DS.spacing8),
-        child: Row(
-          children: [
-            // Rarity colour dot
-            Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(
-                color: _rarityColor(rarity),
-                shape: BoxShape.circle,
-              ),
+        child: Container(
+          padding: const EdgeInsets.all(DS.spacing10),
+          decoration: BoxDecoration(
+            color: DS.surfacePrimary.withValues(alpha: 0.82),
+            borderRadius: DS.borderRadius16,
+            border: Border.all(
+              color: _rarityColor(rarity).withValues(alpha: 0.14),
             ),
-            const SizedBox(width: DS.spacing8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          achievement.name,
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: _rarityColor(rarity).withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.workspace_premium_rounded,
+                  size: 16,
+                  color: _rarityColor(rarity),
+                ),
+              ),
+              const SizedBox(width: DS.spacing10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            achievement.name,
+                            style: context.sparkleTypography.labelSmall.copyWith(
+                              color: DS.textPrimary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: DS.spacing4),
+                        Text(
+                          '$current/$target',
                           style: context.sparkleTypography.labelSmall.copyWith(
-                            color: DS.textPrimary,
+                            color: DS.textTertiary,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(width: DS.spacing4),
-                      Text(
-                        '$current/$target',
-                        style: context.sparkleTypography.labelSmall.copyWith(
-                          color: DS.textTertiary,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(2),
-                          child: LinearProgressIndicator(
-                            value: progress,
-                            minHeight: 3,
-                            backgroundColor: DS.neutral200,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(_rarityColor(rarity)),
-                          ),
-                        ),
-                      ),
-                      // Visual element reward badge
-                      if (visualRewards.isNotEmpty) ...[
-                        const SizedBox(width: DS.spacing8),
-                        _VisualRewardBadge(
-                          rewards: visualRewards,
-                          l10n: l10n,
                         ),
                       ],
-                    ],
-                  ),
-                ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(999),
+                            child: LinearProgressIndicator(
+                              value: progress,
+                              minHeight: 4,
+                              backgroundColor: DS.neutral200,
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(_rarityColor(rarity)),
+                            ),
+                          ),
+                        ),
+                        if (visualRewards.isNotEmpty) ...[
+                          const SizedBox(width: DS.spacing8),
+                          _VisualRewardBadge(
+                            rewards: visualRewards,
+                            l10n: l10n,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
   /// 从成就奖励配置中提取视觉元素奖励
-  List<Map<String, dynamic>> _extractVisualElementRewards(AchievementModel achievement) {
+  List<Map<String, dynamic>> _extractVisualElementRewards(
+    AchievementModel achievement,
+  ) {
     final rewardConfig = achievement.rewardConfig;
     if (rewardConfig == null || rewardConfig.isEmpty) return [];
 
@@ -227,7 +247,7 @@ class _AchievementRow extends StatelessWidget {
             r['type'] == 'visual_element' ||
             r['type'] == 'background' ||
             r['type'] == 'particle' ||
-            r['type'] == 'effect')
+            r['type'] == 'effect',)
         .toList();
   }
 
@@ -277,18 +297,17 @@ class _VisualRewardBadgeState extends State<_VisualRewardBadge>
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         curve: Curves.easeOut,
-        transform: Matrix4.identity()..scale(_isPressed ? 0.96 : 1.0),
+        transform: Matrix4.diagonal3Values(
+          _isPressed ? 0.96 : 1.0,
+          _isPressed ? 0.96 : 1.0,
+          1,
+        ),
         padding: const EdgeInsets.symmetric(
           horizontal: DS.spacing6,
           vertical: DS.spacing2,
         ),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              colors.background.withValues(alpha: 0.9),
-              colors.background.withValues(alpha: 0.7),
-            ],
-          ),
+          color: colors.background.withValues(alpha: 0.92),
           borderRadius: DS.borderRadius6,
           border: Border.all(color: colors.border, width: 1),
         ),

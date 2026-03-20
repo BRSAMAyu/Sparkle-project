@@ -132,9 +132,17 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
             end: Alignment.bottomCenter,
             colors: [
               DS.surfacePrimary,
-              DS.surfaceSecondary,
+              Color.lerp(DS.surfaceSecondary, DS.info, 0.04) ??
+                  DS.surfaceSecondary,
             ],
           ),
+          boxShadow: [
+            BoxShadow(
+              color: DS.textPrimary.withValues(alpha: 0.04),
+              blurRadius: 18,
+              offset: const Offset(0, 10),
+            ),
+          ],
         ),
         child: SafeArea(
           bottom: false,
@@ -188,9 +196,23 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
     return Container(
       padding: const EdgeInsets.all(DS.spacing16),
       decoration: BoxDecoration(
-        color: DS.surfaceSecondary,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            DS.surfaceSecondary,
+            Color.lerp(DS.surfacePrimary, DS.info, 0.03) ?? DS.surfacePrimary,
+          ],
+        ),
         borderRadius: DS.borderRadius16,
         border: Border.all(color: DS.border.withValues(alpha: 0.5)),
+        boxShadow: [
+          BoxShadow(
+            color: DS.textPrimary.withValues(alpha: 0.05),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -238,8 +260,18 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
               vertical: DS.spacing12,
             ),
             decoration: BoxDecoration(
-              color: DS.brandPrimary10,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  DS.brandPrimary10,
+                  DS.info.withValues(alpha: 0.08),
+                ],
+              ),
               borderRadius: DS.borderRadius12,
+              border: Border.all(
+                color: DS.brandPrimary.withValues(alpha: 0.16),
+              ),
             ),
             child: Column(
               children: [

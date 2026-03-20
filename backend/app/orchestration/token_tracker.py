@@ -7,6 +7,7 @@ TokenTracker - Token 使用量追踪器
 3. 生成使用统计和报表
 4. 异步持久化到数据库
 """
+
 from __future__ import annotations
 
 import json
@@ -16,6 +17,8 @@ from typing import Any
 
 import redis.asyncio as redis
 from loguru import logger
+
+from app.core.llm_router import llm_router
 
 
 class TokenTracker:
@@ -47,7 +50,10 @@ class TokenTracker:
         prompt_tokens: int,
         completion_tokens: int,
         model: str = "gpt-4",
-        cost: float | None = None
+        cost: float | None = None,
+        reasoning_mode: str | None = None,
+        model_tier: str | None = None,
+        chat_mode: str | None = None,
     ) -> int:
         """
         记录 Token 使用量
@@ -77,7 +83,10 @@ class TokenTracker:
             "total_tokens": total_tokens,
             "model": model,
             "cost": cost,
-            "timestamp": timestamp
+            "reasoning_mode": reasoning_mode or "balanced",
+            "model_tier": model_tier or "",
+            "chat_mode": chat_mode or "standard",
+            "timestamp": timestamp,
         }
 
         await self.redis.rpush("queue:billing", json.dumps(usage_record))
@@ -97,6 +106,20 @@ class TokenTracker:
         await self.redis.incrby(model_key, total_tokens)
         await self.redis.expire(model_key, 86400)
 
+        mode = self._normalize_mode(reasoning_mode)
+        mode_tokens_key = f"user:daily_ai_mode_tokens:{user_id}:{today}:{mode}"
+        await self.redis.incrby(mode_tokens_key, total_tokens)
+        await self.redis.expire(mode_tokens_key, 86400)
+
+        mode_requests_key = f"user:daily_ai_mode_requests:{user_id}:{today}:{mode}"
+        await self.redis.incr(mode_requests_key)
+        await self.redis.expire(mode_requests_key, 86400)
+
+        if cost is not None:
+            mode_cost_key = f"user:daily_ai_mode_cost_micro_usd:{user_id}:{today}:{mode}"
+            await self.redis.incrby(mode_cost_key, int(round(float(cost) * 1_000_000)))
+            await self.redis.expire(mode_cost_key, 86400)
+
         # 5. 记录到历史明细（可选，用于详细分析）
         detail_key = f"user:details:{user_id}:{today}"
         detail = {
@@ -106,17 +129,26 @@ class TokenTracker:
             "completion": completion_tokens,
             "total": total_tokens,
             "model": model,
-            "timestamp": timestamp
+            "model_tier": model_tier,
+            "reasoning_mode": mode,
+            "chat_mode": chat_mode or "standard",
+            "timestamp": timestamp,
         }
         await self.redis.rpush(detail_key, json.dumps(detail))
         await self.redis.expire(detail_key, 86400)  # 保留24小时
 
         logger.debug(
-            f"Recorded usage for user {user_id}: "
-            f"{prompt_tokens} + {completion_tokens} = {total_tokens} tokens"
+            f"Recorded usage for user {user_id}: " f"{prompt_tokens} + {completion_tokens} = {total_tokens} tokens"
         )
 
         return total_tokens
+
+    @staticmethod
+    def _normalize_mode(value: str | None) -> str:
+        normalized = str(value or "balanced").strip().lower()
+        if normalized in {"fast", "balanced", "deep"}:
+            return normalized
+        return "balanced"
 
     async def get_daily_usage(self, user_id: str, date: str | None = None) -> int:
         """
@@ -141,12 +173,7 @@ class TokenTracker:
         except (TypeError, ValueError):
             return 0
 
-    async def check_quota(
-        self,
-        user_id: str,
-        daily_limit: int = 100000,
-        date: str | None = None
-    ) -> dict[str, Any]:
+    async def check_quota(self, user_id: str, daily_limit: int = 100000, date: str | None = None) -> dict[str, Any]:
         """
         检查用户配额
 
@@ -174,14 +201,10 @@ class TokenTracker:
             "limit": daily_limit,
             "remaining": max(0, remaining),
             "usage_rate": usage_rate,
-            "percentage": f"{usage_rate * 100:.1f}%"
+            "percentage": f"{usage_rate * 100:.1f}%",
         }
 
-    async def get_usage_breakdown(
-        self,
-        user_id: str,
-        days: int = 7
-    ) -> dict[str, int]:
+    async def get_usage_breakdown(self, user_id: str, days: int = 7) -> dict[str, int]:
         """
         获取用户最近 N 天的使用明细
 
@@ -214,11 +237,7 @@ class TokenTracker:
         result = await self.redis.get(key)
         return int(result) if result else 0
 
-    async def get_model_stats(
-        self,
-        model: str,
-        days: int = 7
-    ) -> dict[str, Any]:
+    async def get_model_stats(self, model: str, days: int = 7) -> dict[str, Any]:
         """
         获取模型使用统计
 
@@ -244,14 +263,10 @@ class TokenTracker:
             "model": model,
             "total_tokens": total,
             "daily_average": total / days if days > 0 else 0,
-            "breakdown": breakdown
+            "breakdown": breakdown,
         }
 
-    async def get_top_users(
-        self,
-        days: int = 7,
-        limit: int = 10
-    ) -> list[dict[str, Any]]:
+    async def get_top_users(self, days: int = 7, limit: int = 10) -> list[dict[str, Any]]:
         """
         获取 Token 使用量最高的用户
 
@@ -286,23 +301,11 @@ class TokenTracker:
                     continue
 
         # 排序并返回 Top N
-        sorted_users = sorted(
-            user_totals.items(),
-            key=lambda x: x[1],
-            reverse=True
-        )[:limit]
+        sorted_users = sorted(user_totals.items(), key=lambda x: x[1], reverse=True)[:limit]
 
-        return [
-            {"user_id": uid, "total_tokens": tokens}
-            for uid, tokens in sorted_users
-        ]
+        return [{"user_id": uid, "total_tokens": tokens} for uid, tokens in sorted_users]
 
-    async def get_user_details(
-        self,
-        user_id: str,
-        date: str | None = None,
-        limit: int = 50
-    ) -> list[dict[str, Any]]:
+    async def get_user_details(self, user_id: str, date: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
         """
         获取用户详细使用记录
 
@@ -358,19 +361,11 @@ class TokenTracker:
         return {
             "date": today,
             "total_tokens": int(total),
-            "model_distribution": {
-                "gpt-4": int(gpt4),
-                "gpt-3.5-turbo": int(gpt35)
-            },
-            "active_users": active_users
+            "model_distribution": {"gpt-4": int(gpt4), "gpt-3.5-turbo": int(gpt35)},
+            "active_users": active_users,
         }
 
-    async def estimate_cost(
-        self,
-        prompt_tokens: int,
-        completion_tokens: int,
-        model: str = "gpt-4"
-    ) -> float:
+    async def estimate_cost(self, prompt_tokens: int, completion_tokens: int, model: str = "gpt-4") -> float:
         """
         估算成本（基于 OpenAI 定价）
 
@@ -382,11 +377,17 @@ class TokenTracker:
         Returns:
             估算成本（美元）
         """
-        # OpenAI 定价（2024年）
+        router_models = getattr(llm_router, "_available_models", {})
+        if model in router_models:
+            config = router_models[model]
+            cost = (prompt_tokens + completion_tokens) * float(getattr(config, "cost_per_1k_tokens", 0.0)) / 1000.0
+            return round(cost, 6)
+
+        # Legacy OpenAI 定价兜底
         pricing = {
             "gpt-4": {"input": 0.03, "output": 0.06},  # per 1k tokens
             "gpt-4-turbo": {"input": 0.01, "output": 0.03},
-            "gpt-3.5-turbo": {"input": 0.001, "output": 0.002}
+            "gpt-3.5-turbo": {"input": 0.001, "output": 0.002},
         }
 
         if model not in pricing:
@@ -396,6 +397,55 @@ class TokenTracker:
         cost = (prompt_tokens * p["input"] + completion_tokens * p["output"]) / 1000
 
         return round(cost, 6)
+
+    async def get_mode_usage_summary(
+        self,
+        user_id: str,
+        mode: str,
+        *,
+        date: str | None = None,
+        request_limit: int = 0,
+    ) -> dict[str, Any]:
+        if date is None:
+            date = datetime.now().strftime("%Y-%m-%d")
+        normalized_mode = self._normalize_mode(mode)
+
+        requests_raw, tokens_raw, cost_raw = await self.redis.mget(
+            f"user:daily_ai_mode_requests:{user_id}:{date}:{normalized_mode}",
+            f"user:daily_ai_mode_tokens:{user_id}:{date}:{normalized_mode}",
+            f"user:daily_ai_mode_cost_micro_usd:{user_id}:{date}:{normalized_mode}",
+        )
+        requests_used = int(requests_raw or 0)
+        total_tokens = int(tokens_raw or 0)
+        total_cost_usd = round(int(cost_raw or 0) / 1_000_000.0, 6)
+        remaining = max(0, request_limit - requests_used) if request_limit > 0 else 0
+
+        return {
+            "mode": normalized_mode,
+            "label": {"fast": "敏捷", "balanced": "均衡", "deep": "深思"}[normalized_mode],
+            "requests_used": requests_used,
+            "requests_limit": request_limit,
+            "requests_remaining": remaining,
+            "total_tokens": total_tokens,
+            "total_cost_usd": total_cost_usd,
+        }
+
+    async def get_ai_usage_summary(
+        self,
+        user_id: str,
+        *,
+        mode_limits: dict[str, int],
+        date: str | None = None,
+    ) -> list[dict[str, Any]]:
+        return [
+            await self.get_mode_usage_summary(
+                user_id,
+                mode,
+                date=date,
+                request_limit=int(limit),
+            )
+            for mode, limit in mode_limits.items()
+        ]
 
 
 # 单例实例

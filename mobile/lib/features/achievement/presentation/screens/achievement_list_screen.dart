@@ -179,9 +179,17 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
             end: Alignment.bottomCenter,
             colors: [
               DS.surfacePrimary,
-              DS.surfaceSecondary,
+              Color.lerp(DS.surfaceSecondary, DS.brandPrimary, 0.04) ??
+                  DS.surfaceSecondary,
             ],
           ),
+          boxShadow: [
+            BoxShadow(
+              color: DS.textPrimary.withValues(alpha: 0.04),
+              blurRadius: 18,
+              offset: const Offset(0, 10),
+            ),
+          ],
         ),
         child: SafeArea(
           bottom: false,
@@ -231,9 +239,17 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
 
   Widget _buildViewToggle() => DecoratedBox(
         decoration: BoxDecoration(
-          color: DS.surfaceSecondary,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              DS.surfaceSecondary,
+              Color.lerp(DS.surfacePrimary, DS.brandPrimary, 0.03) ??
+                  DS.surfacePrimary,
+            ],
+          ),
           borderRadius: DS.borderRadius12,
-          border: Border.all(color: DS.border),
+          border: Border.all(color: DS.border.withValues(alpha: 0.6)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,

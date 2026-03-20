@@ -33,21 +33,40 @@ class DashboardCardSection extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Row(
+              children: [
+                Text(
+                  '驾驶舱组件',
+                  style: context.sparkleTypography.labelLarge.copyWith(
+                    fontWeight: DS.fontWeightBold,
+                    color: DS.textPrimary,
+                  ),
+                ),
+                const SizedBox(width: DS.spacing8),
+                Expanded(
+                  child: Text(
+                    '把常用入口和摘要信息固定在这里。',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.sparkleTypography.labelSmall.copyWith(
+                      color: DS.textSecondary,
+                    ),
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: () => _openEditSheet(context),
+                  icon: const Icon(Icons.tune_rounded, size: 18),
+                  label: Text(AppLocalizations.of(context)!.dashboardCustomizeCards),
+                ),
+              ],
+            ),
+            const SizedBox(height: DS.spacing10),
             if (cards.isEmpty)
               const _EmptyDashboardCardSection()
             else if (config.layoutMode == DashboardCardLayoutMode.swipe)
               DashboardCardCarousel(cards: cards)
             else
               DashboardCardGrid(cards: cards),
-            const SizedBox(height: DS.spacing8),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton.icon(
-                onPressed: () => _openEditSheet(context),
-                icon: const Icon(Icons.edit_outlined, size: 18),
-                label: Text(AppLocalizations.of(context)!.dashboardCustomizeCards),
-              ),
-            ),
           ],
         ),
       ),
@@ -107,13 +126,13 @@ class _DashboardStreakCard extends StatelessWidget {
         material: AppMaterials.ceramic.copyWith(
           backgroundGradient: LinearGradient(
             colors: [
-              DS.warning100,
+              Color.lerp(DS.surfaceSecondary, DS.warning, 0.08)!,
               DS.surfaceSecondary,
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          borderColor: DS.warning200,
+          borderColor: DS.warning.withValues(alpha: 0.18),
           borderWidth: 1,
         ),
         borderRadius: DS.borderRadius20,

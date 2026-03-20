@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 ChatOrchestrator — Modular orchestration engine for Sparkle AI.
 
@@ -182,6 +183,7 @@ SESSION_FEEDBACK_KEY_PREFIX = "session:feedback:"
 # Standalone helpers (exported for backward compatibility)
 # ---------------------------------------------------------------------------
 
+
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
@@ -196,43 +198,49 @@ def get_agent_type_for_tool(tool_name: str) -> int:
     tool_lower = tool_name.lower()
 
     # Knowledge-related tools -> KNOWLEDGE agent
-    if any(keyword in tool_lower for keyword in ['knowledge', 'query', 'search', 'retrieve', 'vector', 'graphrag']):
+    if any(keyword in tool_lower for keyword in ["knowledge", "query", "search", "retrieve", "vector", "graphrag"]):
         return agent_service_pb2.KNOWLEDGE
 
     # Math/calculation tools -> MATH agent
-    if any(keyword in tool_lower for keyword in ['math', 'calculate', 'wolfram', 'compute', 'formula', 'equation']):
+    if any(keyword in tool_lower for keyword in ["math", "calculate", "wolfram", "compute", "formula", "equation"]):
         return agent_service_pb2.MATH
 
     # Code/system tools -> CODE agent
-    if any(keyword in tool_lower for keyword in ['code', 'execute', 'run', 'system', 'debug', 'compile']):
+    if any(keyword in tool_lower for keyword in ["code", "execute", "run", "system", "debug", "compile"]):
         return agent_service_pb2.CODE
 
     # Data analysis tools -> DATA_ANALYSIS agent
-    if any(keyword in tool_lower for keyword in ['data', 'analyze', 'statistic', 'chart', 'plot', 'visualize', 'pandas', 'numpy']):
+    if any(
+        keyword in tool_lower
+        for keyword in ["data", "analyze", "statistic", "chart", "plot", "visualize", "pandas", "numpy"]
+    ):
         return agent_service_pb2.DATA_ANALYSIS
 
     # Translation tools -> TRANSLATION agent
-    if any(keyword in tool_lower for keyword in ['translate', 'language', 'localize', 'i18n']):
+    if any(keyword in tool_lower for keyword in ["translate", "language", "localize", "i18n"]):
         return agent_service_pb2.TRANSLATION
 
     # Image tools -> IMAGE agent
-    if any(keyword in tool_lower for keyword in ['image', 'photo', 'picture', 'draw', 'generate_image', 'edit_image']):
+    if any(keyword in tool_lower for keyword in ["image", "photo", "picture", "draw", "generate_image", "edit_image"]):
         return agent_service_pb2.IMAGE
 
     # Audio tools -> AUDIO agent
-    if any(keyword in tool_lower for keyword in ['audio', 'sound', 'music', 'speech', 'voice', 'tts', 'stt']):
+    if any(keyword in tool_lower for keyword in ["audio", "sound", "music", "speech", "voice", "tts", "stt"]):
         return agent_service_pb2.AUDIO
 
     # Writing/content tools -> WRITING agent
-    if any(keyword in tool_lower for keyword in ['write', 'summarize', 'compose', 'draft', 'edit_text']):
+    if any(keyword in tool_lower for keyword in ["write", "summarize", "compose", "draft", "edit_text"]):
         return agent_service_pb2.WRITING
 
     # Reasoning/logic tools -> REASONING agent
-    if any(keyword in tool_lower for keyword in ['reason', 'logic', 'solve', 'deduce', 'infer', 'prove']):
+    if any(keyword in tool_lower for keyword in ["reason", "logic", "solve", "deduce", "infer", "prove"]):
         return agent_service_pb2.REASONING
 
     # Task/orchestration tools -> ORCHESTRATOR
-    if any(keyword in tool_lower for keyword in ['task', 'plan', 'create', 'update', 'batch', 'orchestrate', 'focus', 'pomodoro']):
+    if any(
+        keyword in tool_lower
+        for keyword in ["task", "plan", "create", "update", "batch", "orchestrate", "focus", "pomodoro"]
+    ):
         return agent_service_pb2.ORCHESTRATOR
 
     # Default to ORCHESTRATOR
@@ -242,6 +250,7 @@ def get_agent_type_for_tool(tool_name: str) -> int:
 # ---------------------------------------------------------------------------
 # ChatOrchestrator — composed from mixins
 # ---------------------------------------------------------------------------
+
 
 class ChatOrchestrator(
     ContextBuilderMixin,
@@ -293,9 +302,9 @@ class ChatOrchestrator(
         self.token_tracker = None
         self.context_pruner = ContextPruner(
             redis_client=redis_client,
-            max_history_messages=10,      # 保留最近10轮对话
-            summary_threshold=20,         # 超过20轮触发总结
-            summary_cache_ttl=3600        # 总结缓存1小时
+            max_history_messages=10,  # 保留最近10轮对话
+            summary_threshold=20,  # 超过20轮触发总结
+            summary_cache_ttl=3600,  # 总结缓存1小时
         )
 
         # Initialize TokenTracker (P1 feature)
@@ -318,19 +327,14 @@ class ChatOrchestrator(
 
         self.tracer = ExecutionTracer(redis_client)
 
-        self.graph.on_event = self._chain_event_handlers(
-            visualizer.on_graph_event,
-            self.tracer.record_event
-        )
+        self.graph.on_event = self._chain_event_handlers(visualizer.on_graph_event, self.tracer.record_event)
 
         # Phase 1: Initialize new components
         self.grounding_validator = GroundingValidator(redis_client)
 
         # Unified Intent Router (Fix #1): 统一功能入口路由
         self.unified_router = UnifiedIntentRouter(
-            redis_client=redis_client,
-            llm_service=llm_service,
-            context_window_size=5
+            redis_client=redis_client, llm_service=llm_service, context_window_size=5
         )
         logger.info("ChatOrchestrator initialized with GroundingValidator and UnifiedIntentRouter")
 
@@ -343,12 +347,9 @@ class ChatOrchestrator(
         self.langgraph_breaker = CircuitBreaker(
             name="langgraph_planner",
             config=CircuitBreakerConfig(
-                failure_threshold=5,
-                success_threshold=2,
-                timeout_ms=60000,
-                failure_rate_threshold=0.5
+                failure_threshold=5, success_threshold=2, timeout_ms=60000, failure_rate_threshold=0.5
             ),
-            redis_client=redis_client
+            redis_client=redis_client,
         )
         circuit_breaker_registry.register(self.langgraph_breaker)
         self._track_task(asyncio.create_task(self.langgraph_breaker.initialize()))
@@ -366,12 +367,15 @@ class ChatOrchestrator(
 
         # Phase 3: Version Conflict Service (P1 enhancement)
         from app.orchestration.version_conflict_service import VersionConflictService
+
         self.version_conflict_service = VersionConflictService(
             redis=redis_client,
             planner=self.lang_graph_planner,
         )
 
-        logger.info("ChatOrchestrator initialized with Phase 3 components: CircuitBreaker, Observability, ShadowMode, PlanReview, VersionConflict")
+        logger.info(
+            "ChatOrchestrator initialized with Phase 3 components: CircuitBreaker, Observability, ShadowMode, PlanReview, VersionConflict"
+        )
 
         # Ensure tools are registered
         self._ensure_tools_registered()
@@ -554,9 +558,11 @@ class ChatOrchestrator(
 
     def _chain_event_handlers(self, *handlers):
         """Chain multiple event handlers"""
+
         async def chained(event):
             for handler in handlers:
                 await handler(event)
+
         return chained
 
     def _ensure_tools_registered(self):
@@ -583,7 +589,7 @@ class ChatOrchestrator(
         self,
         request: agent_service_pb2.ChatRequest,
         db_session: AsyncSession | None = None,
-        context_data: dict[str, Any] | None = None
+        context_data: dict[str, Any] | None = None,
     ) -> AsyncGenerator[agent_service_pb2.ChatResponse, None]:
         """Coordinator: orchestrate chat request through validation, routing,
         planning, execution, and response composition."""
@@ -613,10 +619,14 @@ class ChatOrchestrator(
             active_db = db_session or self.db_session
 
             # Step 1: Validation & idempotency (early exits)
-            if validation_error := await self._validate_request(request, response_id=response_id, request_id=request_id):
+            if validation_error := await self._validate_request(
+                request, response_id=response_id, request_id=request_id
+            ):
                 yield validation_error
                 return
-            if cached_resp := await self._check_idempotency_response(session_id=session_id, request_id=request_id, response_id=response_id):
+            if cached_resp := await self._check_idempotency_response(
+                session_id=session_id, request_id=request_id, response_id=response_id
+            ):
                 yield cached_resp
                 return
 
@@ -633,12 +643,20 @@ class ChatOrchestrator(
                 lock_acquired = await self._acquire_session_lock(session_id, request_id)
                 if not lock_acquired:
                     yield agent_service_pb2.ChatResponse(
-                        response_id=response_id, created_at=int(datetime.now().timestamp()), request_id=request_id,
-                        error=agent_service_pb2.Error(message="会话正在处理另一个请求，请稍候", retryable=True, error_code=agent_service_pb2.ERROR_CODE_CONFLICT),
+                        response_id=response_id,
+                        created_at=int(datetime.now().timestamp()),
+                        request_id=request_id,
+                        error=agent_service_pb2.Error(
+                            message="会话正在处理另一个请求，请稍候",
+                            retryable=True,
+                            error_code=agent_service_pb2.ERROR_CODE_CONFLICT,
+                        ),
                         finish_reason=agent_service_pb2.ERROR,
                     )
                     return
-                lock_renewal_task, lock_renewal_stop = await self.state_manager.start_lock_renewal(session_id, request_id, interval=10.0)
+                lock_renewal_task, lock_renewal_stop = await self.state_manager.start_lock_renewal(
+                    session_id, request_id, interval=10.0
+                )
 
                 # Step 3: Initialize state & extract message
                 await self._update_state(session_id, STATE_INIT, f"Request {request_id}")
@@ -646,8 +664,17 @@ class ChatOrchestrator(
                 user_message = request.message or ""
 
                 # Step 4: Build full context
-                grpc_context, plan_id, plan_switched, user_context_payload, conversation_context, plan_context = \
-                    await self._build_full_context(request=request, active_db=active_db, user_id=user_id, session_id=session_id, user_message=user_message, request_id=request_id, tracer=tracer)
+                grpc_context, plan_id, plan_switched, user_context_payload, conversation_context, plan_context = (
+                    await self._build_full_context(
+                        request=request,
+                        active_db=active_db,
+                        user_id=user_id,
+                        session_id=session_id,
+                        user_message=user_message,
+                        request_id=request_id,
+                        tracer=tracer,
+                    )
+                )
                 conversation_context = self._merge_request_history_into_conversation_context(
                     conversation_context,
                     list(request.history),
@@ -657,14 +684,20 @@ class ChatOrchestrator(
                 session_adaptation_context = None
                 conversation_rhythm = None
                 if not request.HasField("tool_result"):
-                    session_feedback_signal, session_adaptation_context, conversation_rhythm = await self._detect_session_feedback(
-                        session_id=session_id,
-                        user_message=user_message,
-                        conversation_context=conversation_context,
+                    session_feedback_signal, session_adaptation_context, conversation_rhythm = (
+                        await self._detect_session_feedback(
+                            session_id=session_id,
+                            user_message=user_message,
+                            conversation_context=conversation_context,
+                        )
                     )
                 session_feedback_signal = self._apply_cohort_to_session_feedback_signal(
                     session_feedback_signal,
-                    (user_context_payload or {}).get("experiment_cohort") if isinstance(user_context_payload, dict) else None,
+                    (
+                        (user_context_payload or {}).get("experiment_cohort")
+                        if isinstance(user_context_payload, dict)
+                        else None
+                    ),
                 )
 
                 expert_routing_decision = None
@@ -673,9 +706,7 @@ class ChatOrchestrator(
                 team_spec = parse_team_spec(chat_mode)
                 if team_spec:
                     requested_experts = [
-                        str(item).strip()
-                        for item in (team_spec.get("agents") or [])
-                        if str(item).strip()
+                        str(item).strip() for item in (team_spec.get("agents") or []) if str(item).strip()
                     ]
                     answer_experts = [
                         str(item).strip()
@@ -687,14 +718,18 @@ class ChatOrchestrator(
                     requested_experts = [explicit_expert]
 
                 custom_expert_profiles: dict[str, dict[str, Any]] = {}
-                if active_db is not None and any(is_custom_expert_id(item) for item in [*requested_experts, *answer_experts]):
+                if active_db is not None and any(
+                    is_custom_expert_id(item) for item in [*requested_experts, *answer_experts]
+                ):
                     custom_expert_profiles = await CustomExpertService(active_db).load_runtime_profiles(
                         user_id=user_id,
                         expert_ids=[*requested_experts, *answer_experts],
                     )
 
-                if settings.ENABLE_EXPERT_STRATEGY_V1 and is_expert_chat_mode(chat_mode) and not any(
-                    is_custom_expert_id(item) for item in requested_experts
+                if (
+                    settings.ENABLE_EXPERT_STRATEGY_V1
+                    and is_expert_chat_mode(chat_mode)
+                    and not any(is_custom_expert_id(item) for item in requested_experts)
                 ):
                     user_preferences = (user_context_payload or {}).get("preferences", {})
                     expert_routing_decision = ExpertStrategyV1.route(
@@ -909,22 +944,42 @@ class ChatOrchestrator(
                         yield continued_response
                     await self._update_state(session_id, STATE_DONE, "Tool result continuation completed")
                     REQUEST_COUNT.labels(module="orchestration", method="process_stream", status="success").inc()
-                    COLLABORATION_SUCCESS.labels(workflow_type="standard_chat", agents_used="orchestrator", outcome="success").inc()
+                    COLLABORATION_SUCCESS.labels(
+                        workflow_type="standard_chat", agents_used="orchestrator", outcome="success"
+                    ).inc()
                     return
 
                 # Step 7: Notifications
                 await self._notify_pending_milestone_proposals(user_id, stream_callback)
                 if plan_switched and plan_id:
-                    await stream_callback(agent_service_pb2.ChatResponse(metadata={"plan_switched": "true", "switched_to_plan_id": str(plan_id), "session_id": session_id}))
+                    await stream_callback(
+                        agent_service_pb2.ChatResponse(
+                            metadata={
+                                "plan_switched": "true",
+                                "switched_to_plan_id": str(plan_id),
+                                "session_id": session_id,
+                            }
+                        )
+                    )
 
                 # Step 8: Inject dependencies into state
                 self._inject_state_dependencies(
-                    state, active_db=active_db, user_id=user_id, session_id=session_id, stream_callback=stream_callback,
-                    tools_schema=state.context_data.get("tools_schema", []), transparency_generator=transparency_generator,
-                    emit_transparency_event=emit_transparency_event, user_context_payload=user_context_payload,
-                    conversation_context=conversation_context, plan_context=plan_context,
-                    file_ids=list(request.file_ids), include_references=bool(request.include_references),
-                    workflow_id=workflow_id, prompt_version=prompt_version, run_ledger=run_ledger,
+                    state,
+                    active_db=active_db,
+                    user_id=user_id,
+                    session_id=session_id,
+                    stream_callback=stream_callback,
+                    tools_schema=state.context_data.get("tools_schema", []),
+                    transparency_generator=transparency_generator,
+                    emit_transparency_event=emit_transparency_event,
+                    user_context_payload=user_context_payload,
+                    conversation_context=conversation_context,
+                    plan_context=plan_context,
+                    file_ids=list(request.file_ids),
+                    include_references=bool(request.include_references),
+                    workflow_id=workflow_id,
+                    prompt_version=prompt_version,
+                    run_ledger=run_ledger,
                 )
                 state.context_data["chat_mode"] = chat_mode
                 orchestration_trace = OrchestrationTrace(trace_id=trace_id or request_id or str(uuid.uuid4()))
@@ -984,8 +1039,12 @@ class ChatOrchestrator(
                 # Step 10: Route with unified orchestration brain for all modes
                 route_started_at = time.perf_counter()
                 route_decision, unified_routing_result = await self._route_and_classify(
-                    user_message=user_message, user_id=user_id, session_id=session_id,
-                    grpc_context=grpc_context, conversation_context=conversation_context, state=state,
+                    user_message=user_message,
+                    user_id=user_id,
+                    session_id=session_id,
+                    grpc_context=grpc_context,
+                    conversation_context=conversation_context,
+                    state=state,
                 )
                 orchestration_trace.add_step(
                     step_id="route",
@@ -1110,10 +1169,7 @@ class ChatOrchestrator(
                     step_id="dual_core",
                     label="双核调度",
                     decision=f"{self._dual_core_mode_label(str(dual_core_decision.get('mode') or 'balanced'))}",
-                    reason=str(
-                        dual_core_decision.get("reason")
-                        or "系统判断当前需要同时兼顾理解用户状态与推进执行。"
-                    ),
+                    reason=str(dual_core_decision.get("reason") or "系统判断当前需要同时兼顾理解用户状态与推进执行。"),
                     metadata={
                         "mode": dual_core_decision.get("mode"),
                         "cognitive_adjustments": dual_core_decision.get("cognitive_adjustments", []),
@@ -1148,10 +1204,17 @@ class ChatOrchestrator(
 
                 # Step 11: Plan & validate (langgraph/hybrid mode)
                 route_decision, executable_plan, snapshot, should_return = await self._plan_and_validate(
-                    route_decision=route_decision, user_message=user_message, user_id=user_id, session_id=session_id,
-                    active_db=active_db, plan_id=plan_id, conversation_context=conversation_context,
+                    route_decision=route_decision,
+                    user_message=user_message,
+                    user_id=user_id,
+                    session_id=session_id,
+                    active_db=active_db,
+                    plan_id=plan_id,
+                    conversation_context=conversation_context,
                     plan_context=plan_context,
-                    stream_callback=stream_callback, state=state, user_context_payload=user_context_payload,
+                    stream_callback=stream_callback,
+                    state=state,
+                    user_context_payload=user_context_payload,
                     orchestration_trace=orchestration_trace,
                 )
                 await self._emit_orchestration_trace(
@@ -1170,18 +1233,26 @@ class ChatOrchestrator(
                 )
                 plan_meta = state.context_data.get("plan_metadata", {})
                 await self.observability.log_route_decision(
-                    user_id=user_id, session_id=session_id, message=user_message,
-                    decision={"execution_mode": route_decision.execution_mode, "risk_level": route_decision.risk_level,
-                              "reason": route_decision.reason, "intent": route_intent,
-                              "confidence": route_decision.confidence,
-                              "routing_layer": plan_meta.get("routing_layer", "unknown"),
-                              "adaptive_notes": plan_meta.get("adaptive_notes", ""),
-                              "summary_used_for_routing": plan_meta.get("summary_used_for_routing", "false")},
+                    user_id=user_id,
+                    session_id=session_id,
+                    message=user_message,
+                    decision={
+                        "execution_mode": route_decision.execution_mode,
+                        "risk_level": route_decision.risk_level,
+                        "reason": route_decision.reason,
+                        "intent": route_intent,
+                        "confidence": route_decision.confidence,
+                        "routing_layer": plan_meta.get("routing_layer", "unknown"),
+                        "adaptive_notes": plan_meta.get("adaptive_notes", ""),
+                        "summary_used_for_routing": plan_meta.get("summary_used_for_routing", "false"),
+                    },
                 )
 
                 # Step 13: Execute graph
                 result_holder: dict[str, Any] = {}
-                async for item in self._execute_graph(state=state, user_id=user_id, queue=queue, result_holder=result_holder):
+                async for item in self._execute_graph(
+                    state=state, user_id=user_id, queue=queue, result_holder=result_holder
+                ):
                     yield item
 
                 # Step 14: Build & yield final response
@@ -1190,10 +1261,19 @@ class ChatOrchestrator(
                     total_prompt_tokens = result_holder.get("total_prompt_tokens", 0)
                     total_completion_tokens = result_holder.get("total_completion_tokens", 0)
                     final_response, final_response_data = await self._build_final_response(
-                        final_state=final_state, executable_plan=executable_plan, active_db=active_db,
-                        user_id=user_id, session_id=session_id, response_id=response_id, request_id=request_id,
-                        trace_id=trace_id, workflow_id=workflow_id, prompt_version=prompt_version,
-                        route_decision=route_decision, plan_switched=plan_switched, plan_id=plan_id,
+                        final_state=final_state,
+                        executable_plan=executable_plan,
+                        active_db=active_db,
+                        user_id=user_id,
+                        session_id=session_id,
+                        response_id=response_id,
+                        request_id=request_id,
+                        trace_id=trace_id,
+                        workflow_id=workflow_id,
+                        prompt_version=prompt_version,
+                        route_decision=route_decision,
+                        plan_switched=plan_switched,
+                        plan_id=plan_id,
                         user_context_payload=user_context_payload,
                         total_prompt_tokens=total_prompt_tokens,
                         total_completion_tokens=total_completion_tokens,
@@ -1205,8 +1285,7 @@ class ChatOrchestrator(
                             messages = conversation_context.get("messages")
                             if isinstance(messages, list):
                                 user_count = sum(
-                                    1 for msg in messages
-                                    if isinstance(msg, dict) and msg.get("role") == "user"
+                                    1 for msg in messages if isinstance(msg, dict) and msg.get("role") == "user"
                                 )
                                 turn_index = user_count
                                 if user_message and (not messages or messages[-1].get("role") != "user"):
@@ -1242,11 +1321,15 @@ class ChatOrchestrator(
                     yield final_response
 
                 REQUEST_COUNT.labels(module="orchestration", method="process_stream", status="success").inc()
-                COLLABORATION_SUCCESS.labels(workflow_type="standard_chat", agents_used="orchestrator", outcome="success").inc()
+                COLLABORATION_SUCCESS.labels(
+                    workflow_type="standard_chat", agents_used="orchestrator", outcome="success"
+                ).inc()
 
             except Exception as e:
                 REQUEST_COUNT.labels(module="orchestration", method="process_stream", status="error").inc()
-                COLLABORATION_SUCCESS.labels(workflow_type="standard_chat", agents_used="orchestrator", outcome="error").inc()
+                COLLABORATION_SUCCESS.labels(
+                    workflow_type="standard_chat", agents_used="orchestrator", outcome="error"
+                ).inc()
                 logger.error(f"Orchestration Error: {e}", exc_info=True)
                 await self._update_state(session_id, STATE_FAILED, str(e))
                 if transparency_generator is not None and emit_transparency_event is not None:
@@ -1255,17 +1338,28 @@ class ChatOrchestrator(
                 async for queued in self._drain_queue(queue):
                     yield queued
                 yield agent_service_pb2.ChatResponse(
-                    response_id=response_id, created_at=int(datetime.now().timestamp()), request_id=request_id,
-                    error=agent_service_pb2.Error(message=str(e), retryable=True, error_code=agent_service_pb2.ERROR_CODE_INTERNAL),
+                    response_id=response_id,
+                    created_at=int(datetime.now().timestamp()),
+                    request_id=request_id,
+                    error=agent_service_pb2.Error(
+                        message=str(e), retryable=True, error_code=agent_service_pb2.ERROR_CODE_INTERNAL
+                    ),
                     finish_reason=agent_service_pb2.ERROR,
                     session_id=session_id,
                 )
 
             finally:
                 await self._cleanup(
-                    lock_acquired=lock_acquired, lock_renewal_task=lock_renewal_task, lock_renewal_stop=lock_renewal_stop,
-                    session_id=session_id, request_id=request_id, start_time=start_time, user_id=user_id,
-                    total_prompt_tokens=total_prompt_tokens, total_completion_tokens=total_completion_tokens,
+                    lock_acquired=lock_acquired,
+                    lock_renewal_task=lock_renewal_task,
+                    lock_renewal_stop=lock_renewal_stop,
+                    session_id=session_id,
+                    request_id=request_id,
+                    start_time=start_time,
+                    user_id=user_id,
+                    total_prompt_tokens=total_prompt_tokens,
+                    total_completion_tokens=total_completion_tokens,
+                    final_state=result_holder.get("final_state") if "result_holder" in locals() else None,
                 )
         finally:
             span.end()

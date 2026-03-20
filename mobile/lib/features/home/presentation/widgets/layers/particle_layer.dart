@@ -244,19 +244,29 @@ class _ParticlePainter extends CustomPainter {
 
       final color = colors[i % colors.length].withValues(alpha: opacity);
       final paint = Paint()..color = color;
+      final glowPaint = Paint()
+        ..color = color.withValues(alpha: opacity * 0.18)
+        ..maskFilter = MaskFilter.blur(
+          BlurStyle.normal,
+          particle.size * 0.8,
+        );
 
       // 绘制不同形状
       switch (shape) {
         case 'star':
+          canvas.drawCircle(Offset(x, y), particle.size * 1.8, glowPaint);
           _drawStar(canvas, Offset(x, y), particle.size, paint);
           break;
         case 'petal':
+          canvas.drawCircle(Offset(x, y), particle.size * 1.6, glowPaint);
           _drawPetal(canvas, Offset(x, y), particle.size, paint, particle.rotation);
           break;
         case 'snowflake':
+          canvas.drawCircle(Offset(x, y), particle.size * 1.7, glowPaint);
           _drawSnowflake(canvas, Offset(x, y), particle.size, paint);
           break;
         case 'square':
+          canvas.drawCircle(Offset(x, y), particle.size * 1.45, glowPaint);
           canvas.drawRect(
             Rect.fromCenter(
               center: Offset(x, y),
@@ -268,6 +278,7 @@ class _ParticlePainter extends CustomPainter {
           break;
         case 'circle':
         default:
+          canvas.drawCircle(Offset(x, y), particle.size * 1.6, glowPaint);
           canvas.drawCircle(Offset(x, y), particle.size, paint);
       }
     }

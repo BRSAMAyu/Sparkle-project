@@ -1,8 +1,8 @@
 """
 MIMO v2-pro 集成测试
 
-测试 mimo-v2-pro 模型的：
-1. 层级路由（STANDARD 和 REASONING 层级的第一优先级）
+测试 MIMO 体系的：
+1. 分层路由（STANDARD 和 MAX 层级）
 2. 联网搜索功能
 3. 思考链响应处理
 """
@@ -14,27 +14,24 @@ from app.core.llm_router import LLMRouter, ModelConfig, ModelProvider
 
 
 class TestMIMOPRoTierRouting:
-    """测试 mimo_pro 的层级路由"""
+    """测试 MIMO 分层路由"""
 
-    def test_mimo_pro_is_first_in_standard_tier(self):
-        """验证 mimo_pro 是 STANDARD 层级的第一优先级"""
+    def test_mimo_flash_thinking_is_available_in_standard_tier(self):
+        """验证标准层使用 flash 思考模型而非 mimo_pro"""
         router = LLMRouter()
 
-        # 获取 STANDARD 层级的模型列表
         standard_models = router._tier_mapping.get(ModelTier.STANDARD, [])
 
-        assert "mimo_pro" in standard_models, "mimo_pro 应该在 STANDARD 层级中"
-        assert standard_models[0] == "mimo_pro", "mimo_pro 应该是 STANDARD 层级的第一优先级"
+        assert "xiaomi_standard_thinking" in standard_models
+        assert "mimo_pro" not in standard_models
 
-    def test_mimo_pro_is_first_in_reasoning_tier(self):
-        """验证 mimo_pro 是 REASONING 层级的第一优先级"""
+    def test_mimo_pro_is_available_in_max_tier(self):
+        """验证 mimo_pro 被提升到 MAX 层级"""
         router = LLMRouter()
 
-        # 获取 REASONING 层级的模型列表
-        reasoning_models = router._tier_mapping.get(ModelTier.REASONING, [])
+        max_models = router._tier_mapping.get(ModelTier.MAX, [])
 
-        assert "mimo_pro" in reasoning_models, "mimo_pro 应该在 REASONING 层级中"
-        assert reasoning_models[0] == "mimo_pro", "mimo_pro 应该是 REASONING 层级的第一优先级"
+        assert "mimo_pro" in max_models
 
     def test_mimo_pro_config_has_web_search_enabled(self):
         """验证 mimo_pro 配置启用了联网搜索"""
@@ -46,27 +43,29 @@ class TestMIMOPRoTierRouting:
         assert mimo_pro_config.enable_web_search is True, "mimo_pro 应该启用联网搜索"
         assert mimo_pro_config.thinking_mode == "enabled", "mimo_pro 应该启用思考模式"
 
-    def test_select_model_returns_mimo_pro_for_standard_task(self):
-        """验证 STANDARD 任务选择 mimo_pro"""
+    def test_select_model_returns_standard_tier_model_for_standard_task(self):
+        """验证 STANDARD 任务不再默认命中 mimo_pro"""
         router = LLMRouter()
 
         selection = router.select_model(
             agent_role=AgentRole.GENERATION,
-            task_type=TaskType.STANDARD_RESPONSE
+            task_type=TaskType.STANDARD_RESPONSE,
+            reasoning_mode='balanced',
         )
 
-        assert selection.model_key == "mimo_pro", f"STANDARD 任务应该选择 mimo_pro，但选择了 {selection.model_key}"
+        assert selection.model_key in {"xiaomi_standard_thinking", "dashscope_standard_thinking"}
 
-    def test_select_model_returns_mimo_pro_for_reasoning_task(self):
-        """验证 REASONING 任务选择 mimo_pro"""
+    def test_select_model_returns_pro_tier_model_for_reasoning_task(self):
+        """验证深任务默认走 pro 层而不是 max"""
         router = LLMRouter()
 
         selection = router.select_model(
             agent_role=AgentRole.EXAM_ORACLE,
-            task_type=TaskType.DEEP_REASONING
+            task_type=TaskType.DEEP_REASONING,
+            reasoning_mode='deep',
         )
 
-        assert selection.model_key == "mimo_pro", f"REASONING 任务应该选择 mimo_pro，但选择了 {selection.model_key}"
+        assert selection.model_key in {"dashscope_reason", "deepseek_reason"}
 
 
 class TestMIMOProConfigFields:

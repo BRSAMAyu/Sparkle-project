@@ -18,7 +18,8 @@ class UserRepository {
         '/users/me/preferences',
         data: preferences.toJson(),
       );
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'updateUserPreferences');
+      final payload = ApiResponseParser.unwrapMap(response.data,
+          action: 'updateUserPreferences');
       return UserModel.fromJson(payload);
     } catch (e) {
       rethrow;
@@ -36,7 +37,8 @@ class UserRepository {
         '/users/me/push-preference',
         data: prefs.toJson(),
       );
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'updatePushPreferences');
+      final payload = ApiResponseParser.unwrapMap(response.data,
+          action: 'updatePushPreferences');
       return UserModel.fromJson(payload);
     } catch (e) {
       rethrow;
@@ -65,7 +67,8 @@ class UserRepository {
     }
     final response =
         await _apiClient.get<Map<String, dynamic>>('/profile/transparent');
-    return ApiResponseParser.unwrapMap(response.data, action: 'fetchTransparentProfile');
+    return ApiResponseParser.unwrapMap(response.data,
+        action: 'fetchTransparentProfile');
   }
 
   Future<Map<String, dynamic>> fetchProfileContext() async {
@@ -88,7 +91,8 @@ class UserRepository {
     }
     final response =
         await _apiClient.get<Map<String, dynamic>>('/profile/context');
-    return ApiResponseParser.unwrapMap(response.data, action: 'fetchProfileContext');
+    return ApiResponseParser.unwrapMap(response.data,
+        action: 'fetchProfileContext');
   }
 
   Future<List<Map<String, dynamic>>> fetchInferredPreferences() async {
@@ -155,7 +159,8 @@ class UserRepository {
       return items.cast<Map<String, dynamic>>();
     }
     // Direct list format
-    final data = ApiResponseParser.unwrapList(response.data, action: 'fetchSystemUpdates');
+    final data = ApiResponseParser.unwrapList(response.data,
+        action: 'fetchSystemUpdates');
     return data.cast<Map<String, dynamic>>();
   }
 
@@ -238,12 +243,15 @@ class UserRepository {
       return {
         'transparency_level': 0,
         'system_update_level': 1,
+        'ai_reasoning_mode': 'balanced',
         'task_reminders_enabled': true,
         'task_reminder_times': [1440, 60, 15],
       };
     }
-    final response = await _apiClient.get<Map<String, dynamic>>('/user/settings');
-    return ApiResponseParser.unwrapMap(response.data, action: 'fetchUserSettings');
+    final response =
+        await _apiClient.get<Map<String, dynamic>>('/user/settings');
+    return ApiResponseParser.unwrapMap(response.data,
+        action: 'fetchUserSettings');
   }
 
   Future<void> updateUserSettings(Map<String, dynamic> payload) async {
@@ -257,8 +265,52 @@ class UserRepository {
     );
   }
 
+  Future<Map<String, dynamic>> fetchAiUsageSummary() async {
+    if (DemoDataService.isDemoMode) {
+      return {
+        'current_mode': 'balanced',
+        'items': [
+          {
+            'mode': 'fast',
+            'label': '敏捷',
+            'requests_used': 12,
+            'requests_limit': 120,
+            'requests_remaining': 108,
+            'total_tokens': 18420,
+            'total_cost_usd': 0.0184,
+          },
+          {
+            'mode': 'balanced',
+            'label': '均衡',
+            'requests_used': 6,
+            'requests_limit': 60,
+            'requests_remaining': 54,
+            'total_tokens': 14310,
+            'total_cost_usd': 0.0267,
+          },
+          {
+            'mode': 'deep',
+            'label': '深思',
+            'requests_used': 1,
+            'requests_limit': 24,
+            'requests_remaining': 23,
+            'total_tokens': 6120,
+            'total_cost_usd': 0.0153,
+          },
+        ],
+      };
+    }
+    final response =
+        await _apiClient.get<Map<String, dynamic>>('/user/settings/ai-usage');
+    return ApiResponseParser.unwrapMap(
+      response.data,
+      action: 'fetchAiUsageSummary',
+    );
+  }
+
   /// Update weekly schedule preferences (time slots grid)
-  Future<UserModel> updateSchedulePreferences(Map<String, dynamic> scheduleData) async {
+  Future<UserModel> updateSchedulePreferences(
+      Map<String, dynamic> scheduleData) async {
     if (DemoDataService.isDemoMode) {
       return DemoDataService().demoUser; // Mock update
     }
@@ -267,7 +319,8 @@ class UserRepository {
         '/users/me/schedule-preferences',
         data: scheduleData,
       );
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'updateSchedulePreferences');
+      final payload = ApiResponseParser.unwrapMap(response.data,
+          action: 'updateSchedulePreferences');
       return UserModel.fromJson(payload);
     } catch (e) {
       rethrow;

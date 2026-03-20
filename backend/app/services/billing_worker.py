@@ -3,6 +3,7 @@ BillingWorker - 异步计费任务处理器
 
 负责从 Redis 队列中消费 Token 使用记录，并批量持久化到数据库中。
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -40,7 +41,7 @@ class BillingWorker:
         redis_password: str | None = settings.REDIS_PASSWORD,
         db_url: str = settings.DATABASE_URL,
         batch_size: int = 10,
-        flush_interval: int = 5
+        flush_interval: int = 5,
     ):
         self.redis_url = redis_url
         self.batch_size = batch_size
@@ -52,9 +53,7 @@ class BillingWorker:
 
         # 初始化数据库引擎和会话工厂
         self.engine = create_async_engine(to_async_database_url(db_url))
-        self.async_session_factory = sessionmaker(
-            self.engine, expire_on_commit=False, class_=AsyncSession
-        )
+        self.async_session_factory = sessionmaker(self.engine, expire_on_commit=False, class_=AsyncSession)
 
         self.is_running = False
         self._batch: list[dict[str, Any]] = []
@@ -124,17 +123,21 @@ class BillingWorker:
                     # 转换记录格式以匹配模型，并处理可能的 UUID 转换或时间格式转换
                     stmt_data = []
                     for r in self._batch:
-                        stmt_data.append({
-                            "user_id": r["user_id"],
-                            "session_id": r["session_id"],
-                            "request_id": r["request_id"],
-                            "model": r["model"],
-                            "prompt_tokens": r["prompt_tokens"],
-                            "completion_tokens": r["completion_tokens"],
-                            "total_tokens": r["total_tokens"],
-                            "cost": r.get("cost", 0.0),
-                            "timestamp": datetime.fromtimestamp(r["timestamp"]) if "timestamp" in r else _utcnow()
-                        })
+                        stmt_data.append(
+                            {
+                                "user_id": r["user_id"],
+                                "session_id": r["session_id"],
+                                "request_id": r["request_id"],
+                                "model": r["model"],
+                                "model_tier": r.get("model_tier"),
+                                "ai_reasoning_mode": r.get("reasoning_mode", "balanced"),
+                                "prompt_tokens": r["prompt_tokens"],
+                                "completion_tokens": r["completion_tokens"],
+                                "total_tokens": r["total_tokens"],
+                                "cost": r.get("cost", 0.0),
+                                "timestamp": datetime.fromtimestamp(r["timestamp"]) if "timestamp" in r else _utcnow(),
+                            }
+                        )
 
                     # 批量插入
                     await session.execute(insert(TokenUsage), stmt_data)
@@ -177,6 +180,8 @@ class BillingWorker:
             "session_id": record["session_id"],
             "request_id": record["request_id"],
             "model": record["model"],
+            "model_tier": record.get("model_tier"),
+            "ai_reasoning_mode": record.get("reasoning_mode", "balanced"),
             "prompt_tokens": record["prompt_tokens"],
             "completion_tokens": record["completion_tokens"],
             "total_tokens": record["total_tokens"],
@@ -200,6 +205,7 @@ class BillingWorker:
     def stop(self):
         """停止工作器"""
         self.is_running = False
+
 
 if __name__ == "__main__":
     # 简单的本地运行逻辑

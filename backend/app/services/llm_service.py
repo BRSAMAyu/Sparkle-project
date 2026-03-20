@@ -298,6 +298,7 @@ class LLMService:
         self,
         task_type: TaskType,
         avoid_providers: list[ModelProvider] | None = None,
+        reasoning_mode: str | None = None,
     ):
         """
         根据任务类型动态切换模型（线程安全）
@@ -315,6 +316,7 @@ class LLMService:
                 self.agent_role,
                 task_type,
                 avoid_providers=avoid_providers,
+                reasoning_mode=reasoning_mode,
             )
             kwargs = llm_router.get_openai_client_kwargs(selection)
 
@@ -1277,6 +1279,7 @@ async def get_configured_llm_service(
     agent_role: AgentRole | str,
     task_type: TaskType | None = None,
     avoid_providers: list[ModelProvider] | None = None,
+    reasoning_mode: str | None = None,
 ) -> LLMService:
     """
     获取已按角色/任务完成模型路由的 LLM 服务实例。
@@ -1286,7 +1289,11 @@ async def get_configured_llm_service(
     """
     service = get_llm_service(agent_role)
     if task_type is not None:
-        await service.switch_model_for_task(task_type, avoid_providers=avoid_providers)
+        await service.switch_model_for_task(
+            task_type,
+            avoid_providers=avoid_providers,
+            reasoning_mode=reasoning_mode,
+        )
     return service
 
 
@@ -1294,10 +1301,17 @@ async def get_configured_llm_service_for_tier(
     agent_role: AgentRole | str,
     force_tier: ModelTier,
     task_type: TaskType | None = None,
+    reasoning_mode: str | None = None,
 ) -> LLMService:
     """获取按指定 tier 强制路由后的 LLM 服务实例。"""
     service = get_llm_service(agent_role)
-    selection = llm_router.select_model(agent_role, task_type=task_type, force_tier=force_tier)
+    selection = llm_router.select_model(
+        agent_role,
+        task_type=task_type,
+        force_tier=force_tier,
+        reasoning_mode=reasoning_mode,
+        allow_max=force_tier == ModelTier.MAX,
+    )
     service._init_with_router(selection)
     return service
 

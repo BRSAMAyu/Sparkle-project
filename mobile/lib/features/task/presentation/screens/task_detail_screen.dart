@@ -102,37 +102,55 @@ class _TaskDetailView extends ConsumerWidget {
     switch (type) {
       case TaskType.learning:
         return LinearGradient(
-          colors: [DS.brandPrimary.shade50, DS.brandPrimary],
+          colors: [
+            Color.lerp(DS.surfaceSecondary, DS.brandPrimary, 0.18)!,
+            Color.lerp(DS.surfaceSecondary, DS.brandPrimary, 0.62)!,
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         );
       case TaskType.training:
         return LinearGradient(
-          colors: [DS.brandPrimary.shade50, DS.brandPrimary],
+          colors: [
+            Color.lerp(DS.surfaceSecondary, DS.success, 0.18)!,
+            Color.lerp(DS.surfaceSecondary, DS.success, 0.58)!,
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         );
       case TaskType.errorFix:
         return LinearGradient(
-          colors: [DS.error.shade50, DS.brandPrimary],
+          colors: [
+            Color.lerp(DS.surfaceSecondary, DS.error, 0.14)!,
+            Color.lerp(DS.surfaceSecondary, DS.error, 0.52)!,
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         );
       case TaskType.reflection:
         return LinearGradient(
-          colors: [DS.rarityEpicBg, DS.brandPrimary],
+          colors: [
+            Color.lerp(DS.surfaceSecondary, DS.rarityEpic, 0.18)!,
+            Color.lerp(DS.surfaceSecondary, DS.rarityEpic, 0.56)!,
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         );
       case TaskType.social:
         return LinearGradient(
-          colors: [DS.success.shade50, DS.brandPrimary],
+          colors: [
+            Color.lerp(DS.surfaceSecondary, DS.info, 0.16)!,
+            Color.lerp(DS.surfaceSecondary, DS.info, 0.54)!,
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         );
       case TaskType.planning:
         return LinearGradient(
-          colors: [DS.infoLight, DS.brandPrimary],
+          colors: [
+            Color.lerp(DS.surfaceSecondary, DS.warning, 0.14)!,
+            Color.lerp(DS.surfaceSecondary, DS.warning, 0.48)!,
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         );
@@ -197,12 +215,13 @@ class _TaskDetailView extends ConsumerWidget {
                                 style: const TextStyle(fontSize: DS.fontSizeSm),
                               ),
                               backgroundColor:
-                                  DS.brandPrimary.withValues(alpha: 0.8),
+                                  DS.surfaceOverlay.withValues(alpha: 0.92),
                               avatar: Icon(
                                 Icons.category,
                                 size: DS.iconSizeXs,
-                                color: DS.primaryBase,
+                                color: DS.textSecondary,
                               ),
+                              labelStyle: TextStyle(color: DS.textPrimary),
                             ),
                             Chip(
                               label: Text(
@@ -529,11 +548,11 @@ class _BottomActionBar extends ConsumerWidget {
           child: Container(
             padding: const EdgeInsets.all(DS.spacing16),
             decoration: BoxDecoration(
-              color: DS.brandPrimaryConst,
+              color: DS.surfacePrimary,
               boxShadow: DS.shadowMd,
               border: Border(
                 top: BorderSide(
-                  color: DS.neutral200,
+                  color: DS.borderSubtle,
                 ),
               ),
             ),

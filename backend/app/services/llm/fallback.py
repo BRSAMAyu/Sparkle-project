@@ -274,11 +274,13 @@ class LLMModelFallbackManager:
 
         # 2. 降级到下一级 tier
         tier_order = [
-            ModelTier.REASONING,
+            ModelTier.MAX,
+            ModelTier.PRO,
+            ModelTier.PLUS,
             ModelTier.STANDARD,
             ModelTier.FAST,
-            ModelTier.FREE_REASONING,
             ModelTier.FREE_FAST,
+            ModelTier.FREE_REASONING,
         ]
 
         try:

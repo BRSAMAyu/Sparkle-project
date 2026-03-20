@@ -13,16 +13,24 @@ class FeedPostCard extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         padding: const EdgeInsets.all(DS.lg),
         decoration: BoxDecoration(
-          color: DS.surface,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              DS.surfacePrimary,
+              Color.lerp(DS.surfaceSecondary, DS.brandPrimary, 0.03) ??
+                  DS.surfaceSecondary,
+            ],
+          ),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: DS.border.withValues(alpha: 0.3),
+            color: DS.border.withValues(alpha: 0.4),
           ),
           boxShadow: [
             BoxShadow(
-              color: DS.brandPrimary.withValues(alpha: 0.1),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+              color: DS.textPrimary.withValues(alpha: 0.06),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
@@ -51,7 +59,7 @@ class FeedPostCard extends StatelessWidget {
                     Text(
                       post.user.username,
                       style: TextStyle(
-                        color: DS.brandPrimaryConst,
+                        color: DS.textPrimary,
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),
@@ -59,7 +67,7 @@ class FeedPostCard extends StatelessWidget {
                     Text(
                       timeago.format(post.createdAt),
                       style: TextStyle(
-                        color: DS.brandPrimary400,
+                        color: DS.textSecondary,
                         fontSize: 12,
                       ),
                     ),
@@ -71,8 +79,11 @@ class FeedPostCard extends StatelessWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: DS.primaryBase.withValues(alpha: 0.2),
+                      color: DS.info.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: DS.info.withValues(alpha: 0.22),
+                      ),
                     ),
                     child: Row(
                       children: [
@@ -85,7 +96,7 @@ class FeedPostCard extends StatelessWidget {
                         Text(
                           'Posting...',
                           style: TextStyle(
-                            color: DS.primaryBase,
+                            color: DS.info,
                             fontSize: 10,
                           ),
                         ),
@@ -98,7 +109,7 @@ class FeedPostCard extends StatelessWidget {
             Text(
               post.content,
               style: TextStyle(
-                color: DS.brandPrimaryConst,
+                color: DS.textPrimary,
                 fontSize: 15,
                 height: 1.4,
               ),
@@ -115,7 +126,7 @@ class FeedPostCard extends StatelessWidget {
                     height: 200,
                     errorBuilder: (ctx, err, stack) => Container(
                       height: 200,
-                      color: DS.brandPrimary800,
+                      color: DS.surfaceSecondary,
                       child: const Center(child: Icon(Icons.broken_image)),
                     ),
                   ),
@@ -140,8 +151,11 @@ class FeedPostCard extends StatelessWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: DS.secondaryBase.withValues(alpha: 0.2),
+                      color: DS.secondaryBase.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: DS.secondaryBase.withValues(alpha: 0.22),
+                      ),
                     ),
                     child: Text(
                       '#${post.topic}',
@@ -169,12 +183,12 @@ class _ActionButton extends StatelessWidget {
         onTap: onTap,
         child: Row(
           children: [
-            Icon(icon, color: DS.brandPrimary400, size: 20),
+            Icon(icon, color: DS.textSecondary, size: 20),
             const SizedBox(width: 6),
             Text(
               label,
               style: TextStyle(
-                color: DS.brandPrimary400,
+                color: DS.textSecondary,
                 fontSize: 14,
               ),
             ),

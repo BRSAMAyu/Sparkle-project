@@ -87,7 +87,7 @@ class _TaskCardState extends ConsumerState<TaskCard>
     final taskColor = context.sparkleColors.getTaskColor(type.name);
     return LinearGradient(
       colors: [
-        taskColor.withValues(alpha: 0.05),
+        taskColor.withValues(alpha: 0.035),
         _surfaceSecondary(context),
       ],
       begin: Alignment.topLeft,
@@ -131,15 +131,26 @@ class _TaskCardState extends ConsumerState<TaskCard>
                       gradient:
                           _getBackgroundGradient(context, widget.task.type),
                       borderRadius: _radius(context),
-                      boxShadow: _shadows(context),
+                      border: Border.all(
+                        color: context.sparkleColors.getTaskColor(
+                          widget.task.type.name,
+                        ).withValues(alpha: 0.12),
+                      ),
+                      boxShadow: [
+                        for (final shadow in _shadows(context))
+                          BoxShadow(
+                            color: shadow.color.withValues(alpha: 0.08),
+                            blurRadius: shadow.blurRadius + 4,
+                            offset: const Offset(0, 8),
+                          ),
+                      ],
                     ),
                     foregroundDecoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          context.sparkleColors.brandPrimary
+                          Colors.white
                               .withValues(alpha: 0),
-                          context.sparkleColors.brandPrimary
-                              .withValues(alpha: 0.1),
+                          Colors.white.withValues(alpha: 0.05),
                           context.sparkleColors.brandPrimary
                               .withValues(alpha: 0),
                         ],
