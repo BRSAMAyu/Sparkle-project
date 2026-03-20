@@ -27,6 +27,7 @@ from app.models.community import Friendship, FriendshipStatus, SharedResource
 from app.models.user import User
 from app.schemas.leaderboard import LeaderboardType
 from app.schemas.community import UserBrief as CommunityUserBrief
+from app.services.accountability_notification_service import _user_display_name
 from app.services.leaderboard_service import LeaderboardService
 
 router = APIRouter()

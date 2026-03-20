@@ -7,6 +7,7 @@ from uuid import UUID
 from app.services.galaxy_service import GalaxyService
 
 from .base import BaseTool, ToolCategory, ToolResult
+from .entity_cards import build_knowledge_entity_card, wrap_widget_payload
 from .schemas import CreateKnowledgeNodeParams, LinkNodesParams, QueryKnowledgeParams
 
 
@@ -46,19 +47,28 @@ class CreateKnowledgeNodeTool(BaseTool):
 
             if existing_nodes:
                 node = existing_nodes[0]
+                node_payload = {
+                    "id": str(node.id),
+                    "title": node.name,
+                    "summary": node.description,
+                    "tags": node.keywords,
+                    "is_existing": True,
+                    "message": "相似知识点已存在，已为您关联。",
+                }
                 return ToolResult(
                     success=True, # 返回成功，但告知用户已关联
                     tool_name=self.name,
                     data={"node_id": str(node.id), "is_duplicate": True},
                     widget_type="knowledge_card",
-                    widget_data={
-                        "id": str(node.id),
-                        "title": node.name,
-                        "summary": node.description,
-                        "tags": node.keywords,
-                        "is_existing": True,
-                        "message": "相似知识点已存在，已为您关联。"
-                    }
+                    widget_data=wrap_widget_payload(
+                        widget_type="knowledge_card",
+                        widget_data=node_payload,
+                        entity_card=build_knowledge_entity_card(
+                            node_payload,
+                            tool_name=self.name,
+                            tool_result_id=tool_call_id,
+                        ),
+                    ),
                 )
 
             # 2. 如果无重复，继续创建
@@ -86,19 +96,28 @@ class CreateKnowledgeNodeTool(BaseTool):
                 parent_node_id=parent_node_uuid
             )
 
+            node_payload = {
+                "id": str(node.id),
+                "title": node.name,
+                "summary": node.description,
+                "tags": node.keywords,
+                "mastery_level": 0,
+                "created_at": _utcnow().isoformat() if not hasattr(node, 'created_at') else node.created_at.isoformat(),
+            }
             return ToolResult(
                 success=True,
                 tool_name=self.name,
                 data={"node_id": str(node.id)},
                 widget_type="knowledge_card",
-                widget_data={
-                    "id": str(node.id),
-                    "title": node.name,
-                    "summary": node.description,
-                    "tags": node.keywords,
-                    "mastery_level": 0, # Initial mastery
-                    "created_at": _utcnow().isoformat() if not hasattr(node, 'created_at') else node.created_at.isoformat()
-                }
+                widget_data=wrap_widget_payload(
+                    widget_type="knowledge_card",
+                    widget_data=node_payload,
+                    entity_card=build_knowledge_entity_card(
+                        node_payload,
+                        tool_name=self.name,
+                        tool_result_id=tool_call_id,
+                    ),
+                ),
             )
         except Exception as e:
             return ToolResult(

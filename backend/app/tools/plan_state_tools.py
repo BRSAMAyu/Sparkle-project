@@ -19,6 +19,7 @@ from pydantic import BaseModel, Field
 from app.services.plan_state_service import PlanStateService
 from app.services.task_state_sync import TaskStateSyncService
 from app.tools.base import BaseTool, ToolCategory, ToolResult
+from app.tools.entity_cards import build_task_list_entity_card, wrap_widget_payload
 from app.tools.plan_resolution import PlanResolutionError, resolve_user_plan_reference
 
 # ============================================
@@ -222,11 +223,20 @@ class GetTaskSummaryTool(BaseTool):
                     "tasks": summaries,
                 },
                 widget_type="task_list",
-                widget_data={
-                    "tasks": summaries,
-                    "plan_id": str(resolved.plan_id),
-                    "plan_name": resolved.plan_name,
-                },
+                widget_data=wrap_widget_payload(
+                    widget_type="task_list",
+                    widget_data={
+                        "tasks": summaries,
+                        "plan_id": str(resolved.plan_id),
+                        "plan_name": resolved.plan_name,
+                    },
+                    entity_card=build_task_list_entity_card(
+                        summaries,
+                        tool_name=self.name,
+                        plan_id=str(resolved.plan_id),
+                        plan_title=resolved.plan_name,
+                    ),
+                ),
             )
 
         except Exception as e:

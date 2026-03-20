@@ -2,14 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 
-class PredictedIntentCard extends ConsumerWidget {
+class PredictedIntentCard extends ConsumerStatefulWidget {
   const PredictedIntentCard({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PredictedIntentCard> createState() =>
+      _PredictedIntentCardState();
+}
+
+class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
+  bool _isContinuing = false;
+
+  @override
+  Widget build(BuildContext context) {
     final forecast = ref.watch(dashboardProvider).nextIntentForecast;
     if (forecast == null || forecast.title.isEmpty || forecast.summary.isEmpty) {
       return const SizedBox.shrink();
@@ -21,6 +30,24 @@ class PredictedIntentCard extends ConsumerWidget {
       'rules' => '规则兜底',
       _ => forecast.predictionSource,
     };
+    final windowLabel = _windowLabel(forecast.predictedWindow);
+    final actionLabel = _actionLabel(forecast.predictedActionType);
+    final freshnessLabel = _freshnessLabel(forecast.generatedAt);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final promptPreview = forecast.suggestedPrompt.trim();
+    final gradientStart = isDark
+        ? Color.alphaBlend(
+            DS.info.withValues(alpha: 0.16),
+            DS.surfaceSecondary,
+          )
+        : DS.info.withValues(alpha: 0.1);
+    final gradientMid = isDark
+        ? Color.alphaBlend(
+            DS.brandPrimary.withValues(alpha: 0.12),
+            DS.surfaceSecondary,
+          )
+        : DS.brandPrimary.withValues(alpha: 0.05);
+    final gradientEnd = isDark ? DS.surfaceOverlay : DS.surfaceSecondary;
 
     return ContentConstraint(
       child: Padding(
@@ -28,112 +55,204 @@ class PredictedIntentCard extends ConsumerWidget {
         child: MaterialStyler(
           material: AppMaterials.ceramic.copyWith(
             backgroundGradient: LinearGradient(
-              colors: [
-                DS.info.withValues(alpha: 0.12),
-                DS.brandPrimary.withValues(alpha: 0.06),
-                DS.surfaceSecondary,
-              ],
+              colors: [gradientStart, gradientMid, gradientEnd],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            borderColor: DS.info.withValues(alpha: 0.18),
+            borderColor: DS.info.withValues(alpha: isDark ? 0.22 : 0.16),
             borderWidth: 1,
+            shadows: [
+              BoxShadow(
+                color: DS.info.withValues(alpha: isDark ? 0.12 : 0.06),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
           ),
           borderRadius: DS.borderRadius20,
           padding: const EdgeInsets.all(DS.spacing16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Stack(
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
+              Positioned(
+                right: -10,
+                top: -12,
+                child: IgnorePointer(
+                  child: Container(
+                    width: 96,
+                    height: 96,
                     decoration: BoxDecoration(
-                      color: DS.info.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      Icons.psychology_alt_rounded,
-                      color: DS.info,
-                      size: 18,
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          DS.info.withValues(alpha: isDark ? 0.14 : 0.12),
+                          Colors.transparent,
+                        ],
+                      ),
                     ),
                   ),
-                  const SizedBox(width: DS.spacing12),
-                  Expanded(
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: DS.info.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: DS.info.withValues(alpha: 0.16),
+                          ),
+                        ),
+                        child: Icon(
+                          Icons.psychology_alt_rounded,
+                          color: DS.info,
+                          size: 18,
+                        ),
+                      ),
+                      const SizedBox(width: DS.spacing12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '系统预测',
+                              style: context.sparkleTypography.labelLarge.copyWith(
+                                fontWeight: DS.fontWeightBold,
+                              ),
+                            ),
+                            Text(
+                              '基于画像、最近 24 小时行为与任务节奏',
+                              style: context.sparkleTypography.labelSmall.copyWith(
+                                color: DS.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      _Chip(label: '$confidencePercent%'),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    forecast.title,
+                    style: context.sparkleTypography.titleLarge.copyWith(
+                      fontWeight: DS.fontWeightBold,
+                      height: 1.15,
+                    ),
+                  ),
+                  const SizedBox(height: DS.spacing8),
+                  Text(
+                    forecast.summary,
+                    style: context.sparkleTypography.bodyMedium.copyWith(
+                      color: DS.textSecondary,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: DS.spacing12),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(DS.spacing12),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.04)
+                          : DS.surfaceOverlay,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: DS.borderSubtle,
+                      ),
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '系统预测',
-                          style: context.sparkleTypography.labelLarge.copyWith(
+                          '建议接续',
+                          style: context.sparkleTypography.labelSmall.copyWith(
+                            color: DS.textTertiary,
                             fontWeight: DS.fontWeightBold,
                           ),
                         ),
+                        const SizedBox(height: DS.spacing6),
                         Text(
-                          '基于画像、最近 24 小时行为与任务节奏',
-                          style: context.sparkleTypography.labelSmall.copyWith(
-                            color: DS.textSecondary,
+                          promptPreview.isEmpty ? '预测结果已生成，等待可继续指令' : promptPreview,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: context.sparkleTypography.bodyMedium.copyWith(
+                            color: DS.textPrimary,
+                            height: 1.45,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  _Chip(label: '$confidencePercent%'),
-                ],
-              ),
-              const SizedBox(height: DS.spacing12),
-              Text(
-                forecast.title,
-                style: context.sparkleTypography.titleLarge.copyWith(
-                  fontWeight: DS.fontWeightBold,
-                ),
-              ),
-              const SizedBox(height: DS.spacing8),
-              Text(
-                forecast.summary,
-                style: context.sparkleTypography.bodyMedium.copyWith(
-                  color: DS.textSecondary,
-                  height: 1.45,
-                ),
-              ),
-              if (forecast.reasons.isNotEmpty) ...[
-                const SizedBox(height: DS.spacing12),
-                Wrap(
-                  spacing: DS.spacing8,
-                  runSpacing: DS.spacing8,
-                  children: forecast.reasons.take(2).map((reason) {
-                    return _Chip(
-                      label: reason,
-                      subdued: true,
-                    );
-                  }).toList(),
-                ),
-              ],
-              const SizedBox(height: DS.spacing12),
-              Row(
-                children: [
-                  Expanded(
-                    child: SparkleButton(
-                      label: '按这个继续',
-                      icon: const Icon(Icons.auto_awesome_rounded),
-                      onPressed: () async {
-                        final prompt = forecast.suggestedPrompt.trim();
-                        if (prompt.isEmpty) return;
-                        if (context.mounted) {
-                          context.go('/chat');
-                        }
-                        await Future<void>.delayed(
-                          const Duration(milliseconds: 250),
-                        );
-                        await ref.read(chatProvider.notifier).sendMessage(prompt);
-                      },
-                    ),
+                  const SizedBox(height: DS.spacing12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(999),
+                          child: LinearProgressIndicator(
+                            minHeight: 6,
+                            value: forecast.confidence.clamp(0.0, 1.0),
+                            backgroundColor: DS.surfaceTertiary,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(DS.info),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: DS.spacing10),
+                      Text(
+                        '可信度 $confidencePercent%',
+                        style: context.sparkleTypography.labelSmall.copyWith(
+                          color: DS.textSecondary,
+                          fontWeight: DS.fontWeightBold,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: DS.spacing8),
-                  _Chip(
-                    label: '${forecast.predictedWindow} · $sourceLabel',
-                    subdued: true,
+                  if (forecast.reasons.isNotEmpty) ...[
+                    const SizedBox(height: DS.spacing12),
+                    Wrap(
+                      spacing: DS.spacing8,
+                      runSpacing: DS.spacing8,
+                      children: forecast.reasons.take(3).map(
+                        (reason) => _Chip(
+                          label: reason,
+                          subdued: true,
+                        ),
+                      ).toList(),
+                    ),
+                  ],
+                  const SizedBox(height: 14),
+                  SparkleButton(
+                    label: _isContinuing ? '正在衔接到对话…' : '按这个继续',
+                    icon: Icon(
+                      _isContinuing
+                          ? Icons.sync_rounded
+                          : Icons.auto_awesome_rounded,
+                    ),
+                    loading: _isContinuing,
+                    expand: true,
+                    disabled: _isContinuing || promptPreview.isEmpty,
+                    onPressed: _isContinuing || promptPreview.isEmpty
+                        ? null
+                        : () => _handleContinue(forecast),
+                  ),
+                  const SizedBox(height: DS.spacing10),
+                  Wrap(
+                    spacing: DS.spacing8,
+                    runSpacing: DS.spacing8,
+                    children: [
+                      _Chip(label: actionLabel, subdued: true),
+                      _Chip(label: windowLabel, subdued: true),
+                      _Chip(label: sourceLabel, subdued: true),
+                      if (freshnessLabel != null)
+                        _Chip(label: freshnessLabel, subdued: true),
+                    ],
                   ),
                 ],
               ),
@@ -142,6 +261,81 @@ class PredictedIntentCard extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _handleContinue(NextIntentForecastData forecast) async {
+    final prompt = forecast.suggestedPrompt.trim();
+    if (prompt.isEmpty || _isContinuing) {
+      return;
+    }
+
+    final chatNotifier = ref.read(chatProvider.notifier);
+    setState(() {
+      _isContinuing = true;
+    });
+
+    try {
+      await SensoryFeedbackService.emit(SensoryFeedbackEvent.navigation);
+      if (!mounted) return;
+      context.go('/chat');
+      await Future<void>.delayed(const Duration(milliseconds: 280));
+      await chatNotifier.sendMessage(prompt);
+    } catch (_) {
+      if (mounted) {
+        AppFeedback.error(context, '继续对话时出现问题，请稍后重试');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isContinuing = false;
+        });
+      }
+    }
+  }
+
+  String _actionLabel(String actionType) {
+    switch (actionType) {
+      case 'resume_priority_task':
+        return '继续重点任务';
+      case 'review_progress':
+        return '复盘进展';
+      case 'plan_next_step':
+        return '规划下一步';
+      case 'reflection':
+        return '快速反思';
+      default:
+        return '预测意图';
+    }
+  }
+
+  String _windowLabel(String window) {
+    switch (window) {
+      case 'next_30m':
+        return '未来 30 分钟';
+      case 'next_1h':
+        return '未来 1 小时';
+      case 'next_2h':
+        return '未来 2 小时';
+      case 'today':
+        return '今天内';
+      default:
+        return window.replaceAll('_', ' ');
+    }
+  }
+
+  String? _freshnessLabel(DateTime? generatedAt) {
+    if (generatedAt == null) return null;
+    final diff = DateTime.now().difference(generatedAt);
+    if (diff.inMinutes < 1) {
+      return '刚刚更新';
+    }
+    if (diff.inHours < 1) {
+      return '${diff.inMinutes} 分钟前';
+    }
+    if (diff.inDays < 1) {
+      return '${diff.inHours} 小时前';
+    }
+    return '${diff.inDays} 天前';
   }
 }
 
@@ -155,8 +349,7 @@ class _Chip extends StatelessWidget {
   final bool subdued;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.symmetric(
         horizontal: DS.spacing8,
         vertical: DS.spacing6,
@@ -176,5 +369,4 @@ class _Chip extends StatelessWidget {
         ),
       ),
     );
-  }
 }

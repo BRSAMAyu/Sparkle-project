@@ -2406,10 +2406,22 @@ Return only valid JSON array, no markdown.
             if action_data and isinstance(action_data, list):
                 # Wrap as ToolResult objects
                 from app.tools.base import ToolResult
+                from app.tools.entity_cards import (
+                    build_task_list_entity_card,
+                    wrap_widget_payload,
+                )
 
                 action_cards = [
                     ToolResult(
-                        widget_type="task_list", widget_data={"tasks": action_data, "source": "collaboration_fallback"}
+                        widget_type="task_list",
+                        widget_data=wrap_widget_payload(
+                            widget_type="task_list",
+                            widget_data={"tasks": action_data, "source": "collaboration_fallback"},
+                            entity_card=build_task_list_entity_card(
+                                action_data,
+                                tool_name="collaboration_fallback",
+                            ),
+                        ),
                     )
                 ]
                 if hasattr(collaboration_result, "outputs") and collaboration_result.outputs:

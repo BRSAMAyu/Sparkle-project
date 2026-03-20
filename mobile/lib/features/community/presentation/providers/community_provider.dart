@@ -121,6 +121,8 @@ class FriendsNotifier extends StateNotifier<AsyncValue<List<FriendshipInfo>>> {
             createdAt: f.createdAt,
             updatedAt: f.updatedAt,
             matchReason: f.matchReason,
+            initiatedByMe: f.initiatedByMe,
+            accountability: f.accountability,
           );
         }
         return f;

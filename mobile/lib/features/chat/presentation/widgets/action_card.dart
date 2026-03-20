@@ -152,6 +152,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     if (widget.action.type == 'task_card') {
       try {
         final data = Map<String, dynamic>.from(widget.action.data);
+        final entity = EntityCardPayload.fromRaw(data, fallbackType: 'task');
         final task = taskModelFromEntityPayload(data);
         if (task == null) {
           throw StateError('Unable to normalize task payload');
@@ -159,15 +160,18 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         final status = data['status']?.toString();
         final isAlreadyActive =
             status == 'IN_PROGRESS' || status == 'COMPLETED';
-        final toolResultId = data['tool_result_id']?.toString();
+        final toolResultId =
+            entity.toolResultId ?? data['tool_result_id']?.toString();
         final canConfirm =
             toolResultId != null && toolResultId.trim().isNotEmpty;
+        final detailRoute = entity.detailRoute;
+        final share = entity.share;
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TaskCard(
               task: task,
-              onTap: () => context.push('/tasks/${task.id}'),
+              onTap: () => context.push(detailRoute ?? '/tasks/${task.id}'),
             ),
             Padding(
               padding: const EdgeInsets.only(
@@ -181,7 +185,9 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                     child: SparkleButton.ghost(
                       label: '查看任务',
                       icon: const Icon(Icons.open_in_new_rounded),
-                      onPressed: () => unawaited(context.push('/tasks/${task.id}')),
+                      onPressed: () => unawaited(
+                        context.push(detailRoute ?? '/tasks/${task.id}'),
+                      ),
                     ),
                   ),
                   const SizedBox(width: DS.spacing8),
@@ -191,10 +197,10 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                       icon: const Icon(Icons.share_outlined),
                       onPressed: () => unawaited(
                         _shareResource(
-                          resourceType: 'task',
-                          resourceId: task.id,
-                          title: task.title,
-                          subtitle: task.guideContent,
+                          resourceType: share?.resourceType ?? 'task',
+                          resourceId: share?.resourceId ?? task.id,
+                          title: share?.title ?? task.title,
+                          subtitle: share?.subtitle ?? task.guideContent,
                         ),
                       ),
                     ),
@@ -871,17 +877,21 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     final l10n = context.l10n;
     final tasks = action.data['tasks'] as List<dynamic>? ?? [];
     if (tasks.isEmpty) return const SizedBox.shrink();
+    final entity = EntityCardPayload.fromRaw(action.data, fallbackType: 'task_list');
 
-    final toolResultId = action.data['tool_result_id']?.toString() ??
+    final toolResultId = entity.toolResultId ??
+        action.data['tool_result_id']?.toString() ??
         action.data['id']?.toString();
     final canConfirm = toolResultId != null && toolResultId.trim().isNotEmpty;
-    final planId = action.data['plan_id']?.toString();
-    final planTitle = action.data['plan_title']?.toString() ??
+    final planId = entity.planId ?? action.data['plan_id']?.toString();
+    final planTitle = _asString(entity.linkedEntities['plan_title']) ??
+        action.data['plan_title']?.toString() ??
         action.data['plan_name']?.toString();
     final ragQuality = action.data['rag_quality']?.toString();
 
     final taskItems = tasks.take(5).map((item) {
       final task = Map<String, dynamic>.from(item as Map);
+      final taskEntity = EntityCardPayload.fromRaw(task, fallbackType: 'task');
       final taskId = task['id']?.toString();
       final title = task['title']?.toString() ?? l10n.taskUntitled;
       final taskModel = taskModelFromEntityPayload(task);
@@ -931,10 +941,11 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                         icon: const Icon(Icons.share_outlined),
                         onPressed: () => unawaited(
                           _shareResource(
-                            resourceType: 'task',
-                            resourceId: taskId,
-                            title: title,
-                            subtitle: taskModel?.guideContent,
+                            resourceType: taskEntity.share?.resourceType ?? 'task',
+                            resourceId: taskEntity.share?.resourceId ?? taskId,
+                            title: taskEntity.share?.title ?? title,
+                            subtitle:
+                                taskEntity.share?.subtitle ?? taskModel?.guideContent,
                           ),
                         ),
                       ),
@@ -1009,10 +1020,11 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                     icon: const Icon(Icons.share_outlined),
                     onPressed: () => unawaited(
                       _shareResource(
-                        resourceType: 'plan',
-                        resourceId: planId,
-                        title: planTitle ?? '学习计划',
-                        subtitle: '由 AI 生成的任务计划',
+                        resourceType: entity.share?.resourceType ?? 'plan',
+                        resourceId: entity.share?.resourceId ?? planId,
+                        title: entity.share?.title ?? (planTitle ?? '学习计划'),
+                        subtitle:
+                            entity.share?.subtitle ?? '由 AI 生成的任务计划',
                       ),
                     ),
                   ),
@@ -1051,8 +1063,10 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
   }
 
   Widget _buildPlanCardContent(BuildContext context, WidgetPayload action) {
-    final planId =
-        action.data['id']?.toString() ?? action.data['plan_id']?.toString();
+    final entity = EntityCardPayload.fromRaw(action.data, fallbackType: 'plan');
+    final planId = entity.entityId ??
+        action.data['id']?.toString() ??
+        action.data['plan_id']?.toString();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
@@ -1062,24 +1076,32 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
           onTap: planId == null
               ? null
               : () {
-                  unawaited(context.push('/plans/$planId'));
+                  unawaited(context.push(entity.detailRoute ?? '/plans/$planId'));
                   widget.onPlanNavigation?.call(planId);
                 },
           onShare: planId == null
               ? null
               : () => unawaited(
                     _shareResource(
-                      resourceType: 'plan',
-                      resourceId: planId,
-                      title: action.data['title']?.toString() ??
+                      resourceType: entity.share?.resourceType ?? 'plan',
+                      resourceId: entity.share?.resourceId ?? planId,
+                      title: entity.share?.title ??
+                          action.data['title']?.toString() ??
                           action.data['name']?.toString() ??
                           '学习计划',
-                      subtitle: action.data['description']?.toString(),
+                      subtitle:
+                          entity.share?.subtitle ?? action.data['description']?.toString(),
                     ),
                   ),
         ),
       ],
     );
+  }
+
+  String? _asString(dynamic value) {
+    if (value == null) return null;
+    final text = value.toString().trim();
+    return text.isEmpty ? null : text;
   }
 
   Widget _buildMetaChip({

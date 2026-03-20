@@ -54,6 +54,11 @@ class _PlanCardState extends State<PlanCard>
     }
     final payload = PlanCardPayload.fromMap(widget.data);
     final planId = payload.id;
+    final route = payload.entity.detailRoute;
+    if (route != null && route.isNotEmpty) {
+      unawaited(context.push(route));
+      return;
+    }
     if (planId != null && planId.isNotEmpty) {
       unawaited(context.push('/plans/$planId'));
       return;
@@ -187,7 +192,8 @@ class _PlanCardState extends State<PlanCard>
                   ],
                 ),
               ],
-              if (widget.onShare != null && !widget.compact) ...[
+              if ((widget.onShare != null || payload.entity.share != null) &&
+                  !widget.compact) ...[
                 const SizedBox(height: DS.md),
                 Row(
                   children: [
@@ -195,7 +201,7 @@ class _PlanCardState extends State<PlanCard>
                       child: SparkleButton.ghost(
                         label: '分享卡片',
                         icon: const Icon(Icons.share_outlined),
-                        onPressed: () => widget.onShare!(),
+                        onPressed: () => widget.onShare?.call(),
                       ),
                     ),
                     const SizedBox(width: DS.spacing8),

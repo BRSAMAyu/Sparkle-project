@@ -37,6 +37,7 @@ import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart'
 import 'package:sparkle/features/reviews/presentation/providers/nightly_review_provider.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
+import 'package:sparkle/shared/utils/entity_card_payloads.dart';
 
 part 'chat_notifier_reviews.dart';
 part 'chat_notifier_history.dart';
@@ -181,7 +182,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       return;
     }
     debugPrint('[Chat] cancelActiveRun: $reason');
-    _invalidateActiveStreamState(phase: ChatRunPhase.cancelled);
+    _invalidateActiveStreamState();
   }
 
   @override
@@ -410,7 +411,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
   }
 
   WidgetPayload _normalizeWidgetPayload(
-      String type, Map<String, dynamic> data) {
+    String type,
+    Map<String, dynamic> data,
+  ) {
     if (type == 'system_update') {
       final category = data['category']?.toString();
       final metadata = data['metadata'];

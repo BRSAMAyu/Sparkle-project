@@ -239,6 +239,10 @@ extension ChatNotifierActions on ChatNotifier {
 
   /// 确认 ActionCard
   void confirmAction(WidgetPayload action) {
+    final entity = EntityCardPayload.fromRaw(
+      action.data,
+      fallbackType: action.type,
+    );
     if (action.type == 'nightly_review') {
       final reviewId = action.data['review_id']?.toString() ?? '';
       if (reviewId.isNotEmpty) {
@@ -262,6 +266,7 @@ extension ChatNotifierActions on ChatNotifier {
 
     // 从 WidgetPayload 中提取 tool_result_id
     final toolResultId = action.data['id']?.toString() ??
+        entity.toolResultId ??
         action.data['tool_result_id']?.toString() ??
         '';
 
@@ -287,6 +292,10 @@ extension ChatNotifierActions on ChatNotifier {
 
   /// 忽略 ActionCard
   void dismissAction(WidgetPayload action) {
+    final entity = EntityCardPayload.fromRaw(
+      action.data,
+      fallbackType: action.type,
+    );
     if (action.type == 'nightly_review') {
       debugPrint('ℹ️ Nightly review dismissed');
       return;
@@ -306,6 +315,7 @@ extension ChatNotifierActions on ChatNotifier {
     }
 
     final toolResultId = action.data['id']?.toString() ??
+        entity.toolResultId ??
         action.data['tool_result_id']?.toString() ??
         '';
 

@@ -7,6 +7,7 @@ import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/repositories/community_share_repository.dart';
+import 'package:sparkle/features/community/presentation/providers/accountability_provider.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
 
 Future<void> showShareResourceSheet(
@@ -54,6 +55,7 @@ class _ShareResourceSheetState extends ConsumerState<ShareResourceSheet>
 
   String? _selectedUserId;
   String? _selectedGroupId;
+  String? _autoSelectedPartnerId;
   bool _isSharing = false;
 
   @override
@@ -73,7 +75,9 @@ class _ShareResourceSheetState extends ConsumerState<ShareResourceSheet>
   Widget build(BuildContext context) {
     final friendsState = ref.watch(friendsProvider);
     final groupsState = ref.watch(myGroupsProvider);
+    final overviewAsync = ref.watch(accountabilityOverviewProvider);
     final l10n = context.l10n;
+    final activePartnershipId = overviewAsync.valueOrNull?.activePartnership?.id;
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -124,7 +128,10 @@ class _ShareResourceSheetState extends ConsumerState<ShareResourceSheet>
                 child: TabBarView(
                   controller: _tabController,
                   children: [
-                    _buildFriendsList(friendsState),
+                    _buildFriendsList(
+                      friendsState,
+                      activePartnershipId: activePartnershipId,
+                    ),
                     _buildGroupsList(groupsState),
                   ],
                 ),
@@ -183,15 +190,33 @@ class _ShareResourceSheetState extends ConsumerState<ShareResourceSheet>
         ),
       );
 
-  Widget _buildFriendsList(AsyncValue<List<FriendshipInfo>> state) =>
+  Widget _buildFriendsList(
+    AsyncValue<List<FriendshipInfo>> state, {
+    required String? activePartnershipId,
+  }) =>
       state.when(
-        data: (friends) => friends.isEmpty
+        data: (friends) {
+          final sortedFriends = _sortFriends(
+            friends,
+            activePartnershipId: activePartnershipId,
+          );
+          _maybePreselectCorePartner(
+            sortedFriends,
+            activePartnershipId: activePartnershipId,
+          );
+
+          return sortedFriends.isEmpty
             ? _buildEmpty(context.l10n.shareResourceNoFriends)
             : ListView.separated(
-                itemCount: friends.length,
+                itemCount: sortedFriends.length,
                 separatorBuilder: (_, __) => const Divider(height: 1),
                 itemBuilder: (context, index) {
-                  final friend = friends[index].friend;
+                  final friendship = sortedFriends[index];
+                  final friend = friendship.friend;
+                  final isCorePartner =
+                      friendship.accountability?.status == 'active' &&
+                      friendship.accountability?.partnershipId ==
+                          activePartnershipId;
                   final isSelected = _selectedUserId == friend.id;
                   return ListTile(
                     leading: SparkleAvatar(
@@ -200,6 +225,24 @@ class _ShareResourceSheetState extends ConsumerState<ShareResourceSheet>
                       fallbackText: friend.displayName,
                     ),
                     title: Text(friend.displayName),
+                    subtitle: isCorePartner
+                        ? Text(
+                            '核心责任伙伴',
+                            style: TextStyle(
+                              color: DS.brandPrimary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          )
+                        : friendship.accountability?.isPending == true
+                            ? Text(
+                                '责任伙伴邀请待确认',
+                                style: TextStyle(
+                                  color: DS.warning,
+                                  fontSize: 12,
+                                ),
+                              )
+                            : null,
                     trailing: Icon(
                       isSelected ? Icons.check_circle : Icons.circle_outlined,
                       color: isSelected ? DS.brandPrimary : DS.neutral400,
@@ -212,10 +255,64 @@ class _ShareResourceSheetState extends ConsumerState<ShareResourceSheet>
                     },
                   );
                 },
-              ),
+              );
+        },
         loading: () => const Center(child: LoadingIndicator()),
         error: (e, _) => _buildEmpty(context.l10n.loadingFailedWithError(e)),
       );
+
+  List<FriendshipInfo> _sortFriends(
+    List<FriendshipInfo> friends, {
+    required String? activePartnershipId,
+  }) {
+    final sorted = [...friends];
+    int priority(FriendshipInfo friendship) {
+      final accountability = friendship.accountability;
+      if (accountability == null) return 3;
+      if (accountability.status == 'active' &&
+          accountability.partnershipId == activePartnershipId) {
+        return 0;
+      }
+      if (accountability.status == 'active') return 1;
+      if (accountability.status == 'pending') return 2;
+      return 3;
+    }
+
+    sorted.sort((a, b) {
+      final priorityCompare = priority(a).compareTo(priority(b));
+      if (priorityCompare != 0) return priorityCompare;
+      return a.friend.displayName.compareTo(b.friend.displayName);
+    });
+    return sorted;
+  }
+
+  void _maybePreselectCorePartner(
+    List<FriendshipInfo> friends, {
+    required String? activePartnershipId,
+  }) {
+    if (_selectedUserId != null || activePartnershipId == null) return;
+
+    FriendshipInfo? corePartner;
+    for (final friendship in friends) {
+      if (friendship.accountability?.status == 'active' &&
+          friendship.accountability?.partnershipId == activePartnershipId) {
+        corePartner = friendship;
+        break;
+      }
+    }
+    if (corePartner == null || _autoSelectedPartnerId == corePartner.friend.id) {
+      return;
+    }
+
+    _autoSelectedPartnerId = corePartner.friend.id;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _selectedUserId != null) return;
+      setState(() {
+        _selectedUserId = corePartner?.friend.id;
+        _selectedGroupId = null;
+      });
+    });
+  }
 
   Widget _buildGroupsList(AsyncValue<List<GroupListItem>> state) => state.when(
         data: (groups) => groups.isEmpty

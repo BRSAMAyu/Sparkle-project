@@ -215,6 +215,81 @@ async def main() -> int:
         f"partner accepted notification missing: {owner_notifications}",
     )
 
+    overview = request_json(
+        session,
+        "GET",
+        "/accountability/overview",
+        token=owner["token"],
+    )
+    ensure(
+        overview["slot_type"] == "core" and overview["active_partnership"]["id"] == partnership_id,
+        f"overview should expose active core partner: {overview}",
+    )
+
+    dashboard = request_json(
+        session,
+        "GET",
+        f"/accountability/{partnership_id}/dashboard",
+        token=owner["token"],
+    )
+    ensure(
+        dashboard["partnership"]["id"] == partnership_id and dashboard["quick_actions"]["can_open_dashboard"] is True,
+        f"dashboard payload malformed: {dashboard}",
+    )
+
+    friend_profile = request_json(
+        session,
+        "GET",
+        f"/community/friends/{partner['id']}/profile",
+        token=owner["token"],
+    )
+    ensure(
+        friend_profile["accountability"]["id"] == partnership_id
+        and friend_profile["quick_actions"]["can_open_dashboard"] is True,
+        f"friend profile should include accountability enrichment: {friend_profile}",
+    )
+
+    profile_context = request_json(
+        session,
+        "GET",
+        "/profile/context",
+        token=owner["token"],
+    )
+    ensure(
+        profile_context["accountability_summary"]["has_core_partner"] is True
+        and profile_context["accountability_summary"]["slot_type"] == "core",
+        f"profile context missing accountability summary: {profile_context}",
+    )
+
+    second_friend_req = request_json(
+        session,
+        "POST",
+        "/community/friends/request",
+        token=owner["token"],
+        json={"target_user_id": outsider["id"], "message": "先成为好友"},
+    )
+    request_json(
+        session,
+        "POST",
+        "/community/friends/respond",
+        token=outsider["token"],
+        json={"friendship_id": second_friend_req["friendship_id"], "accept": True},
+    )
+    single_core_blocked = session.post(
+        f"{GATEWAY_BASE}/accountability/request",
+        headers={"Authorization": f"Bearer {owner['token']}"},
+        timeout=TIMEOUT,
+        json={
+            "partner_id": outsider["id"],
+            "initiator_goal": "已有核心伙伴时不能再发起新的核心伙伴邀请",
+            "check_in_days": 1,
+        },
+    )
+    ensure(
+        single_core_blocked.status_code == 409,
+        f"single core constraint should block second partner request: {single_core_blocked.status_code} {single_core_blocked.text[:400]}",
+    )
+
     owner_mine = request_json(
         session,
         "GET",
@@ -297,6 +372,25 @@ async def main() -> int:
     ensure(stats["my_checked_in_today"] is True, f"my_checked_in_today not updated: {stats}")
     ensure(stats["partner_checked_in_today"] is True, f"partner_checked_in_today not updated: {stats}")
     ensure(stats["total_checkins"] == 2, f"unexpected total checkins: {stats}")
+
+    nudge_resp = request_json(
+        session,
+        "POST",
+        f"/accountability/{partnership_id}/nudge",
+        token=owner["token"],
+        json={"message": "今晚一起收尾"},
+    )
+    ensure(nudge_resp["success"] is True, f"manual nudge failed: {nudge_resp}")
+    nudge_again = session.post(
+        f"{GATEWAY_BASE}/accountability/{partnership_id}/nudge",
+        headers={"Authorization": f"Bearer {owner['token']}"},
+        timeout=TIMEOUT,
+        json={"message": "再次提醒"},
+    )
+    ensure(
+        nudge_again.status_code == 429,
+        f"nudge rate limit should trigger: {nudge_again.status_code} {nudge_again.text[:400]}",
+    )
 
     timeline = request_json(
         session,

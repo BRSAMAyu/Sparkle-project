@@ -100,7 +100,7 @@ func TestProxyRoutesHandler_RegisterProxyRoutes(t *testing.T) {
 
 	expectedCommunityRoutes := []string{
 		"GET /api/v1/community/friends",
-		"GET /api/v1/community/friends/:friendId/profile",
+		"GET /api/v1/community/friends/:friend_id/profile",
 	}
 
 	// Expected route patterns for tasks

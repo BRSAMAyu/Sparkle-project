@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 import pytest
@@ -86,6 +86,10 @@ async def test_build_partnership_out_includes_nested_users_and_checkin_state(db_
     await db_session.commit()
     await db_session.refresh(partnership)
 
+    today_start, _ = _day_range_for_timezone("Asia/Shanghai")
+    owner_checkin_at = today_start + timedelta(hours=9)
+    partner_checkin_at = today_start + timedelta(hours=10)
+
     db_session.add_all(
         [
             AccountabilityCheckin(
@@ -94,7 +98,7 @@ async def test_build_partnership_out_includes_nested_users_and_checkin_state(db_
                 content="完成了英语精读。",
                 mood=4,
                 minutes=45,
-                created_at=datetime(2026, 3, 19, 1, 0),
+                created_at=owner_checkin_at,
             ),
             AccountabilityCheckin(
                 partnership_id=partnership.id,
@@ -102,7 +106,7 @@ async def test_build_partnership_out_includes_nested_users_and_checkin_state(db_
                 content="做了复盘并发来鼓励。",
                 mood=5,
                 minutes=30,
-                created_at=datetime(2026, 3, 19, 2, 0),
+                created_at=partner_checkin_at,
             ),
         ]
     )
@@ -116,7 +120,7 @@ async def test_build_partnership_out_includes_nested_users_and_checkin_state(db_
     assert payload.my_role == "initiator"
     assert payload.my_checked_in_today is True
     assert payload.partner_checked_in_today is True
-    assert payload.last_checkin_at == datetime(2026, 3, 19, 2, 0)
+    assert payload.last_checkin_at == partner_checkin_at
 
 
 @pytest.mark.asyncio

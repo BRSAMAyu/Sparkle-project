@@ -34,6 +34,8 @@ from app.models.community import (  # noqa: F401
     Group, GroupMember, GroupMessage, PrivateMessage,
     Friendship, GroupType, GroupRole
 )
+from app.models.accountability import AccountabilityPartnership, AccountabilityCheckin  # noqa: F401
+from app.models.achievement import Achievement, UserAchievement  # noqa: F401
 from app.models.shop import (  # noqa: F401
     ShopItem, ShopPurchase, UserConsumable,
     PhotonTransactionType, ShopItemType, ItemRarity, ConsumableEffectType

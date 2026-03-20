@@ -9,7 +9,6 @@ import 'package:sparkle/features/community/community_routes.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
 import 'package:sparkle/features/community/presentation/providers/accountability_provider.dart';
-import 'package:sparkle/shared/entities/user_brief.dart';
 
 class FriendProfileScreen extends ConsumerStatefulWidget {
   const FriendProfileScreen({
@@ -61,13 +60,13 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
                   Icon(Icons.error_outline, color: DS.error, size: 48),
                   const SizedBox(height: DS.md),
                   Text(
-                    'Failed to load profile',
+                    '好友详情加载失败',
                     style: theme.textTheme.bodyMedium
                         ?.copyWith(color: DS.textSecondary),
                   ),
                   const SizedBox(height: DS.md),
                   CustomButton.secondary(
-                    text: 'Retry',
+                    text: '重试',
                     onPressed: () => setState(() {
                       _profileFuture = ref
                           .read(communityRepositoryProvider)
@@ -90,11 +89,14 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
     final user = profile.user;
     final relationshipSummary = profile.relationshipSummary ?? const {};
     final achievementsSummary = profile.achievementsSummary ?? const {};
+    final leaderboardSummary = profile.leaderboardSummary ?? const {};
     final accountability = profile.accountability ?? const {};
     final quickActions = profile.quickActions;
+    final partnershipId =
+        (accountability['id'] ?? accountability['partnership_id'])?.toString();
     final canOpenDashboard =
         quickActions['can_open_dashboard'] == true &&
-        accountability['id'] != null;
+        partnershipId != null;
     final canInviteAccountability =
         quickActions['can_invite_accountability'] != false;
 
@@ -161,10 +163,25 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
             ),
           ),
           const SizedBox(height: DS.spacing24),
+          if (accountability.isNotEmpty) ...[
+            _SimplePanel(
+              title: '伙伴目标',
+              icon: Icons.flag_outlined,
+              body: Text(
+                (accountability['partner_goal'] ??
+                            accountability['initiator_goal'] ??
+                            '还没有同步目标')
+                        .toString(),
+                style: DS.bodyMedium,
+              ),
+            ),
+            const SizedBox(height: DS.spacing16),
+          ],
           if (relationshipSummary.isNotEmpty || achievementsSummary.isNotEmpty)
             _RelationshipPanel(
               relationshipSummary: relationshipSummary,
               achievementsSummary: achievementsSummary,
+              leaderboardSummary: leaderboardSummary,
               recentShares: profile.recentShares,
               hasAccountability: accountability.isNotEmpty,
             ),
@@ -173,7 +190,7 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
             children: [
               Expanded(
                 child: CustomButton.primary(
-                  text: 'Message',
+                  text: '聊天',
                   icon: Icons.chat_bubble_outline,
                   onPressed: () {
                     context.push(
@@ -185,13 +202,13 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
               const SizedBox(width: DS.md),
               Expanded(
                 child: CustomButton.secondary(
-                  text: canOpenDashboard ? '工作台' : '分享',
+                  text: canOpenDashboard ? '进入工作台' : '去看成就',
                   icon: canOpenDashboard
                       ? Icons.handshake_outlined
-                      : Icons.share_outlined,
+                      : Icons.emoji_events_outlined,
                   onPressed: () {
                     if (canOpenDashboard) {
-                      final id = accountability['id']?.toString();
+                      final id = partnershipId;
                       if (id == null) return;
                       context.push(
                         CommunityRoutes.accountabilityDetail
@@ -216,7 +233,7 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
                   _showAccountabilityInvite(context, user);
                   return;
                 }
-                final id = accountability['id']?.toString();
+                final id = partnershipId;
                 if (id == null) return;
                 context.push(
                   CommunityRoutes.accountabilityDetail.replaceFirst(':id', id),
@@ -319,12 +336,14 @@ class _RelationshipPanel extends StatelessWidget {
   const _RelationshipPanel({
     required this.relationshipSummary,
     required this.achievementsSummary,
+    required this.leaderboardSummary,
     required this.recentShares,
     required this.hasAccountability,
   });
 
   final Map<String, dynamic> relationshipSummary;
   final Map<String, dynamic> achievementsSummary;
+  final Map<String, dynamic> leaderboardSummary;
   final List<Map<String, dynamic>> recentShares;
   final bool hasAccountability;
 
@@ -354,7 +373,9 @@ class _RelationshipPanel extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 hasAccountability ? '责任伙伴关系' : '好友关系',
-                style: DS.titleMedium.copyWith(fontWeight: FontWeight.bold),
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
               ),
             ],
           ),
@@ -380,6 +401,18 @@ class _RelationshipPanel extends StatelessWidget {
               style: DS.bodySmall.copyWith(color: DS.textSecondary),
             ),
           ],
+          if (leaderboardSummary.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Text(
+              '激励摘要',
+              style: DS.labelLarge.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '连续打卡榜：你第 ${(leaderboardSummary['streak'] as Map?)?['my_rank'] ?? '-'}，TA 第 ${(leaderboardSummary['streak'] as Map?)?['partner_rank'] ?? '-'}。',
+              style: DS.bodySmall.copyWith(color: DS.textSecondary),
+            ),
+          ],
           if (recentShares.isNotEmpty) ...[
             const SizedBox(height: 14),
             Text(
@@ -397,6 +430,50 @@ class _RelationshipPanel extends StatelessWidget {
                   ),
                 ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+class _SimplePanel extends StatelessWidget {
+  const _SimplePanel({
+    required this.title,
+    required this.icon,
+    required this.body,
+  });
+
+  final String title;
+  final IconData icon;
+  final Widget body;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(DS.spacing16),
+      decoration: BoxDecoration(
+        color: DS.surfaceSecondary,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: DS.neutral200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: DS.brandPrimary),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          body,
         ],
       ),
     );

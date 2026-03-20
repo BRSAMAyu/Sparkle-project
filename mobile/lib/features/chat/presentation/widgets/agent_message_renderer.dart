@@ -9,7 +9,7 @@ import 'package:sparkle/features/knowledge/presentation/widgets/knowledge_card.d
 import 'package:sparkle/features/plan/presentation/widgets/plan_card.dart'; // New widget for plan card
 import 'package:sparkle/features/plan/presentation/widgets/plan_context_summary.dart';
 import 'package:sparkle/features/task/task.dart';
-import 'package:sparkle/shared/entities/task_model.dart';
+import 'package:sparkle/shared/utils/entity_card_payloads.dart';
 
 /// Agent 消息渲染器
 /// 根据消息中的 widgets 字段动态渲染不同类型的组件
@@ -65,23 +65,14 @@ class AgentMessageRenderer extends StatelessWidget {
     switch (widget.type) {
       case 'task_card':
         try {
-          // Ensure mandatory fields for TaskModel are present
-          final data = Map<String, dynamic>.from(widget.data);
-          data['user_id'] ??= 'unknown';
-          data['tags'] ??= <String>[];
-          data['difficulty'] ??= 1;
-          data['energy_cost'] ??= 1;
-          data['priority'] ??= 1;
-          data['created_at'] ??= DateTime.now().toIso8601String();
-          data['updated_at'] ??= DateTime.now().toIso8601String();
-
-          // Handle 'type' mapping if it's a string that might not match exactly or needs defaulting
-          // Assuming the backend/LLM sends correct string matching the enum (e.g., "learning")
-
-          final task = TaskModel.fromJson(data);
+          final entity = EntityCardPayload.fromRaw(widget.data, fallbackType: 'task');
+          final task = taskModelFromEntityPayload(widget.data);
+          if (task == null) {
+            throw StateError('Unable to parse task entity payload');
+          }
           return TaskCard(
             task: task,
-            onTap: () => onTaskAction?.call(task.id),
+            onTap: () => onTaskAction?.call(entity.entityId ?? task.id),
           );
         } catch (e) {
           debugPrint('Error parsing TaskModel in AgentMessageRenderer: $e');
@@ -108,10 +99,15 @@ class AgentMessageRenderer extends StatelessWidget {
         );
 
       case 'plan_card':
+        final entity = EntityCardPayload.fromRaw(widget.data, fallbackType: 'plan');
         final planId =
-            widget.data['id']?.toString() ?? widget.data['plan_id']?.toString();
+            entity.entityId ??
+            widget.data['id']?.toString() ??
+            widget.data['plan_id']?.toString();
         return GestureDetector(
-          onTap: planId != null ? () => context.push('/plans/$planId') : null,
+          onTap: planId != null
+              ? () => context.push(entity.detailRoute ?? '/plans/$planId')
+              : null,
           child: PlanCard(data: widget.data),
         );
 

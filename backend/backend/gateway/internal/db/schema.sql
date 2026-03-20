@@ -3,8 +3,8 @@
 --
 
 
--- Dumped from database version 16.11 (Debian 16.11-1.pgdg12+1)
--- Dumped by pg_dump version 16.11 (Debian 16.11-1.pgdg12+1)
+-- Dumped from database version 16.13 (Debian 16.13-1.pgdg12+1)
+-- Dumped by pg_dump version 16.13 (Debian 16.13-1.pgdg12+1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -44,6 +44,31 @@ CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public;
 
 COMMENT ON EXTENSION vector IS 'vector data type and ivfflat and hnsw access methods';
 
+
+--
+-- Name: accountabilityslottype; Type: TYPE; Schema: public; Owner: postgres
+--
+
+CREATE TYPE accountabilityslottype AS ENUM (
+    'core'
+);
+
+
+ALTER TYPE accountabilityslottype OWNER TO postgres;
+
+--
+-- Name: accountabilitystatus; Type: TYPE; Schema: public; Owner: postgres
+--
+
+CREATE TYPE accountabilitystatus AS ENUM (
+    'pending',
+    'active',
+    'paused',
+    'ended'
+);
+
+
+ALTER TYPE accountabilitystatus OWNER TO postgres;
 
 --
 -- Name: achievementrarity; Type: TYPE; Schema: public; Owner: postgres
@@ -330,6 +355,32 @@ CREATE TYPE reportstatus AS ENUM (
 ALTER TYPE reportstatus OWNER TO postgres;
 
 --
+-- Name: searchvisibility; Type: TYPE; Schema: public; Owner: postgres
+--
+
+CREATE TYPE searchvisibility AS ENUM (
+    'everyone',
+    'friends',
+    'nobody'
+);
+
+
+ALTER TYPE searchvisibility OWNER TO postgres;
+
+--
+-- Name: streakdaystatus; Type: TYPE; Schema: public; Owner: postgres
+--
+
+CREATE TYPE streakdaystatus AS ENUM (
+    'active',
+    'frozen',
+    'missed'
+);
+
+
+ALTER TYPE streakdaystatus OWNER TO postgres;
+
+--
 -- Name: subtaskstatus; Type: TYPE; Schema: public; Owner: postgres
 --
 
@@ -402,6 +453,49 @@ CREATE TYPE visualeffecttype AS ENUM (
 
 
 ALTER TYPE visualeffecttype OWNER TO postgres;
+
+--
+-- Name: visualelementrarity; Type: TYPE; Schema: public; Owner: postgres
+--
+
+CREATE TYPE visualelementrarity AS ENUM (
+    'common',
+    'rare',
+    'epic',
+    'legendary'
+);
+
+
+ALTER TYPE visualelementrarity OWNER TO postgres;
+
+--
+-- Name: visualelementtype; Type: TYPE; Schema: public; Owner: postgres
+--
+
+CREATE TYPE visualelementtype AS ENUM (
+    'background',
+    'particle',
+    'effect',
+    'bundle'
+);
+
+
+ALTER TYPE visualelementtype OWNER TO postgres;
+
+--
+-- Name: visualelementunlocksource; Type: TYPE; Schema: public; Owner: postgres
+--
+
+CREATE TYPE visualelementunlocksource AS ENUM (
+    'system',
+    'achievement',
+    'shop',
+    'event',
+    'season'
+);
+
+
+ALTER TYPE visualelementunlocksource OWNER TO postgres;
 
 SET default_tablespace = '';
 
@@ -501,6 +595,52 @@ CREATE TABLE ab_experiments (
 ALTER TABLE ab_experiments OWNER TO postgres;
 
 --
+-- Name: accountability_checkin; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE accountability_checkin (
+    id uuid NOT NULL,
+    partnership_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    content text NOT NULL,
+    mood integer DEFAULT 3 NOT NULL,
+    minutes integer DEFAULT 0 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    deleted_at timestamp with time zone,
+    likes integer DEFAULT 0 NOT NULL,
+    encouragements jsonb DEFAULT '[]'::jsonb NOT NULL,
+    liked_by jsonb DEFAULT '[]'::jsonb NOT NULL
+);
+
+
+ALTER TABLE accountability_checkin OWNER TO postgres;
+
+--
+-- Name: accountability_partnership; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE accountability_partnership (
+    id uuid NOT NULL,
+    initiator_id uuid NOT NULL,
+    partner_id uuid NOT NULL,
+    friendship_id uuid,
+    initiator_goal text NOT NULL,
+    partner_goal text,
+    check_in_days integer DEFAULT 1 NOT NULL,
+    slot_type accountabilityslottype DEFAULT 'core'::accountabilityslottype NOT NULL,
+    status accountabilitystatus DEFAULT 'pending'::accountabilitystatus NOT NULL,
+    started_at timestamp with time zone,
+    ended_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    deleted_at timestamp with time zone
+);
+
+
+ALTER TABLE accountability_partnership OWNER TO postgres;
+
+--
 -- Name: achievements; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -526,7 +666,13 @@ CREATE TABLE achievements (
     parent_id character varying(50),
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
-    deleted_at timestamp without time zone
+    deleted_at timestamp without time zone,
+    name_i18n json,
+    description_i18n json,
+    active_from timestamp without time zone,
+    active_to timestamp without time zone,
+    is_limited boolean DEFAULT false NOT NULL,
+    event_tag character varying(50)
 );
 
 
@@ -629,15 +775,15 @@ ALTER TABLE arbitration_decisions OWNER TO postgres;
 --
 
 CREATE TABLE auth_audit_log (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
     user_id uuid,
     action character varying(64) NOT NULL,
     ip_address character varying(45),
     user_agent character varying(500),
-    metadata jsonb,
-    occurred_at timestamp without time zone DEFAULT now() NOT NULL,
-    created_at timestamp without time zone DEFAULT now() NOT NULL,
-    updated_at timestamp without time zone DEFAULT now() NOT NULL
+    metadata json,
+    occurred_at timestamp without time zone NOT NULL,
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL
 );
 
 
@@ -707,6 +853,35 @@ CREATE TABLE broadcast_messages (
 
 
 ALTER TABLE broadcast_messages OWNER TO postgres;
+
+--
+-- Name: calendar_events; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE calendar_events (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    title character varying(255) NOT NULL,
+    description text,
+    start_time timestamp with time zone NOT NULL,
+    end_time timestamp with time zone NOT NULL,
+    is_all_day boolean DEFAULT false NOT NULL,
+    location character varying(255),
+    color character varying(32),
+    recurrence_rule character varying(512),
+    recurrence_end_date timestamp with time zone,
+    reminder_minutes jsonb DEFAULT '[]'::jsonb NOT NULL,
+    source character varying(32) DEFAULT 'manual'::character varying NOT NULL,
+    source_metadata jsonb,
+    task_id uuid,
+    plan_id uuid,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE calendar_events OWNER TO postgres;
 
 --
 -- Name: capsule_favorites; Type: TABLE; Schema: public; Owner: postgres
@@ -786,7 +961,7 @@ CREATE TABLE chat_messages (
     user_id uuid NOT NULL,
     task_id uuid,
     session_id uuid NOT NULL,
-    message_id character varying(36),
+    message_id character varying(128),
     role messagerole NOT NULL,
     content text NOT NULL,
     actions json,
@@ -807,11 +982,11 @@ ALTER TABLE chat_messages OWNER TO postgres;
 CREATE TABLE chat_sessions (
     user_id uuid NOT NULL,
     title character varying(200),
-    is_active boolean NOT NULL,
+    is_active boolean DEFAULT true NOT NULL,
     last_message_at timestamp without time zone,
     id uuid NOT NULL,
-    created_at timestamp without time zone NOT NULL,
-    updated_at timestamp without time zone NOT NULL,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
     deleted_at timestamp without time zone
 );
 
@@ -1040,7 +1215,8 @@ CREATE TABLE curiosity_capsules (
     id uuid NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
-    deleted_at timestamp without time zone
+    deleted_at timestamp without time zone,
+    personalization_context json
 );
 
 
@@ -1175,7 +1351,9 @@ CREATE TABLE episodic_memories (
     id uuid NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
-    deleted_at timestamp without time zone
+    deleted_at timestamp without time zone,
+    last_consumed_at timestamp without time zone,
+    archived_at timestamp without time zone
 );
 
 
@@ -1226,12 +1404,25 @@ CREATE TABLE event_outbox (
     payload jsonb NOT NULL,
     metadata jsonb,
     sequence_number bigint DEFAULT 1 NOT NULL,
-    created_at timestamp without time zone DEFAULT now() NOT NULL,
-    published_at timestamp without time zone
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    published_at timestamp with time zone
 );
 
 
 ALTER TABLE event_outbox OWNER TO postgres;
+
+--
+-- Name: event_sequence_counters; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE event_sequence_counters (
+    aggregate_type character varying(100) NOT NULL,
+    aggregate_id uuid NOT NULL,
+    next_sequence bigint DEFAULT 1 NOT NULL
+);
+
+
+ALTER TABLE event_sequence_counters OWNER TO postgres;
 
 --
 -- Name: event_store; Type: TABLE; Schema: public; Owner: postgres
@@ -1425,6 +1616,23 @@ CREATE TABLE group_members (
 
 
 ALTER TABLE group_members OWNER TO postgres;
+
+--
+-- Name: group_message_reads; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE group_message_reads (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    message_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    read_at timestamp without time zone NOT NULL
+);
+
+
+ALTER TABLE group_message_reads OWNER TO postgres;
 
 --
 -- Name: group_messages; Type: TABLE; Schema: public; Owner: postgres
@@ -1669,6 +1877,28 @@ CREATE TABLE irt_item_parameters (
 ALTER TABLE irt_item_parameters OWNER TO postgres;
 
 --
+-- Name: item_similarities; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE item_similarities (
+    item_id_1 uuid NOT NULL,
+    item_type_1 character varying(50) NOT NULL,
+    item_id_2 uuid NOT NULL,
+    item_type_2 character varying(50) NOT NULL,
+    similarity_score double precision NOT NULL,
+    common_learners integer DEFAULT 0 NOT NULL,
+    last_calculated_at timestamp without time zone NOT NULL,
+    meta json,
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE item_similarities OWNER TO postgres;
+
+--
 -- Name: jobs; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -1782,6 +2012,47 @@ CREATE TABLE ltm_daily_snapshots (
 ALTER TABLE ltm_daily_snapshots OWNER TO postgres;
 
 --
+-- Name: mastery_audit_log; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE mastery_audit_log (
+    id integer NOT NULL,
+    node_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    old_mastery integer NOT NULL,
+    new_mastery integer NOT NULL,
+    reason character varying(100) NOT NULL,
+    request_id character varying(100),
+    revision integer DEFAULT 1,
+    created_at timestamp without time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE mastery_audit_log OWNER TO postgres;
+
+--
+-- Name: mastery_audit_log_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE mastery_audit_log_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE mastery_audit_log_id_seq OWNER TO postgres;
+
+--
+-- Name: mastery_audit_log_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE mastery_audit_log_id_seq OWNED BY mastery_audit_log.id;
+
+
+--
 -- Name: memory_corrections; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -1854,7 +2125,9 @@ CREATE TABLE memory_goals (
     id uuid NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
-    deleted_at timestamp without time zone
+    deleted_at timestamp without time zone,
+    last_consumed_at timestamp without time zone,
+    archived_at timestamp without time zone
 );
 
 
@@ -1880,7 +2153,9 @@ CREATE TABLE memory_preferences (
     id uuid NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
-    deleted_at timestamp without time zone
+    deleted_at timestamp without time zone,
+    last_consumed_at timestamp without time zone,
+    archived_at timestamp without time zone
 );
 
 
@@ -2328,7 +2603,9 @@ CREATE TABLE plans (
     id uuid NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
-    deleted_at timestamp without time zone
+    deleted_at timestamp without time zone,
+    source character varying(32),
+    source_metadata jsonb
 );
 
 
@@ -2494,6 +2771,26 @@ CREATE TABLE push_preferences (
 
 
 ALTER TABLE push_preferences OWNER TO postgres;
+
+--
+-- Name: recommendation_cache; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE recommendation_cache (
+    user_id uuid NOT NULL,
+    recommendation_type character varying(50) NOT NULL,
+    cached_recommendations json NOT NULL,
+    generated_at timestamp without time zone NOT NULL,
+    expires_at timestamp without time zone NOT NULL,
+    hit_count integer DEFAULT 0 NOT NULL,
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE recommendation_cache OWNER TO postgres;
 
 --
 -- Name: response_feedback; Type: TABLE; Schema: public; Owner: postgres
@@ -2748,7 +3045,8 @@ CREATE TABLE shared_resources (
     id uuid NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
-    deleted_at timestamp without time zone
+    deleted_at timestamp without time zone,
+    knowledge_node_id uuid
 );
 
 
@@ -3115,7 +3413,10 @@ CREATE TABLE subtasks (
     id uuid NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
-    deleted_at timestamp without time zone
+    deleted_at timestamp without time zone,
+    knowledge_node_id uuid,
+    estimated_minutes integer DEFAULT 25,
+    guide_content text
 );
 
 
@@ -3161,7 +3462,8 @@ CREATE TABLE task_feedbacks (
     id uuid NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
-    deleted_at timestamp without time zone
+    deleted_at timestamp without time zone,
+    reflection_payload jsonb
 );
 
 
@@ -3315,6 +3617,65 @@ CREATE TABLE user_achievements (
 
 
 ALTER TABLE user_achievements OWNER TO postgres;
+
+--
+-- Name: user_blocks; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE user_blocks (
+    id uuid NOT NULL,
+    blocker_id uuid NOT NULL,
+    blocked_id uuid NOT NULL,
+    reason character varying(500),
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE user_blocks OWNER TO postgres;
+
+--
+-- Name: COLUMN user_blocks.blocker_id; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN user_blocks.blocker_id IS '执行拉黑的用户ID';
+
+
+--
+-- Name: COLUMN user_blocks.blocked_id; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN user_blocks.blocked_id IS '被拉黑的用户ID';
+
+
+--
+-- Name: COLUMN user_blocks.reason; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN user_blocks.reason IS '拉黑原因';
+
+
+--
+-- Name: COLUMN user_blocks.created_at; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN user_blocks.created_at IS '拉黑时间';
+
+
+--
+-- Name: COLUMN user_blocks.updated_at; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN user_blocks.updated_at IS '更新时间';
+
+
+--
+-- Name: COLUMN user_blocks.deleted_at; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN user_blocks.deleted_at IS '软删除时间（解除拉黑）';
+
 
 --
 -- Name: user_consumables; Type: TABLE; Schema: public; Owner: postgres
@@ -3486,6 +3847,28 @@ CREATE TABLE user_irt_ability (
 ALTER TABLE user_irt_ability OWNER TO postgres;
 
 --
+-- Name: user_item_interactions; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE user_item_interactions (
+    user_id uuid NOT NULL,
+    item_id uuid NOT NULL,
+    item_type character varying(50) NOT NULL,
+    interaction_type character varying(50) NOT NULL,
+    interaction_weight double precision DEFAULT '1'::double precision NOT NULL,
+    subject_id uuid,
+    session_id character varying(100),
+    meta json,
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE user_item_interactions OWNER TO postgres;
+
+--
 -- Name: user_library_subscriptions; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -3602,7 +3985,6 @@ ALTER TABLE user_preferences_center OWNER TO postgres;
 --
 
 CREATE TABLE user_sessions (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
     user_id uuid NOT NULL,
     session_id character varying(64) NOT NULL,
     device_id character varying(255),
@@ -3613,9 +3995,10 @@ CREATE TABLE user_sessions (
     refresh_token_jti character varying(64),
     is_active boolean DEFAULT true NOT NULL,
     revoked_at timestamp without time zone,
-    last_active_at timestamp without time zone DEFAULT now() NOT NULL,
-    created_at timestamp without time zone DEFAULT now() NOT NULL,
-    updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    last_active_at timestamp without time zone NOT NULL,
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
     deleted_at timestamp without time zone
 );
 
@@ -3642,6 +4025,28 @@ CREATE TABLE user_settings (
 ALTER TABLE user_settings OWNER TO postgres;
 
 --
+-- Name: user_similarities; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE user_similarities (
+    user_id_1 uuid NOT NULL,
+    user_id_2 uuid NOT NULL,
+    similarity_score double precision NOT NULL,
+    common_items_count integer DEFAULT 0 NOT NULL,
+    common_subjects json,
+    last_calculated_at timestamp without time zone NOT NULL,
+    calculation_version integer DEFAULT 1 NOT NULL,
+    meta json,
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE user_similarities OWNER TO postgres;
+
+--
 -- Name: user_state_snapshots; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -3666,6 +4071,25 @@ CREATE TABLE user_state_snapshots (
 
 
 ALTER TABLE user_state_snapshots OWNER TO postgres;
+
+--
+-- Name: user_streak_days; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE user_streak_days (
+    user_id uuid NOT NULL,
+    day date NOT NULL,
+    status streakdaystatus NOT NULL,
+    used_freeze boolean DEFAULT false NOT NULL,
+    source_event character varying(50),
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE user_streak_days OWNER TO postgres;
 
 --
 -- Name: user_streak_stats; Type: TABLE; Schema: public; Owner: postgres
@@ -3726,8 +4150,8 @@ CREATE TABLE user_tool_history (
     execution_time_ms integer,
     error_message character varying(500),
     error_type character varying(100),
-    context_snapshot json,
-    input_args json,
+    context_snapshot jsonb,
+    input_args jsonb,
     output_summary text,
     user_satisfaction integer,
     was_helpful boolean,
@@ -3759,6 +4183,44 @@ ALTER SEQUENCE user_tool_history_id_seq OWNER TO postgres;
 
 ALTER SEQUENCE user_tool_history_id_seq OWNED BY user_tool_history.id;
 
+
+--
+-- Name: user_visual_configs; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE user_visual_configs (
+    user_id uuid NOT NULL,
+    equipped_background_id character varying(50),
+    equipped_particle_id character varying(50),
+    equipped_effect_id character varying(50),
+    background_equipped_at timestamp without time zone,
+    particle_equipped_at timestamp without time zone,
+    effect_equipped_at timestamp without time zone,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE user_visual_configs OWNER TO postgres;
+
+--
+-- Name: user_visual_elements; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE user_visual_elements (
+    user_id uuid NOT NULL,
+    element_id character varying(50) NOT NULL,
+    unlocked_at timestamp without time zone NOT NULL,
+    unlock_source character varying(50) NOT NULL,
+    source_id character varying(100),
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE user_visual_elements OWNER TO postgres;
 
 --
 -- Name: users; Type: TABLE; Schema: public; Owner: postgres
@@ -3799,18 +4261,59 @@ CREATE TABLE users (
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
     deleted_at timestamp without time zone,
+    equipped_skin_source character varying(20),
+    equipped_title_source character varying(20),
+    email_verified boolean DEFAULT false NOT NULL,
+    token_revoked_before timestamp without time zone,
     password_login_enabled boolean DEFAULT true NOT NULL,
     agreed_to_tos_at timestamp without time zone,
     agreed_to_privacy_at timestamp without time zone,
     tos_version character varying(50),
     privacy_version character varying(50),
     agreed_locale character varying(20),
-    email_verified boolean DEFAULT false NOT NULL,
-    token_revoked_before bigint
+    searchable_by searchvisibility DEFAULT 'everyone'::searchvisibility NOT NULL
 );
 
 
 ALTER TABLE users OWNER TO postgres;
+
+--
+-- Name: COLUMN users.searchable_by; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN users.searchable_by IS '用户搜索隐私设置';
+
+
+--
+-- Name: visual_elements; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE visual_elements (
+    id character varying(50) NOT NULL,
+    name character varying(100) NOT NULL,
+    description text,
+    name_i18n jsonb,
+    description_i18n jsonb,
+    element_type visualelementtype NOT NULL,
+    rarity visualelementrarity NOT NULL,
+    unlock_source visualelementunlocksource,
+    unlock_requirement jsonb,
+    config jsonb NOT NULL,
+    preview_url character varying(500),
+    icon_url character varying(500),
+    is_active boolean NOT NULL,
+    is_default boolean NOT NULL,
+    sort_order integer NOT NULL,
+    category character varying(50),
+    season_start character varying(10),
+    season_end character varying(10),
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE visual_elements OWNER TO postgres;
 
 --
 -- Name: word_books; Type: TABLE; Schema: public; Owner: postgres
@@ -3847,6 +4350,13 @@ ALTER TABLE word_books OWNER TO postgres;
 --
 
 ALTER TABLE ONLY crdt_operation_log ALTER COLUMN id SET DEFAULT nextval('crdt_operation_log_id_seq'::regclass);
+
+
+--
+-- Name: mastery_audit_log id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY mastery_audit_log ALTER COLUMN id SET DEFAULT nextval('mastery_audit_log_id_seq'::regclass);
 
 
 --
@@ -3896,6 +4406,22 @@ ALTER TABLE ONLY ab_experiments
 
 
 --
+-- Name: accountability_checkin accountability_checkin_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY accountability_checkin
+    ADD CONSTRAINT accountability_checkin_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: accountability_partnership accountability_partnership_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY accountability_partnership
+    ADD CONSTRAINT accountability_partnership_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: achievements achievements_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -3904,11 +4430,11 @@ ALTER TABLE ONLY achievements
 
 
 --
--- Name: alembic_version alembic_version_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: alembic_version alembic_version_pkc; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY alembic_version
-    ADD CONSTRAINT alembic_version_pkey PRIMARY KEY (version_num);
+    ADD CONSTRAINT alembic_version_pkc PRIMARY KEY (version_num);
 
 
 --
@@ -3965,6 +4491,14 @@ ALTER TABLE ONLY behavioral_outcomes
 
 ALTER TABLE ONLY broadcast_messages
     ADD CONSTRAINT broadcast_messages_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: calendar_events calendar_events_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY calendar_events
+    ADD CONSTRAINT calendar_events_pkey PRIMARY KEY (id);
 
 
 --
@@ -4152,6 +4686,14 @@ ALTER TABLE ONLY event_outbox
 
 
 --
+-- Name: event_sequence_counters event_sequence_counters_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY event_sequence_counters
+    ADD CONSTRAINT event_sequence_counters_pkey PRIMARY KEY (aggregate_type, aggregate_id);
+
+
+--
 -- Name: event_store event_store_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -4221,6 +4763,14 @@ ALTER TABLE ONLY group_files
 
 ALTER TABLE ONLY group_members
     ADD CONSTRAINT group_members_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: group_message_reads group_message_reads_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY group_message_reads
+    ADD CONSTRAINT group_message_reads_pkey PRIMARY KEY (id);
 
 
 --
@@ -4304,6 +4854,14 @@ ALTER TABLE ONLY irt_item_parameters
 
 
 --
+-- Name: item_similarities item_similarities_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY item_similarities
+    ADD CONSTRAINT item_similarities_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: jobs jobs_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -4341,6 +4899,14 @@ ALTER TABLE ONLY login_attempts
 
 ALTER TABLE ONLY ltm_daily_snapshots
     ADD CONSTRAINT ltm_daily_snapshots_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: mastery_audit_log mastery_audit_log_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY mastery_audit_log
+    ADD CONSTRAINT mastery_audit_log_pkey PRIMARY KEY (id);
 
 
 --
@@ -4576,6 +5142,14 @@ ALTER TABLE ONLY push_preferences
 
 
 --
+-- Name: recommendation_cache recommendation_cache_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY recommendation_cache
+    ADD CONSTRAINT recommendation_cache_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: response_feedback response_feedback_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -4808,6 +5382,14 @@ ALTER TABLE ONLY tracking_events
 
 
 --
+-- Name: accountability_partnership uq_accountability_partnership_pair; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY accountability_partnership
+    ADD CONSTRAINT uq_accountability_partnership_pair UNIQUE (initiator_id, partner_id);
+
+
+--
 -- Name: capsule_favorites uq_capsule_favorite; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -4840,11 +5422,27 @@ ALTER TABLE ONLY group_members
 
 
 --
+-- Name: group_message_reads uq_group_message_read; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY group_message_reads
+    ADD CONSTRAINT uq_group_message_read UNIQUE (message_id, user_id);
+
+
+--
 -- Name: intervention_feedback uq_intervention_feedback_idempotency; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY intervention_feedback
     ADD CONSTRAINT uq_intervention_feedback_idempotency UNIQUE (user_id, request_id, feedback_type, idempotency_key);
+
+
+--
+-- Name: item_similarities uq_item_similarity_pair; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY item_similarities
+    ADD CONSTRAINT uq_item_similarity_pair UNIQUE (item_id_1, item_type_1, item_id_2, item_type_2);
 
 
 --
@@ -4880,11 +5478,27 @@ ALTER TABLE ONLY group_task_claims
 
 
 --
+-- Name: user_blocks uq_user_blocks; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY user_blocks
+    ADD CONSTRAINT uq_user_blocks UNIQUE (blocker_id, blocked_id);
+
+
+--
 -- Name: user_daily_metrics uq_user_daily_metric; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY user_daily_metrics
     ADD CONSTRAINT uq_user_daily_metric UNIQUE (user_id, date);
+
+
+--
+-- Name: user_similarities uq_user_similarity_pair; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY user_similarities
+    ADD CONSTRAINT uq_user_similarity_pair UNIQUE (user_id_1, user_id_2);
 
 
 --
@@ -4901,6 +5515,14 @@ ALTER TABLE ONLY word_books
 
 ALTER TABLE ONLY user_achievements
     ADD CONSTRAINT user_achievements_pkey PRIMARY KEY (user_id, achievement_id, id);
+
+
+--
+-- Name: user_blocks user_blocks_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY user_blocks
+    ADD CONSTRAINT user_blocks_pkey PRIMARY KEY (id);
 
 
 --
@@ -4957,6 +5579,14 @@ ALTER TABLE ONLY user_intervention_settings
 
 ALTER TABLE ONLY user_irt_ability
     ADD CONSTRAINT user_irt_ability_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: user_item_interactions user_item_interactions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY user_item_interactions
+    ADD CONSTRAINT user_item_interactions_pkey PRIMARY KEY (id);
 
 
 --
@@ -5024,11 +5654,27 @@ ALTER TABLE ONLY user_settings
 
 
 --
+-- Name: user_similarities user_similarities_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY user_similarities
+    ADD CONSTRAINT user_similarities_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: user_state_snapshots user_state_snapshots_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY user_state_snapshots
     ADD CONSTRAINT user_state_snapshots_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: user_streak_days user_streak_days_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY user_streak_days
+    ADD CONSTRAINT user_streak_days_pkey PRIMARY KEY (user_id, day);
 
 
 --
@@ -5056,6 +5702,22 @@ ALTER TABLE ONLY user_tool_history
 
 
 --
+-- Name: user_visual_configs user_visual_configs_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY user_visual_configs
+    ADD CONSTRAINT user_visual_configs_pkey PRIMARY KEY (user_id);
+
+
+--
+-- Name: user_visual_elements user_visual_elements_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY user_visual_elements
+    ADD CONSTRAINT user_visual_elements_pkey PRIMARY KEY (user_id, element_id);
+
+
+--
 -- Name: users users_email_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -5080,11 +5742,54 @@ ALTER TABLE ONLY users
 
 
 --
+-- Name: visual_elements visual_elements_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY visual_elements
+    ADD CONSTRAINT visual_elements_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: word_books word_books_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY word_books
     ADD CONSTRAINT word_books_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: idx_accountability_checkin_created_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_accountability_checkin_created_at ON accountability_checkin USING btree (created_at);
+
+
+--
+-- Name: idx_accountability_checkin_partnership_user; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_accountability_checkin_partnership_user ON accountability_checkin USING btree (partnership_id, user_id);
+
+
+--
+-- Name: idx_accountability_initiator_status; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_accountability_initiator_status ON accountability_partnership USING btree (initiator_id, status);
+
+
+--
+-- Name: idx_accountability_partner_status; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_accountability_partner_status ON accountability_partnership USING btree (partner_id, status);
+
+
+--
+-- Name: idx_accountability_slot_status; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_accountability_slot_status ON accountability_partnership USING btree (slot_type, status);
 
 
 --
@@ -5158,6 +5863,13 @@ CREATE INDEX idx_chat_user_id ON chat_messages USING btree (user_id);
 
 
 --
+-- Name: idx_chat_user_session_created_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_chat_user_session_created_at ON chat_messages USING btree (user_id, session_id, created_at);
+
+
+--
 -- Name: idx_claim_task; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -5200,6 +5912,13 @@ CREATE INDEX idx_dict_word ON dictionary_entries USING btree (word);
 
 
 --
+-- Name: idx_episodic_memories_archived_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_episodic_memories_archived_at ON episodic_memories USING btree (archived_at);
+
+
+--
 -- Name: idx_episodic_memories_evidence_missing; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -5211,6 +5930,13 @@ CREATE INDEX idx_episodic_memories_evidence_missing ON episodic_memories USING b
 --
 
 CREATE INDEX idx_episodic_memories_evidence_score ON episodic_memories USING btree (evidence_score);
+
+
+--
+-- Name: idx_episodic_memories_last_consumed_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_episodic_memories_last_consumed_at ON episodic_memories USING btree (last_consumed_at);
 
 
 --
@@ -5326,6 +6052,20 @@ CREATE INDEX idx_group_files_shared_by ON group_files USING btree (shared_by_id)
 
 
 --
+-- Name: idx_group_message_read_message; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_group_message_read_message ON group_message_reads USING btree (message_id, read_at);
+
+
+--
+-- Name: idx_group_message_read_user; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_group_message_read_user ON group_message_reads USING btree (user_id, read_at);
+
+
+--
 -- Name: idx_group_public; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -5351,6 +6091,27 @@ CREATE INDEX idx_group_type ON groups USING btree (type);
 --
 
 CREATE INDEX idx_idempotency_expires ON idempotency_keys USING btree (expires_at);
+
+
+--
+-- Name: idx_item_sim_item1; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_item_sim_item1 ON item_similarities USING btree (item_id_1);
+
+
+--
+-- Name: idx_item_sim_item2; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_item_sim_item2 ON item_similarities USING btree (item_id_2);
+
+
+--
+-- Name: idx_item_sim_score; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_item_sim_score ON item_similarities USING btree (similarity_score);
 
 
 --
@@ -5382,6 +6143,34 @@ CREATE UNIQUE INDEX idx_ltm_daily_snapshots_date ON ltm_daily_snapshots USING bt
 
 
 --
+-- Name: idx_mastery_audit_log_created_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_mastery_audit_log_created_at ON mastery_audit_log USING btree (created_at DESC);
+
+
+--
+-- Name: idx_mastery_audit_log_node_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_mastery_audit_log_node_id ON mastery_audit_log USING btree (node_id);
+
+
+--
+-- Name: idx_mastery_audit_log_user_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_mastery_audit_log_user_id ON mastery_audit_log USING btree (user_id);
+
+
+--
+-- Name: idx_mastery_audit_log_user_node_time; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_mastery_audit_log_user_node_time ON mastery_audit_log USING btree (user_id, node_id, created_at DESC);
+
+
+--
 -- Name: idx_member_group; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -5400,6 +6189,13 @@ CREATE INDEX idx_member_user ON group_members USING btree (user_id);
 --
 
 CREATE INDEX idx_memory_corrections_user_type_created ON memory_corrections USING btree (user_id, memory_type, created_at);
+
+
+--
+-- Name: idx_memory_goals_archived_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_memory_goals_archived_at ON memory_goals USING btree (archived_at);
 
 
 --
@@ -5424,10 +6220,24 @@ CREATE INDEX idx_memory_goals_expires_at ON memory_goals USING btree (expires_at
 
 
 --
+-- Name: idx_memory_goals_last_consumed_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_memory_goals_last_consumed_at ON memory_goals USING btree (last_consumed_at);
+
+
+--
 -- Name: idx_memory_goals_user_status_target; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_memory_goals_user_status_target ON memory_goals USING btree (user_id, status, target_date);
+
+
+--
+-- Name: idx_memory_preferences_archived_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_memory_preferences_archived_at ON memory_preferences USING btree (archived_at);
 
 
 --
@@ -5442,6 +6252,13 @@ CREATE INDEX idx_memory_preferences_evidence_missing ON memory_preferences USING
 --
 
 CREATE INDEX idx_memory_preferences_evidence_score ON memory_preferences USING btree (evidence_score);
+
+
+--
+-- Name: idx_memory_preferences_last_consumed_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_memory_preferences_last_consumed_at ON memory_preferences USING btree (last_consumed_at);
 
 
 --
@@ -5620,6 +6437,20 @@ CREATE UNIQUE INDEX idx_projection_snapshots_projection_aggregate ON projection_
 
 
 --
+-- Name: idx_rec_cache_expires; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_rec_cache_expires ON recommendation_cache USING btree (expires_at);
+
+
+--
+-- Name: idx_rec_cache_user_type; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_rec_cache_user_type ON recommendation_cache USING btree (user_id, recommendation_type);
+
+
+--
 -- Name: idx_share_group; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -5631,6 +6462,13 @@ CREATE INDEX idx_share_group ON shared_resources USING btree (group_id);
 --
 
 CREATE INDEX idx_share_resource_capsule ON shared_resources USING btree (curiosity_capsule_id);
+
+
+--
+-- Name: idx_share_resource_knowledge_node; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_share_resource_knowledge_node ON shared_resources USING btree (knowledge_node_id);
 
 
 --
@@ -5718,10 +6556,24 @@ CREATE INDEX idx_tasks_status ON tasks USING btree (status);
 
 
 --
+-- Name: idx_tasks_user_created_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_tasks_user_created_at ON tasks USING btree (user_id, created_at);
+
+
+--
 -- Name: idx_tasks_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_tasks_user_id ON tasks USING btree (user_id);
+
+
+--
+-- Name: idx_tasks_user_status_created_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_tasks_user_status_created_at ON tasks USING btree (user_id, status, created_at);
 
 
 --
@@ -5760,10 +6612,59 @@ CREATE INDEX idx_user_achievements_user_unlocked ON user_achievements USING btre
 
 
 --
+-- Name: idx_user_blocks_blocked; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_user_blocks_blocked ON user_blocks USING btree (blocked_id, deleted_at);
+
+
+--
+-- Name: idx_user_blocks_blocker; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_user_blocks_blocker ON user_blocks USING btree (blocker_id, deleted_at);
+
+
+--
 -- Name: idx_user_encryption_keys_user; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_user_encryption_keys_user ON user_encryption_keys USING btree (user_id, is_active);
+
+
+--
+-- Name: idx_user_interaction_item; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_user_interaction_item ON user_item_interactions USING btree (item_id);
+
+
+--
+-- Name: idx_user_interaction_time; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_user_interaction_time ON user_item_interactions USING btree (created_at);
+
+
+--
+-- Name: idx_user_interaction_type; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_user_interaction_type ON user_item_interactions USING btree (interaction_type);
+
+
+--
+-- Name: idx_user_interaction_user; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_user_interaction_user ON user_item_interactions USING btree (user_id);
+
+
+--
+-- Name: idx_user_interaction_user_item; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_user_interaction_user_item ON user_item_interactions USING btree (user_id, item_id);
 
 
 --
@@ -5785,6 +6686,27 @@ CREATE INDEX idx_user_sessions_user_active ON user_sessions USING btree (user_id
 --
 
 CREATE UNIQUE INDEX idx_user_settings_user ON user_settings USING btree (user_id);
+
+
+--
+-- Name: idx_user_sim_score; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_user_sim_score ON user_similarities USING btree (similarity_score);
+
+
+--
+-- Name: idx_user_sim_user1; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_user_sim_user1 ON user_similarities USING btree (user_id_1);
+
+
+--
+-- Name: idx_user_sim_user2; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_user_sim_user2 ON user_similarities USING btree (user_id_2);
 
 
 --
@@ -5952,7 +6874,7 @@ CREATE INDEX ix_achievements_deleted_at ON achievements USING btree (deleted_at)
 -- Name: ix_achievements_trigger_code; Type: INDEX; Schema: public; Owner: postgres
 --
 
-CREATE UNIQUE INDEX ix_achievements_trigger_code ON achievements USING btree (trigger_code);
+CREATE INDEX ix_achievements_trigger_code ON achievements USING btree (trigger_code);
 
 
 --
@@ -6138,6 +7060,41 @@ CREATE INDEX ix_broadcast_messages_sender_id ON broadcast_messages USING btree (
 
 
 --
+-- Name: ix_calendar_events_plan_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_calendar_events_plan_id ON calendar_events USING btree (plan_id);
+
+
+--
+-- Name: ix_calendar_events_task_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_calendar_events_task_id ON calendar_events USING btree (task_id);
+
+
+--
+-- Name: ix_calendar_events_user_deleted; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_calendar_events_user_deleted ON calendar_events USING btree (user_id, deleted_at);
+
+
+--
+-- Name: ix_calendar_events_user_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_calendar_events_user_id ON calendar_events USING btree (user_id);
+
+
+--
+-- Name: ix_calendar_events_user_time; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_calendar_events_user_time ON calendar_events USING btree (user_id, start_time);
+
+
+--
 -- Name: ix_capsule_favorites_capsule_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -6247,13 +7204,6 @@ CREATE INDEX ix_chat_messages_user_id ON chat_messages USING btree (user_id);
 --
 
 CREATE INDEX ix_chat_sessions_deleted_at ON chat_sessions USING btree (deleted_at);
-
-
---
--- Name: ix_chat_sessions_user_id; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX ix_chat_sessions_user_id ON chat_sessions USING btree (user_id);
 
 
 --
@@ -6705,6 +7655,27 @@ CREATE INDEX ix_group_members_user_id ON group_members USING btree (user_id);
 
 
 --
+-- Name: ix_group_message_reads_deleted_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_group_message_reads_deleted_at ON group_message_reads USING btree (deleted_at);
+
+
+--
+-- Name: ix_group_message_reads_message_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_group_message_reads_message_id ON group_message_reads USING btree (message_id);
+
+
+--
+-- Name: ix_group_message_reads_user_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_group_message_reads_user_id ON group_message_reads USING btree (user_id);
+
+
+--
 -- Name: ix_group_messages_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -6919,6 +7890,13 @@ CREATE INDEX ix_irt_item_parameters_question_id ON irt_item_parameters USING btr
 --
 
 CREATE INDEX ix_irt_item_parameters_subject_id ON irt_item_parameters USING btree (subject_id);
+
+
+--
+-- Name: ix_item_similarities_deleted_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_item_similarities_deleted_at ON item_similarities USING btree (deleted_at);
 
 
 --
@@ -7594,6 +8572,13 @@ CREATE UNIQUE INDEX ix_push_preferences_user_id ON push_preferences USING btree 
 
 
 --
+-- Name: ix_recommendation_cache_deleted_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_recommendation_cache_deleted_at ON recommendation_cache USING btree (deleted_at);
+
+
+--
 -- Name: ix_response_feedback_created_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -8119,6 +9104,13 @@ CREATE INDEX ix_subtasks_deleted_at ON subtasks USING btree (deleted_at);
 
 
 --
+-- Name: ix_subtasks_knowledge_node_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_subtasks_knowledge_node_id ON subtasks USING btree (knowledge_node_id);
+
+
+--
 -- Name: ix_subtasks_parent_task_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -8343,6 +9335,20 @@ CREATE INDEX ix_user_achievements_unlocked_at ON user_achievements USING btree (
 
 
 --
+-- Name: ix_user_blocks_blocked_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_user_blocks_blocked_id ON user_blocks USING btree (blocked_id);
+
+
+--
+-- Name: ix_user_blocks_blocker_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_user_blocks_blocker_id ON user_blocks USING btree (blocker_id);
+
+
+--
 -- Name: ix_user_consumables_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -8480,6 +9486,13 @@ CREATE INDEX ix_user_irt_ability_subject_id ON user_irt_ability USING btree (sub
 --
 
 CREATE INDEX ix_user_irt_ability_user_id ON user_irt_ability USING btree (user_id);
+
+
+--
+-- Name: ix_user_item_interactions_deleted_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_user_item_interactions_deleted_at ON user_item_interactions USING btree (deleted_at);
 
 
 --
@@ -8637,6 +9650,13 @@ CREATE UNIQUE INDEX ix_user_settings_user_id ON user_settings USING btree (user_
 
 
 --
+-- Name: ix_user_similarities_deleted_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_user_similarities_deleted_at ON user_similarities USING btree (deleted_at);
+
+
+--
 -- Name: ix_user_state_snapshots_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -8655,6 +9675,13 @@ CREATE INDEX ix_user_state_snapshots_snapshot_at ON user_state_snapshots USING b
 --
 
 CREATE INDEX ix_user_state_snapshots_user_id ON user_state_snapshots USING btree (user_id);
+
+
+--
+-- Name: ix_user_streak_days_user_day; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX ix_user_streak_days_user_day ON user_streak_days USING btree (user_id, day);
 
 
 --
@@ -8714,6 +9741,20 @@ CREATE INDEX ix_user_tool_history_user_id ON user_tool_history USING btree (user
 
 
 --
+-- Name: ix_user_visual_configs_user_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_user_visual_configs_user_id ON user_visual_configs USING btree (user_id);
+
+
+--
+-- Name: ix_user_visual_elements_user_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_user_visual_elements_user_id ON user_visual_elements USING btree (user_id);
+
+
+--
 -- Name: ix_users_apple_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -8735,10 +9776,24 @@ CREATE INDEX ix_users_equipped_skin ON users USING btree (equipped_skin);
 
 
 --
+-- Name: ix_users_equipped_skin_source; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_users_equipped_skin_source ON users USING btree (equipped_skin_source);
+
+
+--
 -- Name: ix_users_equipped_title; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_users_equipped_title ON users USING btree (equipped_title);
+
+
+--
+-- Name: ix_users_equipped_title_source; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_users_equipped_title_source ON users USING btree (equipped_title_source);
 
 
 --
@@ -8753,6 +9808,27 @@ CREATE UNIQUE INDEX ix_users_google_id ON users USING btree (google_id);
 --
 
 CREATE UNIQUE INDEX ix_users_wechat_unionid ON users USING btree (wechat_unionid);
+
+
+--
+-- Name: ix_visual_elements_active; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_visual_elements_active ON visual_elements USING btree (is_active);
+
+
+--
+-- Name: ix_visual_elements_category; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_visual_elements_category ON visual_elements USING btree (category);
+
+
+--
+-- Name: ix_visual_elements_type_rarity; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_visual_elements_type_rarity ON visual_elements USING btree (element_type, rarity);
 
 
 --
@@ -8855,11 +9931,43 @@ ALTER TABLE ONLY ab_experiments
 
 
 --
--- Name: ab_experiments ab_experiments_winning_variant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: accountability_checkin accountability_checkin_partnership_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
-ALTER TABLE ONLY ab_experiments
-    ADD CONSTRAINT ab_experiments_winning_variant_id_fkey FOREIGN KEY (winning_variant_id) REFERENCES ab_experiment_variants(id) ON DELETE SET NULL;
+ALTER TABLE ONLY accountability_checkin
+    ADD CONSTRAINT accountability_checkin_partnership_id_fkey FOREIGN KEY (partnership_id) REFERENCES accountability_partnership(id) ON DELETE CASCADE;
+
+
+--
+-- Name: accountability_checkin accountability_checkin_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY accountability_checkin
+    ADD CONSTRAINT accountability_checkin_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: accountability_partnership accountability_partnership_friendship_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY accountability_partnership
+    ADD CONSTRAINT accountability_partnership_friendship_id_fkey FOREIGN KEY (friendship_id) REFERENCES friendships(id) ON DELETE SET NULL;
+
+
+--
+-- Name: accountability_partnership accountability_partnership_initiator_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY accountability_partnership
+    ADD CONSTRAINT accountability_partnership_initiator_id_fkey FOREIGN KEY (initiator_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: accountability_partnership accountability_partnership_partner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY accountability_partnership
+    ADD CONSTRAINT accountability_partnership_partner_id_fkey FOREIGN KEY (partner_id) REFERENCES users(id) ON DELETE CASCADE;
 
 
 --
@@ -8883,7 +9991,7 @@ ALTER TABLE ONLY achievements
 --
 
 ALTER TABLE ONLY auth_audit_log
-    ADD CONSTRAINT auth_audit_log_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL;
+    ADD CONSTRAINT auth_audit_log_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
 
 
 --
@@ -8916,6 +10024,30 @@ ALTER TABLE ONLY behavioral_outcomes
 
 ALTER TABLE ONLY broadcast_messages
     ADD CONSTRAINT broadcast_messages_sender_id_fkey FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: calendar_events calendar_events_plan_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY calendar_events
+    ADD CONSTRAINT calendar_events_plan_id_fkey FOREIGN KEY (plan_id) REFERENCES plans(id) ON DELETE SET NULL;
+
+
+--
+-- Name: calendar_events calendar_events_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY calendar_events
+    ADD CONSTRAINT calendar_events_task_id_fkey FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE SET NULL;
+
+
+--
+-- Name: calendar_events calendar_events_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY calendar_events
+    ADD CONSTRAINT calendar_events_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 
 --
@@ -9159,6 +10291,22 @@ ALTER TABLE ONLY expansion_feedback
 
 
 --
+-- Name: ab_experiments fk_ab_experiments_winning_variant_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY ab_experiments
+    ADD CONSTRAINT fk_ab_experiments_winning_variant_id FOREIGN KEY (winning_variant_id) REFERENCES ab_experiment_variants(id) ON DELETE SET NULL;
+
+
+--
+-- Name: subtasks fk_subtasks_knowledge_node_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY subtasks
+    ADD CONSTRAINT fk_subtasks_knowledge_node_id FOREIGN KEY (knowledge_node_id) REFERENCES knowledge_nodes(id) ON DELETE SET NULL;
+
+
+--
 -- Name: focus_sessions focus_sessions_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -9252,6 +10400,22 @@ ALTER TABLE ONLY group_members
 
 ALTER TABLE ONLY group_members
     ADD CONSTRAINT group_members_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+
+
+--
+-- Name: group_message_reads group_message_reads_message_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY group_message_reads
+    ADD CONSTRAINT group_message_reads_message_id_fkey FOREIGN KEY (message_id) REFERENCES group_messages(id) ON DELETE CASCADE;
+
+
+--
+-- Name: group_message_reads group_message_reads_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY group_message_reads
+    ADD CONSTRAINT group_message_reads_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 
 --
@@ -9444,6 +10608,22 @@ ALTER TABLE ONLY legal_holds
 
 ALTER TABLE ONLY login_attempts
     ADD CONSTRAINT login_attempts_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+
+
+--
+-- Name: mastery_audit_log mastery_audit_log_node_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY mastery_audit_log
+    ADD CONSTRAINT mastery_audit_log_node_id_fkey FOREIGN KEY (node_id) REFERENCES knowledge_nodes(id) ON DELETE CASCADE;
+
+
+--
+-- Name: mastery_audit_log mastery_audit_log_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY mastery_audit_log
+    ADD CONSTRAINT mastery_audit_log_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 
 --
@@ -9775,6 +10955,14 @@ ALTER TABLE ONLY push_preferences
 
 
 --
+-- Name: recommendation_cache recommendation_cache_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY recommendation_cache
+    ADD CONSTRAINT recommendation_cache_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+
+
+--
 -- Name: scaffolding_states scaffolding_states_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -9836,6 +11024,14 @@ ALTER TABLE ONLY shared_resources
 
 ALTER TABLE ONLY shared_resources
     ADD CONSTRAINT shared_resources_group_id_fkey FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE;
+
+
+--
+-- Name: shared_resources shared_resources_knowledge_node_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY shared_resources
+    ADD CONSTRAINT shared_resources_knowledge_node_id_fkey FOREIGN KEY (knowledge_node_id) REFERENCES knowledge_nodes(id);
 
 
 --
@@ -10063,6 +11259,22 @@ ALTER TABLE ONLY user_achievements
 
 
 --
+-- Name: user_blocks user_blocks_blocked_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY user_blocks
+    ADD CONSTRAINT user_blocks_blocked_id_fkey FOREIGN KEY (blocked_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: user_blocks user_blocks_blocker_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY user_blocks
+    ADD CONSTRAINT user_blocks_blocker_id_fkey FOREIGN KEY (blocker_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
 -- Name: user_consumables user_consumables_consumable_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -10135,6 +11347,14 @@ ALTER TABLE ONLY user_irt_ability
 
 
 --
+-- Name: user_item_interactions user_item_interactions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY user_item_interactions
+    ADD CONSTRAINT user_item_interactions_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+
+
+--
 -- Name: user_library_subscriptions user_library_subscriptions_library_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -10195,7 +11415,7 @@ ALTER TABLE ONLY user_preferences_center
 --
 
 ALTER TABLE ONLY user_sessions
-    ADD CONSTRAINT user_sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+    ADD CONSTRAINT user_sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
 
 
 --
@@ -10207,11 +11427,35 @@ ALTER TABLE ONLY user_settings
 
 
 --
+-- Name: user_similarities user_similarities_user_id_1_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY user_similarities
+    ADD CONSTRAINT user_similarities_user_id_1_fkey FOREIGN KEY (user_id_1) REFERENCES users(id);
+
+
+--
+-- Name: user_similarities user_similarities_user_id_2_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY user_similarities
+    ADD CONSTRAINT user_similarities_user_id_2_fkey FOREIGN KEY (user_id_2) REFERENCES users(id);
+
+
+--
 -- Name: user_state_snapshots user_state_snapshots_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY user_state_snapshots
     ADD CONSTRAINT user_state_snapshots_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+
+
+--
+-- Name: user_streak_days user_streak_days_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY user_streak_days
+    ADD CONSTRAINT user_streak_days_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 
 --
@@ -10247,6 +11491,54 @@ ALTER TABLE ONLY user_tool_history
 
 
 --
+-- Name: user_visual_configs user_visual_configs_equipped_background_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY user_visual_configs
+    ADD CONSTRAINT user_visual_configs_equipped_background_id_fkey FOREIGN KEY (equipped_background_id) REFERENCES visual_elements(id);
+
+
+--
+-- Name: user_visual_configs user_visual_configs_equipped_effect_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY user_visual_configs
+    ADD CONSTRAINT user_visual_configs_equipped_effect_id_fkey FOREIGN KEY (equipped_effect_id) REFERENCES visual_elements(id);
+
+
+--
+-- Name: user_visual_configs user_visual_configs_equipped_particle_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY user_visual_configs
+    ADD CONSTRAINT user_visual_configs_equipped_particle_id_fkey FOREIGN KEY (equipped_particle_id) REFERENCES visual_elements(id);
+
+
+--
+-- Name: user_visual_configs user_visual_configs_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY user_visual_configs
+    ADD CONSTRAINT user_visual_configs_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: user_visual_elements user_visual_elements_element_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY user_visual_elements
+    ADD CONSTRAINT user_visual_elements_element_id_fkey FOREIGN KEY (element_id) REFERENCES visual_elements(id) ON DELETE CASCADE;
+
+
+--
+-- Name: user_visual_elements user_visual_elements_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY user_visual_elements
+    ADD CONSTRAINT user_visual_elements_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
 -- Name: word_books word_books_source_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -10265,5 +11557,4 @@ ALTER TABLE ONLY word_books
 --
 -- PostgreSQL database dump complete
 --
-
 

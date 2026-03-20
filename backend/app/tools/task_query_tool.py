@@ -21,6 +21,7 @@ from app.schemas.task import TaskUpdate
 from app.services.task_service import TaskService
 
 from .base import BaseTool, ToolCategory, ToolResult
+from .entity_cards import build_task_entity_card, build_task_list_entity_card, wrap_widget_payload
 from .plan_resolution import PlanResolutionError, resolve_user_plan_reference
 from .schemas import (
     GetTaskDetailsParams,
@@ -103,12 +104,21 @@ class QueryPlanTasksTool(BaseTool):
                         "resolved_via": resolved.resolution,
                     },
                     widget_type="task_list",
-                    widget_data={
-                        "tasks": [],
-                        "plan_id": str(plan_uuid),
-                        "plan_name": resolved.plan_name,
-                        "message": "该计划下暂无符合条件的任务",
-                    },
+                    widget_data=wrap_widget_payload(
+                        widget_type="task_list",
+                        widget_data={
+                            "tasks": [],
+                            "plan_id": str(plan_uuid),
+                            "plan_name": resolved.plan_name,
+                            "message": "该计划下暂无符合条件的任务",
+                        },
+                        entity_card=build_task_list_entity_card(
+                            [],
+                            tool_name=self.name,
+                            plan_id=str(plan_uuid),
+                            plan_title=resolved.plan_name,
+                        ),
+                    ),
                 )
 
             # Format tasks for response
@@ -142,12 +152,21 @@ class QueryPlanTasksTool(BaseTool):
                     "resolved_via": resolved.resolution,
                 },
                 widget_type="task_list",
-                widget_data={
-                    "tasks": task_list,
-                    "plan_id": str(plan_uuid),
-                    "plan_name": resolved.plan_name,
-                    "filter": params.status_filter.value,
-                },
+                widget_data=wrap_widget_payload(
+                    widget_type="task_list",
+                    widget_data={
+                        "tasks": task_list,
+                        "plan_id": str(plan_uuid),
+                        "plan_name": resolved.plan_name,
+                        "filter": params.status_filter.value,
+                    },
+                    entity_card=build_task_list_entity_card(
+                        task_list,
+                        tool_name=self.name,
+                        plan_id=str(plan_uuid),
+                        plan_title=resolved.plan_name,
+                    ),
+                ),
             )
 
         except PlanResolutionError as e:
@@ -251,6 +270,22 @@ class ModifyPlanTaskTool(BaseTool):
             task_update = TaskUpdate(**update_fields)
             updated_task = await TaskService.update(db_session, task, task_update)
 
+            task_payload = {
+                "id": str(updated_task.id),
+                "title": updated_task.title,
+                "guide_content": updated_task.guide_content,
+                "type": updated_task.type.value,
+                "status": updated_task.status.value,
+                "plan_id": str(updated_task.plan_id) if updated_task.plan_id else None,
+                "priority": updated_task.priority,
+                "estimated_minutes": updated_task.estimated_minutes,
+                "difficulty": updated_task.difficulty,
+                "energy_cost": updated_task.energy_cost,
+                "tags": updated_task.tags or [],
+                "created_at": updated_task.created_at.isoformat() if updated_task.created_at else None,
+                "updated_at": updated_task.updated_at.isoformat() if updated_task.updated_at else None,
+                "user_id": str(user_uuid),
+            }
             return ToolResult(
                 success=True,
                 tool_name=self.name,
@@ -259,24 +294,14 @@ class ModifyPlanTaskTool(BaseTool):
                     "updated_fields": list(update_fields.keys()),
                 },
                 widget_type="task_card",
-                widget_data={
-                    "id": str(updated_task.id),
-                    "title": updated_task.title,
-                    "guide_content": updated_task.guide_content,
-                    "type": updated_task.type.value,
-                    "status": updated_task.status.value,
-                    "plan_id": str(updated_task.plan_id) if updated_task.plan_id else None,
-                    "priority": updated_task.priority,
-                    "estimated_minutes": updated_task.estimated_minutes,  # 🔧 补充：预计时间
-                    "difficulty": updated_task.difficulty,  # 🔧 补充：难度
-                    "energy_cost": updated_task.energy_cost,  # 🔧 补充：能量消耗
-                    "tags": updated_task.tags or [],  # 🔧 补充：标签
-                    "created_at": updated_task.created_at.isoformat() if updated_task.created_at else None,
-                    "updated_at": updated_task.updated_at.isoformat()
-                    if updated_task.updated_at
-                    else None,
-                    "user_id": str(user_uuid),  # 🔧 补充：用户ID
-                },
+                widget_data=wrap_widget_payload(
+                    widget_type="task_card",
+                    widget_data=task_payload,
+                    entity_card=build_task_entity_card(
+                        task_payload,
+                        tool_name=self.name,
+                    ),
+                ),
             )
 
         except ValueError as e:

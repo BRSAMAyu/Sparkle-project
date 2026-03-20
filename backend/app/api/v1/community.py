@@ -23,6 +23,8 @@ from app.core.websocket import manager
 from app.db.session import AsyncSessionLocal, get_db
 from app.models.cognitive import BehaviorPattern, CognitiveFragment
 from app.models.community import (
+    Friendship,
+    FriendshipStatus,
     GroupMember,
     GroupMessage,
     GroupRole,
@@ -129,8 +131,10 @@ from app.services.seed_library_service import SeedLibraryService
 from app.services.community_signal_bridge import CommunitySignalBridge
 from app.api.v1.accountability import (
     _build_leaderboard_summary,
+    _build_partnership_out,
     _build_partnership_achievements_payload,
     _build_partnership_stats_payload,
+    _build_recent_shares_payload,
     _build_relationship_summary,
     _get_last_checkin_at,
     _slot_type_value,

@@ -745,31 +745,65 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     if (durationMs == null || durationMs <= 0) {
       return const SizedBox.shrink();
     }
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final accent = durationMs >= 60000
+        ? Color.lerp(DS.warning, DS.error, 0.18) ?? DS.warning
+        : durationMs >= 10000
+            ? Color.lerp(DS.info, DS.brandPrimary, 0.28) ?? DS.info
+            : Color.lerp(DS.success, DS.info, 0.22) ?? DS.success;
+
     return Container(
       padding: const EdgeInsets.symmetric(
-        horizontal: DS.spacing6,
-        vertical: DS.spacing2,
+        horizontal: DS.spacing8,
+        vertical: DS.spacing4,
       ),
       decoration: BoxDecoration(
-        color: DS.surfaceSecondary,
+        color: isDark
+            ? Color.alphaBlend(
+                accent.withValues(alpha: 0.12),
+                DS.surfaceSecondary,
+              )
+            : accent.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(999),
         border: Border.all(
-          color: DS.borderSubtle,
+          color: accent.withValues(alpha: isDark ? 0.26 : 0.16),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: accent.withValues(alpha: isDark ? 0.1 : 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
-      child: Text(
-        _formatDurationBadge(durationMs),
-        style: TextStyle(
-          fontSize: 10,
-          color: DS.textSecondary,
-          fontWeight: DS.fontWeightMedium,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.schedule_rounded,
+            size: 11,
+            color: accent.withValues(alpha: 0.88),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            _formatDurationBadge(durationMs),
+            style: TextStyle(
+              fontSize: 10,
+              color: isDark ? DS.textPrimary : accent.withValues(alpha: 0.96),
+              fontWeight: DS.fontWeightBold,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+        ],
       ),
     );
   }
 
   String _formatDurationBadge(int durationMs) {
     final seconds = durationMs / 1000.0;
+    if (seconds < 1) {
+      return '${durationMs}ms';
+    }
     if (seconds < 10) {
       return '${seconds.toStringAsFixed(1)}s';
     }
@@ -778,6 +812,9 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     }
     final minutes = durationMs ~/ 60000;
     final remainingSeconds = (durationMs % 60000) ~/ 1000;
+    if (remainingSeconds == 0) {
+      return '${minutes}m';
+    }
     return '${minutes}m ${remainingSeconds}s';
   }
 

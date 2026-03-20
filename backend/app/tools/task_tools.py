@@ -14,6 +14,11 @@ from app.services.focus_service import focus_service
 from app.services.task_service import TaskService
 
 from .base import BaseTool, ToolCategory, ToolResult
+from .entity_cards import (
+    build_task_entity_card,
+    build_task_list_entity_card,
+    wrap_widget_payload,
+)
 from .schemas import (
     BatchCreateTasksParams,
     BreakdownTaskParams,
@@ -72,27 +77,35 @@ class CreateTaskTool(BaseTool):
                 user_id=user_uuid
             )
 
+            task_payload = {
+                "id": str(task.id),
+                "title": task.title,
+                "guide_content": task.guide_content,
+                "type": task.type.value,
+                "status": task.status.value,
+                "plan_id": str(task.plan_id) if task.plan_id else None,
+                "estimated_minutes": task.estimated_minutes,
+                "priority": task.priority,
+                "created_at": task.created_at.isoformat(),
+                "user_id": str(user_uuid),
+                "tags": [],
+                "difficulty": 1,
+                "energy_cost": 1,
+            }
             return ToolResult(
                 success=True,
                 tool_name=self.name,
                 data={"task_id": str(task.id)},
                 widget_type="task_card",  # 前端渲染类型
-                widget_data={
-                    "id": str(task.id),
-                    "title": task.title,
-                    "guide_content": task.guide_content,  # 🔧 修复：字段名改为guide_content以匹配前端
-                    "type": task.type.value,
-                    "status": task.status.value,
-                    "plan_id": str(task.plan_id) if task.plan_id else None,
-                    "estimated_minutes": task.estimated_minutes,
-                    "priority": task.priority,
-                    "created_at": task.created_at.isoformat(),
-                    # 🔧 补充前端需要的其他字段
-                    "user_id": str(user_uuid),
-                    "tags": [],
-                    "difficulty": 1,
-                    "energy_cost": 1,
-                }
+                widget_data=wrap_widget_payload(
+                    widget_type="task_card",
+                    widget_data=task_payload,
+                    entity_card=build_task_entity_card(
+                        task_payload,
+                        tool_name=self.name,
+                        tool_result_id=tool_call_id,
+                    ),
+                ),
             )
         except Exception as e:
             return ToolResult(
@@ -144,28 +157,36 @@ class UpdateTaskStatusTool(BaseTool):
                 task_update = TaskUpdate(status=TaskStatus.PENDING)
                 task = await TaskService.update(db_session, task, task_update)
 
+            task_payload = {
+                "id": str(task.id),
+                "title": task.title,
+                "guide_content": task.guide_content,
+                "type": task.type.value,
+                "status": task.status.value,
+                "plan_id": str(task.plan_id) if task.plan_id else None,
+                "estimated_minutes": task.estimated_minutes,
+                "priority": task.priority,
+                "actual_minutes": task.actual_minutes,
+                "created_at": task.created_at.isoformat(),
+                "user_id": str(user_uuid),
+                "tags": [],
+                "difficulty": 1,
+                "energy_cost": 1,
+            }
             return ToolResult(
                 success=True,
                 tool_name=self.name,
                 data={"task_id": str(task.id), "new_status": task.status.value},
                 widget_type="task_card",
-                widget_data={
-                    "id": str(task.id),
-                    "title": task.title,
-                    "guide_content": task.guide_content,  # 🔧 修复：添加guide_content字段
-                    "type": task.type.value,
-                    "status": task.status.value,
-                    "plan_id": str(task.plan_id) if task.plan_id else None,
-                    "estimated_minutes": task.estimated_minutes,
-                    "priority": task.priority,
-                    "actual_minutes": task.actual_minutes,
-                    "created_at": task.created_at.isoformat(),
-                    # 🔧 补充前端需要的其他字段
-                    "user_id": str(user_uuid),
-                    "tags": [],
-                    "difficulty": 1,
-                    "energy_cost": 1,
-                }
+                widget_data=wrap_widget_payload(
+                    widget_type="task_card",
+                    widget_data=task_payload,
+                    entity_card=build_task_entity_card(
+                        task_payload,
+                        tool_name=self.name,
+                        tool_result_id=tool_call_id,
+                    ),
+                ),
             )
         except Exception as e:
             return ToolResult(
@@ -234,15 +255,25 @@ class BatchCreateTasksTool(BaseTool):
                     "energy_cost": 1,
                 })
 
+            task_list_payload = {
+                "tasks": created_tasks,
+                "tool_result_id": tool_call_id,
+                "task_count": len(created_tasks),
+            }
             return ToolResult(
                 success=True,
                 tool_name=self.name,
                 data={"task_count": len(created_tasks)},
                 widget_type="task_list",  # 任务列表组件
-                widget_data={
-                    "tasks": created_tasks,
-                    "tool_result_id": tool_call_id
-                }
+                widget_data=wrap_widget_payload(
+                    widget_type="task_list",
+                    widget_data=task_list_payload,
+                    entity_card=build_task_list_entity_card(
+                        created_tasks,
+                        tool_name=self.name,
+                        tool_result_id=tool_call_id,
+                    ),
+                ),
             )
         except Exception as e:
             return ToolResult(
@@ -441,17 +472,25 @@ class BreakdownTaskTool(BaseTool):
                 tool_name=self.name,
                 data={"task_count": len(created_tasks)},
                 widget_type="task_list",
-                widget_data={
-                    "tasks": created_tasks,
-                    "tool_result_id": tool_call_id,
-                    "persona_applied": True,
-                    "persona_highlights": {
-                        "max_session": persona_constraints.max_session_minutes,
-                        "task_size": persona_constraints.preferred_task_size,
-                        "time_multiplier": persona_constraints.time_multiplier,
-                        "warmup_included": persona_constraints.require_warmup_task,
+                widget_data=wrap_widget_payload(
+                    widget_type="task_list",
+                    widget_data={
+                        "tasks": created_tasks,
+                        "tool_result_id": tool_call_id,
+                        "persona_applied": True,
+                        "persona_highlights": {
+                            "max_session": persona_constraints.max_session_minutes,
+                            "task_size": persona_constraints.preferred_task_size,
+                            "time_multiplier": persona_constraints.time_multiplier,
+                            "warmup_included": persona_constraints.require_warmup_task,
+                        },
                     },
-                }
+                    entity_card=build_task_list_entity_card(
+                        created_tasks,
+                        tool_name=self.name,
+                        tool_result_id=tool_call_id,
+                    ),
+                ),
             )
         except Exception as e:
             return ToolResult(

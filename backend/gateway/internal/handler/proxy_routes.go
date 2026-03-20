@@ -209,7 +209,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		community.GET("/friends", h.proxyWithHeaders)
 		community.GET("/friends/pending", h.proxyWithHeaders)
 		community.GET("/friends/recommendations", h.proxyWithHeaders)
-		community.GET("/friends/:friendId/profile", h.proxyWithHeaders)
+		community.GET("/friends/:friend_id/profile", h.proxyWithHeaders)
 		community.DELETE("/friends/:friendshipId", h.proxyWithHeaders)
 		// Block System
 		community.POST("/users/block", h.proxyWithHeaders)

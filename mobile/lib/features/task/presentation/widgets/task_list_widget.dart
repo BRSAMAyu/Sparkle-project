@@ -36,7 +36,15 @@ class _TaskListWidgetState extends State<TaskListWidget> {
     if (widget.tasks.isEmpty) {
       return const SizedBox.shrink();
     }
-    final planId = widget.tasks.first['plan_id']?.toString();
+    final listPayload = EntityCardPayload.fromRaw(
+      {
+        'tasks': widget.tasks,
+        'tool_result_id': widget.toolResultId,
+      },
+      fallbackType: 'task_list',
+    );
+    final planId =
+        _asString(listPayload.linkedEntities['plan_id']) ?? widget.tasks.first['plan_id']?.toString();
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8),
@@ -220,15 +228,29 @@ class _TaskListWidgetState extends State<TaskListWidget> {
   }
 
   Future<void> _sharePlan(BuildContext context) async {
-    final planId = widget.tasks.first['plan_id']?.toString();
+    final listPayload = EntityCardPayload.fromRaw(
+      {
+        'tasks': widget.tasks,
+        'tool_result_id': widget.toolResultId,
+      },
+      fallbackType: 'task_list',
+    );
+    final planId =
+        _asString(listPayload.linkedEntities['plan_id']) ?? widget.tasks.first['plan_id']?.toString();
     if (planId == null || planId.isEmpty) return;
     await showShareResourceSheet(
       context,
       resourceType: 'plan',
       resourceId: planId,
-      title: '学习计划',
+      title: _asString(listPayload.linkedEntities['plan_title']) ?? '学习计划',
       subtitle: '包含 ${widget.tasks.length} 个可执行任务',
     );
+  }
+
+  String? _asString(dynamic value) {
+    if (value == null) return null;
+    final text = value.toString().trim();
+    return text.isEmpty ? null : text;
   }
 
   Widget _buildTaskIcon(String type) {

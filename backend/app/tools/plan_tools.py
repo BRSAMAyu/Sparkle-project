@@ -23,6 +23,11 @@ from app.services.plan_service import PlanService
 from app.services.task_service import TaskService
 
 from .base import BaseTool, ToolCategory, ToolResult
+from .entity_cards import (
+    build_plan_entity_card,
+    build_task_list_entity_card,
+    wrap_widget_payload,
+)
 from .schemas import CreatePlanParams, GenerateTasksForPlanParams
 
 
@@ -77,26 +82,35 @@ class CreatePlanTool(BaseTool):
                 user_id=user_uuid
             )
 
+            plan_payload = {
+                "id": str(plan.id),
+                "title": plan.name,
+                "type": plan.type.value,
+                "plan_stage": plan.plan_stage.value if plan.plan_stage else None,
+                "description": plan.description,
+                "subject": getattr(plan, "subject", None),
+                "progress": getattr(plan, "progress", 0),
+                "is_active": getattr(plan, "is_active", True),
+                "is_primary": getattr(plan, "is_primary", False),
+                "task_count": len(getattr(plan, "tasks", []) or []),
+                "source": getattr(plan, "source", None),
+                "target_date": plan.target_date.isoformat() if plan.target_date else None,
+                "target_mastery": params.target_mastery,
+            }
             return ToolResult(
                 success=True,
                 tool_name=self.name,
                 data={"plan_id": str(plan.id)},
                 widget_type="plan_card",
-                widget_data={
-                    "id": str(plan.id),
-                    "title": plan.name,
-                    "type": plan.type.value,
-                    "plan_stage": plan.plan_stage.value if plan.plan_stage else None,
-                    "description": plan.description,
-                    "subject": getattr(plan, "subject", None),
-                    "progress": getattr(plan, "progress", 0),
-                    "is_active": getattr(plan, "is_active", True),
-                    "is_primary": getattr(plan, "is_primary", False),
-                    "task_count": len(getattr(plan, "tasks", []) or []),
-                    "source": getattr(plan, "source", None),
-                    "target_date": plan.target_date.isoformat() if plan.target_date else None,
-                    "target_mastery": params.target_mastery,
-                }
+                widget_data=wrap_widget_payload(
+                    widget_type="plan_card",
+                    widget_data=plan_payload,
+                    entity_card=build_plan_entity_card(
+                        plan_payload,
+                        tool_name=self.name,
+                        tool_result_id=tool_call_id,
+                    ),
+                ),
             )
         except Exception as e:
             return ToolResult(
@@ -304,6 +318,20 @@ class GenerateTasksForPlanTool(BaseTool):
             logger.info(f"Generated {len(created_tasks)} tasks for plan {plan_uuid}")
 
             # 第五步: 返回卡片化结果
+            task_list_payload = {
+                "tasks": created_tasks,
+                "plan_id": params.plan_id,
+                "plan_title": plan_snapshot.name,
+                "source": "graph_augmented_ai" if knowledge_context else "ai_generated",
+                "rag_quality": rag_quality,
+                "persona_applied": True,
+                "persona_highlights": {
+                    "max_session": getattr(persona_constraints, "max_session_minutes", None),
+                    "task_size": getattr(persona_constraints, "preferred_task_size", None),
+                    "time_multiplier": getattr(persona_constraints, "time_multiplier", None),
+                    "warmup_included": getattr(persona_constraints, "require_warmup_task", False),
+                },
+            }
             return ToolResult(
                 success=True,
                 tool_name=self.name,
@@ -315,20 +343,18 @@ class GenerateTasksForPlanTool(BaseTool):
                     "rag_quality": rag_quality,
                 },
                 widget_type="task_list",
-                widget_data={
-                    "tasks": created_tasks,
-                    "plan_id": params.plan_id,
-                    "plan_title": plan_snapshot.name,
-                    "source": "graph_augmented_ai" if knowledge_context else "ai_generated",
-                    "rag_quality": rag_quality,
-                    "persona_applied": True,
-                    "persona_highlights": {
-                        "max_session": getattr(persona_constraints, "max_session_minutes", None),
-                        "task_size": getattr(persona_constraints, "preferred_task_size", None),
-                        "time_multiplier": getattr(persona_constraints, "time_multiplier", None),
-                        "warmup_included": getattr(persona_constraints, "require_warmup_task", False),
-                    },
-                }
+                widget_data=wrap_widget_payload(
+                    widget_type="task_list",
+                    widget_data=task_list_payload,
+                    entity_card=build_task_list_entity_card(
+                        created_tasks,
+                        tool_name=self.name,
+                        tool_result_id=tool_call_id,
+                        plan_id=params.plan_id,
+                        plan_title=plan_snapshot.name,
+                        rag_quality=rag_quality,
+                    ),
+                ),
             )
 
         except ValueError as e:

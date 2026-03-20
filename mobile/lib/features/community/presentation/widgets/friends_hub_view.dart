@@ -497,7 +497,7 @@ class _MetricChip extends StatelessWidget {
           ),
           Text(
             value,
-            style: DS.labelMedium.copyWith(fontWeight: FontWeight.bold),
+            style: DS.bodySmall.copyWith(fontWeight: FontWeight.bold),
           ),
         ],
       ),
@@ -586,7 +586,7 @@ class _EmptyFriendsCard extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             hasPending ? '先处理伙伴邀请，再扩展你的好友网络' : '还没有好友',
-            style: DS.titleMedium.copyWith(fontWeight: FontWeight.bold),
+            style: DS.bodyLarge.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 6),
           Text(
