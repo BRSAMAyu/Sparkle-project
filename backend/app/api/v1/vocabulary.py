@@ -9,7 +9,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
@@ -25,6 +25,28 @@ router = APIRouter()
 
 # 全局 MDX 服务实例
 _mdx_service = None
+
+
+def _external_base_url(request: Request) -> str:
+    """Build a client-reachable base URL behind the gateway/proxy."""
+    if settings.DICTIONARY_PACKAGE_BASE_URL:
+        return settings.DICTIONARY_PACKAGE_BASE_URL.rstrip("/")
+
+    gateway_base = getattr(settings, "GATEWAY_INTERNAL_URL", "") or ""
+    if gateway_base.startswith(("http://", "https://")):
+        return gateway_base.rstrip("/")
+
+    forwarded_proto = request.headers.get("x-forwarded-proto")
+    forwarded_host = request.headers.get("x-forwarded-host")
+    forwarded_prefix = request.headers.get("x-forwarded-prefix", "").rstrip("/")
+
+    scheme = forwarded_proto or request.url.scheme
+    host = forwarded_host or request.headers.get("host") or request.url.netloc
+
+    if host:
+        return f"{scheme}://{host}{forwarded_prefix}".rstrip("/")
+
+    return str(request.base_url).rstrip("/")
 
 
 def get_mdx_service():
@@ -106,8 +128,7 @@ class WordBookResponse(BaseModel):
     source_translation_id: str | None = None
     context_sentence: str | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class VocabularyStats(BaseModel):
@@ -173,14 +194,18 @@ async def lookup_word(
 
 @router.get("/dictionary/packages", summary="获取离线词典包", response_model=list[DictionaryPackageInfo])
 async def list_dictionary_packages(request: Request):
+    download_path_template = request.app.url_path_for(
+        "download_dictionary_package",
+        package_id="__PACKAGE_ID__",
+    )
+    external_base = _external_base_url(request)
     packages = []
     for package in dictionary_package_service.list_packages():
+        download_path = str(download_path_template).replace("__PACKAGE_ID__", package["id"])
         packages.append(
             DictionaryPackageInfo(
                 **package,
-                download_url=str(
-                    request.url_for("download_dictionary_package", package_id=package["id"])
-                ),
+                download_url=f"{external_base}{download_path}",
             )
         )
     return packages

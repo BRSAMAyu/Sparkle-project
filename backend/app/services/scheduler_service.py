@@ -86,7 +86,7 @@ class SchedulerService:
         logger.info("Starting task reminders check...")
         try:
             from app.core.celery_app import celery_app
-            celery_app.send_task("send_task_reminders")
+            celery_app.send_task("send_task_reminders", queue="default")
         except Exception as e:
             logger.error(f"Failed to trigger task reminders: {e}")
 

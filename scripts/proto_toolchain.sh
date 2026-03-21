@@ -14,7 +14,7 @@ fi
 
 run_in_host() {
   cd "${REPO_ROOT}"
-  export PATH="${HOME}/.pub-cache/bin:${HOME}/.local/bin:${PATH}"
+  export PATH="$(go env GOPATH 2>/dev/null)/bin:${HOME}/.pub-cache/bin:${HOME}/.local/bin:${PATH}"
   eval "$*"
 }
 
@@ -25,11 +25,15 @@ run_in_docker() {
     USE_DOCKER=0
     return
   fi
-  docker run --rm \
+  if ! docker run --rm \
     -v "${REPO_ROOT}:/workspace" \
     -w /workspace \
     "${IMAGE_NAME}" \
-    "export PATH=\"/root/.pub-cache/bin:\$PATH\" && ${cmd}"
+    "export PATH=\"/root/.pub-cache/bin:\$PATH\" && ${cmd}"; then
+    echo "WARN: dockerized proto toolchain failed, falling back to host toolchain (PROTO_USE_DOCKER=0)." >&2
+    USE_DOCKER=0
+    return
+  fi
 }
 
 case "$1" in
@@ -45,7 +49,7 @@ case "$1" in
     CMD="buf breaking --against '${AGAINST}'"
     ;;
   check-generated)
-    CMD='buf generate --template buf.gen.yaml && buf generate --template buf.gen.dart.yaml && bash scripts/generate_python_protos.sh && python3 scripts/sync_buf_python_stubs.py && git diff --exit-code -- backend/gateway/gen backend/app/gen mobile/lib/gen'
+    CMD='tmpdir=$(mktemp -d) && trap "rm -rf \"$tmpdir\"" EXIT && for path in backend/gateway/gen backend/app/gen mobile/lib/gen; do if [ -e "$path" ]; then mkdir -p "$tmpdir/$(dirname "$path")" && cp -R "$path" "$tmpdir/$path"; fi; done && buf generate --template buf.gen.yaml && buf generate --template buf.gen.dart.yaml && bash scripts/generate_python_protos.sh && python3 scripts/sync_buf_python_stubs.py && for path in backend/gateway/gen backend/app/gen mobile/lib/gen; do if [ -e "$path" ] || [ -e "$tmpdir/$path" ]; then diff -ruN "$tmpdir/$path" "$path"; fi; done'
     ;;
   *)
     echo "Unknown subcommand: $1"

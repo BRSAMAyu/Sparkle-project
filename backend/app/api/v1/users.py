@@ -483,7 +483,7 @@ async def get_security_log(
             action=item.action,
             ip_address=item.ip_address,
             user_agent=item.user_agent,
-            metadata=item.metadata or {},
+            metadata=item.metadata_ or {},
             occurred_at=item.occurred_at,
         )
         for item in items

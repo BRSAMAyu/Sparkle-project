@@ -1,5 +1,7 @@
 // ignore_for_file: discarded_futures, unawaited_futures
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

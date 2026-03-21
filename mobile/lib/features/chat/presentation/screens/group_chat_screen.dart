@@ -176,19 +176,27 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                         fontWeight: FontWeight.bold, fontSize: DS.fontSizeLg),
                   ),
                   const SizedBox(height: DS.spacing8),
-                  ...[
-                    (ReportReason.spam, '垃圾信息'),
-                    (ReportReason.harassment, '骚扰'),
-                    (ReportReason.violence, '暴力'),
-                    (ReportReason.hateSpeech, '仇恨言论'),
-                    (ReportReason.misinformation, '虚假信息'),
-                    (ReportReason.other, '其他'),
-                  ].map(
-                    (entry) => RadioListTile<ReportReason>(
-                      title: Text(entry.$2),
-                      value: entry.$1,
-                      groupValue: selectedReason,
-                      onChanged: (v) => setState(() => selectedReason = v!),
+                  RadioGroup<ReportReason>(
+                    groupValue: selectedReason,
+                    onChanged: (value) => setState(
+                      () => selectedReason = value ?? ReportReason.spam,
+                    ),
+                    child: Column(
+                      children: [
+                        ...[
+                          (ReportReason.spam, '垃圾信息'),
+                          (ReportReason.harassment, '骚扰'),
+                          (ReportReason.violence, '暴力'),
+                          (ReportReason.hateSpeech, '仇恨言论'),
+                          (ReportReason.misinformation, '虚假信息'),
+                          (ReportReason.other, '其他'),
+                        ].map(
+                          (entry) => RadioListTile<ReportReason>(
+                            title: Text(entry.$2),
+                            value: entry.$1,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: DS.spacing8),

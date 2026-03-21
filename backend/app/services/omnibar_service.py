@@ -6,7 +6,6 @@ from uuid import UUID
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.schemas.cognitive import CognitiveFragmentCreate
 from app.schemas.task import TaskCreate
 from app.services.cognitive_service import CognitiveService
 from app.services.llm_service import llm_service
@@ -59,16 +58,12 @@ class OmniBarService:
 
         elif action_type == "CAPSULE":
             try:
-                fragment_in = CognitiveFragmentCreate(
-                    content=text,
-                    source_type="capsule"
-                )
-                # Use CognitiveService instance as per its design
                 cognitive_service = CognitiveService(self.db)
                 fragment = await cognitive_service.create_fragment(
                     user_id=user_id,
-                    data=fragment_in,
-                    background_tasks=None # Force sync
+                    content=text,
+                    source_type="capsule",
+                    resource_type="text",
                 )
                 return {"action_type": "CAPSULE", "data": fragment}
             except Exception as e:

@@ -14,6 +14,7 @@ Sparkle Celery 应用配置
 
 import logging
 import os
+import asyncio
 
 from celery import Celery
 from celery.schedules import crontab
@@ -21,6 +22,15 @@ from celery.schedules import crontab
 from app.config import settings
 
 logger = logging.getLogger(__name__)
+_worker_event_loop: asyncio.AbstractEventLoop | None = None
+
+
+def _run_async(coro):
+    global _worker_event_loop
+    if _worker_event_loop is None or _worker_event_loop.is_closed():
+        _worker_event_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(_worker_event_loop)
+    return _worker_event_loop.run_until_complete(coro)
 
 # =============================================================================
 # Celery 配置
@@ -98,6 +108,9 @@ celery_app.conf.update(
         "app.core.celery_tasks.health_check_task": {"queue": "high_priority"},
         "generate_capsules_batch": {"queue": "glm_batch"},
         "analyze_cognitive_fragment_batch": {"queue": "glm_batch"},
+        "daily_report": {"queue": "default"},
+        "send_task_reminders": {"queue": "default"},
+        "generate_daily_capsules_for_all": {"queue": "default"},
         # P1: Knowledge Galaxy auto-update tasks
         "update_knowledge_galaxy": {"queue": "default"},
         "sync_plan_progress_to_galaxy": {"queue": "low_priority"},
@@ -174,7 +187,7 @@ def generate_embedding(self, node_id: str, text: str, user_id: str | None = None
                 raise
 
     try:
-        return asyncio.run(_generate())
+        return _run_async(_generate())
     except Exception as exc:
         logger.error(f"Task failed, attempt {self.request.retries + 1}: {exc}")
         raise self.retry(exc=exc, countdown=2 ** self.request.retries)
@@ -223,7 +236,7 @@ def batch_error_analysis(self, error_ids: list[str], user_id: str):
             }
 
     try:
-        return asyncio.run(_analyze())
+        return _run_async(_analyze())
     except Exception as exc:
         logger.error(f"Batch analysis failed: {exc}")
         raise self.retry(exc=exc, countdown=2 ** self.request.retries)
@@ -270,7 +283,7 @@ def cleanup_old_data(self, days_to_keep: int = 30):
             }
 
     try:
-        return asyncio.run(_cleanup())
+        return _run_async(_cleanup())
     except Exception as exc:
         logger.error(f"Cleanup failed: {exc}")
         raise self.retry(exc=exc, countdown=60)
@@ -309,7 +322,7 @@ def notify_user(self, user_id: str, message: str, notification_type: str = "syst
                 raise
 
     try:
-        return asyncio.run(_notify())
+        return _run_async(_notify())
     except Exception as exc:
         raise self.retry(exc=exc, countdown=10)
 
@@ -322,8 +335,6 @@ def daily_report(self):
     Returns:
         dict: 报告摘要
     """
-    import asyncio
-
     from loguru import logger
 
     from app.db.session import AsyncSessionLocal
@@ -342,7 +353,7 @@ def daily_report(self):
                 raise
 
     try:
-        return asyncio.run(_generate())
+        return _run_async(_generate())
     except Exception as exc:
         raise self.retry(exc=exc, countdown=300)
 
@@ -441,7 +452,7 @@ def generate_capsules_batch(
                 raise
 
     try:
-        return asyncio.run(_generate())
+        return _run_async(_generate())
     except Exception as exc:
         logger.error(f"Capsule generation task failed: {exc}")
         # 指数退避重试
@@ -473,7 +484,7 @@ def analyze_cognitive_fragment_batch(
             )
 
     try:
-        return asyncio.run(_analyze())
+        return _run_async(_analyze())
     except Exception as exc:
         logger.error(f"Cognitive batch analysis task failed: {exc}")
         countdown = 60 * (2 ** self.request.retries)
@@ -671,7 +682,7 @@ def update_knowledge_galaxy(
         return [c for c in concepts if c.get("name")]
 
     try:
-        return asyncio.run(_update_galaxy())
+        return _run_async(_update_galaxy())
     except Exception as exc:
         logger.error(f"Galaxy update task failed: {exc}")
         countdown = 30 * (2 ** self.request.retries)
@@ -743,7 +754,7 @@ def sync_plan_progress_to_galaxy(self, user_id: str):
                 raise
 
     try:
-        return asyncio.run(_sync())
+        return _run_async(_sync())
     except Exception as exc:
         raise self.retry(exc=exc, countdown=60)
 
@@ -758,8 +769,6 @@ def generate_daily_capsules_for_all(self):
     Returns:
         dict: 生成统计
     """
-    import asyncio
-
     from loguru import logger
 
     from app.db.session import AsyncSessionLocal
@@ -818,7 +827,7 @@ def generate_daily_capsules_for_all(self):
                 raise
 
     try:
-        return asyncio.run(_generate())
+        return _run_async(_generate())
     except Exception as exc:
         raise self.retry(exc=exc, countdown=300)
 

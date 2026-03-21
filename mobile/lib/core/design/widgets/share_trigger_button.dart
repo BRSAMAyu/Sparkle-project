@@ -157,11 +157,6 @@ class ShareTriggerButton extends StatelessWidget {
   }
 
   Widget _buildFabButton(BuildContext context) {
-    final fabSize = size == ShareButtonSize.large
-        ? 56.0
-        : size == ShareButtonSize.small
-            ? 40.0
-            : 48.0;
     final iconSize = _getIconSize();
 
     return FloatingActionButton(
@@ -338,7 +333,9 @@ class PlanShareTrigger extends StatelessWidget {
         contentType: ShareableContentType.planProgress,
         resourceId: planId,
         title: planTitle,
-        subtitle: progress != null ? '进度: ${(progress! * 100).toStringAsFixed(0)}%' : null,
+        subtitle: progress != null
+            ? '进度: ${(progress! * 100).toStringAsFixed(0)}%'
+            : null,
         metadata: progress != null ? {'progress': progress} : null,
       ),
       variant: variant,

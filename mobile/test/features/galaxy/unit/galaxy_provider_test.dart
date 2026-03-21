@@ -55,6 +55,19 @@ class FakeEnhancedGalaxyRepository implements EnhancedGalaxyRepository {
       updateNodePositions(<String, Offset>{nodeId: position});
 
   @override
+  Future<NetworkResult<Map<String, dynamic>>> updateNodeMastery(
+    String nodeId, {
+    required int mastery,
+    String reason = 'manual_update',
+  }) async =>
+      NetworkResult.success(<String, dynamic>{
+        'success': true,
+        'node_id': nodeId,
+        'new_mastery': mastery,
+        'reason': reason,
+      });
+
+  @override
   Stream<SSEEvent> getGalaxyEventsStream({String? lastEventId}) => eventsStream;
 
   @override

@@ -14,33 +14,39 @@ import 'package:sparkle/features/task/presentation/providers/task_provider.dart'
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/profile_context_provider.dart';
 
+final sessionBoundProvidersProvider =
+    Provider<List<ProviderOrFamily>>(
+  (ref) => [
+    dashboardProvider,
+    unreadNotificationsProvider,
+    notificationCenterProvider,
+    taskListProvider,
+    planListProvider,
+    calendarProvider,
+    unifiedCalendarProvider,
+    friendsProvider,
+    pendingRequestsProvider,
+    friendRecommendationsProvider,
+    groupRecommendationsProvider,
+    myGroupsProvider,
+    achievementProvider,
+    streakHistoryProvider,
+    leaderboardProvider,
+    myRankProvider,
+    focusStatisticsProvider,
+    profileContextProvider,
+    transparentProfileProvider,
+    inferredPreferencesProvider,
+    activePoliciesProvider,
+    systemUpdatesProvider,
+  ],
+);
+
 class SessionRefreshService {
   const SessionRefreshService._();
 
   static void refreshSessionBoundProviders(Ref ref) {
     DemoDataService().resetDemoState();
-    ref
-      ..invalidate(dashboardProvider)
-      ..invalidate(unreadNotificationsProvider)
-      ..invalidate(notificationCenterProvider)
-      ..invalidate(taskListProvider)
-      ..invalidate(planListProvider)
-      ..invalidate(calendarProvider)
-      ..invalidate(unifiedCalendarProvider)
-      ..invalidate(friendsProvider)
-      ..invalidate(pendingRequestsProvider)
-      ..invalidate(friendRecommendationsProvider)
-      ..invalidate(groupRecommendationsProvider)
-      ..invalidate(myGroupsProvider)
-      ..invalidate(achievementProvider)
-      ..invalidate(streakHistoryProvider)
-      ..invalidate(leaderboardProvider)
-      ..invalidate(myRankProvider)
-      ..invalidate(focusStatisticsProvider)
-      ..invalidate(profileContextProvider)
-      ..invalidate(transparentProfileProvider)
-      ..invalidate(inferredPreferencesProvider)
-      ..invalidate(activePoliciesProvider)
-      ..invalidate(systemUpdatesProvider);
+    ref.read(sessionBoundProvidersProvider).forEach(ref.invalidate);
   }
 }

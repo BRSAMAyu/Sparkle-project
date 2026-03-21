@@ -7,7 +7,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
-from sqlalchemy import and_, desc, select
+from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
@@ -16,6 +16,10 @@ from app.models.background_task import BackgroundTask, BackgroundTaskStatus, Bac
 from app.models.user import User
 
 router = APIRouter()
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 @router.get("", response_model=dict[str, Any])
@@ -29,23 +33,29 @@ async def get_background_tasks(
     """
     Get background tasks for the current user
     """
-    query = select(BackgroundTask).where(BackgroundTask.user_id == current_user.id)
+    try:
+        query = select(BackgroundTask).where(BackgroundTask.user_id == current_user.id)
 
-    if status:
-        query = query.where(BackgroundTask.status == status)
-    if task_type:
-        query = query.where(BackgroundTask.task_type == task_type)
+        if status:
+            query = query.where(BackgroundTask.status == status)
+        if task_type:
+            query = query.where(BackgroundTask.task_type == task_type)
 
-    # Order by created_at desc, limit to recent tasks
-    query = query.order_by(desc(BackgroundTask.created_at)).limit(limit)
+        # Order by created_at desc, limit to recent tasks
+        query = query.order_by(desc(BackgroundTask.created_at)).limit(limit)
 
-    result = await db.execute(query)
-    tasks = result.scalars().all()
+        result = await db.execute(query)
+        tasks = result.scalars().all()
 
-    return {
-        "data": [task.to_dict() for task in tasks],
-        "count": len(tasks),
-    }
+        return {
+            "data": [task.to_dict() for task in tasks],
+            "count": len(tasks),
+        }
+    except Exception as exc:
+        if "background_tasks" in str(exc).lower():
+            await db.rollback()
+            return {"data": [], "count": 0, "degraded": True}
+        raise
 
 
 @router.get("/{task_id}", response_model=dict[str, Any])
@@ -168,42 +178,41 @@ async def get_background_task_stats(
     """
     Get summary statistics of background tasks
     """
-    # Count tasks by status
-    stats = {}
+    try:
+        stats: dict[str, int] = {}
 
-    for status in BackgroundTaskStatus:
-        await db.execute(
-            select(BackgroundTask)
-            .where(
+        for status in BackgroundTaskStatus:
+            count = await db.scalar(
+                select(func.count(BackgroundTask.id)).where(
+                    and_(
+                        BackgroundTask.user_id == current_user.id,
+                        BackgroundTask.status == status,
+                    )
+                )
+            )
+            stats[status.value] = int(count or 0)
+
+        yesterday = _utcnow() - timedelta(days=1)
+        recent_completed = await db.scalar(
+            select(func.count(BackgroundTask.id)).where(
                 and_(
                     BackgroundTask.user_id == current_user.id,
-                    BackgroundTask.status == status
+                    BackgroundTask.status == BackgroundTaskStatus.COMPLETED,
+                    BackgroundTask.completed_at >= yesterday,
                 )
-            ).count()
+            )
         )
-        count = await db.scalar(select(BackgroundTask).where(
-            and_(
-                BackgroundTask.user_id == current_user.id,
-                BackgroundTask.status == status
-            )
-        ).count())
-        stats[status.value] = count
 
-    # Get recently completed tasks (last 24 hours)
-    yesterday = _utcnow() - timedelta(days=1)
-    recent_result = await db.execute(
-        select(BackgroundTask)
-        .where(
-            and_(
-                BackgroundTask.user_id == current_user.id,
-                BackgroundTask.status == BackgroundTaskStatus.COMPLETED,
-                BackgroundTask.completed_at >= yesterday
-            )
-        ).count()
-    )
-    recent_completed = recent_result.scalar() or 0
-
-    return {
-        "stats": stats,
-        "recent_completed_24h": recent_completed,
-    }
+        return {
+            "stats": stats,
+            "recent_completed_24h": int(recent_completed or 0),
+        }
+    except Exception as exc:
+        if "background_tasks" in str(exc).lower():
+            await db.rollback()
+            return {
+                "stats": {status.value: 0 for status in BackgroundTaskStatus},
+                "recent_completed_24h": 0,
+                "degraded": True,
+            }
+        raise

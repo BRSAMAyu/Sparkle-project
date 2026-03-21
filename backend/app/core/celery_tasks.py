@@ -7,9 +7,21 @@ Celery 任务模块 - 任务包装器
 创建时间: 2026-01-03
 """
 
+import asyncio
+
 from loguru import logger
 
 from app.core.celery_app import celery_app
+
+_worker_event_loop: asyncio.AbstractEventLoop | None = None
+
+
+def _run_async(coro):
+    global _worker_event_loop
+    if _worker_event_loop is None or _worker_event_loop.is_closed():
+        _worker_event_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(_worker_event_loop)
+    return _worker_event_loop.run_until_complete(coro)
 
 
 @celery_app.task(bind=True, name="app.core.celery_tasks.health_check_task")
@@ -525,19 +537,20 @@ def send_task_reminders(self):
     检查启用任务提醒的用户，为即将到期的任务发送通知。
     提醒时间默认为：24小时前、1小时前、15分钟前
     """
-    import asyncio
     from datetime import datetime, timedelta
-    from uuid import UUID
 
     from app.core.cache import cache_service
     from app.db.session import AsyncSessionLocal
-    from app.models.task import Task
+    from app.models.task import Task, TaskStatus
     from app.models.user_settings import UserSettings
     from app.schemas.notification import NotificationCreate
     from app.services.notification_service import NotificationService
     from sqlalchemy import and_, select
 
     async def _send():
+        if cache_service.redis is None:
+            await cache_service.init_redis()
+
         async with AsyncSessionLocal() as session:
             # 获取启用任务提醒的用户
             result = await session.execute(
@@ -546,15 +559,21 @@ def send_task_reminders(self):
                     UserSettings.deleted_at.is_(None),
                 )
             )
-            users_settings = result.scalars().all()
+            settings_rows = [
+                {
+                    "user_id": settings.user_id,
+                    "task_reminder_times": list(settings.task_reminder_times or []),
+                }
+                for settings in result.scalars().all()
+            ]
 
             sent_count = 0
             skipped_count = 0
 
-            for settings in users_settings:
+            for settings in settings_rows:
+                user_id = settings["user_id"]
                 try:
-                    reminder_times = settings.task_reminder_times or [1440, 60, 15]
-                    user_id = settings.user_id
+                    reminder_times = settings["task_reminder_times"] or [1440, 60, 15]
 
                     # 计算提醒时间窗口
                     now = datetime.utcnow()
@@ -563,16 +582,17 @@ def send_task_reminders(self):
                         # 窗口：目标时间前后 30 秒（因为任务是每 15 分钟运行一次）
                         window_start = now + timedelta(minutes=minutes, seconds=-30)
                         window_end = now + timedelta(minutes=minutes, seconds=30)
-                        windows.append((window_start, window_end, minutes))
+                        windows.append((window_start.date(), window_end.date(), minutes))
 
                     # 查询即将到期的任务
-                    for window_start, window_end, minutes in windows:
+                    for due_date_start, due_date_end, minutes in windows:
                         tasks_result = await session.execute(
                             select(Task).where(
                                 and_(
                                     Task.user_id == user_id,
-                                    Task.due_date.between(window_start, window_end),
-                                    Task.status != "completed",
+                                    Task.due_date.is_not(None),
+                                    Task.due_date.between(due_date_start, due_date_end),
+                                    Task.status != TaskStatus.COMPLETED,
                                     Task.deleted_at.is_(None),
                                 )
                             )
@@ -582,7 +602,7 @@ def send_task_reminders(self):
                         for task in tasks:
                             # 检查是否已发送提醒（使用 Redis 去重）
                             reminder_key = f"task_reminder:{task.id}:{minutes}"
-                            if await cache_service.redis.get(reminder_key):
+                            if await cache_service.get(reminder_key):
                                 skipped_count += 1
                                 continue
 
@@ -611,19 +631,20 @@ def send_task_reminders(self):
                             )
 
                             # 标记已发送（24小时内有效）
-                            await cache_service.redis.setex(reminder_key, 86400, "1")
+                            await cache_service.set(reminder_key, "1", ttl=86400)
                             sent_count += 1
 
                     await session.commit()
 
                 except Exception as e:
-                    logger.warning(f"Failed to send reminders for user {settings.user_id}: {e}")
+                    await session.rollback()
+                    logger.warning(f"Failed to send reminders for user {user_id}: {e}")
 
             logger.info(f"✅ Task reminders sent: {sent_count}, skipped (duplicate): {skipped_count}")
             return {"sent_count": sent_count, "skipped_count": skipped_count}
 
     try:
-        return asyncio.run(_send())
+        return _run_async(_send())
     except Exception as exc:
         logger.error(f"❌ Task reminders failed: {exc}")
         raise self.retry(exc=exc, countdown=300)

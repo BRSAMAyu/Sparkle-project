@@ -4,13 +4,13 @@
 # PURPOSE: Single source of truth for all AI agents modifying this codebase.
 # USAGE: Read relevant sections BEFORE making any change. Cross-check interfaces here.
 # AUDIENCE: AI coding agents, senior engineers
-# LAST UPDATED: 2026-03-20
+# LAST UPDATED: 2026-03-21
 
 ---
 
 ## VERIFICATION STATUS
 
-This document was audited against the repository source tree on `2026-03-20`.
+This document was audited against the repository source tree on `2026-03-21`.
 
 Verification labels used in this document:
 - `VERIFIED`: confirmed against current source files.
@@ -28,6 +28,13 @@ High-risk corrections applied during this audit:
   - community key routes under `/encryption/keys/user/:id` and `/revoke` do not match current Python/Gateway shapes
   - some file upload routes are Gateway-native rather than Python REST routes
   - mobile has constants for `/community/shared-resources/:id/adopt`, while Python uses that path but earlier doc recorded `/share/:id/adopt`
+
+Companion pre-release acceptance checklist:
+- `/Users/brsama/code/GitHub/Sparkle-project/docs/verification/本地发布前完整签收清单_2026-03-21.md`
+
+Current feature inventory snapshot from source tree:
+- Mobile feature directories currently include: `achievement`, `admin`, `auth`, `calendar`, `chat`, `cognitive`, `community`, `demo`, `document`, `error_book`, `file`, `focus`, `galaxy`, `home`, `insights`, `intent`, `knowledge`, `leaderboard`, `memory`, `notification_center`, `onboarding`, `photon`, `plan`, `reviews`, `seed_library`, `settings`, `shop`, `splash`, `task`, `tools`, `translation`, `user`, `visual_elements`, `vocabulary`
+- Python API v1 modules currently include: `accountability`, `achievements`, `agent_stats`, `analytics`, `assets`, `audit`, `auth`, `background_tasks`, `calendar`, `capsules`, `chat`, `client_telemetry`, `cognitive`, `community`, `dashboard`, `decay_timemachine`, `devices`, `dlq_admin`, `error_book`, `errors`, `event_bus_health`, `events`, `experiments`, `feedback_admin`, `files`, `focus`, `galaxy`, `graph_monitor`, `graphrag_trace`, `health`, `health_production`, `ingestion`, `interventions`, `inventory`, `leaderboards`, `learning_paths`, `memory`, `memory_admin`, `memory_settings`, `monitoring`, `multi_agent`, `multi_intent`, `nightly_reviews`, `notification_center`, `notifications`, `observability`, `omnibar`, `photons`, `plans`, `prediction`, `predictive_analytics`, `preferences`, `profile_transparency`, `push_interaction`, `recommendations`, `seed_libraries`, `shop`, `signals`, `statistics`, `stt`, `subjects`, `subtasks`, `suggestions`, `tasks`, `translation`, `user_persona_batch`, `user_settings`, `users`, `visual_elements`, `vocabulary`
 
 ## TABLE OF CONTENTS
 
@@ -467,8 +474,9 @@ Key message families:
 - Messaging: `MessageSend`, `MessageInfo`, `PrivateMessageSend`, `PrivateMessageInfo`
 - Check-in: `CheckinRequest`, `CheckinResponse`
 
-Note:
-- This proto is present and generated for Go/Python/Dart, but current app behavior is primarily exposed through REST + proxied community WebSocket routes rather than a clearly centralized gRPC server registration in the audited files.
+Important note:
+- `proto/community_service.proto` does define a full `CommunityService` RPC surface.
+- However, the currently audited application paths that are most obviously user-facing are still REST endpoints under `/api/v1/community/*` plus proxied community WebSocket routes.
 
 ### [4.6] STTService — `proto/stt_service.proto`
 

@@ -309,15 +309,18 @@ class PhotonService:
 
         # 使用数据库事务确保原子性
         try:
-            # 先检查转出用户余额
-            from_balance = await self.get_balance(from_user_id)
-            if from_balance < amount:
-                raise ValueError(
-                    f"Insufficient photon balance: {from_balance} < {amount}"
-                )
+            owns_transaction = not self.db.in_transaction()
+            tx_context = self.db.begin() if owns_transaction else self.db.begin_nested()
 
             # 在单一事务中执行转账
-            async with self.db.begin():
+            async with tx_context:
+                # 先检查转出用户余额
+                from_balance = await self.get_balance(from_user_id)
+                if from_balance < amount:
+                    raise ValueError(
+                        f"Insufficient photon balance: {from_balance} < {amount}"
+                    )
+
                 # 扣除转出用户（使用内部方法，不提交）
                 old_from, new_from, _ = await self._update_balance(
                     from_user_id, -amount, delete_cache=False

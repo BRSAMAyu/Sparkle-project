@@ -90,9 +90,9 @@ class ApiEndpoints {
   static const String healthPrometheusAlerts = '/health/prometheus/alerts';
 
   // Statistics
-  static const String statsOverview = '/statistics/overview';
-  static const String statsWeekly = '/statistics/weekly';
-  static const String statsFlame = '/statistics/flame';
+  static const String statsOverview = '/stats/overview';
+  static const String statsWeekly = '/stats/weekly';
+  static const String statsFlame = '/stats/flame';
 
   // Galaxy
   static const String galaxyGraph = '/galaxy/graph';

@@ -172,6 +172,34 @@ class _FakeUserRepository implements UserRepository {
       <String, dynamic>{'window_days': days, 'items': <dynamic>[]};
 
   @override
+  Future<Map<String, dynamic>> fetchAiOpsExport({int days = 14}) async =>
+      <String, dynamic>{'window_days': days, 'items': <dynamic>[]};
+
+  @override
+  Future<Map<String, dynamic>> fetchClientTelemetrySummary({
+    int days = 7,
+  }) async =>
+      <String, dynamic>{'days': days, 'items': <dynamic>[]};
+
+  @override
+  Future<Map<String, dynamic>> fetchHealthCapacity() async =>
+      <String, dynamic>{'status': 'ok'};
+
+  @override
+  Future<Map<String, dynamic>> fetchOnboardingPreview(
+    Map<String, dynamic> payload,
+  ) async =>
+      <String, dynamic>{
+        'message': 'preview',
+        'source': 'test',
+        'fallback_used': false,
+      };
+
+  @override
+  Future<Map<String, dynamic>> fetchPrometheusAlerts() async =>
+      <String, dynamic>{'alerts': <dynamic>[]};
+
+  @override
   Future<UserModel> updateUserPreferences(UserPreferences preferences) {
     throw UnimplementedError();
   }

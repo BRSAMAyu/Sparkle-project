@@ -445,8 +445,8 @@ class _CosmicConstellationCanvasState extends State<_CosmicConstellationCanvas>
           padding * scale;
 
       _transformationController.value = Matrix4.identity()
-        ..translate(offsetX, offsetY)
-        ..scale(scale, scale);
+        ..translateByDouble(offsetX, offsetY, 0, 1)
+        ..scaleByDouble(scale, scale, 1, 1);
 
       _hasInitializedViewport = true;
     });
@@ -470,8 +470,8 @@ class _CosmicConstellationCanvasState extends State<_CosmicConstellationCanvas>
     final dx = current.storage[12];
     final dy = current.storage[13];
     _transformationController.value = Matrix4.identity()
-      ..translate(dx, dy)
-      ..scale(nextScale, nextScale);
+      ..translateByDouble(dx, dy, 0, 1)
+      ..scaleByDouble(nextScale, nextScale, 1, 1);
   }
 
   void _resetViewport() {

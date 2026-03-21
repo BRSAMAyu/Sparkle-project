@@ -131,7 +131,7 @@ class NightlyReviewService:
             select(ErrorRecord).where(
                 and_(
                     ErrorRecord.user_id == user_id,
-                    not ErrorRecord.is_deleted,
+                    ErrorRecord.is_deleted.is_(False),
                     ErrorRecord.created_at >= start,
                     ErrorRecord.created_at <= end,
                 )

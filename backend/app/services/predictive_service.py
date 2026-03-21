@@ -1395,12 +1395,23 @@ class PredictiveService:
         days: int = 7,
     ) -> dict[str, Any]:
         since = self._get_current_time().replace(tzinfo=None) - timedelta(days=max(1, min(days, 30)))
-        stmt = select(CandidateActionFeedback).where(
-            CandidateActionFeedback.user_id == user_id,
-            CandidateActionFeedback.created_at >= since,
-            CandidateActionFeedback.deleted_at.is_(None),
-        )
-        rows = (await self.db.execute(stmt)).scalars().all()
+        try:
+            stmt = select(CandidateActionFeedback).where(
+                CandidateActionFeedback.user_id == user_id,
+                CandidateActionFeedback.created_at >= since,
+                CandidateActionFeedback.deleted_at.is_(None),
+            )
+            rows = (await self.db.execute(stmt)).scalars().all()
+        except Exception as exc:
+            if "candidate_action_feedback" in str(exc).lower():
+                await self.db.rollback()
+                logger.warning(
+                    "Prediction analytics feedback table unavailable; continuing in degraded mode for user {}",
+                    user_id,
+                )
+                rows = []
+            else:
+                raise
 
         def _blank_bucket() -> dict[str, Any]:
             return {

@@ -66,7 +66,11 @@ def main() -> int:
 
         found = False
         for _ in range(12):
-            feed = client.get(f"{GATEWAY_BASE}/community/feed", params={"page": 1, "limit": 20})
+            feed = client.get(
+                f"{GATEWAY_BASE}/community/feed",
+                headers=headers,
+                params={"page": 1, "limit": 20},
+            )
             assert_status(feed, 200, "gateway feed")
             items = feed.json()
             if any((item.get("content") or "") == post_marker for item in items):

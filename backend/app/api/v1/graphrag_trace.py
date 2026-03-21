@@ -9,7 +9,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from loguru import logger
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from app.api.deps import get_current_active_superuser
 from app.models.user import User
@@ -40,8 +40,7 @@ class GraphRAGTraceResponse(BaseModel):
     # 性能指标
     timing: dict[str, float]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 @router.get("/trace/latest", response_model=GraphRAGTraceResponse)

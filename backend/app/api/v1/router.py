@@ -8,10 +8,13 @@ from fastapi import APIRouter
 from app.api.v1 import (
     accountability,
     achievements,
+    agent_stats,
     calendar,
     analytics,
+    assets,
     audit,
     auth,
+    background_tasks,
     capsules,
     chat,
     client_telemetry,
@@ -79,8 +82,9 @@ from app.config import settings
 api_router = APIRouter()
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(users.router, prefix="/users", tags=["users"])
-api_router.include_router(suggestions.router, prefix="/suggestions", tags=["suggestions"])  # Vision Item 3
+api_router.include_router(suggestions.router, tags=["suggestions"])  # Route already carries /suggestions
 api_router.include_router(ingestion.router, prefix="/documents", tags=["ingestion"])
+api_router.include_router(ingestion.router, prefix="/ingestion", tags=["ingestion"])
 api_router.include_router(files.router, tags=["files"])
 api_router.include_router(interventions.router, tags=["interventions"])
 api_router.include_router(events.router, tags=["events"])
@@ -108,6 +112,9 @@ api_router.include_router(cognitive.router, prefix="/cognitive", tags=["cognitiv
 api_router.include_router(omnibar.router, prefix="/omnibar", tags=["omnibar"])
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 api_router.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
+api_router.include_router(background_tasks.router, prefix="/background-tasks", tags=["background_tasks"])
+api_router.include_router(agent_stats.router)
+api_router.include_router(assets.router)
 api_router.include_router(stt.router, prefix="/stt", tags=["stt"])
 api_router.include_router(focus.router, prefix="/focus", tags=["focus"])
 api_router.include_router(vocabulary.router, prefix="/vocabulary", tags=["vocabulary"])

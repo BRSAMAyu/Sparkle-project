@@ -95,8 +95,7 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
     final partnershipId =
         (accountability['id'] ?? accountability['partnership_id'])?.toString();
     final canOpenDashboard =
-        quickActions['can_open_dashboard'] == true &&
-        partnershipId != null;
+        quickActions['can_open_dashboard'] == true && partnershipId != null;
     final canInviteAccountability =
         quickActions['can_invite_accountability'] != false;
 
@@ -169,9 +168,9 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
               icon: Icons.flag_outlined,
               body: Text(
                 (accountability['partner_goal'] ??
-                            accountability['initiator_goal'] ??
-                            '还没有同步目标')
-                        .toString(),
+                        accountability['initiator_goal'] ??
+                        '还没有同步目标')
+                    .toString(),
                 style: DS.bodyMedium,
               ),
             ),
@@ -208,11 +207,9 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
                       : Icons.emoji_events_outlined,
                   onPressed: () {
                     if (canOpenDashboard) {
-                      final id = partnershipId;
-                      if (id == null) return;
                       context.push(
                         CommunityRoutes.accountabilityDetail
-                            .replaceFirst(':id', id),
+                            .replaceFirst(':id', partnershipId),
                       );
                     } else {
                       context.push('/achievements');
@@ -386,7 +383,8 @@ class _RelationshipPanel extends StatelessWidget {
             children: [
               _InfoChip('一起 ${relationshipSummary['days_together'] ?? 0} 天'),
               _InfoChip('我 ${relationshipSummary['my_streak_days'] ?? 0} 天'),
-              _InfoChip('TA ${relationshipSummary['partner_streak_days'] ?? 0} 天'),
+              _InfoChip(
+                  'TA ${relationshipSummary['partner_streak_days'] ?? 0} 天'),
             ],
           ),
           if (achievementsSummary.isNotEmpty) ...[

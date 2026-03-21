@@ -35,7 +35,8 @@ class CalendarRemoteDataSource {
 
     final data = response.data?['data'] as List<dynamic>? ?? [];
     return data
-        .map((json) => CalendarEventModel.fromJson(json as Map<String, dynamic>))
+        .map(
+            (json) => CalendarEventModel.fromJson(json as Map<String, dynamic>))
         .toList();
   }
 
@@ -67,7 +68,7 @@ class CalendarRemoteDataSource {
 
   /// 删除日历事件
   Future<void> deleteEvent(String eventId, {bool hardDelete = false}) async {
-    await _apiClient.delete(
+    await _apiClient.delete<void>(
       ApiEndpoints.calendarEvent(eventId),
       queryParameters: {'hard_delete': hardDelete},
     );
@@ -78,11 +79,13 @@ class CalendarRemoteDataSource {
     final response = await _apiClient.post<Map<String, dynamic>>(
       ApiEndpoints.calendarEventRestore(eventId),
     );
-    return CalendarEventModel.fromJson(response.data?['data'] as Map<String, dynamic>);
+    return CalendarEventModel.fromJson(
+        response.data?['data'] as Map<String, dynamic>);
   }
 
   /// 批量操作
-  Future<Map<String, dynamic>> batchOperations(List<Map<String, dynamic>> operations) async {
+  Future<Map<String, dynamic>> batchOperations(
+      List<Map<String, dynamic>> operations) async {
     final response = await _apiClient.post<Map<String, dynamic>>(
       ApiEndpoints.calendarEventsBatch,
       data: {'operations': operations},
@@ -95,7 +98,8 @@ class CalendarRemoteDataSource {
 }
 
 /// Provider for CalendarRemoteDataSource
-final calendarRemoteDataSourceProvider = Provider<CalendarRemoteDataSource>((ref) {
+final calendarRemoteDataSourceProvider =
+    Provider<CalendarRemoteDataSource>((ref) {
   final apiClient = ref.watch(apiClientProvider);
   return CalendarRemoteDataSource(apiClient);
 });

@@ -3,7 +3,7 @@ Subjects API Endpoints
 学科标准接口 (v2.1)
 """
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
@@ -19,8 +19,7 @@ class SubjectResponse(BaseModel):
     name: str
     category: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class SubjectListResponse(BaseModel):
     success: bool

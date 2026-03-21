@@ -12,7 +12,7 @@ Features:
 - Deep link support for notification actions
 """
 from dataclasses import dataclass
-from datetime import timezone, datetime
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -22,6 +22,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.firebase_config import get_firebase_app, initialize_firebase, is_firebase_available
 from app.models.user import UserDevice
+
+
+def _utcnow_naive() -> datetime:
+    """Return a naive UTC timestamp for legacy DateTime columns."""
+    return datetime.utcnow()
 
 
 @dataclass
@@ -422,7 +427,7 @@ class PushSenderService:
             existing.push_token = push_token
             existing.token_type = token_type
             existing.is_active = True
-            existing.last_used_at = datetime.now(timezone.utc)
+            existing.last_used_at = _utcnow_naive()
             if device_name:
                 existing.device_name = device_name
             if app_version:
@@ -449,7 +454,7 @@ class PushSenderService:
                 os_version=os_version,
                 device_metadata=metadata,
                 is_active=True,
-                last_used_at=datetime.now(timezone.utc),
+                last_used_at=_utcnow_naive(),
             )
             self.db.add(device)
             await self.db.commit()

@@ -34,6 +34,7 @@ class FirebaseMessagingService {
 
     _logger.i('Firebase services disabled - skipping FCM initialization');
     _isInitialized = true;
+    _ref.read(fcmInitializedProvider.notifier).state = true;
   }
 
   /// Subscribe to a topic (no-op when disabled)
@@ -49,6 +50,7 @@ class FirebaseMessagingService {
   /// Delete the current FCM token (no-op when disabled)
   Future<void> deleteToken() async {
     _currentToken = null;
+    _ref.read(fcmInitializedProvider.notifier).state = false;
     _logger.d('FCM disabled - token deletion skipped');
   }
 }

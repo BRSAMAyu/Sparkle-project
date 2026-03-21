@@ -57,6 +57,7 @@ type Config struct {
 
 	// File storage (MinIO/S3)
 	MinioEndpoint         string `mapstructure:"MINIO_ENDPOINT"`
+	MinioPublicEndpoint   string `mapstructure:"MINIO_PUBLIC_ENDPOINT"`
 	MinioAccessKey        string `mapstructure:"MINIO_ACCESS_KEY"`
 	MinioSecretKey        string `mapstructure:"MINIO_SECRET_KEY"`
 	MinioBucket           string `mapstructure:"MINIO_BUCKET"`
@@ -395,6 +396,7 @@ func Load() *Config {
 		"WS_IDLE_TIMEOUT_SECONDS",
 		"REQUEST_TIMEOUT_SECONDS",
 		"MINIO_ENDPOINT",
+		"MINIO_PUBLIC_ENDPOINT",
 		"MINIO_ACCESS_KEY",
 		"MINIO_SECRET_KEY",
 		"MINIO_BUCKET",
@@ -459,6 +461,7 @@ func Load() *Config {
 
 	// File storage defaults
 	viper.SetDefault("MINIO_ENDPOINT", "localhost:9000")
+	viper.SetDefault("MINIO_PUBLIC_ENDPOINT", "")
 	viper.SetDefault("MINIO_ACCESS_KEY", "minioadmin")
 	viper.SetDefault("MINIO_SECRET_KEY", "minioadmin")
 	viper.SetDefault("MINIO_BUCKET", "sparkle-files")

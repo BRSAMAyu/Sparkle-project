@@ -815,6 +815,44 @@
         "title": "AiOpsDashboardResponse",
         "type": "object"
       },
+      "AiOpsExportResponse": {
+        "properties": {
+          "generated_at": {
+            "format": "date-time",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AiOpsModeItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "overview": {
+            "$ref": "#/components/schemas/AiOpsOverviewItem"
+          },
+          "trend_series": {
+            "items": {
+              "$ref": "#/components/schemas/AiOpsTrendSeries"
+            },
+            "title": "Trend Series",
+            "type": "array"
+          },
+          "window_days": {
+            "title": "Window Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "window_days",
+          "overview",
+          "items",
+          "generated_at"
+        ],
+        "title": "AiOpsExportResponse",
+        "type": "object"
+      },
       "AiOpsModeItem": {
         "properties": {
           "avg_first_token_ms": {
@@ -935,6 +973,87 @@
         "title": "AiOpsModeItem",
         "type": "object"
       },
+      "AiOpsOverviewItem": {
+        "properties": {
+          "avg_first_token_ms": {
+            "default": 0.0,
+            "title": "Avg First Token Ms",
+            "type": "number"
+          },
+          "avg_stream_duration_ms": {
+            "default": 0.0,
+            "title": "Avg Stream Duration Ms",
+            "type": "number"
+          },
+          "avg_total_duration_ms": {
+            "default": 0.0,
+            "title": "Avg Total Duration Ms",
+            "type": "number"
+          },
+          "execution_conversion_rate_percent": {
+            "default": 0.0,
+            "title": "Execution Conversion Rate Percent",
+            "type": "number"
+          },
+          "execution_count": {
+            "default": 0,
+            "title": "Execution Count",
+            "type": "integer"
+          },
+          "fallback_rate_percent": {
+            "default": 0.0,
+            "title": "Fallback Rate Percent",
+            "type": "number"
+          },
+          "plan_conversion_rate_percent": {
+            "default": 0.0,
+            "title": "Plan Conversion Rate Percent",
+            "type": "number"
+          },
+          "plan_count": {
+            "default": 0,
+            "title": "Plan Count",
+            "type": "integer"
+          },
+          "requests_failed": {
+            "default": 0,
+            "title": "Requests Failed",
+            "type": "integer"
+          },
+          "requests_success": {
+            "default": 0,
+            "title": "Requests Success",
+            "type": "integer"
+          },
+          "requests_total": {
+            "default": 0,
+            "title": "Requests Total",
+            "type": "integer"
+          },
+          "success_rate_percent": {
+            "default": 0.0,
+            "title": "Success Rate Percent",
+            "type": "number"
+          },
+          "task_conversion_rate_percent": {
+            "default": 0.0,
+            "title": "Task Conversion Rate Percent",
+            "type": "number"
+          },
+          "task_count": {
+            "default": 0,
+            "title": "Task Count",
+            "type": "integer"
+          },
+          "total_cost_usd": {
+            "default": 0.0,
+            "title": "Total Cost Usd",
+            "type": "number"
+          }
+        },
+        "title": "AiOpsOverviewItem",
+        "type": "object"
+      },
       "AiOpsReasoningBreakdownItem": {
         "properties": {
           "fallback_count": {
@@ -966,6 +1085,79 @@
           "mode"
         ],
         "title": "AiOpsReasoningBreakdownItem",
+        "type": "object"
+      },
+      "AiOpsTrendPoint": {
+        "properties": {
+          "avg_first_token_ms": {
+            "default": 0.0,
+            "title": "Avg First Token Ms",
+            "type": "number"
+          },
+          "avg_stream_duration_ms": {
+            "default": 0.0,
+            "title": "Avg Stream Duration Ms",
+            "type": "number"
+          },
+          "avg_total_duration_ms": {
+            "default": 0.0,
+            "title": "Avg Total Duration Ms",
+            "type": "number"
+          },
+          "date": {
+            "title": "Date",
+            "type": "string"
+          },
+          "execution_conversion_rate_percent": {
+            "default": 0.0,
+            "title": "Execution Conversion Rate Percent",
+            "type": "number"
+          },
+          "fallback_rate_percent": {
+            "default": 0.0,
+            "title": "Fallback Rate Percent",
+            "type": "number"
+          },
+          "requests_total": {
+            "default": 0,
+            "title": "Requests Total",
+            "type": "integer"
+          },
+          "success_rate_percent": {
+            "default": 0.0,
+            "title": "Success Rate Percent",
+            "type": "number"
+          },
+          "total_cost_usd": {
+            "default": 0.0,
+            "title": "Total Cost Usd",
+            "type": "number"
+          }
+        },
+        "required": [
+          "date"
+        ],
+        "title": "AiOpsTrendPoint",
+        "type": "object"
+      },
+      "AiOpsTrendSeries": {
+        "properties": {
+          "chat_mode": {
+            "title": "Chat Mode",
+            "type": "string"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/AiOpsTrendPoint"
+            },
+            "title": "Points",
+            "type": "array"
+          }
+        },
+        "required": [
+          "chat_mode"
+        ],
+        "title": "AiOpsTrendSeries",
         "type": "object"
       },
       "AiUsageExportResponse": {
@@ -1045,6 +1237,145 @@
         "title": "AnalysisStatus",
         "type": "string"
       },
+      "AssetListResponse": {
+        "description": "Response for asset listing",
+        "properties": {
+          "assets": {
+            "items": {
+              "$ref": "#/components/schemas/AssetResponse"
+            },
+            "title": "Assets",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "assets",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "AssetListResponse",
+        "type": "object"
+      },
+      "AssetResponse": {
+        "description": "Response for a single asset",
+        "properties": {
+          "asset_kind": {
+            "title": "Asset Kind",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "definition": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Definition"
+          },
+          "example": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Example"
+          },
+          "headword": {
+            "title": "Headword",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "inbox_expires_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inbox Expires At"
+          },
+          "language_code": {
+            "title": "Language Code",
+            "type": "string"
+          },
+          "lookup_count": {
+            "title": "Lookup Count",
+            "type": "integer"
+          },
+          "review_count": {
+            "title": "Review Count",
+            "type": "integer"
+          },
+          "review_success_rate": {
+            "title": "Review Success Rate",
+            "type": "number"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "translation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Translation"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "asset_kind",
+          "headword",
+          "definition",
+          "translation",
+          "example",
+          "language_code",
+          "lookup_count",
+          "review_count",
+          "review_success_rate",
+          "inbox_expires_at",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "AssetResponse",
+        "type": "object"
+      },
       "AuthAuditLogInfo": {
         "description": "Security log item for the current user.",
         "properties": {
@@ -1112,6 +1443,30 @@
           "rejected"
         ],
         "title": "AvatarStatus",
+        "type": "string"
+      },
+      "BackgroundTaskStatus": {
+        "description": "Background task status",
+        "enum": [
+          "PENDING",
+          "RUNNING",
+          "COMPLETED",
+          "FAILED",
+          "CANCELLED"
+        ],
+        "title": "BackgroundTaskStatus",
+        "type": "string"
+      },
+      "BackgroundTaskType": {
+        "description": "Background task types",
+        "enum": [
+          "AI_GENERATION",
+          "DATA_SYNC",
+          "PLAN_GENERATION",
+          "GALAXY_EXPANSION",
+          "TASK_BATCH"
+        ],
+        "title": "BackgroundTaskType",
         "type": "string"
       },
       "BatchItemImportRequest": {
@@ -1530,6 +1885,26 @@
           "file"
         ],
         "title": "Body_clean_document_api_v1_documents_clean_post",
+        "type": "object"
+      },
+      "Body_clean_document_api_v1_ingestion_clean_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          },
+          "options": {
+            "default": "{}",
+            "description": "JSON options (e.g. {'enable_ocr': true, 'ocr_engine': 'zhipu' | 'local'})",
+            "title": "Options",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_clean_document_api_v1_ingestion_clean_post",
         "type": "object"
       },
       "Body_dispatch_omnibar_api_v1_omnibar_dispatch_post": {
@@ -3275,6 +3650,20 @@
         "title": "CheckinResponse",
         "type": "object"
       },
+      "ClientTelemetryBatchRequest": {
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/ClientTelemetryEventRequest"
+            },
+            "maxItems": 50,
+            "title": "Events",
+            "type": "array"
+          }
+        },
+        "title": "ClientTelemetryBatchRequest",
+        "type": "object"
+      },
       "ClientTelemetryEventRequest": {
         "properties": {
           "category": {
@@ -3815,6 +4204,126 @@
           "target_type"
         ],
         "title": "CorrectionRequest",
+        "type": "object"
+      },
+      "CreateAssetRequest": {
+        "description": "Request to create a new learning asset",
+        "properties": {
+          "activate_immediately": {
+            "default": false,
+            "description": "Skip inbox, activate directly",
+            "title": "Activate Immediately",
+            "type": "boolean"
+          },
+          "asset_kind": {
+            "default": "WORD",
+            "description": "Asset type: WORD, SENTENCE, CONCEPT",
+            "title": "Asset Kind",
+            "type": "string"
+          },
+          "context_after": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Text after selection",
+            "title": "Context After"
+          },
+          "context_before": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Text before selection",
+            "title": "Context Before"
+          },
+          "definition": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Definition or meaning",
+            "title": "Definition"
+          },
+          "example": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Example sentence",
+            "title": "Example"
+          },
+          "language_code": {
+            "default": "en",
+            "description": "Source language code",
+            "title": "Language Code",
+            "type": "string"
+          },
+          "page_no": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Page number",
+            "title": "Page No"
+          },
+          "selected_text": {
+            "description": "Text that was selected",
+            "maxLength": 1000,
+            "title": "Selected Text",
+            "type": "string"
+          },
+          "source_file_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Source document UUID",
+            "title": "Source File Id"
+          },
+          "translation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Translated text",
+            "title": "Translation"
+          }
+        },
+        "required": [
+          "selected_text"
+        ],
+        "title": "CreateAssetRequest",
         "type": "object"
       },
       "CreateExperimentRequest": {
@@ -6673,6 +7182,89 @@
           }
         },
         "title": "ExportPersonaRequest",
+        "type": "object"
+      },
+      "FeedbackRequest": {
+        "description": "Request body for candidate action feedback",
+        "properties": {
+          "action_type": {
+            "description": "Action type identifier",
+            "title": "Action Type",
+            "type": "string"
+          },
+          "candidate_id": {
+            "description": "Candidate action ID",
+            "title": "Candidate Id",
+            "type": "string"
+          },
+          "completion_result": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Result of executed action (if any)",
+            "title": "Completion Result"
+          },
+          "context_snapshot": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ContextEnvelope at time of feedback",
+            "title": "Context Snapshot"
+          },
+          "executed": {
+            "default": false,
+            "description": "Was the action executed",
+            "title": "Executed",
+            "type": "boolean"
+          },
+          "feedback_type": {
+            "description": "Feedback type: impression, accept, ignore, dismiss",
+            "title": "Feedback Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "candidate_id",
+          "action_type",
+          "feedback_type"
+        ],
+        "title": "FeedbackRequest",
+        "type": "object"
+      },
+      "FeedbackResponse": {
+        "description": "Response for feedback submission",
+        "properties": {
+          "feedback_id": {
+            "title": "Feedback Id",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "feedback_id",
+          "message"
+        ],
+        "title": "FeedbackResponse",
         "type": "object"
       },
       "FewShotExample": {
@@ -10756,6 +11348,11 @@
             "title": "Id",
             "type": "string"
           },
+          "is_optional": {
+            "default": false,
+            "title": "Is Optional",
+            "type": "boolean"
+          },
           "is_target": {
             "title": "Is Target",
             "type": "boolean"
@@ -10763,6 +11360,28 @@
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "relation_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relation Type"
+          },
+          "source_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Type"
           },
           "status": {
             "title": "Status",
@@ -13699,6 +14318,29 @@
         "title": "OfflineMessageStatusEnum",
         "type": "string"
       },
+      "OnboardingPreviewResponse": {
+        "properties": {
+          "fallback_used": {
+            "default": true,
+            "title": "Fallback Used",
+            "type": "boolean"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "source": {
+            "default": "fallback",
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "OnboardingPreviewResponse",
+        "type": "object"
+      },
       "OnboardingRequest": {
         "properties": {
           "curiosity_preference": {
@@ -16396,6 +17038,18 @@
             ],
             "title": "Curiosity Capsule Id"
           },
+          "entity_card": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entity Card"
+          },
           "id": {
             "description": "Record ID",
             "format": "uuid",
@@ -17679,6 +18333,39 @@
         "title": "SuggestedNode",
         "type": "object"
       },
+      "SuggestionFeedbackRequest": {
+        "description": "Request to record feedback on a suggestion",
+        "properties": {
+          "asset_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Created asset ID if accepted",
+            "title": "Asset Id"
+          },
+          "response": {
+            "description": "Response: ACCEPT, DISMISS, IGNORE",
+            "title": "Response",
+            "type": "string"
+          },
+          "suggestion_log_id": {
+            "description": "Suggestion log UUID",
+            "title": "Suggestion Log Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "suggestion_log_id",
+          "response"
+        ],
+        "title": "SuggestionFeedbackRequest",
+        "type": "object"
+      },
       "TaskAbandon": {
         "description": "Abandon task",
         "properties": {
@@ -17989,6 +18676,12 @@
             "description": "Knowledge node ID",
             "title": "Knowledge Node Id"
           },
+          "order_index": {
+            "default": 0,
+            "description": "Display order",
+            "title": "Order Index",
+            "type": "integer"
+          },
           "plan_id": {
             "anyOf": [
               {
@@ -18023,6 +18716,18 @@
           "status": {
             "$ref": "#/components/schemas/TaskStatus",
             "description": "Task status"
+          },
+          "subtasks_completed": {
+            "default": 0,
+            "description": "Completed subtasks",
+            "title": "Subtasks Completed",
+            "type": "integer"
+          },
+          "subtasks_total": {
+            "default": 0,
+            "description": "Total subtasks",
+            "title": "Subtasks Total",
+            "type": "integer"
           },
           "tags": {
             "description": "Tags list",
@@ -18414,6 +19119,26 @@
         "title": "TaskRecommendationResponse",
         "type": "object"
       },
+      "TaskReorderRequest": {
+        "description": "Persist task ordering for the current user.",
+        "properties": {
+          "task_ids": {
+            "description": "Ordered task IDs",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Task Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "task_ids"
+        ],
+        "title": "TaskReorderRequest",
+        "type": "object"
+      },
       "TaskResourceLinkCreate": {
         "description": "Attach a resource to a task.",
         "properties": {
@@ -18675,6 +19400,18 @@
             ],
             "description": "Guide content",
             "title": "Guide Content"
+          },
+          "order_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Display order",
+            "title": "Order Index"
           },
           "priority": {
             "anyOf": [
@@ -19259,6 +19996,66 @@
           }
         },
         "title": "UpdateNodeContentRequest",
+        "type": "object"
+      },
+      "UpdateNodeMasteryRequest": {
+        "properties": {
+          "mastery": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mastery"
+          },
+          "mastery_delta": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": -100.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mastery Delta"
+          },
+          "reason": {
+            "default": "manual_update",
+            "title": "Reason",
+            "type": "string"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          }
+        },
+        "title": "UpdateNodeMasteryRequest",
         "type": "object"
       },
       "UpgradeGuestRequest": {
@@ -24446,6 +25243,236 @@
         ]
       }
     },
+    "/api/v1/agent-stats/agent-types": {
+      "get": {
+        "description": "获取所有可用的Agent类型\n\n返回所有Agent的元数据，包括：\n- 类型ID\n- 显示名称\n- 描述\n- 图标建议",
+        "operationId": "get_available_agent_types_api_v1_agent_stats_agent_types_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Available Agent Types",
+        "tags": [
+          "agent-stats"
+        ]
+      }
+    },
+    "/api/v1/agent-stats/performance": {
+      "get": {
+        "description": "获取Agent性能指标\n\n包括：\n- 平均耗时\n- 中位数耗时\n- P95耗时\n- 成功率/失败率",
+        "operationId": "get_performance_metrics_api_v1_agent_stats_performance_get",
+        "parameters": [
+          {
+            "description": "Agent类型（可选）",
+            "in": "query",
+            "name": "agent_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Agent类型（可选）",
+              "title": "Agent Type"
+            }
+          },
+          {
+            "description": "统计天数",
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 7,
+              "description": "统计天数",
+              "maximum": 365,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Performance Metrics",
+        "tags": [
+          "agent-stats"
+        ]
+      }
+    },
+    "/api/v1/agent-stats/refresh-summary": {
+      "post": {
+        "description": "刷新统计汇总物化视图\n\n注意：此操作可能耗时较长，建议通过定时任务调用",
+        "operationId": "refresh_stats_summary_api_v1_agent_stats_refresh_summary_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Refresh Stats Summary",
+        "tags": [
+          "agent-stats"
+        ]
+      }
+    },
+    "/api/v1/agent-stats/user/overview": {
+      "get": {
+        "description": "获取用户的Agent使用统计概览\n\n返回：\n- 总体统计（总执行次数、平均耗时、会话数）\n- 各Agent类型统计\n- 最近活动记录",
+        "operationId": "get_user_stats_overview_api_v1_agent_stats_user_overview_get",
+        "parameters": [
+          {
+            "description": "统计天数",
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "description": "统计天数",
+              "maximum": 365,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get User Stats Overview",
+        "tags": [
+          "agent-stats"
+        ]
+      }
+    },
+    "/api/v1/agent-stats/user/top-agents": {
+      "get": {
+        "description": "获取用户最常使用的Agent\n\n返回：\n- Agent类型\n- 使用次数\n- 平均耗时",
+        "operationId": "get_top_agents_api_v1_agent_stats_user_top_agents_get",
+        "parameters": [
+          {
+            "description": "返回数量",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 5,
+              "description": "返回数量",
+              "maximum": 10,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "统计天数",
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "description": "统计天数",
+              "maximum": 365,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Top Agents",
+        "tags": [
+          "agent-stats"
+        ]
+      }
+    },
     "/api/v1/analytics/reports/download/{filename}": {
       "get": {
         "description": "Download a generated PDF report.",
@@ -24518,6 +25545,368 @@
         "summary": "Generate Weekly Report",
         "tags": [
           "analytics"
+        ]
+      }
+    },
+    "/api/v1/assets": {
+      "get": {
+        "description": "List user's learning assets with optional status filter.",
+        "operationId": "list_assets_api_v1_assets_get",
+        "parameters": [
+          {
+            "description": "Filter by status: INBOX, ACTIVE, ARCHIVED",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by status: INBOX, ACTIVE, ARCHIVED",
+              "title": "Status"
+            }
+          },
+          {
+            "description": "Max results",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "description": "Max results",
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Pagination offset",
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "description": "Pagination offset",
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "获取资产列表",
+        "tags": [
+          "assets"
+        ]
+      },
+      "post": {
+        "description": "Create a new learning asset from a text selection.\n\nThis is called when user explicitly saves a word/phrase to their collection.",
+        "operationId": "create_asset_api_v1_assets_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAssetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "创建学习资产",
+        "tags": [
+          "assets"
+        ]
+      }
+    },
+    "/api/v1/assets/suggestions/feedback": {
+      "post": {
+        "description": "Record user feedback on an asset suggestion.\n\nIf dismissed, sets a cooldown to avoid re-suggesting.",
+        "operationId": "record_suggestion_feedback_api_v1_assets_suggestions_feedback_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuggestionFeedbackRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "记录建议反馈",
+        "tags": [
+          "assets"
+        ]
+      }
+    },
+    "/api/v1/assets/{asset_id}": {
+      "delete": {
+        "description": "Soft delete an asset.",
+        "operationId": "delete_asset_api_v1_assets__asset_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "asset_id",
+            "required": true,
+            "schema": {
+              "title": "Asset Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "删除资产",
+        "tags": [
+          "assets"
+        ]
+      },
+      "get": {
+        "description": "Get a single asset by ID.",
+        "operationId": "get_asset_api_v1_assets__asset_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "asset_id",
+            "required": true,
+            "schema": {
+              "title": "Asset Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "获取单个资产",
+        "tags": [
+          "assets"
+        ]
+      }
+    },
+    "/api/v1/assets/{asset_id}/activate": {
+      "post": {
+        "description": "Activate an asset (move from INBOX to ACTIVE).\n\nThis makes the asset eligible for review scheduling.",
+        "operationId": "activate_asset_api_v1_assets__asset_id__activate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "asset_id",
+            "required": true,
+            "schema": {
+              "title": "Asset Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "激活资产",
+        "tags": [
+          "assets"
+        ]
+      }
+    },
+    "/api/v1/assets/{asset_id}/archive": {
+      "post": {
+        "description": "Archive an asset.\n\nArchived assets are hidden from default views but can be restored.",
+        "operationId": "archive_asset_api_v1_assets__asset_id__archive_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "asset_id",
+            "required": true,
+            "schema": {
+              "title": "Asset Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "归档资产",
+        "tags": [
+          "assets"
         ]
       }
     },
@@ -25167,6 +26556,285 @@
         "summary": "Verify Email",
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/api/v1/background-tasks": {
+      "get": {
+        "description": "Get background tasks for the current user",
+        "operationId": "get_background_tasks_api_v1_background_tasks_get",
+        "parameters": [
+          {
+            "description": "Filter by status",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/BackgroundTaskStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by status",
+              "title": "Status"
+            }
+          },
+          {
+            "description": "Filter by task type",
+            "in": "query",
+            "name": "task_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/BackgroundTaskType"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by task type",
+              "title": "Task Type"
+            }
+          },
+          {
+            "description": "Limit results",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "description": "Limit results",
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Background Tasks Api V1 Background Tasks Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Background Tasks",
+        "tags": [
+          "background_tasks"
+        ]
+      }
+    },
+    "/api/v1/background-tasks/stats/summary": {
+      "get": {
+        "description": "Get summary statistics of background tasks",
+        "operationId": "get_background_task_stats_api_v1_background_tasks_stats_summary_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Background Task Stats Api V1 Background Tasks Stats Summary Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Background Task Stats",
+        "tags": [
+          "background_tasks"
+        ]
+      }
+    },
+    "/api/v1/background-tasks/{task_id}": {
+      "get": {
+        "description": "Get details of a specific background task",
+        "operationId": "get_background_task_api_v1_background_tasks__task_id__get",
+        "parameters": [
+          {
+            "description": "Task ID",
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "description": "Task ID",
+              "format": "uuid",
+              "title": "Task Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Background Task Api V1 Background Tasks  Task Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Background Task",
+        "tags": [
+          "background_tasks"
+        ]
+      }
+    },
+    "/api/v1/background-tasks/{task_id}/cancel": {
+      "post": {
+        "description": "Cancel a running or pending background task",
+        "operationId": "cancel_background_task_api_v1_background_tasks__task_id__cancel_post",
+        "parameters": [
+          {
+            "description": "Task ID",
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "description": "Task ID",
+              "format": "uuid",
+              "title": "Task Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Cancel Background Task Api V1 Background Tasks  Task Id  Cancel Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Cancel Background Task",
+        "tags": [
+          "background_tasks"
+        ]
+      }
+    },
+    "/api/v1/background-tasks/{task_id}/retry": {
+      "post": {
+        "description": "Retry a failed background task",
+        "operationId": "retry_background_task_api_v1_background_tasks__task_id__retry_post",
+        "parameters": [
+          {
+            "description": "Task ID",
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "description": "Task ID",
+              "format": "uuid",
+              "title": "Task Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Retry Background Task Api V1 Background Tasks  Task Id  Retry Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Retry Background Task",
+        "tags": [
+          "background_tasks"
         ]
       }
     },
@@ -26651,6 +28319,54 @@
           }
         ],
         "summary": "Ingest Client Telemetry",
+        "tags": [
+          "client-telemetry"
+        ]
+      }
+    },
+    "/api/v1/client-telemetry/events/batch": {
+      "post": {
+        "operationId": "ingest_client_telemetry_batch_api_v1_client_telemetry_events_batch_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClientTelemetryBatchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Ingest Client Telemetry Batch Api V1 Client Telemetry Events Batch Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Ingest Client Telemetry Batch",
         "tags": [
           "client-telemetry"
         ]
@@ -34711,6 +36427,64 @@
         ]
       }
     },
+    "/api/v1/galaxy/nodes/{node_id}/update-mastery": {
+      "post": {
+        "description": "Explicit REST entrypoint for node mastery updates used by Galaxy UI flows.",
+        "operationId": "update_node_mastery_api_v1_galaxy_nodes__node_id__update_mastery_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "node_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Node Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateNodeMasteryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Node Mastery",
+        "tags": [
+          "galaxy",
+          "Knowledge Galaxy"
+        ]
+      }
+    },
     "/api/v1/galaxy/predict-next": {
       "post": {
         "description": "预测下一个最佳学习节点\n\n基于用户的学习历史和知识图谱结构，推荐下一个最值得学习的节点。",
@@ -35289,6 +37063,87 @@
         "tags": [
           "Health",
           "Health"
+        ]
+      }
+    },
+    "/api/v1/ingestion/clean": {
+      "post": {
+        "description": "Starts an asynchronous document cleaning task.\nReturns a `task_id` immediately. Use `GET /clean/{task_id}` to check progress.",
+        "operationId": "clean_document_api_v1_ingestion_clean_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_clean_document_api_v1_ingestion_clean_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Async Upload and Clean Document",
+        "tags": [
+          "ingestion"
+        ]
+      }
+    },
+    "/api/v1/ingestion/clean/{task_id}": {
+      "get": {
+        "description": "Poll this endpoint to get progress (percent, message) and final result.",
+        "operationId": "check_task_status_api_v1_ingestion_clean__task_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "title": "Task Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Check Cleaning Task Status",
+        "tags": [
+          "ingestion"
         ]
       }
     },
@@ -36273,6 +38128,33 @@
               "title": "Target Node Id",
               "type": "string"
             }
+          },
+          {
+            "description": "是否返回可选拓展节点建议",
+            "in": "query",
+            "name": "include_related",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "是否返回可选拓展节点建议",
+              "title": "Include Related",
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "用户主动纳入路径的相关节点",
+            "in": "query",
+            "name": "selected_related_node_ids",
+            "required": false,
+            "schema": {
+              "description": "用户主动纳入路径的相关节点",
+              "items": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "title": "Selected Related Node Ids",
+              "type": "array"
+            }
           }
         ],
         "responses": {
@@ -36333,6 +38215,33 @@
               "title": "Target Node Id",
               "type": "string"
             }
+          },
+          {
+            "description": "是否在返回路径时附带推荐拓展节点",
+            "in": "query",
+            "name": "include_related",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "是否在返回路径时附带推荐拓展节点",
+              "title": "Include Related",
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "用户选择纳入完整计划的相关节点",
+            "in": "query",
+            "name": "selected_related_node_ids",
+            "required": false,
+            "schema": {
+              "description": "用户选择纳入完整计划的相关节点",
+              "items": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "title": "Selected Related Node Ids",
+              "type": "array"
+            }
           }
         ],
         "responses": {
@@ -36379,6 +38288,33 @@
               "format": "uuid",
               "title": "Target Node Id",
               "type": "string"
+            }
+          },
+          {
+            "description": "是否在响应里返回推荐拓展节点",
+            "in": "query",
+            "name": "include_related",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "是否在响应里返回推荐拓展节点",
+              "title": "Include Related",
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "用户选择纳入计划的相关节点",
+            "in": "query",
+            "name": "selected_related_node_ids",
+            "required": false,
+            "schema": {
+              "description": "用户选择纳入计划的相关节点",
+              "items": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "title": "Selected Related Node Ids",
+              "type": "array"
             }
           }
         ],
@@ -40149,6 +42085,52 @@
         ]
       }
     },
+    "/api/v1/profile/onboarding/preview": {
+      "post": {
+        "operationId": "preview_onboarding_api_v1_profile_onboarding_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OnboardingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingPreviewResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Preview Onboarding",
+        "tags": [
+          "profile"
+        ]
+      }
+    },
     "/api/v1/profile/override-inferred": {
       "post": {
         "operationId": "override_inferred_preference_api_v1_profile_override_inferred_post",
@@ -42863,6 +44845,78 @@
         ]
       }
     },
+    "/api/v1/signals/feedback": {
+      "post": {
+        "description": "Record user feedback on candidate action.\n\nFeedback types:\n- impression: User saw the candidate action\n- accept: User clicked on the candidate action\n- ignore: User saw but didn't interact (implicit)\n- dismiss: User explicitly dismissed the candidate\n\nUsed by daily learning job to calculate:\n- CTR (Click-Through Rate): accept / impression\n- Completion Rate: executed / accept\n- Confidence Calibration: expected vs actual CTR\n\nArgs:\n    request: Feedback data\n    current_user: Authenticated user\n    db: Database session\n\nReturns:\n    FeedbackResponse with ok status and feedback ID",
+        "operationId": "record_feedback_api_v1_signals_feedback_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "记录候选动作反馈",
+        "tags": [
+          "signals"
+        ]
+      }
+    },
+    "/api/v1/signals/feedback/stats": {
+      "get": {
+        "description": "Get feedback statistics for current user.\n\nReturns:\n- Total feedback count\n- Breakdown by feedback type\n- Breakdown by action type\n- CTR (Click-Through Rate)\n- Completion rate\n\nThis endpoint is useful for user-facing stats dashboards.",
+        "operationId": "get_feedback_stats_api_v1_signals_feedback_stats_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "获取反馈统计",
+        "tags": [
+          "signals"
+        ]
+      }
+    },
     "/api/v1/stats/daily": {
       "get": {
         "description": "获取今日统计数据\nGet daily statistics for current user",
@@ -43194,10 +45248,10 @@
         ]
       }
     },
-    "/api/v1/suggestions/suggestions": {
+    "/api/v1/suggestions": {
       "get": {
         "description": "Get real-time intent predictions/suggestions while typing.\nVision Item 3.\n\nRequires authentication via JWT token.",
-        "operationId": "get_suggestions_api_v1_suggestions_suggestions_get",
+        "operationId": "get_suggestions_api_v1_suggestions_get",
         "parameters": [
           {
             "description": "Partial user input",
@@ -43222,7 +45276,7 @@
                     "additionalProperties": true,
                     "type": "object"
                   },
-                  "title": "Response Get Suggestions Api V1 Suggestions Suggestions Get",
+                  "title": "Response Get Suggestions Api V1 Suggestions Get",
                   "type": "array"
                 }
               }
@@ -43767,6 +45821,55 @@
         ]
       }
     },
+    "/api/v1/tasks/reorder": {
+      "post": {
+        "description": "Persist the display order of tasks for the current user.",
+        "operationId": "reorder_tasks_api_v1_tasks_reorder_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskReorderRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Reorder Tasks Api V1 Tasks Reorder Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reorder Tasks",
+        "tags": [
+          "tasks"
+        ]
+      }
+    },
     "/api/v1/tasks/suggestions": {
       "post": {
         "description": "获取任务创建建议 (LLM 驱动)",
@@ -44262,6 +46365,59 @@
           }
         ],
         "summary": "Submit Task Feedback",
+        "tags": [
+          "tasks"
+        ]
+      }
+    },
+    "/api/v1/tasks/{task_id}/generate-guide": {
+      "post": {
+        "description": "Generate or regenerate AI guide for an existing task using fast LLM tier.",
+        "operationId": "generate_task_guide_api_v1_tasks__task_id__generate_guide_post",
+        "parameters": [
+          {
+            "description": "Task ID",
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "description": "Task ID",
+              "format": "uuid",
+              "title": "Task Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Generate Task Guide Api V1 Tasks  Task Id  Generate Guide Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Generate Task Guide",
         "tags": [
           "tasks"
         ]
@@ -45075,6 +47231,56 @@
           }
         ],
         "summary": "Get User Ai Ops Dashboard",
+        "tags": [
+          "user_settings"
+        ]
+      }
+    },
+    "/api/v1/user/settings/ai-ops/export": {
+      "get": {
+        "operationId": "export_user_ai_ops_dashboard_api_v1_user_settings_ai_ops_export_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 14,
+              "maximum": 30,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiOpsExportResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Export User Ai Ops Dashboard",
         "tags": [
           "user_settings"
         ]

@@ -31,126 +31,121 @@ class GroupRecommendationCard extends StatelessWidget {
       surfaceRole: SparkleSurfaceRole.card,
       padding: EdgeInsets.zero,
       onTap: onTap,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: context.space.edge(all: context.space.md),
-            child: Column(
+      child: SingleChildScrollView(
+        padding: context.space.edge(all: context.space.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: DS.surfaceRoleColor(SparkleSurfaceRole.panel),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Icon(
-                        isSprint ? Icons.timer_outlined : Icons.group_outlined,
-                        color: DS.textSecondary,
-                      ),
-                    ),
-                    SizedBox(width: context.space.sm),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            isSprint ? 'Sprint group' : 'Squad',
-                            style: context.typo.labelSmall
-                                .copyWith(color: DS.textSecondary),
-                          ),
-                          SizedBox(height: context.space.xs),
-                          Text(
-                            group.name,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          SizedBox(height: context.space.xs),
-                          Text(
-                            '${group.memberCount} members | ${group.totalFlamePower} flame',
-                            style: context.typo.bodyMedium
-                                .copyWith(color: DS.textSecondary),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (onDismiss != null)
-                      SparkleIconButton(
-                        variant: ButtonVariant.ghost,
-                        icon: const Icon(Icons.close),
-                        onPressed: onDismiss,
-                      ),
-                  ],
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: DS.surfaceRoleColor(SparkleSurfaceRole.panel),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Icon(
+                    isSprint ? Icons.timer_outlined : Icons.group_outlined,
+                    color: DS.textSecondary,
+                  ),
                 ),
-                if (reasons.isNotEmpty) ...[
-                  SizedBox(height: context.space.sm),
-                  Wrap(
-                    spacing: context.space.xs,
-                    runSpacing: context.space.xs,
-                    children: reasons
-                        .map(
-                          (reason) => SemanticPill(
-                            label: _reasonLabel(reason),
-                            tone: _reasonTone(reason),
-                            icon: _reasonIcon(reason),
-                            dense: true,
-                          ),
-                        )
-                        .toList(),
-                  ),
-                ],
-                if (group.description != null &&
-                    group.description!.isNotEmpty) ...[
-                  SizedBox(height: context.space.sm),
-                  Text(
-                    group.description!,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.typo.bodyMedium
-                        .copyWith(color: DS.textSecondary, height: 1.35),
-                  ),
-                ],
-                SizedBox(height: context.space.md),
-                Row(
-                  children: [
-                    if (group.focusTags.isNotEmpty)
-                      Expanded(
-                        child: Text(
-                          group.focusTags.take(2).join(' / '),
-                          style: context.typo.bodyMedium
-                              .copyWith(color: DS.textSecondary),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      )
-                    else
-                      const Spacer(),
-                    if (onFeedback != null) ...[
-                      SparkleButton(
-                        label: '评价',
-                        size: ButtonSize.small,
-                        variant: ButtonVariant.secondary,
-                        onPressed: onFeedback,
+                SizedBox(width: context.space.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isSprint ? 'Sprint group' : 'Squad',
+                        style: context.typo.labelSmall
+                            .copyWith(color: DS.textSecondary),
                       ),
-                      SizedBox(width: context.space.xs),
+                      SizedBox(height: context.space.xs),
+                      Text(
+                        group.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      SizedBox(height: context.space.xs),
+                      Text(
+                        '${group.memberCount} members | ${group.totalFlamePower} flame',
+                        style: context.typo.bodyMedium
+                            .copyWith(color: DS.textSecondary),
+                      ),
                     ],
-                    SparkleButton(
-                      label: joinLabel,
-                      size: ButtonSize.small,
-                      onPressed: onJoin,
+                  ),
+                ),
+                if (onDismiss != null)
+                  SparkleIconButton(
+                    variant: ButtonVariant.ghost,
+                    icon: const Icon(Icons.close),
+                    onPressed: onDismiss,
+                  ),
+              ],
+            ),
+            if (reasons.isNotEmpty) ...[
+              SizedBox(height: context.space.sm),
+              Wrap(
+                spacing: context.space.xs,
+                runSpacing: context.space.xs,
+                children: reasons
+                    .map(
+                      (reason) => SemanticPill(
+                        label: _reasonLabel(reason),
+                        tone: _reasonTone(reason),
+                        icon: _reasonIcon(reason),
+                        dense: true,
+                      ),
+                    )
+                    .toList(),
+              ),
+            ],
+            if (group.description != null && group.description!.isNotEmpty) ...[
+              SizedBox(height: context.space.sm),
+              Text(
+                group.description!,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: context.typo.bodyMedium
+                    .copyWith(color: DS.textSecondary, height: 1.35),
+              ),
+            ],
+            SizedBox(height: context.space.md),
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: context.space.xs,
+              runSpacing: context.space.xs,
+              children: [
+                if (group.focusTags.isNotEmpty)
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 180),
+                    child: Text(
+                      group.focusTags.take(2).join(' / '),
+                      style: context.typo.bodyMedium
+                          .copyWith(color: DS.textSecondary),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ],
+                  ),
+                if (onFeedback != null)
+                  SparkleButton(
+                    label: '评价',
+                    size: ButtonSize.small,
+                    variant: ButtonVariant.secondary,
+                    onPressed: onFeedback,
+                  ),
+                SparkleButton(
+                  label: joinLabel,
+                  size: ButtonSize.small,
+                  onPressed: onJoin,
                 ),
               ],
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

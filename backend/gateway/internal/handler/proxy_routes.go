@@ -151,6 +151,30 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	}
 	h.logger.Info("Registered recommendations proxy routes")
 
+	// ==================== Suggestions Routes ====================
+	suggestions := api.Group("/suggestions")
+	suggestions.Use(authMiddleware)
+	{
+		suggestions.GET("", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered suggestions proxy routes")
+
+	// ==================== Agent Stats Routes ====================
+	agentStats := api.Group("/agent-stats")
+	agentStats.Use(authMiddleware)
+	{
+		agentStats.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered agent-stats proxy routes")
+
+	// ==================== Assets Routes ====================
+	assets := api.Group("/assets")
+	assets.Use(authMiddleware)
+	{
+		assets.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered assets proxy routes")
+
 	// NOTE: /goals and /reflections routes are intentionally omitted —
 	// no Python backend implementation exists yet. Add here when implemented.
 
@@ -331,6 +355,14 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	}
 	h.logger.Info("Registered dashboard proxy routes")
 
+	// ==================== Background Tasks Routes ====================
+	backgroundTasks := api.Group("/background-tasks")
+	backgroundTasks.Use(authMiddleware)
+	{
+		backgroundTasks.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered background-tasks proxy routes")
+
 	// ==================== Predictive Routes ====================
 	predictive := api.Group("/predictive")
 	predictive.Use(authMiddleware)
@@ -339,6 +371,21 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	}
 	h.logger.Info("Registered predictive proxy routes")
 
+	// ==================== Ingestion / Documents Routes ====================
+	ingestion := api.Group("/ingestion")
+	ingestion.Use(authMiddleware)
+	{
+		ingestion.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered ingestion proxy routes")
+
+	documents := api.Group("/documents")
+	documents.Use(authMiddleware)
+	{
+		documents.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered documents proxy routes")
+
 	// ==================== STT Batch Transcription ====================
 	stt := api.Group("/stt")
 	stt.Use(authMiddleware)
@@ -346,6 +393,16 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		stt.POST("/transcribe", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered STT proxy routes")
+
+	// ==================== WebSocket Monitoring Routes ====================
+	ws := api.Group("/ws")
+	ws.Use(authMiddleware)
+	{
+		ws.GET("/health", h.proxyWithHeaders)
+		ws.GET("/stats", h.proxyWithHeaders)
+		ws.GET("/metrics", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered websocket monitoring proxy routes")
 }
 
 // proxyWithHeaders proxies request to Python Backend with user context headers

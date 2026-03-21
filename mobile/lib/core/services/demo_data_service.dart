@@ -2619,7 +2619,7 @@ main  →  [A] → [B] → [C]
           'created_at': DateTime.now()
               .subtract(const Duration(minutes: 20))
               .toIso8601String(),
-          'reactions': [],
+          'reactions': <Map<String, dynamic>>[],
         },
       ];
 
@@ -2638,11 +2638,11 @@ main  →  [A] → [B] → [C]
         'date': date.toIso8601String().split('T')[0],
         'intensity': intensity,
         'checkins': intensity > 0
-            ? [
+            ? <Map<String, dynamic>>[
                 {'time': '09:00', 'content': '早起学习一小时！'},
                 if (intensity > 2) {'time': '21:00', 'content': '晚上复习总结'},
               ]
-            : [],
+            : <Map<String, dynamic>>[],
       });
     }
     return heatmap;
@@ -2672,7 +2672,7 @@ main  →  [A] → [B] → [C]
               .subtract(const Duration(hours: 5))
               .toIso8601String(),
           'likes_count': 3,
-          'encouragements': [],
+          'encouragements': <Map<String, dynamic>>[],
         },
       ];
 

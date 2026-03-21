@@ -157,7 +157,11 @@ PODS:
     - Flutter
     - JCore (>= 4.6.2)
     - JPush (= 5.3.0)
-  - nanopb (3.30910.0)
+  - nanopb (3.30910.0):
+    - nanopb/decode (= 3.30910.0)
+    - nanopb/encode (= 3.30910.0)
+  - nanopb/decode (3.30910.0)
+  - nanopb/encode (3.30910.0)
   - package_info_plus (0.4.5):
     - Flutter
   - path_provider_foundation (0.0.1):
@@ -210,7 +214,7 @@ DEPENDENCIES:
   - isar_flutter_libs (from `.symlinks/plugins/isar_flutter_libs/ios`)
   - JCore (= 4.9.0)
   - jpush_flutter (from `.symlinks/plugins/jpush_flutter/ios`)
-  - nanopb (from `/tmp/nanopb/nanopb`)
+  - nanopb (~> 3.30910.0)
   - package_info_plus (from `.symlinks/plugins/package_info_plus/ios`)
   - path_provider_foundation (from `.symlinks/plugins/path_provider_foundation/darwin`)
   - permission_handler_apple (from `.symlinks/plugins/permission_handler_apple/ios`)
@@ -240,6 +244,7 @@ SPEC REPOS:
     - GTMSessionFetcher
     - JCore
     - JPush
+    - nanopb
     - PromisesObjC
     - SDWebImage
     - Sentry
@@ -281,8 +286,6 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/isar_flutter_libs/ios"
   jpush_flutter:
     :path: ".symlinks/plugins/jpush_flutter/ios"
-  nanopb:
-    :path: "/tmp/nanopb/nanopb"
   package_info_plus:
     :path: ".symlinks/plugins/package_info_plus/ios"
   path_provider_foundation:
@@ -338,7 +341,7 @@ SPEC CHECKSUMS:
   JCore: 1128d8c6f33f5c3607536a7b87c0e450d2c6ada6
   JPush: b71f497a3c1b825c7843fd97f290b05d5cd75f2e
   jpush_flutter: 81be43c2095cac5c2ac45e673e26c83230304015
-  nanopb: 052a9a74da27438c8e9345925c2579396c34f408
+  nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
   package_info_plus: af8e2ca6888548050f16fa2f1938db7b5a5df499
   path_provider_foundation: bb55f6dbba17d0dccd6737fe6f7f34fbd0376880
   permission_handler_apple: 4ed2196e43d0651e8ff7ca3483a069d469701f2d
@@ -355,6 +358,6 @@ SPEC CHECKSUMS:
   url_launcher_ios: 7a95fa5b60cc718a708b8f2966718e93db0cef1b
   WechatOpenSDK-XCFramework: ff342ae616bb86df3d236aca38059dfd4bc4a949
 
-PODFILE CHECKSUM: ebab60ea385acee106a4d1f4e422d835890ee68b
+PODFILE CHECKSUM: 8924785941238f0fdf843c2032407ed55ea8e053
 
 COCOAPODS: 1.16.2

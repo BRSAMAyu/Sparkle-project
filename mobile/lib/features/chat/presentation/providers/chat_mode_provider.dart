@@ -16,7 +16,8 @@ final chatModeProvider = chatModeNotifierProvider;
 /// StateNotifier provider for more complex chat mode state management.
 /// This provider persists the last selected mode.
 final chatModeNotifierProvider =
-    StateNotifierProvider<ChatModeNotifier, ChatMode>((ref) => ChatModeNotifier());
+    StateNotifierProvider<ChatModeNotifier, ChatMode>(
+        (ref) => ChatModeNotifier());
 
 /// Chat Mode Notifier
 ///
@@ -39,7 +40,6 @@ class ChatModeNotifier extends PersistentNotifier<ChatMode> {
 
   /// Set mode with visual feedback
   void setModeWithFeedback(ChatMode mode, BuildContext context) {
-    final previousMode = state;
     state = mode;
 
     // Show elegant mode switch feedback

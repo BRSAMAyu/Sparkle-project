@@ -21,6 +21,42 @@ class DashboardService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
+    async def generate_daily_report(self) -> dict[str, Any]:
+        """
+        Build a lightweight system-wide daily report for Celery beat.
+
+        This report is used as an operational heartbeat, so it should stay fast
+        and deterministic even when no user-facing dashboard context is present.
+        """
+        today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+        active_users_result = await self.db.execute(
+            select(func.count(User.id)).where(User.is_active.is_(True))
+        )
+        completed_tasks_result = await self.db.execute(
+            select(func.count(Task.id)).where(
+                and_(
+                    Task.status == TaskStatus.COMPLETED,
+                    Task.completed_at >= today_start,
+                )
+            )
+        )
+        created_tasks_result = await self.db.execute(
+            select(func.count(Task.id)).where(Task.created_at >= today_start)
+        )
+        active_plans_result = await self.db.execute(
+            select(func.count(Plan.id)).where(Plan.is_active.is_(True))
+        )
+
+        return {
+            "date": today_start.date().isoformat(),
+            "active_users": active_users_result.scalar() or 0,
+            "tasks_created_today": created_tasks_result.scalar() or 0,
+            "tasks_completed_today": completed_tasks_result.scalar() or 0,
+            "active_plans": active_plans_result.scalar() or 0,
+            "generated_at": _utcnow().isoformat(),
+        }
+
     async def get_dashboard_status(self, user_id: UUID) -> dict[str, Any]:
         """
         Get all data for the dashboard

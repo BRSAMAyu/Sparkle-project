@@ -111,7 +111,9 @@ class _VisualElementCardState extends State<VisualElementCard>
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 120),
         curve: Curves.easeOut,
-        transform: Matrix4.identity()..scale(_isPressed ? 0.96 : 1.0),
+        transform: Matrix4.identity()
+          ..scaleByDouble(
+              _isPressed ? 0.96 : 1.0, _isPressed ? 0.96 : 1.0, 1, 1),
         child: RarityVisualWrapper(
           rarity: widget.element.rarity,
           borderRadius: borderRadius,
@@ -536,8 +538,7 @@ class _VisualElementCardState extends State<VisualElementCard>
   Widget _buildLockedOverlay(AppLocalizations l10n, _RarityColors colors) {
     return Positioned.fill(
       child: ClipRRect(
-        borderRadius:
-            widget.isCompact ? DS.borderRadius12 : DS.borderRadius16,
+        borderRadius: widget.isCompact ? DS.borderRadius12 : DS.borderRadius16,
         child: Stack(
           children: [
             // 磨砂玻璃背景

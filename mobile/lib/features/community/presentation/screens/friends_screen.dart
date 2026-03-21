@@ -66,6 +66,7 @@ class _MyFriendsTab extends ConsumerWidget {
     );
   }
 
+  // ignore: unused_element
   void _showFriendContextMenu(
     BuildContext context,
     WidgetRef ref,
@@ -445,7 +446,8 @@ class _RecommendationsTab extends ConsumerWidget {
                       ),
                     ),
               ],
-              if (friendInsight != null && friendInsight.recentFeedbackCount > 0)
+              if (friendInsight != null &&
+                  friendInsight.recentFeedbackCount > 0)
                 Padding(
                   padding: const EdgeInsets.only(top: DS.md),
                   child: RecommendationFeedbackInsightCard(
@@ -556,7 +558,9 @@ class _RecommendationsTab extends ConsumerWidget {
     double? score,
   }) async {
     try {
-      await ref.read(communityRepositoryProvider).sendFriendRecommendationFeedback(
+      await ref
+          .read(communityRepositoryProvider)
+          .sendFriendRecommendationFeedback(
             targetUserId: targetUserId,
             strategy: strategy,
             target: target,
@@ -981,6 +985,7 @@ class _RecommendationBadge extends StatelessWidget {
 }
 
 /// 责任伙伴入口卡片（显示在好友列表顶部）
+// ignore: unused_element
 class _AccountabilityPartnersCard extends StatelessWidget {
   const _AccountabilityPartnersCard({required this.partnershipsState});
 

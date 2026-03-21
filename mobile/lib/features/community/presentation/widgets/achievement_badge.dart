@@ -63,7 +63,9 @@ class AchievementBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(isSmall ? 8 : 12),
         border: isUnlocked
             ? Border.all(
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                color: Theme.of(
+                  context,
+                ).colorScheme.primary.withValues(alpha: 0.3),
                 width: 1,
               )
             : null,
@@ -483,7 +485,7 @@ class AchievementDetailDialog extends StatelessWidget {
   }
 
   static void show(BuildContext context, AchievementInfo achievement) {
-    showSensoryDialog(
+    showSensoryDialog<void>(
       context: context,
       builder: (context) => AchievementDetailDialog(achievement: achievement),
     );

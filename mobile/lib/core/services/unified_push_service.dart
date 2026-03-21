@@ -10,8 +10,13 @@ import 'package:sparkle/core/services/jpush_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 
 // Conditional import for Firebase services
-export 'firebase_messaging_service.dart' show FirebaseMessagingService, firebaseMessagingServiceProvider, fcmInitializedProvider;
-import 'firebase_messaging_service.dart' show FirebaseMessagingService, firebaseMessagingServiceProvider, fcmInitializedProvider;
+export 'firebase_messaging_service.dart'
+    show
+        FirebaseMessagingService,
+        firebaseMessagingServiceProvider,
+        fcmInitializedProvider;
+import 'firebase_messaging_service.dart'
+    show firebaseMessagingServiceProvider, fcmInitializedProvider;
 
 /// Push channel type
 enum PushChannel {

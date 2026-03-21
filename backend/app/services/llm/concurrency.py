@@ -128,6 +128,7 @@ class LLMConcurrencyManager:
     def __init__(self):
         self._runtime: dict[ProviderType, ProviderRuntimeState] = {}
         self._lock = asyncio.Lock()
+        self._bound_loop: asyncio.AbstractEventLoop | None = None
         self._initialize_runtime()
 
     def _initialize_runtime(self):
@@ -140,6 +141,20 @@ class LLMConcurrencyManager:
                 current_limit=initial_limit,
             )
         logger.info(f"LLMConcurrencyManager initialized with {len(self._runtime)} providers")
+
+    async def _ensure_loop_state(self) -> None:
+        current_loop = asyncio.get_running_loop()
+        if self._bound_loop is current_loop:
+            return
+
+        self._bound_loop = current_loop
+        self._lock = asyncio.Lock()
+        for state in self._runtime.values():
+            state.condition = asyncio.Condition()
+            state.active = 0
+            state.waiting = 0
+            state.hydrated = False
+        logger.info("LLMConcurrencyManager rebound to current event loop")
 
     def _get_provider_type(self, provider: str) -> ProviderType:
         provider_lower = provider.lower()
@@ -181,6 +196,7 @@ class LLMConcurrencyManager:
         )
 
     async def _hydrate_runtime_if_needed(self, provider_type: ProviderType) -> None:
+        await self._ensure_loop_state()
         state = self._runtime[provider_type]
         if not state.config.adaptive or state.hydrated:
             return
@@ -223,6 +239,7 @@ class LLMConcurrencyManager:
         return max(min_limit, min(int(limit), max_limit))
 
     async def _maybe_roll_bucket(self, provider_type: ProviderType) -> None:
+        await self._ensure_loop_state()
         state = self._runtime[provider_type]
         if not state.config.adaptive:
             return
@@ -253,6 +270,7 @@ class LLMConcurrencyManager:
             state.condition.notify_all()
 
     async def _acquire_slot(self, provider_type: ProviderType, timeout: float) -> None:
+        await self._ensure_loop_state()
         state = self._runtime[provider_type]
         await self._hydrate_runtime_if_needed(provider_type)
         await self._maybe_roll_bucket(provider_type)
@@ -274,6 +292,7 @@ class LLMConcurrencyManager:
                 state.waiting = max(0, state.waiting - 1)
 
     async def _release_slot(self, provider_type: ProviderType) -> None:
+        await self._ensure_loop_state()
         state = self._runtime[provider_type]
         async with state.condition:
             state.active = max(0, state.active - 1)
@@ -304,6 +323,7 @@ class LLMConcurrencyManager:
 
     async def report_success(self, provider: str) -> None:
         provider_type = self._get_provider_type(provider)
+        await self._ensure_loop_state()
         state = self._runtime[provider_type]
         if not state.config.adaptive:
             return
@@ -340,6 +360,7 @@ class LLMConcurrencyManager:
 
     async def report_rate_limit(self, provider: str) -> None:
         provider_type = self._get_provider_type(provider)
+        await self._ensure_loop_state()
         state = self._runtime[provider_type]
         if not state.config.adaptive:
             return

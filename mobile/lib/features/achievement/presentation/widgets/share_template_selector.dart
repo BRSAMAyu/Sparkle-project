@@ -44,7 +44,6 @@ class _TemplateCard extends StatelessWidget {
     required this.template,
     required this.isSelected,
     required this.onTap,
-    super.key,
   });
 
   final ShareTemplateInfo template;

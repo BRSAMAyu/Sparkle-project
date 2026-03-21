@@ -337,7 +337,7 @@ Future<_RouterHarness> _pumpRouter(
     overrides: [
       authProvider.overrideWith((ref) => _FakeAuthNotifier(authState)),
       onboardingCompletedProvider.overrideWith(
-        (ref) => _FakeOnboardingCompletedNotifier(onboardingCompleted),
+        (ref) => _FakeOnboardingCompletedNotifier(onboardingCompleted, ref),
       ),
       enhancedGalaxyRepositoryProvider.overrideWithValue(
         _TestGalaxyRepository(),
@@ -413,8 +413,13 @@ class _UnusedRef implements Ref<Object?> {
 }
 
 class _FakeOnboardingCompletedNotifier extends OnboardingCompletedNotifier {
-  _FakeOnboardingCompletedNotifier(bool completed) : super() {
-    state = completed;
+  _FakeOnboardingCompletedNotifier(this._completed, Ref ref) : super(ref);
+
+  final bool _completed;
+
+  @override
+  Future<void> syncForUser(UserModel? user) async {
+    state = _completed;
   }
 
   @override

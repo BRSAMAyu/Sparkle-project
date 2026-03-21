@@ -1,8 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
@@ -12,7 +15,6 @@ import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart'
 import 'package:sparkle/features/community/presentation/screens/community_main_screen.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_card_config_provider.dart';
 import 'package:sparkle/features/home/presentation/screens/dashboard_screen.dart';
-import 'package:sparkle/features/home/presentation/widgets/home_notification_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/unified_omni_bar.dart';
 import 'package:sparkle/features/user/presentation/screens/profile_screen.dart';
 import 'package:sparkle/features/user/presentation/widgets/statistics_card.dart';
@@ -22,9 +24,12 @@ import 'package:sparkle/shared/entities/user_model.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  late Directory hiveDir;
 
   setUpAll(() async {
     SharedPreferences.setMockInitialValues({});
+    hiveDir = Directory.systemTemp.createTempSync('sparkle_main_pages_hive_');
+    Hive.init(hiveDir.path);
     await ViewStorageService.ensureInitialized();
   });
 
@@ -43,7 +48,7 @@ void main() {
       await _pumpPage(tester, const DashboardScreen());
 
       expect(find.byType(DashboardScreen), findsOneWidget);
-      expect(find.byType(HomeNotificationCard), findsOneWidget);
+      expect(find.byType(CustomScrollView), findsOneWidget);
       expect(find.byType(UnifiedOmniBar), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
@@ -52,9 +57,9 @@ void main() {
       await _pumpPage(tester, const CommunityMainScreen());
 
       expect(find.byType(CommunityMainScreen), findsOneWidget);
-      expect(find.text('星火社群'), findsOneWidget);
-      expect(find.text('好友'), findsOneWidget);
-      expect(find.text('群组'), findsOneWidget);
+      expect(find.byType(TabBar), findsOneWidget);
+      expect(find.byIcon(Icons.search), findsOneWidget);
+      expect(find.byIcon(Icons.person_add_outlined), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 

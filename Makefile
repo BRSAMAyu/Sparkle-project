@@ -1,4 +1,4 @@
-.PHONY: dev-up sync-db sync-equipment proto-gen proto-lint proto-breaking proto-check-generated proto-deprecation-check proto-tools-build db-migrate db-dump db-sqlc db-validate env-check smoke quality-baseline quality-baseline-full quality-budget-check openapi-contract-check flutter-analyze-gate mobile-design-lint fixture-init local-config-check local-ai-check local-backend-smoke local-mobile-smoke local-acceptance auth-test community-test file-pipeline-test worker-test china-mirrors-setup mobile-setup-china pip-install-china uv-install-china mobile-build-china mobile-build-intl mobile-build-china-ios mobile-build-intl-ios
+.PHONY: dev-up sync-db sync-equipment proto-gen proto-lint proto-breaking proto-check-generated proto-deprecation-check proto-tools-build db-migrate db-dump db-sqlc db-validate env-check smoke quality-baseline quality-baseline-full quality-budget-check openapi-contract-check flutter-analyze-gate mobile-design-lint fixture-init local-config-check local-ai-check local-backend-smoke local-mobile-smoke local-acceptance auth-test community-test file-pipeline-test worker-test china-mirrors-setup mobile-setup-china pip-install-china uv-install-china mobile-build-china mobile-build-intl mobile-build-china-ios mobile-build-intl-ios init-minio-buckets
 
 # Load environment variables from .env
 include .env
@@ -109,11 +109,15 @@ db-sqlc:
 # RAG 相关命令 (v2.0)
 init-rag:
 	@echo "🏗️ Initializing Redis Index..."
-	python backend/scripts/init_redis_index.py
+	$(BACKEND_PYTHON) backend/scripts/init_redis_index.py
 
 sync-rag:
 	@echo "🔄 Syncing PG KnowledgeNodes to Redis..."
-	python backend/scripts/sync_pg_to_redis.py
+	$(BACKEND_PYTHON) backend/scripts/sync_pg_to_redis.py
+
+init-minio-buckets:
+	@echo "🪣 Ensuring MinIO buckets exist..."
+	$(BACKEND_PYTHON) backend/scripts/init_minio_buckets.py
 
 smoke:
 	@set -e; \
@@ -347,7 +351,7 @@ celery-flush:
 
 celery-status:
 	@echo "📊 Celery Services Status..."
-	@docker ps --filter "name=sparkle_celery" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" || echo "No Celery services running"
+	@docker ps --filter "name=celery_" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" || echo "No Celery services running"
 
 celery-stop:
 	@echo "🛑 Stopping Celery services..."

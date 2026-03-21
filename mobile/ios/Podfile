@@ -40,8 +40,14 @@ target 'Runner' do
   # Pin JCore to an HTTP-based source to avoid GitHub fetch failures during pod install.
   pod 'JCore', '4.9.0'
 
-  # Use local nanopb podspec to avoid GitHub fetch failures during pod install.
-  pod 'nanopb', :path => '/tmp/nanopb/nanopb'
+  # Prefer a local nanopb checkout when present, but keep fresh builds reproducible
+  # by falling back to the public CocoaPods spec on clean machines.
+  nanopb_local_path = '/tmp/nanopb/nanopb'
+  if File.exist?(File.join(nanopb_local_path, 'nanopb.podspec'))
+    pod 'nanopb', :path => nanopb_local_path
+  else
+    pod 'nanopb', '~> 3.30910.0'
+  end
 
   target 'RunnerTests' do
     inherit! :search_paths

@@ -502,8 +502,7 @@ class MockCommunityRepository implements CommunityRepository {
         deadline: group.deadline,
         daysRemaining: group.deadline == null
             ? null
-            : (group.deadline!.difference(DateTime.now()).inDays.clamp(0, 9999)
-                as int),
+            : group.deadline!.difference(DateTime.now()).inDays.clamp(0, 9999),
         isPublic: group.isPublic,
         joinRequiresApproval: group.joinRequiresApproval,
         activityScore: group.todayCheckinCount * 4 +
@@ -1075,7 +1074,8 @@ class MockCommunityRepository implements CommunityRepository {
         if (overallScore != null) 'overall_score': overallScore,
         if (relevanceScore != null) 'relevance_score': relevanceScore,
         if (explanationScore != null) 'explanation_score': explanationScore,
-        if (actionabilityScore != null) 'actionability_score': actionabilityScore,
+        if (actionabilityScore != null)
+          'actionability_score': actionabilityScore,
         if (similarityScore != null) 'similarity_score': similarityScore,
         if (complementaryScore != null)
           'complementary_score': complementaryScore,
@@ -1087,9 +1087,8 @@ class MockCommunityRepository implements CommunityRepository {
         if ((freeText ?? '').contains('不够相似')) 'too_dissimilar',
       ],
       featureBoosts: {
-        'subject_overlap': similarityScore != null && similarityScore <= 2
-            ? 1.12
-            : 1.06,
+        'subject_overlap':
+            similarityScore != null && similarityScore <= 2 ? 1.12 : 1.06,
         'relationship_readiness':
             comfortScore != null && comfortScore <= 2 ? 1.08 : 1.04,
       },
@@ -1098,6 +1097,7 @@ class MockCommunityRepository implements CommunityRepository {
       },
     );
   }
+
   @override
   Future<List<UserBrief>> searchUsers(String keyword, {int limit = 20}) async =>
       [];
@@ -1407,7 +1407,8 @@ class MockCommunityRepository implements CommunityRepository {
         if (overallScore != null) 'overall_score': overallScore,
         if (relevanceScore != null) 'relevance_score': relevanceScore,
         if (explanationScore != null) 'explanation_score': explanationScore,
-        if (actionabilityScore != null) 'actionability_score': actionabilityScore,
+        if (actionabilityScore != null)
+          'actionability_score': actionabilityScore,
         if (interestMatchScore != null)
           'interest_match_score': interestMatchScore,
         if (activityScore != null) 'activity_score': activityScore,
