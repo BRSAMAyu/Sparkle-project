@@ -151,7 +151,7 @@ func initServices(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client,
 	if chatHistoryTTL == 0 {
 		chatHistoryTTL = 30 * time.Minute
 	}
-	chatHistoryService := service.NewChatHistoryServiceWithTTL(rdb, chatHistoryTTL)
+	chatHistoryService := service.NewChatHistoryServiceWithPool(rdb, dbh.pool, chatHistoryTTL)
 	semanticCacheService := service.NewSemanticCacheService(rdb)
 	billingService := service.NewCostCalculator()
 	userContextService := service.NewUserContextService(dbh.pool)

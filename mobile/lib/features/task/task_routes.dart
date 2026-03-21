@@ -1,9 +1,11 @@
 import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/experience/experience_profile.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
-import 'package:sparkle/core/widgets/bgm_scope.dart';
+import 'package:sparkle/core/services/scene_audio_policy.dart';
+import 'package:sparkle/core/widgets/scene_audio_scope.dart';
 import 'package:sparkle/features/task/presentation/screens/task_create_screen.dart';
 import 'package:sparkle/features/task/presentation/screens/task_detail_screen.dart';
 import 'package:sparkle/features/task/presentation/screens/task_execution_screen.dart';
@@ -41,8 +43,11 @@ class TaskRoutes {
           parentNavigatorKey: navigatorKey,
           pageBuilder: (context, state) => _buildTransitionPage(
             state: state,
-            child: const BgmScope(
-              track: BgmTrack.task,
+            child: const SceneAudioScope(
+              policy: SceneAudioPolicy(
+                track: BgmTrack.task,
+                priority: BgmPriority.route,
+              ),
               child: TaskListScreen(),
             ),
           ),
@@ -54,8 +59,11 @@ class TaskRoutes {
           parentNavigatorKey: navigatorKey,
           pageBuilder: (context, state) => _buildTransitionPage(
             state: state,
-            child: const BgmScope(
-              track: BgmTrack.task,
+            child: const SceneAudioScope(
+              policy: SceneAudioPolicy(
+                track: BgmTrack.task,
+                priority: BgmPriority.route,
+              ),
               child: TaskCreateScreen(),
             ),
             type: SharedAxisTransitionType.scaled,
@@ -71,8 +79,11 @@ class TaskRoutes {
             final taskId = state.pathParameters['id']!;
             return _buildTransitionPage(
               state: state,
-              child: BgmScope(
-                track: BgmTrack.task,
+              child: SceneAudioScope(
+                policy: SceneAudioPolicy(
+                  track: BgmTrack.task,
+                  priority: BgmPriority.route,
+                ),
                 child: TaskDetailScreen(taskId: taskId),
               ),
             );
@@ -85,8 +96,12 @@ class TaskRoutes {
           parentNavigatorKey: navigatorKey,
           pageBuilder: (context, state) => _buildTransitionPage(
             state: state,
-            child: const BgmScope(
-              track: BgmTrack.focus,
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.focusImmersive.audioPolicy(
+                trackOverride: BgmTrack.focusDeep,
+                priority: BgmPriority.route,
+                useSavedAmbient: true,
+              ),
               child: TaskExecutionScreen(),
             ),
             type: SharedAxisTransitionType.scaled,

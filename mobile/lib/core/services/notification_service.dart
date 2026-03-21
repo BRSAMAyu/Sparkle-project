@@ -56,8 +56,10 @@ class NotificationPermissionStatus {
 }
 
 class NotificationService {
-  NotificationService(this._ref) {
-    unawaited(_initialize());
+  NotificationService(this._ref, {bool autoInitialize = true}) {
+    if (autoInitialize) {
+      unawaited(_initialize());
+    }
   }
   final Ref _ref;
   final FlutterLocalNotificationsPlugin _notificationsPlugin =

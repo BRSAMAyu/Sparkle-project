@@ -16,6 +16,12 @@ enum BgmPalette {
   warm,
 }
 
+enum BgmMode {
+  adaptive,
+  focusOnly,
+  silent,
+}
+
 enum BgmTrack {
   dashboard,
   plan,
@@ -76,6 +82,7 @@ class BgmService {
   static const _enabledKey = 'bgm.enabled';
   static const _volumeKey = 'bgm.volume';
   static const _paletteKey = 'bgm.palette';
+  static const _modeKey = 'bgm.mode';
 
   static AudioPlayer? _player;
   static SharedPreferences? _prefs;
@@ -125,6 +132,19 @@ class BgmService {
 
   static Future<void> setPalette(BgmPalette palette) async {
     await (await _getPrefs()).setString(_paletteKey, palette.name);
+    await _refreshPlayback(force: true);
+  }
+
+  static Future<BgmMode> getMode() async {
+    final raw = (await _getPrefs()).getString(_modeKey);
+    return BgmMode.values.firstWhere(
+      (value) => value.name == raw,
+      orElse: () => BgmMode.adaptive,
+    );
+  }
+
+  static Future<void> setMode(BgmMode mode) async {
+    await (await _getPrefs()).setString(_modeKey, mode.name);
     await _refreshPlayback(force: true);
   }
 
@@ -197,7 +217,7 @@ class BgmService {
 
     _isRefreshing = true;
     try {
-      final desiredTrack = _resolveDesiredTrack();
+      final desiredTrack = await _resolveDesiredTrack();
       final enabled = await isEnabled();
 
       if (!enabled || desiredTrack == null) {
@@ -236,7 +256,31 @@ class BgmService {
     return values.first;
   }
 
-  static BgmTrack? _resolveDesiredTrack() => _resolveRegistration()?.track;
+  static Future<BgmTrack?> _resolveDesiredTrack() async {
+    final registration = _resolveRegistration();
+    if (registration == null) {
+      return null;
+    }
+    final mode = await getMode();
+    if (mode == BgmMode.silent) {
+      return null;
+    }
+    if (mode == BgmMode.focusOnly && !_isFocusTrack(registration.track)) {
+      return null;
+    }
+    return registration.track;
+  }
+
+  static bool _isFocusTrack(BgmTrack track) {
+    switch (track) {
+      case BgmTrack.focusStart:
+      case BgmTrack.focus:
+      case BgmTrack.focusDeep:
+        return true;
+      default:
+        return false;
+    }
+  }
 
   static Future<void> _switchTrack(BgmTrack track) async {
     final player = _player;

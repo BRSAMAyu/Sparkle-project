@@ -13,7 +13,10 @@ import 'package:sparkle/core/services/view_storage_service.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sparkle/features/community/presentation/screens/community_main_screen.dart';
+import 'package:sparkle/features/home/data/repositories/dashboard_repository.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_card_config_provider.dart';
+import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
+import 'package:sparkle/features/home/presentation/providers/intent_prediction_provider.dart';
 import 'package:sparkle/features/home/presentation/screens/dashboard_screen.dart';
 import 'package:sparkle/features/home/presentation/widgets/unified_omni_bar.dart';
 import 'package:sparkle/features/user/presentation/screens/profile_screen.dart';
@@ -53,6 +56,38 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    testWidgets('dashboard shows first-goal empty state for new users', (
+      tester,
+    ) async {
+      await _pumpPage(
+        tester,
+        const DashboardScreen(),
+        overrides: [
+          dashboardProvider.overrideWith((ref) => _EmptyDashboardNotifier()),
+          visiblePredictionsProvider.overrideWith((ref) => const []),
+        ],
+      );
+
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Text &&
+              (widget.data == '先定下你的第一个目标' ||
+                  widget.data == 'Set your first goal'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Text &&
+              (widget.data == '和 AI 定目标' || widget.data == 'Start with AI'),
+        ),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('community renders tabs and app bar', (tester) async {
       await _pumpPage(tester, const CommunityMainScreen());
 
@@ -82,12 +117,13 @@ void main() {
       final notifier = container.read(dashboardCardConfigProvider.notifier);
       final currentOrder =
           container.read(dashboardCardConfigProvider).cardOrder;
-      notifier.setLayoutMode(DashboardCardLayoutMode.grid);
-      notifier.toggleCardVisibility(DashboardCardIds.focus);
-      notifier.reorderCards(
-        currentOrder.indexOf(DashboardCardIds.longTermPlan),
-        0,
-      );
+      notifier
+        ..setLayoutMode(DashboardCardLayoutMode.grid)
+        ..toggleCardVisibility(DashboardCardIds.focus)
+        ..reorderCards(
+          currentOrder.indexOf(DashboardCardIds.longTermPlan),
+          0,
+        );
       await notifier.saveImmediate();
       await tester.pump(const Duration(milliseconds: 350));
       notifier.restoreDefaults();
@@ -104,13 +140,18 @@ void main() {
   });
 }
 
-Future<void> _pumpPage(WidgetTester tester, Widget page) async {
+Future<void> _pumpPage(
+  WidgetTester tester,
+  Widget page, {
+  List<Override> overrides = const [],
+}) async {
   SharedPreferences.setMockInitialValues({});
   await ViewStorageService.ensureInitialized();
 
   final container = ProviderContainer(
     overrides: [
       authProvider.overrideWith((ref) => _FakeAuthNotifier()),
+      ...overrides,
     ],
   );
   addTearDown(container.dispose);
@@ -148,6 +189,21 @@ class _FakeAuthNotifier extends AuthNotifier {
   Future<void> checkAuthStatus() async {}
 }
 
+class _EmptyDashboardNotifier extends DashboardNotifier {
+  _EmptyDashboardNotifier() : super(_UnusedDashboardRepository()) {
+    state = DashboardState(
+      weather: WeatherData(type: 'sunny', condition: 'clear'),
+      flame: FlameData(level: 1, brightness: 0.0, todayFocusMinutes: 0),
+      sprint: null,
+      nextActions: const [],
+      cognitive: CognitiveData(status: 'empty'),
+    );
+  }
+
+  @override
+  Future<void> fetchData() async {}
+}
+
 class _UnusedRef implements Ref<Object?> {
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -179,6 +235,16 @@ class _UnusedAuthRepository extends AuthRepository {
 
   @override
   Future<void> logout({bool keepDemoMode = false}) async {}
+}
+
+class _UnusedDashboardRepository extends DashboardRepository {
+  _UnusedDashboardRepository() : super(_UnusedApiClient());
+
+  @override
+  Future<Map<String, dynamic>> getDashboardStatus() async => {};
+
+  @override
+  Future<Map<String, dynamic>> getPredictiveDashboard() async => {};
 }
 
 class _UnusedApiClient implements ApiClient {

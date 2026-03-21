@@ -359,7 +359,11 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	backgroundTasks := api.Group("/background-tasks")
 	backgroundTasks.Use(authMiddleware)
 	{
-		backgroundTasks.Any("/*path", h.proxyWithHeaders)
+		backgroundTasks.GET("", h.proxyWithHeaders)
+		backgroundTasks.GET("/stats/summary", h.proxyWithHeaders)
+		backgroundTasks.GET("/:task_id", h.proxyWithHeaders)
+		backgroundTasks.POST("/:task_id/retry", h.proxyWithHeaders)
+		backgroundTasks.POST("/:task_id/cancel", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered background-tasks proxy routes")
 

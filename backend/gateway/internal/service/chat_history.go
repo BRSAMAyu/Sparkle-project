@@ -31,7 +31,7 @@ const (
 
 // retryEntry 保存一条待重试的消息及其首次入队时间
 type retryEntry struct {
-	msg       []byte
+	msg        []byte
 	enqueuedAt time.Time
 }
 
@@ -60,7 +60,7 @@ func NewChatHistoryServiceWithPool(rdb *redis.Client, pool *pgxpool.Pool, ttl ti
 }
 
 type ChatHistoryMessage struct {
-	ID        string `json:"id"`         // Unique message ID (UUID)
+	ID        string `json:"id"` // Unique message ID (UUID)
 	SessionID string `json:"session_id"`
 	UserID    string `json:"user_id"`
 	Role      string `json:"role"`
@@ -363,6 +363,21 @@ func (s *ChatHistoryService) getMessagesFromDB(ctx context.Context, userID, sess
 		return nil, fmt.Errorf("invalid user_id: %w", err)
 	}
 
+	hasAccess, err := s.userOwnsSessionInDB(ctx, userUUID, sessionUUID)
+	if err != nil {
+		return nil, err
+	}
+	if !hasAccess {
+		exists, err := s.sessionExistsInDB(ctx, sessionUUID)
+		if err != nil {
+			return nil, err
+		}
+		if exists {
+			return nil, fmt.Errorf("forbidden")
+		}
+		return []ChatHistoryMessage{}, nil
+	}
+
 	// Use the generated SQLC query
 	queries := db.New(s.pool)
 	dbMessages, err := queries.GetSessionMessagesFromDB(ctx, db.GetSessionMessagesFromDBParams{
@@ -389,6 +404,38 @@ func (s *ChatHistoryService) getMessagesFromDB(ctx context.Context, userID, sess
 	}
 
 	return messages, nil
+}
+
+func (s *ChatHistoryService) userOwnsSessionInDB(ctx context.Context, userUUID, sessionUUID pgtype.UUID) (bool, error) {
+	const ownershipQuery = `
+		SELECT EXISTS(
+			SELECT 1 FROM chat_sessions WHERE id = $1 AND user_id = $2
+		) OR EXISTS(
+			SELECT 1 FROM chat_messages WHERE session_id = $1 AND user_id = $2
+		)
+	`
+
+	var owns bool
+	if err := s.pool.QueryRow(ctx, ownershipQuery, sessionUUID, userUUID).Scan(&owns); err != nil {
+		return false, err
+	}
+	return owns, nil
+}
+
+func (s *ChatHistoryService) sessionExistsInDB(ctx context.Context, sessionUUID pgtype.UUID) (bool, error) {
+	const existenceQuery = `
+		SELECT EXISTS(
+			SELECT 1 FROM chat_sessions WHERE id = $1
+		) OR EXISTS(
+			SELECT 1 FROM chat_messages WHERE session_id = $1
+		)
+	`
+
+	var exists bool
+	if err := s.pool.QueryRow(ctx, existenceQuery, sessionUUID).Scan(&exists); err != nil {
+		return false, err
+	}
+	return exists, nil
 }
 
 // backfillRedisMessages populates Redis cache with messages from DB

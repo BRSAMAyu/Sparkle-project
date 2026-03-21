@@ -31,6 +31,17 @@ class DashboardScreen extends ConsumerStatefulWidget {
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   double _bottomOverlayHeight = 52;
 
+  SliverToBoxAdapter _staggeredSection({
+    required int index,
+    required Widget child,
+  }) =>
+      SliverToBoxAdapter(
+        child: SparkleStaggerItem(
+          index: index,
+          child: child,
+        ),
+      );
+
   bool _shouldShowFirstGoalEmptyState(DashboardState state) {
     if (state.isLoading || state.error != null) {
       return false;
@@ -204,36 +215,62 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               child: CustomScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [
-                  SliverToBoxAdapter(
+                  _staggeredSection(
+                    index: 0,
                     child: CompactStatusBar(
                       user: user,
                       dashboardState: dashboardState,
                     ),
                   ),
-                  SliverToBoxAdapter(
+                  _staggeredSection(
+                    index: 1,
                     child: MetricsRow(dashboardState: dashboardState),
                   ),
                   if (showFirstGoalEmptyState)
-                    SliverToBoxAdapter(child: _buildFirstGoalEmptyState())
+                    _staggeredSection(
+                      index: 2,
+                      child: _buildFirstGoalEmptyState(),
+                    )
                   else ...[
-                    SliverToBoxAdapter(
+                    _staggeredSection(
+                      index: 2,
                       child: NextActionsCard(
                         compact: true,
                         onViewAll: () => context.push('/tasks'),
                       ),
                     ),
-                    const SliverToBoxAdapter(child: PredictedIntentCard()),
-                    const SliverToBoxAdapter(child: HomeNotificationCard()),
-                    const SliverToBoxAdapter(child: NightlyReviewPanel()),
-                    const SliverToBoxAdapter(child: DashboardCardSection()),
-                    const SliverToBoxAdapter(
-                      child: SizedBox(height: DS.spacing12),
+                    _staggeredSection(
+                      index: 3,
+                      child: const PredictedIntentCard(),
                     ),
-                    const SliverToBoxAdapter(child: AchievementProgressCard()),
-                    const SliverToBoxAdapter(
-                      child: SizedBox(height: DS.spacing12),
+                    _staggeredSection(
+                      index: 4,
+                      child: const HomeNotificationCard(),
                     ),
-                    const SliverToBoxAdapter(child: TaskBoardCard()),
+                    _staggeredSection(
+                      index: 5,
+                      child: const NightlyReviewPanel(),
+                    ),
+                    _staggeredSection(
+                      index: 6,
+                      child: const DashboardCardSection(),
+                    ),
+                    _staggeredSection(
+                      index: 7,
+                      child: const SizedBox(height: DS.spacing12),
+                    ),
+                    _staggeredSection(
+                      index: 8,
+                      child: const AchievementProgressCard(),
+                    ),
+                    _staggeredSection(
+                      index: 9,
+                      child: const SizedBox(height: DS.spacing12),
+                    ),
+                    _staggeredSection(
+                      index: 10,
+                      child: const TaskBoardCard(),
+                    ),
                   ],
 
                   // Dynamic bottom spacing for floating components

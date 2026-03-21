@@ -23,8 +23,7 @@ class PredictedIntentCard extends ConsumerStatefulWidget {
 }
 
 class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
-  static const _collapsedPrefKey =
-      'dashboard.predicted_intent_card.collapsed';
+  static const _collapsedPrefKey = 'dashboard.predicted_intent_card.collapsed';
 
   bool _isContinuing = false;
   bool _isCollapsed = false;
@@ -528,7 +527,7 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
           entityId: forecast.entityCard?.entityId,
         ),
       );
-      await SensoryFeedbackService.emit(SensoryFeedbackEvent.navigation);
+      await SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm);
       if (!mounted) return;
       final route = primaryAction?.targetRoute ?? '/chat';
       context.go(route);

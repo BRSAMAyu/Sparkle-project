@@ -81,7 +81,12 @@ class AuthInterceptor extends Interceptor {
       // Configure SSL pinning for secure communication
       configureDioForPinning(_retryDio!, ApiConstants.apiCertSha256);
       // Add only logging and retry interceptors (not auth)
-      _retryDio!.interceptors.add(_ref.read(loggingInterceptorProvider));
+      try {
+        _retryDio!.interceptors.add(_ref.read(loggingInterceptorProvider));
+      } on StateError {
+        // During integration-test teardown the provider container may already
+        // be disposed while late network retries are still unwinding.
+      }
     }
     return _retryDio!;
   }
@@ -91,12 +96,16 @@ class AuthInterceptor extends Interceptor {
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
-    final token = await _ref.read(authRepositoryProvider).getToken();
-    final deviceHeaders =
-        await _ref.read(deviceIdentityServiceProvider).buildHeaders();
-    options.headers.addAll(deviceHeaders);
-    if (token != null) {
-      options.headers['Authorization'] = 'Bearer $token';
+    try {
+      final token = await _ref.read(authRepositoryProvider).getToken();
+      final deviceHeaders =
+          await _ref.read(deviceIdentityServiceProvider).buildHeaders();
+      options.headers.addAll(deviceHeaders);
+      if (token != null) {
+        options.headers['Authorization'] = 'Bearer $token';
+      }
+    } on StateError {
+      // Allow late teardown-time requests to complete without crashing tests.
     }
     super.onRequest(options, handler);
   }
@@ -171,6 +180,8 @@ class AuthInterceptor extends Interceptor {
             _refreshCompleter = null;
           });
         }
+      } on StateError {
+        return super.onError(err, handler);
       } catch (e) {
         return super.onError(err, handler);
       }

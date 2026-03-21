@@ -62,6 +62,16 @@ async def get_user_stats_overview(
         raise HTTPException(status_code=500, detail="Failed to retrieve statistics")
 
 
+@router.get("/overview")
+async def get_user_stats_overview_alias(
+    days: int = Query(30, ge=1, le=365, description="统计天数"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Compatibility alias for legacy acceptance paths."""
+    return await get_user_stats_overview(days=days, current_user=current_user, db=db)
+
+
 @router.get("/user/top-agents")
 async def get_top_agents(
     limit: int = Query(5, ge=1, le=10, description="返回数量"),

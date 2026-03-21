@@ -193,11 +193,12 @@ class _InteractiveOnboardingScreenState
       );
 
   // Page 1: Welcome
-  Widget _buildWelcomePage() => Padding(
-        padding: const EdgeInsets.all(DS.xxl),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
+  Widget _buildWelcomePage() => ContentConstraint(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(DS.xxl),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
             // Logo animation
             TweenAnimationBuilder<double>(
               tween: Tween(begin: 0, end: 1),
@@ -269,12 +270,13 @@ class _InteractiveOnboardingScreenState
               context.l10n.onboardingFeatureChatDesc,
             ),
             const SizedBox(height: DS.lg),
-            _buildFeaturePreview(
-              Icons.task_alt,
-              context.l10n.onboardingFeatureTasks,
-              context.l10n.onboardingFeatureTasksDesc,
-            ),
-          ],
+              _buildFeaturePreview(
+                Icons.task_alt,
+                context.l10n.onboardingFeatureTasks,
+                context.l10n.onboardingFeatureTasksDesc,
+              ),
+            ],
+          ),
         ),
       );
 
@@ -328,11 +330,12 @@ class _InteractiveOnboardingScreenState
       );
 
   // Page 2: Architecture Animation
-  Widget _buildArchitecturePage() => Padding(
-        padding: const EdgeInsets.all(DS.xxl),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
+  Widget _buildArchitecturePage() => ContentConstraint(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(DS.xxl),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
             Text(
               context.l10n.onboardingArchitectureTitle,
               style: TextStyle(
@@ -352,8 +355,9 @@ class _InteractiveOnboardingScreenState
             const SizedBox(height: DS.xxl),
 
             // Architecture Animation
-            const ArchitectureAnimation(),
-          ],
+              const ArchitectureAnimation(),
+            ],
+          ),
         ),
       );
 
@@ -403,11 +407,12 @@ class _InteractiveOnboardingScreenState
       );
 
   // Page 6: Personalization
-  Widget _buildPersonalizationPage() => Padding(
-        padding: const EdgeInsets.all(DS.xxl),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
+  Widget _buildPersonalizationPage() => ContentConstraint(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(DS.xxl),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
             Icon(
               Icons.settings_suggest,
               size: 80,
@@ -453,13 +458,14 @@ class _InteractiveOnboardingScreenState
               onTap: _microphoneEnabled ? null : _requestMicrophonePermission,
             ),
             const SizedBox(height: DS.lg),
-            _buildSettingOption(
-              icon: Icons.auto_awesome,
-              title: context.l10n.onboardingSettingAssistant,
-              description: context.l10n.onboardingSettingAssistantDesc,
-              value: true,
-            ),
-          ],
+              _buildSettingOption(
+                icon: Icons.auto_awesome,
+                title: context.l10n.onboardingSettingAssistant,
+                description: context.l10n.onboardingSettingAssistantDesc,
+                value: true,
+              ),
+            ],
+          ),
         ),
       );
 
@@ -719,13 +725,14 @@ class _InteractiveOnboardingScreenState
       );
 
   Widget _buildChatDemo() => Container(
-        height: 200,
+        constraints: const BoxConstraints(minHeight: 200),
         padding: const EdgeInsets.all(DS.lg),
         decoration: BoxDecoration(
           color: DS.brandPrimary.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildChatMessage(context.l10n.onboardingChatDemo1, true),
@@ -755,13 +762,14 @@ class _InteractiveOnboardingScreenState
       );
 
   Widget _buildTaskDemo() => Container(
-        height: 200,
+        constraints: const BoxConstraints(minHeight: 200),
         padding: const EdgeInsets.all(DS.lg),
         decoration: BoxDecoration(
           color: DS.brandPrimary.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             _buildTaskItem(
               context.l10n.onboardingTaskTypeLearning,

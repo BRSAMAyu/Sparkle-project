@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/features/task/task.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
@@ -52,13 +55,15 @@ class FocusMainScreen extends ConsumerWidget {
               Expanded(
                 child: todayTasks.isEmpty
                     ? _buildEmptyState(context, ref)
-                    : ListView.builder(
+                    : SparkleStaggerList(
                         padding: const EdgeInsets.symmetric(horizontal: 20),
-                        itemCount: todayTasks.length,
-                        itemBuilder: (context, index) {
-                          final task = todayTasks[index];
-                          return _buildTaskItem(context, task);
-                        },
+                        shrinkWrap: false,
+                        physics: const BouncingScrollPhysics(),
+                        gap: DS.spacing12,
+                        children: [
+                          for (final task in todayTasks)
+                            _buildTaskItem(context, task),
+                        ],
                       ),
               ),
               _buildQuickFocusButton(context, ref),
@@ -96,6 +101,9 @@ class FocusMainScreen extends ConsumerWidget {
               child: SparkleButton(
                 expand: true,
                 onPressed: () {
+                  unawaited(
+                    SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm),
+                  );
                   final dummyTask = TaskModel(
                     id: 'quick_focus_${DateTime.now().millisecondsSinceEpoch}',
                     userId: '',
@@ -121,7 +129,14 @@ class FocusMainScreen extends ConsumerWidget {
             const SizedBox(height: DS.sm),
             SparkleButton.ghost(
               label: context.l10n.focusCreateTask,
-              onPressed: () => context.push('/tasks/new'),
+              onPressed: () {
+                unawaited(
+                  SensoryFeedbackService.emit(
+                    SensoryFeedbackEvent.selection,
+                  ),
+                );
+                context.push('/tasks/new');
+              },
             ),
           ],
         ),
@@ -153,6 +168,9 @@ class FocusMainScreen extends ConsumerWidget {
               size: 16,
             ),
             onTap: () {
+              unawaited(
+                SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+              );
               // 🔧 修复：设置activeTaskProvider以便TaskExecutionScreen能读取
               ref.read(activeTaskProvider.notifier).state = task;
               context.push('/tasks/${task.id}/execute');
@@ -167,6 +185,9 @@ class FocusMainScreen extends ConsumerWidget {
           expand: true,
           label: context.l10n.focusQuickStart,
           onPressed: () {
+            unawaited(
+              SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm),
+            );
             // Create a dummy task for quick focus if needed, or just push a generic task
             final dummyTask = TaskModel(
               id: 'quick_focus_${DateTime.now().millisecondsSinceEpoch}',

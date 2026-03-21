@@ -840,6 +840,21 @@ async def save_chat_message(
     tool_results: list[dict]
 ):
     """保存聊天消息"""
+    session_meta = await db.get(ChatSessionModel, session_id)
+    now = _utcnow()
+    if session_meta is None:
+        db.add(
+            ChatSessionModel(
+                id=session_id,
+                user_id=user_id,
+                is_active=True,
+                last_message_at=now,
+            )
+        )
+    else:
+        session_meta.last_message_at = now
+        session_meta.is_active = True
+
     # Save user message
     user_msg_db = ChatMessage(
         user_id=user_id,
@@ -930,7 +945,36 @@ async def get_chat_history(
     """
     获取特定会话的聊天历史
     """
-    # Verify the session belongs to the user
+    ownership_stmt = (
+        select(func.count())
+        .select_from(ChatMessage)
+        .where(
+            and_(
+                ChatMessage.user_id == current_user.id,
+                ChatMessage.session_id == session_id,
+            )
+        )
+    )
+    ownership_result = await db.execute(ownership_stmt)
+    owns_session = (ownership_result.scalar() or 0) > 0
+
+    if not owns_session:
+        session_meta_stmt = (
+            select(ChatSessionModel.id)
+            .where(
+                and_(
+                    ChatSessionModel.id == session_id,
+                    ChatSessionModel.user_id == current_user.id,
+                )
+            )
+            .limit(1)
+        )
+        session_meta_result = await db.execute(session_meta_stmt)
+        owns_session = session_meta_result.scalar_one_or_none() is not None
+
+    if not owns_session:
+        raise HTTPException(status_code=404, detail="Chat session not found")
+
     stmt = (
         select(ChatMessage)
         .where(

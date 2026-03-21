@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -108,7 +107,8 @@ class _TaskCardState extends ConsumerState<TaskCard>
             type: MaterialType.transparency,
             child: GestureDetector(
               onTapDown: (_) {
-                unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));
+                unawaited(
+                    SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));
                 if (mounted) unawaited(_controller.forward());
               },
               onTapUp: (_) {
@@ -133,9 +133,11 @@ class _TaskCardState extends ConsumerState<TaskCard>
                           _getBackgroundGradient(context, widget.task.type),
                       borderRadius: _radius(context),
                       border: Border.all(
-                        color: context.sparkleColors.getTaskColor(
-                          widget.task.type.name,
-                        ).withValues(alpha: 0.12),
+                        color: context.sparkleColors
+                            .getTaskColor(
+                              widget.task.type.name,
+                            )
+                            .withValues(alpha: 0.12),
                       ),
                       boxShadow: [
                         for (final shadow in _shadows(context))
@@ -149,8 +151,7 @@ class _TaskCardState extends ConsumerState<TaskCard>
                     foregroundDecoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          Colors.white
-                              .withValues(alpha: 0),
+                          Colors.white.withValues(alpha: 0),
                           Colors.white.withValues(alpha: 0.05),
                           context.sparkleColors.brandPrimary
                               .withValues(alpha: 0),
@@ -182,7 +183,8 @@ class _TaskCardState extends ConsumerState<TaskCard>
                                 // Content
                                 Expanded(
                                   child: Padding(
-                                    padding: EdgeInsets.all(_spacingMd(context)),
+                                    padding:
+                                        EdgeInsets.all(_spacingMd(context)),
                                     child: Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
@@ -306,15 +308,16 @@ class _TaskCardState extends ConsumerState<TaskCard>
                                               Icon(
                                                 Icons.checklist,
                                                 size: 14,
-                                                color: context
-                                                    .sparkleColors.textSecondary,
+                                                color: context.sparkleColors
+                                                    .textSecondary,
                                               ),
                                               const SizedBox(width: 4),
                                               Expanded(
                                                 child: SubtaskProgressIndicator(
-                                                  completed:
-                                                      widget.task.subtasksCompleted,
-                                                  total: widget.task.subtasksTotal,
+                                                  completed: widget
+                                                      .task.subtasksCompleted,
+                                                  total:
+                                                      widget.task.subtasksTotal,
                                                   showLabel: true,
                                                 ),
                                               ),
@@ -340,8 +343,11 @@ class _TaskCardState extends ConsumerState<TaskCard>
                                                       .brandPrimary,
                                                   onPressed: () {
                                                     unawaited(
-                                                      HapticFeedback
-                                                          .selectionClick(),
+                                                      SensoryFeedbackService
+                                                          .emit(
+                                                        SensoryFeedbackEvent
+                                                            .confirm,
+                                                      ),
                                                     );
                                                     widget.onStart!();
                                                   },
@@ -356,8 +362,11 @@ class _TaskCardState extends ConsumerState<TaskCard>
                                                       .semanticSuccess,
                                                   onPressed: () {
                                                     unawaited(
-                                                      HapticFeedback
-                                                          .mediumImpact(),
+                                                      SensoryFeedbackService
+                                                          .emit(
+                                                        SensoryFeedbackEvent
+                                                            .success,
+                                                      ),
                                                     );
                                                     widget.onComplete!();
                                                   },

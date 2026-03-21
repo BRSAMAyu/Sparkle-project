@@ -233,6 +233,24 @@ class SensoryFeedbackService {
     await _ambientPlayer?.setVolume(volume);
   }
 
+  static Future<void> setAmbientScene(
+    AmbientScene scene, {
+    bool autoplay = false,
+  }) async {
+    await _saveAmbientScene(scene);
+    if (!autoplay) {
+      if (scene == AmbientScene.none && _currentScene != AmbientScene.none) {
+        await stopAmbient();
+      }
+      return;
+    }
+    if (scene == AmbientScene.none) {
+      await stopAmbient();
+      return;
+    }
+    await playAmbient(scene);
+  }
+
   static Future<AmbientScene> getSavedAmbientScene() async {
     final prefs = await _getPrefs();
     final index = prefs.getInt(_ambientSceneKey) ?? 0;

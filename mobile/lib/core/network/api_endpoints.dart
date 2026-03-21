@@ -89,6 +89,12 @@ class ApiEndpoints {
   static const String healthCapacity = '/health/capacity';
   static const String healthPrometheusAlerts = '/health/prometheus/alerts';
 
+  // Notification Center
+  static const String notificationCenterNotifications = '/notification-center/notifications';
+  static const String notificationCenterMarkAllRead = '/notification-center/notifications/mark-all-read';
+  static const String notificationCenterAnalytics = '/notification-center/analytics';
+  static const String notificationCenterHistory = '/notification-center/history';
+
   // Statistics
   static const String statsOverview = '/stats/overview';
   static const String statsWeekly = '/stats/weekly';

@@ -109,11 +109,6 @@ func (c *Config) IsProduction() bool {
 
 // IsOriginAllowed checks if the given origin is allowed for WebSocket connections
 func (c *Config) IsOriginAllowed(origin string) bool {
-	// In development mode, allow all origins
-	if c.IsDevelopment() {
-		return true
-	}
-
 	originURL, err := neturl.Parse(origin)
 	if err != nil || originURL.Scheme == "" || originURL.Host == "" {
 		return false
@@ -122,6 +117,15 @@ func (c *Config) IsOriginAllowed(origin string) bool {
 	originScheme := strings.ToLower(originURL.Scheme)
 	originHost := strings.ToLower(originURL.Hostname())
 	originPort := originURL.Port()
+
+	// In development we still reject arbitrary cross-site origins, but allow
+	// local hosts plus any explicit whitelist entries from config.
+	if c.IsDevelopment() {
+		switch originHost {
+		case "localhost", "127.0.0.1", "::1":
+			return true
+		}
+	}
 
 	// Check against whitelist
 	for _, allowed := range c.AllowedOrigins {

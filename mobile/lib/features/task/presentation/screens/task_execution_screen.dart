@@ -72,6 +72,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
   void initState() {
     super.initState();
     _pageEnterTime = DateTime.now(); // Record page entry time
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
     final task = ref.read(activeTaskProvider);
     _currentTimerDuration =
         task?.actualMinutes != null ? task!.actualMinutes! * 60 : 0;
@@ -151,7 +152,9 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
     });
 
     // 2. Haptic Feedback
-    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.checkin));
+    unawaited(
+      SensoryFeedbackService.emit(SensoryFeedbackEvent.focusComplete),
+    );
 
     // 3. API Call
     final task = ref.read(activeTaskProvider);

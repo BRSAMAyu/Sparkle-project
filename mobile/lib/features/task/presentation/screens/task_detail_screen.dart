@@ -72,38 +72,37 @@ class _TaskDetailView extends ConsumerWidget {
                   child: ContentConstraint(
                     child: Padding(
                       padding: const EdgeInsets.all(DS.spacing16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      child: SparkleStaggerList(
+                        gap: DS.spacing24,
                         children: [
                           _buildInfoSection(context, ref),
-                          if ((task.userNote ?? '').trim().isNotEmpty) ...[
-                            const SizedBox(height: DS.spacing24),
+                          if ((task.userNote ?? '').trim().isNotEmpty)
                             _buildNoteSection(context),
-                          ],
-                          const SizedBox(height: DS.spacing24),
                           _buildSubtaskSection(context, ref),
-                          const SizedBox(height: DS.spacing24),
-                          Row(
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Expanded(
-                                child: Text(
-                                  context.l10n.taskGuideTitle,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleLarge
-                                      ?.copyWith(
-                                        fontWeight: DS.fontWeightBold,
-                                      ),
-                                ),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      context.l10n.taskGuideTitle,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleLarge
+                                          ?.copyWith(
+                                            fontWeight: DS.fontWeightBold,
+                                          ),
+                                    ),
+                                  ),
+                                  _GenerateGuideButton(taskId: task.id),
+                                ],
                               ),
-                              _GenerateGuideButton(taskId: task.id),
+                              const SizedBox(height: DS.spacing12),
+                              _buildGuideSection(context),
                             ],
                           ),
-                          const SizedBox(height: DS.spacing12),
-                          _buildGuideSection(context),
-                          const SizedBox(
-                            height: DS.spacing64,
-                          ), // Space for bottom bar
+                          const SizedBox(height: DS.spacing64),
                         ],
                       ),
                     ),

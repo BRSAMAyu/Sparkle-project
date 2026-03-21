@@ -712,3 +712,26 @@ for task_name in dir():
     if hasattr(task_obj, 'apply_async'):
         # 可以在这里应用装饰器
         pass
+
+
+@celery_app.task(bind=True, name="acceptance.sleep_probe_task")
+def sleep_probe_task(self, seconds: float = 2.0):
+    """Acceptance-only probe task used to verify Celery state transitions."""
+    import time
+
+    delay = max(0.1, float(seconds))
+    time.sleep(delay)
+    return {
+        "status": "success",
+        "slept_seconds": delay,
+        "task_id": self.request.id,
+    }
+
+
+@celery_app.task(bind=True, max_retries=1, default_retry_delay=1, name="acceptance.fail_probe_task")
+def fail_probe_task(self):
+    """Acceptance-only probe task used to verify retry/failure handling."""
+    attempt = int(self.request.retries or 0)
+    if attempt < 1:
+        raise self.retry(exc=RuntimeError("intentional acceptance retry"), countdown=1)
+    raise RuntimeError("intentional acceptance failure")

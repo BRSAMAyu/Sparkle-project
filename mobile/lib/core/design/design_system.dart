@@ -57,6 +57,7 @@ export 'tokens_v2/typography_token.dart';
 export 'validation/design_validator.dart';
 export 'widgets/app_feedback.dart';
 export 'widgets/graphite_surfaces.dart';
+export 'widgets/sparkle_motion_primitives.dart';
 
 /// MaterialApp 主题配置
 class AppThemes {

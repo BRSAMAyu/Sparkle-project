@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/experience/experience_profile.dart';
 import 'package:sparkle/core/navigation/sensory_navigation_observer.dart';
 import 'package:sparkle/core/navigation/shell_navigation.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
+import 'package:sparkle/core/services/scene_audio_policy.dart';
 import 'package:sparkle/core/widgets/bgm_scope.dart';
+import 'package:sparkle/core/widgets/scene_audio_scope.dart';
 import 'package:sparkle/features/achievement/achievement_routes.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/calendar/calendar.dart';
@@ -103,7 +106,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         return UserRoutes.personaOnboarding;
       }
 
-      if (isAuthenticated && (onboardingCompleted || isGuestUser) && isOnPersonaOnboarding) {
+      if (isAuthenticated &&
+          (onboardingCompleted || isGuestUser) &&
+          isOnPersonaOnboarding) {
         return '/home';
       }
 
@@ -123,8 +128,11 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: '/home',
                 pageBuilder: (context, state) => MaterialPage<void>(
                   key: state.pageKey,
-                  child: const BgmScope(
-                    track: BgmTrack.dashboard,
+                  child: const SceneAudioScope(
+                    policy: SceneAudioPolicy(
+                      track: BgmTrack.dashboard,
+                      priority: BgmPriority.route,
+                    ),
                     child: DashboardScreen(),
                   ),
                 ),
@@ -153,8 +161,8 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: '/chat',
                 pageBuilder: (context, state) => MaterialPage<void>(
                   key: state.pageKey,
-                  child: BgmScope(
-                    track: BgmTrack.chat,
+                  child: SceneAudioScope(
+                    policy: ExperienceProfiles.assistantFlow.audioPolicy(),
                     child: ChatScreen(
                       initialPrompt: state.uri.queryParameters['prompt'],
                       initialChatMode: state.uri.queryParameters['chat_mode'],

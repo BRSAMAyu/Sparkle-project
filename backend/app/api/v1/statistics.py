@@ -140,6 +140,20 @@ async def get_stats_overview(
     }
 
 
+@router.get("/learning-summary")
+async def get_learning_summary(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Compatibility summary endpoint for acceptance and legacy clients."""
+    overview = await get_stats_overview(current_user=current_user, db=db)
+    weekly = await get_weekly_stats(current_user=current_user, db=db)
+    return {
+        "overview": overview,
+        "weekly": weekly,
+    }
+
+
 @router.get("/weekly")
 async def get_weekly_stats(
     current_user: User = Depends(get_current_user),

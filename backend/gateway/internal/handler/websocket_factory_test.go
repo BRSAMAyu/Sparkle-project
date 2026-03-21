@@ -333,29 +333,43 @@ func TestCheckOrigin_WildcardOrigin(t *testing.T) {
 	}
 }
 
-// TestCheckOrigin_DevelopmentMode tests development mode allows all origins
+// TestCheckOrigin_DevelopmentMode tests development mode allows local origins by default.
 func TestCheckOrigin_DevelopmentMode(t *testing.T) {
 	cfg := &config.Config{
 		Environment:    "dev",
-		AllowedOrigins: []string{}, // Empty whitelist, but dev mode should allow all
+		AllowedOrigins: []string{},
 	}
 
 	factory := NewWebSocketFactory(cfg)
 
-	tests := []string{
+	allowed := []string{
+		"http://localhost:3000",
+		"http://127.0.0.1:8080",
+	}
+	denied := []string{
 		"https://example.com",
 		"https://malicious.com",
-		"http://localhost:3000",
 	}
 
-	for _, origin := range tests {
-		t.Run(origin, func(t *testing.T) {
+	for _, origin := range allowed {
+		t.Run("allow_"+origin, func(t *testing.T) {
 			req := httptest.NewRequest("GET", "http://localhost:8080/ws", nil)
 			req.Header.Set("Origin", origin)
 
 			result := factory.checkOrigin(req)
 
-			assert.True(t, result, "development mode should allow any origin")
+			assert.True(t, result, "development mode should allow local origins")
+		})
+	}
+
+	for _, origin := range denied {
+		t.Run("deny_"+origin, func(t *testing.T) {
+			req := httptest.NewRequest("GET", "http://localhost:8080/ws", nil)
+			req.Header.Set("Origin", origin)
+
+			result := factory.checkOrigin(req)
+
+			assert.False(t, result, "development mode should reject arbitrary cross-site origins")
 		})
 	}
 }

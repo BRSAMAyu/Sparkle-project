@@ -7,8 +7,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/experience/experience_profile.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/widgets/ai_rich_text.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.dart';
@@ -89,6 +91,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           unawaited(ref.read(chatProvider.notifier).switchPlanSession(next));
         }
       })
+      ..listenManual(chatProvider.select((state) => state.aiStatus),
+          (previous, next) {
+        final hadStatus = previous != null && previous.trim().isNotEmpty;
+        final hasStatus = next != null && next.trim().isNotEmpty;
+        if (!hadStatus && hasStatus) {
+          unawaited(
+            SensoryFeedbackService.emit(
+              SensoryFeedbackEvent.aiResponseStart,
+            ),
+          );
+        }
+      })
       // 🔧 错误修复：监听错误状态，10秒后自动清除（避免长时间阻塞UI）
       ..listenManual(chatProvider.select((state) => state.error),
           (previous, next) {
@@ -119,7 +133,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 message != null &&
                 message.isNotEmpty) {
               final notifier = ref.read(chatProvider.notifier);
-              notifier.state = notifier.state.copyWith(clearActionFeedback: true);
+              notifier.state =
+                  notifier.state.copyWith(clearActionFeedback: true);
               unawaited(_navigateFromAction(message));
               return;
             }
@@ -214,6 +229,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final experience = ExperienceProfiles.assistantFlow;
     final chatState = ref.watch(chatProvider);
     final aiSystemPreferences =
         ref.watch(transparencyPreferencesProvider).valueOrNull ??
@@ -230,7 +246,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
 
     return GraphiteScaffold(
-      role: SparklePageRole.content,
+      role: experience.pageRole,
+      motionToken: experience.motionToken,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         flexibleSpace: ClipRect(
@@ -518,8 +535,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                               },
                             ),
                     ),
-                    if (chatState.error != null)
-                      Container(
+                    SparkleExitTransition(
+                      visible: chatState.error != null,
+                      maintainSize: false,
+                      child: Container(
                         width: double.infinity,
                         margin: const EdgeInsets.fromLTRB(
                           DS.spacing16,
@@ -542,97 +561,114 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             color: DS.error.withValues(alpha: 0.18),
                           ),
                         ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                chatState.error!,
-                                style: TextStyle(
-                                  color: DS.error,
-                                  fontSize: DS.fontSizeSm,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            Material(
-                              color: DS.surfacePrimary.withValues(alpha: 0),
-                              borderRadius: DS.borderRadiusFull,
-                              child: InkWell(
-                                borderRadius: DS.borderRadiusFull,
-                                onTap: () {
-                                  // Clear error
-                                  // 🔧 修复：正确使用StateNotifier更新状态
-                                  final notifier =
-                                      ref.read(chatProvider.notifier);
-                                  notifier.state =
-                                      notifier.state.copyWith(clearError: true);
-                                },
-                                child: Padding(
-                                  padding: const EdgeInsets.all(DS.spacing4),
-                                  child: Icon(
-                                    Icons.close,
-                                    size: DS.iconSizeXs,
-                                    color: DS.error,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    if (chatState.pendingPlanReview != null)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: DS.lg,
-                          vertical: DS.sm,
-                        ),
-                        child: PlanReviewCard(
-                          review: chatState.pendingPlanReview!,
-                          onDecision: (decision, {userComment, meta}) =>
-                              ref.read(chatProvider.notifier).submitPlanReview(
-                                    decision: decision,
-                                    userComment: userComment,
-                                    meta: meta,
-                                  ),
-                        ),
-                      ),
-                    if (chatState.attachedFiles.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: DS.lg,
-                          vertical: DS.sm,
-                        ),
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxHeight: 80),
-                          child: SingleChildScrollView(
-                            child: Wrap(
-                              spacing: DS.spacing8,
-                              runSpacing: DS.spacing8,
-                              children: chatState.attachedFiles
-                                  .map(
-                                    (file) => InputChip(
-                                      label: Text(
-                                        file.fileName,
-                                        overflow: TextOverflow.ellipsis,
+                        child: chatState.error == null
+                            ? const SizedBox.shrink()
+                            : Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      chatState.error!,
+                                      style: TextStyle(
+                                        color: DS.error,
+                                        fontSize: DS.fontSizeSm,
                                       ),
-                                      backgroundColor: Color.alphaBlend(
-                                        DS.info.withValues(alpha: 0.04),
-                                        DS.surfacePrimary,
-                                      ),
-                                      side: BorderSide(
-                                        color: DS.border.withValues(alpha: 0.4),
-                                      ),
-                                      onDeleted: () => ref
-                                          .read(chatProvider.notifier)
-                                          .removeAttachment(file.id),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                  )
-                                  .toList(),
-                            ),
-                          ),
-                        ),
+                                  ),
+                                  Material(
+                                    color:
+                                        DS.surfacePrimary.withValues(alpha: 0),
+                                    borderRadius: DS.borderRadiusFull,
+                                    child: InkWell(
+                                      borderRadius: DS.borderRadiusFull,
+                                      onTap: () {
+                                        final notifier =
+                                            ref.read(chatProvider.notifier);
+                                        notifier.state = notifier.state
+                                            .copyWith(clearError: true);
+                                      },
+                                      child: Padding(
+                                        padding:
+                                            const EdgeInsets.all(DS.spacing4),
+                                        child: Icon(
+                                          Icons.close,
+                                          size: DS.iconSizeXs,
+                                          color: DS.error,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                       ),
+                    ),
+                    SparkleExitTransition(
+                      visible: chatState.pendingPlanReview != null,
+                      maintainSize: false,
+                      child: chatState.pendingPlanReview == null
+                          ? const SizedBox.shrink()
+                          : Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: DS.lg,
+                                vertical: DS.sm,
+                              ),
+                              child: PlanReviewCard(
+                                review: chatState.pendingPlanReview!,
+                                onDecision: (decision, {userComment, meta}) =>
+                                    ref
+                                        .read(chatProvider.notifier)
+                                        .submitPlanReview(
+                                          decision: decision,
+                                          userComment: userComment,
+                                          meta: meta,
+                                        ),
+                              ),
+                            ),
+                    ),
+                    SparkleExitTransition(
+                      visible: chatState.attachedFiles.isNotEmpty,
+                      maintainSize: false,
+                      child: chatState.attachedFiles.isEmpty
+                          ? const SizedBox.shrink()
+                          : Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: DS.lg,
+                                vertical: DS.sm,
+                              ),
+                              child: ConstrainedBox(
+                                constraints:
+                                    const BoxConstraints(maxHeight: 80),
+                                child: SingleChildScrollView(
+                                  child: Wrap(
+                                    spacing: DS.spacing8,
+                                    runSpacing: DS.spacing8,
+                                    children: chatState.attachedFiles
+                                        .map(
+                                          (file) => InputChip(
+                                            label: Text(
+                                              file.fileName,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            backgroundColor: Color.alphaBlend(
+                                              DS.info.withValues(alpha: 0.04),
+                                              DS.surfacePrimary,
+                                            ),
+                                            side: BorderSide(
+                                              color: DS.border
+                                                  .withValues(alpha: 0.4),
+                                            ),
+                                            onDeleted: () => ref
+                                                .read(chatProvider.notifier)
+                                                .removeAttachment(file.id),
+                                          ),
+                                        )
+                                        .toList(),
+                                  ),
+                                ),
+                              ),
+                            ),
+                    ),
                     // Bottom input area - wrapped to prevent overflow
                     LayoutBuilder(
                       builder: (context, constraints) => _buildBottomInputArea(
@@ -1002,28 +1038,45 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               ),
             ),
           if (showExpandedContext) ...[
-            const PlanSelectorPill(),
-            const SizedBox(height: DS.spacing18),
-            const AiReasoningModePill(),
-            const SizedBox(height: DS.spacing18),
-            const ChatModeSelectorPill(),
-          ],
-          if (!chatState.hasActiveRun)
-            Padding(
-              padding: const EdgeInsets.only(
-                left: DS.spacing16,
-                right: DS.spacing16,
-                top: DS.spacing12,
-                bottom: DS.spacing10,
-              ),
-              child: ChatPredictionDock(
-                compact: isCompactMobile,
-                promptStarters: promptStarters,
-                onPromptSelected: (prompt) => unawaited(
-                  ref.read(chatProvider.notifier).sendMessage(prompt),
-                ),
-              ),
+            const SparkleStaggerItem(
+              index: 0,
+              child: PlanSelectorPill(),
             ),
+            const SizedBox(height: DS.spacing18),
+            const SparkleStaggerItem(
+              index: 1,
+              child: AiReasoningModePill(),
+            ),
+            const SizedBox(height: DS.spacing18),
+            const SparkleStaggerItem(
+              index: 2,
+              child: ChatModeSelectorPill(),
+            ),
+          ],
+          SparkleExitTransition(
+            visible: !chatState.hasActiveRun,
+            maintainSize: false,
+            child: !chatState.hasActiveRun
+                ? Padding(
+                    padding: const EdgeInsets.only(
+                      left: DS.spacing16,
+                      right: DS.spacing16,
+                      top: DS.spacing12,
+                      bottom: DS.spacing10,
+                    ),
+                    child: SparkleStaggerItem(
+                      index: 3,
+                      child: ChatPredictionDock(
+                        compact: isCompactMobile,
+                        promptStarters: promptStarters,
+                        onPromptSelected: (prompt) => unawaited(
+                          ref.read(chatProvider.notifier).sendMessage(prompt),
+                        ),
+                      ),
+                    ),
+                  )
+                : const SizedBox.shrink(),
+          ),
           ChatInput(
             enabled: !chatState.hasActiveRun,
             onTextChanged: (text) {
@@ -1280,7 +1333,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ];
     }
   }
-
 }
 
 class _ChatHistorySheet extends ConsumerStatefulWidget {

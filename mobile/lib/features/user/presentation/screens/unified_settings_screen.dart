@@ -36,9 +36,12 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   bool _bgmReady = false;
   double _bgmVolume = 0.68;
   BgmPalette _bgmPalette = BgmPalette.adaptive;
+  BgmMode _bgmMode = BgmMode.adaptive;
   bool _soundEnabled = true;
   bool _hapticEnabled = true;
   bool _sensoryReady = false;
+  AmbientScene _ambientScene = AmbientScene.none;
+  double _ambientVolume = 0.35;
   Timer? _learningPrefsDebounce;
 
   @override
@@ -58,6 +61,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     final enabled = await BgmService.isEnabled();
     final volume = await BgmService.getVolume();
     final palette = await BgmService.getPalette();
+    final mode = await BgmService.getMode();
     if (!mounted) {
       return;
     }
@@ -65,6 +69,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
       _bgmEnabled = enabled;
       _bgmVolume = volume;
       _bgmPalette = palette;
+      _bgmMode = mode;
       _bgmReady = true;
     });
   }
@@ -72,12 +77,16 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   Future<void> _loadSensoryPreferences() async {
     final soundEnabled = await SensoryFeedbackService.isSoundEnabled();
     final hapticEnabled = await SensoryFeedbackService.isHapticEnabled();
+    final ambientScene = await SensoryFeedbackService.getSavedAmbientScene();
+    final ambientVolume = await SensoryFeedbackService.getAmbientVolume();
     if (!mounted) {
       return;
     }
     setState(() {
       _soundEnabled = soundEnabled;
       _hapticEnabled = hapticEnabled;
+      _ambientScene = ambientScene;
+      _ambientVolume = ambientVolume;
       _sensoryReady = true;
     });
   }
@@ -97,6 +106,11 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     await BgmService.setPalette(palette);
   }
 
+  Future<void> _setBgmMode(BgmMode mode) async {
+    setState(() => _bgmMode = mode);
+    await BgmService.setMode(mode);
+  }
+
   Future<void> _setSoundEnabled(bool value) async {
     setState(() => _soundEnabled = value);
     await SensoryFeedbackService.setSoundEnabled(value);
@@ -105,6 +119,16 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   Future<void> _setHapticEnabled(bool value) async {
     setState(() => _hapticEnabled = value);
     await SensoryFeedbackService.setHapticEnabled(value);
+  }
+
+  Future<void> _setAmbientScene(AmbientScene scene) async {
+    setState(() => _ambientScene = scene);
+    await SensoryFeedbackService.setAmbientScene(scene);
+  }
+
+  Future<void> _setAmbientVolume(double value) async {
+    setState(() => _ambientVolume = value);
+    await SensoryFeedbackService.setAmbientVolume(value);
   }
 
   void _scheduleLearningPreferenceUpdate({
@@ -169,9 +193,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                       leading: const Icon(Icons.tune_rounded),
                       title: const Text('感官反馈'),
                       subtitle: Text(
-                        _sensoryReady
-                            ? '统一控制操作音效、成就反馈和触觉回馈'
-                            : '正在读取感官反馈偏好...',
+                        _sensoryReady ? '统一控制操作音效、成就反馈和触觉回馈' : '正在读取感官反馈偏好...',
                       ),
                     ),
                     SwitchListTile(
@@ -193,6 +215,53 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                           ? (value) => unawaited(_setHapticEnabled(value))
                           : null,
                       activeThumbColor: DS.primaryBase,
+                    ),
+                    const SizedBox(height: DS.spacing8),
+                    Text(
+                      '专注环境音',
+                      style: DS.labelSmall.copyWith(color: DS.textSecondary),
+                    ),
+                    const SizedBox(height: DS.spacing8),
+                    Wrap(
+                      spacing: DS.spacing8,
+                      runSpacing: DS.spacing8,
+                      children: AmbientScene.values
+                          .map(
+                            (scene) => ChoiceChip(
+                              label: Text(scene.label),
+                              selected: _ambientScene == scene,
+                              onSelected: _sensoryReady
+                                  ? (_) => unawaited(_setAmbientScene(scene))
+                                  : null,
+                            ),
+                          )
+                          .toList(),
+                    ),
+                    const SizedBox(height: DS.spacing10),
+                    Text(
+                      '环境音音量',
+                      style: DS.labelSmall.copyWith(color: DS.textSecondary),
+                    ),
+                    Row(
+                      children: [
+                        const Icon(Icons.volume_mute_rounded, size: 18),
+                        Expanded(
+                          child: Slider(
+                            value: _ambientVolume,
+                            min: 0,
+                            max: 1,
+                            divisions: 10,
+                            onChanged: _sensoryReady && _soundEnabled
+                                ? (value) =>
+                                    setState(() => _ambientVolume = value)
+                                : null,
+                            onChangeEnd: _sensoryReady && _soundEnabled
+                                ? (value) => unawaited(_setAmbientVolume(value))
+                                : null,
+                          ),
+                        ),
+                        const Icon(Icons.surround_sound_rounded, size: 18),
+                      ],
                     ),
                   ],
                 ),
@@ -313,6 +382,44 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                           : null,
                       activeThumbColor: DS.primaryBase,
                     ),
+                    const SizedBox(height: DS.spacing8),
+                    Text(
+                      '播放策略',
+                      style: DS.labelSmall.copyWith(color: DS.textSecondary),
+                    ),
+                    const SizedBox(height: DS.spacing8),
+                    Wrap(
+                      spacing: DS.spacing8,
+                      runSpacing: DS.spacing8,
+                      children: BgmMode.values
+                          .map(
+                            (mode) => ChoiceChip(
+                              label: Text(_bgmModeLabel(mode)),
+                              selected: _bgmMode == mode,
+                              onSelected: _bgmReady
+                                  ? (_) => unawaited(_setBgmMode(mode))
+                                  : null,
+                            ),
+                          )
+                          .toList(),
+                    ),
+                    const SizedBox(height: DS.spacing10),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(DS.spacing12),
+                      decoration: BoxDecoration(
+                        color: DS.surfaceSecondary,
+                        borderRadius: DS.borderRadius12,
+                      ),
+                      child: Text(
+                        _bgmModeDescription(_bgmMode),
+                        style: DS.bodySmall.copyWith(
+                          color: DS.textSecondary,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: DS.spacing12),
                     const SizedBox(height: DS.spacing8),
                     Text(
                       '音乐音量',
@@ -523,7 +630,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                       onChanged: (v) async {
                         if (v) {
                           final granted = await ref
-                              .read(notificationPermissionStatusProvider.notifier)
+                              .read(
+                                  notificationPermissionStatusProvider.notifier)
                               .requestPermission();
                           if (!granted) {
                             if (context.mounted) {
@@ -921,6 +1029,18 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         BgmPalette.warm => '整体更偏温暖、柔和、有人味的轻快底色。',
       };
 
+  String _bgmModeLabel(BgmMode mode) => switch (mode) {
+        BgmMode.adaptive => '跟随页面',
+        BgmMode.focusOnly => '仅专注开启',
+        BgmMode.silent => '全局静音',
+      };
+
+  String _bgmModeDescription(BgmMode mode) => switch (mode) {
+        BgmMode.adaptive => '首页、聊天、任务、成就等页面会自动切换到对应氛围音乐。',
+        BgmMode.focusOnly => '只有专注开始、沉浸和执行任务时才会播放背景音乐，日常页面保持安静。',
+        BgmMode.silent => '保留音效和触感反馈，但所有背景音乐都不会自动播放。',
+      };
+
   Widget _buildNotificationPermissionCard(
     BuildContext context,
     AppLocalizations l10n,
@@ -1252,8 +1372,9 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         (a, b) => ((b['requests_total'] as num?)?.toInt() ?? 0)
             .compareTo((a['requests_total'] as num?)?.toInt() ?? 0),
       );
-    final topChatMode =
-        topMode.isNotEmpty ? _labelForChatMode(topMode.first['chat_mode']) : '标准对话';
+    final topChatMode = topMode.isNotEmpty
+        ? _labelForChatMode(topMode.first['chat_mode'])
+        : '标准对话';
     final funnel = (predictionPayload?['funnel'] as Map<String, dynamic>?) ??
         const <String, dynamic>{};
     final acceptToExecution =
@@ -1345,10 +1466,10 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     );
     final fallbackRate =
         totalRequests > 0 ? weightedFallback / totalRequests : 0.0;
-    final topActions =
-        (predictionPayload?['top_actions'] as List<dynamic>? ?? const <dynamic>[])
-            .whereType<Map<String, dynamic>>()
-            .toList();
+    final topActions = (predictionPayload?['top_actions'] as List<dynamic>? ??
+            const <dynamic>[])
+        .whereType<Map<String, dynamic>>()
+        .toList();
     final topAction = topActions.isNotEmpty
         ? topActions.first['action_type']?.toString() ?? 'unknown'
         : 'unknown';
@@ -1447,7 +1568,6 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         return value?.toString() ?? 'standard';
     }
   }
-
 }
 
 class _MetricChip extends StatelessWidget {
