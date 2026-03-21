@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/network/dio_provider.dart';
 import 'package:sparkle/core/services/app_event_stream_service.dart';
@@ -22,7 +23,11 @@ class PredictedIntentCard extends ConsumerStatefulWidget {
 }
 
 class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
+  static const _collapsedPrefKey =
+      'dashboard.predicted_intent_card.collapsed';
+
   bool _isContinuing = false;
+  bool _isCollapsed = false;
   late final CandidateFeedbackService _feedbackService;
   late final AppEventStreamService _eventStream;
   late final PredictionAttributionService _predictionAttribution;
@@ -34,6 +39,25 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
     _feedbackService = CandidateFeedbackService(ref.read(dioProvider));
     _eventStream = ref.read(appEventStreamServiceProvider);
     _predictionAttribution = ref.read(predictionAttributionServiceProvider);
+    unawaited(_loadCollapsedPreference());
+  }
+
+  Future<void> _loadCollapsedPreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    final collapsed = prefs.getBool(_collapsedPrefKey) ?? false;
+    if (!mounted) return;
+    setState(() {
+      _isCollapsed = collapsed;
+    });
+  }
+
+  Future<void> _setCollapsed(bool value) async {
+    if (_isCollapsed == value) return;
+    setState(() {
+      _isCollapsed = value;
+    });
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_collapsedPrefKey, value);
   }
 
   @override
@@ -73,6 +97,86 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
           )
         : DS.brandPrimary.withValues(alpha: 0.05);
     final gradientEnd = isDark ? DS.surfaceOverlay : DS.surfaceSecondary;
+
+    if (_isCollapsed) {
+      return ContentConstraint(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
+          child: MaterialStyler(
+            material: AppMaterials.ceramic.copyWith(
+              backgroundGradient: LinearGradient(
+                colors: [gradientStart, gradientMid, gradientEnd],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderColor: DS.info.withValues(alpha: isDark ? 0.22 : 0.16),
+              borderWidth: 1,
+            ),
+            borderRadius: DS.borderRadius20,
+            padding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: DS.spacing12,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: DS.info.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.psychology_alt_rounded,
+                    color: DS.info,
+                    size: 16,
+                  ),
+                ),
+                const SizedBox(width: DS.spacing10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '系统预测已收起',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.sparkleTypography.labelLarge.copyWith(
+                          fontWeight: DS.fontWeightBold,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        freshnessLabel == null
+                            ? '需要时再展开查看建议'
+                            : '上次更新于$freshnessLabel',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.sparkleTypography.labelSmall.copyWith(
+                          color: DS.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                _Chip(label: '$confidencePercent%', subdued: true),
+                const SizedBox(width: DS.spacing8),
+                SparkleIconButton(
+                  variant: ButtonVariant.ghost,
+                  size: 34,
+                  onPressed: () => _setCollapsed(false),
+                  icon: const Icon(
+                    Icons.unfold_more_rounded,
+                    size: 18,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     return ContentConstraint(
       child: Padding(
@@ -162,6 +266,16 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
                         ),
                       ),
                       _Chip(label: '$confidencePercent%'),
+                      const SizedBox(width: DS.spacing8),
+                      SparkleIconButton(
+                        variant: ButtonVariant.ghost,
+                        size: 34,
+                        onPressed: () => _setCollapsed(true),
+                        icon: const Icon(
+                          Icons.visibility_off_rounded,
+                          size: 18,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 14),
@@ -345,21 +459,25 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
       return;
     }
     _lastImpressionPredictionId = forecast.predictionId;
-    unawaited(_feedbackService.recordFeedback(
-      candidateId: forecast.trackingCandidateId,
-      actionType: forecast.trackingActionType,
-      feedbackType: 'impression',
-      contextSnapshot: _feedbackContext(forecast),
-    ));
-    unawaited(_eventStream.recordPredictionFeedback(
-      predictionId: forecast.predictionId,
-      feedbackType: 'impression',
-      actionType: forecast.trackingActionType,
-      surface: forecast.surface ?? 'dashboard',
-      suggestedPrompt: forecast.suggestedPrompt,
-      entityType: forecast.entityCard?.entityType,
-      entityId: forecast.entityCard?.entityId,
-    ));
+    unawaited(
+      _feedbackService.recordFeedback(
+        candidateId: forecast.trackingCandidateId,
+        actionType: forecast.trackingActionType,
+        feedbackType: 'impression',
+        contextSnapshot: _feedbackContext(forecast),
+      ),
+    );
+    unawaited(
+      _eventStream.recordPredictionFeedback(
+        predictionId: forecast.predictionId,
+        feedbackType: 'impression',
+        actionType: forecast.trackingActionType,
+        surface: forecast.surface ?? 'dashboard',
+        suggestedPrompt: forecast.suggestedPrompt,
+        entityType: forecast.entityCard?.entityType,
+        entityId: forecast.entityCard?.entityId,
+      ),
+    );
   }
 
   Future<void> _handleContinue(PredictionInsightData forecast) async {
@@ -378,21 +496,25 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
     });
 
     try {
-      _feedbackService.recordFeedback(
-        candidateId: forecast.trackingCandidateId,
-        actionType: forecast.trackingActionType,
-        feedbackType: 'accept',
-        contextSnapshot: _feedbackContext(forecast),
+      unawaited(
+        _feedbackService.recordFeedback(
+          candidateId: forecast.trackingCandidateId,
+          actionType: forecast.trackingActionType,
+          feedbackType: 'accept',
+          contextSnapshot: _feedbackContext(forecast),
+        ),
       );
-      unawaited(_eventStream.recordPredictionFeedback(
-        predictionId: forecast.predictionId,
-        feedbackType: 'accept',
-        actionType: forecast.trackingActionType,
-        surface: forecast.surface ?? 'dashboard',
-        suggestedPrompt: prompt,
-        entityType: forecast.entityCard?.entityType,
-        entityId: forecast.entityCard?.entityId,
-      ));
+      unawaited(
+        _eventStream.recordPredictionFeedback(
+          predictionId: forecast.predictionId,
+          feedbackType: 'accept',
+          actionType: forecast.trackingActionType,
+          surface: forecast.surface ?? 'dashboard',
+          suggestedPrompt: prompt,
+          entityType: forecast.entityCard?.entityType,
+          entityId: forecast.entityCard?.entityId,
+        ),
+      );
       unawaited(
         _predictionAttribution.rememberAcceptedPrediction(
           predictionId: forecast.predictionId,

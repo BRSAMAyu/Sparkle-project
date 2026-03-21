@@ -618,16 +618,18 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
         sliver: SliverLayoutBuilder(
           builder: (context, constraints) {
             final width = constraints.crossAxisExtent;
-            final crossAxisCount = width < 380
-                ? 1
-                : width < 900
-                    ? 2
-                    : 3;
-            final mainAxisExtent = width < 380
-                ? 190.0
-                : width < 900
-                    ? 228.0
-                    : 236.0;
+            final crossAxisCount = width < 720
+                ? 2
+                : width < 1100
+                    ? 3
+                    : 4;
+            final mainAxisExtent = width < 420
+                ? 238.0
+                : width < 720
+                    ? 246.0
+                    : width < 1100
+                        ? 252.0
+                        : 260.0;
 
             return SliverGrid(
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(

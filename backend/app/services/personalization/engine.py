@@ -200,6 +200,7 @@ class PersonalizationEngine:
 
         # 优先从 schedule_preferences 读取周日程表（168格格式）
         active_hours = []
+        slots = []
         schedule_prefs = explicit.get("schedule_preferences")
         if schedule_prefs and isinstance(schedule_prefs, dict) and "grid" in schedule_prefs:
             from app.utils.schedule_converter import weekly_grid_to_weekly_active_hours

@@ -108,94 +108,99 @@ class SprintStatisticsCard extends ConsumerWidget {
     BuildContext context,
     AppLocalizations l10n,
     SprintStatistics stats,
-  ) =>
-      Row(
-        children: [
-          // Donut chart
-          SizedBox(
-            width: 80,
-            height: 80,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                SizedBox(
-                  width: 80,
-                  height: 80,
-                  child: PieChart(
-                    PieChartData(
-                      sectionsSpace: 0,
-                      centerSpaceRadius: 28,
-                      sections: [
-                        PieChartSectionData(
-                          value: stats.completionRate * 100,
-                          color: _getCompletionRateColor(stats.completionRate),
-                          radius: 32,
-                          showTitle: false,
-                        ),
-                        PieChartSectionData(
-                          value: (1 - stats.completionRate) * 100,
-                          color: DS.surfaceTertiary,
-                          radius: 32,
-                          showTitle: false,
-                        ),
-                      ],
+  ) {
+    // Donut sizing: centerSpaceRadius + sectionRadius must fit within half the container
+    // Container = 88, half = 44, so centerSpace=22, sectionRadius=12 → total 34 < 44
+    const chartSize = 88.0;
+    const centerSpace = 22.0;
+    const sectionRadius = 12.0;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        // Donut chart — properly sized to avoid overflow
+        SizedBox(
+          width: chartSize,
+          height: chartSize,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              PieChart(
+                PieChartData(
+                  sectionsSpace: 2,
+                  centerSpaceRadius: centerSpace,
+                  sections: [
+                    PieChartSectionData(
+                      value: stats.completionRate * 100,
+                      color: _getCompletionRateColor(stats.completionRate),
+                      radius: sectionRadius,
+                      showTitle: false,
                     ),
-                  ),
-                ),
-                // Center percentage
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '${(stats.completionRate * 100).toInt()}%',
-                      style: context.sparkleTypography.labelLarge.copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                    if (stats.completionRate < 1.0)
+                      PieChartSectionData(
+                        value: (1 - stats.completionRate) * 100,
+                        color: DS.surfaceTertiary,
+                        radius: sectionRadius,
+                        showTitle: false,
                       ),
-                    ),
-                    Text(
-                      l10n.sprintCompletionRate,
-                      style: context.sparkleTypography.labelSmall.copyWith(
-                        fontSize: 8,
-                        color: DS.textSecondary,
-                      ),
-                    ),
                   ],
                 ),
-              ],
-            ),
+              ),
+              // Center percentage
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '${(stats.completionRate * 100).toInt()}%',
+                    style: context.sparkleTypography.labelLarge.copyWith(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                  Text(
+                    l10n.sprintCompletionRate,
+                    style: context.sparkleTypography.labelSmall.copyWith(
+                      fontSize: 8,
+                      color: DS.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-          const SizedBox(width: DS.spacing16),
-          // Stats details
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildStatRow(
-                  context,
-                  label: l10n.sprintTotalTasks,
-                  value: l10n.sprintTaskCount(stats.totalTasks),
-                  color: DS.textSecondary,
-                ),
-                const SizedBox(height: DS.spacing4),
-                _buildStatRow(
-                  context,
-                  label: l10n.sprintCompletedTasks,
-                  value: l10n.sprintTaskCount(stats.completedTasks),
-                  color: DS.semanticSuccess,
-                ),
-                const SizedBox(height: DS.spacing4),
-                _buildStatRow(
-                  context,
-                  label: l10n.sprintRemainingTasks,
-                  value: l10n.sprintTaskCount(stats.remainingTasks),
-                  color: DS.semanticWarning,
-                ),
-              ],
-            ),
+        ),
+        const SizedBox(width: DS.spacing16),
+        // Stats details
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildStatRow(
+                context,
+                label: l10n.sprintTotalTasks,
+                value: l10n.sprintTaskCount(stats.totalTasks),
+                color: DS.textSecondary,
+              ),
+              const SizedBox(height: DS.spacing8),
+              _buildStatRow(
+                context,
+                label: l10n.sprintCompletedTasks,
+                value: l10n.sprintTaskCount(stats.completedTasks),
+                color: DS.semanticSuccess,
+              ),
+              const SizedBox(height: DS.spacing8),
+              _buildStatRow(
+                context,
+                label: l10n.sprintRemainingTasks,
+                value: l10n.sprintTaskCount(stats.remainingTasks),
+                color: DS.semanticWarning,
+              ),
+            ],
           ),
-        ],
-      );
+        ),
+      ],
+    );
+  }
 
   Widget _buildTaskStatusSection(
     BuildContext context,

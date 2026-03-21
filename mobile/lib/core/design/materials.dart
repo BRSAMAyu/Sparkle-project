@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -416,8 +417,9 @@ class _MaterialRimPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Rect.fromLTWH(0, 0, size.width, size.height);
-    final rrect = (borderRadius ?? BorderRadius.zero).toRRect(rect);
-    final borderPath = shapeBorder?.getOuterPath(rect);
+    final insetRect = rect.deflate(0.5);
+    final rrect = (borderRadius ?? BorderRadius.zero).toRRect(insetRect);
+    final borderPath = shapeBorder?.getOuterPath(insetRect);
 
     // Draw Rim Light (Top Edge)
     if (rimColor != null) {
@@ -437,11 +439,13 @@ class _MaterialRimPainter extends CustomPainter {
       if (borderPath != null) {
         canvas.drawPath(borderPath, rimPaint);
       } else if (shape == BoxShape.circle) {
-        canvas.drawCircle(rect.center, size.width / 2, rimPaint);
+        canvas.drawCircle(
+          insetRect.center,
+          math.min(insetRect.width, insetRect.height) / 2,
+          rimPaint,
+        );
       } else {
-        // We trim the path to only show top part effectively via gradient,
-        // but drawing the full RRect with top-down gradient works well for Rim Light.
-        canvas.drawRRect(rrect.deflate(0.5), rimPaint);
+        canvas.drawRRect(rrect, rimPaint);
       }
     }
   }
@@ -476,8 +480,9 @@ class _MaterialBorderPainter extends CustomPainter {
     if (borderColor == null && borderGradient == null) return;
 
     final rect = Rect.fromLTWH(0, 0, size.width, size.height);
-    final rrect = (borderRadius ?? BorderRadius.zero).toRRect(rect);
-    final borderPath = shapeBorder?.getOuterPath(rect);
+    final insetRect = rect.deflate(borderWidth / 2);
+    final rrect = (borderRadius ?? BorderRadius.zero).toRRect(insetRect);
+    final borderPath = shapeBorder?.getOuterPath(insetRect);
 
     final borderPaint = Paint()
       ..style = PaintingStyle.stroke
@@ -492,7 +497,11 @@ class _MaterialBorderPainter extends CustomPainter {
     if (borderPath != null) {
       canvas.drawPath(borderPath, borderPaint);
     } else if (shape == BoxShape.circle) {
-      canvas.drawCircle(rect.center, size.width / 2, borderPaint);
+      canvas.drawCircle(
+        insetRect.center,
+        math.min(insetRect.width, insetRect.height) / 2,
+        borderPaint,
+      );
     } else {
       canvas.drawRRect(rrect, borderPaint);
     }

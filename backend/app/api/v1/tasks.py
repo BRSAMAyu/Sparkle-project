@@ -410,6 +410,28 @@ async def update_task(
 
     return {"data": TaskDetail.model_validate(task)}
 
+@router.post("/{task_id}/generate-guide", response_model=dict[str, Any])
+async def generate_task_guide(
+    task_id: UUID = Path(..., description="Task ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Generate or regenerate AI guide for an existing task using fast LLM tier.
+    """
+    task = await db.get(Task, task_id)
+    if not task or task.user_id != current_user.id:
+        raise NotFoundError(message="Task not found")
+
+    guide = await task_guide_service.generate_guide(task, current_user, db)
+    task.guide_content = guide
+    db.add(task)
+    await db.commit()
+    await db.refresh(task)
+
+    return {"data": TaskDetail.model_validate(task)}
+
+
 @router.delete("/{task_id}")
 async def delete_task(
     task_id: UUID = Path(..., description="Task ID"),

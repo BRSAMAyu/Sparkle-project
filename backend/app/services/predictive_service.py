@@ -24,6 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.agent_profiles import AgentRole, ModelTier, TaskType
 from app.core.cache import cache_service
 from app.core.llm_router import llm_router
+from app.config import settings
 from app.models.candidate_action_feedback import CandidateActionFeedback
 from app.models.event import TrackingEvent
 from app.models.focus import FocusSession, FocusStatus
@@ -96,8 +97,9 @@ class PredictiveService:
     """预测学习智能服务"""
     LONG_HORIZON_CACHE_TTL_SECONDS = 60 * 60 * 6
     LONG_HORIZON_SOFT_STALE_SECONDS = 60 * 30
-    REALTIME_FREE_TIMEOUT_SECONDS = 1.2
-    REALTIME_FREE_FAST_TIMEOUT_SECONDS = 1.8
+    REALTIME_FREE_TIMEOUT_SECONDS = 0.25
+    REALTIME_FREE_FAST_TIMEOUT_SECONDS = 0.45
+    REALTIME_FAST_TIMEOUT_SECONDS = 2.2
 
     def __init__(self, db: AsyncSession):
         self.db = db
@@ -119,7 +121,7 @@ class PredictiveService:
         简化版本：基于历史平均间隔 + 时间模式
         """
         try:
-            now = self._get_current_time()
+            now = self._get_current_time().replace(tzinfo=None)
 
             # 1. 获取最近30天的学习记录
             query = (
@@ -196,7 +198,7 @@ class PredictiveService:
         except Exception as e:
             logger.error(f"参与度预测失败: {e}")
             return EngagementForecast(
-                next_active_time=datetime.now(timezone.utc) + timedelta(days=1),
+                next_active_time=self._get_current_time().replace(tzinfo=None) + timedelta(days=1),
                 confidence=0.0,
                 recommended_intervention="预测失败",
                 risk_level="unknown"
@@ -346,7 +348,7 @@ class PredictiveService:
         基于历史学习效果（掌握度提升最快的时间段）
         """
         try:
-            now = self._get_current_time()
+            now = self._get_current_time().replace(tzinfo=None)
 
             # 获取最近30天的学习记录
             query = (
@@ -435,7 +437,7 @@ class PredictiveService:
         4. 掌握度增长缓慢
         """
         try:
-            now = self._get_current_time()
+            now = self._get_current_time().replace(tzinfo=None)
 
             # 1. 最近活跃度
             recent_7d_query = select(func.count(StudyRecord.id)).where(
@@ -596,83 +598,52 @@ class PredictiveService:
 
     async def generate_long_horizon_forecast(self, user_id: UUID) -> dict[str, Any]:
         base = await self._build_rule_based_next_intent(user_id)
+        model_candidates, route_reason = self._select_long_horizon_model_chain(base.get("signals", {}))
+        messages = self._build_long_horizon_messages(base)
+
         try:
-            selection = llm_router.select_model(
-                AgentRole.GENERATION,
-                TaskType.STANDARD_RESPONSE,
-                force_tier=ModelTier.GLM_BATCH,
-            )
-            llm = await get_llm_service_for_specific_model(
-                selection.model_key,
-                agent_role=AgentRole.GENERATION,
-            )
-            payload = await llm.chat_json(
-                messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "你是 Sparkle 的长期行为预测器。"
-                            "请基于输入的用户画像、最近24小时行为、待办和专注信号，"
-                            "预测用户接下来最可能想做的一件事。"
-                            "输出 JSON，字段必须包含 title, summary, confidence, "
-                            "predicted_action_type, predicted_window, reasons(list), suggested_prompt。"
-                        ),
-                    },
-                    {
-                        "role": "user",
-                        "content": json.dumps(base["signals"], ensure_ascii=False),
-                    },
-                ],
-                schema={
-                    "type": "object",
-                    "properties": {
-                        "title": {"type": "string"},
-                        "summary": {"type": "string"},
-                        "confidence": {"type": "number"},
-                        "predicted_action_type": {"type": "string"},
-                        "predicted_window": {"type": "string"},
-                        "reasons": {"type": "array", "items": {"type": "string"}},
-                        "suggested_prompt": {"type": "string"},
-                    },
-                    "required": [
-                        "title",
-                        "summary",
-                        "confidence",
-                        "predicted_action_type",
-                        "predicted_window",
-                        "reasons",
-                        "suggested_prompt",
-                    ],
-                },
-                temperature=0.3,
-            )
-            if isinstance(payload, dict) and payload.get("title") and payload.get("summary"):
-                enriched = self._finalize_prediction(
-                    user_id=user_id,
-                    forecast={
-                        **base,
-                        "title": str(payload.get("title") or base["title"]),
-                        "summary": str(payload.get("summary") or base["summary"]),
-                        "confidence": float(payload.get("confidence") or base["confidence"]),
-                        "predicted_action_type": str(
-                            payload.get("predicted_action_type") or base["predicted_action_type"]
-                        ),
-                        "predicted_window": str(payload.get("predicted_window") or base["predicted_window"]),
-                        "reasons": list(payload.get("reasons") or base["reasons"]),
-                        "suggested_prompt": str(payload.get("suggested_prompt") or base["suggested_prompt"]),
-                    },
-                    horizon="long_horizon",
-                    source="glm_batch",
-                    tier=selection.model_key,
-                    fallback_used=False,
-                    surface="dashboard",
-                )
-                await self._cache_forecast(
-                    f"predictive:next_intent:{user_id}",
-                    enriched,
-                    ttl_seconds=self.LONG_HORIZON_CACHE_TTL_SECONDS,
-                )
-                return enriched
+            for model_key in model_candidates:
+                try:
+                    llm = await get_llm_service_for_specific_model(
+                        model_key,
+                        agent_role=AgentRole.GENERATION,
+                    )
+                    payload = await self._request_prediction_payload(
+                        llm=llm,
+                        messages=messages,
+                        temperature=0.2,
+                    )
+                    merged = self._merge_prediction_payload(base, payload)
+                    if merged is None:
+                        logger.info(
+                            f"Long horizon model returned no usable payload for user {user_id}: {model_key}"
+                        )
+                        continue
+
+                    enriched = self._finalize_prediction(
+                        user_id=user_id,
+                        forecast=merged,
+                        horizon="long_horizon",
+                        source="glm_batch",
+                        tier=model_key,
+                        fallback_used=False,
+                        surface="dashboard",
+                    )
+                    await self._cache_forecast(
+                        f"predictive:next_intent:{user_id}",
+                        enriched,
+                        ttl_seconds=self.LONG_HORIZON_CACHE_TTL_SECONDS,
+                    )
+                    logger.info(
+                        f"Long horizon prediction ready for user {user_id}: "
+                        f"model={model_key}, route={route_reason}"
+                    )
+                    return enriched
+                except Exception as exc:
+                    logger.warning(
+                        f"Long horizon model attempt failed for user {user_id}: "
+                        f"model={model_key}, route={route_reason}, error={exc}"
+                    )
         except Exception as exc:
             logger.warning(f"Long horizon prediction failed for user {user_id}: {exc}")
 
@@ -954,102 +925,310 @@ class PredictiveService:
         base: dict[str, Any],
         surface: str,
     ) -> dict[str, Any] | None:
-        async def _attempt(force_tier: ModelTier, timeout_seconds: float) -> dict[str, Any] | None:
-            selection = llm_router.select_model(
-                AgentRole.GENERATION,
-                TaskType.PREDICT_NEXT_ACTIONS,
-                force_tier=force_tier,
-            )
+        messages = self._build_realtime_llm_messages(partial_text=partial_text, base=base)
+
+        async def _attempt(
+            model_key: str,
+            *,
+            source_tier: ModelTier,
+            timeout_seconds: float,
+        ) -> dict[str, Any] | None:
             llm = await get_llm_service_for_specific_model(
-                selection.model_key,
+                model_key,
                 agent_role=AgentRole.GENERATION,
             )
-            payload = await asyncio.wait_for(
-                llm.chat_json(
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": (
-                                "你是 Sparkle 的实时下一步预测器。"
-                                "目标是 2 秒左右给出用户最可能马上要做的事情。"
-                                "输出 JSON，字段必须包含 title, summary, confidence, "
-                                "predicted_action_type, predicted_window, reasons(list), suggested_prompt。"
-                                "不要输出冗长解释。"
-                            ),
-                        },
-                        {
-                            "role": "user",
-                            "content": json.dumps(
-                                {
-                                    "input": partial_text,
-                                    "base_signals": base.get("signals", {}),
-                                    "base_reasons": base.get("reasons", []),
-                                },
-                                ensure_ascii=False,
-                            ),
-                        },
-                    ],
-                    schema={
-                        "type": "object",
-                        "properties": {
-                            "title": {"type": "string"},
-                            "summary": {"type": "string"},
-                            "confidence": {"type": "number"},
-                            "predicted_action_type": {"type": "string"},
-                            "predicted_window": {"type": "string"},
-                            "reasons": {"type": "array", "items": {"type": "string"}},
-                            "suggested_prompt": {"type": "string"},
-                        },
-                        "required": [
-                            "title",
-                            "summary",
-                            "confidence",
-                            "predicted_action_type",
-                            "predicted_window",
-                            "reasons",
-                            "suggested_prompt",
-                        ],
-                    },
-                    temperature=0.2,
-                ),
-                timeout=timeout_seconds,
+            payload = await self._request_prediction_payload(
+                llm=llm,
+                messages=messages,
+                temperature=0.1,
+                timeout_seconds=timeout_seconds,
             )
-            if not isinstance(payload, dict):
-                return None
-            if not payload.get("title") or not payload.get("summary"):
+            merged = self._merge_prediction_payload(base, payload)
+            if merged is None:
                 return None
             return self._finalize_prediction(
                 user_id=user_id,
-                forecast={
-                    **base,
-                    "title": str(payload.get("title") or base["title"]),
-                    "summary": str(payload.get("summary") or base["summary"]),
-                    "confidence": float(payload.get("confidence") or base["confidence"]),
-                    "predicted_action_type": str(
-                        payload.get("predicted_action_type") or base["predicted_action_type"]
-                    ),
-                    "predicted_window": str(payload.get("predicted_window") or base["predicted_window"]),
-                    "reasons": list(payload.get("reasons") or base["reasons"]),
-                    "suggested_prompt": str(payload.get("suggested_prompt") or base["suggested_prompt"]),
-                },
+                forecast=merged,
                 horizon="realtime",
-                source=force_tier.value,
-                tier=selection.model_key,
+                source=source_tier.value,
+                tier=model_key,
                 fallback_used=False,
                 surface=surface,
             )
 
-        try:
-            return await _attempt(ModelTier.FREE, self.REALTIME_FREE_TIMEOUT_SECONDS)
-        except Exception as exc:
-            logger.debug(f"Realtime prediction free tier skipped for user {user_id}: {exc}")
-
-        try:
-            return await _attempt(ModelTier.FREE_FAST, self.REALTIME_FREE_FAST_TIMEOUT_SECONDS)
-        except Exception as exc:
-            logger.debug(f"Realtime prediction free_fast tier skipped for user {user_id}: {exc}")
+        for model_key, source_tier, timeout_seconds in self._realtime_model_attempts():
+            try:
+                forecast = await _attempt(
+                    model_key,
+                    source_tier=source_tier,
+                    timeout_seconds=timeout_seconds,
+                )
+                if forecast is not None:
+                    logger.info(
+                        f"Realtime prediction ready for user {user_id}: "
+                        f"model={model_key}, tier={source_tier.value}"
+                    )
+                    return forecast
+                logger.info(
+                    f"Realtime prediction model returned no usable payload for user {user_id}: "
+                    f"model={model_key}, tier={source_tier.value}"
+                )
+            except Exception as exc:
+                logger.info(
+                    f"Realtime prediction tier skipped for user {user_id}: "
+                    f"model={model_key}, tier={source_tier.value}, error={exc}"
+                )
 
         return None
+
+    async def _request_prediction_payload(
+        self,
+        *,
+        llm: Any,
+        messages: list[dict[str, str]],
+        temperature: float,
+        timeout_seconds: float | None = None,
+    ) -> dict[str, Any] | None:
+        async def _run() -> dict[str, Any] | None:
+            raw = await llm.chat(
+                messages=messages,
+                temperature=temperature,
+            )
+            return self._parse_prediction_json(raw)
+
+        if timeout_seconds is None:
+            return await _run()
+        return await asyncio.wait_for(_run(), timeout=timeout_seconds)
+
+    def _parse_prediction_json(self, raw: Any) -> dict[str, Any] | None:
+        if not isinstance(raw, str):
+            return raw if isinstance(raw, dict) else None
+
+        cleaned = raw.replace("```json", "").replace("```", "").strip()
+        if not cleaned:
+            return None
+
+        try:
+            payload = json.loads(cleaned)
+            return payload if isinstance(payload, dict) else None
+        except json.JSONDecodeError:
+            start = cleaned.find("{")
+            end = cleaned.rfind("}")
+            if start == -1 or end == -1 or end <= start:
+                return None
+            try:
+                payload = json.loads(cleaned[start:end + 1])
+                return payload if isinstance(payload, dict) else None
+            except json.JSONDecodeError:
+                return None
+
+    def _merge_prediction_payload(
+        self,
+        base: dict[str, Any],
+        payload: Any,
+    ) -> dict[str, Any] | None:
+        if not isinstance(payload, dict):
+            return None
+
+        title = str(payload.get("title") or "").strip()
+        summary = str(payload.get("summary") or "").strip()
+        action_type = str(payload.get("predicted_action_type") or "").strip()
+        suggested_prompt = str(payload.get("suggested_prompt") or "").strip()
+        reasons = [
+            str(item).strip()
+            for item in list(payload.get("reasons") or [])
+            if str(item).strip()
+        ]
+        has_signal = any([title, summary, action_type, suggested_prompt, reasons])
+        if not has_signal:
+            return None
+
+        merged_confidence = payload.get("confidence")
+        try:
+            confidence = float(merged_confidence)
+        except (TypeError, ValueError):
+            confidence = float(base["confidence"])
+
+        return {
+            **base,
+            "title": title or str(base["title"]),
+            "summary": summary or str(base["summary"]),
+            "confidence": max(0.0, min(confidence, 0.95)),
+            "predicted_action_type": action_type or str(base["predicted_action_type"]),
+            "predicted_window": str(payload.get("predicted_window") or base["predicted_window"]),
+            "reasons": reasons or list(base["reasons"]),
+            "suggested_prompt": suggested_prompt or str(base["suggested_prompt"]),
+        }
+
+    def _build_realtime_llm_messages(
+        self,
+        *,
+        partial_text: str,
+        base: dict[str, Any],
+    ) -> list[dict[str, str]]:
+        signals = base.get("signals", {})
+        compact_payload = {
+            "input": partial_text[:180],
+            "base_action": base.get("predicted_action_type"),
+            "base_prompt": str(base.get("suggested_prompt") or "")[:120],
+            "pending_task_count": signals.get("pending_task_count", 0),
+            "focus_sessions_last_24h": signals.get("focus_sessions_last_24h", 0),
+            "top_task_title": signals.get("top_task_title"),
+            "surface": signals.get("surface") or "chat",
+        }
+        return [
+            {
+                "role": "system",
+                "content": (
+                    "你是 Sparkle 的实时下一步预测器。"
+                    "目标是在 2 秒内判断用户此刻最可能点击或要求的下一步。"
+                    "只输出 JSON。优先给出 predicted_action_type 和 suggested_prompt。"
+                    "句子要短，不确定字段可以留空。"
+                ),
+            },
+            {
+                "role": "user",
+                "content": json.dumps(compact_payload, ensure_ascii=False),
+            },
+        ]
+
+    def _build_long_horizon_messages(self, base: dict[str, Any]) -> list[dict[str, str]]:
+        return [
+            {
+                "role": "system",
+                "content": (
+                    "你是 Sparkle 的长期行为预测器。"
+                    "基于最近行为、待办和专注信号，判断用户未来 2 到 6 小时最可能推进的一件事。"
+                    "只输出一行 JSON，字段尽量包含 title, summary, confidence, "
+                    "predicted_action_type, predicted_window, reasons, suggested_prompt。"
+                    "结论短、动作明确。"
+                ),
+            },
+            {
+                "role": "user",
+                "content": json.dumps(base.get("signals", {}), ensure_ascii=False),
+            },
+        ]
+
+    def _realtime_model_attempts(self) -> list[tuple[str, ModelTier, float]]:
+        attempts: list[tuple[str, ModelTier, float]] = []
+
+        def _append_candidates(
+            tier: ModelTier,
+            *,
+            timeout_seconds: float,
+            preferred_order: list[str],
+            limit: int,
+        ) -> None:
+            candidates = llm_router.resolve_candidate_models(
+                AgentRole.GENERATION,
+                TaskType.STANDARD_RESPONSE,
+                force_tier=tier,
+            )
+            ordered = [model for model in preferred_order if model in candidates]
+            ordered.extend(model for model in candidates if model not in ordered)
+            for model_key in ordered[:limit]:
+                attempts.append((model_key, tier, timeout_seconds))
+
+        _append_candidates(
+            ModelTier.FREE,
+            timeout_seconds=self.REALTIME_FREE_TIMEOUT_SECONDS,
+            preferred_order=["siliconflow_free"],
+            limit=1,
+        )
+        _append_candidates(
+            ModelTier.FREE_FAST,
+            timeout_seconds=self.REALTIME_FREE_FAST_TIMEOUT_SECONDS,
+            preferred_order=["glm_4_5_air_free"],
+            limit=1,
+        )
+        _append_candidates(
+            ModelTier.FAST,
+            timeout_seconds=self.REALTIME_FAST_TIMEOUT_SECONDS,
+            preferred_order=["xiaomi_chat", "glm_4_7_flash_no_thinking"],
+            limit=2,
+        )
+        return attempts
+
+    def _select_long_horizon_model_chain(
+        self,
+        signals: dict[str, Any],
+    ) -> tuple[list[str], str]:
+        pending_task_count = int(signals.get("pending_task_count") or 0)
+        overdue_count = int(signals.get("overdue_count") or 0)
+        completed_last_24h = int(signals.get("completed_last_24h") or 0)
+        focus_minutes_last_24h = int(signals.get("focus_minutes_last_24h") or 0)
+        study_records_last_24h = int(signals.get("study_records_last_24h") or 0)
+        study_records_last_7d = int(signals.get("study_records_last_7d") or 0)
+        top_task_priority = int(signals.get("top_task_priority") or 0)
+        has_top_task = bool(str(signals.get("top_task_title") or "").strip())
+
+        complexity_score = 0
+        ambiguity_score = 0
+
+        if pending_task_count >= 2:
+            complexity_score += 1
+        if pending_task_count >= 5:
+            complexity_score += 1
+        if overdue_count > 0:
+            complexity_score += 2
+        if top_task_priority >= 2:
+            complexity_score += 1
+        if focus_minutes_last_24h >= 60:
+            complexity_score += 1
+        if study_records_last_7d >= 8:
+            complexity_score += 1
+
+        if has_top_task and completed_last_24h == 0 and focus_minutes_last_24h == 0:
+            ambiguity_score += 1
+        if overdue_count > 0 and completed_last_24h > 0:
+            ambiguity_score += 1
+        if pending_task_count == 0 and study_records_last_24h > 0:
+            ambiguity_score += 1
+        if pending_task_count >= 4 and focus_minutes_last_24h < 20:
+            ambiguity_score += 1
+
+        if ambiguity_score >= 2 or complexity_score >= 6:
+            preferred = [
+                "glm_4_7_thinking",
+                "glm_4_7_no_thinking",
+                "glm_4_6_batch",
+                "glm_4_5_air_batch",
+            ]
+            reason = "高冲突/高复杂行为信号，优先用 glm_4_7_thinking 做抽象预测"
+        elif complexity_score >= 4:
+            preferred = [
+                "glm_4_7_no_thinking",
+                "glm_4_7_thinking",
+                "glm_4_6_batch",
+                "glm_4_5_air_batch",
+            ]
+            reason = "中高复杂行为信号，优先用 glm_4_7_no_thinking 做稳态综合"
+        elif complexity_score >= 2:
+            preferred = [
+                "glm_4_6_batch",
+                "glm_4_7_no_thinking",
+                "glm_4_5_air_batch",
+                "glm_4_7_thinking",
+            ]
+            reason = "中等复杂行为信号，优先用 glm_4_6_batch 控制成本"
+        else:
+            preferred = [
+                "glm_4_5_air_batch",
+                "glm_4_6_batch",
+                "glm_4_7_no_thinking",
+                "glm_4_7_thinking",
+            ]
+            reason = "低复杂行为信号，优先用 glm_4_5_air_batch 快速完成批处理"
+
+        registered = llm_router.resolve_candidate_models(
+            AgentRole.GENERATION,
+            TaskType.STANDARD_RESPONSE,
+            force_tier=ModelTier.GLM_BATCH,
+        )
+        ordered = [model_key for model_key in preferred if model_key in registered]
+        ordered.extend(model_key for model_key in registered if model_key not in ordered)
+        return ordered, reason
 
     def _finalize_prediction(
         self,
@@ -1368,6 +1547,7 @@ class PredictiveService:
             acquired = await cache_service.redis.set(lock_key, "1", ex=300, nx=True)
             if not acquired:
                 return
+
             from app.core.celery_app import celery_app
 
             celery_app.send_task(
@@ -1375,5 +1555,36 @@ class PredictiveService:
                 args=(str(user_id),),
                 queue="glm_batch",
             )
+
+            if settings.DEBUG:
+                self._schedule_local_long_horizon_refresh(
+                    user_id=user_id,
+                    lock_key=lock_key,
+                    reason="debug_local_fallback",
+                )
         except Exception as exc:
+            try:
+                await cache_service.redis.delete(lock_key)
+            except Exception:
+                pass
             logger.warning(f"Failed to schedule long horizon prediction for user {user_id}: {exc}")
+
+    def _schedule_local_long_horizon_refresh(self, *, user_id: UUID, lock_key: str, reason: str) -> None:
+        async def _run() -> None:
+            from app.db.session import AsyncSessionLocal
+
+            try:
+                logger.info(f"Scheduling local long horizon refresh for user {user_id} ({reason})")
+                async with AsyncSessionLocal() as session:
+                    service = PredictiveService(session)
+                    await service.generate_long_horizon_forecast(user_id)
+            except Exception as exc:
+                logger.warning(f"Local long horizon refresh failed for user {user_id}: {exc}")
+            finally:
+                if cache_service.redis:
+                    try:
+                        await cache_service.redis.delete(lock_key)
+                    except Exception as exc:
+                        logger.warning(f"Failed to release long horizon refresh lock for user {user_id}: {exc}")
+
+        asyncio.create_task(_run())

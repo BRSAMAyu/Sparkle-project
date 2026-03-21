@@ -169,10 +169,9 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
     return SparklePageScaffold(
       role: SparklePageRole.content,
       safeArea: false,
-      floatingActionButton: SparkleIconButton(
-        icon: const Icon(Icons.add),
+      floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddEventDialog(context),
-        size: 56,
+        child: const Icon(Icons.add),
       ),
       child: Stack(
         children: [

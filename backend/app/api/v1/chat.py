@@ -2,7 +2,7 @@ from __future__ import annotations
 import json
 from datetime import timezone, datetime
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
@@ -31,6 +31,18 @@ router = APIRouter()
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+def _normalize_conversation_id(conversation_id: str | None) -> tuple[UUID, str]:
+    if conversation_id:
+        try:
+            session_id = UUID(conversation_id)
+            return session_id, str(session_id)
+        except ValueError:
+            pass
+
+    session_id = uuid4()
+    return session_id, str(session_id)
 
 
 class ChatRequest(BaseModel):
@@ -162,6 +174,10 @@ async def chat_with_task_context(
     # If ChatMessage doesn't have task_id, we might need to add it or just rely on session_id being tracked elsewhere.
     # For now, we return the response.
 
+    session_id_uuid, session_id_str = _normalize_conversation_id(
+        request.conversation_id,
+    )
+
     response_data = response_composer.compose_response(
         llm_text=llm_text,
         tool_results=tool_results,
@@ -173,13 +189,13 @@ async def chat_with_task_context(
     await save_chat_message(
         db=db,
         user_id=current_user.id,
-        conversation_id=request.conversation_id,
+        session_id=session_id_uuid,
         user_message=request.message,
         assistant_message=llm_text,
         tool_results=[tr.model_dump() for tr in tool_results]
     )
 
-    return ChatResponse(**response_data, conversation_id=request.conversation_id or "new_task_chat")
+    return ChatResponse(**response_data, conversation_id=session_id_str)
 
 @router.post("/chat", response_model=ChatResponse)
 async def chat(
@@ -303,6 +319,10 @@ async def chat(
         llm_text = llm_response.content
 
     # 6. 组装响应
+    session_id_uuid, session_id_str = _normalize_conversation_id(
+        request.conversation_id,
+    )
+
     response_data = response_composer.compose_response(
         llm_text=llm_text,
         tool_results=tool_results,
@@ -314,13 +334,13 @@ async def chat(
     await save_chat_message(
         db=db,
         user_id=current_user.id,
-        conversation_id=request.conversation_id,
+        session_id=session_id_uuid,
         user_message=request.message,
         assistant_message=llm_text,
         tool_results=[tr.model_dump() for tr in tool_results] # save tool results in message
     )
 
-    return ChatResponse(**response_data, conversation_id=request.conversation_id or "new")
+    return ChatResponse(**response_data, conversation_id=session_id_str)
 
 @router.post("/chat/stream")
 async def chat_stream(
@@ -814,18 +834,16 @@ async def get_conversation_history(
 async def save_chat_message(
     db: AsyncSession,
     user_id: UUID,
-    conversation_id: str | None,
+    session_id: UUID,
     user_message: str,
     assistant_message: str,
     tool_results: list[dict]
 ):
     """保存聊天消息"""
-    session_id_uuid = UUID(conversation_id) if conversation_id else UUID('00000000-0000-0000-0000-000000000000')
-
     # Save user message
     user_msg_db = ChatMessage(
         user_id=user_id,
-        session_id=session_id_uuid,
+        session_id=session_id,
         role=MessageRole.USER,
         content=user_message,
     )
@@ -835,7 +853,7 @@ async def save_chat_message(
     # Actions should be saved as JSON directly if the model supports it
     assistant_msg_db = ChatMessage(
         user_id=user_id,
-        session_id=session_id_uuid,
+        session_id=session_id,
         role=MessageRole.ASSISTANT,
         content=assistant_message,
         actions=tool_results if tool_results else None, # Store tool results as actions

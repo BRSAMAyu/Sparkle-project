@@ -27,17 +27,30 @@ class GroupDetailScreen extends ConsumerWidget {
       child: groupState.when(
         data: (group) => _buildContent(context, ref, group),
         loading: () => const _DetailLoading(),
-        error: (e, s) => SparklePageScaffold(
-          role: SparklePageRole.content,
-          appBar: AppBar(),
-          child: Center(
-            child: CustomErrorWidget.page(
-              context: context,
-              message: e.toString(),
-              onRetry: () {
-                ref.read(groupDetailProvider(groupId).notifier).refresh();
-              },
-            ),
+        error: (e, s) => SafeArea(
+          child: Column(
+            children: [
+              AppBar(
+                leading: SparkleIconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () => context.pop(),
+                ),
+                title: const Text('社群详情'),
+              ),
+              Expanded(
+                child: Center(
+                  child: CustomErrorWidget.page(
+                    context: context,
+                    message: e.toString(),
+                    onRetry: () {
+                      ref
+                          .read(groupDetailProvider(groupId).notifier)
+                          .refresh();
+                    },
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -138,7 +151,7 @@ class GroupDetailScreen extends ConsumerWidget {
             actions: [
               if (isMember)
                 SparkleIconButton(
-                  icon: Icon(Icons.more_vert, color: DS.brandPrimary),
+                  icon: Icon(Icons.more_vert, color: DS.textPrimary),
                   onPressed: () => _showGroupOptions(context, ref, group),
                 ),
             ],
@@ -171,7 +184,7 @@ class GroupDetailScreen extends ConsumerWidget {
                           ),
                         ),
                         child: Text(
-                          'Sprint ends in ${group.daysRemaining} days',
+                          '冲刺倒计时 ${group.daysRemaining} 天',
                           style: TextStyle(
                             color: DS.error,
                             fontWeight: FontWeight.bold,
@@ -207,7 +220,7 @@ class GroupDetailScreen extends ConsumerWidget {
                       Expanded(
                         child: _buildStatCard(
                           context,
-                          'Members',
+                          '成员',
                           '${group.memberCount}/${group.maxMembers}',
                           Icons.people,
                         ),
@@ -216,7 +229,7 @@ class GroupDetailScreen extends ConsumerWidget {
                       Expanded(
                         child: _buildStatCard(
                           context,
-                          'Total Flame',
+                          '火力值',
                           '${group.totalFlamePower}',
                           Icons.local_fire_department,
                         ),
@@ -225,7 +238,7 @@ class GroupDetailScreen extends ConsumerWidget {
                       Expanded(
                         child: _buildStatCard(
                           context,
-                          'Check-ins',
+                          '今日打卡',
                           '${group.todayCheckinCount}',
                           Icons.check_circle,
                         ),
@@ -237,13 +250,13 @@ class GroupDetailScreen extends ConsumerWidget {
 
                   // Description
                   Text(
-                    'About',
+                    '关于',
                     style: theme.textTheme.titleLarge
                         ?.copyWith(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: DS.sm),
                   Text(
-                    group.description ?? 'No description provided.',
+                    group.description ?? '暂无描述',
                     style: theme.textTheme.bodyMedium
                         ?.copyWith(color: DS.textSecondary, height: 1.6),
                   ),
@@ -279,7 +292,7 @@ class GroupDetailScreen extends ConsumerWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          'Announcement',
+                          '公告',
                           style: theme.textTheme.titleLarge
                               ?.copyWith(fontWeight: FontWeight.bold),
                         ),
@@ -299,7 +312,7 @@ class GroupDetailScreen extends ConsumerWidget {
                   Text(
                     group.announcement?.isNotEmpty == true
                         ? group.announcement!
-                        : 'No announcement.',
+                        : '暂无公告',
                     style: theme.textTheme.bodyMedium
                         ?.copyWith(color: DS.textSecondary, height: 1.6),
                   ),
@@ -309,7 +322,7 @@ class GroupDetailScreen extends ConsumerWidget {
                   // Actions
                   if (isMember) ...[
                     CustomButton.primary(
-                      text: 'Enter Chat',
+                      text: '进入聊天',
                       icon: Icons.chat_bubble_outline,
                       size: CustomButtonSize.large,
                       onPressed: () {
@@ -321,7 +334,7 @@ class GroupDetailScreen extends ConsumerWidget {
                       children: [
                         Expanded(
                           child: CustomButton.secondary(
-                            text: 'Tasks',
+                            text: '任务',
                             icon: Icons.task_alt,
                             onPressed: () {
                               context.push('/community/groups/$groupId/tasks');
@@ -331,7 +344,7 @@ class GroupDetailScreen extends ConsumerWidget {
                         const SizedBox(width: DS.lg),
                         Expanded(
                           child: CustomButton.secondary(
-                            text: 'Members',
+                            text: '成员',
                             icon: Icons.people_outline,
                             onPressed: () {
                               context.push(
@@ -344,7 +357,7 @@ class GroupDetailScreen extends ConsumerWidget {
                     ),
                   ] else ...[
                     CustomButton.primary(
-                      text: 'Join Group',
+                      text: '加入群组',
                       onPressed: () async {
                         HapticFeedback.lightImpact();
                         try {
@@ -354,12 +367,12 @@ class GroupDetailScreen extends ConsumerWidget {
                           if (context.mounted) {
                             AppFeedback.success(
                               context,
-                              'Welcome to the group!',
+                              '欢迎加入群组!',
                             );
                           }
                         } catch (e) {
                           if (context.mounted) {
-                            AppFeedback.error(context, 'Failed to join: $e');
+                            AppFeedback.error(context, '加入失败: $e');
                           }
                         }
                       },
@@ -389,10 +402,10 @@ class GroupDetailScreen extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(DS.spacing8),
               decoration: BoxDecoration(
-                color: DS.primaryBase.withValues(alpha: 0.08),
+                color: DS.surfaceSecondary,
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: Icon(icon, color: DS.primaryBase, size: 20),
+              child: Icon(icon, color: DS.textSecondary, size: 20),
             ),
             const SizedBox(height: DS.sm),
             Text(
@@ -429,8 +442,11 @@ class GroupDetailScreen extends ConsumerWidget {
                 leading: Container(
                   padding: const EdgeInsets.all(DS.sm),
                   decoration: BoxDecoration(
-                    color: DS.error.withValues(alpha: 0.1),
+                    color: DS.surfaceSecondary,
                     shape: BoxShape.circle,
+                    border: Border.all(
+                      color: DS.error.withValues(alpha: 0.3),
+                    ),
                   ),
                   child: Icon(
                     Icons.exit_to_app,
@@ -439,7 +455,7 @@ class GroupDetailScreen extends ConsumerWidget {
                   ),
                 ),
                 title: Text(
-                  'Leave Group',
+                  '离开群组',
                   style: TextStyle(
                     color: DS.error,
                     fontWeight: FontWeight.bold,
@@ -450,17 +466,17 @@ class GroupDetailScreen extends ConsumerWidget {
                   final confirm = await showSensoryDialog<bool>(
                     context: context,
                     builder: (context) => AlertDialog(
-                      title: const Text('Leave Group?'),
+                      title: const Text('确认离开?'),
                       content: const Text(
-                        'Are you sure you want to leave this group?',
+                        '确定要离开这个群组吗？',
                       ),
                       actions: [
                         SparkleButton.ghost(
-                          label: 'Cancel',
+                          label: '取消',
                           onPressed: () => Navigator.pop(context, false),
                         ),
                         SparkleButton.destructive(
-                          label: 'Leave',
+                          label: '离开',
                           onPressed: () => Navigator.pop(context, true),
                         ),
                       ],
@@ -501,22 +517,22 @@ class GroupDetailScreen extends ConsumerWidget {
           borderRadius: BorderRadius.circular(20),
           side: BorderSide(color: DS.border.withValues(alpha: 0.5)),
         ),
-        title: const Text('Edit Announcement'),
+        title: const Text('编辑公告'),
         content: TextField(
           controller: controller,
           maxLines: 4,
           maxLength: 2000,
           decoration: const InputDecoration(
-            hintText: 'Enter group announcement...',
+            hintText: '输入群组公告...',
           ),
         ),
         actions: [
           SparkleButton.ghost(
-            label: 'Cancel',
+            label: '取消',
             onPressed: () => Navigator.pop(context),
           ),
           SparkleButton.primary(
-            label: 'Save',
+            label: '保存',
             onPressed: () => Navigator.pop(context, controller.text.trim()),
           ),
         ],
@@ -528,9 +544,9 @@ class GroupDetailScreen extends ConsumerWidget {
       await ref
           .read(groupDetailProvider(groupId).notifier)
           .updateAnnouncement(result.isEmpty ? null : result);
-      if (context.mounted) AppFeedback.success(context, 'Announcement updated');
+      if (context.mounted) AppFeedback.success(context, '公告已更新');
     } catch (e) {
-      if (context.mounted) AppFeedback.error(context, 'Failed to update: $e');
+      if (context.mounted) AppFeedback.error(context, '更新失败: $e');
     }
   }
 }
@@ -540,29 +556,54 @@ class _DetailLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Shimmer.fromColors(
-        baseColor: DS.neutral200,
-        highlightColor: DS.neutral100,
+        baseColor: DS.surfaceOverlay,
+        highlightColor: DS.surfacePrimary,
         child: Column(
           children: [
-            Container(height: 200, color: DS.brandPrimary),
+            Container(height: 200, color: DS.surfaceOverlay),
             Padding(
               padding: const EdgeInsets.all(DS.lg),
               child: Column(
                 children: [
-                  Container(height: 20, width: 200, color: DS.brandPrimary),
+                  Container(
+                    height: 20,
+                    width: 200,
+                    decoration: BoxDecoration(
+                      color: DS.surfaceOverlay,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
                   const SizedBox(height: 20),
                   Row(
                     children: [
                       Expanded(
-                        child: Container(height: 80, color: DS.brandPrimary),
+                        child: Container(
+                          height: 80,
+                          decoration: BoxDecoration(
+                            color: DS.surfaceOverlay,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
-                        child: Container(height: 80, color: DS.brandPrimary),
+                        child: Container(
+                          height: 80,
+                          decoration: BoxDecoration(
+                            color: DS.surfaceOverlay,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
-                        child: Container(height: 80, color: DS.brandPrimary),
+                        child: Container(
+                          height: 80,
+                          decoration: BoxDecoration(
+                            color: DS.surfaceOverlay,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
                       ),
                     ],
                   ),

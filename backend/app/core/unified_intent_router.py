@@ -372,6 +372,15 @@ class UnifiedIntentRouter:
         best_intent = max(scores, key=scores.get)
         confidence = scores[best_intent]
 
+        if best_intent == UnifiedIntentType.PLAN and self._is_advisory_plan_query(message):
+            return IntentRoutingResult(
+                primary_intent=UnifiedIntentType.CHAT,
+                confidence=min(confidence, 0.72),
+                routing_layer="rule",
+                execution_mode="direct",
+                context_signals={"advisory_plan_override": True, "matched_keywords": list(scores.keys())},
+            )
+
         # 判断执行模式
         execution_mode = "direct"
         if confidence >= 0.8 and best_intent in [
@@ -480,6 +489,13 @@ class UnifiedIntentRouter:
             if is_complex:
                 execution_mode = "langgraph"
 
+            advisory_override = primary_intent == UnifiedIntentType.PLAN and self._is_advisory_plan_query(message)
+            if advisory_override:
+                primary_intent = UnifiedIntentType.CHAT
+                confidence = min(confidence, 0.72)
+                execution_mode = "direct"
+                reasoning = f"咨询型学习比较，保留标准直答链；{reasoning}"
+
             result = IntentRoutingResult(
                 primary_intent=primary_intent,
                 confidence=confidence,
@@ -488,7 +504,8 @@ class UnifiedIntentRouter:
                 context_signals={
                     "llm_reasoning": reasoning,
                     "is_complex": is_complex,
-                    "rule_hint": rule_hints.primary_intent.value
+                    "rule_hint": rule_hints.primary_intent.value,
+                    "advisory_plan_override": advisory_override,
                 },
                 conversation_context=context_str
             )
@@ -549,6 +566,43 @@ class UnifiedIntentRouter:
             "创建计划", "生成计划", "create", "schedule", "remind", "task", "plan",
         )
         return not any(keyword in message.lower() for keyword in explicit_action_keywords)
+
+    @staticmethod
+    def _is_advisory_plan_query(message: str) -> bool:
+        message = (message or "").strip().lower()
+        if not message:
+            return False
+
+        advisory_markers = (
+            "先学哪个",
+            "应该先",
+            "怎么选",
+            "判断标准",
+            "取舍",
+            "比较",
+            "区别",
+            "优先学",
+            "值不值得",
+        )
+        explicit_plan_markers = (
+            "制定计划",
+            "做计划",
+            "生成计划",
+            "创建计划",
+            "安排一下",
+            "排个计划",
+            "帮我规划",
+            "帮我安排",
+            "学习计划",
+            "复习计划",
+            "时间安排",
+            "日程安排",
+            "时间表",
+        )
+
+        return any(marker in message for marker in advisory_markers) and not any(
+            marker in message for marker in explicit_plan_markers
+        )
 
     def _is_complex_intent(self, message: str) -> bool:
         """检查是否为复杂意图"""
@@ -628,6 +682,9 @@ class UnifiedIntentRouter:
 
         if intent == UnifiedIntentType.MULTI_INTENT:
             return "langgraph"
+
+        if intent == UnifiedIntentType.PLAN and self._is_advisory_plan_query(message):
+            return "direct"
 
         if intent in {UnifiedIntentType.PLAN, UnifiedIntentType.SPRINT_PLAN} and self._is_complex_intent(message):
             return "langgraph"

@@ -52,6 +52,7 @@ class ApiEndpoints {
   static String startTask(String id) => '/tasks/$id/start';
   static String completeTask(String id) => '/tasks/$id/complete';
   static String abandonTask(String id) => '/tasks/$id/abandon';
+  static String taskGenerateGuide(String id) => '/tasks/$id/generate-guide';
   static String taskFeedback(String id) => '/tasks/$id/feedback';
   static String taskFeedbackReflection(String feedbackId) =>
       '/tasks/feedback/$feedbackId/reflection';

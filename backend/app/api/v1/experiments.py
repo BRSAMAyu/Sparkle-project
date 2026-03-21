@@ -11,6 +11,7 @@ RESTful API endpoints for managing A/B test experiments including:
 - Metric recording
 """
 from datetime import datetime
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from loguru import logger
@@ -19,6 +20,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
+from app.core.cache import cache_service
 from app.learning.ab_test_framework_enhanced import ABTestFrameworkEnhanced
 from app.learning.statistics import ABTestStatistics
 from app.models.experiment import (
@@ -30,6 +32,21 @@ from app.models.experiment import (
 from app.models.user import User
 
 router = APIRouter(tags=["experiments"])
+
+
+def _get_redis_client_or_503():
+    redis_client = cache_service.redis
+    if redis_client is None:
+        raise HTTPException(status_code=503, detail="Redis is not available")
+    return redis_client
+
+
+def _is_uuid_like(value: str) -> bool:
+    try:
+        UUID(value)
+        return True
+    except (TypeError, ValueError):
+        return False
 
 
 # Request/Response Models
@@ -151,9 +168,7 @@ async def create_experiment(
     Creates an experiment with the specified variants and metrics.
     Automatically calculates sample size if not provided.
     """
-    # Import Redis client
-    from app.core.redis import get_redis_client
-    redis_client = await get_redis_client()
+    redis_client = _get_redis_client_or_503()
 
     framework = ABTestFrameworkEnhanced(db, redis_client)
 
@@ -214,8 +229,7 @@ async def list_experiments(
     current_user: User = Depends(get_current_user),
 ):
     """List experiments with optional filtering"""
-    from app.core.redis import get_redis_client
-    redis_client = await get_redis_client()
+    redis_client = _get_redis_client_or_503()
 
     framework = ABTestFrameworkEnhanced(db, redis_client)
 
@@ -268,8 +282,7 @@ async def start_experiment(
     current_user: User = Depends(get_current_user),
 ):
     """Start an experiment"""
-    from app.core.redis import get_redis_client
-    redis_client = await get_redis_client()
+    redis_client = _get_redis_client_or_503()
 
     framework = ABTestFrameworkEnhanced(db, redis_client)
 
@@ -288,8 +301,7 @@ async def pause_experiment(
     current_user: User = Depends(get_current_user),
 ):
     """Pause a running experiment"""
-    from app.core.redis import get_redis_client
-    redis_client = await get_redis_client()
+    redis_client = _get_redis_client_or_503()
 
     framework = ABTestFrameworkEnhanced(db, redis_client)
 
@@ -308,8 +320,7 @@ async def resume_experiment(
     current_user: User = Depends(get_current_user),
 ):
     """Resume a paused experiment"""
-    from app.core.redis import get_redis_client
-    redis_client = await get_redis_client()
+    redis_client = _get_redis_client_or_503()
 
     framework = ABTestFrameworkEnhanced(db, redis_client)
 
@@ -329,8 +340,7 @@ async def complete_experiment(
     current_user: User = Depends(get_current_user),
 ):
     """Complete an experiment with conclusions"""
-    from app.core.redis import get_redis_client
-    redis_client = await get_redis_client()
+    redis_client = _get_redis_client_or_503()
 
     framework = ABTestFrameworkEnhanced(db, redis_client)
 
@@ -353,8 +363,7 @@ async def get_experiment_stats(
     current_user: User = Depends(get_current_user),
 ):
     """Get experiment statistics"""
-    from app.core.redis import get_redis_client
-    redis_client = await get_redis_client()
+    redis_client = _get_redis_client_or_503()
 
     framework = ABTestFrameworkEnhanced(db, redis_client)
 
@@ -378,10 +387,22 @@ async def assign_variant(
     Returns the assigned variant for the user. Assignments are deterministic
     based on user ID and experiment ID.
     """
-    from app.core.redis import get_redis_client
-    redis_client = await get_redis_client()
+    redis_client = _get_redis_client_or_503()
 
     framework = ABTestFrameworkEnhanced(db, redis_client)
+
+    if not _is_uuid_like(experiment_id):
+        logger.warning(
+            "Experiment %s is not UUID-backed; falling back to control cohort",
+            experiment_id,
+        )
+        return {
+            "variant_id": "control",
+            "variant_name": "control",
+            "is_control": True,
+            "is_new_assignment": False,
+            "fallback": True,
+        }
 
     try:
         variant, is_new = await framework.assign_variant(
@@ -411,8 +432,15 @@ async def record_metric(
 
     Records a metric value for the specified variant.
     """
-    from app.core.redis import get_redis_client
-    redis_client = await get_redis_client()
+    redis_client = _get_redis_client_or_503()
+
+    if not _is_uuid_like(experiment_id) or not _is_uuid_like(variant_id):
+        logger.warning(
+            "Skipping metric for non-UUID experiment assignment: experiment_id=%s, variant_id=%s",
+            experiment_id,
+            variant_id,
+        )
+        return {"status": "skipped", "reason": "non_uuid_assignment"}
 
     framework = ABTestFrameworkEnhanced(db, redis_client)
 

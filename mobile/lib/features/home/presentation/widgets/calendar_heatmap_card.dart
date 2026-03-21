@@ -46,104 +46,7 @@ class CalendarHeatmapCard extends ConsumerWidget {
     }
 
     if (compact) {
-      final showLegend = !dense;
-      final contentPadding = dense ? DS.spacing10 : DS.spacing12;
-      final headerSpacing = dense ? DS.spacing8 : DS.spacing10;
-      final monthlySummaries = calendarState.taskSummaries.entries
-          .where(
-            (entry) =>
-                entry.key.year == now.year && entry.key.month == now.month,
-          )
-          .map((entry) => entry.value)
-          .toList(growable: false);
-      final activeDays =
-          monthlySummaries.where((summary) => summary.hasTasks).length;
-      final peakTasks = monthlySummaries.isEmpty
-          ? 0
-          : monthlySummaries.map((summary) => summary.total).reduce(max);
-      final totalTasks = monthlySummaries.fold<int>(
-        0,
-        (sum, summary) => sum + summary.total,
-      );
-      final pendingTasks = monthlySummaries.fold<int>(
-        0,
-        (sum, summary) =>
-            sum + summary.pending + summary.inProgress + summary.overdue,
-      );
-      final completedTasks = monthlySummaries.fold<int>(
-        0,
-        (sum, summary) => sum + summary.completed,
-      );
-
-      return GestureDetector(
-        onTap: () => context.push('/calendar-stats'),
-        child: MaterialStyler(
-          material: AppMaterials.ceramic,
-          borderRadius: DS.borderRadius20,
-          padding: EdgeInsets.all(contentPadding),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(context, dense: dense),
-              SizedBox(height: headerSpacing),
-              Expanded(
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final showSidebar = constraints.maxWidth >= 290;
-                    final sidebarWidth = dense
-                        ? 92.0
-                        : constraints.maxWidth >= 340
-                            ? 112.0
-                            : 96.0;
-                    final grid = _buildMonthGrid(
-                      context,
-                      ref,
-                      BoxConstraints(
-                        maxWidth: showSidebar
-                            ? constraints.maxWidth - sidebarWidth - DS.spacing10
-                            : constraints.maxWidth,
-                        maxHeight: constraints.maxHeight,
-                      ),
-                      calendarState,
-                    );
-
-                    if (!showSidebar) {
-                      return Column(
-                        children: [
-                          Expanded(child: grid),
-                          if (showLegend) ...[
-                            const SizedBox(height: DS.spacing8),
-                            _buildLegend(context),
-                          ],
-                        ],
-                      );
-                    }
-
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(child: grid),
-                        const SizedBox(width: DS.spacing10),
-                        SizedBox(
-                          width: sidebarWidth,
-                          child: _CompactCalendarSidebar(
-                            activeDays: activeDays,
-                            peakTasks: peakTasks,
-                            totalTasks: totalTasks,
-                            pendingTasks: pendingTasks,
-                            completedTasks: completedTasks,
-                            showLegend: showLegend,
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
+      return _buildCompactCard(context, ref, now, calendarState);
     }
 
     final previewState = ref.watch(calendarPreviewProvider);
@@ -182,6 +85,116 @@ class CalendarHeatmapCard extends ConsumerWidget {
         ),
         if (isExpanded) const TaskPreviewPanel(),
       ],
+    );
+  }
+
+  Widget _buildCompactCard(
+    BuildContext context,
+    WidgetRef ref,
+    DateTime now,
+    TaskCalendarState calendarState,
+  ) {
+    final contentPadding = dense ? DS.spacing10 : DS.spacing12;
+    final headerSpacing = dense ? DS.spacing6 : DS.spacing8;
+    final monthlySummaries = calendarState.taskSummaries.entries
+        .where(
+          (entry) =>
+              entry.key.year == now.year && entry.key.month == now.month,
+        )
+        .map((entry) => entry.value)
+        .toList(growable: false);
+    final activeDays =
+        monthlySummaries.where((summary) => summary.hasTasks).length;
+    final totalTasks = monthlySummaries.fold<int>(
+      0,
+      (sum, summary) => sum + summary.total,
+    );
+    final pendingTasks = monthlySummaries.fold<int>(
+      0,
+      (sum, summary) =>
+          sum + summary.pending + summary.inProgress + summary.overdue,
+    );
+    final completedTasks = monthlySummaries.fold<int>(
+      0,
+      (sum, summary) => sum + summary.completed,
+    );
+    final previewState = ref.watch(calendarPreviewProvider);
+    final selectedDate = previewState.selectedDate;
+    final selectedSummary = selectedDate != null &&
+            selectedDate.year == now.year &&
+            selectedDate.month == now.month
+        ? calendarState.taskSummaries[
+            DateTime(selectedDate.year, selectedDate.month, selectedDate.day)]
+        : null;
+    final selectedLabel = selectedDate == null
+        ? null
+        : selectedSummary != null && selectedSummary.hasTasks
+            ? '${selectedDate.day}日 · ${selectedSummary.total}项'
+            : '${selectedDate.day}日 · 暂无任务';
+
+    return GestureDetector(
+      onTap: () => context.push('/calendar-stats'),
+      child: MaterialStyler(
+        material: AppMaterials.ceramic,
+        borderRadius: DS.borderRadius20,
+        padding: EdgeInsets.all(contentPadding),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildHeader(context, dense: dense),
+            SizedBox(height: headerSpacing),
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  // Always use 2/3 + 1/3 layout with flex
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Left 2/3: Calendar grid
+                      Expanded(
+                        flex: 2,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildWeekdayStrip(context),
+                            const SizedBox(height: DS.spacing4),
+                            Expanded(
+                              child: LayoutBuilder(
+                                builder: (context, gridConstraints) =>
+                                    _buildMonthGrid(
+                                  context,
+                                  ref,
+                                  gridConstraints,
+                                  calendarState,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: DS.spacing4),
+                            _buildLegend(context),
+                          ],
+                        ),
+                      ),
+                      SizedBox(width: dense ? DS.spacing8 : DS.spacing10),
+                      // Right 1/3: Stats sidebar
+                      Expanded(
+                        flex: 1,
+                        child: _CompactCalendarSidebar(
+                          activeDays: activeDays,
+                          totalTasks: totalTasks,
+                          pendingTasks: pendingTasks,
+                          completedTasks: completedTasks,
+                          selectedLabel: selectedLabel,
+                          dense: dense,
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -240,38 +253,57 @@ class CalendarHeatmapCard extends ConsumerWidget {
         ],
       );
 
-  Widget _buildLegend(BuildContext context) => Wrap(
-        alignment: WrapAlignment.end,
-        spacing: 2,
-        runSpacing: 2,
+  Widget _buildLegend(BuildContext context) => Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             'Less',
-            style: TextStyle(fontSize: 10, color: DS.textSecondary),
+            style: TextStyle(fontSize: 9, color: DS.textTertiary),
           ),
-          const SizedBox(width: DS.xs),
-          _buildLegendItem(context, 0),
-          _buildLegendItem(context, 1),
-          _buildLegendItem(context, 2),
-          _buildLegendItem(context, 3),
-          _buildLegendItem(context, 4),
-          const SizedBox(width: DS.xs),
+          const SizedBox(width: 3),
+          for (var i = 0; i < 5; i++)
+            Padding(
+              padding: const EdgeInsets.only(right: 2),
+              child: Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: _HeatmapColor.forLevel(context, i),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+          const SizedBox(width: 3),
           Text(
             'More',
-            style: TextStyle(fontSize: 10, color: DS.textSecondary),
+            style: TextStyle(fontSize: 9, color: DS.textTertiary),
           ),
         ],
       );
 
-  Widget _buildLegendItem(BuildContext context, int level) => Container(
-        width: 8,
-        height: 8,
-        decoration: BoxDecoration(
-          color: _HeatmapColor.forLevel(context, level),
-          borderRadius: BorderRadius.circular(2),
-        ),
-      );
+  Widget _buildWeekdayStrip(BuildContext context) {
+    const labels = ['一', '二', '三', '四', '五', '六', '日'];
+    return Row(
+      children: labels
+          .map(
+            (label) => Expanded(
+              child: Center(
+                child: Text(
+                  label,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: DS.textTertiary,
+                        fontSize: 10,
+                        fontWeight: DS.fontWeightBold,
+                      ),
+                ),
+              ),
+            ),
+          )
+          .toList(growable: false),
+    );
+  }
 
+  /// GitHub-style heatmap grid: each column aligns exactly with weekday labels.
   Widget _buildMonthGrid(
     BuildContext context,
     WidgetRef ref,
@@ -285,261 +317,181 @@ class CalendarHeatmapCard extends ConsumerWidget {
     final previewState = ref.watch(calendarPreviewProvider);
     final selectedDate = previewState.selectedDate;
 
-    final gridCells = <Widget>[];
+    final totalLeading = firstWeekday - 1;
+    final totalCells = totalLeading + daysInMonth;
+    final rows = max(1, (totalCells / 7).ceil());
+    const spacing = 3.0;
 
-    // Empty cells for offset
-    for (var i = 0; i < firstWeekday - 1; i++) {
-      gridCells.add(const SizedBox());
-    }
+    final cellWidth = (constraints.maxWidth - spacing * 6) / 7;
+    final cellHeight = (constraints.maxHeight - spacing * (rows - 1)) / rows;
+    final cellSize = max(8.0, min(cellWidth, cellHeight));
 
-    // Days
-    for (var i = 1; i <= daysInMonth; i++) {
-      final dayDate = DateTime(now.year, now.month, i);
-      final dayKey = DateTime(now.year, now.month, i);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(rows, (row) => Padding(
+        padding: EdgeInsets.only(top: row > 0 ? spacing : 0),
+        child: Row(
+          children: List.generate(7, (col) {
+            final index = row * 7 + col;
+            final dayNumber = index - totalLeading + 1;
 
-      // Get task summary for this day from real data
-      final summary = calendarState.taskSummaries[dayKey];
-      final hasTasks = summary != null && summary.hasTasks;
+            final child = (dayNumber >= 1 && dayNumber <= daysInMonth)
+                ? _buildDayCell(
+                    context, ref, now, dayNumber, cellSize,
+                    calendarState, selectedDate,
+                  )
+                : SizedBox(width: cellSize, height: cellSize);
 
-      // Calculate intensity based on task count
-      var intensity = 0;
-      if (hasTasks) {
-        final totalTasks = summary.total;
-        if (totalTasks >= 6) {
-          intensity = 4;
-        } else if (totalTasks >= 4) {
-          intensity = 3;
-        } else if (totalTasks >= 2) {
-          intensity = 2;
-        } else {
-          intensity = 1;
-        }
-      }
-
-      final isToday = i == now.day;
-      final isSelected = selectedDate != null &&
-          dayKey.year == selectedDate.year &&
-          dayKey.month == selectedDate.month &&
-          dayKey.day == selectedDate.day;
-
-      gridCells.add(
-        _DayCell(
-          day: i,
-          intensity: intensity,
-          isToday: isToday,
-          isSelected: isSelected,
-          hasTasks: hasTasks,
-          onTap: () => _handleDateTap(ref, dayDate),
+            return Expanded(child: Center(child: child));
+          }),
         ),
-      );
-    }
-
-    const columns = 7;
-    const spacing = 4.0;
-    final rows = max(1, (gridCells.length / columns).ceil());
-    final cellSizeFromWidth =
-        (constraints.maxWidth - spacing * (columns - 1)) / columns;
-    final cellSizeFromHeight =
-        (constraints.maxHeight - spacing * (rows - 1)) / rows;
-    final cellSize = max(0.0, min(cellSizeFromWidth, cellSizeFromHeight));
-    final totalCells = rows * columns;
-
-    return Align(
-      alignment: Alignment.center,
-      child: SizedBox(
-        width: cellSize * columns + spacing * (columns - 1),
-        height: cellSize * rows + spacing * (rows - 1),
-        child: GridView.builder(
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: columns,
-            mainAxisSpacing: spacing,
-            crossAxisSpacing: spacing,
-          ),
-          physics: const NeverScrollableScrollPhysics(),
-          padding: EdgeInsets.zero,
-          itemCount: totalCells,
-          itemBuilder: (context, index) {
-            if (index >= gridCells.length) {
-              return const SizedBox();
-            }
-            return gridCells[index];
-          },
-        ),
-      ),
+      )),
     );
   }
 
-  void _handleDateTap(WidgetRef ref, DateTime date) {
-    ref.read(calendarPreviewProvider.notifier).selectDate(date);
+  Widget _buildDayCell(
+    BuildContext context,
+    WidgetRef ref,
+    DateTime now,
+    int day,
+    double cellSize,
+    TaskCalendarState calendarState,
+    DateTime? selectedDate,
+  ) {
+    final dayKey = DateTime(now.year, now.month, day);
+    final summary = calendarState.taskSummaries[dayKey];
+    final hasTasks = summary != null && summary.hasTasks;
+
+    var intensity = 0;
+    if (hasTasks) {
+      final totalTasks = summary.total;
+      if (totalTasks >= 6) {
+        intensity = 4;
+      } else if (totalTasks >= 4) {
+        intensity = 3;
+      } else if (totalTasks >= 2) {
+        intensity = 2;
+      } else {
+        intensity = 1;
+      }
+    }
+
+    final isToday = day == now.day;
+    final isSelected = selectedDate != null &&
+        dayKey.year == selectedDate.year &&
+        dayKey.month == selectedDate.month &&
+        dayKey.day == selectedDate.day;
+
+    return _DayCell(
+      day: day,
+      intensity: intensity,
+      isToday: isToday,
+      isSelected: isSelected,
+      hasTasks: hasTasks,
+      size: cellSize,
+      onTap: () =>
+          ref.read(calendarPreviewProvider.notifier).selectDate(dayKey),
+    );
   }
 }
 
+/// Overflow-safe stats sidebar — uses Flexible children so content
+/// gracefully shrinks instead of overflowing when space is tight.
 class _CompactCalendarSidebar extends ConsumerWidget {
   const _CompactCalendarSidebar({
     required this.activeDays,
-    required this.peakTasks,
     required this.totalTasks,
     required this.pendingTasks,
     required this.completedTasks,
-    required this.showLegend,
+    required this.selectedLabel,
+    required this.dense,
   });
 
   final int activeDays;
-  final int peakTasks;
   final int totalTasks;
   final int pendingTasks;
   final int completedTasks;
-  final bool showLegend;
+  final String? selectedLabel;
+  final bool dense;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Get today's aggregate for summary
     final todayAggregate = ref.watch(todayAggregateProvider);
-    final todaySummary = todayAggregate.summaryText;
-    final hasActivePlan = todayAggregate.activePlan != null;
+    final hasActivity = todayAggregate.hasActivity;
 
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: DS.spacing8,
-        vertical: DS.spacing8,
-      ),
+      padding: const EdgeInsets.all(DS.spacing8),
       decoration: BoxDecoration(
         color: DS.surfaceOverlay,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: DS.borderSubtle),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header row
           Text(
-            '本月概览',
+            '概览',
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   color: DS.textSecondary,
                   fontWeight: DS.fontWeightBold,
+                  fontSize: 10,
                 ),
           ),
           const SizedBox(height: DS.spacing6),
-          // Today's overview badge
-          if (todayAggregate.hasActivity)
-            Container(
+          // Today summary — flexible
+          Flexible(
+            flex: 2,
+            child: Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(
                 horizontal: DS.spacing6,
                 vertical: DS.spacing4,
               ),
               decoration: BoxDecoration(
-                color: DS.brandPrimary.withValues(alpha: 0.15),
+                color: hasActivity
+                    ? DS.brandPrimary.withValues(alpha: 0.10)
+                    : DS.surfacePrimary.withValues(alpha: 0.72),
                 borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: hasActivity
+                      ? DS.brandPrimary.withValues(alpha: 0.12)
+                      : DS.borderSubtle,
+                ),
               ),
               child: Text(
-                todaySummary,
+                hasActivity
+                    ? todayAggregate.summaryText
+                    : '今天还没有密集安排',
                 style: TextStyle(
-                  fontSize: 9.5,
-                  fontWeight: FontWeight.w600,
-                  color: DS.brandPrimary,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w500,
+                  color: hasActivity ? DS.brandPrimary : DS.textSecondary,
+                  height: 1.3,
                 ),
-                maxLines: 3,
+                maxLines: dense ? 2 : 3,
                 overflow: TextOverflow.ellipsis,
               ),
-            ),
-          if (todayAggregate.hasActivity) const SizedBox(height: DS.spacing8),
-          Expanded(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final compact = constraints.maxHeight < 126;
-                final statSpacing = compact ? DS.spacing6 : DS.spacing8;
-                return Wrap(
-                  spacing: DS.spacing8,
-                  runSpacing: statSpacing,
-                  children: [
-                    _CompactCalendarStat(
-                      label: '任务总量',
-                      value: '$totalTasks项',
-                      width: (constraints.maxWidth - DS.spacing8) / 2,
-                    ),
-                    _CompactCalendarStat(
-                      label: '待处理',
-                      value: '$pendingTasks项',
-                      width: (constraints.maxWidth - DS.spacing8) / 2,
-                    ),
-                    _CompactCalendarStat(
-                      label: '已完成',
-                      value: '$completedTasks项',
-                      width: (constraints.maxWidth - DS.spacing8) / 2,
-                    ),
-                    _CompactCalendarStat(
-                      label: '活跃日期',
-                      value: '$activeDays天',
-                      width: (constraints.maxWidth - DS.spacing8) / 2,
-                    ),
-                    _CompactCalendarStat(
-                      label: '单日峰值',
-                      value: '$peakTasks项',
-                      width: constraints.maxWidth,
-                    ),
-                  ],
-                );
-              },
             ),
           ),
-          // Active plan indicator
-          if (hasActivePlan) ...[
-            const SizedBox(height: DS.spacing6),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(
-                horizontal: DS.spacing6,
-                vertical: 5,
-              ),
-              decoration: BoxDecoration(
-                color: DS.surfacePrimary.withValues(alpha: 0.8),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: DS.borderSubtle),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.flag_rounded,
-                    size: 12,
-                    color: DS.info,
+          const SizedBox(height: DS.spacing6),
+          // Stat chips — each is a compact row
+          _StatChip(label: '总量', value: '$totalTasks'),
+          const SizedBox(height: DS.spacing4),
+          _StatChip(label: '待办', value: '$pendingTasks'),
+          const SizedBox(height: DS.spacing4),
+          _StatChip(label: '完成', value: '$completedTasks'),
+          // Bottom dynamic label
+          if (selectedLabel != null) ...[
+            const Spacer(),
+            Text(
+              selectedLabel!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: DS.textTertiary,
+                    fontSize: 9,
                   ),
-                  const SizedBox(width: DS.spacing4),
-                  Expanded(
-                    child: Text(
-                      todayAggregate.activePlan!.name,
-                      style: TextStyle(
-                        fontSize: 9.5,
-                        color: DS.textPrimary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ] else ...[
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(
-                horizontal: DS.spacing6,
-                vertical: 5,
-              ),
-              decoration: BoxDecoration(
-                color: DS.surfacePrimary.withValues(alpha: 0.72),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: DS.borderSubtle),
-              ),
-              child: Text(
-                '今天没有活跃计划，适合整理待办与安排节奏。',
-                style: TextStyle(
-                  fontSize: 9.5,
-                  color: DS.textSecondary,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
             ),
           ],
         ],
@@ -548,40 +500,46 @@ class _CompactCalendarSidebar extends ConsumerWidget {
   }
 }
 
-class _CompactCalendarStat extends StatelessWidget {
-  const _CompactCalendarStat({
-    required this.label,
-    required this.value,
-    required this.width,
-  });
+/// Ultra-compact stat row: label + value on one line
+class _StatChip extends StatelessWidget {
+  const _StatChip({required this.label, required this.value});
 
   final String label;
   final String value;
-  final double width;
 
   @override
-  Widget build(BuildContext context) => SizedBox(
-        width: width,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+  Widget build(BuildContext context) => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing6,
+          vertical: DS.spacing4,
+        ),
+        decoration: BoxDecoration(
+          color: DS.surfacePrimary.withValues(alpha: 0.68),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: DS.borderSubtle),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              label,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: DS.textSecondary,
-                  ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+            Flexible(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 9,
+                  color: DS.textSecondary,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-            const SizedBox(height: 2),
             Text(
               value,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: DS.textPrimary,
-                    fontWeight: DS.fontWeightBold,
-                  ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: DS.textPrimary,
+              ),
             ),
           ],
         ),
@@ -597,6 +555,7 @@ class _DayCell extends StatelessWidget {
     required this.isSelected,
     required this.hasTasks,
     required this.onTap,
+    this.size,
   });
 
   final int day;
@@ -605,25 +564,32 @@ class _DayCell extends StatelessWidget {
   final bool isSelected;
   final bool hasTasks;
   final VoidCallback onTap;
+  final double? size;
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cellSize = size ?? 24.0;
+    final fontSize = (cellSize * 0.38).clamp(7.0, 12.0);
+    final borderRadius = (cellSize * 0.18).clamp(2.0, 5.0);
+
     return GestureDetector(
       onTap: hasTasks ? onTap : null,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         curve: Curves.easeOut,
+        width: cellSize,
+        height: cellSize,
         decoration: BoxDecoration(
           color: _HeatmapColor.forLevel(context, intensity),
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(borderRadius),
           border: _buildBorder(),
           boxShadow: isSelected
               ? [
                   BoxShadow(
                     color: DS.brandPrimary.withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+                    blurRadius: 6,
+                    offset: const Offset(0, 1),
                   ),
                 ]
               : null,
@@ -632,8 +598,8 @@ class _DayCell extends StatelessWidget {
         child: Text(
           '$day',
           style: TextStyle(
-            fontSize: 8,
-            fontWeight: isToday ? FontWeight.w700 : FontWeight.w600,
+            fontSize: fontSize,
+            fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
             color: _getTextColor(isDark, intensity),
           ),
         ),
@@ -642,11 +608,9 @@ class _DayCell extends StatelessWidget {
   }
 
   Color _getTextColor(bool isDark, int intensity) {
-    // High intensity (3-4) or selected = white text
     if (intensity >= 3 || isSelected) {
       return DS.textOnPrimary;
     }
-    // Low intensity (0-2) = use contrast color based on theme
     if (isDark) {
       return isToday ? DS.primaryBase : DS.textSecondary;
     }

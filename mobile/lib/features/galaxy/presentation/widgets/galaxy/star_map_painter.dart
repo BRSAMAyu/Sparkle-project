@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/galaxy/data/services/galaxy_spatial_index.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_camera.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_config.dart';
@@ -1362,13 +1363,22 @@ class StarMapPainter extends CustomPainter {
       }
 
       if (celebrationNodeIds.contains(node.id)) {
-        canvas.drawCircle(
-          nodeCenter,
-          radius * 2.1,
-          Paint()
-            ..color = style.baseColor.withValues(alpha: 0.12 * nodeAlpha)
-            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 20),
-        );
+        canvas
+          ..drawCircle(
+            nodeCenter,
+            radius * 3.4,
+            Paint()
+              ..color = style.baseColor.withValues(alpha: 0.22 * nodeAlpha)
+              ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 28),
+          )
+          ..drawCircle(
+            nodeCenter,
+            radius * 1.9,
+            Paint()
+              ..color = DS.brandPrimary.withValues(alpha: 0.14 * nodeAlpha)
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 1.6,
+          );
       }
     }
   }

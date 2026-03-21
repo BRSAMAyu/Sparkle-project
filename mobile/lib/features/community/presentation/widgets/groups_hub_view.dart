@@ -33,11 +33,13 @@ class GroupsHubView extends ConsumerWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: padding,
         children: [
+          // My groups first — the primary action
+          _MyGroupsSection(state: groupsAsync),
+          const SizedBox(height: DS.spacing20),
+          // Discovery & recommendations below
           _CommunityHero(directoryAsync: directoryAsync),
           const SizedBox(height: DS.spacing20),
           _RecommendationsSection(state: recommendationsAsync),
-          const SizedBox(height: DS.spacing20),
-          _MyGroupsSection(state: groupsAsync),
         ],
       ),
     );
@@ -110,7 +112,7 @@ class _CommunityHero extends StatelessWidget {
             children: [
               Expanded(
                 child: SparkleButton.primary(
-                  label: '浏览全部社群',
+                  label: '浏览社群',
                   icon: const Icon(Icons.travel_explore_outlined),
                   onPressed: () => context.push('/community/groups/discover'),
                 ),
@@ -280,7 +282,8 @@ class _JoinedGroupTile extends StatelessWidget {
     return GraphiteCardSurface(
       surfaceRole: SparkleSurfaceRole.card,
       padding: EdgeInsets.zero,
-      onTap: () => context.push('/community/groups/${group.id}'),
+      // Tap goes directly to chat — the primary action for joined groups
+      onTap: () => context.push('/chat/group/${group.id}'),
       child: ListTile(
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 10),

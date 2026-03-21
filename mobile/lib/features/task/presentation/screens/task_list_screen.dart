@@ -145,6 +145,31 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
           child: Column(
             children: [
               if (!_isSearching) const _FilterChips(),
+              if (taskListState.error != null && tasks.isNotEmpty)
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.fromLTRB(
+                    DS.spacing16,
+                    DS.spacing12,
+                    DS.spacing16,
+                    0,
+                  ),
+                  padding: const EdgeInsets.all(DS.spacing12),
+                  decoration: BoxDecoration(
+                    color: DS.warning.withValues(alpha: 0.08),
+                    borderRadius: DS.borderRadius12,
+                    border: Border.all(
+                      color: DS.warning.withValues(alpha: 0.24),
+                    ),
+                  ),
+                  child: Text(
+                    '部分数据刷新失败，当前先显示已加载的任务。',
+                    style: TextStyle(
+                      color: DS.textPrimary,
+                      fontSize: DS.fontSizeSm,
+                    ),
+                  ),
+                ),
               Expanded(
                 child: _buildTaskList(context, taskListState, tasks, ref),
               ),
@@ -170,7 +195,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
       );
     }
 
-    if (state.error != null) {
+    if (state.error != null && tasks.isEmpty) {
       return CustomErrorWidget.page(
         context: context,
         message: state.error!,
@@ -253,7 +278,9 @@ class _FilterChips extends ConsumerWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(
-          vertical: DS.spacing12, horizontal: DS.spacing16,),
+        vertical: DS.spacing12,
+        horizontal: DS.spacing16,
+      ),
       decoration: BoxDecoration(
         color: DS.brandPrimaryConst,
         boxShadow: DS.shadowSm,

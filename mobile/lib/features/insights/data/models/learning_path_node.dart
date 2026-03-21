@@ -9,6 +9,9 @@ class LearningPathNode {
     required this.name,
     required this.status,
     this.isTarget = false,
+    this.isOptional = false,
+    this.relationType,
+    this.sourceType,
   });
 
   factory LearningPathNode.fromJson(Map<String, dynamic> json) =>
@@ -19,5 +22,15 @@ class LearningPathNode {
 
   @JsonKey(name: 'is_target')
   final bool isTarget;
+
+  @JsonKey(name: 'is_optional')
+  final bool isOptional;
+
+  @JsonKey(name: 'relation_type')
+  final String? relationType;
+
+  @JsonKey(name: 'source_type')
+  final String? sourceType;
+
   Map<String, dynamic> toJson() => _$LearningPathNodeToJson(this);
 }

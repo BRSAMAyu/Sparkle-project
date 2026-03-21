@@ -217,7 +217,7 @@ class ToolPreferenceRouter:
                 target = record.tool_name
 
                 success = 1 if record.success else 0
-                self.learner.update(source, target, success)
+                await self.learner.update(source, target, success)
 
             logger.info(f"Updated learner from {len(records)} historical records")
 

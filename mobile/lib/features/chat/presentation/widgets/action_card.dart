@@ -41,6 +41,36 @@ class ActionCard extends StatefulWidget {
 }
 
 class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
+  static const Set<String> _narrativeKeys = {
+    'summary',
+    'description',
+    'message',
+    'subtitle',
+    'label',
+    'headline',
+  };
+
+  static const Set<String> _hiddenGenericKeys = {
+    'id',
+    'plan_id',
+    'task_id',
+    'tool_result_id',
+    'status_filter',
+    'total_tasks',
+    'completed_tasks',
+    'plans',
+    'workflow_id',
+    'trace_id',
+    'response_id',
+    'session_id',
+    'run_id',
+    'entity_id',
+    'linked_entities',
+    'linkedentities',
+    'metadata',
+    'raw',
+  };
+
   late AnimationController _pulseController;
   late Animation<double> _iconScaleAnimation;
   late AnimationController _pressController;
@@ -54,8 +84,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _detailsExpanded =
-        !_isCollapsedByDefault(_resolveActionType(widget.action));
+    _detailsExpanded = !_shouldCollapseByDefault(widget.action);
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
@@ -72,6 +101,14 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
 
     if (widget.onConfirm != null || widget.onDismiss != null) {
       unawaited(_pulseController.repeat(reverse: true));
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant ActionCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.action != widget.action) {
+      _detailsExpanded = !_shouldCollapseByDefault(widget.action);
     }
   }
 
@@ -237,7 +274,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         !_usesCustomCta(resolvedType);
     final confirmLabel = _getConfirmLabel(widget.action.type);
     final dismissLabel = _getDismissLabel(widget.action.type);
-    final isCollapsible = _isCollapsedByDefault(resolvedType);
+    final isCollapsible = _isCollapsible(widget.action);
     final supportsTapToggle = isCollapsible;
     final isPressable = hasAction || supportsTapToggle;
 
@@ -354,6 +391,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                           Expanded(
                             child: Text(
                               _getTitleForAction(widget.action.type),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: Theme.of(context)
                                   .textTheme
                                   .titleMedium
@@ -736,7 +775,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (action.data['title'] != null) ...[
+        if (_asString(action.data['title']) != null) ...[
           Container(
             padding: const EdgeInsets.all(DS.spacing12),
             decoration: BoxDecoration(
@@ -754,7 +793,9 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
               ),
             ),
             child: Text(
-              action.data['title'] as String,
+              _asString(action.data['title'])!,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                     fontWeight: DS.fontWeightSemibold,
                     color: DS.neutral900,
@@ -763,56 +804,99 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
           ),
           const SizedBox(height: DS.spacing12),
         ],
-        if (action.data.entries.where((e) => e.key != 'title').isNotEmpty)
-          Wrap(
-            spacing: DS.spacing8,
-            runSpacing: DS.spacing8,
-            children: action.data.entries
-                .where((e) => e.key != 'title')
-                .map(
-                  (entry) => Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: DS.spacing12,
-                      vertical: DS.spacing8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: DS.neutral100,
-                      borderRadius: DS.borderRadius8,
-                      border: Border.all(color: DS.neutral200),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          _getParamIcon(entry.key),
-                          size: DS.iconSizeXs,
-                          color: DS.neutral600,
-                        ),
-                        const SizedBox(width: DS.spacing4),
-                        Text(
-                          '${_formatParamKey(entry.key)}: ',
-                          style: TextStyle(
-                            color: DS.neutral600,
-                            fontSize: DS.fontSizeSm,
+        if (_extractGenericNarrative(action) case final narrative?) ...[
+          Text(
+            narrative,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: DS.neutral700,
+                  height: 1.45,
+                ),
+          ),
+          const SizedBox(height: DS.spacing12),
+        ],
+        if (_buildVisibleGenericEntries(action).isNotEmpty)
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final entries = _buildVisibleGenericEntries(action);
+              final maxChipWidth = constraints.maxWidth > 220
+                  ? 220.0
+                  : constraints.maxWidth;
+              return Wrap(
+                spacing: DS.spacing8,
+                runSpacing: DS.spacing8,
+                children: entries
+                    .map(
+                      (entry) => ConstrainedBox(
+                        constraints: BoxConstraints(maxWidth: maxChipWidth),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: DS.spacing12,
+                            vertical: DS.spacing8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: DS.neutral100,
+                            borderRadius: DS.borderRadius8,
+                            border: Border.all(color: DS.neutral200),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _getParamIcon(entry.key),
+                                size: DS.iconSizeXs,
+                                color: DS.neutral600,
+                              ),
+                              const SizedBox(width: DS.spacing6),
+                              Expanded(
+                                child: RichText(
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  text: TextSpan(
+                                    style: TextStyle(
+                                      fontSize: DS.fontSizeSm,
+                                      color: DS.neutral900,
+                                    ),
+                                    children: [
+                                      TextSpan(
+                                        text: '${_formatParamKey(entry.key)}: ',
+                                        style: TextStyle(
+                                          color: DS.neutral600,
+                                          fontWeight: DS.fontWeightRegular,
+                                        ),
+                                      ),
+                                      TextSpan(
+                                        text: entry.value,
+                                        style: TextStyle(
+                                          color: DS.neutral900,
+                                          fontWeight: DS.fontWeightSemibold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        Text(
-                          entry.value.toString(),
-                          style: TextStyle(
-                            fontWeight: DS.fontWeightSemibold,
-                            fontSize: DS.fontSizeSm,
-                            color: DS.neutral900,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-                .toList(),
+                      ),
+                    )
+                    .toList(),
+              );
+            },
           ),
       ],
     );
   }
+
+  bool _isCollapsible(WidgetPayload action) =>
+      _isCollapsedByDefault(_resolveActionType(action)) ||
+      _shouldCollapseGenericMetadata(action);
+
+  bool _shouldCollapseByDefault(WidgetPayload action) =>
+      _isCollapsedByDefault(_resolveActionType(action)) ||
+      _shouldCollapseGenericMetadata(action);
 
   bool _isCollapsedByDefault(String type) {
     switch (type) {
@@ -829,6 +913,41 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
 
   Widget _buildCollapsedPreview(BuildContext context, WidgetPayload action) {
     final preview = _collapsedPreviewText(action);
+    if (_shouldCollapseGenericMetadata(action)) {
+      return Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing10,
+          vertical: DS.spacing8,
+        ),
+        decoration: BoxDecoration(
+          color: DS.neutral100,
+          borderRadius: DS.borderRadius12,
+          border: Border.all(color: DS.neutral200),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.info_outline_rounded,
+              size: DS.iconSizeXs,
+              color: DS.neutral600,
+            ),
+            const SizedBox(width: DS.spacing6),
+            Flexible(
+              child: Text(
+                preview,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: DS.neutral700,
+                      fontWeight: DS.fontWeightMedium,
+                    ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     return Text(
       preview,
       maxLines: 2,
@@ -869,8 +988,92 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             action.data['title']?.toString() ??
             l10n.chatActionTitleExecutionSummary;
       default:
-        return '';
+        final summary = _extractGenericNarrative(action);
+        if (summary != null) {
+          return summary;
+        }
+        final title = _asString(action.data['title']);
+        if (title != null) {
+          return title;
+        }
+        final entryPreview = _buildVisibleGenericEntries(action)
+            .take(2)
+            .map((entry) => '${_formatParamKey(entry.key)} ${entry.value}')
+            .join(' · ');
+        return entryPreview.isNotEmpty ? entryPreview : l10n.viewDetails;
     }
+  }
+
+  bool _shouldCollapseGenericMetadata(WidgetPayload action) {
+    if (_isCollapsedByDefault(_resolveActionType(action))) {
+      return false;
+    }
+
+    final keys = action.data.keys.map((key) => key.toLowerCase()).toSet();
+    final hasInternalMetadata = keys.any(_hiddenGenericKeys.contains);
+    final visibleEntries = _buildVisibleGenericEntries(action);
+    final narrative = _extractGenericNarrative(action);
+
+    return hasInternalMetadata ||
+        visibleEntries.length > 2 ||
+        (narrative == null && visibleEntries.isNotEmpty);
+  }
+
+  String? _extractGenericNarrative(WidgetPayload action) {
+    for (final key in _narrativeKeys) {
+      final text = _asString(action.data[key]);
+      if (text != null) {
+        return text;
+      }
+    }
+    return null;
+  }
+
+  List<MapEntry<String, String>> _buildVisibleGenericEntries(
+    WidgetPayload action,
+  ) {
+    final entries = <MapEntry<String, String>>[];
+    for (final entry in action.data.entries) {
+      final normalizedKey = entry.key.toLowerCase();
+      if (normalizedKey == 'title' ||
+          _narrativeKeys.contains(normalizedKey) ||
+          _hiddenGenericKeys.contains(normalizedKey)) {
+        continue;
+      }
+      final value = _formatDisplayValue(entry.value);
+      if (value == null) {
+        continue;
+      }
+      entries.add(MapEntry(entry.key, value));
+    }
+    return entries;
+  }
+
+  String? _formatDisplayValue(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+    if (value is String) {
+      final trimmed = value.trim();
+      return trimmed.isEmpty ? null : trimmed;
+    }
+    if (value is num || value is bool) {
+      return value.toString();
+    }
+    if (value is List) {
+      final scalarItems = value
+          .map((item) => item is String || item is num || item is bool
+              ? item.toString().trim()
+              : '',)
+          .where((item) => item.isNotEmpty)
+          .take(3)
+          .toList();
+      if (scalarItems.isEmpty) {
+        return null;
+      }
+      return scalarItems.join(' · ');
+    }
+    return null;
   }
 
   Widget _buildTaskListContent(BuildContext context, WidgetPayload action) {

@@ -56,41 +56,52 @@ class SprintCard extends ConsumerWidget {
         // Circular progress - use Expanded to take available space
         Expanded(
           child: Center(
-            child: SizedBox(
-              width: 50,
-              height: 50,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  CustomPaint(
-                    size: const Size(50, 50),
-                    painter: _CircularProgressPainter(
-                      progress: progress,
-                      isUrgent: isUrgent,
-                    ),
-                  ),
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                // Use the smaller of available width/height, capped at 56
+                final ringSize = math.min(
+                  constraints.maxWidth.clamp(0, 56).toDouble(),
+                  constraints.maxHeight.clamp(0, 56).toDouble(),
+                );
+                return SizedBox(
+                  width: ringSize,
+                  height: ringSize,
+                  child: Stack(
+                    alignment: Alignment.center,
                     children: [
-                      Text(
-                        '$daysLeft',
-                        style: context.sparkleTypography.headingMedium.copyWith(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: isUrgent ? DS.error : DS.brandPrimary,
+                      CustomPaint(
+                        size: Size(ringSize, ringSize),
+                        painter: _CircularProgressPainter(
+                          progress: progress,
+                          isUrgent: isUrgent,
                         ),
                       ),
-                      Text(
-                        '天',
-                        style: context.sparkleTypography.labelSmall.copyWith(
-                          fontSize: 9,
-                          color: DS.textSecondary,
-                        ),
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '$daysLeft',
+                            style:
+                                context.sparkleTypography.headingMedium.copyWith(
+                              fontSize: ringSize * 0.3,
+                              fontWeight: FontWeight.bold,
+                              color: isUrgent ? DS.error : DS.brandPrimary,
+                            ),
+                          ),
+                          Text(
+                            '天',
+                            style:
+                                context.sparkleTypography.labelSmall.copyWith(
+                              fontSize: ringSize * 0.17,
+                              color: DS.textSecondary,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
+                );
+              },
             ),
           ),
         ),
@@ -164,20 +175,22 @@ class _CircularProgressPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2 - 4;
+    const strokeWidth = 5.0;
+    // Inset by half stroke width so the ring stays fully inside the canvas
+    final radius = size.width / 2 - strokeWidth / 2 - 1;
 
     // Background circle
     final bgPaint = Paint()
       ..color = DS.brandPrimary.withValues(alpha: 0.12)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 6;
+      ..strokeWidth = strokeWidth;
     canvas.drawCircle(center, radius, bgPaint);
 
     // Progress arc
     final progressPaint = Paint()
       ..color = isUrgent ? DS.error : DS.primaryBase
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 6
+      ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round;
 
     final sweepAngle = 2 * math.pi * progress;

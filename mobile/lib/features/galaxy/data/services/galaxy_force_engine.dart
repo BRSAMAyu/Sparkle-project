@@ -111,6 +111,29 @@ class GalaxyForceEngine {
     _anchoredNodeId = null;
   }
 
+  void activateNodes(
+    Iterable<String> nodeIds, {
+    required Map<String, Offset> positions,
+    Offset center = Offset.zero,
+    double impulse = 0.9,
+  }) {
+    for (final nodeId in nodeIds) {
+      final position = positions[nodeId];
+      if (position == null) {
+        continue;
+      }
+      _activeNodeIds.add(nodeId);
+
+      final delta = position - center;
+      final distance = math.max(delta.distance, 1.0);
+      final radial = delta / distance;
+      final tangent = Offset(-radial.dy, radial.dx);
+      final seed = ((nodeId.hashCode & 0xFFFF) / 0xFFFF) - 0.5;
+      final kick = radial * (impulse * 0.7) + tangent * (impulse * seed);
+      _velocities[nodeId] = (_velocities[nodeId] ?? Offset.zero) + kick;
+    }
+  }
+
   GalaxyForceTickResult tick({
     required Map<String, Offset> positions,
     required Map<String, Set<String>> adjacency,

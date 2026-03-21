@@ -51,10 +51,10 @@ class ToolShell extends StatefulWidget {
 class _ToolShellState extends State<ToolShell> {
   static const _headerPrefPrefix = 'tool_shell.header_hidden.';
 
-  bool _headerCollapsed = false;
+  bool _headerCollapsed = true;
 
   bool get _isSheet => widget.surface == ToolSurface.sheet;
-  bool get _effectiveCompactHeader => widget.compactHeader || _headerCollapsed;
+  bool get _effectiveCompactHeader => true;
 
   @override
   void initState() {
@@ -65,7 +65,7 @@ class _ToolShellState extends State<ToolShell> {
   Future<void> _loadHeaderPreference() async {
     final prefs = await SharedPreferences.getInstance();
     final nextValue =
-        prefs.getBool('$_headerPrefPrefix${widget.title}') ?? false;
+        prefs.getBool('$_headerPrefPrefix${widget.title}') ?? true;
     if (!mounted) {
       return;
     }
@@ -193,36 +193,26 @@ class _ToolShellState extends State<ToolShell> {
                         children: [
                           Text(
                             widget.title,
-                            maxLines: _effectiveCompactHeader ? 1 : 2,
+                            maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: (_effectiveCompactHeader
-                                    ? Theme.of(context).textTheme.titleLarge
-                                    : Theme.of(context).textTheme.headlineSmall)
+                            style: Theme.of(context).textTheme.titleLarge
                                 ?.copyWith(
                               color: DS.textPrimary,
                               fontWeight: DS.fontWeightBold,
                               height: 1.05,
                             ),
                           ),
-                          if (!_headerCollapsed) ...[
-                            SizedBox(
-                              height: _effectiveCompactHeader
-                                  ? DS.spacing6
-                                  : DS.spacing8,
-                            ),
-                            Text(
-                              widget.subtitle,
-                              maxLines: _effectiveCompactHeader ? 2 : 3,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
-                                  ?.copyWith(
-                                    color: DS.textSecondary,
-                                    height: _effectiveCompactHeader ? 1.4 : 1.5,
-                                  ),
-                            ),
-                          ],
+                          const SizedBox(height: DS.spacing4),
+                          Text(
+                            '先直接使用核心功能，说明已收在下方。',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: DS.textSecondary,
+                                  height: 1.4,
+                                ),
+                          ),
                         ],
                       ),
                     ),
@@ -236,26 +226,13 @@ class _ToolShellState extends State<ToolShell> {
                       onPressed: _toggleHeaderCollapsed,
                       icon: Icon(
                         _headerCollapsed
-                            ? Icons.visibility_off_rounded
-                            : Icons.visibility_rounded,
+                            ? Icons.expand_more_rounded
+                            : Icons.expand_less_rounded,
                         size: 18,
                       ),
                     ),
                   ],
                 ),
-                if (!_headerCollapsed && widget.heroChips.isNotEmpty) ...[
-                  SizedBox(
-                    height:
-                        _effectiveCompactHeader ? DS.spacing10 : DS.spacing16,
-                  ),
-                  Wrap(
-                    spacing:
-                        _effectiveCompactHeader ? DS.spacing8 : DS.spacing10,
-                    runSpacing:
-                        _effectiveCompactHeader ? DS.spacing8 : DS.spacing10,
-                    children: widget.heroChips,
-                  ),
-                ],
               ],
             ),
           ),
@@ -272,6 +249,16 @@ class _ToolShellState extends State<ToolShell> {
             height: _effectiveCompactHeader ? DS.spacing12 : DS.spacing20,
           ),
           widget.footer!,
+        ],
+        if (widget.subtitle.isNotEmpty || widget.heroChips.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing12),
+          _ToolIntroSection(
+            expanded: !_headerCollapsed,
+            accentColor: widget.accentColor,
+            description: widget.subtitle,
+            chips: widget.heroChips,
+            onToggle: _toggleHeaderCollapsed,
+          ),
         ],
       ],
     );
@@ -422,6 +409,121 @@ class ToolSectionCard extends StatelessWidget {
               const SizedBox(height: DS.spacing16),
             ],
             if (fillHeight) Expanded(child: child) else child,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ToolIntroSection extends StatelessWidget {
+  const _ToolIntroSection({
+    required this.expanded,
+    required this.accentColor,
+    required this.description,
+    required this.chips,
+    required this.onToggle,
+  });
+
+  final bool expanded;
+  final Color accentColor;
+  final String description;
+  final List<Widget> chips;
+  final VoidCallback onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final background = _mix(
+      DS.surfacePrimary,
+      accentColor,
+      isDark ? 0.10 : 0.04,
+    );
+    final border = _mix(
+      DS.borderSubtle,
+      accentColor,
+      isDark ? 0.18 : 0.10,
+    );
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: border),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(DS.spacing12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            InkWell(
+              onTap: onToggle,
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: DS.spacing4,
+                  vertical: DS.spacing2,
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline_rounded,
+                      size: 16,
+                      color: accentColor,
+                    ),
+                    const SizedBox(width: DS.spacing8),
+                    Expanded(
+                      child: Text(
+                        expanded ? '收起工具说明' : '展开工具说明',
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                              color: DS.textPrimary,
+                              fontWeight: DS.fontWeightSemiBold,
+                            ),
+                      ),
+                    ),
+                    Icon(
+                      expanded
+                          ? Icons.keyboard_arrow_up_rounded
+                          : Icons.keyboard_arrow_down_rounded,
+                      color: DS.textSecondary,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            AnimatedCrossFade(
+              firstChild: const SizedBox.shrink(),
+              secondChild: Padding(
+                padding: const EdgeInsets.only(top: DS.spacing10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (description.isNotEmpty)
+                      Text(
+                        description,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: DS.textSecondary,
+                              height: 1.5,
+                            ),
+                      ),
+                    if (chips.isNotEmpty) ...[
+                      if (description.isNotEmpty)
+                        const SizedBox(height: DS.spacing10),
+                      Wrap(
+                        spacing: DS.spacing8,
+                        runSpacing: DS.spacing8,
+                        children: chips,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              crossFadeState: expanded
+                  ? CrossFadeState.showSecond
+                  : CrossFadeState.showFirst,
+              duration: DS.durationFast,
+              sizeCurve: Curves.easeOutCubic,
+            ),
           ],
         ),
       ),

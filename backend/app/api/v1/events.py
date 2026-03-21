@@ -45,7 +45,11 @@ async def ingest_events(
     result = await service.ingest_events(current_user.id, items)
 
     estimator = StateEstimatorService(db)
-    await estimator.update_state(current_user.id, current_user.timezone)
+    timezone_name = (
+        getattr(getattr(current_user, "push_preference", None), "timezone", None)
+        or "Asia/Shanghai"
+    )
+    await estimator.update_state(current_user.id, timezone_name)
     await cache_service.delete(f"predictive:next_intent:{current_user.id}")
 
     return EventIngestResponse(**result)

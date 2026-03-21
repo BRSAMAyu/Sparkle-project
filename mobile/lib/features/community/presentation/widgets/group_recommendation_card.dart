@@ -24,9 +24,6 @@ class GroupRecommendationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final group = recommendation.group;
     final isSprint = group.isSprint;
-    final accentColors = isSprint
-        ? [DS.warning, DS.warning.withValues(alpha: 0.4)]
-        : [DS.brandPrimary, DS.brandPrimary.withValues(alpha: 0.4)];
     final reasons = recommendation.reasons.take(2).toList();
     final joinLabel = recommendation.requiresApproval ? 'Apply' : 'Join';
 
@@ -37,15 +34,6 @@ class GroupRecommendationCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            height: 6,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(colors: accentColors),
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(24),
-              ),
-            ),
-          ),
           Padding(
             padding: context.space.edge(all: context.space.md),
             child: Column(

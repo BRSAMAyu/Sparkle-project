@@ -13,8 +13,8 @@ from loguru import logger
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.dependencies import get_current_user
-from app.database import get_db
+from app.api.deps import get_current_user
+from app.db.session import get_db
 from app.models.candidate_action_feedback import CandidateActionFeedback
 from app.models.user import User
 
@@ -124,6 +124,18 @@ async def record_feedback(
     except HTTPException:
         raise
     except Exception as e:
+        await db.rollback()
+        if "candidate_action_feedback" in str(e).lower():
+            feedback_id = str(uuid.uuid4())
+            logger.warning(
+                "Candidate action feedback table unavailable; accepting feedback without persistence for candidate {}",
+                request.candidate_id,
+            )
+            return FeedbackResponse(
+                ok=True,
+                feedback_id=feedback_id,
+                message="Feedback accepted in degraded mode",
+            )
         logger.exception("Failed to record feedback")
         raise HTTPException(status_code=500, detail=f"Failed to record feedback: {str(e)}")
 
@@ -215,5 +227,18 @@ async def get_feedback_stats(
         }
 
     except Exception as e:
+        if "candidate_action_feedback" in str(e).lower():
+            logger.warning(
+                "Candidate action feedback stats unavailable because table is missing; returning empty stats",
+            )
+            return {
+                "ok": True,
+                "total_count": 0,
+                "feedback_type_breakdown": {},
+                "action_type_breakdown": {},
+                "impression_count": 0,
+                "ctr_percent": 0,
+                "completion_rate_percent": 0,
+            }
         logger.exception("Failed to get feedback stats")
         raise HTTPException(status_code=500, detail=f"Failed to get stats: {str(e)}")

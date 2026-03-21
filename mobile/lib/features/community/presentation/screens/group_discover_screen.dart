@@ -90,23 +90,15 @@ class _GroupDiscoverScreenState extends ConsumerState<GroupDiscoverScreen> {
                   },
                 ),
                 const SizedBox(height: 16),
-                _SortSelector(
-                  current: notifier.sortBy,
-                  onChanged: notifier.setSortBy,
+                _CompactFilterBar(
+                  sortBy: notifier.sortBy,
+                  onSortChanged: notifier.setSortBy,
+                  type: notifier.type,
+                  onTypeChanged: notifier.setType,
+                  availableTags: directory.availableTags,
+                  selectedTags: notifier.selectedTags,
+                  onToggleTag: notifier.toggleTag,
                 ),
-                const SizedBox(height: 12),
-                _TypeSelector(
-                  current: notifier.type,
-                  onChanged: notifier.setType,
-                ),
-                if (directory.availableTags.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  _TagSelector(
-                    availableTags: directory.availableTags,
-                    selectedTags: notifier.selectedTags,
-                    onToggle: notifier.toggleTag,
-                  ),
-                ],
                 if (groupPrompts.isNotEmpty) ...[
                   const SizedBox(height: 18),
                   Text(
@@ -387,99 +379,105 @@ class _SearchBar extends StatelessWidget {
   }
 }
 
-class _SortSelector extends StatelessWidget {
-  const _SortSelector({
-    required this.current,
-    required this.onChanged,
-  });
-
-  final GroupDirectorySort current;
-  final Future<void> Function(GroupDirectorySort) onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    const options = <(GroupDirectorySort, String)>[
-      (GroupDirectorySort.hot, '热度优先'),
-      (GroupDirectorySort.latest, '最新创建'),
-      (GroupDirectorySort.random, '随机发现'),
-    ];
-
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: options.map((option) {
-        final selected = current == option.$1;
-        return ChoiceChip(
-          label: Text(option.$2),
-          selected: selected,
-          onSelected: (_) {
-            onChanged(option.$1);
-          },
-        );
-      }).toList(),
-    );
-  }
-}
-
-class _TypeSelector extends StatelessWidget {
-  const _TypeSelector({
-    required this.current,
-    required this.onChanged,
-  });
-
-  final GroupType? current;
-  final Future<void> Function(GroupType?) onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    const options = <(GroupType?, String)>[
-      (null, '全部'),
-      (GroupType.squad, '学习小组'),
-      (GroupType.sprint, '冲刺小组'),
-    ];
-
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: options.map((option) {
-        final selected = current == option.$1;
-        return ChoiceChip(
-          label: Text(option.$2),
-          selected: selected,
-          onSelected: (_) {
-            onChanged(option.$1);
-          },
-        );
-      }).toList(),
-    );
-  }
-}
-
-class _TagSelector extends StatelessWidget {
-  const _TagSelector({
+class _CompactFilterBar extends StatelessWidget {
+  const _CompactFilterBar({
+    required this.sortBy,
+    required this.onSortChanged,
+    required this.type,
+    required this.onTypeChanged,
     required this.availableTags,
     required this.selectedTags,
-    required this.onToggle,
+    required this.onToggleTag,
   });
 
+  final GroupDirectorySort sortBy;
+  final Future<void> Function(GroupDirectorySort) onSortChanged;
+  final GroupType? type;
+  final Future<void> Function(GroupType?) onTypeChanged;
   final List<String> availableTags;
   final Set<String> selectedTags;
-  final Future<void> Function(String tag) onToggle;
+  final Future<void> Function(String tag) onToggleTag;
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: availableTags.take(12).map((tag) {
-        return FilterChip(
-          label: Text(tag),
-          selected: selectedTags.contains(tag),
-          onSelected: (_) {
-            onToggle(tag);
-          },
-        );
-      }).toList(),
+    const sortOptions = <(GroupDirectorySort, String, IconData)>[
+      (GroupDirectorySort.hot, '热度', Icons.local_fire_department_outlined),
+      (GroupDirectorySort.latest, '最新', Icons.schedule_outlined),
+      (GroupDirectorySort.random, '随机', Icons.shuffle_outlined),
+    ];
+
+    const typeOptions = <(GroupType?, String)>[
+      (null, '全部'),
+      (GroupType.squad, '学习'),
+      (GroupType.sprint, '冲刺'),
+    ];
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          // Sort chips
+          ...sortOptions.map((option) {
+            final selected = sortBy == option.$1;
+            return Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: ChoiceChip(
+                label: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(option.$3, size: 14),
+                    const SizedBox(width: 4),
+                    Text(option.$2),
+                  ],
+                ),
+                selected: selected,
+                visualDensity: VisualDensity.compact,
+                onSelected: (_) => onSortChanged(option.$1),
+              ),
+            );
+          }),
+          // Divider
+          Container(
+            width: 1,
+            height: 20,
+            margin: const EdgeInsets.symmetric(horizontal: 6),
+            color: DS.textSecondary.withValues(alpha: 0.2),
+          ),
+          // Type chips
+          ...typeOptions.map((option) {
+            final selected = type == option.$1;
+            return Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: ChoiceChip(
+                label: Text(option.$2),
+                selected: selected,
+                visualDensity: VisualDensity.compact,
+                onSelected: (_) => onTypeChanged(option.$1),
+              ),
+            );
+          }),
+          // Tag chips (if any)
+          if (availableTags.isNotEmpty) ...[
+            Container(
+              width: 1,
+              height: 20,
+              margin: const EdgeInsets.symmetric(horizontal: 6),
+              color: DS.textSecondary.withValues(alpha: 0.2),
+            ),
+            ...availableTags.take(8).map((tag) {
+              return Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: FilterChip(
+                  label: Text(tag),
+                  selected: selectedTags.contains(tag),
+                  visualDensity: VisualDensity.compact,
+                  onSelected: (_) => onToggleTag(tag),
+                ),
+              );
+            }),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -547,7 +545,7 @@ class _DirectoryGroupCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final accent = group.isSprint ? DS.warning : DS.brandPrimary;
     final actionLabel = group.isJoined
-        ? '已加入'
+        ? '进入聊天'
         : group.joinRequiresApproval
             ? '申请加入'
             : '加入';
@@ -640,7 +638,9 @@ class _DirectoryGroupCard extends StatelessWidget {
                 variant: group.isJoined
                     ? ButtonVariant.secondary
                     : ButtonVariant.primary,
-                onPressed: group.isJoined ? onTap : onJoin,
+                onPressed: group.isJoined
+                    ? () => context.push('/chat/group/${group.id}')
+                    : onJoin,
               ),
             ],
           ),

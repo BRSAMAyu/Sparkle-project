@@ -54,6 +54,7 @@ router = APIRouter()
 AUTH_RATE_LIMIT = "50/15minutes" if settings.DEBUG else "5/15minutes"
 SOCIAL_RATE_LIMIT = "50/15minutes" if settings.DEBUG else "5/15minutes"
 REFRESH_RATE_LIMIT = "100/15minutes" if settings.DEBUG else "10/15minutes"
+LOGOUT_RATE_LIMIT = "500/15minutes" if settings.DEBUG else "30/15minutes"
 FORGOT_RATE_LIMIT = "30/15minutes" if settings.DEBUG else "3/15minutes"
 VERIFY_RATE_LIMIT = "30/15minutes" if settings.DEBUG else "5/15minutes"
 RESET_RATE_LIMIT = "30/15minutes" if settings.DEBUG else "5/15minutes"
@@ -574,7 +575,7 @@ async def refresh_token(
 
 
 @router.post("/logout", response_model=Any)
-@limiter.limit(REFRESH_RATE_LIMIT)
+@limiter.limit(LOGOUT_RATE_LIMIT)
 async def logout(
     request: Request,
     data: LogoutRequest | None = None,

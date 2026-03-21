@@ -20,6 +20,7 @@ import 'package:sparkle/features/task/data/models/task_completion_result.dart';
 import 'package:sparkle/features/task/data/models/task_feedback_response.dart';
 import 'package:sparkle/features/task/data/models/task_feedback_submission.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
+import 'package:sparkle/features/task/utils/task_identity.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 // A dummy filter class for now
@@ -203,6 +204,18 @@ class TaskNotifier extends StateNotifier<TaskListState> {
 
       if (refresh) await refreshTasks();
     });
+  }
+
+  /// Generate or regenerate AI guide for an existing task.
+  Future<TaskModel> generateGuide(String id) async {
+    final updated = await _taskRepository.generateGuide(id);
+    // Update the task in local state
+    state = state.copyWith(
+      tasks: state.tasks.map((t) => t.id == id ? updated : t).toList(),
+      todayTasks:
+          state.todayTasks.map((t) => t.id == id ? updated : t).toList(),
+    );
+    return updated;
   }
 
   Future<void> deleteTask(String id) async {
@@ -528,7 +541,7 @@ final taskDetailProvider =
     return await taskRepo.getTask(id);
   } catch (e) {
     // 🔧 Demo 模式或任务不存在时，返回默认的"自由专注"任务
-    if (DemoDataService.isDemoMode || id.startsWith('focus_')) {
+    if (DemoDataService.isDemoMode || isLocalOnlyTaskId(id)) {
       debugPrint('🎭 Using default focus task for: $id');
       return TaskModel(
         id: id,

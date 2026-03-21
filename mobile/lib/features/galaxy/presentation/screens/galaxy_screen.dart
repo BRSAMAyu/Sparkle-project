@@ -1369,8 +1369,10 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     _clearPreviewState();
     _cancelTapFeedbackState();
     final totalMs = _currentBuildReplayDurationMs();
+    final overviewCamera = _fitOverviewCamera();
 
     setState(() {
+      _camera = overviewCamera;
       _selectedNodeId = null;
       _draggingNodeId = null;
       _isBuildAnimating = true;
@@ -1437,6 +1439,45 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
         _centerGravityStrength = centerGravity;
       }
     });
+    _previewPhysicsSettingsChange();
+  }
+
+  void _previewPhysicsSettingsChange() {
+    final graph = _graph;
+    if (graph == null || _positions.isEmpty || _viewportSize == Size.zero) {
+      return;
+    }
+
+    final viewport = _camera.viewportRect.inflate(180);
+    final viewportCenter = _camera.screenToWorld(
+      Offset(_viewportSize.width / 2, _viewportSize.height / 2),
+    );
+    final candidates = _positions.entries
+        .where((entry) => viewport.contains(entry.value))
+        .toList(growable: false);
+    final activeEntries =
+        (candidates.isNotEmpty ? candidates : _positions.entries.toList())
+          ..sort(
+            (a, b) => (a.value - viewportCenter)
+                .distance
+                .compareTo((b.value - viewportCenter).distance),
+          );
+
+    final nodeIds = activeEntries
+        .take(36)
+        .map((entry) => entry.key)
+        .toList(growable: false);
+    if (nodeIds.isEmpty) {
+      return;
+    }
+
+    _forceEngine.activateNodes(
+      nodeIds,
+      positions: _positions,
+      center: viewportCenter,
+      impulse: 1.15,
+    );
+    _startPhysicsSimulation();
   }
 
   void _updateReplaySpeed(double value) {
@@ -1444,6 +1485,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       _replaySpeed = value;
     });
     if (!_isBuildAnimating) {
+      _startBuildReplay();
       return;
     }
     final progress = _buildReplayController.value.clamp(0.0, 1.0);
@@ -1790,12 +1832,23 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                       if (worldPosition == null) {
                         return const SizedBox.shrink();
                       }
+                      // Collect neighbor screen positions for connection animation
+                      final neighborIds = _adjacency[entry.nodeId] ?? const <String>{};
+                      final neighborScreenPositions = <Offset>[];
+                      for (final nid in neighborIds) {
+                        final nPos = _positions[nid];
+                        if (nPos != null) {
+                          neighborScreenPositions.add(_camera.worldToScreen(nPos));
+                        }
+                      }
                       return Positioned.fill(
                         child: IgnorePointer(
                           child: StarSuccessAnimation(
                             key: ValueKey(entry.id),
                             position: _camera.worldToScreen(worldPosition),
                             color: entry.color,
+                            neighborPositions: neighborScreenPositions,
+                            emphasizeNeighbors: entry.emphasizeNeighbors,
                             onComplete: () => _removeCelebration(entry.id),
                           ),
                         ),

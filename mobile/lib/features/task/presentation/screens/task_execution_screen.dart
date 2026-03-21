@@ -23,6 +23,7 @@ import 'package:sparkle/features/task/presentation/widgets/task_feedback_dialog.
 import 'package:sparkle/features/task/presentation/widgets/subtask_list_widget.dart';
 import 'package:sparkle/features/task/presentation/widgets/timer_widget.dart';
 import 'package:sparkle/features/task/task_routes.dart';
+import 'package:sparkle/features/task/utils/task_identity.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 LinearGradient _taskWarmActionGradient(BuildContext context) {
@@ -78,7 +79,9 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
     // This ensures backend state transitions to IN_PROGRESS when user enters execution screen
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final activeTask = ref.read(activeTaskProvider);
-      if (activeTask != null && activeTask.status == TaskStatus.pending) {
+      if (activeTask != null &&
+          isServerTaskId(activeTask.id) &&
+          activeTask.status == TaskStatus.pending) {
         ref.read(taskListProvider.notifier).startTask(activeTask.id).catchError(
           (Object error, StackTrace stackTrace) {
             debugPrint('Error starting task: $error');
@@ -152,6 +155,30 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
     // 3. API Call
     final task = ref.read(activeTaskProvider);
     if (task != null) {
+      if (isLocalOnlyTaskId(task.id)) {
+        if (mounted) {
+          setState(() {
+            _completionResult = TaskCompletionResult(
+              task: task.toJson(),
+              feedback: '本次自由专注已完成。',
+            );
+          });
+          final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ??
+              MediaQuery.maybeOf(context)?.accessibleNavigation ??
+              false;
+          if (reduceMotion) {
+            _finishCompletionFlow();
+          } else {
+            _celebrationDismissTimer?.cancel();
+            _celebrationDismissTimer = Timer(
+              const Duration(milliseconds: 1100),
+              _finishCompletionFlow,
+            );
+          }
+        }
+        return;
+      }
+
       // Run completion in background while animation plays
       final result = await ref
           .read(taskListProvider.notifier)
@@ -310,6 +337,8 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
         ),
       );
     }
+
+    final hasPersistentTask = isServerTaskId(activeTask.id);
 
     return PopScope(
       canPop: false,
@@ -521,6 +550,9 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                               // Subtasks Section (if task has subtasks)
                               Consumer(
                                 builder: (context, ref, child) {
+                                  if (!hasPersistentTask) {
+                                    return const SizedBox.shrink();
+                                  }
                                   final subtaskState = ref.watch(
                                     subtaskNotifierProvider(activeTask.id),
                                   );
@@ -586,11 +618,17 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                               const SizedBox(height: DS.spacing16),
 
                               // 3. Quick Tools Panel
-                              QuickToolsPanel(taskId: activeTask.id),
+                              QuickToolsPanel(
+                                taskId:
+                                    hasPersistentTask ? activeTask.id : null,
+                              ),
                               const SizedBox(height: DS.spacing16),
 
                               // 4. Task Chat Panel
-                              TaskChatPanel(taskId: activeTask.id),
+                              TaskChatPanel(
+                                taskId: hasPersistentTask ? activeTask.id : '',
+                                isAvailable: hasPersistentTask,
+                              ),
                             ],
                           ),
                         ),

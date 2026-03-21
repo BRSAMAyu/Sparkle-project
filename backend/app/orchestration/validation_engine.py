@@ -82,6 +82,81 @@ class ValidationEngineMixin:
             logger.debug(f"Fast interaction copy fallback triggered: {exc}")
             return fallback_text
 
+    async def _emit_fast_interaction(
+        self,
+        *,
+        stream_callback,
+        text: str,
+        details: str,
+        metadata: dict[str, str] | None = None,
+    ) -> None:
+        payload = metadata or {}
+        await stream_callback(
+            agent_service_pb2.ChatResponse(
+                status_update=agent_service_pb2.AgentStatus(
+                    state=agent_service_pb2.AgentStatus.THINKING,
+                    details=details,
+                    current_agent_name="Sparkle Flash",
+                ),
+                metadata=payload,
+            )
+        )
+        cleaned = str(text or "").strip()
+        if cleaned:
+            logger.info(
+                "Emitting fast interaction copy "
+                f"(chars={len(cleaned)}, preview={cleaned[:80]!r})"
+            )
+            await stream_callback(
+                agent_service_pb2.ChatResponse(
+                    full_text=cleaned,
+                    finish_reason=agent_service_pb2.STOP,
+                )
+            )
+        else:
+            logger.warning("Fast interaction copy resolved to empty text")
+
+    @staticmethod
+    def _normalize_sufficiency_intent_type(
+        *,
+        intent_type: str,
+        user_message: str,
+    ) -> str:
+        normalized = str(intent_type or "").strip().lower()
+        if normalized not in {"create_plan", "time_planning"}:
+            return normalized
+
+        message = str(user_message or "").strip()
+        advisory_markers = (
+            "先学哪个",
+            "应该先",
+            "怎么选",
+            "判断标准",
+            "取舍",
+            "比较",
+            "区别",
+            "优先学",
+            "值不值得",
+        )
+        explicit_plan_markers = (
+            "制定计划",
+            "做计划",
+            "生成计划",
+            "创建计划",
+            "安排一下",
+            "排个计划",
+            "帮我规划",
+            "帮我安排",
+            "学习计划",
+            "复习计划",
+        )
+
+        if any(marker in message for marker in advisory_markers) and not any(
+            marker in message for marker in explicit_plan_markers
+        ):
+            return "knowledge_query"
+        return normalized
+
     async def _validate_request(
         self,
         request: agent_service_pb2.ChatRequest,
@@ -160,7 +235,15 @@ class ValidationEngineMixin:
                 active_plan_id=str(plan_id) if plan_id else None,
                 user_id=user_id,
             )
-            intent_type = prediction.get("intent_type", "unknown")
+            raw_intent_type = str(prediction.get("intent_type", "unknown") or "unknown")
+            intent_type = self._normalize_sufficiency_intent_type(
+                intent_type=raw_intent_type,
+                user_message=user_message,
+            )
+            logger.info(
+                "Sufficiency intent resolved "
+                f"(raw={raw_intent_type}, normalized={intent_type}, message={user_message[:80]!r})"
+            )
             extracted_entities = self._build_sufficiency_entities(
                 intent_type=intent_type,
                 user_message=user_message,
@@ -186,19 +269,15 @@ class ValidationEngineMixin:
                     fallback_text=fallback_text,
                     prompts=questions or check_result.missing_fields,
                 )
-                await stream_callback(agent_service_pb2.ChatResponse(
-                    delta=interaction_text,
-                    status_update=agent_service_pb2.AgentStatus(
-                        state=agent_service_pb2.AgentStatus.THINKING,
-                        details="我先快速确认缺失信息，再继续帮你推进。",
-                        current_agent_name="Sparkle Flash",
-                    ),
+                await self._emit_fast_interaction(
+                    stream_callback=stream_callback,
+                    text=interaction_text,
+                    details="我先快速确认缺失信息，再继续帮你推进。",
                     metadata={
                         "requires_clarification": "true",
                         "missing_fields": ",".join(check_result.missing_fields),
                     },
-                ))
-                await stream_callback(agent_service_pb2.ChatResponse(finish_reason=agent_service_pb2.STOP))
+                )
                 return True, intent_type
 
             if check_result.status == SufficiencyStatus.NEED_CONFIRMATION:
@@ -208,16 +287,12 @@ class ValidationEngineMixin:
                     fallback_text=check_result.confirmation_message,
                     prompts=[check_result.confirmation_message],
                 )
-                await stream_callback(agent_service_pb2.ChatResponse(
-                    delta=interaction_text,
-                    status_update=agent_service_pb2.AgentStatus(
-                        state=agent_service_pb2.AgentStatus.THINKING,
-                        details="我先和你确认方向，再继续后面的协作。",
-                        current_agent_name="Sparkle Flash",
-                    ),
+                await self._emit_fast_interaction(
+                    stream_callback=stream_callback,
+                    text=interaction_text,
+                    details="我先和你确认方向，再继续后面的协作。",
                     metadata={"requires_confirmation": "true"},
-                ))
-                await stream_callback(agent_service_pb2.ChatResponse(finish_reason=agent_service_pb2.STOP))
+                )
                 return True, intent_type
         except Exception as e:
             logger.warning(f"Sufficiency check failed, continuing: {e}")
@@ -315,21 +390,15 @@ class ValidationEngineMixin:
                 fallback_text=fallback_text,
                 prompts=evaluation.clarification_questions,
             )
-            await stream_callback(
-                agent_service_pb2.ChatResponse(
-                    delta=interaction_text,
-                    status_update=agent_service_pb2.AgentStatus(
-                        state=agent_service_pb2.AgentStatus.THINKING,
-                        details="我先快速把目标边界确认清楚，再进入规划。",
-                        current_agent_name="Sparkle Flash",
-                    ),
-                    metadata={
-                        "requires_goal_clarification": "true",
-                        "goal_quality_scores": json.dumps(evaluation.scores.to_dict(), ensure_ascii=False),
-                    },
-                )
+            await self._emit_fast_interaction(
+                stream_callback=stream_callback,
+                text=interaction_text,
+                details="我先快速把目标边界确认清楚，再进入规划。",
+                metadata={
+                    "requires_goal_clarification": "true",
+                    "goal_quality_scores": json.dumps(evaluation.scores.to_dict(), ensure_ascii=False),
+                },
             )
-            await stream_callback(agent_service_pb2.ChatResponse(finish_reason=agent_service_pb2.STOP))
             return True
 
         if active_db and plan_id:

@@ -8,7 +8,7 @@ import asyncio
 from typing import Any, Union
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from loguru import logger
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -52,6 +52,9 @@ class LearningPathNodeResponse(BaseModel):
     name: str
     status: str  # mastered, unlocked, locked
     is_target: bool
+    is_optional: bool = False
+    relation_type: str | None = None
+    source_type: str | None = None
 
 
 # ============ Helpers ============
@@ -138,6 +141,8 @@ async def get_graph_reasoning_service(db: AsyncSession = Depends(get_db)) -> Gra
 )
 async def get_dynamic_learning_path(
     target_node_id: UUID,
+    include_related: bool = Query(False, description="是否返回可选拓展节点建议"),
+    selected_related_node_ids: list[UUID] = Query(default_factory=list, description="用户主动纳入路径的相关节点"),
     user_id: str = Depends(get_current_user_id),
     service: GraphReasoningService = Depends(get_graph_reasoning_service),
 ):
@@ -151,7 +156,12 @@ async def get_dynamic_learning_path(
     - TARGET_NOT_FOUND: 目标节点不存在
     - GRAPH_ERROR: 图结构查询失败
     """
-    path = await service.generate_learning_path(UUID(user_id), target_node_id)
+    path = await service.generate_learning_path(
+        UUID(user_id),
+        target_node_id,
+        include_related_suggestions=include_related,
+        selected_related_node_ids=selected_related_node_ids,
+    )
 
     # 检查是否为空路径
     if not path:
@@ -178,6 +188,8 @@ async def get_dynamic_learning_path(
 @router.post("/{target_node_id}/plan", response_model=dict[str, Any])
 async def generate_learning_path_plan(
     target_node_id: UUID,
+    include_related: bool = Query(False, description="是否在响应里返回推荐拓展节点"),
+    selected_related_node_ids: list[UUID] = Query(default_factory=list, description="用户选择纳入计划的相关节点"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     service: GraphReasoningService = Depends(get_graph_reasoning_service),
@@ -187,7 +199,12 @@ async def generate_learning_path_plan(
 
     返回 plan_id、plan_summary、tasks 等信息。
     """
-    path = await service.generate_learning_path(current_user.id, target_node_id)  # type: ignore
+    path = await service.generate_learning_path(
+        current_user.id,  # type: ignore[arg-type]
+        target_node_id,
+        include_related_suggestions=include_related,
+        selected_related_node_ids=selected_related_node_ids,
+    )
 
     # 检查是否为空路径
     if not path:
@@ -266,6 +283,7 @@ async def generate_learning_path_plan(
     plan.source_metadata = {
         "target_node_id": str(target_node_id),
         "path_node_ids": [node["id"] for node in path],
+        "selected_related_node_ids": [str(node_id) for node_id in selected_related_node_ids],
         "total_nodes": len(path),
     }
     db.add(plan)
@@ -363,6 +381,8 @@ async def generate_learning_path_plan(
 @router.post("/{target_node_id}/full-plan")
 async def generate_full_path_plan(
     target_node_id: UUID,
+    include_related: bool = Query(False, description="是否在返回路径时附带推荐拓展节点"),
+    selected_related_node_ids: list[UUID] = Query(default_factory=list, description="用户选择纳入完整计划的相关节点"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     service: GraphReasoningService = Depends(get_graph_reasoning_service),
@@ -372,7 +392,12 @@ async def generate_full_path_plan(
     Filters out mastered nodes and sequentially creates subtasks.
     """
     # 1. 获取路径，过滤 mastered
-    path = await service.generate_learning_path(current_user.id, target_node_id)
+    path = await service.generate_learning_path(
+        current_user.id,
+        target_node_id,
+        include_related_suggestions=include_related,
+        selected_related_node_ids=selected_related_node_ids,
+    )
     if not path:
         raise HTTPException(status_code=404, detail="未找到学习路径")
     if _is_error_response(path):
@@ -396,24 +421,10 @@ async def generate_full_path_plan(
     target_node = next((n for n in path if n.get("is_target")), active_nodes[-1])
     target_name = target_node.get("name", "目标节点")
 
-    # 2. 生成计划摘要（复用 TaskDecompositionWorkflow）
-    path_summary = _format_path_summary(active_nodes)
-    user_query = f"为目标「{target_name}」生成学习计划。\n路径：\n{path_summary}"
-
-    context = EnhancedAgentContext(
-        user_id=str(current_user.id),
-        session_id=f"full-plan-{target_node_id}",
-        conversation_history=[],
-        user_query=user_query,
-        knowledge_context=path_summary,
-        db_session=db,
-    )
-    plan_summary, summary_fallback_used = await _generate_plan_summary(
-        user_query=user_query,
-        enhanced_context=context,
-        target_name=str(target_name),
-        path=active_nodes,
-    )
+    # 2. Full-plan 要优先保证稳定落地，避免被 LLM 速率限制拖垮用户点击链路。
+    # 这里直接使用确定性的兜底摘要，确保“生成计划 -> 创建父任务/子任务 -> 跳转计划页”稳定可用。
+    plan_summary = _build_fallback_plan_summary(str(target_name), active_nodes)
+    summary_fallback_used = True
 
     # 3. 创建 Plan
     plan_description = _truncate_text(plan_summary, 1200)
@@ -446,6 +457,7 @@ async def generate_full_path_plan(
     plan.source_metadata = {
         "target_node_id": str(target_node_id),
         "path_node_ids": [n["id"] for n in active_nodes],
+        "selected_related_node_ids": [str(node_id) for node_id in selected_related_node_ids],
         "total_nodes": len(active_nodes),
     }
     db.add(plan)

@@ -298,6 +298,67 @@ class TaskRepository {
     }
   }
 
+  /// Generate or regenerate AI guide for an existing task.
+  Future<TaskModel> generateGuide(String id) async {
+    if (DemoDataService.isDemoMode) {
+      final existingIndex =
+          DemoDataService().demoTasks.indexWhere((t) => t.id == id);
+      if (existingIndex != -1) {
+        final existing = DemoDataService().demoTasks[existingIndex];
+        final updated = existing.copyWith(
+          guideContent: _demoGuide(existing.title),
+        );
+        DemoDataService().demoTasks[existingIndex] = updated;
+        return updated;
+      }
+      throw Exception('Task not found in demo data');
+    }
+    try {
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        ApiEndpoints.taskGenerateGuide(id),
+      );
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'generateGuide');
+      return TaskModel.fromJson(payload);
+    } on DioException catch (e) {
+      return _handleDioError(e, 'generateGuide');
+    }
+  }
+
+  String _demoGuide(String title) => '''# $title
+
+## 🎯 任务目标
+明确任务的核心产出和完成标准。
+
+## 📋 准备清单
+- [ ] 确认相关资料已就绪
+- [ ] 设定专注时间段
+- [ ] 排除干扰因素
+
+## 📍 执行步骤
+
+### 步骤 1: 理解与拆解
+- 梳理任务要求和关键点
+- 将大任务拆分为可执行的小步骤
+
+### 步骤 2: 核心执行
+- 按优先级逐步完成各项子任务
+- 及时记录关键发现和笔记
+
+### 步骤 3: 检查与总结
+- 对照完成标准自查
+- 记录经验教训和改进点
+
+## 💡 注意事项
+- 保持专注，使用番茄工作法
+- 遇到难点先标记，后续集中攻克
+- 完成后及时在星火中记录反思
+
+## ✅ 完成标准
+- [ ] 核心内容已完成
+- [ ] 质量达到预期标准
+- [ ] 已记录总结和反思
+''';
+
   Future<TaskModel> startTask(String id) async {
     if (DemoDataService.isDemoMode) {
       final existingIndex =

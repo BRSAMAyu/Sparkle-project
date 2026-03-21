@@ -27,6 +27,7 @@ class LearningPathRepository {
     try {
       final response = await _apiClient.get<dynamic>(
         ApiEndpoints.learningPath(targetNodeId),
+        queryParameters: const {'include_related': true},
       );
       final data = ApiResponseParser.unwrapList(
         response.data,
@@ -43,8 +44,9 @@ class LearningPathRepository {
   }
 
   Future<LearningPathPlanResponse> generateLearningPlan(
-    String targetNodeId,
-  ) async {
+    String targetNodeId, {
+    List<String> selectedRelatedNodeIds = const [],
+  }) async {
     if (DemoDataService.isDemoMode) {
       return LearningPathPlanResponse(
         planId: 'mock_plan_${DateTime.now().millisecondsSinceEpoch}',
@@ -63,6 +65,11 @@ class LearningPathRepository {
     try {
       final response = await _apiClient.post<dynamic>(
         ApiEndpoints.learningPathPlan(targetNodeId),
+        queryParameters: {
+          'include_related': true,
+          if (selectedRelatedNodeIds.isNotEmpty)
+            'selected_related_node_ids': selectedRelatedNodeIds,
+        },
       );
       final data = ApiResponseParser.unwrapMap(
         response.data,
@@ -85,8 +92,9 @@ class LearningPathRepository {
   }
 
   Future<FullPlanResponse> generateFullPathPlan(
-    String targetNodeId,
-  ) async {
+    String targetNodeId, {
+    List<String> selectedRelatedNodeIds = const [],
+  }) async {
     if (DemoDataService.isDemoMode) {
       return FullPlanResponse(
         planId: 'mock_full_plan_${DateTime.now().millisecondsSinceEpoch}',
@@ -99,6 +107,11 @@ class LearningPathRepository {
     try {
       final response = await _apiClient.post<dynamic>(
         ApiEndpoints.learningPathFullPlan(targetNodeId),
+        queryParameters: {
+          'include_related': true,
+          if (selectedRelatedNodeIds.isNotEmpty)
+            'selected_related_node_ids': selectedRelatedNodeIds,
+        },
       );
       final data = ApiResponseParser.unwrapMap(
         response.data,

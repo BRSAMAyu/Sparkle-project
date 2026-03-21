@@ -17,20 +17,23 @@ import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart'
 import 'package:sparkle/features/chat/presentation/providers/chat_state.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_workflow_panel.dart';
+import 'package:sparkle/features/chat/presentation/widgets/ai_reasoning_mode_pill.dart';
 import 'package:sparkle/features/chat/presentation/widgets/ai_status_indicator.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_bubble.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_input.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_mode_selector_pill.dart';
+import 'package:sparkle/features/chat/presentation/widgets/chat_prediction_dock.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_review_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_selector_pill.dart';
 import 'package:sparkle/features/chat/presentation/widgets/transparency_floating_capsule.dart';
 import 'package:sparkle/features/file/file.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
+import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/intent_prediction_provider.dart';
-import 'package:sparkle/features/home/presentation/widgets/intent_prediction_bar.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 import 'package:sparkle/features/settings/presentation/screens/transparency_settings_screen.dart';
+import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 
 const _defaultAiSystemPreferences = TransparencyPreferences(
   enabled: true,
@@ -72,104 +75,106 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   @override
   void initState() {
     super.initState();
-    ref.listenManual(chatProvider.select((state) => state.messages),
+    ref
+      ..listenManual(
+        chatProvider.select((state) => state.messages),
         (previous, next) {
-      if (next.length > (previous?.length ?? 0)) {
-        _scrollToBottom();
-      }
-    });
-
-    ref.listenManual(activePlanProvider, (previous, next) {
-      if (previous != next) {
-        unawaited(ref.read(chatProvider.notifier).switchPlanSession(next));
-      }
-    });
-
-    // 🔧 错误修复：监听错误状态，10秒后自动清除（避免长时间阻塞UI）
-    ref.listenManual(chatProvider.select((state) => state.error),
-        (previous, next) {
-      if (next != null && next != previous) {
-        Future.delayed(const Duration(seconds: 10), () {
-          if (mounted) {
-            final currentError = ref.read(chatProvider).error;
-            if (currentError == next) {
-              // 错误仍然相同，自动清除
-              // 🔧 修复：正确使用StateNotifier更新状态
-              final notifier = ref.read(chatProvider.notifier);
-              notifier.state = notifier.state.copyWith(clearError: true);
-            }
+          if (next.length > (previous?.length ?? 0)) {
+            _scrollToBottom();
           }
-        });
-      }
-    });
-
-    // 🔧 修复：将ref.listen移到initState，避免在build中监听
-    ref.listenManual(
-      chatProvider.select((state) => state.lastActionStatus),
-      (previous, next) {
+        },
+      )
+      ..listenManual(activePlanProvider, (previous, next) {
+        if (previous != next) {
+          unawaited(ref.read(chatProvider.notifier).switchPlanSession(next));
+        }
+      })
+      // 🔧 错误修复：监听错误状态，10秒后自动清除（避免长时间阻塞UI）
+      ..listenManual(chatProvider.select((state) => state.error),
+          (previous, next) {
         if (next != null && next != previous) {
-          final message = ref.read(chatProvider).lastActionMessage;
-          if (!mounted) {
-            return;
-          }
-          if (next == 'navigation_ready' &&
-              message != null &&
-              message.isNotEmpty) {
-            final notifier = ref.read(chatProvider.notifier);
-            notifier.state = notifier.state.copyWith(clearActionFeedback: true);
-            unawaited(_navigateFromAction(message));
-            return;
-          }
-          if (message != null) {
-            if (next == 'failed' || next == 'error') {
-              AppFeedback.error(context, message);
-            } else {
-              AppFeedback.success(context, message);
+          Future.delayed(const Duration(seconds: 10), () {
+            if (mounted) {
+              final currentError = ref.read(chatProvider).error;
+              if (currentError == next) {
+                // 错误仍然相同，自动清除
+                // 🔧 修复：正确使用StateNotifier更新状态
+                final notifier = ref.read(chatProvider.notifier);
+                notifier.state = notifier.state.copyWith(clearError: true);
+              }
+            }
+          });
+        }
+      })
+      // 🔧 修复：将ref.listen移到initState，避免在build中监听
+      ..listenManual(
+        chatProvider.select((state) => state.lastActionStatus),
+        (previous, next) {
+          if (next != null && next != previous) {
+            final message = ref.read(chatProvider).lastActionMessage;
+            if (!mounted) {
+              return;
+            }
+            if (next == 'navigation_ready' &&
+                message != null &&
+                message.isNotEmpty) {
+              final notifier = ref.read(chatProvider.notifier);
+              notifier.state = notifier.state.copyWith(clearActionFeedback: true);
+              unawaited(_navigateFromAction(message));
+              return;
+            }
+            if (message != null) {
+              if (next == 'failed' || next == 'error') {
+                AppFeedback.error(context, message);
+              } else {
+                AppFeedback.success(context, message);
+              }
             }
           }
-        }
-      },
-    );
+        },
+      )
+      // 🔧 Phase 2.3: 监听 WebSocket 连接状态变化并显示反馈
+      ..listenManual(
+        chatProvider.select((state) => state.wsConnectionState),
+        (previous, next) {
+          if (!mounted) return;
 
-    // 🔧 Phase 2.3: 监听 WebSocket 连接状态变化并显示反馈
-    ref.listenManual(
-      chatProvider.select((state) => state.wsConnectionState),
-      (previous, next) {
-        if (!mounted) return;
+          final l10n = I18nService.instance.l10n;
 
-        final l10n = I18nService.instance.l10n;
+          if (next == WsConnectionState.reconnecting &&
+              previous != WsConnectionState.reconnecting) {
+            // 进入重连状态
+            AppFeedback.loading(context, l10n.chatReconnecting);
+          } else if (next == WsConnectionState.connected &&
+              previous == WsConnectionState.reconnecting) {
+            // 重连成功
+            AppFeedback.success(context, l10n.chatReconnected);
 
-        if (next == WsConnectionState.reconnecting &&
-            previous != WsConnectionState.reconnecting) {
-          // 进入重连状态
-          AppFeedback.loading(context, l10n.chatReconnecting);
-        } else if (next == WsConnectionState.connected &&
-            previous == WsConnectionState.reconnecting) {
-          // 重连成功
-          AppFeedback.success(context, l10n.chatReconnected);
-
-          // 🔧 修复：重连后重新加载历史消息
-          final conversationId = ref.read(chatProvider).conversationId;
-          if (conversationId != null && conversationId.isNotEmpty) {
-            unawaited(
-              ref
-                  .read(chatProvider.notifier)
-                  .loadConversationHistory(conversationId),
-            );
+            // 🔧 修复：重连后重新加载历史消息
+            final conversationId = ref.read(chatProvider).conversationId;
+            if (conversationId != null && conversationId.isNotEmpty) {
+              unawaited(
+                ref
+                    .read(chatProvider.notifier)
+                    .loadConversationHistory(conversationId),
+              );
+            }
+          } else if (next == WsConnectionState.failed &&
+              previous != WsConnectionState.failed) {
+            // 连接失败
+            AppFeedback.error(context, l10n.chatConnectionFailed);
           }
-        } else if (next == WsConnectionState.failed &&
-            previous != WsConnectionState.failed) {
-          // 连接失败
-          AppFeedback.error(context, l10n.chatConnectionFailed);
-        }
-      },
-    );
+        },
+      );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final activePlanId = ref.read(activePlanProvider);
       unawaited(
         ref.read(chatProvider.notifier).switchPlanSession(activePlanId),
       );
+      if (ref.read(dashboardProvider).nextIntentForecast == null) {
+        unawaited(ref.read(dashboardProvider.notifier).refresh());
+      }
       _queueInitialPromptDispatch();
     });
   }
@@ -874,6 +879,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ? DS.spacing32 + DS.spacing4
         : DS.touchTargetMinSize - DS.spacing4;
 
+    // AiReasoningModePill height
+    padding += isSmallScreen
+        ? DS.spacing32 + DS.spacing4
+        : DS.touchTargetMinSize - DS.spacing4;
+
     // IntentPredictionBar height (when visible)
     if (chatState.shouldShowStatusIndicator) {
       padding += isSmallScreen
@@ -883,6 +893,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     // ChatInput base height + expansion buffer
     padding += isSmallScreen ? 80.0 : 100.0;
+
+    if (!chatState.hasActiveRun) {
+      padding += isSmallScreen ? 108.0 : 124.0;
+    }
 
     if (aiSystemPreferences.enabled &&
         aiSystemPreferences.displayMode != TransparencyDisplayMode.detailOnly &&
@@ -915,14 +929,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final aiSystemPreferences =
         ref.watch(transparencyPreferencesProvider).valueOrNull ??
             _defaultAiSystemPreferences;
-    final intentPredictionState = ref.watch(intentPredictionProvider);
     final isCompactMobile = _isCompactMobileContext(context);
     final showExpandedContext = !isCompactMobile || _showContextControls;
-    final showIntentPredictionBar =
-        intentPredictionState.isTyping || showExpandedContext;
     final showAiSystemPanel = aiSystemPreferences.enabled;
     final currentMode = ref.watch(chatModeProvider);
-    final dynamicPrompts = _buildPromptStarters(context, currentMode.apiValue);
+    final reasoningMode = ref.watch(aiReasoningModeProvider);
+    final promptStarters = _buildPromptStarters(context, currentMode.apiValue);
     final activePlanId = ref.watch(activePlanProvider);
     final activePlans =
         ref.watch(planListProvider.select((s) => s.activePlans));
@@ -944,6 +956,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               ),
               child: _ChatContextToggle(
                 isExpanded: _showContextControls,
+                reasoningLabel: _reasoningModeLabel(reasoningMode),
                 modeLabel: currentMode.apiValue == 'standard'
                     ? context.l10n.chatModeStandard
                     : currentMode.label,
@@ -991,32 +1004,24 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           if (showExpandedContext) ...[
             const PlanSelectorPill(),
             const SizedBox(height: DS.spacing18),
+            const AiReasoningModePill(),
+            const SizedBox(height: DS.spacing18),
             const ChatModeSelectorPill(),
           ],
-          if (showIntentPredictionBar)
-            IntentPredictionBar(showIdle: showExpandedContext),
-          if (showExpandedContext &&
-              !chatState.hasActiveRun &&
-              dynamicPrompts.isNotEmpty)
+          if (!chatState.hasActiveRun)
             Padding(
               padding: const EdgeInsets.only(
                 left: DS.spacing16,
                 right: DS.spacing16,
-                top: DS.spacing8,
+                top: DS.spacing12,
+                bottom: DS.spacing10,
               ),
-              child: Wrap(
-                spacing: DS.spacing8,
-                runSpacing: DS.spacing8,
-                children: dynamicPrompts
-                    .map(
-                      (prompt) => ActionChip(
-                        label: Text(prompt),
-                        onPressed: () => unawaited(
-                          ref.read(chatProvider.notifier).sendMessage(prompt),
-                        ),
-                      ),
-                    )
-                    .toList(),
+              child: ChatPredictionDock(
+                compact: isCompactMobile,
+                promptStarters: promptStarters,
+                onPromptSelected: (prompt) => unawaited(
+                  ref.read(chatProvider.notifier).sendMessage(prompt),
+                ),
               ),
             ),
           ChatInput(
@@ -1051,6 +1056,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ],
       ),
     );
+  }
+
+  String _reasoningModeLabel(String mode) {
+    switch (mode) {
+      case 'fast':
+        return '敏捷';
+      case 'deep':
+        return '深思';
+      case 'balanced':
+      default:
+        return '均衡';
+    }
   }
 
   bool _isCompactMobileContext(BuildContext context) {
@@ -1263,6 +1280,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ];
     }
   }
+
 }
 
 class _ChatHistorySheet extends ConsumerStatefulWidget {
@@ -1310,7 +1328,7 @@ class _ChatHistorySheetState extends ConsumerState<_ChatHistorySheet> {
     }
     if (sessionId == widget.currentConversationId) {
       if (mounted) {
-        Navigator.of(context, rootNavigator: true).maybePop();
+        await Navigator.of(context, rootNavigator: true).maybePop();
       }
       return;
     }
@@ -1323,7 +1341,7 @@ class _ChatHistorySheetState extends ConsumerState<_ChatHistorySheet> {
       return;
     }
     if (error == null || error.isEmpty) {
-      Navigator.of(context, rootNavigator: true).maybePop();
+      await Navigator.of(context, rootNavigator: true).maybePop();
       return;
     }
     setState(() {
@@ -1581,12 +1599,14 @@ class _QuickActionChip extends StatefulWidget {
 class _ChatContextToggle extends StatelessWidget {
   const _ChatContextToggle({
     required this.isExpanded,
+    required this.reasoningLabel,
     required this.modeLabel,
     required this.planLabel,
     required this.onTap,
   });
 
   final bool isExpanded;
+  final String reasoningLabel;
   final String modeLabel;
   final String planLabel;
   final VoidCallback onTap;
@@ -1630,7 +1650,7 @@ class _ChatContextToggle extends StatelessWidget {
                 const SizedBox(width: DS.spacing8),
                 Expanded(
                   child: Text(
-                    '$modeLabel · ${planLabel.isEmpty ? context.l10n.chatPlanUnbound : planLabel}',
+                    '$reasoningLabel · $modeLabel · ${planLabel.isEmpty ? context.l10n.chatPlanUnbound : planLabel}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: DS.bodySmall.copyWith(
@@ -1776,7 +1796,6 @@ class _StreamingBubble extends StatelessWidget {
                     ? DS.neutral700
                     : DS.chatBubbleOtherText.withValues(alpha: 0.06),
                 linkColor: DS.brandPrimary,
-                fontSize: DS.fontSizeBase,
               ),
             ),
             const SizedBox(width: DS.xs),

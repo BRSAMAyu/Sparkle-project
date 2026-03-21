@@ -29,6 +29,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
   bool _isGeneratingFullPlan = false;
   String? _inlineStatus;
   String? _inlineError;
+  final Set<String> _selectedRelatedNodeIds = <String>{};
 
   bool get _isBusy => _isGeneratingPlan || _isGeneratingFullPlan;
 
@@ -93,19 +94,40 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
           constraints: BoxConstraints(maxHeight: maxListHeight),
           child: pathAsync.when(
             data: (path) {
-              if (path.isEmpty) {
+              final coreNodes = path
+                  .where((node) => !node.isOptional)
+                  .toList(growable: false);
+              final optionalNodes =
+                  path.where((node) => node.isOptional).toList(growable: false);
+
+              if (coreNodes.isEmpty && optionalNodes.isEmpty) {
                 return const Center(
                   child: Text('无需前置知识，可以直接开始学习！'),
                 );
               }
-              return ListView.builder(
+
+              return ListView(
                 shrinkWrap: true,
-                itemCount: path.length,
-                itemBuilder: (context, index) {
-                  final node = path[index];
-                  final isLast = index == path.length - 1;
-                  return _buildTimelineItem(context, node, isLast);
-                },
+                children: [
+                  if (coreNodes.isNotEmpty) ...[
+                    Text(
+                      '主干路径',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                    const SizedBox(height: DS.md),
+                    ...List.generate(coreNodes.length, (index) {
+                      final node = coreNodes[index];
+                      final isLast = index == coreNodes.length - 1;
+                      return _buildTimelineItem(context, node, isLast);
+                    }),
+                  ],
+                  if (optionalNodes.isNotEmpty) ...[
+                    const SizedBox(height: DS.sm),
+                    _buildOptionalNodesSection(context, optionalNodes),
+                  ],
+                ],
               );
             },
             loading: () => const Center(child: CircularProgressIndicator()),
@@ -133,6 +155,60 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
       ],
     );
   }
+
+  Widget _buildOptionalNodesSection(
+    BuildContext context,
+    List<LearningPathNode> optionalNodes,
+  ) =>
+      GraphiteCardSurface(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '推荐拓展节点',
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+            const SizedBox(height: DS.xs),
+            Text(
+              '这些节点不是必须前置，但可以由你决定是否一并纳入学习计划。',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: DS.textSecondary,
+                  ),
+            ),
+            const SizedBox(height: DS.md),
+            Wrap(
+              spacing: DS.sm,
+              runSpacing: DS.sm,
+              children: optionalNodes.map((node) {
+                final selected = _selectedRelatedNodeIds.contains(node.id);
+                final relationLabel = _relationLabel(node.relationType);
+                final sourceLabel = _sourceLabel(node.sourceType);
+                return FilterChip(
+                  selected: selected,
+                  label: Text(
+                    sourceLabel == null
+                        ? '${node.name}${relationLabel == null ? '' : ' · $relationLabel'}'
+                        : '${node.name}${relationLabel == null ? '' : ' · $relationLabel'} · $sourceLabel',
+                  ),
+                  onSelected: _isBusy
+                      ? null
+                      : (value) {
+                          setState(() {
+                            if (value) {
+                              _selectedRelatedNodeIds.add(node.id);
+                            } else {
+                              _selectedRelatedNodeIds.remove(node.id);
+                            }
+                          });
+                        },
+                );
+              }).toList(growable: false),
+            ),
+          ],
+        ),
+      );
 
   Widget _buildTimelineItem(
     BuildContext context,
@@ -326,9 +402,13 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
     });
     _setInlineStatus('正在为「${node.name}」生成学习计划，请稍候...');
     try {
-      final response = await ref
-          .read(learningPathRepositoryProvider)
-          .generateLearningPlan(node.id);
+      final response =
+          await ref.read(learningPathRepositoryProvider).generateLearningPlan(
+                node.id,
+                selectedRelatedNodeIds: node.id == widget.targetNodeId
+                    ? _selectedRelatedNodeIds.toList(growable: false)
+                    : const [],
+              );
       if (!feedbackContext.mounted) return;
       final message = response.message ?? '学习计划已生成';
       if (response.retry ?? false) {
@@ -362,9 +442,12 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
     });
     _setInlineStatus('正在生成完整学习路径计划，这可能需要十几秒...');
     try {
-      final response = await ref
-          .read(learningPathRepositoryProvider)
-          .generateFullPathPlan(widget.targetNodeId);
+      final response =
+          await ref.read(learningPathRepositoryProvider).generateFullPathPlan(
+                widget.targetNodeId,
+                selectedRelatedNodeIds:
+                    _selectedRelatedNodeIds.toList(growable: false),
+              );
       if (!feedbackContext.mounted) return;
       AppFeedback.success(feedbackContext, '学习计划已生成');
       _clearInlineFeedback();
@@ -405,6 +488,34 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
         return '待解锁';
       default:
         return status;
+    }
+  }
+
+  static String? _relationLabel(String? relationType) {
+    switch (relationType) {
+      case 'application':
+        return '应用';
+      case 'evolution':
+        return '进阶';
+      case 'composition':
+        return '组成';
+      case 'related':
+        return '相关';
+      default:
+        return null;
+    }
+  }
+
+  static String? _sourceLabel(String? sourceType) {
+    switch (sourceType) {
+      case 'llm_expanded':
+        return 'AI推荐';
+      case 'seed':
+        return '预设';
+      case 'user_created':
+        return '用户添加';
+      default:
+        return null;
     }
   }
 }

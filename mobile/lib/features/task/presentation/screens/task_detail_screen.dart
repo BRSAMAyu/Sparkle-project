@@ -73,14 +73,21 @@ class _TaskDetailView extends ConsumerWidget {
                         children: [
                           _buildInfoSection(context),
                           const SizedBox(height: DS.spacing24),
-                          Text(
-                            context.l10n.taskGuideTitle,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleLarge
-                                ?.copyWith(
-                                  fontWeight: DS.fontWeightBold,
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  context.l10n.taskGuideTitle,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleLarge
+                                      ?.copyWith(
+                                        fontWeight: DS.fontWeightBold,
+                                      ),
                                 ),
+                              ),
+                              _GenerateGuideButton(taskId: task.id),
+                            ],
                           ),
                           const SizedBox(height: DS.spacing12),
                           _buildGuideSection(context),
@@ -645,6 +652,54 @@ class _BottomActionBar extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _GenerateGuideButton extends ConsumerStatefulWidget {
+  const _GenerateGuideButton({required this.taskId});
+  final String taskId;
+
+  @override
+  ConsumerState<_GenerateGuideButton> createState() =>
+      _GenerateGuideButtonState();
+}
+
+class _GenerateGuideButtonState extends ConsumerState<_GenerateGuideButton> {
+  bool _isGenerating = false;
+
+  Future<void> _generate() async {
+    setState(() => _isGenerating = true);
+    try {
+      await ref.read(taskListProvider.notifier).generateGuide(widget.taskId);
+      if (mounted) {
+        ref.invalidate(taskDetailProvider(widget.taskId));
+        AppFeedback.success(context, '任务指南已生成');
+      }
+    } catch (e) {
+      if (mounted) {
+        AppFeedback.error(context, '生成失败: $e');
+      }
+    } finally {
+      if (mounted) setState(() => _isGenerating = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isGenerating) {
+      return const SizedBox(
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      );
+    }
+    return SparkleButton(
+      label: 'AI 生成',
+      size: ButtonSize.small,
+      variant: ButtonVariant.secondary,
+      icon: const Icon(Icons.auto_awesome, size: 14),
+      onPressed: _generate,
     );
   }
 }
