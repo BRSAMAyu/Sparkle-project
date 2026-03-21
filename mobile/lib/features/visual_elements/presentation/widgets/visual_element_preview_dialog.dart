@@ -4,7 +4,7 @@ import 'dart:ui' as ui;
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart' as share_plus;
 import 'package:sparkle/core/design/design_system.dart';
@@ -103,7 +103,7 @@ class _VisualElementPreviewDialogState
   }
 
   void _handleEquip() {
-    HapticFeedback.mediumImpact();
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
     setState(() => _showConfetti = true);
     _confettiController.play();
     // Delay callback to let confetti start

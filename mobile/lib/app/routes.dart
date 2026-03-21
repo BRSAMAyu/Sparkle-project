@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/navigation/sensory_navigation_observer.dart';
 import 'package:sparkle/core/navigation/shell_navigation.dart';
+import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
+import 'package:sparkle/core/widgets/bgm_scope.dart';
 import 'package:sparkle/features/achievement/achievement_routes.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/calendar/calendar.dart';
@@ -33,29 +35,31 @@ import 'package:sparkle/features/visual_elements/visual_elements_routes.dart';
 final routerProvider = Provider<GoRouter>((ref) {
   final navigationObserver = SensoryNavigationObserver();
 
-  // Create a notifier to sync auth state with GoRouter without rebuilding the router itself
-  final authStateNotifier = ValueNotifier<AuthState>(ref.read(authProvider));
+  final routerRefreshNotifier = ValueNotifier<int>(0);
 
-  // Update the notifier when auth state changes
   ref
     ..listen<AuthState>(
       authProvider,
       (_, next) {
-        authStateNotifier.value = next;
+        routerRefreshNotifier.value++;
       },
     )
-    // Dispose the notifier when the provider is disposed
-    ..onDispose(authStateNotifier.dispose);
+    ..listen<bool>(
+      onboardingCompletedProvider,
+      (_, __) {
+        routerRefreshNotifier.value++;
+      },
+    )
+    ..onDispose(routerRefreshNotifier.dispose);
 
   return GoRouter(
     navigatorKey: navigatorKey, // Set the global navigator key
     initialLocation: '/',
     debugLogDiagnostics: true,
     observers: [navigationObserver],
-    refreshListenable: authStateNotifier,
+    refreshListenable: routerRefreshNotifier,
     redirect: (context, state) {
-      // Access the latest value from the notifier
-      final authState = authStateNotifier.value;
+      final authState = ref.read(authProvider);
 
       final isAuthenticated = authState.isAuthenticated;
       final isLoading = authState.isLoading;
@@ -72,6 +76,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isOnPersonaOnboarding =
           state.uri.path == UserRoutes.personaOnboarding;
       final onboardingCompleted = ref.read(onboardingCompletedProvider);
+      final isGuestUser = authState.user?.registrationSource == 'guest';
 
       // Still loading authentication state
       if (isLoading) {
@@ -91,11 +96,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         return '/home';
       }
 
-      if (isAuthenticated && !onboardingCompleted && !isOnPersonaOnboarding) {
+      if (isAuthenticated &&
+          !isGuestUser &&
+          !onboardingCompleted &&
+          !isOnPersonaOnboarding) {
         return UserRoutes.personaOnboarding;
       }
 
-      if (isAuthenticated && onboardingCompleted && isOnPersonaOnboarding) {
+      if (isAuthenticated && (onboardingCompleted || isGuestUser) && isOnPersonaOnboarding) {
         return '/home';
       }
 
@@ -115,7 +123,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: '/home',
                 pageBuilder: (context, state) => MaterialPage<void>(
                   key: state.pageKey,
-                  child: const DashboardScreen(),
+                  child: const BgmScope(
+                    track: BgmTrack.dashboard,
+                    child: DashboardScreen(),
+                  ),
                 ),
               ),
             ],
@@ -127,7 +138,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: '/galaxy',
                 pageBuilder: (context, state) => MaterialPage<void>(
                   key: state.pageKey,
-                  child: const GalaxyScreen(),
+                  child: const BgmScope(
+                    track: BgmTrack.galaxy,
+                    child: GalaxyScreen(),
+                  ),
                 ),
               ),
             ],
@@ -139,9 +153,12 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: '/chat',
                 pageBuilder: (context, state) => MaterialPage<void>(
                   key: state.pageKey,
-                  child: ChatScreen(
-                    initialPrompt: state.uri.queryParameters['prompt'],
-                    initialChatMode: state.uri.queryParameters['chat_mode'],
+                  child: BgmScope(
+                    track: BgmTrack.chat,
+                    child: ChatScreen(
+                      initialPrompt: state.uri.queryParameters['prompt'],
+                      initialChatMode: state.uri.queryParameters['chat_mode'],
+                    ),
                   ),
                 ),
               ),
@@ -154,7 +171,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: '/community',
                 pageBuilder: (context, state) => MaterialPage<void>(
                   key: state.pageKey,
-                  child: const CommunityMainScreen(),
+                  child: const BgmScope(
+                    track: BgmTrack.community,
+                    child: CommunityMainScreen(),
+                  ),
                 ),
               ),
             ],
@@ -166,7 +186,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: '/profile',
                 pageBuilder: (context, state) => MaterialPage<void>(
                   key: state.pageKey,
-                  child: const ProfileScreen(),
+                  child: const BgmScope(
+                    track: BgmTrack.profile,
+                    child: ProfileScreen(),
+                  ),
                 ),
               ),
             ],

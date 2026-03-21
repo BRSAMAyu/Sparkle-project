@@ -23,6 +23,7 @@ from app.schemas.task import (
     TaskCompleteRequest,
     TaskCreate,
     TaskDetail,
+    TaskReorderRequest,
     TaskResourceLinkCreate,
     TaskResourceLinkInfo,
     TaskRecommendationResponse,
@@ -140,8 +141,8 @@ async def list_tasks(
     if due_date_end:
         query = query.where(Task.due_date <= due_date_end)
 
-    # Order by created_at desc
-    query = query.order_by(desc(Task.created_at))
+    # Persisted display order with created_at fallback
+    query = query.order_by(Task.order_index.asc(), desc(Task.created_at))
 
     # Pagination
     total_query = select(func.count()).select_from(query.subquery())
@@ -196,6 +197,28 @@ async def create_task(
     return {
         "data": TaskDetail.model_validate(task),
         "nudges": nudges
+    }
+
+
+@router.post("/reorder", response_model=dict[str, Any])
+async def reorder_tasks(
+    request: TaskReorderRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Persist the display order of tasks for the current user."""
+    try:
+        tasks = await TaskService.reorder_tasks(
+            db,
+            user_id=current_user.id,
+            ordered_task_ids=request.task_ids,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return {
+        "success": True,
+        "data": [TaskDetail.model_validate(task) for task in tasks],
     }
 
 @router.post("/suggestions", response_model=TaskSuggestionResponse)
@@ -254,7 +277,7 @@ async def get_today_tasks(
             | (Task.due_date <= today)
             | (Task.completed_at.is_not(None)),
         )
-        .order_by(desc(Task.priority), desc(Task.updated_at))
+        .order_by(Task.order_index.asc(), desc(Task.priority), desc(Task.updated_at))
         .limit(50)
     )
     result = await db.execute(query)
@@ -445,8 +468,7 @@ async def delete_task(
     if not task or task.user_id != current_user.id:
         raise NotFoundError(message="Task not found")
 
-    await db.delete(task)
-    await db.commit()
+    await TaskService.delete(db, task)
 
     return {"success": True}
 
@@ -632,6 +654,19 @@ async def complete_task(
             logger.info(f"User {current_user.id} unlocked {len(unlocked)} achievements on task completion")
     except Exception as e:
         logger.warning(f"Achievement processing failed: {e}")
+    # ============================================
+
+    # ========== Contract Progress Integration ==========
+    try:
+        from app.services.achievement_engine import ContractService
+
+        contract_service = ContractService(db)
+        await contract_service.update_daily_progress(
+            str(current_user.id),
+            actual_minutes,
+        )
+    except Exception as e:
+        logger.warning(f"Contract progress update failed: {e}")
     # ============================================
 
     # 返回数据

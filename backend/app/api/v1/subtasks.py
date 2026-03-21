@@ -86,10 +86,14 @@ async def create_subtask(
     db.add(subtask)
     await db.commit()
     await db.refresh(subtask)
+    refreshed_task = await _verify_task_ownership(task_id, current_user.id, db)  # type: ignore
 
     return {
         "data": SubTaskDetail.model_validate(subtask),
-        "parent_task_subtotals": {"total": task.subtasks_total, "completed": task.subtasks_completed},
+        "parent_task_subtotals": {
+            "total": refreshed_task.subtasks_total,
+            "completed": refreshed_task.subtasks_completed,
+        },
     }
 
 
@@ -173,14 +177,18 @@ async def delete_subtask(
     parent_task_id = subtask.parent_task_id
 
     # Verify parent task ownership
-    task = await _verify_task_ownership(parent_task_id, current_user.id, db)  # type: ignore
+    await _verify_task_ownership(parent_task_id, current_user.id, db)  # type: ignore
 
     await db.delete(subtask)
     await db.commit()
+    refreshed_task = await _verify_task_ownership(parent_task_id, current_user.id, db)  # type: ignore
 
     return {
         "success": True,
-        "parent_task_subtotals": {"total": task.subtasks_total, "completed": task.subtasks_completed},
+        "parent_task_subtotals": {
+            "total": refreshed_task.subtasks_total,
+            "completed": refreshed_task.subtasks_completed,
+        },
     }
 
 
@@ -216,7 +224,7 @@ async def reorder_subtasks(
         if subtask_id and new_order is not None:
             # Find the subtask in our fetched list
             for subtask in subtasks:
-                if subtask.id == subtask_id:
+                if str(subtask.id) == str(subtask_id):
                     subtask.order = new_order
                     break
 

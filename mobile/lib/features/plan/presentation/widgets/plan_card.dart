@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/motion.dart';
@@ -47,7 +47,7 @@ class _PlanCardState extends State<PlanCard>
   }
 
   void _handleTap() {
-    unawaited(HapticFeedback.selectionClick());
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
     if (widget.onTap != null) {
       widget.onTap!();
       return;

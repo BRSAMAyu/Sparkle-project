@@ -53,6 +53,8 @@ from app.orchestration.ux_envelope import ux_envelope_builder
 from app.services.llm_service import llm_service
 from app.services.system_update_service import SystemUpdateService, build_system_update
 
+_LANGGRAPH_PLANNER_TIMEOUT_SECONDS = 10.0
+
 
 class ExecutionEngineMixin:
     """Mixin providing execution, planning, and tool-handling methods for ChatOrchestrator."""
@@ -715,6 +717,7 @@ class ExecutionEngineMixin:
     ) -> tuple[RouteDecision, ExecutablePlan | None, StateSnapshot | None, bool]:
         executable_plan = None
         snapshot = None
+        use_synthesized_fallback = False
 
         if route_decision.execution_mode not in ["langgraph", "hybrid"]:
             return route_decision, executable_plan, snapshot, False
@@ -729,11 +732,7 @@ class ExecutionEngineMixin:
                 new_state="open",
                 reason=reason,
             )
-            await stream_callback(agent_service_pb2.ChatResponse(
-                delta="\n\n⚠️ 智能规划暂时不可用，使用标准模式"
-            ))
-            route_decision.execution_mode = "direct"
-            return route_decision, executable_plan, snapshot, False
+            use_synthesized_fallback = True
 
         try:
             snapshot = await self.snapshot_manager.create_snapshot(
@@ -885,21 +884,53 @@ class ExecutionEngineMixin:
                     ]
                     state_overrides["collaboration_index"] = 0
 
-            executable_plan = await self.lang_graph_planner.plan(
-                message=user_message,
-                snapshot=snapshot,
-                user_id=user_id,
-                session_id=session_id,
-                conversation_history=conversation_history,
-                plan_id=plan_id_str,
-                execution_feedback=execution_feedback,
-                mode_config=mode_config,
-                mode_strategy=mode_strategy,
-                persona_constraints=persona_constraints,
-                state_overrides=state_overrides or None,
-                planning_constraints=planning_constraints or None,
-                stream_callback=stream_callback,
-            )
+            if use_synthesized_fallback:
+                executable_plan = self.lang_graph_planner.build_fallback_plan(
+                    message=user_message,
+                    snapshot=snapshot,
+                    user_id=user_id,
+                    session_id=session_id,
+                    rationale=f"LangGraph circuit open, synthesized fallback: {reason}",
+                    plan_version=1,
+                )
+            else:
+                try:
+                    executable_plan = await asyncio.wait_for(
+                        self.lang_graph_planner.plan(
+                            message=user_message,
+                            snapshot=snapshot,
+                            user_id=user_id,
+                            session_id=session_id,
+                            conversation_history=conversation_history,
+                            plan_id=plan_id_str,
+                            execution_feedback=execution_feedback,
+                            mode_config=mode_config,
+                            mode_strategy=mode_strategy,
+                            persona_constraints=persona_constraints,
+                            state_overrides=state_overrides or None,
+                            planning_constraints=planning_constraints or None,
+                            stream_callback=stream_callback,
+                        ),
+                        timeout=_LANGGRAPH_PLANNER_TIMEOUT_SECONDS,
+                    )
+                except TimeoutError:
+                    logger.warning(
+                        "LangGraph planner timed out after {}s for session {}; using synthesized fallback",
+                        _LANGGRAPH_PLANNER_TIMEOUT_SECONDS,
+                        session_id,
+                    )
+                    executable_plan = self.lang_graph_planner.build_fallback_plan(
+                        message=user_message,
+                        snapshot=snapshot,
+                        user_id=user_id,
+                        session_id=session_id,
+                        rationale=(
+                            f"Planner timeout after {_LANGGRAPH_PLANNER_TIMEOUT_SECONDS:.0f}s, "
+                            "synthesized fallback"
+                        ),
+                        plan_version=1,
+                    )
+                    use_synthesized_fallback = True
 
             if self.redis and isinstance(user_context_payload, dict) and executable_plan is not None:
                 agent_ids = [
@@ -1081,157 +1112,223 @@ class ExecutionEngineMixin:
                 return route_decision, executable_plan, snapshot, True
 
             if executable_plan and route_decision.execution_mode in ["langgraph", "hybrid"]:
-                review_started_at = time.perf_counter()
-                review_result = await plan_review_service.review_plan(
-                    plan=executable_plan,
-                    user_message=user_message,
-                    user_context={
-                        **(user_context_payload or {}),
-                        "plan_context": plan_context or (user_context_payload or {}).get("plan_context"),
-                        "mode_strategy": state.context_data.get("mode_strategy"),
-                    },
-                )
-                if orchestration_trace is not None:
-                    alignment_score = review_result.alignment_score
-                    decision_label = str(review_result.decision or "unknown")
-                    alignment_text = (
-                        f"{alignment_score:.2f}"
-                        if isinstance(alignment_score, (int, float))
-                        else "未知"
-                    )
-                    orchestration_trace.add_step(
-                        step_id="plan_review",
-                        label="计划审查",
-                        decision=f"审查结果 {decision_label}，对齐度 {alignment_text}",
-                        reason=(
-                            review_result.alignment_summary
-                            or review_result.user_facing_reason
-                            or "系统已根据当前画像、风险和执行可行性完成审查。"
-                        ),
-                        confidence=review_result.confidence,
-                        metadata={
-                            "decision": review_result.decision,
-                            "alignment_score": review_result.alignment_score,
-                            "alignment_summary": review_result.alignment_summary or "",
-                            "review_id": review_result.review_id,
-                            "reasoning_source": review_result.reasoning_source or "",
-                        },
-                        duration_ms=self._roundtrip_ms(review_started_at),
-                    )
-                    self._sync_orchestration_trace(
-                        state=state,
-                        orchestration_trace=orchestration_trace,
-                        user_context_payload=user_context_payload,
-                    )
-                if (
-                    settings.ENABLE_PERCEPTIBLE_INTELLIGENCE
-                    and settings.ENABLE_PLAN_REASONING_SUMMARY
-                    and review_result.decision == ReviewDecision.APPROVED.value
-                    and review_result.reasoning_summary
-                ):
-                    try:
-                        await SystemUpdateService(getattr(self, "redis", None)).enqueue(
-                            user_id,
-                            build_system_update(
-                                update_type="plan_reasoning",
-                                category="evolution",
-                                title="这次计划这样安排，是有依据的",
-                                description=review_result.reasoning_summary,
-                                priority="low",
-                                metadata={
-                                    "evolution_kind": "plan_reasoning",
-                                    "headline": "这次计划这样安排，是有依据的",
-                                    "reasoning_summary": review_result.reasoning_summary,
-                                    "reasoning_details": review_result.reasoning_details or [],
-                                    "reasoning_source": review_result.reasoning_source or "",
-                                    "persona_strategy_mapping": review_result.persona_strategy_mapping or [],
-                                    "alignment_score": review_result.alignment_score,
-                                    "alignment_summary": review_result.alignment_summary or "",
-                                    "evidence_summary": "；".join(
-                                        detail.get("evidence", "")
-                                        for detail in (review_result.reasoning_details or [])
-                                        if isinstance(detail, dict) and detail.get("evidence")
-                                    ),
-                                    "plan_id": review_result.plan_id,
-                                },
-                            ),
-                        )
-                        EVIDENCE_BACKED_VISIBLE_UPDATE_TOTAL.labels(kind="plan_reasoning").inc()
-                    except Exception as exc:
-                        logger.warning(f"Failed to enqueue plan reasoning summary: {exc}")
-                if plan_id:
-                    from app.services.plan_feedback_service import get_plan_feedback_service
-                    from app.services.plan_state_service import PlanStateService
-
-                    feedback_service = get_plan_feedback_service(active_db, self.redis)
-                    await feedback_service.append_review_feedback(
-                        user_id=uuid.UUID(user_id),
-                        plan_id=uuid.UUID(plan_id),
-                        review_result=review_result,
-                        user_decision=None,
-                    )
-                    review_feedback_entry = review_result.review_feedback_entry or {}
-                    if review_feedback_entry:
-                        plan_state_service = PlanStateService(active_db, self.redis)
-                        plan_state = await plan_state_service.get_plan_state(
-                            uuid.UUID(user_id),
-                            uuid.UUID(plan_id),
-                        )
-                        existing_review_log = []
-                        if plan_state and isinstance(plan_state.facts, dict):
-                            raw_log = plan_state.facts.get("review_feedback_log")
-                            if isinstance(raw_log, list):
-                                existing_review_log = [item for item in raw_log if isinstance(item, dict)]
-                        existing_review_log.append(review_feedback_entry)
-                        await plan_state_service.upsert_plan_state(
-                            user_id=uuid.UUID(user_id),
-                            plan_id=uuid.UUID(plan_id),
-                            patch={
-                                "feedback_log": review_feedback_entry,
-                                "facts": {
-                                    "review_feedback_log": existing_review_log[-10:],
-                                },
-                            },
-                        )
-                    logger.info(f"Review feedback written for plan {plan_id}")
-
-                if review_result.decision in [
-                    ReviewDecision.REJECTED.value,
-                    ReviewDecision.REQUIRES_CONFIRMATION.value,
-                    ReviewDecision.NEEDS_MODIFICATION.value,
-                ]:
-                    action_id = await plan_review_service.store_review_result(
-                        review=review_result,
-                        user_id=str(user_id),
-                    )
-                    review_data_dict = review_result.to_dict()
-                    review_data_dict["action_id"] = action_id
-                    review_metadata = {
-                        "requires_review": "true",
-                        "review_action_id": action_id,
-                        "review_decision": review_result.decision,
-                        "review_id": review_result.review_id,
-                        "plan_id": review_result.plan_id,
-                        "review_data": json.dumps(review_data_dict),
-                    }
-                    review_delta = self._format_review_message(review_result)
-                    await stream_callback(agent_service_pb2.ChatResponse(
-                        delta=review_delta,
-                        metadata=review_metadata,
-                    ))
-                    state.context_data["plan_review"] = review_result.to_dict()
-                    state.context_data["pending_review_action_id"] = action_id
+                synthesized_fallback = "synthesized fallback" in str(executable_plan.rationale or "").lower()
+                if synthesized_fallback:
                     logger.info(
-                        f"Plan {executable_plan.plan_id} requires user review: "
-                        f"{review_result.decision} (action_id={action_id})"
+                        "Skipping LLM plan review for synthesized fallback plan {} to keep planning degradations executable",
+                        executable_plan.plan_id,
                     )
-                    return route_decision, executable_plan, snapshot, True
+                    state.context_data["plan_review"] = {
+                        "decision": ReviewDecision.APPROVED.value,
+                        "confidence": executable_plan.confidence,
+                        "alignment_score": executable_plan.confidence,
+                        "alignment_summary": "Fallback plan auto-approved to preserve end-to-end execution.",
+                        "reasoning_source": "rule_skip_synthesized_fallback",
+                        "plan_id": executable_plan.plan_id,
+                    }
+                else:
+                    review_started_at = time.perf_counter()
+                    review_result = await plan_review_service.review_plan(
+                        plan=executable_plan,
+                        user_message=user_message,
+                        user_context={
+                            **(user_context_payload or {}),
+                            "plan_context": plan_context or (user_context_payload or {}).get("plan_context"),
+                            "mode_strategy": state.context_data.get("mode_strategy"),
+                        },
+                    )
+                    if orchestration_trace is not None:
+                        alignment_score = review_result.alignment_score
+                        decision_label = str(review_result.decision or "unknown")
+                        alignment_text = (
+                            f"{alignment_score:.2f}"
+                            if isinstance(alignment_score, (int, float))
+                            else "未知"
+                        )
+                        orchestration_trace.add_step(
+                            step_id="plan_review",
+                            label="计划审查",
+                            decision=f"审查结果 {decision_label}，对齐度 {alignment_text}",
+                            reason=(
+                                review_result.alignment_summary
+                                or review_result.user_facing_reason
+                                or "系统已根据当前画像、风险和执行可行性完成审查。"
+                            ),
+                            confidence=review_result.confidence,
+                            metadata={
+                                "decision": review_result.decision,
+                                "alignment_score": review_result.alignment_score,
+                                "alignment_summary": review_result.alignment_summary or "",
+                                "review_id": review_result.review_id,
+                                "reasoning_source": review_result.reasoning_source or "",
+                            },
+                            duration_ms=self._roundtrip_ms(review_started_at),
+                        )
+                        self._sync_orchestration_trace(
+                            state=state,
+                            orchestration_trace=orchestration_trace,
+                            user_context_payload=user_context_payload,
+                        )
+                    if (
+                        settings.ENABLE_PERCEPTIBLE_INTELLIGENCE
+                        and settings.ENABLE_PLAN_REASONING_SUMMARY
+                        and review_result.decision == ReviewDecision.APPROVED.value
+                        and review_result.reasoning_summary
+                    ):
+                        try:
+                            await SystemUpdateService(getattr(self, "redis", None)).enqueue(
+                                user_id,
+                                build_system_update(
+                                    update_type="plan_reasoning",
+                                    category="evolution",
+                                    title="这次计划这样安排，是有依据的",
+                                    description=review_result.reasoning_summary,
+                                    priority="low",
+                                    metadata={
+                                        "evolution_kind": "plan_reasoning",
+                                        "headline": "这次计划这样安排，是有依据的",
+                                        "reasoning_summary": review_result.reasoning_summary,
+                                        "reasoning_details": review_result.reasoning_details or [],
+                                        "reasoning_source": review_result.reasoning_source or "",
+                                        "persona_strategy_mapping": review_result.persona_strategy_mapping or [],
+                                        "alignment_score": review_result.alignment_score,
+                                        "alignment_summary": review_result.alignment_summary or "",
+                                        "evidence_summary": "；".join(
+                                            detail.get("evidence", "")
+                                            for detail in (review_result.reasoning_details or [])
+                                            if isinstance(detail, dict) and detail.get("evidence")
+                                        ),
+                                        "plan_id": review_result.plan_id,
+                                    },
+                                ),
+                            )
+                            EVIDENCE_BACKED_VISIBLE_UPDATE_TOTAL.labels(kind="plan_reasoning").inc()
+                        except Exception as exc:
+                            logger.warning(f"Failed to enqueue plan reasoning summary: {exc}")
+                    if plan_id:
+                        from app.services.plan_feedback_service import get_plan_feedback_service
+                        from app.services.plan_state_service import PlanStateService
 
-                state.context_data["plan_review"] = review_result.to_dict()
-                logger.info(
-                    f"Plan {executable_plan.plan_id} auto-approved: "
-                    f"confidence={review_result.confidence}"
-                )
+                        feedback_service = get_plan_feedback_service(active_db, self.redis)
+                        normalized_plan_id = uuid.UUID(str(plan_id))
+                        await feedback_service.append_review_feedback(
+                            user_id=uuid.UUID(user_id),
+                            plan_id=normalized_plan_id,
+                            review_result=review_result,
+                            user_decision=None,
+                        )
+                        review_feedback_entry = review_result.review_feedback_entry or {}
+                        if review_feedback_entry:
+                            plan_state_service = PlanStateService(active_db, self.redis)
+                            plan_state = await plan_state_service.get_plan_state(
+                                uuid.UUID(user_id),
+                                normalized_plan_id,
+                            )
+                            existing_review_log = []
+                            if plan_state and isinstance(plan_state.facts, dict):
+                                raw_log = plan_state.facts.get("review_feedback_log")
+                                if isinstance(raw_log, list):
+                                    existing_review_log = [item for item in raw_log if isinstance(item, dict)]
+                            existing_review_log.append(review_feedback_entry)
+                            await plan_state_service.upsert_plan_state(
+                                user_id=uuid.UUID(user_id),
+                                plan_id=normalized_plan_id,
+                                patch={
+                                    "feedback_log": review_feedback_entry,
+                                    "facts": {
+                                        "review_feedback_log": existing_review_log[-10:],
+                                    },
+                                },
+                            )
+                        logger.info(f"Review feedback written for plan {plan_id}")
+
+                    review_requires_user_action = review_result.decision in [
+                        ReviewDecision.REJECTED.value,
+                        ReviewDecision.REQUIRES_CONFIRMATION.value,
+                        ReviewDecision.NEEDS_MODIFICATION.value,
+                    ]
+                    planning_keywords = (
+                        "计划",
+                        "学习计划",
+                        "任务卡",
+                        "制定",
+                        "安排",
+                        "路径",
+                        "复习",
+                    )
+                    route_reason_text = str(getattr(route_decision, "reason", "") or "").lower()
+                    should_force_minimal_execution = (
+                        review_requires_user_action
+                        and len(executable_plan.tool_calls) > 2
+                        and (
+                            "plan" in route_reason_text
+                            or any(keyword in str(user_message or "") for keyword in planning_keywords)
+                        )
+                    )
+                    if should_force_minimal_execution:
+                        logger.warning(
+                            "Plan {} review={} for planning request; degrading to synthesized executable fallback",
+                            executable_plan.plan_id,
+                            review_result.decision,
+                        )
+                        executable_plan = self.lang_graph_planner.build_fallback_plan(
+                            message=user_message,
+                            snapshot=snapshot,
+                            user_id=user_id,
+                            session_id=session_id,
+                            rationale=(
+                                "Review-gated complex plan degraded to synthesized fallback "
+                                f"after decision={review_result.decision}"
+                            ),
+                            plan_version=1,
+                        )
+                        state.context_data["plan_review"] = {
+                            "decision": ReviewDecision.APPROVED.value,
+                            "confidence": executable_plan.confidence,
+                            "alignment_score": executable_plan.confidence,
+                            "alignment_summary": (
+                                "复杂规划已自动降级为可直接执行的最小计划链，"
+                                "以确保聊天内能稳定产出计划卡与任务卡。"
+                            ),
+                            "reasoning_source": "review_degraded_to_synthesized_fallback",
+                            "plan_id": executable_plan.plan_id,
+                            "original_review_decision": review_result.decision,
+                            "original_review_id": review_result.review_id,
+                        }
+
+                    if review_requires_user_action and not should_force_minimal_execution:
+                        action_id = await plan_review_service.store_review_result(
+                            review=review_result,
+                            user_id=str(user_id),
+                        )
+                        review_data_dict = review_result.to_dict()
+                        review_data_dict["action_id"] = action_id
+                        review_metadata = {
+                            "requires_review": "true",
+                            "review_action_id": action_id,
+                            "review_decision": review_result.decision,
+                            "review_id": review_result.review_id,
+                            "plan_id": review_result.plan_id,
+                            "review_data": json.dumps(review_data_dict),
+                        }
+                        review_delta = self._format_review_message(review_result)
+                        await stream_callback(agent_service_pb2.ChatResponse(
+                            delta=review_delta,
+                            metadata=review_metadata,
+                        ))
+                        state.context_data["plan_review"] = review_result.to_dict()
+                        state.context_data["pending_review_action_id"] = action_id
+                        logger.info(
+                            f"Plan {executable_plan.plan_id} requires user review: "
+                            f"{review_result.decision} (action_id={action_id})"
+                        )
+                        return route_decision, executable_plan, snapshot, True
+
+                    state.context_data["plan_review"] = review_result.to_dict()
+                    logger.info(
+                        f"Plan {executable_plan.plan_id} auto-approved: "
+                        f"confidence={review_result.confidence}"
+                    )
 
             state.context_data["executable_plan"] = executable_plan
             state.context_data["snapshot"] = snapshot

@@ -1,6 +1,8 @@
 import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/services/bgm_service.dart';
+import 'package:sparkle/core/widgets/bgm_scope.dart';
 import 'package:sparkle/features/calendar/calendar.dart';
 
 Page<dynamic> _buildTransitionPage({
@@ -31,8 +33,11 @@ class CalendarRoutes {
           name: 'calendar',
           pageBuilder: (context, state) => _buildTransitionPage(
             state: state,
-            child: CalendarStatsScreen(
-              initialDate: _parseInitialDate(state.uri.queryParameters['date']),
+            child: BgmScope(
+              track: BgmTrack.calendar,
+              child: CalendarStatsScreen(
+                initialDate: _parseInitialDate(state.uri.queryParameters['date']),
+              ),
             ),
             type: SharedAxisTransitionType.scaled,
           ),
@@ -42,8 +47,11 @@ class CalendarRoutes {
           name: 'calendarStats',
           pageBuilder: (context, state) => _buildTransitionPage(
             state: state,
-            child: CalendarStatsScreen(
-              initialDate: _parseInitialDate(state.uri.queryParameters['date']),
+            child: BgmScope(
+              track: BgmTrack.calendar,
+              child: CalendarStatsScreen(
+                initialDate: _parseInitialDate(state.uri.queryParameters['date']),
+              ),
             ),
             type: SharedAxisTransitionType.scaled,
           ),
@@ -53,9 +61,12 @@ class CalendarRoutes {
           name: 'calendarDailyDetail',
           pageBuilder: (context, state) => _buildTransitionPage(
             state: state,
-            child: DailyDetailScreen(
-              date: _parseInitialDate(state.uri.queryParameters['date']) ??
-                  DateTime.now(),
+            child: BgmScope(
+              track: BgmTrack.calendar,
+              child: DailyDetailScreen(
+                date: _parseInitialDate(state.uri.queryParameters['date']) ??
+                    DateTime.now(),
+              ),
             ),
             type: SharedAxisTransitionType.scaled,
           ),

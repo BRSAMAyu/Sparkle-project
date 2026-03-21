@@ -1,8 +1,10 @@
 import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
+import 'package:sparkle/core/widgets/bgm_scope.dart';
 import 'package:sparkle/features/chat/presentation/screens/group_chat_screen.dart';
 import 'package:sparkle/features/chat/presentation/screens/private_chat_screen.dart';
 
@@ -57,7 +59,10 @@ class ChatRoutes {
             final groupId = state.pathParameters['id']!;
             return _buildTransitionPage(
               state: state,
-              child: GroupChatScreen(groupId: groupId),
+              child: BgmScope(
+                track: BgmTrack.chat,
+                child: GroupChatScreen(groupId: groupId),
+              ),
             );
           },
         ),
@@ -71,9 +76,12 @@ class ChatRoutes {
             final friendName = state.uri.queryParameters['name'];
             return _buildTransitionPage(
               state: state,
-              child: PrivateChatScreen(
-                friendId: friendId,
-                friendName: friendName,
+              child: BgmScope(
+                track: BgmTrack.chat,
+                child: PrivateChatScreen(
+                  friendId: friendId,
+                  friendName: friendName,
+                ),
               ),
             );
           },

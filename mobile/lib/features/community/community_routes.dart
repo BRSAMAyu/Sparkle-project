@@ -1,13 +1,16 @@
 import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
-import 'package:sparkle/features/community/presentation/screens/accountability_screen.dart';
+import 'package:sparkle/core/widgets/bgm_scope.dart';
 import 'package:sparkle/features/community/presentation/screens/accountability_detail_screen.dart';
+import 'package:sparkle/features/community/presentation/screens/accountability_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/blocked_users_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/create_group_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/create_post_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/favorites_screen.dart';
+import 'package:sparkle/features/community/presentation/screens/friend_profile_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/friends_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/group_detail_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/group_discover_screen.dart';
@@ -17,7 +20,6 @@ import 'package:sparkle/features/community/presentation/screens/group_members_sc
 import 'package:sparkle/features/community/presentation/screens/group_moderation_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/group_search_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/group_tasks_screen.dart';
-import 'package:sparkle/features/community/presentation/screens/friend_profile_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/user_search_screen.dart';
 
 Page<dynamic> _buildTransitionPage({
@@ -68,7 +70,10 @@ class CommunityRoutes {
           parentNavigatorKey: navigatorKey,
           pageBuilder: (context, state) => _buildTransitionPage(
             state: state,
-            child: const FriendsScreen(),
+            child: const BgmScope(
+              track: BgmTrack.community,
+              child: FriendsScreen(),
+            ),
           ),
         ),
         // Friends discover / recommendations (detail page, full-screen)
@@ -78,7 +83,10 @@ class CommunityRoutes {
           parentNavigatorKey: navigatorKey,
           pageBuilder: (context, state) => _buildTransitionPage(
             state: state,
-            child: const FriendsScreen(),
+            child: const BgmScope(
+              track: BgmTrack.community,
+              child: FriendsScreen(),
+            ),
           ),
         ),
         // User search (detail page, full-screen)
@@ -88,7 +96,10 @@ class CommunityRoutes {
           parentNavigatorKey: navigatorKey,
           pageBuilder: (context, state) => _buildTransitionPage(
             state: state,
-            child: const UserSearchScreen(),
+            child: const BgmScope(
+              track: BgmTrack.community,
+              child: UserSearchScreen(),
+            ),
           ),
         ),
         // User profile (must be AFTER /community/users/search to avoid :id capturing "search")
@@ -101,7 +112,10 @@ class CommunityRoutes {
             final name = state.uri.queryParameters['name'];
             return _buildTransitionPage(
               state: state,
-              child: FriendProfileScreen(userId: userId, displayName: name),
+              child: BgmScope(
+                track: BgmTrack.community,
+                child: FriendProfileScreen(userId: userId, displayName: name),
+              ),
             );
           },
         ),
@@ -112,7 +126,10 @@ class CommunityRoutes {
           parentNavigatorKey: navigatorKey,
           pageBuilder: (context, state) => _buildTransitionPage(
             state: state,
-            child: const GroupListScreen(),
+            child: const BgmScope(
+              track: BgmTrack.community,
+              child: GroupListScreen(),
+            ),
           ),
         ),
         // Group search (detail page, full-screen)
@@ -122,7 +139,10 @@ class CommunityRoutes {
           parentNavigatorKey: navigatorKey,
           pageBuilder: (context, state) => _buildTransitionPage(
             state: state,
-            child: const GroupSearchScreen(),
+            child: const BgmScope(
+              track: BgmTrack.community,
+              child: GroupSearchScreen(),
+            ),
           ),
         ),
         // Group discover (detail page, full-screen)
@@ -132,7 +152,10 @@ class CommunityRoutes {
           parentNavigatorKey: navigatorKey,
           pageBuilder: (context, state) => _buildTransitionPage(
             state: state,
-            child: const GroupDiscoverScreen(),
+            child: const BgmScope(
+              track: BgmTrack.community,
+              child: GroupDiscoverScreen(),
+            ),
           ),
         ),
         // Create group (modal-like, full-screen)
@@ -142,7 +165,10 @@ class CommunityRoutes {
           parentNavigatorKey: navigatorKey,
           pageBuilder: (context, state) => _buildTransitionPage(
             state: state,
-            child: const CreateGroupScreen(),
+            child: const BgmScope(
+              track: BgmTrack.community,
+              child: CreateGroupScreen(),
+            ),
             type: SharedAxisTransitionType.scaled,
           ),
         ),
@@ -152,7 +178,10 @@ class CommunityRoutes {
           parentNavigatorKey: navigatorKey,
           pageBuilder: (context, state) => _buildTransitionPage(
             state: state,
-            child: const CreatePostScreen(),
+            child: const BgmScope(
+              track: BgmTrack.community,
+              child: CreatePostScreen(),
+            ),
             type: SharedAxisTransitionType.scaled,
           ),
         ),
@@ -166,7 +195,10 @@ class CommunityRoutes {
             final groupId = state.pathParameters['id']!;
             return _buildTransitionPage(
               state: state,
-              child: GroupDetailScreen(groupId: groupId),
+              child: BgmScope(
+                track: BgmTrack.community,
+                child: GroupDetailScreen(groupId: groupId),
+              ),
             );
           },
         ),
@@ -180,7 +212,10 @@ class CommunityRoutes {
             final groupId = state.pathParameters['id']!;
             return _buildTransitionPage(
               state: state,
-              child: GroupTasksScreen(groupId: groupId),
+              child: BgmScope(
+                track: BgmTrack.community,
+                child: GroupTasksScreen(groupId: groupId),
+              ),
             );
           },
         ),
@@ -195,9 +230,12 @@ class CommunityRoutes {
             final groupName = state.uri.queryParameters['name'] ?? '';
             return _buildTransitionPage(
               state: state,
-              child: GroupMembersScreen(
-                groupId: groupId,
-                groupName: groupName,
+              child: BgmScope(
+                track: BgmTrack.community,
+                child: GroupMembersScreen(
+                  groupId: groupId,
+                  groupName: groupName,
+                ),
               ),
             );
           },
@@ -211,7 +249,10 @@ class CommunityRoutes {
             final groupId = state.pathParameters['id']!;
             return _buildTransitionPage(
               state: state,
-              child: GroupFilesScreen(groupId: groupId),
+              child: BgmScope(
+                track: BgmTrack.community,
+                child: GroupFilesScreen(groupId: groupId),
+              ),
             );
           },
         ),

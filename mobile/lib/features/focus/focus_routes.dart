@@ -1,7 +1,9 @@
 import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
+import 'package:sparkle/core/widgets/bgm_scope.dart';
 import 'package:sparkle/features/focus/presentation/screens/focus_main_screen.dart';
 import 'package:sparkle/features/focus/presentation/screens/mindfulness_mode_screen.dart';
 
@@ -35,7 +37,10 @@ class FocusRoutes {
         parentNavigatorKey: navigatorKey,
         pageBuilder: (context, state) => _buildTransitionPage(
           state: state,
-          child: const FocusMainScreen(),
+          child: const BgmScope(
+            track: BgmTrack.focusStart,
+            child: FocusMainScreen(),
+          ),
           type: SharedAxisTransitionType.scaled,
         ),
       ),
@@ -49,7 +54,10 @@ class FocusRoutes {
           final taskId = state.pathParameters['id']!;
           return _buildTransitionPage(
             state: state,
-            child: MindfulnessModeScreen(taskId: taskId),
+            child: BgmScope(
+              track: BgmTrack.focusDeep,
+              child: MindfulnessModeScreen(taskId: taskId),
+            ),
             type: SharedAxisTransitionType.scaled,
           );
         },

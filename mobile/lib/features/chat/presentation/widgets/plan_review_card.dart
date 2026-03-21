@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/motion.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
@@ -925,7 +925,9 @@ class _PlanReviewCardState extends State<PlanReviewCard>
             onPressed: _isSubmitting
                 ? null
                 : () {
-                    HapticFeedback.mediumImpact();
+                    unawaited(
+                      SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm),
+                    );
                     _handleDecision(ReviewDecision.approved);
                   },
             size: CustomButtonSize.small,

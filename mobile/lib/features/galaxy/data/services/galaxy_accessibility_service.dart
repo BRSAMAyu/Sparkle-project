@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_config.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
 
@@ -63,31 +64,41 @@ class GalaxyAccessibilityService {
 
   /// Light haptic for subtle interactions
   Future<void> lightHaptic() async {
-    if (!hapticEnabled) return;
+    if (!hapticEnabled || !await SensoryFeedbackService.isHapticEnabled()) {
+      return;
+    }
     await HapticFeedback.lightImpact();
   }
 
   /// Medium haptic for standard interactions
   Future<void> mediumHaptic() async {
-    if (!hapticEnabled) return;
+    if (!hapticEnabled || !await SensoryFeedbackService.isHapticEnabled()) {
+      return;
+    }
     await HapticFeedback.mediumImpact();
   }
 
   /// Heavy haptic for significant actions
   Future<void> heavyHaptic() async {
-    if (!hapticEnabled) return;
+    if (!hapticEnabled || !await SensoryFeedbackService.isHapticEnabled()) {
+      return;
+    }
     await HapticFeedback.heavyImpact();
   }
 
   /// Selection haptic for UI selection
   Future<void> selectionHaptic() async {
-    if (!hapticEnabled) return;
+    if (!hapticEnabled || !await SensoryFeedbackService.isHapticEnabled()) {
+      return;
+    }
     await HapticFeedback.selectionClick();
   }
 
   /// Vibration pattern for special events
   Future<void> patternHaptic(HapticPattern pattern) async {
-    if (!hapticEnabled) return;
+    if (!hapticEnabled || !await SensoryFeedbackService.isHapticEnabled()) {
+      return;
+    }
 
     switch (pattern) {
       case HapticPattern.success:

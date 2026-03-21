@@ -298,6 +298,36 @@ class TaskRepository {
     }
   }
 
+  Future<List<TaskModel>> reorderTasks(List<String> taskIds) async {
+    if (DemoDataService.isDemoMode) {
+      final demoTasks = DemoDataService().demoTasks;
+      final taskMap = {for (final task in demoTasks) task.id: task};
+      final reordered = <TaskModel>[];
+      for (var i = 0; i < taskIds.length; i++) {
+        final task = taskMap[taskIds[i]];
+        if (task != null) {
+          reordered.add(task.copyWith(orderIndex: (i + 1) * 1000));
+        }
+      }
+      demoTasks
+        ..clear()
+        ..addAll(reordered);
+      return reordered;
+    }
+    try {
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        ApiEndpoints.tasksReorder,
+        data: {'task_ids': taskIds},
+      );
+      final data = ApiResponseParser.unwrapList(response.data, action: 'reorderTasks');
+      return data
+          .map((json) => TaskModel.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } on DioException catch (e) {
+      return _handleDioError(e, 'reorderTasks');
+    }
+  }
+
   /// Generate or regenerate AI guide for an existing task.
   Future<TaskModel> generateGuide(String id) async {
     if (DemoDataService.isDemoMode) {

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +13,7 @@ import 'package:sparkle/features/achievement/presentation/widgets/achievement_un
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart'
     as chat;
 import 'package:sparkle/features/chat/data/services/message_notification_service.dart';
+import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/providers/visual_element_provider.dart';
 
@@ -37,6 +39,7 @@ class MainNavigationShell extends ConsumerStatefulWidget {
 
 class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
   bool _isShowingAchievementDialog = false;
+  StreamSubscription<dynamic>? _communityEventsSub;
 
   void _handleDestinationSelected(int index) {
     unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.navigation));
@@ -53,6 +56,13 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
 
   void _setupAchievementListener() {
     unawaited(ref.read(visualElementProvider.notifier).refresh());
+    _subscribeToCommunityEvents(ref.read(communityEventsStreamProvider));
+    ref.listenManual<Stream<dynamic>>(
+      communityEventsStreamProvider,
+      (previous, next) {
+        _subscribeToCommunityEvents(next);
+      },
+    );
     ref.listenManual(
       pendingAchievementUnlockProvider,
       (previous, next) {
@@ -64,6 +74,66 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
         }
       },
     );
+  }
+
+  void _subscribeToCommunityEvents(Stream<dynamic> stream) {
+    unawaited(_communityEventsSub?.cancel());
+    _communityEventsSub = stream.listen(
+      _handleCommunityEvent,
+      onError: (_) {},
+    );
+  }
+
+  void _handleCommunityEvent(dynamic event) {
+    Map<String, dynamic>? payload;
+    if (event is String && event.isNotEmpty) {
+      try {
+        final decoded = json.decode(event);
+        if (decoded is Map<String, dynamic>) {
+          payload = decoded;
+        }
+      } catch (_) {}
+    } else if (event is Map<String, dynamic>) {
+      payload = event;
+    } else if (event is Map) {
+      payload = Map<String, dynamic>.from(event);
+    }
+
+    if (payload == null) {
+      return;
+    }
+
+    final type = payload['type'] as String?;
+    if (type != 'achievement_unlock') {
+      return;
+    }
+
+    final achievementData = payload['achievement_data'];
+    Map<String, dynamic>? achievementMap;
+    if (achievementData is Map<String, dynamic>) {
+      achievementMap = achievementData;
+    } else if (achievementData is Map) {
+      achievementMap = Map<String, dynamic>.from(achievementData);
+    }
+    if (achievementMap == null) {
+      return;
+    }
+
+    final wsEvent = chat.AchievementUnlockEvent(achievementData: achievementMap);
+    final result =
+        ref.read(achievementProvider.notifier).handleAchievementUnlock(wsEvent);
+    if (result == null) {
+      return;
+    }
+
+    ref.read(pendingAchievementUnlockProvider.notifier).setPending(
+          event: result.event,
+          comboCount: result.comboCount,
+        );
+    unawaited(ref.read(achievementProvider.notifier).refreshAchievements());
+    unawaited(ref.read(achievementProvider.notifier).refreshStats());
+    unawaited(ref.read(achievementProvider.notifier).refreshStreakStats());
+    unawaited(ref.read(streakHistoryProvider.notifier).loadHistory());
   }
 
   Future<void> _showAchievementDialog(
@@ -102,6 +172,7 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(communityEventsStreamProvider);
     final l10n = AppLocalizations.of(context)!;
     final unreadCount = ref.watch(unreadMessageCountProvider);
 
@@ -180,5 +251,11 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
         ),
       ],
     );
+  }
+
+  @override
+  void dispose() {
+    unawaited(_communityEventsSub?.cancel());
+    super.dispose();
   }
 }

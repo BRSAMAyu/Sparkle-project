@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/charts/engagement_heatmap.dart';
 import 'package:sparkle/core/services/predictive_service.dart';
+import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/insights/presentation/widgets/predictive_insights_card.dart';
 import 'package:sparkle/features/reviews/presentation/widgets/nightly_review_panel.dart';
+import 'package:sparkle/shared/entities/achievement_model.dart';
 
 /// 学习预测洞察屏幕 - 展示AI预测的学习趋势
 ///
@@ -26,6 +28,7 @@ class _LearningForecastScreenState
     extends ConsumerState<LearningForecastScreen> {
   bool _isLoading = true;
   Map<String, dynamic>? _dashboardData;
+  Map<DateTime, double> _heatmapData = const <DateTime, double>{};
 
   @override
   void initState() {
@@ -37,14 +40,17 @@ class _LearningForecastScreenState
     setState(() => _isLoading = true);
 
     try {
-      // API Integration: Fetch dashboard data with fallback to mock
-      // See: lib/core/services/predictive_service.dart
-      final response =
-          await ref.read(predictiveServiceProvider).getDashboardData();
+      final results = await Future.wait<dynamic>([
+        ref.read(predictiveServiceProvider).getDashboardData(),
+        ref.read(achievementRepositoryProvider).getStreakHistory(days: 90),
+      ]);
+      final response = results[0] as Map<String, dynamic>;
+      final streakDays = results[1] as List<StreakDayRecord>;
 
       if (mounted) {
         setState(() {
           _dashboardData = response;
+          _heatmapData = _buildHeatmapData(streakDays);
           _isLoading = false;
         });
       }
@@ -54,6 +60,22 @@ class _LearningForecastScreenState
         AppFeedback.error(context, '加载失败: $e');
       }
     }
+  }
+
+  Map<DateTime, double> _buildHeatmapData(List<StreakDayRecord> days) {
+    if (days.isEmpty) {
+      return const <DateTime, double>{};
+    }
+
+    return <DateTime, double>{
+      for (final record in days)
+        DateTime(record.day.year, record.day.month, record.day.day):
+            switch (record.status) {
+              StreakDayStatus.active => 1.0,
+              StreakDayStatus.frozen => 0.55,
+              StreakDayStatus.missed => 0.0,
+            },
+    };
   }
 
   @override
@@ -101,9 +123,11 @@ class _LearningForecastScreenState
                         // Engagement Heatmap
                         _buildSectionTitle('学习活跃度分析'),
                         const SizedBox(height: DS.md),
-                        const EngagementHeatmap(
-                          data: <DateTime,
-                              double>{}, // API Integration: Pass actual heatmap data
+                        EngagementHeatmap(
+                          data: _heatmapData,
+                          onDayTap: (date) => context.push(
+                            '/calendar/day?date=${date.toIso8601String()}',
+                          ),
                         ),
                         const SizedBox(height: DS.xl),
 

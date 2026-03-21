@@ -92,7 +92,7 @@ class CreatePlanTool(BaseTool):
                 "progress": getattr(plan, "progress", 0),
                 "is_active": getattr(plan, "is_active", True),
                 "is_primary": getattr(plan, "is_primary", False),
-                "task_count": len(getattr(plan, "tasks", []) or []),
+                "task_count": 0,
                 "source": getattr(plan, "source", None),
                 "target_date": plan.target_date.isoformat() if plan.target_date else None,
                 "target_mastery": params.target_mastery,

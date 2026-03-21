@@ -94,6 +94,7 @@ class TaskUpdate(BaseModel):
     energy_cost: int | None = Field(default=None, ge=1, le=5, description="Energy cost")
     guide_content: str | None = Field(default=None, description="Guide content")
     priority: int | None = Field(default=None, description="Priority")
+    order_index: int | None = Field(default=None, description="Display order")
     due_date: date | None = Field(default=None, description="Due date")
     user_note: str | None = Field(default=None, description="User note")
 
@@ -157,6 +158,15 @@ class TaskDetail(TaskBase):
     user_note: str | None = Field(description="User note")
     knowledge_node_id: UUID | None = Field(description="Knowledge node ID")
     tool_result_id: str | None = Field(description="Tool result ID")
+    order_index: int = Field(default=0, description="Display order")
+    subtasks_total: int = Field(default=0, description="Total subtasks")
+    subtasks_completed: int = Field(default=0, description="Completed subtasks")
+
+
+class TaskReorderRequest(BaseModel):
+    """Persist task ordering for the current user."""
+
+    task_ids: list[UUID] = Field(min_length=1, description="Ordered task IDs")
 
 
 class TaskResourceLinkCreate(BaseModel):

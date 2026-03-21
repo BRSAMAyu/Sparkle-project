@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/calendar/presentation/providers/calendar_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/calendar_preview_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/calendar/compact_task_card.dart';
+import 'package:sparkle/shared/entities/achievement_model.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 /// Date utility functions
@@ -113,7 +115,23 @@ class TaskPreviewPanel extends ConsumerWidget {
     WidgetRef ref,
     DateTime selectedDate,
     AsyncValue<List<TaskModel>> tasksAsync,
-  ) => tasksAsync.when(
+  ) {
+    final streakHistory = ref.watch(streakHistoryProvider);
+    final streakRecord = streakHistory.days.where((record) {
+      final day = record.day;
+      return day.year == selectedDate.year &&
+          day.month == selectedDate.month &&
+          day.day == selectedDate.day;
+    }).firstOrNull;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (streakRecord != null) ...[
+          _StreakStatusCard(record: streakRecord),
+          const SizedBox(height: DS.spacing12),
+        ],
+        tasksAsync.when(
       data: (tasks) {
         if (tasks.isEmpty) {
           return _buildEmptyState(context);
@@ -142,7 +160,10 @@ class TaskPreviewPanel extends ConsumerWidget {
       },
       loading: _buildLoadingState,
       error: (_, __) => _buildErrorState(context),
+        ),
+      ],
     );
+  }
 
   Widget _buildEmptyState(BuildContext context) => Container(
       padding: const EdgeInsets.symmetric(vertical: DS.spacing24),
@@ -221,6 +242,76 @@ class TaskPreviewPanel extends ConsumerWidget {
   String _getWeekdayName(DateTime date) {
     const weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
     return weekdays[date.weekday - 1];
+  }
+}
+
+class _StreakStatusCard extends StatelessWidget {
+  const _StreakStatusCard({required this.record});
+
+  final StreakDayRecord record;
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, icon, color, subtitle) = switch (record.status) {
+      StreakDayStatus.active => (
+          '已打卡',
+          Icons.local_fire_department_rounded,
+          DS.semanticSuccess,
+          record.sourceEvent == null ? '这一天有实际完成记录。' : '来源：${record.sourceEvent}',
+        ),
+      StreakDayStatus.frozen => (
+          '保护中',
+          Icons.ac_unit_rounded,
+          DS.semanticWarning,
+          '这一天使用了连击保护，没有直接断签。',
+        ),
+      StreakDayStatus.missed => (
+          '未打卡',
+          Icons.event_busy_rounded,
+          DS.textSecondary,
+          '这一天没有形成有效打卡记录。',
+        ),
+    };
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(DS.spacing12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: DS.borderRadius12,
+        border: Border.all(color: color.withValues(alpha: 0.22)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: DS.spacing8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: context.sparkleTypography.labelSmall.copyWith(
+                    color: color,
+                    fontWeight: DS.fontWeightBold,
+                  ),
+                ),
+                const SizedBox(height: DS.spacing2),
+                Text(
+                  subtitle,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.sparkleTypography.labelSmall.copyWith(
+                    color: DS.textSecondary,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

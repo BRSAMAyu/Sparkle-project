@@ -467,6 +467,25 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
         return;
       }
 
+      final tappedNode = _nodesById[command.hit!.nodeId];
+      if (tappedNode == null) {
+        return;
+      }
+
+      if (!tappedNode.isUnlocked) {
+        unawaited(_accessibilityService.lightHaptic());
+        setState(() {
+          _cancelTapFeedbackState();
+          _selectedNodeId = tappedNode.id;
+          _previewNode = tappedNode;
+          _previewScreenPosition = _computePreviewPosition(
+            anchor: _camera.worldToScreen(command.hit!.worldPosition),
+          );
+          _focusNodeIds = <String>{tappedNode.id, ...?_adjacency[tappedNode.id]};
+        });
+        return;
+      }
+
       _startTapFeedback(command.hit!.nodeId);
       return;
     }

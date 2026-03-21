@@ -508,7 +508,10 @@ class GroupDirectoryNotifier
 
   Future<void> loadDirectory() async {
     if (!mounted) return;
-    state = const AsyncValue.loading();
+    final previous = state.valueOrNull;
+    if (previous == null) {
+      state = const AsyncValue.loading();
+    }
     try {
       final directory = await _repository.getGroupDirectory(
         keyword: _keyword.isEmpty ? null : _keyword,
@@ -520,6 +523,11 @@ class GroupDirectoryNotifier
       state = AsyncValue.data(directory);
     } catch (e, st) {
       if (!mounted) return;
+      if (previous != null) {
+        debugPrint('Group directory refresh failed, keeping previous data: $e');
+        state = AsyncValue.data(previous);
+        return;
+      }
       state = AsyncValue.error(e, st);
     }
   }
@@ -595,29 +603,44 @@ class UserSearchNotifier extends StateNotifier<AsyncValue<List<UserBrief>>> {
 // 4. My Groups Provider
 final myGroupsProvider =
     StateNotifierProvider<MyGroupsNotifier, AsyncValue<List<GroupListItem>>>(
-  (ref) => MyGroupsNotifier(ref.watch(communityRepositoryProvider)),
+  (ref) => MyGroupsNotifier(
+    ref.watch(communityRepositoryProvider),
+    ref,
+  ),
 );
 
 final groupDetailProvider = StateNotifierProvider.family<GroupDetailNotifier,
     AsyncValue<GroupInfo>, String>(
-  (ref, groupId) =>
-      GroupDetailNotifier(ref.watch(communityRepositoryProvider), groupId),
+  (ref, groupId) => GroupDetailNotifier(
+    ref.watch(communityRepositoryProvider),
+    groupId,
+    ref,
+  ),
 );
 
 class GroupDetailNotifier extends StateNotifier<AsyncValue<GroupInfo>> {
-  GroupDetailNotifier(this._repository, this._groupId)
+  GroupDetailNotifier(this._repository, this._groupId, this._ref)
       : super(const AsyncValue.loading()) {
     loadDetail();
   }
   final CommunityRepository _repository;
   final String _groupId;
+  final Ref _ref;
 
   Future<void> loadDetail() async {
-    state = const AsyncValue.loading();
+    final previous = state.valueOrNull;
+    if (previous == null) {
+      state = const AsyncValue.loading();
+    }
     try {
       final detail = await _repository.getGroup(_groupId);
       state = AsyncValue.data(detail);
     } catch (e, st) {
+      if (previous != null) {
+        debugPrint('Group detail refresh failed, keeping previous data: $e');
+        state = AsyncValue.data(previous);
+        return;
+      }
       state = AsyncValue.error(e, st);
     }
   }
@@ -627,6 +650,10 @@ class GroupDetailNotifier extends StateNotifier<AsyncValue<GroupInfo>> {
   Future<void> joinGroup() async {
     try {
       await _repository.joinGroup(_groupId);
+      _ref.invalidate(myGroupsProvider);
+      _ref.invalidate(groupDiscoverProvider);
+      _ref.invalidate(groupRecommendationsProvider);
+      _ref.invalidate(groupMembersProvider(_groupId));
       await loadDetail();
     } catch (e) {
       rethrow;
@@ -636,6 +663,10 @@ class GroupDetailNotifier extends StateNotifier<AsyncValue<GroupInfo>> {
   Future<void> leaveGroup() async {
     try {
       await _repository.leaveGroup(_groupId);
+      _ref.invalidate(myGroupsProvider);
+      _ref.invalidate(groupDiscoverProvider);
+      _ref.invalidate(groupRecommendationsProvider);
+      _ref.invalidate(groupMembersProvider(_groupId));
       await loadDetail();
     } catch (e) {
       rethrow;
@@ -649,6 +680,7 @@ class GroupDetailNotifier extends StateNotifier<AsyncValue<GroupInfo>> {
         todayDurationMinutes: minutes,
         message: message,
       );
+      _ref.invalidate(groupMembersProvider(_groupId));
       await loadDetail();
       return response;
     } catch (e) {
@@ -667,20 +699,30 @@ class GroupDetailNotifier extends StateNotifier<AsyncValue<GroupInfo>> {
 }
 
 class MyGroupsNotifier extends StateNotifier<AsyncValue<List<GroupListItem>>> {
-  MyGroupsNotifier(this._repository) : super(const AsyncValue.loading()) {
+  MyGroupsNotifier(this._repository, this._ref)
+      : super(const AsyncValue.loading()) {
     loadGroups();
   }
   final CommunityRepository _repository;
+  final Ref _ref;
 
   Future<void> loadGroups() async {
     if (!mounted) return;
-    state = const AsyncValue.loading();
+    final previous = state.valueOrNull;
+    if (previous == null) {
+      state = const AsyncValue.loading();
+    }
     try {
       final groups = await _repository.getMyGroups();
       if (!mounted) return;
       state = AsyncValue.data(groups);
     } catch (e, st) {
       if (!mounted) return;
+      if (previous != null) {
+        debugPrint('My groups refresh failed, keeping previous data: $e');
+        state = AsyncValue.data(previous);
+        return;
+      }
       state = AsyncValue.error(e, st);
     }
   }
@@ -690,6 +732,8 @@ class MyGroupsNotifier extends StateNotifier<AsyncValue<List<GroupListItem>>> {
   Future<GroupInfo> createGroup(GroupCreate data) async {
     try {
       final group = await _repository.createGroup(data);
+      _ref.invalidate(groupDiscoverProvider);
+      _ref.invalidate(groupRecommendationsProvider);
       await loadGroups();
       return group;
     } catch (e) {
@@ -715,11 +759,19 @@ class GroupMembersNotifier
   final String _groupId;
 
   Future<void> loadMembers() async {
-    state = const AsyncValue.loading();
+    final previous = state.valueOrNull;
+    if (previous == null) {
+      state = const AsyncValue.loading();
+    }
     try {
       final members = await _repository.getGroupMembers(_groupId);
       state = AsyncValue.data(members);
     } catch (e, st) {
+      if (previous != null) {
+        debugPrint('Group members refresh failed, keeping previous data: $e');
+        state = AsyncValue.data(previous);
+        return;
+      }
       state = AsyncValue.error(e, st);
     }
   }
@@ -804,7 +856,13 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
   WebSocketConnectionState get connectionState => _connectionState;
   int _retryCount = 0;
   static const int _maxRetries = 5;
+  static const int _pageSize = 50;
+  bool _isLoadingMore = false;
+  bool _hasMoreMessages = true;
   StreamSubscription<dynamic>? _wsSubscription;
+
+  bool get isLoadingMore => _isLoadingMore;
+  bool get hasMoreMessages => _hasMoreMessages;
 
   Future<void> _initialize() async {
     // Get current user ID for filtering notifications
@@ -1046,7 +1104,8 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
 
   Future<void> loadMessages() async {
     try {
-      final messages = await _repository.getMessages(_groupId);
+      final messages = await _repository.getMessages(_groupId, limit: _pageSize);
+      _hasMoreMessages = messages.length >= _pageSize;
       state = AsyncValue.data(messages);
       await _cacheService.saveGroupMessages(_groupId, messages);
       if (messages.isNotEmpty) {
@@ -1060,6 +1119,49 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
   }
 
   Future<void> refresh() => loadMessages();
+
+  Future<void> loadOlderMessages() async {
+    if (_isLoadingMore || !_hasMoreMessages) {
+      return;
+    }
+
+    final currentMessages = state.valueOrNull ?? const <MessageInfo>[];
+    if (currentMessages.isEmpty) {
+      await loadMessages();
+      return;
+    }
+
+    _isLoadingMore = true;
+    try {
+      final olderMessages = await _repository.getMessages(
+        _groupId,
+        beforeId: currentMessages.last.id,
+        limit: _pageSize,
+      );
+      if (olderMessages.isEmpty) {
+        _hasMoreMessages = false;
+        return;
+      }
+
+      final seenIds = currentMessages.map((message) => message.id).toSet();
+      final deduped = olderMessages
+          .where((message) => !seenIds.contains(message.id))
+          .toList();
+      if (deduped.isEmpty) {
+        _hasMoreMessages = false;
+        return;
+      }
+
+      _hasMoreMessages = olderMessages.length >= _pageSize;
+      final merged = [...currentMessages, ...deduped];
+      state = AsyncValue.data(merged);
+      await _cacheService.saveGroupMessages(_groupId, merged);
+    } catch (e) {
+      debugPrint('Load older group messages failed: $e');
+    } finally {
+      _isLoadingMore = false;
+    }
+  }
 
   void setQuote(MessageInfo? message) {
     _quotedMessage = message;

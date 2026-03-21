@@ -163,6 +163,39 @@ async def test_generation_node_forces_fast_tier_for_standard_chat(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_generation_node_forces_fast_tier_for_balanced_light_standard_chat(monkeypatch):
+    fake_llm = _FakeGenerationLLM()
+    get_tier_mock = AsyncMock(return_value=fake_llm)
+    get_llm_mock = AsyncMock(side_effect=AssertionError("balanced light reply should use fast tier helper"))
+    monkeypatch.setattr("app.agents.standard_workflow.get_configured_llm_service_for_tier", get_tier_mock)
+    monkeypatch.setattr("app.agents.standard_workflow.get_configured_llm_service", get_llm_mock)
+    monkeypatch.setattr("app.agents.standard_workflow.build_system_prompt", lambda *args, **kwargs: "SYSTEM")
+
+    state = WorkflowState(
+        messages=[{"role": "user", "content": "在线代和概率论之间应该先学哪个？给个两周安排。"}],
+        context_data={
+            "chat_mode": "standard",
+            "reasoning_mode": "balanced",
+            "user_context": {},
+            "conversation_context": {"messages": []},
+            "tools_schema": [],
+        },
+    )
+
+    new_state = await generation_node(state)
+
+    get_tier_mock.assert_awaited_once_with(
+        "generation",
+        ModelTier.FAST,
+        task_type=TaskType.QUICK_QUERY,
+        reasoning_mode="balanced",
+    )
+    assert new_state.context_data["first_touch_model_tier"] == ModelTier.FAST.value
+    assert new_state.context_data["first_touch_profile"] == "balanced_fast_path"
+    assert new_state.messages[-1]["content"] == "分析完成"
+
+
+@pytest.mark.asyncio
 async def test_generation_node_uses_custom_expert_specific_model(monkeypatch):
     fake_llm = _FakeGenerationLLM()
     get_specific_mock = AsyncMock(return_value=fake_llm)

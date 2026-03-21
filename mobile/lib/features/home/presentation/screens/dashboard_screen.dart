@@ -31,6 +31,100 @@ class DashboardScreen extends ConsumerStatefulWidget {
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   double _bottomOverlayHeight = 52;
 
+  bool _shouldShowFirstGoalEmptyState(DashboardState state) {
+    if (state.isLoading || state.error != null) {
+      return false;
+    }
+    return state.nextActions.isEmpty &&
+        state.sprint == null &&
+        state.growth == null;
+  }
+
+  bool get _isChinese => Localizations.localeOf(context)
+      .languageCode
+      .toLowerCase()
+      .startsWith('zh');
+
+  Widget _buildFirstGoalEmptyState() => Padding(
+        padding: const EdgeInsets.fromLTRB(
+          DS.spacing16,
+          DS.spacing8,
+          DS.spacing16,
+          DS.spacing12,
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(DS.spacing20),
+          decoration: BoxDecoration(
+            color: DS.surfacePanel.withValues(alpha: 0.78),
+            borderRadius: BorderRadius.circular(DS.radius20),
+            border: Border.all(
+              color: DS.brandPrimary.withValues(alpha: 0.12),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: DS.brandPrimary.withValues(alpha: 0.08),
+                blurRadius: 30,
+                offset: const Offset(0, 12),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      DS.brandPrimary.withValues(alpha: 0.92),
+                      DS.info.withValues(alpha: 0.88),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: const Icon(
+                  Icons.auto_awesome_rounded,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: DS.spacing16),
+              Text(
+                _isChinese ? '先定下你的第一个目标' : 'Set your first goal',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: DS.spacing8),
+              Text(
+                _isChinese
+                    ? '告诉我你最近最想推进的一件事，我会立刻帮你拆成可执行的计划。'
+                    : 'Tell me the one thing you want to move forward, and I will turn it into an actionable plan.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: DS.textSecondary,
+                      height: 1.4,
+                    ),
+              ),
+              const SizedBox(height: DS.spacing16),
+              Wrap(
+                spacing: DS.spacing12,
+                runSpacing: DS.spacing12,
+                children: [
+                  SparkleButton.primary(
+                    label: _isChinese ? '和 AI 定目标' : 'Start with AI',
+                    onPressed: () => context.go('/chat'),
+                  ),
+                  SparkleButton.ghost(
+                    label: _isChinese ? '查看任务列表' : 'Open tasks',
+                    onPressed: () => context.push('/tasks'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+
   void _handleUnifiedOmniBarHeightChanged(double height) {
     if ((height - _bottomOverlayHeight).abs() < 0.5) {
       return;
@@ -46,6 +140,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final dashboardState = ref.watch(dashboardProvider);
     final predictions = ref.watch(visiblePredictionsProvider);
     final l10n = AppLocalizations.of(context)!;
+    final showFirstGoalEmptyState =
+        _shouldShowFirstGoalEmptyState(dashboardState);
 
     final category = ResponsiveSystem.getCategory(context);
     final fallbackBottomHeight = 52.0 + (predictions.isNotEmpty ? 36.0 : 0.0);
@@ -117,24 +213,28 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   SliverToBoxAdapter(
                     child: MetricsRow(dashboardState: dashboardState),
                   ),
-                  SliverToBoxAdapter(
-                    child: NextActionsCard(
-                      compact: true,
-                      onViewAll: () => context.push('/tasks'),
+                  if (showFirstGoalEmptyState)
+                    SliverToBoxAdapter(child: _buildFirstGoalEmptyState())
+                  else ...[
+                    SliverToBoxAdapter(
+                      child: NextActionsCard(
+                        compact: true,
+                        onViewAll: () => context.push('/tasks'),
+                      ),
                     ),
-                  ),
-                  const SliverToBoxAdapter(child: PredictedIntentCard()),
-                  const SliverToBoxAdapter(child: HomeNotificationCard()),
-                  const SliverToBoxAdapter(child: NightlyReviewPanel()),
-                  const SliverToBoxAdapter(child: DashboardCardSection()),
-                  const SliverToBoxAdapter(
-                    child: SizedBox(height: DS.spacing12),
-                  ),
-                  const SliverToBoxAdapter(child: AchievementProgressCard()),
-                  const SliverToBoxAdapter(
-                    child: SizedBox(height: DS.spacing12),
-                  ),
-                  const SliverToBoxAdapter(child: TaskBoardCard()),
+                    const SliverToBoxAdapter(child: PredictedIntentCard()),
+                    const SliverToBoxAdapter(child: HomeNotificationCard()),
+                    const SliverToBoxAdapter(child: NightlyReviewPanel()),
+                    const SliverToBoxAdapter(child: DashboardCardSection()),
+                    const SliverToBoxAdapter(
+                      child: SizedBox(height: DS.spacing12),
+                    ),
+                    const SliverToBoxAdapter(child: AchievementProgressCard()),
+                    const SliverToBoxAdapter(
+                      child: SizedBox(height: DS.spacing12),
+                    ),
+                    const SliverToBoxAdapter(child: TaskBoardCard()),
+                  ],
 
                   // Dynamic bottom spacing for floating components
                   SliverToBoxAdapter(

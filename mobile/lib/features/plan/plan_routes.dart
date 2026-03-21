@@ -1,7 +1,9 @@
 import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
+import 'package:sparkle/core/widgets/bgm_scope.dart';
 import 'package:sparkle/features/plan/presentation/screens/growth_screen.dart';
 import 'package:sparkle/features/plan/presentation/screens/plan_create_screen.dart';
 import 'package:sparkle/features/plan/presentation/screens/plan_detail_screen.dart';
@@ -48,7 +50,10 @@ class PlanRoutes {
           final planType = state.uri.queryParameters['type'];
           return _buildTransitionPage(
             state: state,
-            child: PlanCreateScreen(planType: planType),
+            child: BgmScope(
+              track: BgmTrack.plan,
+              child: PlanCreateScreen(planType: planType),
+            ),
             type: SharedAxisTransitionType.scaled,
           );
         },
@@ -63,7 +68,10 @@ class PlanRoutes {
           final planId = state.pathParameters['id']!;
           return _buildTransitionPage(
             state: state,
-            child: PlanDetailScreen(planId: planId),
+            child: BgmScope(
+              track: BgmTrack.plan,
+              child: PlanDetailScreen(planId: planId),
+            ),
           );
         },
       ),
@@ -77,7 +85,10 @@ class PlanRoutes {
           final planId = state.pathParameters['id']!;
           return _buildTransitionPage(
             state: state,
-            child: PlanEditScreen(planId: planId),
+            child: BgmScope(
+              track: BgmTrack.plan,
+              child: PlanEditScreen(planId: planId),
+            ),
             type: SharedAxisTransitionType.scaled,
           );
         },
@@ -88,7 +99,10 @@ class PlanRoutes {
         parentNavigatorKey: navigatorKey,
         pageBuilder: (context, state) => _buildTransitionPage(
           state: state,
-          child: const PlanHistoryScreen(),
+          child: const BgmScope(
+            track: BgmTrack.plan,
+            child: PlanHistoryScreen(),
+          ),
         ),
       ),
     // Plans list / Sprint screen (detail page, full-screen)
@@ -98,7 +112,10 @@ class PlanRoutes {
         parentNavigatorKey: navigatorKey,
         pageBuilder: (context, state) => _buildTransitionPage(
           state: state,
-          child: const SprintScreen(),
+          child: const BgmScope(
+            track: BgmTrack.plan,
+            child: SprintScreen(),
+          ),
         ),
       ),
     // Sprint alias (detail page, full-screen)
@@ -108,7 +125,10 @@ class PlanRoutes {
         parentNavigatorKey: navigatorKey,
         pageBuilder: (context, state) => _buildTransitionPage(
           state: state,
-          child: const SprintScreen(),
+          child: const BgmScope(
+            track: BgmTrack.plan,
+            child: SprintScreen(),
+          ),
         ),
       ),
     // Sprint history (detail page, full-screen)
@@ -118,7 +138,10 @@ class PlanRoutes {
         parentNavigatorKey: navigatorKey,
         pageBuilder: (context, state) => _buildTransitionPage(
           state: state,
-          child: const SprintHistoryScreen(),
+          child: const BgmScope(
+            track: BgmTrack.plan,
+            child: SprintHistoryScreen(),
+          ),
         ),
       ),
     // Growth screen (detail page, full-screen)
@@ -128,7 +151,10 @@ class PlanRoutes {
         parentNavigatorKey: navigatorKey,
         pageBuilder: (context, state) => _buildTransitionPage(
           state: state,
-          child: const GrowthScreen(),
+          child: const BgmScope(
+            track: BgmTrack.plan,
+            child: GrowthScreen(),
+          ),
         ),
       ),
   ];

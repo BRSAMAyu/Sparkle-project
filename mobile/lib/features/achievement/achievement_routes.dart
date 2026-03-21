@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/services/bgm_service.dart';
+import 'package:sparkle/core/widgets/bgm_scope.dart';
 import 'package:sparkle/features/achievement/presentation/screens/achievement_contract_screen.dart';
 import 'package:sparkle/features/achievement/presentation/screens/achievement_detail_screen.dart';
 import 'package:sparkle/features/achievement/presentation/screens/achievement_list_screen.dart';
@@ -20,28 +22,40 @@ class AchievementRoutes {
       path: basePath,
       pageBuilder: (context, state) => MaterialPage<void>(
         key: state.pageKey,
-        child: const AchievementListScreen(),
+        child: const BgmScope(
+          track: BgmTrack.achievement,
+          child: AchievementListScreen(),
+        ),
       ),
     ),
     GoRoute(
       path: streakDetails,
       pageBuilder: (context, state) => MaterialPage<void>(
         key: state.pageKey,
-        child: const StreakDetailsScreen(),
+        child: const BgmScope(
+          track: BgmTrack.achievement,
+          child: StreakDetailsScreen(),
+        ),
       ),
     ),
     GoRoute(
       path: map,
       pageBuilder: (context, state) => MaterialPage<void>(
         key: state.pageKey,
-        child: const AchievementMapScreen(),
+        child: const BgmScope(
+          track: BgmTrack.achievement,
+          child: AchievementMapScreen(),
+        ),
       ),
     ),
     GoRoute(
       path: contract,
       pageBuilder: (context, state) => MaterialPage<void>(
         key: state.pageKey,
-        child: const AchievementContractScreen(),
+        child: const BgmScope(
+          track: BgmTrack.achievement,
+          child: AchievementContractScreen(),
+        ),
       ),
     ),
     GoRoute(
@@ -50,7 +64,10 @@ class AchievementRoutes {
         final id = state.pathParameters['id']!;
         return MaterialPage<void>(
           key: state.pageKey,
-          child: AchievementDetailScreen(achievementId: id),
+          child: BgmScope(
+            track: BgmTrack.achievement,
+            child: AchievementDetailScreen(achievementId: id),
+          ),
         );
       },
     ),

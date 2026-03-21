@@ -6,7 +6,9 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/providers/locale_provider.dart';
 import 'package:sparkle/core/providers/theme_provider.dart';
+import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/chaos/chaos_control_dialog.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/capsule_provider.dart';
 import 'package:sparkle/features/cognitive/presentation/widgets/capsule/capsule_generation_preview.dart';
@@ -30,12 +32,79 @@ class UnifiedSettingsScreen extends ConsumerStatefulWidget {
 class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   bool _isGenerating = false;
   bool _weeklyAgendaExpanded = false;
+  bool _bgmEnabled = true;
+  bool _bgmReady = false;
+  double _bgmVolume = 0.68;
+  BgmPalette _bgmPalette = BgmPalette.adaptive;
+  bool _soundEnabled = true;
+  bool _hapticEnabled = true;
+  bool _sensoryReady = false;
   Timer? _learningPrefsDebounce;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_loadBgmPreferences());
+    unawaited(_loadSensoryPreferences());
+  }
 
   @override
   void dispose() {
     _learningPrefsDebounce?.cancel();
     super.dispose();
+  }
+
+  Future<void> _loadBgmPreferences() async {
+    final enabled = await BgmService.isEnabled();
+    final volume = await BgmService.getVolume();
+    final palette = await BgmService.getPalette();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _bgmEnabled = enabled;
+      _bgmVolume = volume;
+      _bgmPalette = palette;
+      _bgmReady = true;
+    });
+  }
+
+  Future<void> _loadSensoryPreferences() async {
+    final soundEnabled = await SensoryFeedbackService.isSoundEnabled();
+    final hapticEnabled = await SensoryFeedbackService.isHapticEnabled();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _soundEnabled = soundEnabled;
+      _hapticEnabled = hapticEnabled;
+      _sensoryReady = true;
+    });
+  }
+
+  Future<void> _setBgmEnabled(bool value) async {
+    setState(() => _bgmEnabled = value);
+    await BgmService.setEnabled(value);
+  }
+
+  Future<void> _setBgmVolume(double value) async {
+    setState(() => _bgmVolume = value);
+    await BgmService.setVolume(value);
+  }
+
+  Future<void> _setBgmPalette(BgmPalette palette) async {
+    setState(() => _bgmPalette = palette);
+    await BgmService.setPalette(palette);
+  }
+
+  Future<void> _setSoundEnabled(bool value) async {
+    setState(() => _soundEnabled = value);
+    await SensoryFeedbackService.setSoundEnabled(value);
+  }
+
+  Future<void> _setHapticEnabled(bool value) async {
+    setState(() => _hapticEnabled = value);
+    await SensoryFeedbackService.setHapticEnabled(value);
   }
 
   void _scheduleLearningPreferenceUpdate({
@@ -91,6 +160,44 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              GraphiteCardSurface(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.tune_rounded),
+                      title: const Text('感官反馈'),
+                      subtitle: Text(
+                        _sensoryReady
+                            ? '统一控制操作音效、成就反馈和触觉回馈'
+                            : '正在读取感官反馈偏好...',
+                      ),
+                    ),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('音效反馈'),
+                      subtitle: const Text('关闭后，所有 Sensory 音效与环境音将静默'),
+                      value: _soundEnabled,
+                      onChanged: _sensoryReady
+                          ? (value) => unawaited(_setSoundEnabled(value))
+                          : null,
+                      activeThumbColor: DS.primaryBase,
+                    ),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('触控反馈'),
+                      subtitle: const Text('关闭后，成就、星图等所有触感反馈都会停止'),
+                      value: _hapticEnabled,
+                      onChanged: _sensoryReady
+                          ? (value) => unawaited(_setHapticEnabled(value))
+                          : null,
+                      activeThumbColor: DS.primaryBase,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: DS.spacing20),
               GraphiteCardSurface(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -179,6 +286,95 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                   subtitle: Text(l10n.visualElementsEntrySubtitle),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => context.push(VisualElementsRoutes.basePath),
+                ),
+              ),
+              const SizedBox(height: DS.spacing20),
+              GraphiteCardSurface(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.music_note_rounded),
+                      title: const Text('背景音乐'),
+                      subtitle: Text(
+                        _bgmReady
+                            ? '按页面自动切换氛围，也支持你偏向钢琴、空灵或温暖风格'
+                            : '正在读取音乐偏好...',
+                      ),
+                    ),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('启用背景音乐'),
+                      subtitle: const Text('进入不同页面时自动切换对应的 BGM'),
+                      value: _bgmEnabled,
+                      onChanged: _bgmReady
+                          ? (value) => unawaited(_setBgmEnabled(value))
+                          : null,
+                      activeThumbColor: DS.primaryBase,
+                    ),
+                    const SizedBox(height: DS.spacing8),
+                    Text(
+                      '音乐音量',
+                      style: DS.labelSmall.copyWith(color: DS.textSecondary),
+                    ),
+                    Row(
+                      children: [
+                        const Icon(Icons.volume_down_rounded, size: 18),
+                        Expanded(
+                          child: Slider(
+                            value: _bgmVolume,
+                            min: 0,
+                            max: 1,
+                            divisions: 10,
+                            onChanged: _bgmEnabled && _bgmReady
+                                ? (value) => setState(() => _bgmVolume = value)
+                                : null,
+                            onChangeEnd: _bgmEnabled && _bgmReady
+                                ? (value) => unawaited(_setBgmVolume(value))
+                                : null,
+                          ),
+                        ),
+                        const Icon(Icons.volume_up_rounded, size: 18),
+                      ],
+                    ),
+                    Text(
+                      '场景偏好',
+                      style: DS.labelSmall.copyWith(color: DS.textSecondary),
+                    ),
+                    const SizedBox(height: DS.spacing8),
+                    Wrap(
+                      spacing: DS.spacing8,
+                      runSpacing: DS.spacing8,
+                      children: BgmPalette.values
+                          .map(
+                            (palette) => ChoiceChip(
+                              label: Text(_bgmPaletteLabel(palette)),
+                              selected: _bgmPalette == palette,
+                              onSelected: _bgmReady
+                                  ? (_) => unawaited(_setBgmPalette(palette))
+                                  : null,
+                            ),
+                          )
+                          .toList(),
+                    ),
+                    const SizedBox(height: DS.spacing10),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(DS.spacing12),
+                      decoration: BoxDecoration(
+                        color: DS.surfaceSecondary,
+                        borderRadius: DS.borderRadius12,
+                      ),
+                      child: Text(
+                        _bgmPaletteDescription(_bgmPalette),
+                        style: DS.bodySmall.copyWith(
+                          color: DS.textSecondary,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: DS.spacing20),
@@ -324,10 +520,21 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                       title: Text(l10n.enableNotifications),
                       subtitle: Text(l10n.notificationReceiveSmartPush),
                       value: pushPrefs.enableCuriosity,
-                      onChanged: (v) {
-                        ref
+                      onChanged: (v) async {
+                        if (v) {
+                          final granted = await ref
+                              .read(notificationPermissionStatusProvider.notifier)
+                              .requestPermission();
+                          if (!granted) {
+                            if (context.mounted) {
+                              _showOpenSettingsDialog(context);
+                            }
+                            return;
+                          }
+                        }
+                        await ref
                             .read(pushPreferencesProvider.notifier)
-                            .toggleEnableCuriosity();
+                            .updatePreferences(enableCuriosity: v);
                       },
                       activeThumbColor: DS.primaryBase,
                     ),
@@ -699,6 +906,20 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     }
     return l10n.weeklyAgendaSummary(activeCount, busyCount, fragmentedCount);
   }
+
+  String _bgmPaletteLabel(BgmPalette palette) => switch (palette) {
+        BgmPalette.adaptive => '自适应',
+        BgmPalette.piano => '钢琴优先',
+        BgmPalette.airy => '空灵氛围',
+        BgmPalette.warm => '温暖轻快',
+      };
+
+  String _bgmPaletteDescription(BgmPalette palette) => switch (palette) {
+        BgmPalette.adaptive => '系统会按页面功能自动挑选最合适的背景音乐。',
+        BgmPalette.piano => '整体更偏轻钢琴与安静旋律，适合长时间陪伴。',
+        BgmPalette.airy => '整体更偏空灵、梦幻和空间感更强的氛围。',
+        BgmPalette.warm => '整体更偏温暖、柔和、有人味的轻快底色。',
+      };
 
   Widget _buildNotificationPermissionCard(
     BuildContext context,

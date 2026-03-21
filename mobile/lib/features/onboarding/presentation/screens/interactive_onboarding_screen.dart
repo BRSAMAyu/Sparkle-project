@@ -1,9 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/notification_service.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/onboarding/presentation/widgets/architecture_animation.dart';
 
 /// 交互式引导流程 - Week 7
@@ -15,7 +18,7 @@ import 'package:sparkle/features/onboarding/presentation/widgets/architecture_an
 /// 3. 核心功能介绍（Galaxy、Chat、Tasks）
 /// 4. 权限请求
 /// 5. 个性化设置
-class InteractiveOnboardingScreen extends StatefulWidget {
+class InteractiveOnboardingScreen extends ConsumerStatefulWidget {
   const InteractiveOnboardingScreen({
     required this.onComplete,
     super.key,
@@ -23,20 +26,75 @@ class InteractiveOnboardingScreen extends StatefulWidget {
   final VoidCallback onComplete;
 
   @override
-  State<InteractiveOnboardingScreen> createState() =>
+  ConsumerState<InteractiveOnboardingScreen> createState() =>
       _InteractiveOnboardingScreenState();
 }
 
 class _InteractiveOnboardingScreenState
-    extends State<InteractiveOnboardingScreen> {
+    extends ConsumerState<InteractiveOnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
   final int _totalPages = 6;
+  bool _notificationsEnabled = false;
+  bool _microphoneEnabled = false;
+  bool _requestingNotification = false;
+  bool _requestingMicrophone = false;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_loadPermissionStatuses());
+  }
 
   @override
   void dispose() {
     _pageController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadPermissionStatuses() async {
+    final notificationStatus =
+        await ref.read(notificationServiceProvider).checkPermissionStatus();
+    final microphoneStatus = await Permission.microphone.status;
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _notificationsEnabled = notificationStatus.hasPermission;
+      _microphoneEnabled = microphoneStatus.isGranted;
+    });
+  }
+
+  Future<void> _requestNotificationPermission() async {
+    if (_requestingNotification) {
+      return;
+    }
+    setState(() => _requestingNotification = true);
+    final granted = await ref
+        .read(notificationPermissionStatusProvider.notifier)
+        .requestPermission();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _notificationsEnabled = granted;
+      _requestingNotification = false;
+    });
+  }
+
+  Future<void> _requestMicrophonePermission() async {
+    if (_requestingMicrophone) {
+      return;
+    }
+    setState(() => _requestingMicrophone = true);
+    final status = await Permission.microphone.request();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _microphoneEnabled = status.isGranted;
+      _requestingMicrophone = false;
+    });
   }
 
   void _nextPage() {
@@ -78,7 +136,11 @@ class _InteractiveOnboardingScreenState
                   controller: _pageController,
                   onPageChanged: (index) {
                     setState(() => _currentPage = index);
-                    unawaited(HapticFeedback.lightImpact());
+                    unawaited(
+                      SensoryFeedbackService.emit(
+                        SensoryFeedbackEvent.navigation,
+                      ),
+                    );
                   },
                   children: [
                     _buildWelcomePage(),
@@ -352,7 +414,6 @@ class _InteractiveOnboardingScreenState
               color: DS.brandPrimaryConst,
             ),
             const SizedBox(height: DS.xxl),
-
             Text(
               context.l10n.onboardingPersonalizationTitle,
               style: TextStyle(
@@ -368,22 +429,28 @@ class _InteractiveOnboardingScreenState
                 color: DS.brandPrimary.withValues(alpha: 0.8),
                 fontSize: 16,
               ),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: DS.xxxl),
-
-            // Settings options
-            _buildSettingOption(
+            _buildPermissionOption(
               icon: Icons.notifications_active,
               title: context.l10n.onboardingSettingReminders,
               description: context.l10n.onboardingSettingRemindersDesc,
-              value: true,
+              enabled: _notificationsEnabled,
+              isLoading: _requestingNotification,
+              onTap:
+                  _notificationsEnabled ? null : _requestNotificationPermission,
             ),
             const SizedBox(height: DS.lg),
-            _buildSettingOption(
-              icon: Icons.analytics,
-              title: context.l10n.onboardingSettingAnalytics,
-              description: context.l10n.onboardingSettingAnalyticsDesc,
-              value: true,
+            _buildPermissionOption(
+              icon: Icons.mic_none_rounded,
+              title: _isChinese ? '语音输入' : 'Voice Input',
+              description: _isChinese
+                  ? '启用麦克风后，你可以直接说出目标和问题。'
+                  : 'Enable the microphone so you can speak goals and questions naturally.',
+              enabled: _microphoneEnabled,
+              isLoading: _requestingMicrophone,
+              onTap: _microphoneEnabled ? null : _requestMicrophonePermission,
             ),
             const SizedBox(height: DS.lg),
             _buildSettingOption(
@@ -474,6 +541,111 @@ class _InteractiveOnboardingScreenState
               ),
             ],
           ),
+        ),
+      );
+
+  bool get _isChinese => Localizations.localeOf(context).languageCode == 'zh';
+
+  String get _permissionEnableLabel => _isChinese ? '开启' : 'Enable';
+
+  String get _permissionEnabledLabel => _isChinese ? '已开启' : 'Enabled';
+
+  String get _permissionReadyLabel => _isChinese
+      ? '已准备好，之后也可以在设置里调整'
+      : 'Ready to go, and you can change this later in Settings';
+
+  String get _permissionPendingLabel =>
+      _isChinese ? '稍后也可以在设置里开启' : 'You can turn this on later in Settings';
+
+  Widget _buildPermissionOption({
+    required IconData icon,
+    required String title,
+    required String description,
+    required bool enabled,
+    required bool isLoading,
+    required Future<void> Function()? onTap,
+  }) =>
+      Container(
+        padding: const EdgeInsets.all(DS.lg),
+        decoration: BoxDecoration(
+          color: DS.brandPrimary.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: DS.brandPrimary.withValues(alpha: 0.2)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: DS.brandPrimary.shade400, size: 32),
+                const SizedBox(width: DS.lg),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          color: DS.brandPrimaryConst,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        description,
+                        style: TextStyle(
+                          color: DS.brandPrimary.withValues(alpha: 0.7),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: DS.md,
+                    vertical: DS.xs,
+                  ),
+                  decoration: BoxDecoration(
+                    color: enabled
+                        ? DS.success.withValues(alpha: 0.18)
+                        : DS.brandPrimary.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    enabled ? _permissionEnabledLabel : _permissionEnableLabel,
+                    style: TextStyle(
+                      color: enabled ? DS.success : DS.brandPrimaryConst,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: DS.md),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    enabled ? _permissionReadyLabel : _permissionPendingLabel,
+                    style: TextStyle(
+                      color: DS.brandPrimary.withValues(alpha: 0.7),
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+                if (onTap case final action?)
+                  SparkleButton.ghost(
+                    label: isLoading
+                        ? (_isChinese ? '处理中...' : 'Working...')
+                        : _permissionEnableLabel,
+                    onPressed: isLoading ? () {} : () => unawaited(action()),
+                  ),
+              ],
+            ),
+          ],
         ),
       );
 

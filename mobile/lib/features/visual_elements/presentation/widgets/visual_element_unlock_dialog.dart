@@ -1,10 +1,13 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/global_particle_counter.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/bgm_service.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/widgets/bgm_scope.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/visual_element_model.dart';
 
@@ -224,21 +227,23 @@ class _VisualElementUnlockDialogState extends State<VisualElementUnlockDialog>
 
     switch (highestRarity) {
       case VisualElementRarity.common:
-        HapticFeedback.lightImpact();
-        break;
+        unawaited(
+          SensoryFeedbackService.emit(SensoryFeedbackEvent.achievementCommon),
+        );
       case VisualElementRarity.rare:
-        HapticFeedback.lightImpact();
-        break;
+        unawaited(
+          SensoryFeedbackService.emit(SensoryFeedbackEvent.achievementRare),
+        );
       case VisualElementRarity.epic:
-        HapticFeedback.mediumImpact();
-        break;
+        unawaited(
+          SensoryFeedbackService.emit(SensoryFeedbackEvent.achievementEpic),
+        );
       case VisualElementRarity.legendary:
-        HapticFeedback.heavyImpact();
-        // Double tap for legendary
-        Future.delayed(const Duration(milliseconds: 200), () {
-          if (mounted) HapticFeedback.heavyImpact();
-        });
-        break;
+        unawaited(
+          SensoryFeedbackService.emit(
+            SensoryFeedbackEvent.achievementLegendary,
+          ),
+        );
     }
   }
 
@@ -272,25 +277,29 @@ class _VisualElementUnlockDialogState extends State<VisualElementUnlockDialog>
     final colors = _getRarityColors(highestRarity);
     final l10n = context.l10n;
 
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // Background effects (for Epic/Legendary)
-          if (!_reduceMotion &&
-              (highestRarity == VisualElementRarity.epic ||
-                  highestRarity == VisualElementRarity.legendary))
-            _buildBackgroundEffects(highestRarity),
+    return BgmScope(
+      track: BgmTrack.visualUnlock,
+      priority: BgmPriority.stage,
+      child: Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // Background effects (for Epic/Legendary)
+            if (!_reduceMotion &&
+                (highestRarity == VisualElementRarity.epic ||
+                    highestRarity == VisualElementRarity.legendary))
+              _buildBackgroundEffects(highestRarity),
 
-          // Particle overlay
-          if (_particlesEnabled)
-            _buildParticleOverlay(highestRarity),
+            // Particle overlay
+            if (_particlesEnabled)
+              _buildParticleOverlay(highestRarity),
 
-          // Main content
-          _buildContent(context, colors, l10n, highestRarity),
-        ],
+            // Main content
+            _buildContent(context, colors, l10n, highestRarity),
+          ],
+        ),
       ),
     );
   }

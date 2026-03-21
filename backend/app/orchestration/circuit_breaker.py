@@ -86,6 +86,9 @@ class CircuitBreaker:
                 self._success_count = data["success_count"]
                 self._opened_count = data.get("opened_count", 0)
                 self._last_state_change = datetime.fromisoformat(data["last_state_change"])
+                last_failure_time = data.get("last_failure_time")
+                if last_failure_time:
+                    self._last_failure_time = datetime.fromisoformat(last_failure_time)
                 logger.info(f"CircuitBreaker '{self.name}' loaded from Redis: {self._state.value}")
         except Exception as e:
             logger.warning(f"Failed to load circuit breaker state: {e}")
@@ -102,7 +105,8 @@ class CircuitBreaker:
                 "failure_count": self._failure_count,
                 "success_count": self._success_count,
                 "opened_count": self._opened_count,
-                "last_state_change": self._last_state_change.isoformat()
+                "last_state_change": self._last_state_change.isoformat(),
+                "last_failure_time": self._last_failure_time.isoformat() if self._last_failure_time else None,
             }
             await self.redis.setex(self._redis_key, 3600, json.dumps(data))
         except Exception as e:
@@ -193,10 +197,15 @@ class CircuitBreaker:
 
     def _should_attempt_reset(self) -> bool:
         """Check if should attempt reset"""
-        if not self._last_failure_time:
+        reference_time = self._last_failure_time
+        if reference_time is None and self._state == CircuitState.OPEN:
+            # Older persisted state may not have last_failure_time.
+            # In that case use the last OPEN transition time as recovery baseline.
+            reference_time = self._last_state_change
+        if reference_time is None:
             return False
 
-        elapsed = (_utcnow() - self._last_failure_time).total_seconds() * 1000
+        elapsed = (_utcnow() - reference_time).total_seconds() * 1000
         return elapsed >= self.config.timeout_ms
 
     def _calculate_failure_rate(self) -> float:

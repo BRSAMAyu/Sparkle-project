@@ -1,7 +1,8 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/rarity_visual_wrapper.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -77,7 +78,7 @@ class _VisualElementCardState extends State<VisualElementCard>
 
   void _handleTapDown(TapDownDetails details) {
     if (!widget.element.isUnlocked) return;
-    HapticFeedback.lightImpact();
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));
     setState(() => _isPressed = true);
   }
 

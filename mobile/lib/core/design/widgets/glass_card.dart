@@ -1,7 +1,8 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_card.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
@@ -76,7 +77,7 @@ class _GlassCardState extends State<GlassCard>
       borderRadius: widget.borderRadius,
       onTap: widget.onTap != null && !widget.enableTapEffect
           ? () {
-              HapticFeedback.lightImpact();
+              unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));
               widget.onTap!();
             }
           : null,
@@ -128,7 +129,7 @@ class _GlassCardState extends State<GlassCard>
         onTapUp: (_) => _controller.reverse(),
         onTapCancel: () => _controller.reverse(),
         onTap: () {
-          HapticFeedback.lightImpact();
+          unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));
           widget.onTap!();
         },
         child: ScaleTransition(

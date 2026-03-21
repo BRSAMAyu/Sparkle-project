@@ -435,7 +435,7 @@ class FocusStatistics extends _$FocusStatistics {
           status: session.status,
           whiteNoiseType: session.whiteNoiseType,
         );
-        await _localRepo!.markAsSynced(session.id, response.id);
+        await _localRepo!.markAsSynced(session.id, response.response.id);
       } catch (e) {
         await _localRepo!.markSyncFailed(session.id, e.toString());
       }
@@ -446,7 +446,7 @@ class FocusStatistics extends _$FocusStatistics {
   }
 
   /// Save a completed focus session locally
-  Future<void> saveSession({
+  Future<LoggedFocusSession?> saveSession({
     required DateTime startTime,
     required DateTime endTime,
     required int durationMinutes,
@@ -457,7 +457,7 @@ class FocusStatistics extends _$FocusStatistics {
     int interruptionCount = 0,
     int? qualityScore,
   }) async {
-    if (_localRepo == null) return;
+    if (_localRepo == null) return null;
 
     final record = FocusSessionRecordExtension.createCompleted(
       startTime: startTime,
@@ -488,9 +488,11 @@ class FocusStatistics extends _$FocusStatistics {
         focusType: focusType,
         whiteNoiseType: whiteNoiseType,
       );
-      await _localRepo!.markAsSynced(record.id, response.id);
+      await _localRepo!.markAsSynced(record.id, response.response.id);
+      return response;
     } catch (e) {
       debugPrint('Sync failed, will retry later: $e');
+      return null;
     }
   }
 }

@@ -866,14 +866,15 @@ class ContextBuilderMixin:
 
                             try:
                                 plan_state_svc = PlanStateService(active_db, self.redis)
+                                normalized_plan_id = uuid.UUID(str(plan_id))
                                 plan_state = await plan_state_svc.get_plan_state(
-                                    uuid.UUID(user_id), uuid.UUID(plan_id)
+                                    uuid.UUID(user_id), normalized_plan_id
                                 )
                                 if plan_state and plan_state.constraints.get("require_phase_rollback"):
                                     logger.info(f"Phase rollback triggered for plan_id={plan_id}")
                                     await plan_state_svc.upsert_plan_state(
                                         user_id=uuid.UUID(user_id),
-                                        plan_id=uuid.UUID(plan_id),
+                                        plan_id=normalized_plan_id,
                                         patch={"constraints": {"require_phase_rollback": False}},
                                         bump_version=False,
                                     )

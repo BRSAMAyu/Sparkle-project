@@ -8,10 +8,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/app/app.dart';
 import 'package:sparkle/core/design/tokens_v2/theme_manager.dart';
 import 'package:sparkle/core/offline/local_database.dart';
+import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/client_observability_service.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/performance_monitor.dart';
 import 'package:sparkle/core/services/performance_service.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/services/social_auth_service.dart';
 import 'package:sparkle/core/services/user_preferences_service.dart';
 import 'package:sparkle/core/services/view_storage_service.dart';
@@ -23,6 +25,7 @@ import 'package:sparkle/features/cognitive/data/repositories/local_cognitive_rep
 const _startupErrorPadding = 24.0;
 
 void main() async {
+  final startupStopwatch = Stopwatch()..start();
   try {
     WidgetsFlutterBinding.ensureInitialized();
 
@@ -62,33 +65,20 @@ void main() async {
     // Initialize SharedPrefs
     final prefs = await SharedPreferences.getInstance();
 
-    // Initialize ViewStorageService (for view state persistence)
-    await ViewStorageService.ensureInitialized();
-
-    // Initialize ThemeManager
-    await ThemeManager().initialize();
-
-    // Initialize OpenTelemetry Tracing
+    // Initialize critical services required before the first meaningful frame.
     const otelEndpoint = String.fromEnvironment('OTEL_EXPORTER_OTLP_ENDPOINT');
     final collectorUri =
         otelEndpoint.isNotEmpty ? Uri.parse(otelEndpoint) : null;
-    await TracingService.instance.initialize(collectorUri: collectorUri);
+    await Future.wait(<Future<void>>[
+      ViewStorageService.ensureInitialized(),
+      ThemeManager().initialize(),
+      TracingService.instance.initialize(collectorUri: collectorUri),
+    ]);
 
     // Enable Demo Mode via --dart-define=DEMO_MODE=true
     const isDemoMode = bool.fromEnvironment('DEMO_MODE');
     DemoDataService.isDemoMode =
         isDemoMode || (prefs.getBool('demo_guest_mode_enabled') ?? false);
-
-    // TODO: Open Hive boxes
-    await Hive.openBox<dynamic>('settings');
-    await Hive.openBox<dynamic>('user');
-
-    // Initialize WeChat SDK (non-blocking — skips silently if APP_ID not configured)
-    await SocialAuthService().initWeChat();
-
-    // Initialize Firebase (required for push notifications)
-    // Note: google-services.json and GoogleService-Info.plist must be configured
-    await _initializeFirebase();
 
     // Initialize unified push service (FCM + JPush)
     // This will be called after app starts, as it needs ProviderScope
@@ -105,6 +95,23 @@ void main() async {
         child: const SparkleApp(),
       ),
     );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final firstFrameMs = startupStopwatch.elapsedMilliseconds;
+      unawaited(
+        ClientObservabilityService.instance.recordEvent(
+          eventType: 'app_first_frame',
+          category: 'lifecycle',
+          route: 'bootstrap',
+          metadata: <String, dynamic>{
+            'startup_ms': firstFrameMs,
+            'demo_mode': DemoDataService.isDemoMode,
+          },
+        ),
+      );
+    });
+
+    unawaited(_runDeferredStartupWarmups());
 
     unawaited(
       ClientObservabilityService.instance.recordEvent(
@@ -132,6 +139,26 @@ void main() async {
           ),
         ),
       ),
+    );
+  }
+}
+
+Future<void> _runDeferredStartupWarmups() async {
+  try {
+    await Future.wait(<Future<void>>[
+      Hive.openBox<dynamic>('settings'),
+      Hive.openBox<dynamic>('user'),
+      SensoryFeedbackService.init(),
+      BgmService.init(),
+      SocialAuthService().initWeChat(),
+      _initializeFirebase(),
+    ]);
+  } catch (e, stack) {
+    debugPrint('⚠️ Deferred startup warmup failed: $e');
+    PerformanceMonitor().reportCrash(
+      e,
+      stack,
+      context: 'deferred_startup_warmup',
     );
   }
 }

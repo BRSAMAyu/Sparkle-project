@@ -46,6 +46,7 @@ class ApiEndpoints {
 
   // Tasks
   static const String tasks = '/tasks';
+  static const String tasksReorder = '/tasks/reorder';
   static String task(String id) => '/tasks/$id';
   static const String todayTasks = '/tasks/today';
   static const String recommendedTasks = '/tasks/recommended';
@@ -71,6 +72,7 @@ class ApiEndpoints {
   static String generateTasks(String planId) => '/plans/$planId/generate-tasks';
   static String planArchive(String id) => '/plans/$id/archive';
   static String planRestore(String id) => '/plans/$id/restore';
+  static const String planPrimary = '/plans/primary';
 
   // Chat
   static const String chat = '/chat';
@@ -96,6 +98,8 @@ class ApiEndpoints {
   static const String galaxyGraph = '/galaxy/graph';
   static const String galaxyViewport = '/galaxy/nodes/viewport';
   static const String galaxyPositions = '/galaxy/nodes/positions';
+  static String galaxyUpdateMastery(String id) =>
+      '/galaxy/nodes/$id/update-mastery';
   static const String galaxyPredictNext = '/galaxy/predict-next';
   static const String galaxySearch = '/galaxy/search';
   static String sparkNode(String id) => '/galaxy/node/$id/spark';

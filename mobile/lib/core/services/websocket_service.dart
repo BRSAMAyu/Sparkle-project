@@ -2,7 +2,6 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:sparkle/core/tracing/tracing_service.dart';
@@ -12,6 +11,16 @@ import 'package:web_socket_channel/status.dart' as status;
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 class WebSocketService {
+  static const List<Duration> _reconnectSchedule = <Duration>[
+    Duration(milliseconds: 800),
+    Duration(milliseconds: 1200),
+    Duration(milliseconds: 2200),
+    Duration(milliseconds: 4200),
+    Duration(milliseconds: 8200),
+    Duration(milliseconds: 12200),
+  ];
+  static const int _maxReconnectAttempts = 6;
+
   WebSocketChannel? _channel;
   bool _isConnected = false;
   String? _url;
@@ -21,8 +30,6 @@ class WebSocketService {
   Timer? _reconnectTimer;
   int _reconnectAttempts = 0;
   bool _isManualDisconnect = false;
-  static const int _maxReconnectAttempts = 10;
-  static const int _baseReconnectDelayMs = 1000;
 
   final StreamController<dynamic> _controller =
       StreamController<dynamic>.broadcast();
@@ -105,10 +112,11 @@ class WebSocketService {
       return;
     }
 
-    final delay = _baseReconnectDelayMs * pow(2, _reconnectAttempts);
+    final index = _reconnectAttempts.clamp(0, _maxReconnectAttempts - 1);
+    final delay = _reconnectSchedule[index];
     debugPrint('Scheduling reconnect in ${delay}ms');
 
-    _reconnectTimer = Timer(Duration(milliseconds: delay.toInt()), () {
+    _reconnectTimer = Timer(delay, () {
       _reconnectAttempts++;
       _connectInternal();
     });

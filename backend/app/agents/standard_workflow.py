@@ -74,7 +74,20 @@ def _max_tool_loops_for_state(state: WorkflowState) -> int:
 def _should_force_final_synthesis_without_tools(state: WorkflowState) -> bool:
     chat_mode = str(state.context_data.get("chat_mode", "standard")).strip().lower()
     tool_loop_count = int(state.context_data.get("tool_loop_count") or 0)
-    return chat_mode in {"study_plan", "error_diagnosis"} and tool_loop_count >= 1
+    if chat_mode in {"study_plan", "error_diagnosis"} and tool_loop_count >= 1:
+        return True
+
+    if tool_loop_count < 1:
+        return False
+
+    tool_results = state.context_data.get("tool_results") or []
+    for result in tool_results:
+        if not isinstance(result, dict):
+            continue
+        widget_type = str(result.get("widget_type") or "").strip().lower()
+        if widget_type in {"plan_card", "task_list"}:
+            return True
+    return False
 
 
 def _build_minimal_user_context_for_grounded_synthesis(user_context: dict[str, Any]) -> dict[str, Any]:
@@ -163,6 +176,47 @@ def _should_force_fast_first_touch(
         return False
     chat_mode = str(state.context_data.get("chat_mode", "standard")).strip().lower()
     return chat_mode == "standard"
+
+
+def _should_force_balanced_fast_first_touch(
+    state: WorkflowState,
+    *,
+    explicit_runtime: dict[str, Any] | None = None,
+    task_type: TaskType | None = None,
+    user_message: str = "",
+    use_slim_standard_context: bool = False,
+) -> bool:
+    if explicit_runtime is not None:
+        return False
+    if task_type is not TaskType.STANDARD_RESPONSE:
+        return False
+    if _resolve_reasoning_mode(state) != "balanced":
+        return False
+    if not use_slim_standard_context:
+        return False
+
+    chat_mode = str(state.context_data.get("chat_mode", "standard")).strip().lower()
+    if chat_mode not in {"standard", "chat"}:
+        return False
+
+    text = (user_message or "").strip().lower()
+    if not text or len(text) > 120:
+        return False
+
+    deep_markers = (
+        "深入",
+        "详细",
+        "原理",
+        "推导",
+        "证明",
+        "严谨",
+        "系统地",
+        "systematically",
+        "in depth",
+        "deep dive",
+        "why exactly",
+    )
+    return not any(marker in text for marker in deep_markers)
 
 
 def _coerce_agent_role(role: str | None) -> AgentRole:
@@ -982,6 +1036,15 @@ async def retrieval_node(state: WorkflowState) -> WorkflowState:
 
 async def generation_node(state: WorkflowState) -> WorkflowState:
     """LLM Generation (Streaming)."""
+    executable_plan = state.context_data.get("executable_plan")
+    if executable_plan and getattr(executable_plan, "tool_calls", None):
+        logger.info(
+            "Executable plan already available for session {}, skipping generation and entering tool execution",
+            state.context_data.get("session_id", ""),
+        )
+        state.next_step = "tool_execution"
+        return state
+
     # We need to access the 'stream_callback' from context to yield tokens
     stream_callback = state.context_data.get("stream_callback")
 
@@ -1002,6 +1065,7 @@ async def generation_node(state: WorkflowState) -> WorkflowState:
     use_slim_deep_context = _should_use_slim_deep_analysis_context(state, user_message)
     use_fast_grounded_synthesis = _should_force_final_synthesis_without_tools(state)
     memory_answer = _resolve_recent_memory_answer(conversation_context, user_message)
+    use_slim_standard_context = _should_use_slim_standard_context(state, user_message)
 
     if memory_answer:
         if stream_callback:
@@ -1044,6 +1108,21 @@ async def generation_node(state: WorkflowState) -> WorkflowState:
                     reasoning_mode=reasoning_mode,
                 )
                 state.context_data["first_touch_model_tier"] = ModelTier.FAST.value
+            elif _should_force_balanced_fast_first_touch(
+                state,
+                explicit_runtime=explicit_runtime,
+                task_type=task_type,
+                user_message=user_message,
+                use_slim_standard_context=use_slim_standard_context,
+            ):
+                generation_llm = await get_configured_llm_service_for_tier(
+                    agent_role,
+                    ModelTier.FAST,
+                    task_type=TaskType.QUICK_QUERY,
+                    reasoning_mode=reasoning_mode,
+                )
+                state.context_data["first_touch_model_tier"] = ModelTier.FAST.value
+                state.context_data["first_touch_profile"] = "balanced_fast_path"
             elif use_fast_grounded_synthesis:
                 if reasoning_mode == "fast":
                     generation_llm = await get_configured_llm_service_for_tier(
@@ -1071,7 +1150,6 @@ async def generation_node(state: WorkflowState) -> WorkflowState:
 
     # Extract plan_context from state if available
     plan_context = state.context_data.get("plan_context")
-    use_slim_standard_context = _should_use_slim_standard_context(state, user_message)
     if use_fast_grounded_synthesis:
         prompt_user_context = _build_minimal_user_context_for_grounded_synthesis(user_context)
         prompt_conversation_context = {
@@ -1208,20 +1286,34 @@ Ask about their available time and current tasks if needed.
         logger.info("Disabling tool exposure for deep analysis generation")
         tools = []
 
-    if stream_callback and _should_force_fast_first_touch(
+    force_fast_first_touch = _should_force_fast_first_touch(
         state,
         explicit_runtime=explicit_runtime,
         task_type=task_type,
-    ):
+    )
+    force_balanced_fast_first_touch = _should_force_balanced_fast_first_touch(
+        state,
+        explicit_runtime=explicit_runtime,
+        task_type=task_type,
+        user_message=user_message,
+        use_slim_standard_context=use_slim_standard_context,
+    )
+
+    if stream_callback and (force_fast_first_touch or force_balanced_fast_first_touch):
         await stream_callback(
             agent_service_pb2.ChatResponse(
                 status_update=agent_service_pb2.AgentStatus(
                     state=agent_service_pb2.AgentStatus.THINKING,
-                    details="已收到，Flash 快响层正在组织首轮回复...",
+                    details=(
+                        "已收到，Flash 快响层正在组织首轮回复..."
+                        if force_fast_first_touch
+                        else "已收到，均衡快响层正在组织首轮回复..."
+                    ),
                     current_agent_name="Sparkle Flash",
                 ),
                 metadata={
-                    "fast_first_touch": "true",
+                    "fast_first_touch": "true" if force_fast_first_touch else "false",
+                    "balanced_fast_path": "true" if force_balanced_fast_first_touch else "false",
                     "first_touch_tier": ModelTier.FAST.value,
                 },
             )
@@ -1532,15 +1624,16 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
     session_id = state.context_data.get("session_id", "")
     db_session = state.context_data.get("db_session")
     redis_client = state.context_data.get("redis_client")
+    state.context_data["tool_results"] = []
 
     # === Phase 2: Check for executable_plan from LangGraph planner ===
     executable_plan = state.context_data.get("executable_plan")
     snapshot = state.context_data.get("snapshot")
 
-    if executable_plan and executable_plan.source == "langgraph":
+    if executable_plan and getattr(executable_plan, "tool_calls", None):
         logger.info(
-            f"Executing LangGraph plan: {len(executable_plan.tool_calls)} tool calls, "
-            f"plan_id={executable_plan.plan_id}"
+            f"Executing executable plan: {len(executable_plan.tool_calls)} tool calls, "
+            f"plan_id={executable_plan.plan_id}, source={getattr(executable_plan, 'source', 'unknown')}"
         )
 
         # Use snapshot for validation if available
@@ -1551,6 +1644,7 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
 
             if not validation_result.is_valid:
                 logger.error(f"LangGraph plan validation failed: {validation_result.failure_reason}")
+                state.context_data["executable_plan"] = None
                 if stream_callback:
                     await stream_callback(
                         agent_service_pb2.ChatResponse(
@@ -1563,6 +1657,7 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
 
             if validation_result.requires_confirmation or validation_result.requires_hitl:
                 logger.warning(f"LangGraph plan requires confirmation: {validation_result.risk_flags}")
+                state.context_data["executable_plan"] = None
                 action_id = await _queue_hitl_action(
                     user_id=str(user_id),
                     reason="risk_flags",
@@ -1648,6 +1743,18 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
 
         for step_result in plan_result.step_results:
             result = step_result.tool_result
+            state.context_data["tool_results"].append(
+                {
+                    "name": step_result.tool_name,
+                    "success": result.success,
+                    "result": result.data or {},
+                    "error": result.error_message,
+                    "suggestion": result.suggestion,
+                    "widget_type": result.widget_type,
+                    "widget_data": result.widget_data or {},
+                    "tool_call_id": step_result.step_id,
+                }
+            )
 
             if stream_callback:
                 status_msg = f"{step_result.tool_name}: {'执行成功' if result.success else '执行失败'}"
@@ -1713,6 +1820,7 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
 
         # Clear executable_plan and loop back
         state.context_data["executable_plan"] = None
+        state.context_data["tool_loop_count"] = int(state.context_data.get("tool_loop_count") or 0) + 1
         state.next_step = "generation"
         return state
 
@@ -2565,6 +2673,8 @@ def create_standard_chat_graph() -> StateGraph:
 
     # Generation → generation_review (所有生成内容都经过审查)
     def generation_router(state: WorkflowState) -> str:
+        if state.next_step == "tool_execution":
+            return "tool_execution"
         # 生成后默认进入审查
         state.next_step = "generation_review"
         return "generation_review"
@@ -2578,6 +2688,9 @@ def create_standard_chat_graph() -> StateGraph:
     # - failed → __end__ (或user_approval)
     def generation_review_condition(state: WorkflowState) -> str:
         next_step = state.next_step or "__end__"
+
+        if next_step == "tool_execution":
+            return "tool_execution"
 
         # 如果有工具调用需要执行
         if state.context_data.get("tool_calls") and next_step != "reflection":
@@ -2813,6 +2926,18 @@ async def _execute_single_tool(
         }
     )
     state.append_message("tool", result_json, name=tool_name)
+    state.context_data.setdefault("tool_results", []).append(
+        {
+            "name": tool_name,
+            "success": result.success,
+            "result": result.data or {},
+            "error": result.error_message,
+            "suggestion": result.suggestion,
+            "widget_type": result.widget_type,
+            "widget_data": result.widget_data or {},
+            "tool_call_id": tool_call_id,
+        }
+    )
 
 
 async def _write_feedback(

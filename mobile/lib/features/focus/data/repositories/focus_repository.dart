@@ -7,6 +7,16 @@ import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/focus/data/models/focus_session_model.dart';
 
+class LoggedFocusSession {
+  const LoggedFocusSession({
+    required this.response,
+    this.unlockedAchievements = const <Map<String, dynamic>>[],
+  });
+
+  final FocusSessionResponse response;
+  final List<Map<String, dynamic>> unlockedAchievements;
+}
+
 /// Repository for focus session operations (P0.3)
 class FocusRepository {
   FocusRepository(this._apiClient);
@@ -17,7 +27,7 @@ class FocusRepository {
   ///
   /// P0.3: Called when user exits focus mode to persist session data
   /// and update user flame level
-  Future<FocusSessionResponse> logFocusSession({
+  Future<LoggedFocusSession> logFocusSession({
     required DateTime startTime,
     required DateTime endTime,
     required int durationMinutes,
@@ -27,13 +37,15 @@ class FocusRepository {
     String? whiteNoiseType,
   }) async {
     if (DemoDataService.isDemoMode) {
-      return FocusSessionResponse(
-        id: 'mock-session-${DateTime.now().millisecondsSinceEpoch}',
-        success: true,
-        rewards: const FocusSessionRewards(
-          flameEarned: 10,
-          leveledUp: false,
-          newLevel: 5,
+      return LoggedFocusSession(
+        response: FocusSessionResponse(
+          id: 'mock-session-${DateTime.now().millisecondsSinceEpoch}',
+          success: true,
+          rewards: const FocusSessionRewards(
+            flameEarned: 10,
+            leveledUp: false,
+            newLevel: 5,
+          ),
         ),
       );
     }
@@ -65,7 +77,16 @@ class FocusRepository {
       debugPrint('📥 Focus session logged: ${response.data}');
 
       final payload = ApiResponseParser.unwrapMap(response.data, action: 'logFocusSession');
-      return FocusSessionResponse.fromJson(payload);
+      final unlockedAchievements =
+          (payload['unlocked_achievements'] as List<dynamic>?)
+                  ?.whereType<Map<Object?, Object?>>()
+                  .map((item) => Map<String, dynamic>.from(item))
+                  .toList() ??
+              const <Map<String, dynamic>>[];
+      return LoggedFocusSession(
+        response: FocusSessionResponse.fromJson(payload),
+        unlockedAchievements: unlockedAchievements,
+      );
     } on DioException catch (e) {
       debugPrint('❌ Failed to log focus session: ${e.message}');
       debugPrint('Response: ${e.response?.data}');

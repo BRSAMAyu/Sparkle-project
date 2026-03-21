@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shimmer/shimmer.dart';
@@ -359,7 +359,9 @@ class GroupDetailScreen extends ConsumerWidget {
                     CustomButton.primary(
                       text: '加入群组',
                       onPressed: () async {
-                        HapticFeedback.lightImpact();
+                        unawaited(
+                          SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm),
+                        );
                         try {
                           await ref
                               .read(groupDetailProvider(groupId).notifier)

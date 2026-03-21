@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -69,7 +69,9 @@ class FocusActionCard extends StatelessWidget {
                 icon: Icons.play_arrow_rounded,
                 customGradient: DS.secondaryGradient,
                 onPressed: () {
-                  HapticFeedback.selectionClick();
+                  unawaited(
+                    SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+                  );
                   // 🔧 修复：设置activeTaskProvider以便TaskExecutionScreen能读取
                   ref.read(activeTaskProvider.notifier).state = taskModel;
                   context.push('/tasks/${taskModel.id}/execute');

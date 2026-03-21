@@ -12,7 +12,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -574,7 +574,11 @@ class _ReviewAppealCardState extends State<ReviewAppealCard>
                           final isSelected = _selectedIssues.contains(issue);
                           return GestureDetector(
                             onTap: () {
-                              unawaited(HapticFeedback.selectionClick());
+                              unawaited(
+                                SensoryFeedbackService.emit(
+                                  SensoryFeedbackEvent.selection,
+                                ),
+                              );
                               setState(() {
                                 if (isSelected) {
                                   _selectedIssues.remove(issue);
@@ -702,7 +706,7 @@ class _ReviewAppealCardState extends State<ReviewAppealCard>
       return;
     }
 
-    await HapticFeedback.mediumImpact();
+    await SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm);
 
     final success = await widget.onSubmitAppeal?.call(
       _reasonController.text.trim(),

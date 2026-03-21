@@ -222,18 +222,18 @@ class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
         );
 
         debugPrint(
-          '✅ Focus session logged: ${response.rewards.flameEarned} flames earned',
+          '✅ Focus session logged: ${response.response.rewards.flameEarned} flames earned',
         );
 
         final linkedPrediction =
             await _predictionAttribution.consumeForExecution(
           executionType: 'focus',
-          entityType: 'focus_session',
-          entityId: response.id,
+              entityType: 'focus_session',
+              entityId: response.response.id,
         );
         await _eventStream.recordEntityExecution(
           entityType: 'focus_session',
-          entityId: response.id,
+          entityId: response.response.id,
           actionType: 'complete_focus_session',
           source: 'mindfulness',
           payload: {

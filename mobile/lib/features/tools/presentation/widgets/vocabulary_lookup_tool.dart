@@ -1,7 +1,7 @@
 // ignore_for_file: unawaited_futures, discarded_futures
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
@@ -134,7 +134,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
     });
 
     if (mounted) {
-      HapticFeedback.mediumImpact();
+      unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.success));
       AppFeedback.success(context, '已添加 "$word" 到生词本');
     }
   }
@@ -157,7 +157,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
         return;
       }
       setState(() => _isInLocalWordbook = false);
-      HapticFeedback.lightImpact();
+      unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));
       AppFeedback.info(context, '已从生词本移除 "$word"');
     }
   }

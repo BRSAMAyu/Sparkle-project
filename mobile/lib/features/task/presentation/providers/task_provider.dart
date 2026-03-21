@@ -442,6 +442,31 @@ class TaskNotifier extends StateNotifier<TaskListState> {
     await loadRecommendedTasks();
   }
 
+  Future<void> reorderTasks(int oldIndex, int newIndex) async {
+    final originalTasks = List<TaskModel>.from(state.tasks);
+    final normalizedNewIndex = newIndex > oldIndex ? newIndex - 1 : newIndex;
+    final reordered = List<TaskModel>.from(state.tasks);
+    final moved = reordered.removeAt(oldIndex);
+    reordered.insert(normalizedNewIndex, moved);
+
+    state = state.copyWith(
+      tasks: [
+        for (var i = 0; i < reordered.length; i++)
+          reordered[i].copyWith(orderIndex: (i + 1) * 1000),
+      ],
+      clearError: true,
+    );
+
+    try {
+      final persisted = await _taskRepository.reorderTasks(
+        state.tasks.map((task) => task.id).toList(),
+      );
+      state = state.copyWith(tasks: persisted);
+    } catch (e) {
+      state = state.copyWith(tasks: originalTasks, error: e.toString());
+    }
+  }
+
   void _updateTaskInState(TaskModel task) {
     state = state.copyWith(
       tasks: state.tasks.map((t) => t.id == task.id ? task : t).toList(),

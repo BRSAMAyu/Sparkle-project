@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/network/api_client.dart';
@@ -295,7 +297,7 @@ final transparentModeProvider = Provider<bool>(
 
 final onboardingCompletedProvider =
     StateNotifierProvider<OnboardingCompletedNotifier, bool>(
-  (ref) => OnboardingCompletedNotifier(),
+  (ref) => OnboardingCompletedNotifier(ref),
 );
 
 final systemUpdateLevelProvider =
@@ -543,17 +545,71 @@ class TransparencyLevelNotifier extends StateNotifier<int> {
 }
 
 class OnboardingCompletedNotifier extends StateNotifier<bool> {
-  OnboardingCompletedNotifier() : super(false) {
-    _loadSettings();
+  OnboardingCompletedNotifier(this._ref) : super(false) {
+    _ref.listen<AuthState>(authProvider, (prev, next) {
+      if (prev?.user?.id != next.user?.id ||
+          prev?.isAuthenticated != next.isAuthenticated) {
+        unawaited(syncForUser(next.user));
+      }
+    });
+    unawaited(syncForUser(_ref.read(authProvider).user));
   }
 
-  Future<void> _loadSettings() async {
+  final Ref _ref;
+
+  String _storageKeyForUser(String userId) => '${kOnboardingCompletedKey}_$userId';
+
+  bool _inferCompletedFromProfileContext(Map<String, dynamic> payload) {
+    final preferenceVersion = payload['preference_version'];
+    final versionValue = preferenceVersion is num ? preferenceVersion.toInt() : 0;
+    if (versionValue > 1) {
+      return true;
+    }
+
+    final preferences = payload['preferences'];
+    if (preferences is! Map<String, dynamic>) {
+      return false;
+    }
+
+    return preferences.containsKey('study_time_preference') ||
+        preferences.containsKey('knowledge_level') ||
+        preferences.containsKey('response_style');
+  }
+
+  Future<void> syncForUser(UserModel? user) async {
+    if (user == null) {
+      state = false;
+      return;
+    }
+
+    if (user.registrationSource == 'guest') {
+      state = true;
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool(_storageKeyForUser(user.id), true);
+      } catch (_) {
+        // Silent fail for persistence
+      }
+      return;
+    }
+
     try {
       final prefs = await SharedPreferences.getInstance();
-      final enabled = prefs.getBool(kOnboardingCompletedKey);
-      if (enabled != null) {
-        state = enabled;
+      final saved = prefs.getBool(_storageKeyForUser(user.id));
+      if (saved != null) {
+        state = saved;
+        if (saved) {
+          return;
+        }
+      } else {
+        state = false;
       }
+
+      final profileContext =
+          await _ref.read(userRepositoryProvider).fetchProfileContext();
+      final completed = _inferCompletedFromProfileContext(profileContext);
+      state = completed;
+      await prefs.setBool(_storageKeyForUser(user.id), completed);
     } catch (_) {
       state = false;
     }
@@ -564,7 +620,10 @@ class OnboardingCompletedNotifier extends StateNotifier<bool> {
     state = value;
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(kOnboardingCompletedKey, value);
+      final user = _ref.read(authProvider).user;
+      if (user != null) {
+        await prefs.setBool(_storageKeyForUser(user.id), value);
+      }
     } catch (_) {
       // Silent fail for persistence
     }

@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -583,7 +583,7 @@ class _UnifiedOmniBarState extends ConsumerState<UnifiedOmniBar>
   }
 
   void _toggleAgentPanel() {
-    unawaited(HapticFeedback.lightImpact());
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
     setState(() {
       _agentPanelExpanded = !_agentPanelExpanded;
     });
@@ -595,7 +595,7 @@ class _UnifiedOmniBarState extends ConsumerState<UnifiedOmniBar>
   }
 
   Future<void> _selectMode(ChatMode mode) async {
-    unawaited(HapticFeedback.lightImpact());
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
     ref.read(chatModeNotifierProvider.notifier).setMode(mode);
     ref.read(lastMultiAgentModeProvider.notifier).setMode(mode);
 

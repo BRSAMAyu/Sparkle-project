@@ -59,6 +59,7 @@ class TaskModel {
     this.userNote,
     this.dueDate,
     this.knowledgeNodeId,
+    this.orderIndex = 0,
     this.subtasksTotal = 0,
     this.subtasksCompleted = 0,
     this.syncStatus = TaskSyncStatus.synced,
@@ -97,6 +98,8 @@ class TaskModel {
   final DateTime? dueDate;
   @JsonKey(name: 'knowledge_node_id')
   final String? knowledgeNodeId;
+  @JsonKey(name: 'order_index')
+  final int orderIndex;
   @JsonKey(name: 'subtasks_total')
   final int subtasksTotal;
   @JsonKey(name: 'subtasks_completed')
@@ -134,6 +137,7 @@ class TaskModel {
     int? priority,
     DateTime? dueDate,
     String? knowledgeNodeId,
+    int? orderIndex,
     int? subtasksTotal,
     int? subtasksCompleted,
     DateTime? createdAt,
@@ -161,6 +165,7 @@ class TaskModel {
         priority: priority ?? this.priority,
         dueDate: dueDate ?? this.dueDate,
         knowledgeNodeId: knowledgeNodeId ?? this.knowledgeNodeId,
+        orderIndex: orderIndex ?? this.orderIndex,
         subtasksTotal: subtasksTotal ?? this.subtasksTotal,
         subtasksCompleted: subtasksCompleted ?? this.subtasksCompleted,
         createdAt: createdAt ?? this.createdAt,

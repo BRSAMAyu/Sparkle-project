@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -63,6 +63,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
   int _currentTimerDuration = 0; // In seconds
   bool _isPomodoroMode = false;
   int _pomodoroCycle = 0; // 0: work, 1: break, 2: long break
+  int _timerResetVersion = 0;
 
   // Focus Protection State
   DateTime? _pageEnterTime;
@@ -150,7 +151,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
     });
 
     // 2. Haptic Feedback
-    HapticFeedback.mediumImpact();
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.checkin));
 
     // 3. API Call
     final task = ref.read(activeTaskProvider);
@@ -291,6 +292,18 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
     setState(() {}); // Trigger rebuild for TimerWidget to update
   }
 
+  void _resetTimer() {
+    setState(() {
+      _elapsedSeconds = 0;
+      if (_isPomodoroMode) {
+        _currentTimerDuration = _pomodoroCycle == 0 ? 25 * 60 : 5 * 60;
+      } else if (_timerMode == TimerMode.countUp) {
+        _currentTimerDuration = 0;
+      }
+      _timerResetVersion += 1;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -428,8 +441,8 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                               Center(
                                 child: TimerWidget(
                                   key: ValueKey(
-                                    _currentTimerDuration,
-                                  ), // Force rebuild on duration change
+                                    '$_currentTimerDuration-$_timerResetVersion',
+                                  ),
                                   mode: _timerMode,
                                   initialSeconds: _currentTimerDuration,
                                   maxSeconds: _isPomodoroMode
@@ -449,6 +462,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                                 isPomodoroMode: _isPomodoroMode,
                                 onTogglePomodoro: _togglePomodoro,
                                 onSetPreset: _setPresetDuration,
+                                onReset: _resetTimer,
                               ),
                               const SizedBox(height: DS.spacing24),
 
@@ -822,10 +836,12 @@ class _TimerControls extends StatelessWidget {
     required this.isPomodoroMode,
     required this.onTogglePomodoro,
     required this.onSetPreset,
+    required this.onReset,
   });
   final bool isPomodoroMode;
   final VoidCallback onTogglePomodoro;
   final void Function(int minutes) onSetPreset;
+  final VoidCallback onReset;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -847,6 +863,12 @@ class _TimerControls extends StatelessWidget {
                   onPressed: () => onSetPreset(minutes),
                   size: CustomButtonSize.small,
                 ),
+              ),
+              CustomButton.secondary(
+                text: '重置',
+                icon: Icons.restart_alt_rounded,
+                onPressed: onReset,
+                size: CustomButtonSize.small,
               ),
             ],
           ),
@@ -970,7 +992,11 @@ class _BottomControls extends ConsumerWidget {
                       icon: Icons.check_rounded,
                       customGradient: _taskWarmActionGradient(context),
                       onPressed: () {
-                        HapticFeedback.heavyImpact();
+                        unawaited(
+                          SensoryFeedbackService.emit(
+                            SensoryFeedbackEvent.focusComplete,
+                          ),
+                        );
                         Navigator.of(ctx).pop();
                         onComplete(
                           minutes,
@@ -1080,7 +1106,7 @@ class _TaskExitConfirmationDialogState
   }
 
   void _nextStep() {
-    HapticFeedback.lightImpact();
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));
     if (_currentStep == _TaskExitStep.third) {
       // Show reflection dialog after triple confirmation
       Navigator.of(context).pop(true);
@@ -1092,7 +1118,7 @@ class _TaskExitConfirmationDialogState
   }
 
   void _cancel() {
-    HapticFeedback.lightImpact();
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));
     Navigator.of(context).pop(false);
   }
 

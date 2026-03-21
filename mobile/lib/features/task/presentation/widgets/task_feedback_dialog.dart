@@ -312,6 +312,54 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
                             style: theme.textTheme.bodyMedium,
                           ),
 
+                        if (widget.result.unlockedAchievements.isNotEmpty) ...[
+                          const SizedBox(height: DS.spacing16),
+                          Container(
+                            padding: const EdgeInsets.all(DS.spacing12),
+                            decoration: BoxDecoration(
+                              color: DS.warning.withValues(alpha: 0.08),
+                              borderRadius: DS.borderRadius12,
+                              border: Border.all(
+                                color: DS.warning.withValues(alpha: 0.22),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.emoji_events_rounded,
+                                      color: DS.warning,
+                                      size: 18,
+                                    ),
+                                    const SizedBox(width: DS.spacing8),
+                                    Text(
+                                      '已解锁成就',
+                                      style: theme.textTheme.titleSmall
+                                          ?.copyWith(
+                                        fontWeight: DS.fontWeightBold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: DS.spacing8),
+                                ...widget.result.unlockedAchievements.take(3).map(
+                                      (achievement) => Padding(
+                                        padding: const EdgeInsets.only(
+                                          bottom: DS.spacing4,
+                                        ),
+                                        child: Text(
+                                          '• ${(achievement as Map<String, dynamic>)['name'] ?? '新成就'}',
+                                          style: theme.textTheme.bodyMedium,
+                                        ),
+                                      ),
+                                    ),
+                              ],
+                            ),
+                          ),
+                        ],
+
                         const SizedBox(height: DS.spacing20),
 
                         // Stats Updates

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/chat/presentation/widgets/attachment_picker_sheet.dart';
 import 'package:sparkle/features/chat/presentation/widgets/voice_input_button.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
@@ -141,6 +142,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   Future<void> _handleSend() async {
     final text = _controller.text.trim();
     if (text.isEmpty || _isSending) return;
+
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.messageSend));
 
     if (widget.onSend != null) {
       widget.onSend!(text, replyToId: widget.quotedMessage?.id);

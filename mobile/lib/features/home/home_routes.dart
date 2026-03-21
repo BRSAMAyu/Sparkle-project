@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/services/bgm_service.dart';
+import 'package:sparkle/core/widgets/bgm_scope.dart';
 import 'package:sparkle/features/home/presentation/screens/notification_list_screen.dart';
 
 class HomeRoutes {
@@ -14,7 +16,10 @@ class HomeRoutes {
           name: 'notifications',
           pageBuilder: (context, state) => MaterialPage<void>(
             key: state.pageKey,
-            child: const NotificationListScreen(),
+            child: const BgmScope(
+              track: BgmTrack.dashboard,
+              child: NotificationListScreen(),
+            ),
           ),
         ),
       ];

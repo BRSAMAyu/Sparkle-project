@@ -22,6 +22,7 @@ class PersonaOnboardingScreen extends ConsumerStatefulWidget {
 class _PersonaOnboardingScreenState
     extends ConsumerState<PersonaOnboardingScreen> {
   final _goalController = TextEditingController();
+  Timer? _previewDebounce;
   int _currentStep = 0;
   String _goalType = 'exam';
   String _learningStyle = 'balanced';
@@ -30,9 +31,19 @@ class _PersonaOnboardingScreenState
   double _depthPreference = 0.5;
   double _curiosityPreference = 0.5;
   bool _submitting = false;
+  bool _previewLoading = false;
+  String? _previewMessage;
+  int _previewRequestId = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _goalController.addListener(_schedulePreview);
+  }
 
   @override
   void dispose() {
+    _previewDebounce?.cancel();
     _goalController.dispose();
     super.dispose();
   }
@@ -105,6 +116,8 @@ class _PersonaOnboardingScreenState
                   hintText: l10n.personaGoalHint,
                 ),
               ),
+              const SizedBox(height: DS.spacing12),
+              _buildPreviewCard(context),
             ],
           ),
           isActive: _currentStep >= 0,
@@ -133,7 +146,10 @@ class _PersonaOnboardingScreenState
                 min: 10,
                 max: 180,
                 divisions: 17,
-                onChanged: (v) => setState(() => _studyMinutes = v),
+                onChanged: (v) {
+                  setState(() => _studyMinutes = v);
+                  _schedulePreview();
+                },
               ),
             ],
           ),
@@ -160,14 +176,20 @@ class _PersonaOnboardingScreenState
               Slider(
                 value: _depthPreference,
                 divisions: 10,
-                onChanged: (v) => setState(() => _depthPreference = v),
+                onChanged: (v) {
+                  setState(() => _depthPreference = v);
+                  _schedulePreview();
+                },
               ),
               const SizedBox(height: DS.spacing12),
               Text(l10n.personaCuriosityExtension),
               Slider(
                 value: _curiosityPreference,
                 divisions: 10,
-                onChanged: (v) => setState(() => _curiosityPreference = v),
+                onChanged: (v) {
+                  setState(() => _curiosityPreference = v);
+                  _schedulePreview();
+                },
               ),
             ],
           ),
@@ -178,24 +200,144 @@ class _PersonaOnboardingScreenState
   ChoiceChip _styleChip(String value, String label) => ChoiceChip(
         label: Text(label),
         selected: _learningStyle == value,
-        onSelected: (_) => setState(() => _learningStyle = value),
+        onSelected: (_) {
+          setState(() => _learningStyle = value);
+          _schedulePreview();
+        },
       );
 
   ChoiceChip _goalTypeChip(String value, String label) => ChoiceChip(
         label: Text(label),
         selected: _goalType == value,
-        onSelected: (_) => setState(() => _goalType = value),
+        onSelected: (_) {
+          setState(() => _goalType = value);
+          _schedulePreview();
+        },
       );
 
   ChoiceChip _levelChip(String value, String label) => ChoiceChip(
         label: Text(label),
         selected: _knowledgeLevel == value,
-        onSelected: (_) => setState(() => _knowledgeLevel = value),
+        onSelected: (_) {
+          setState(() => _knowledgeLevel = value);
+          _schedulePreview();
+        },
       );
 
   void _handleBack() {
     if (_currentStep == 0) return;
     setState(() => _currentStep -= 1);
+  }
+
+  void _schedulePreview() {
+    _previewDebounce?.cancel();
+    final goal = _goalController.text.trim();
+    if (goal.isEmpty) {
+      if (_previewMessage != null || _previewLoading) {
+        setState(() {
+          _previewMessage = null;
+          _previewLoading = false;
+        });
+      }
+      return;
+    }
+
+    _previewDebounce = Timer(const Duration(milliseconds: 450), () {
+      unawaited(_loadPreview());
+    });
+  }
+
+  Future<void> _loadPreview() async {
+    final goal = _goalController.text.trim();
+    if (goal.isEmpty) return;
+
+    final requestId = ++_previewRequestId;
+    setState(() => _previewLoading = true);
+
+    final repo = ref.read(userRepositoryProvider);
+    try {
+      final preview = await repo.fetchOnboardingPreview({
+        'learning_goal_type': _goalType,
+        'learning_goal': goal,
+        'learning_style': _learningStyle,
+        'study_time_minutes': _studyMinutes.round(),
+        'knowledge_level': _knowledgeLevel,
+        'response_depth': _depthPreference,
+        'curiosity_preference': _curiosityPreference,
+      });
+      if (!mounted || requestId != _previewRequestId) return;
+      setState(() {
+        _previewMessage = preview['message']?.toString().trim();
+        _previewLoading = false;
+      });
+    } catch (_) {
+      if (!mounted || requestId != _previewRequestId) return;
+      setState(() {
+        _previewMessage =
+            '我已经理解你想先推进「$goal」，接下来会根据你的目标和时间给出第一版学习建议。';
+        _previewLoading = false;
+      });
+    }
+  }
+
+  Widget _buildPreviewCard(BuildContext context) {
+    final goal = _goalController.text.trim();
+    if (goal.isEmpty && !_previewLoading) {
+      return const SizedBox.shrink();
+    }
+
+    final textTheme = Theme.of(context).textTheme;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      width: double.infinity,
+      padding: const EdgeInsets.all(DS.spacing12),
+      decoration: BoxDecoration(
+        color: DS.brandPrimary.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(DS.radius16),
+        border: Border.all(
+          color: DS.brandPrimary.withValues(alpha: 0.14),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: DS.brandPrimary.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(DS.radius12),
+            ),
+            child: const Icon(Icons.auto_awesome_rounded, size: 16),
+          ),
+          const SizedBox(width: DS.spacing10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'AI 已开始理解你的目标',
+                  style: textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: DS.spacing4),
+                if (_previewLoading)
+                  Text(
+                    '正在生成第一版理解与建议...',
+                    style: textTheme.bodySmall,
+                  )
+                else
+                  Text(
+                    _previewMessage ?? '',
+                    style: textTheme.bodyMedium,
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _handleContinue(int totalSteps) async {

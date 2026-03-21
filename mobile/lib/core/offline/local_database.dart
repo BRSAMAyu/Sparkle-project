@@ -151,6 +151,26 @@ class LocalDatabase {
     );
   }
 
+  Future<void> clearUserScopedData() async {
+    if (!isar.isOpen) {
+      return;
+    }
+    await isar.writeTxn(() async {
+      await knowledgeNodes.clear();
+      await pendingUpdates.clear();
+      await crdtSnapshots.clear();
+      await outboxItems.clear();
+      await analyticsEvents.clear();
+      await focusSessionRecords.clear();
+      await cachedStatistics.clear();
+      await offlineChatMessages.clear();
+      await translationWordLinks.clear();
+      await translationRecords.clear();
+      await vocabReviews.clear();
+      await vocabWords.clear();
+    });
+  }
+
   // Convenience accessors for collections
   IsarCollection<TranslationRecord> get translationRecords => isar.translationRecords;
   IsarCollection<TranslationWordLink> get translationWordLinks => isar.translationWordLinks;

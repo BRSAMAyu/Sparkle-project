@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/components/atoms/ai_status_capsule.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/utils/ai_status_mapper.dart';
+import 'package:sparkle/core/services/bgm_service.dart';
+import 'package:sparkle/core/widgets/bgm_scope.dart';
 
 /// AI 状态指示器
 /// 显示 AI 的当前状态（THINKING, GENERATING, EXECUTING_TOOL 等）
@@ -99,7 +101,7 @@ class _AiStatusIndicatorState extends State<AiStatusIndicator> {
         : color.withValues(alpha: 0.06);
     final detailsColor = isDark ? DS.textSecondary : DS.textPrimary;
 
-    return AnimatedContainer(
+    final indicator = AnimatedContainer(
       duration: DS.motionDuration(
         SparkleMotionToken.standard,
         reduceMotion: reduceMotion,
@@ -198,6 +200,16 @@ class _AiStatusIndicatorState extends State<AiStatusIndicator> {
         ],
       ),
     );
+
+    final thinkingTrack = _bgmTrackForStatus(status);
+    if (thinkingTrack == null) {
+      return indicator;
+    }
+    return BgmScope(
+      track: thinkingTrack,
+      priority: BgmPriority.stage,
+      child: indicator,
+    );
   }
 
   String? _elapsedLabel(int? startedAtEpochMs) {
@@ -236,6 +248,19 @@ class _AiStatusIndicatorState extends State<AiStatusIndicator> {
         return Icons.error_outline_rounded;
       default:
         return Icons.bolt_rounded;
+    }
+  }
+
+  BgmTrack? _bgmTrackForStatus(String status) {
+    switch (status) {
+      case 'THINKING':
+      case 'ANALYZING':
+      case 'PLANNING':
+      case 'REVIEWING':
+      case 'SEARCHING':
+        return BgmTrack.thinking;
+      default:
+        return null;
     }
   }
 }

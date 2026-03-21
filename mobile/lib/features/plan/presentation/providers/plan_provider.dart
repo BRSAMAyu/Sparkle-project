@@ -109,6 +109,13 @@ class PlanNotifier extends StateNotifier<PlanListState> {
     });
   }
 
+  Future<void> setPrimaryPlan(String id) async {
+    await _runWithErrorHandling(() async {
+      await _planRepository.setPrimaryPlan(id);
+      await refresh();
+    });
+  }
+
   Future<void> generateTasks(String planId, int count) async {
     await _runWithErrorHandling(() async {
       await _planRepository.generateTasks(planId, count: count);

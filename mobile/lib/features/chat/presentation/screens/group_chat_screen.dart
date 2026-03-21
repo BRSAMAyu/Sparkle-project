@@ -32,6 +32,31 @@ class GroupChatScreen extends ConsumerStatefulWidget {
 class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
   MessageInfo? _quotedMessage;
   bool _agentMode = false;
+  late final ScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController()..addListener(_handleScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController
+      ..removeListener(_handleScroll)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _handleScroll() {
+    if (!_scrollController.hasClients) {
+      return;
+    }
+    final position = _scrollController.position;
+    if (position.pixels >= position.maxScrollExtent - 240) {
+      ref.read(groupChatProvider(widget.groupId).notifier).loadOlderMessages();
+    }
+  }
 
   void _handleFavorite(MessageInfo msg) {
     unawaited(
@@ -386,6 +411,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                   return Align(
                     alignment: Alignment.topCenter,
                     child: ListView.builder(
+                      controller: _scrollController,
                       reverse: true,
                       shrinkWrap: true,
                       padding: const EdgeInsets.all(DS.spacing16),

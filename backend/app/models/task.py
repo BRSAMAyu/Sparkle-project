@@ -18,6 +18,7 @@ from sqlalchemy import (
     String,
     Text,
     event,
+    inspect,
     update,
 )
 from sqlalchemy.dialects.postgresql import JSONB
@@ -85,6 +86,7 @@ class Task(BaseModel):
 
     # 优先级和截止日期
     priority = Column(Integer, default=0, nullable=False)
+    order_index = Column(Integer, default=0, nullable=False)
     due_date = Column(Date, nullable=True)
 
     # Knowledge Galaxy Integration
@@ -137,6 +139,7 @@ Index("idx_tasks_plan_id", Task.plan_id)
 Index("idx_tasks_status", Task.status)
 Index("idx_tasks_created_at", Task.created_at)
 Index("idx_tasks_due_date", Task.due_date)
+Index("idx_tasks_user_order_index", Task.user_id, Task.order_index)
 
 
 class SubTask(BaseModel):
@@ -198,21 +201,25 @@ def update_total_on_subtask_delete(mapper, connection, target):
 @event.listens_for(SubTask, "after_update")
 def update_completed_on_subtask_status_change(mapper, connection, target):
     """子任务状态变更时自动更新父任务的 subtasks_completed"""
-    # 检查 status 字段是否发生变化
-    state = target._sa_instance_state
-    if "status" in state.committed_attributes:
-        # 获取变更前的状态
-        old_status = state.committed_attributes.get("status")
-        if old_status != target.status:
-            delta = 0
-            if target.status == SubTaskStatus.COMPLETED:
-                delta = 1
-            elif old_status == SubTaskStatus.COMPLETED:
-                delta = -1
+    state = inspect(target)
+    status_history = state.attrs.status.history
+    if not status_history.has_changes():
+        return
 
-            if delta != 0:
-                connection.execute(
-                    update(Task)
-                    .where(Task.id == target.parent_task_id)
-                    .values(subtasks_completed=Task.subtasks_completed + delta)
-                )
+    old_status = status_history.deleted[0] if status_history.deleted else None
+    new_status = status_history.added[0] if status_history.added else target.status
+    if old_status == new_status:
+        return
+
+    delta = 0
+    if new_status == SubTaskStatus.COMPLETED:
+        delta = 1
+    elif old_status == SubTaskStatus.COMPLETED:
+        delta = -1
+
+    if delta != 0:
+        connection.execute(
+            update(Task)
+            .where(Task.id == target.parent_task_id)
+            .values(subtasks_completed=Task.subtasks_completed + delta)
+        )

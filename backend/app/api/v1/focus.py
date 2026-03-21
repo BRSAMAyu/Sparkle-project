@@ -71,7 +71,8 @@ async def log_focus_session(
         return {
             "success": True,
             "id": str(session.id),
-            "rewards": rewards # {flame_earned, leveled_up, new_level}
+            "rewards": rewards, # {flame_earned, leveled_up, new_level}
+            "unlocked_achievements": result.get("unlocked_achievements", []),
         }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

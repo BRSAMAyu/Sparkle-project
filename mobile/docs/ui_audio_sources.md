@@ -1,37 +1,78 @@
-# UI Audio Sources
+# UI Audio Spec
 
-Last updated: 2026-03-20
+Last updated: 2026-03-21
 
-## Selected Asset Pack
+## Current Strategy
 
-- Source: OpenGameArt
-- Pack: `UI Sounds`
-- Author: `StumpyStrust`
-- License: `CC0`
-- Download URL used in implementation: `https://opengameart.org/sites/default/files/sounds_2.zip`
-- Local asset target: `mobile/assets/audio/ui/`
+- Primary source of truth: procedurally generated audio assets
+- Generator script: `/Users/brsama/code/GitHub/Sparkle-project/scripts/generate_sensory_audio.py`
+- Output folders:
+  - `mobile/assets/audio/ui/`
+  - `mobile/assets/audio/ambient/`
+- Encoding target:
+  - OGG container
+  - 44.1kHz
+  - stereo
+  - nominal 128kbps export settings
 
-## Imported Files
+## Why Procedural
 
-- `button1.ogg`
-- `button2.ogg`
-- `complete.ogg`
-- `off.ogg`
-- `on.ogg`
+- Keeps the app's sound language consistent and reproducible
+- Makes it easy to tune duration, pitch, decay, and loudness without relicensing assets
+- Fits the product's restrained, minimal interaction style
 
-## Event Mapping
+## UI Event Mapping
 
-| App event | Asset | Notes |
-|---|---|---|
-| tap | `button1.ogg` | light press on cards and buttons |
-| selection / toggle | `button2.ogg` | list selection, pills, mode switches |
-| navigation / sheet open / dialog open | `on.ogg` | transition cue with low volume |
-| confirm / success | `complete.ogg` | completion, submit, positive resolve |
-| warning / error | `off.ogg` | caution, destructive, failed action |
+| Event | Asset | Target feel | Current duration |
+|---|---|---|---|
+| tap | `tap.ogg` | crisp, quiet tap | ~61ms |
+| toggle | `toggle.ogg` | short double-state click | ~81ms |
+| selection | `select.ogg` | slightly brighter than tap | ~91ms |
+| navigation | `nav.ogg` | soft directional whoosh | ~181ms |
+| sheet open | `sheet_open.ogg` | upward lift | ~221ms |
+| dialog open | `dialog_open.ogg` | lighter modal pop | ~200ms |
+| confirm | `confirm.ogg` | compact rising confirmation | ~181ms |
+| success | `success.ogg` | brighter rising triad | ~321ms |
+| warning | `warning.ogg` | lower and more cautious | ~261ms |
+| error | `error.ogg` | descending broken resolve | ~261ms |
+| achievement common | `achievement_common.ogg` | modest unlock | ~280ms |
+| achievement rare | `achievement_rare.ogg` | longer and brighter | ~361ms |
+| achievement epic | `achievement_epic.ogg` | richer cadence | ~480ms |
+| achievement legendary | `achievement_legendary.ogg` | multi-note flourish with tail | ~681ms |
+| star unlock | `star_unlock.ogg` | sparkling unlock cue | ~521ms |
+| focus complete | `focus_complete.ogg` | calm completion bell | ~441ms |
+| streak | `streak.ogg` | energetic milestone cue | ~401ms |
+| checkin | `checkin.ogg` | compact positive ping | ~300ms |
+| message send | `message_send.ogg` | tiny send tick | ~81ms |
+| ai response start | `ai_start.ogg` | soft synthetic rise | ~161ms |
+| card flip | `card_flip.ogg` | dry flip sweep | ~120ms |
+| drag start | `drag_start.ogg` | soft pickup | ~91ms |
+| drag drop | `drag_drop.ogg` | slightly weightier settle | ~110ms |
 
-## Design Direction
+## Ambient Scenes
 
-- Audio is intentionally quiet and short-lived.
-- Sound should confirm state change, not compete with reading or motion.
-- Haptics mirror the same semantic layers so sound-off mode still feels coherent.
-- Any future custom branded sounds should preserve the same event semantics and volume hierarchy.
+| Scene | Asset | Duration | Notes |
+|---|---|---|---|
+| Rain | `rain.ogg` | 32s | periodic noise bed + droplet texture |
+| White noise | `white_noise.ogg` | 32s | balanced broadband mask |
+| Cafe | `cafe.ogg` | 32s | warm room noise + sparse clink accents |
+| Piano | `piano.ogg` | 32s | soft tonal loop over subtle pad |
+
+## Looping Rules
+
+- Ambient assets are generated with loop-safe smoothing at both ends
+- Ambient scenes are normalized to avoid loudness jumps when switching
+- UI sounds remain short and non-competing with speech, text, and motion
+
+## Regeneration
+
+```bash
+python3 /Users/brsama/code/GitHub/Sparkle-project/scripts/generate_sensory_audio.py
+```
+
+Regenerate whenever we adjust:
+
+- event taxonomy
+- interaction durations
+- achievement rarity hierarchy
+- ambient texture or loudness targets

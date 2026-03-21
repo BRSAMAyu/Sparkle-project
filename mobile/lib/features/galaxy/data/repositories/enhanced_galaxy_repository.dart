@@ -183,6 +183,48 @@ class EnhancedGalaxyRepository {
   ) =>
       updateNodePositions(<String, Offset>{nodeId: position});
 
+  Future<NetworkResult<Map<String, dynamic>>> updateNodeMastery(
+    String nodeId, {
+    required int mastery,
+    String reason = 'manual_update',
+  }) async {
+    if (DemoDataService.isDemoMode) {
+      return NetworkResult.success(<String, dynamic>{
+        'success': true,
+        'node_id': nodeId,
+        'old_mastery': 0,
+        'new_mastery': mastery,
+        'reason': reason,
+      });
+    }
+
+    try {
+      final response = await RetryStrategy.executeWithRetry<Map<String, dynamic>>(
+        () async {
+          final response = await _apiClient.post<Map<String, dynamic>>(
+            ApiEndpoints.galaxyUpdateMastery(nodeId),
+            data: {
+              'mastery': mastery,
+              'reason': reason,
+            },
+          );
+          return ApiResponseParser.unwrapMap(
+            response.data,
+            action: 'updateGalaxyNodeMastery',
+          );
+        },
+      );
+
+      _graphCache.clear();
+      _detailCache.remove(nodeId);
+      return NetworkResult.success(response);
+    } on DioException catch (e) {
+      return NetworkResult.failure(GalaxyError.network(e));
+    } catch (e) {
+      return NetworkResult.failure(GalaxyError.unknown(e.toString()));
+    }
+  }
+
   /// 激活节点
   Future<NetworkResult<void>> sparkNode(String id) async {
     if (DemoDataService.isDemoMode) {

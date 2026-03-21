@@ -325,6 +325,7 @@ async def get_contract_status(
     Returns active contract or null if no active contract.
     """
     service = ContractService(db)
+    status_result = await service.check_contract_status(current_user.id)
     contract = await service._get_active_contract(current_user.id)
 
     if not contract:
@@ -332,7 +333,11 @@ async def get_contract_status(
 
     return {
         "has_active_contract": True,
-        "contract": ContractResponse.model_validate(contract).model_dump()
+        "contract": ContractResponse.model_validate(
+            contract,
+            from_attributes=True,
+        ).model_dump(),
+        "status": status_result,
     }
 
 
@@ -358,7 +363,10 @@ async def create_contract(
         )
         return {
             "success": True,
-            "data": ContractResponse.model_validate(contract).model_dump()
+            "data": ContractResponse.model_validate(
+                contract,
+                from_attributes=True,
+            ).model_dump()
         }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

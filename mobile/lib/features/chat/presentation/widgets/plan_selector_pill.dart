@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
@@ -78,7 +78,7 @@ class PlanSelectorPill extends ConsumerWidget {
     WidgetRef ref,
     List<PlanModel> activePlans,
   ) {
-    HapticFeedback.lightImpact();
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen));
     unawaited(
       showSensoryModalBottomSheet<void>(
         context: context,
@@ -352,7 +352,7 @@ class _ClearOptionTile extends ConsumerWidget {
     return InkWell(
       onTap: () {
         ref.read(activePlanProvider.notifier).clearSelection();
-        HapticFeedback.lightImpact();
+        unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen));
         Navigator.pop(context);
       },
       child: Container(
@@ -413,7 +413,7 @@ class _PlanListTile extends ConsumerWidget {
     return InkWell(
       onTap: () {
         ref.read(activePlanProvider.notifier).selectPlan(plan.id);
-        HapticFeedback.lightImpact();
+        unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen));
         Navigator.pop(context);
       },
       child: Container(

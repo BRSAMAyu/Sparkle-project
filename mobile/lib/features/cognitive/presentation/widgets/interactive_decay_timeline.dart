@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 
@@ -70,7 +70,7 @@ class _InteractiveDecayTimelineState extends State<InteractiveDecayTimeline>
 
     // 触觉反馈（每10天）
     if (value % 10 == 0) {
-      unawaited(HapticFeedback.selectionClick());
+      unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
     }
 
     // 通知父组件更新预测数据
@@ -96,7 +96,7 @@ class _InteractiveDecayTimelineState extends State<InteractiveDecayTimeline>
     unawaited(_playInterventionAnimation());
 
     // 触觉反馈
-    unawaited(HapticFeedback.mediumImpact());
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
 
     // 调用干预模拟
     widget.onSimulateIntervention(

@@ -111,6 +111,14 @@ class AchievementEngine:
     def __init__(self, db: AsyncSession):
         self.db = db
 
+    @staticmethod
+    def _coerce_activity_date(value: date | datetime | None) -> date | None:
+        if value is None:
+            return None
+        if isinstance(value, datetime):
+            return value.date()
+        return value
+
     async def _refresh_achievement_cache(self):
         """刷新成就定义缓存"""
         now = _utcnow()
@@ -1028,16 +1036,17 @@ class AchievementEngine:
         )
         result = await self.db.execute(query)
         record = result.scalar_one_or_none()
+        persisted_status = status.value if hasattr(status, "value") else status
 
         if record:
-            record.status = status
+            record.status = persisted_status
             record.used_freeze = used_freeze
             record.source_event = source_event
         else:
             record = UserStreakDay(
                 user_id=user_id,
                 day=day,
-                status=status,
+                status=persisted_status,
                 used_freeze=used_freeze,
                 source_event=source_event,
             )
@@ -1049,6 +1058,9 @@ class AchievementEngine:
         """更新连胜统计"""
         stats = await self._get_or_create_streak_stats(user_id)
         today = _utcnow().date()
+        last_activity_date = self._coerce_activity_date(stats.last_activity_date)
+        if last_activity_date != stats.last_activity_date:
+            stats.last_activity_date = last_activity_date
 
         # 只有核心活动才更新连胜
         if event_type not in [AchievementEvent.DAILY_CHECKIN,
@@ -1056,10 +1068,14 @@ class AchievementEngine:
                               AchievementEvent.NODE_MASTERED]:
             return
 
-        if not stats.last_activity_date:
+        if not last_activity_date:
             stats.current_streak = 1
+            stats.max_streak = max(int(stats.max_streak or 0), 1)
+            stats.longest_streak = max(int(stats.longest_streak or 0), 1)
+            stats.total_checkin_days = max(int(stats.total_checkin_days or 0), 1)
             stats.last_activity_date = today
             stats.longest_streak_start = today
+            stats.longest_streak_end = today
             await self._upsert_streak_day(
                 user_id,
                 today,
@@ -1069,7 +1085,7 @@ class AchievementEngine:
             await self.db.flush()
             return
 
-        delta = (today - stats.last_activity_date).days
+        delta = (today - last_activity_date).days
 
         if delta == 0:
             # 今天已活动，无需更新
@@ -1110,7 +1126,7 @@ class AchievementEngine:
                 logger.info(f"User {user_id} used {days_missed} freeze charges")
 
                 for offset in range(1, days_missed + 1):
-                    day = stats.last_activity_date + timedelta(days=offset)
+                    day = last_activity_date + timedelta(days=offset)
                     await self._upsert_streak_day(
                         user_id,
                         day,
@@ -1124,7 +1140,7 @@ class AchievementEngine:
                 logger.info(f"User {user_id} streak broken at {stats.max_streak} days")
 
                 for offset in range(1, days_missed + 1):
-                    day = stats.last_activity_date + timedelta(days=offset)
+                    day = last_activity_date + timedelta(days=offset)
                     await self._upsert_streak_day(
                         user_id,
                         day,
@@ -1903,7 +1919,7 @@ class ContractService:
                 source=f"contract:{contract.id}",
                 transaction_type=PhotonTransactionType.GRANT_CONTRACT,
                 metadata={
-                    "contract_id": contract.id,
+                    "contract_id": str(contract.id),
                     "stake": contract.photon_stake,
                     "multiplier": contract.reward_multiplier
                 },
@@ -1928,7 +1944,7 @@ class ContractService:
                 reason=f"Contract failed: {contract.id}",
                 transaction_type=PhotonTransactionType.DEDUCT_CONTRACT,
                 metadata={
-                    "contract_id": contract.id,
+                    "contract_id": str(contract.id),
                     "failure_reason": contract.failure_reason
                 },
                 related_item_id=str(contract.id),

@@ -234,7 +234,10 @@ class UserStreakDay(BaseModel):
     user_id = Column(GUID(), ForeignKey("users.id"), primary_key=True)
     day = Column(Date, primary_key=True)
 
-    status = Column(Enum(StreakDayStatus), nullable=False)
+    status = Column(
+        Enum(StreakDayStatus, values_callable=lambda enum_cls: [item.value for item in enum_cls]),
+        nullable=False,
+    )
     used_freeze = Column(Boolean, default=False)
     source_event = Column(String(50), nullable=True)
 

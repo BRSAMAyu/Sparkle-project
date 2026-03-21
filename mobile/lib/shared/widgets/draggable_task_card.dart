@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -48,7 +48,7 @@ class DraggableTaskCard extends ConsumerWidget {
       dragAnchorStrategy: pointerDragAnchorStrategy,
       maxSimultaneousDrags: 1,
       onDragStarted: () {
-        HapticFeedback.mediumImpact();
+        unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.dragStart));
         ref.read(taskDragProvider.notifier).startDrag(task);
       },
       onDragEnd: (details) {

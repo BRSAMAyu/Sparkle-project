@@ -1,7 +1,7 @@
 // ignore_for_file: discarded_futures, unawaited_futures
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/cognitive_provider.dart';
@@ -133,7 +133,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
             taskId: widget.taskId,
           );
 
-      HapticFeedback.mediumImpact();
+      unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.success));
       if (mounted) {
         Navigator.pop(context);
         AppFeedback.success(context, '已记录到错题本，并写入认知棱镜');

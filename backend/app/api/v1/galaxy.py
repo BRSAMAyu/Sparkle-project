@@ -61,6 +61,14 @@ class MasterySyncRequest(BaseModel):
     reason: str = "offline_sync"
 
 
+class UpdateNodeMasteryRequest(BaseModel):
+    mastery: int | None = Field(None, ge=0, le=100)
+    mastery_delta: float | None = Field(None, ge=-100, le=100)
+    reason: str = "manual_update"
+    source: str | None = None
+    version: datetime | None = None
+
+
 @router.post("/sync/mastery")
 async def sync_node_mastery(
     request: MasterySyncRequest,
@@ -81,6 +89,44 @@ async def sync_node_mastery(
 
     if not result.get("success"):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=result.get("reason", "conflict"))
+
+    return result
+
+
+@router.post("/nodes/{node_id}/update-mastery")
+async def update_node_mastery(
+    node_id: UUID,
+    request: UpdateNodeMasteryRequest,
+    user_id: str = Depends(get_current_user_id),
+    galaxy_service: GalaxyService = Depends(get_galaxy_service),
+):
+    """Explicit REST entrypoint for node mastery updates used by Galaxy UI flows."""
+    if request.mastery is None and request.mastery_delta is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Either mastery or mastery_delta is required",
+        )
+
+    target_mastery = request.mastery
+    if target_mastery is None:
+        current_status = await galaxy_service.retrieval._get_user_status(UUID(user_id), node_id)
+        current_mastery = float(current_status.mastery_score or 0) if current_status else 0.0
+        delta = float(request.mastery_delta or 0.0)
+        target_mastery = max(0, min(100, int(round(current_mastery + delta))))
+
+    result = await galaxy_service.update_node_mastery(
+        user_id=UUID(user_id),
+        node_id=node_id,
+        new_mastery=target_mastery,
+        reason=request.reason if request.reason != "manual_update" else (request.source or request.reason),
+        version=request.version,
+    )
+
+    if not result.get("success"):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=result.get("reason", "conflict"),
+        )
 
     return result
 

@@ -1,8 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
@@ -259,7 +259,7 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
               icon: Icons.grid_view,
               isActive: _viewMode == AchievementViewMode.grid,
               onTap: () {
-                HapticFeedback.selectionClick();
+                unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
                 setState(() => _viewMode = AchievementViewMode.grid);
               },
             ),
@@ -267,7 +267,7 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
               icon: Icons.view_list,
               isActive: _viewMode == AchievementViewMode.list,
               onTap: () {
-                HapticFeedback.selectionClick();
+                unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
                 setState(() => _viewMode = AchievementViewMode.list);
               },
             ),
@@ -809,7 +809,7 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
   }
 
   void _selectCategory(String category, AppLocalizations l10n) {
-    HapticFeedback.selectionClick();
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
     AchievementStatus? status;
 
     if (category == l10n.achievementAll) {
@@ -1511,7 +1511,7 @@ class _AchievementFilterSheetState extends State<_AchievementFilterSheet> {
                 isSelected,
                 accentColor: RarityColorProvider.getColor(rarity),
                 onTap: () {
-                  HapticFeedback.selectionClick();
+                  unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
                   setState(() {
                     _options = _options.copyWith(
                       rarity: _options.rarity == rarity ? null : rarity,
@@ -1548,7 +1548,7 @@ class _AchievementFilterSheetState extends State<_AchievementFilterSheet> {
                 _getStatusDisplayName(status, l10n),
                 isSelected,
                 onTap: () {
-                  HapticFeedback.selectionClick();
+                  unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
                   setState(() {
                     if (status == AchievementStatus.all) {
                       _options = _options.copyWith(status: null);

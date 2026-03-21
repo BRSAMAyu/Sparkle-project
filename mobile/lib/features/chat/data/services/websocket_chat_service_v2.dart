@@ -944,6 +944,16 @@ typedef WebSocketChannelFactory = WebSocketChannel Function(
 
 /// WebSocket 聊天服务 V2（完整的连接复用和状态管理）
 class WebSocketChatServiceV2 with WidgetsBindingObserver {
+  static const List<Duration> _reconnectSchedule = <Duration>[
+    Duration(milliseconds: 800),
+    Duration(milliseconds: 1200),
+    Duration(milliseconds: 2200),
+    Duration(milliseconds: 4200),
+    Duration(milliseconds: 8200),
+    Duration(milliseconds: 12200),
+  ];
+  static const int _maxReconnectAttempts = 6;
+
   WebSocketChatServiceV2({
     required ProviderContainer container,
     String? baseUrl,
@@ -993,7 +1003,6 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
 
   // 重连机制
   int _reconnectAttempts = 0;
-  static const int _maxReconnectAttempts = 5;
   Timer? _reconnectTimer;
 
   // 心跳保活
@@ -1715,13 +1724,11 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     _reconnectAttempts++;
     _updateConnectionState(WsConnectionState.reconnecting);
 
-    // 指数退避带上限 (最大 60 秒)
-    final backoff = math.min(
-      math.pow(2, _reconnectAttempts).toInt(),
-      60, // 从 32s 提升到 60s 上限
-    );
-    final jitter = math.Random().nextInt(1000);
-    final delayMs = (backoff * 1000) + jitter;
+    final baseDelay =
+        _reconnectSchedule[_reconnectAttempts.clamp(1, _maxReconnectAttempts) -
+            1];
+    final jitterMs = math.Random().nextInt(250);
+    final delayMs = baseDelay.inMilliseconds + jitterMs;
 
     _log(
       '🔄 Reconnecting in ${delayMs}ms '
@@ -1992,26 +1999,29 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (_disposed) return;
-    switch (state) {
-      case AppLifecycleState.paused:
-      case AppLifecycleState.inactive:
-      case AppLifecycleState.hidden:
-        _log('📱 App backgrounded — disconnecting WebSocket');
-        _stopHeartbeat();
-        _closeConnection();
-        _updateConnectionState(WsConnectionState.disconnected);
-      case AppLifecycleState.detached:
-        _log('📱 App detached — closing WebSocket');
-        _stopHeartbeat();
-        _closeConnection();
-        _updateConnectionState(WsConnectionState.disconnected);
-      case AppLifecycleState.resumed:
-        _log('📱 App resumed — checking WebSocket');
-        if (_connectionState == WsConnectionState.disconnected &&
-            _currentUserId != null) {
-          _reconnectAttempts = 0;
-          _establishConnection(_currentUserId!, _currentToken);
-        }
+    if (state == AppLifecycleState.inactive) {
+      _log('📱 App inactive — keeping socket warm');
+      _stopHeartbeat();
+      return;
+    }
+
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.detached) {
+      _log('📱 App backgrounded — disconnecting WebSocket');
+      _stopHeartbeat();
+      _closeConnection();
+      _updateConnectionState(WsConnectionState.disconnected);
+      return;
+    }
+
+    if (state == AppLifecycleState.resumed) {
+      _log('📱 App resumed — checking WebSocket');
+      if (_connectionState == WsConnectionState.disconnected &&
+          _currentUserId != null) {
+        _reconnectAttempts = 0;
+        _establishConnection(_currentUserId!, _currentToken);
+      }
     }
   }
 

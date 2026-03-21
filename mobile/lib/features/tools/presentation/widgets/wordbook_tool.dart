@@ -1,7 +1,7 @@
 // ignore_for_file: avoid_dynamic_calls, unawaited_futures, discarded_futures
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
@@ -87,7 +87,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
       if (!mounted) {
         return;
       }
-      HapticFeedback.lightImpact();
+      unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
     }
 
     if (_currentReviewIndex >= _sessionWords.length - 1) {

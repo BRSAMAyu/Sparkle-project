@@ -1,5 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -55,7 +57,7 @@ class _ExitConfirmationDialogState extends State<ExitConfirmationDialog>
   }
 
   void _nextStep() {
-    HapticFeedback.lightImpact();
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));
     if (_currentStep == ExitStep.third) {
       widget.onConfirmExit();
     } else {
@@ -66,7 +68,7 @@ class _ExitConfirmationDialogState extends State<ExitConfirmationDialog>
   }
 
   void _cancel() {
-    HapticFeedback.lightImpact();
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));
     widget.onCancel();
   }
 

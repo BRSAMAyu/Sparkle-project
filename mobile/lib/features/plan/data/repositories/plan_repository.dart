@@ -212,6 +212,46 @@ class PlanRepository {
   Future<PlanModel> deactivatePlan(String id) async =>
       _updateActivation(id, false);
 
+  Future<void> setPrimaryPlan(String id) async {
+    if (DemoDataService.isDemoMode) {
+      final demoPlans = DemoDataService().demoPlans;
+      for (var i = 0; i < demoPlans.length; i++) {
+        final existing = demoPlans[i];
+        demoPlans[i] = PlanModel(
+          id: existing.id,
+          userId: existing.userId,
+          name: existing.name,
+          type: existing.type,
+          dailyAvailableMinutes: existing.dailyAvailableMinutes,
+          masteryLevel: existing.masteryLevel,
+          progress: existing.progress,
+          isActive: existing.isActive,
+          createdAt: existing.createdAt,
+          updatedAt: DateTime.now(),
+          description: existing.description,
+          targetDate: existing.targetDate,
+          subject: existing.subject,
+          totalEstimatedHours: existing.totalEstimatedHours,
+          tasks: existing.tasks,
+          source: existing.source,
+          sourceMetadata: existing.sourceMetadata,
+          priority: existing.priority,
+          planStage: existing.planStage,
+          isPrimary: existing.id == id,
+        );
+      }
+      return;
+    }
+    try {
+      await _apiClient.post<dynamic>(
+        ApiEndpoints.planPrimary,
+        data: {'plan_id': id},
+      );
+    } on DioException catch (e) {
+      return _handleDioError(e, 'setPrimaryPlan');
+    }
+  }
+
   Future<List<TaskModel>> generateTasks(String planId, {int count = 5}) async {
     if (DemoDataService.isDemoMode) {
       final demoService = DemoDataService();

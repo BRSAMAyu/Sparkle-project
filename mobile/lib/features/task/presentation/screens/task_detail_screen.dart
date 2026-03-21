@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -17,8 +17,12 @@ import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/share_poster_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
+import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
+import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
+import 'package:sparkle/features/task/presentation/providers/subtask_provider.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
+import 'package:sparkle/features/task/presentation/widgets/subtask_list_widget.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 class TaskDetailScreen extends ConsumerWidget {
@@ -71,7 +75,13 @@ class _TaskDetailView extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildInfoSection(context),
+                          _buildInfoSection(context, ref),
+                          if ((task.userNote ?? '').trim().isNotEmpty) ...[
+                            const SizedBox(height: DS.spacing24),
+                            _buildNoteSection(context),
+                          ],
+                          const SizedBox(height: DS.spacing24),
+                          _buildSubtaskSection(context, ref),
                           const SizedBox(height: DS.spacing24),
                           Row(
                             children: [
@@ -105,6 +115,105 @@ class _TaskDetailView extends ConsumerWidget {
           _BottomActionBar(task: task),
         ],
       );
+
+  Widget _buildNoteSection(BuildContext context) => GraphiteCardSurface(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.notes_rounded, color: DS.primaryBase, size: 20),
+                const SizedBox(width: DS.spacing8),
+                Text(
+                  '任务说明',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: DS.fontWeightBold,
+                      ),
+                ),
+              ],
+            ),
+            const SizedBox(height: DS.spacing12),
+            Text(
+              task.userNote!.trim(),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: DS.textSecondary,
+                    height: 1.6,
+                  ),
+            ),
+          ],
+        ),
+      );
+
+  Widget _buildSubtaskSection(BuildContext context, WidgetRef ref) {
+    final subtaskState = ref.watch(subtaskNotifierProvider(task.id));
+    final shouldShowSection = task.subtasksTotal > 0 || subtaskState.total > 0;
+    if (!shouldShowSection) {
+      return const SizedBox.shrink();
+    }
+
+    return GraphiteCardSurface(
+      padding: EdgeInsets.zero,
+      child: ExpansionTile(
+        initiallyExpanded: true,
+        shape: const Border(),
+        tilePadding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing16,
+          vertical: DS.spacing12,
+        ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: DS.surfaceSecondary,
+                shape: BoxShape.circle,
+                border: Border.all(color: DS.borderSubtle),
+              ),
+              child: Icon(
+                Icons.checklist_rounded,
+                color: DS.primaryBase,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: DS.spacing12),
+            Expanded(
+              child: Text(
+                '子任务 (${subtaskState.completed}/${subtaskState.total})',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: DS.fontWeightBold,
+                    ),
+              ),
+            ),
+          ],
+        ),
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              DS.spacing16,
+              0,
+              DS.spacing16,
+              DS.spacing16,
+            ),
+            child: subtaskState.isLoading && subtaskState.total == 0
+                ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+                : subtaskState.error != null && subtaskState.total == 0
+                    ? Text(
+                        '子任务加载失败：${subtaskState.error}',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: DS.error,
+                            ),
+                      )
+                    : SubtaskListWidget(
+                        parentTaskId: task.id,
+                        onSubtaskToggle: (_) {},
+                        onSubtaskDelete: (_) {},
+                        readOnly: true,
+                      ),
+          ),
+        ],
+      ),
+    );
+  }
 
   LinearGradient _getBackgroundGradient(TaskType type) {
     switch (type) {
@@ -278,49 +387,135 @@ class _TaskDetailView extends ConsumerWidget {
     );
   }
 
-  Widget _buildInfoSection(BuildContext context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _InfoTileCard(
-            icon: Icons.timer_outlined,
-            title: context.l10n.taskEstimatedDuration,
-            content: Formatters.formatDuration(
-              Duration(minutes: task.estimatedMinutes),
-            ),
-            gradient: DS.primaryGradient,
-          ),
+  Widget _buildInfoSection(BuildContext context, WidgetRef ref) {
+    final planAsync = task.planId == null
+        ? null
+        : ref.watch(planDetailProvider(task.planId!));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (planAsync != null) ...[
+          _buildPlanContextCard(context, planAsync),
           const SizedBox(height: DS.spacing12),
-          Row(
-            children: [
-              Expanded(
-                child: _InfoTileCard(
-                  icon: Icons.star_border,
-                  title: context.l10n.taskDifficulty,
-                  content: '${task.difficulty} / 5',
-                  gradient: DS.warningGradient,
+        ],
+        _InfoTileCard(
+          icon: Icons.timer_outlined,
+          title: context.l10n.taskEstimatedDuration,
+          content: Formatters.formatDuration(
+            Duration(minutes: task.estimatedMinutes),
+          ),
+          gradient: DS.primaryGradient,
+        ),
+        const SizedBox(height: DS.spacing12),
+        Row(
+          children: [
+            Expanded(
+              child: _InfoTileCard(
+                icon: Icons.star_border,
+                title: context.l10n.taskDifficulty,
+                content: '${task.difficulty} / 5',
+                gradient: DS.warningGradient,
+              ),
+            ),
+            const SizedBox(width: DS.spacing12),
+            Expanded(
+              child: _InfoTileCard(
+                icon: Icons.local_fire_department,
+                title: context.l10n.taskEnergyCost,
+                content: '${task.energyCost} / 5',
+                gradient: DS.errorGradient,
+              ),
+            ),
+          ],
+        ),
+        if (task.dueDate != null) ...[
+          const SizedBox(height: DS.spacing12),
+          _InfoTileCard(
+            icon: Icons.calendar_today,
+            title: context.l10n.taskDeadline,
+            content: DateFormat.yMMMd().format(task.dueDate!),
+            gradient: DS.infoGradient,
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildPlanContextCard(
+    BuildContext context,
+    AsyncValue<PlanModel> planAsync,
+  ) =>
+      planAsync.when(
+        data: (plan) => GraphiteCardSurface(
+          child: InkWell(
+            borderRadius: DS.borderRadius16,
+            onTap: () => context.push('/plans/${plan.id}'),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    gradient: DS.primaryGradient,
+                    borderRadius: DS.borderRadius12,
+                  ),
+                  child: const Icon(
+                    Icons.route_rounded,
+                    color: Colors.white,
+                    size: 18,
+                  ),
                 ),
+                const SizedBox(width: DS.spacing12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '所属计划',
+                        style:
+                            Theme.of(context).textTheme.labelMedium?.copyWith(
+                                  color: DS.textSecondary,
+                                  fontWeight: DS.fontWeightMedium,
+                                ),
+                      ),
+                      const SizedBox(height: DS.spacing4),
+                      Text(
+                        plan.name,
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: DS.fontWeightBold,
+                                ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: DS.textSecondary,
+                ),
+              ],
+            ),
+          ),
+        ),
+        loading: () => GraphiteCardSurface(
+          child: Row(
+            children: [
+              const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
               ),
               const SizedBox(width: DS.spacing12),
-              Expanded(
-                child: _InfoTileCard(
-                  icon: Icons.local_fire_department,
-                  title: context.l10n.taskEnergyCost,
-                  content: '${task.energyCost} / 5',
-                  gradient: DS.errorGradient,
-                ),
+              Text(
+                '正在加载所属计划...',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: DS.textSecondary,
+                    ),
               ),
             ],
           ),
-          if (task.dueDate != null) ...[
-            const SizedBox(height: DS.spacing12),
-            _InfoTileCard(
-              icon: Icons.calendar_today,
-              title: context.l10n.taskDeadline,
-              content: DateFormat.yMMMd().format(task.dueDate!),
-              gradient: DS.infoGradient,
-            ),
-          ],
-        ],
+        ),
+        error: (_, __) => const SizedBox.shrink(),
       );
 
   Widget _buildGuideSection(BuildContext context) => Container(
@@ -571,9 +766,11 @@ class _BottomActionBar extends ConsumerWidget {
                     text: context.l10n.commonEdit,
                     icon: Icons.edit_outlined,
                     onPressed: () {
-                      HapticFeedback.mediumImpact();
+                      unawaited(
+                        SensoryFeedbackService.emit(SensoryFeedbackEvent.tap),
+                      );
                       // TODO: 需要创建任务编辑页面，暂时导航到创建页面
-                      context.push('/tasks/new');
+                      unawaited(context.push('/tasks/new'));
                     },
                   ),
                 ),
@@ -584,13 +781,16 @@ class _BottomActionBar extends ConsumerWidget {
                     text: context.l10n.taskStart,
                     icon: Icons.play_arrow_rounded,
                     onPressed: () {
-                      HapticFeedback.heavyImpact();
+                      unawaited(
+                        SensoryFeedbackService.emit(
+                            SensoryFeedbackEvent.confirm),
+                      );
                       ref.read(activeTaskProvider.notifier).state = task;
                       // P0-1: Auto-switch plan context when starting task
                       ref
                           .read(activePlanProvider.notifier)
                           .selectFromTaskPlanId(task.planId);
-                      context.push('/tasks/${task.id}/execute');
+                      unawaited(context.push('/tasks/${task.id}/execute'));
                     },
                   ),
                 ),
@@ -608,40 +808,51 @@ class _BottomActionBar extends ConsumerWidget {
                     size: 40,
                     icon: Icon(Icons.delete_outline, color: DS.error),
                     onPressed: () {
-                      HapticFeedback.mediumImpact();
-                      showSensoryDialog<void>(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          shape: const RoundedRectangleBorder(
-                            borderRadius: DS.borderRadius20,
+                      unawaited(
+                        SensoryFeedbackService.emit(
+                            SensoryFeedbackEvent.dialogOpen),
+                      );
+                      unawaited(
+                        showSensoryDialog<void>(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: DS.borderRadius20,
+                            ),
+                            title: Text(
+                              context.l10n.taskDeleteTitle,
+                              style: const TextStyle(
+                                fontWeight: DS.fontWeightBold,
+                              ),
+                            ),
+                            content: Text(context.l10n.taskDeleteConfirm),
+                            actions: [
+                              CustomButton.text(
+                                text: context.l10n.cancel,
+                                onPressed: () => Navigator.of(ctx).pop(),
+                              ),
+                              CustomButton.primary(
+                                text: context.l10n.commonDelete,
+                                icon: Icons.delete_rounded,
+                                onPressed: () {
+                                  unawaited(
+                                    SensoryFeedbackService.emit(
+                                      SensoryFeedbackEvent.error,
+                                    ),
+                                  );
+                                  Navigator.of(ctx).pop();
+                                  unawaited(
+                                    ref
+                                        .read(taskListProvider.notifier)
+                                        .deleteTask(task.id),
+                                  );
+                                  context.pop();
+                                },
+                                customGradient: DS.errorGradient,
+                                size: CustomButtonSize.small,
+                              ),
+                            ],
                           ),
-                          title: Text(
-                            context.l10n.taskDeleteTitle,
-                            style: const TextStyle(
-                              fontWeight: DS.fontWeightBold,
-                            ),
-                          ),
-                          content: Text(context.l10n.taskDeleteConfirm),
-                          actions: [
-                            CustomButton.text(
-                              text: context.l10n.cancel,
-                              onPressed: () => Navigator.of(ctx).pop(),
-                            ),
-                            CustomButton.primary(
-                              text: context.l10n.commonDelete,
-                              icon: Icons.delete_rounded,
-                              onPressed: () {
-                                HapticFeedback.heavyImpact();
-                                Navigator.of(ctx).pop();
-                                ref
-                                    .read(taskListProvider.notifier)
-                                    .deleteTask(task.id);
-                                context.pop();
-                              },
-                              customGradient: DS.errorGradient,
-                              size: CustomButtonSize.small,
-                            ),
-                          ],
                         ),
                       );
                     },

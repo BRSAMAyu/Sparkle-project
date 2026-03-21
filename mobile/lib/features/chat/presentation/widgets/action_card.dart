@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/motion.dart';
@@ -290,11 +290,15 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       onTapCancel: isPressable ? () => _pressController.reverse() : null,
       onTap: supportsTapToggle
           ? () {
-              unawaited(HapticFeedback.selectionClick());
+              unawaited(
+                SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+              );
               toggleDetails();
             }
           : hasAction
-              ? HapticFeedback.selectionClick
+              ? () => unawaited(
+                    SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+                  )
               : null,
       child: SparkleMotion.pressScale(
         animation: _pressController,

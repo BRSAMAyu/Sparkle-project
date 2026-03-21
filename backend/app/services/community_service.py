@@ -565,7 +565,8 @@ class GroupService:
             'updated_at': group.updated_at,
             'member_count': member_count,
             'my_role': my_role,
-            'days_remaining': days_remaining
+            'days_remaining': days_remaining,
+            'announcement': group.announcement,
         }
 
     @staticmethod

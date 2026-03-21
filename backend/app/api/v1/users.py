@@ -17,6 +17,7 @@ from app.db.session import get_db
 from app.models.auth_security import AuthAuditAction, AuthAuditLog, UserSession
 from app.models.user import PushPreference, User, UserStatus
 from app.schemas.user import (
+    AvatarStatus,
     AuthAuditLogInfo,
     DeleteAccountRequest,
     LinkSocialRequest,
@@ -161,6 +162,11 @@ async def update_me(
             raise HTTPException(status_code=400, detail="Email already registered")
         current_user.email = obj_in.email
         current_user.email_verified = False
+
+    if obj_in.avatar_url is not None:
+        current_user.avatar_url = obj_in.avatar_url
+        current_user.pending_avatar_url = None
+        current_user.avatar_status = AvatarStatus.APPROVED
 
     pref_updates = {}
     if obj_in.depth_preference is not None:

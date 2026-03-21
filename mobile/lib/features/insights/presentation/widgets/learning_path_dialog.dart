@@ -313,6 +313,11 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              _LearningPathNodeSummary(
+                node: node,
+                relatedTasksFuture: _loadRelatedTasks(node.id),
+              ),
+              const SizedBox(height: DS.md),
               SparkleButton.primary(
                 label: '查看详情',
                 icon: const Icon(Icons.open_in_new),
@@ -350,6 +355,15 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
         ),
       ),
     );
+  }
+
+  Future<List<TaskModel>> _loadRelatedTasks(String nodeId) async {
+    final response = await ref.read(taskRepositoryProvider).getTasks(
+          pageSize: 50,
+        );
+    return response.items
+        .where((task) => task.knowledgeNodeId == nodeId)
+        .toList(growable: false);
   }
 
   void _handleOpenNode(
@@ -518,6 +532,146 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
         return null;
     }
   }
+}
+
+class _LearningPathNodeSummary extends StatelessWidget {
+  const _LearningPathNodeSummary({
+    required this.node,
+    required this.relatedTasksFuture,
+  });
+
+  final LearningPathNode node;
+  final Future<List<TaskModel>> relatedTasksFuture;
+
+  @override
+  Widget build(BuildContext context) => GraphiteCardSurface(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Wrap(
+              spacing: DS.sm,
+              runSpacing: DS.xs,
+              children: [
+                _MetaChip(
+                  icon: Icons.radio_button_checked_rounded,
+                  label: _LearningPathDialogState._statusLabel(node.status),
+                ),
+                if (node.isTarget)
+                  const _MetaChip(
+                    icon: Icons.flag_rounded,
+                    label: '目标节点',
+                  ),
+                if (node.isOptional)
+                  const _MetaChip(
+                    icon: Icons.extension_rounded,
+                    label: '可选拓展',
+                  ),
+                if (_LearningPathDialogState._relationLabel(node.relationType) !=
+                    null)
+                  _MetaChip(
+                    icon: Icons.hub_rounded,
+                    label: _LearningPathDialogState._relationLabel(
+                      node.relationType,
+                    )!,
+                  ),
+                if (_LearningPathDialogState._sourceLabel(node.sourceType) != null)
+                  _MetaChip(
+                    icon: Icons.auto_awesome_rounded,
+                    label: _LearningPathDialogState._sourceLabel(
+                      node.sourceType,
+                    )!,
+                  ),
+              ],
+            ),
+            const SizedBox(height: DS.md),
+            Text(
+              node.isTarget
+                  ? '这是当前学习路径的目标节点。'
+                  : '你可以围绕这个节点单独建任务，或把它并入学习计划。',
+              style: DS.bodyMedium.copyWith(color: DS.textSecondary),
+            ),
+            const SizedBox(height: DS.md),
+            FutureBuilder<List<TaskModel>>(
+              future: relatedTasksFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Text(
+                    '正在加载关联任务...',
+                    style: DS.bodySmall.copyWith(color: DS.textTertiary),
+                  );
+                }
+
+                final tasks = snapshot.data ?? const <TaskModel>[];
+                if (tasks.isEmpty) {
+                  return Text(
+                    '当前还没有关联任务。',
+                    style: DS.bodySmall.copyWith(color: DS.textTertiary),
+                  );
+                }
+
+                final visible = tasks.take(3).toList(growable: false);
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '关联任务',
+                      style: DS.labelLarge.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: DS.xs),
+                    ...visible.map(
+                      (task) => Padding(
+                        padding: const EdgeInsets.only(bottom: DS.xs),
+                        child: Text(
+                          '• ${task.title}',
+                          style: DS.bodySmall.copyWith(
+                            color: DS.textSecondary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      );
+}
+
+class _MetaChip extends StatelessWidget {
+  const _MetaChip({
+    required this.icon,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.sm,
+          vertical: DS.spacing6,
+        ),
+        decoration: BoxDecoration(
+          color: DS.surfaceSecondary,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: DS.borderSubtle),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: DS.textSecondary),
+            const SizedBox(width: DS.xs),
+            Text(
+              label,
+              style: DS.labelSmall.copyWith(color: DS.textSecondary),
+            ),
+          ],
+        ),
+      );
 }
 
 class _LearningPathInlineFeedback extends StatelessWidget {

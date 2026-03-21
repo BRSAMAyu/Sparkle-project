@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/components/atoms/task_pill.dart';
@@ -107,7 +107,7 @@ class _TaskCardState extends ConsumerState<TaskCard>
             type: MaterialType.transparency,
             child: GestureDetector(
               onTapDown: (_) {
-                unawaited(HapticFeedback.lightImpact());
+                unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));
                 if (mounted) unawaited(_controller.forward());
               },
               onTapUp: (_) {

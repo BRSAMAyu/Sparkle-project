@@ -1,8 +1,11 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/bgm_service.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/widgets/bgm_scope.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/rarity_badge.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart'
     as chat;
@@ -168,50 +171,54 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
   }
 
   void _startRarityAnimations() {
+    _emitRarityFeedback();
+
     switch (widget.event.rarity) {
       case AchievementRarity.common:
         // 简单淡入，无特殊效果
         break;
       case AchievementRarity.rare:
-        // 金色光晕 + 缓慢旋转
+        // 柔和光晕，轻量反馈
         _glowController.repeat(reverse: true);
+        break;
       case AchievementRarity.epic:
-        // 紫色脉动光圈 + 扩散波纹
+        // 更明显的脉动和粒子
         _glowController.repeat(reverse: true);
         _particleController.repeat();
+        break;
       case AchievementRarity.legendary:
-        // 彩虹粒子爆炸 + 屏幕震动效果
+        // 最强烈的旋转、粒子与光晕
         _rotateController.repeat();
         _particleController.repeat();
         _glowController.repeat(reverse: true);
-
-        // 屏幕震动
-        if (mounted) {
-          Future.delayed(const Duration(milliseconds: 300), () {
-            if (mounted) {
-              _triggerScreenShake();
-            }
-          });
-        }
+        break;
     }
   }
 
-  void _triggerScreenShake() {
-    // 震动反馈
+  void _emitRarityFeedback() {
     switch (widget.event.rarity) {
       case AchievementRarity.common:
-        // 普通成就无需震动，或仅使用极轻微震动
+        unawaited(
+          SensoryFeedbackService.emit(SensoryFeedbackEvent.achievementCommon),
+        );
         break;
       case AchievementRarity.rare:
-        HapticFeedback.lightImpact();
+        unawaited(
+          SensoryFeedbackService.emit(SensoryFeedbackEvent.achievementRare),
+        );
+        break;
       case AchievementRarity.epic:
-        HapticFeedback.mediumImpact();
+        unawaited(
+          SensoryFeedbackService.emit(SensoryFeedbackEvent.achievementEpic),
+        );
+        break;
       case AchievementRarity.legendary:
-        HapticFeedback.heavyImpact();
-        // 传说级额外震动
-        Future.delayed(const Duration(milliseconds: 200), () {
-          if (mounted) HapticFeedback.heavyImpact();
-        });
+        unawaited(
+          SensoryFeedbackService.emit(
+            SensoryFeedbackEvent.achievementLegendary,
+          ),
+        );
+        break;
     }
   }
 
@@ -228,28 +235,32 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
   Widget build(BuildContext context) {
     final rarity = widget.event.rarity;
 
-    return Dialog(
-      backgroundColor: DS.overlay30.withValues(alpha: 0),
-      elevation: 0,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // 背景特效
-          if (rarity != AchievementRarity.common) _buildBackgroundEffects(),
+    return BgmScope(
+      track: BgmTrack.celebration,
+      priority: BgmPriority.stage,
+      child: Dialog(
+        backgroundColor: DS.overlay30.withValues(alpha: 0),
+        elevation: 0,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // 背景特效
+            if (rarity != AchievementRarity.common) _buildBackgroundEffects(),
 
-          // 连击横幅 (P1功能 - 成就连击反馈)
-          if (widget.comboCount != null && widget.comboCount! > 1)
-            _buildComboBanner(),
+            // 连击横幅 (P1功能 - 成就连击反馈)
+            if (widget.comboCount != null && widget.comboCount! > 1)
+              _buildComboBanner(),
 
-          // 主内容
-          _buildContent(),
+            // 主内容
+            _buildContent(),
 
-          // 粒子效果
-          if (rarity == AchievementRarity.rare ||
-              rarity == AchievementRarity.epic ||
-              rarity == AchievementRarity.legendary)
-            _buildParticleOverlay(),
-        ],
+            // 粒子效果
+            if (rarity == AchievementRarity.rare ||
+                rarity == AchievementRarity.epic ||
+                rarity == AchievementRarity.legendary)
+              _buildParticleOverlay(),
+          ],
+        ),
       ),
     );
   }

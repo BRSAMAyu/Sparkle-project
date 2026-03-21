@@ -12,7 +12,7 @@ from uuid import UUID
 from google.protobuf import json_format
 from google.api import annotations_pb2  # noqa: F401
 from loguru import logger
-from sqlalchemy import and_, desc, select
+from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import cache_service
@@ -78,6 +78,7 @@ class TaskService:
             due_date=obj_in.due_date,
             knowledge_node_id=obj_in.knowledge_node_id,
             tool_result_id=obj_in.tool_result_id,
+            order_index=await TaskService._next_top_order_index(db, user_id),
             status=TaskStatus.PENDING,
         )
         db.add(db_obj)
@@ -94,6 +95,60 @@ class TaskService:
                 logger.warning(f"Failed to sync task creation with plan state: {e}")
 
         return db_obj
+
+    @staticmethod
+    async def _next_top_order_index(db: AsyncSession, user_id: UUID) -> int:
+        """Allocate a new top-of-list order index while leaving gaps for reordering."""
+        min_query = select(func.min(Task.order_index)).where(Task.user_id == user_id)
+        min_result = await db.execute(min_query)
+        current_min = min_result.scalar_one_or_none()
+        if current_min is None:
+            return 1000
+        return int(current_min) - 1000
+
+    @staticmethod
+    async def reorder_tasks(
+        db: AsyncSession,
+        *,
+        user_id: UUID,
+        ordered_task_ids: list[UUID],
+    ) -> list[Task]:
+        """Persist the display order for the provided tasks."""
+        unique_ids: list[UUID] = list(dict.fromkeys(ordered_task_ids))
+        if not unique_ids:
+            return []
+
+        result = await db.execute(
+            select(Task).where(
+                and_(
+                    Task.user_id == user_id,
+                    Task.id.in_(unique_ids),
+                )
+            )
+        )
+        tasks = result.scalars().all()
+        task_map = {task.id: task for task in tasks}
+
+        if len(task_map) != len(unique_ids):
+            missing_ids = [str(task_id) for task_id in unique_ids if task_id not in task_map]
+            raise ValueError(f"Tasks not found or not owned by user: {', '.join(missing_ids)}")
+
+        for index, task_id in enumerate(unique_ids):
+            task_map[task_id].order_index = (index + 1) * 1000
+
+        await db.commit()
+
+        refreshed = await db.execute(
+            select(Task)
+            .where(
+                and_(
+                    Task.user_id == user_id,
+                    Task.id.in_(unique_ids),
+                )
+            )
+            .order_by(Task.order_index.asc(), desc(Task.created_at))
+        )
+        return refreshed.scalars().all()
 
     @staticmethod
     async def update(
@@ -415,8 +470,18 @@ class TaskService:
     @staticmethod
     async def delete(db: AsyncSession, db_obj: Task) -> None:
         """Delete task"""
+        plan_id = db_obj.plan_id
+        user_id = db_obj.user_id
         await db.delete(db_obj)
         await db.commit()
+
+        if plan_id:
+            try:
+                from app.services.plan_service import PlanService
+
+                await PlanService.update_progress(db, plan_id, user_id)
+            except Exception as e:
+                logger.warning(f"Failed to update plan progress after task deletion: {e}")
 
     @staticmethod
     async def confirm_tasks_by_tool_result(

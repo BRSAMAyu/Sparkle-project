@@ -126,6 +126,29 @@ class UserRepository {
     );
   }
 
+  Future<Map<String, dynamic>> fetchOnboardingPreview(
+    Map<String, dynamic> payload,
+  ) async {
+    final goal = payload['learning_goal']?.toString().trim() ?? '';
+    if (DemoDataService.isDemoMode) {
+      return {
+        'message': goal.isEmpty
+            ? '先告诉我你现在最想推进的学习目标，我会立刻帮你判断难度并给出第一版起步建议。'
+            : '我已经理解你想先推进「$goal」。接下来我会先补齐画像，再给你第一版学习路径和任务建议。',
+        'source': 'demo_fallback',
+        'fallback_used': true,
+      };
+    }
+    final response = await _apiClient.post<Map<String, dynamic>>(
+      '/profile/onboarding/preview',
+      data: payload,
+    );
+    return ApiResponseParser.unwrapMap(
+      response.data,
+      action: 'fetchOnboardingPreview',
+    );
+  }
+
   Future<void> submitProfileCorrection(Map<String, dynamic> payload) async {
     if (DemoDataService.isDemoMode) {
       return;

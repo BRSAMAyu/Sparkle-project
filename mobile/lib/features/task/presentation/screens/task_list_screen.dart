@@ -1,5 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/animations/staggered_responsive_grid.dart';
@@ -13,9 +15,14 @@ import 'package:sparkle/features/task/presentation/widgets/task_card.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 enum TaskFilterOptions { all, pending, inProgress, completed }
+enum TaskPriorityFilterOptions { all, high, medium, low }
 
 final taskFilterProvider =
     StateProvider<TaskFilterOptions>((ref) => TaskFilterOptions.all);
+final taskPriorityFilterProvider =
+    StateProvider<TaskPriorityFilterOptions>(
+      (ref) => TaskPriorityFilterOptions.all,
+    );
 
 class TaskListScreen extends ConsumerStatefulWidget {
   const TaskListScreen({super.key});
@@ -26,6 +33,7 @@ class TaskListScreen extends ConsumerStatefulWidget {
 
 class _TaskListScreenState extends ConsumerState<TaskListScreen> {
   bool _isSearching = false;
+  bool _isReorderMode = false;
   final TextEditingController _searchController = TextEditingController();
 
   @override
@@ -38,9 +46,15 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
   Widget build(BuildContext context) {
     final taskListState = ref.watch(taskListProvider);
     final filter = ref.watch(taskFilterProvider);
+    final priorityFilter = ref.watch(taskPriorityFilterProvider);
+    final canReorder = !_isSearching &&
+        filter == TaskFilterOptions.all &&
+        priorityFilter == TaskPriorityFilterOptions.all &&
+        _searchController.text.isEmpty;
 
     // Filter tasks based on chips and search query
     var tasks = _filterTasks(taskListState.tasks, filter);
+    tasks = _filterTasksByPriority(tasks, priorityFilter);
     if (_searchController.text.isNotEmpty) {
       tasks = tasks
           .where(
@@ -111,6 +125,58 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                 ),
         ),
         actions: [
+          PopupMenuButton<TaskPriorityFilterOptions>(
+            tooltip: '优先级筛选',
+            initialValue: priorityFilter,
+            onSelected: (value) {
+              ref.read(taskPriorityFilterProvider.notifier).state = value;
+            },
+            itemBuilder: (context) => TaskPriorityFilterOptions.values
+                .map(
+                  (filter) => PopupMenuItem(
+                    value: filter,
+                    child: Text(_getPriorityFilterLabel(filter)),
+                  ),
+                )
+                .toList(),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: DS.spacing8),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.filter_alt_rounded,
+                    size: DS.iconSizeBase,
+                    color: DS.textPrimary,
+                  ),
+                  if (priorityFilter != TaskPriorityFilterOptions.all) ...[
+                    const SizedBox(width: DS.spacing4),
+                    Text(
+                      _getPriorityFilterShortLabel(priorityFilter),
+                      style: TextStyle(
+                        color: DS.textPrimary,
+                        fontSize: DS.fontSizeXs,
+                        fontWeight: DS.fontWeightBold,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          if (canReorder || _isReorderMode)
+            SparkleIconButton(
+              variant: ButtonVariant.ghost,
+              icon: Icon(
+                _isReorderMode ? Icons.check_rounded : Icons.reorder_rounded,
+                size: DS.iconSizeBase,
+                color: DS.textPrimary,
+              ),
+              onPressed: () {
+                setState(() {
+                  _isReorderMode = !_isReorderMode;
+                });
+              },
+            ),
           SparkleIconButton(
             variant: ButtonVariant.ghost,
             icon: Icon(
@@ -130,7 +196,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
       floatingActionButton: SparkleIconButton(
         size: 60,
         onPressed: () {
-          HapticFeedback.mediumImpact();
+          unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
           context.push('/tasks/new');
         },
         icon: Icon(
@@ -170,8 +236,35 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                     ),
                   ),
                 ),
+              if (!canReorder && !_isSearching && _isReorderMode)
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.fromLTRB(
+                    DS.spacing16,
+                    DS.spacing12,
+                    DS.spacing16,
+                    0,
+                  ),
+                  padding: const EdgeInsets.all(DS.spacing12),
+                  decoration: BoxDecoration(
+                    color: DS.info.withValues(alpha: 0.08),
+                    borderRadius: DS.borderRadius12,
+                    border: Border.all(
+                      color: DS.info.withValues(alpha: 0.24),
+                    ),
+                  ),
+                  child: Text(
+                    '拖拽排序仅在“全部任务”列表中可用。',
+                  ),
+                ),
               Expanded(
-                child: _buildTaskList(context, taskListState, tasks, ref),
+                child: _buildTaskList(
+                  context,
+                  taskListState,
+                  tasks,
+                  ref,
+                  canReorder: canReorder,
+                ),
               ),
             ],
           ),
@@ -184,8 +277,9 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
     BuildContext context,
     TaskListState state,
     List<TaskModel> tasks,
-    WidgetRef ref,
-  ) {
+    WidgetRef ref, {
+    required bool canReorder,
+  }) {
     if (state.isLoading && tasks.isEmpty) {
       return Center(
         child: LoadingIndicator.circular(
@@ -215,6 +309,68 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
           },
         );
       }
+    }
+
+    if (_isReorderMode && canReorder) {
+      return ReorderableListView.builder(
+        padding: EdgeInsets.fromLTRB(
+          DS.spacing12,
+          DS.spacing8,
+          DS.spacing12,
+          96,
+        ),
+        onReorder: (oldIndex, newIndex) async {
+          await ref.read(taskListProvider.notifier).reorderTasks(
+                oldIndex,
+                newIndex,
+              );
+        },
+        itemCount: tasks.length,
+        buildDefaultDragHandles: false,
+        itemBuilder: (context, index) {
+          final task = tasks[index];
+          return Container(
+            key: ValueKey('task-reorder-${task.id}'),
+            margin: const EdgeInsets.only(bottom: DS.spacing8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: TaskCard(
+                    task: task,
+                    compact: true,
+                    onTap: () => context.push('/tasks/${task.id}'),
+                    onStart: () {
+                      ref.read(taskListProvider.notifier).startTask(task.id);
+                    },
+                    onComplete: () {
+                      ref
+                          .read(taskListProvider.notifier)
+                          .completeTask(task.id, task.estimatedMinutes, null);
+                    },
+                  ),
+                ),
+                const SizedBox(width: DS.spacing8),
+                ReorderableDragStartListener(
+                  index: index,
+                  child: Container(
+                    margin: const EdgeInsets.only(top: DS.spacing12),
+                    padding: const EdgeInsets.all(DS.spacing8),
+                    decoration: BoxDecoration(
+                      color: DS.surfaceSecondary,
+                      borderRadius: DS.borderRadius12,
+                    ),
+                    child: Icon(
+                      Icons.drag_indicator_rounded,
+                      color: DS.textSecondary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      );
     }
 
     return StaggeredResponsiveGrid(
@@ -267,6 +423,48 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
         return tasks;
     }
   }
+
+  List<TaskModel> _filterTasksByPriority(
+    List<TaskModel> tasks,
+    TaskPriorityFilterOptions filter,
+  ) {
+    switch (filter) {
+      case TaskPriorityFilterOptions.high:
+        return tasks.where((t) => t.priority >= 4).toList();
+      case TaskPriorityFilterOptions.medium:
+        return tasks.where((t) => t.priority >= 2 && t.priority <= 3).toList();
+      case TaskPriorityFilterOptions.low:
+        return tasks.where((t) => t.priority <= 1).toList();
+      case TaskPriorityFilterOptions.all:
+        return tasks;
+    }
+  }
+
+  String _getPriorityFilterLabel(TaskPriorityFilterOptions filter) {
+    switch (filter) {
+      case TaskPriorityFilterOptions.all:
+        return '全部优先级';
+      case TaskPriorityFilterOptions.high:
+        return '高优先级';
+      case TaskPriorityFilterOptions.medium:
+        return '中优先级';
+      case TaskPriorityFilterOptions.low:
+        return '低优先级';
+    }
+  }
+
+  String _getPriorityFilterShortLabel(TaskPriorityFilterOptions filter) {
+    switch (filter) {
+      case TaskPriorityFilterOptions.high:
+        return '高';
+      case TaskPriorityFilterOptions.medium:
+        return '中';
+      case TaskPriorityFilterOptions.low:
+        return '低';
+      case TaskPriorityFilterOptions.all:
+        return '全部';
+    }
+  }
 }
 
 class _FilterChips extends ConsumerWidget {
@@ -295,7 +493,9 @@ class _FilterChips extends ConsumerWidget {
               padding: const EdgeInsets.only(right: DS.spacing8),
               child: GestureDetector(
                 onTap: () {
-                  HapticFeedback.selectionClick();
+                  unawaited(
+                    SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+                  );
                   ref.read(taskFilterProvider.notifier).state = filter;
                 },
                 child: AnimatedContainer(

@@ -24,6 +24,13 @@ class DailyDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final calendarNotifier = ref.watch(calendarProvider.notifier);
     final events = calendarNotifier.getEventsForDay(date);
+    final streakHistory = ref.watch(streakHistoryProvider);
+    final streakRecord = streakHistory.days.where((record) {
+      final day = record.day;
+      return day.year == date.year &&
+          day.month == date.month &&
+          day.day == date.day;
+    }).firstOrNull;
 
     // Filter tasks for this date locally (mock logic as we load all tasks)
     final allTasks = ref.watch(taskListProvider).tasks;
@@ -79,6 +86,17 @@ class DailyDetailScreen extends ConsumerWidget {
               // 2. Metrics Grid (Flame, Focus, Energy)
               _buildMetricsGrid(context, dashboardState),
               const SizedBox(height: DS.spacing20),
+
+              if (streakRecord != null) ...[
+                _buildSectionTitle(
+                  context,
+                  '打卡详情',
+                  Icons.local_fire_department_rounded,
+                ),
+                const SizedBox(height: DS.spacing10),
+                _buildCheckinSnapshot(context, streakRecord, dayTasks),
+                const SizedBox(height: DS.spacing20),
+              ],
 
               // 3. Active Plans Section (NEW)
               if (activePlans.isNotEmpty) ...[
@@ -222,6 +240,83 @@ class DailyDetailScreen extends ConsumerWidget {
           ),
         ),
       );
+
+  Widget _buildCheckinSnapshot(
+    BuildContext context,
+    StreakDayRecord record,
+    List<TaskModel> dayTasks,
+  ) {
+    final (title, description, color, icon) = switch (record.status) {
+      StreakDayStatus.active => (
+          '今日已形成有效打卡',
+          '已完成 ${dayTasks.where((task) => task.status == TaskStatus.completed).length} 个任务，连击记录已计入系统。',
+          DS.semanticSuccess,
+          Icons.local_fire_department_rounded,
+        ),
+      StreakDayStatus.frozen => (
+          '今日触发了连击保护',
+          '系统保留了连击，但这一天没有形成标准完成记录。',
+          DS.semanticWarning,
+          Icons.ac_unit_rounded,
+        ),
+      StreakDayStatus.missed => (
+          '今日没有形成打卡',
+          '任务与专注记录不足以计入当日连击。',
+          DS.textSecondary,
+          Icons.event_busy_rounded,
+        ),
+    };
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(DS.md),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.18)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(width: DS.spacing10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: color,
+                  ),
+                ),
+                const SizedBox(height: DS.spacing4),
+                Text(
+                  description,
+                  style: TextStyle(
+                    color: DS.textSecondary,
+                    height: 1.4,
+                  ),
+                ),
+                if (record.sourceEvent != null &&
+                    record.sourceEvent!.trim().isNotEmpty) ...[
+                  const SizedBox(height: DS.spacing6),
+                  Text(
+                    '来源事件：${record.sourceEvent}',
+                    style: TextStyle(
+                      color: DS.textTertiary,
+                      fontSize: DS.fontSizeXs,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   /// Build achievements in progress section
   Widget _buildAchievementsInProgress(

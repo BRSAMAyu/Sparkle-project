@@ -2,10 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/session_refresh_service.dart';
+import 'package:sparkle/core/services/view_storage_service.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
+import 'package:sparkle/features/chat/data/services/chat_cache_service.dart';
 import 'package:sparkle/features/user/data/models/account_security_model.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 
@@ -46,6 +49,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
   final Ref _ref;
   final AuthRepository _authRepository;
 
+  Future<void> _clearUserScopedLocalData() async {
+    await _ref.read(guestServiceProvider).clearGuestData();
+    await ChatCacheService().clearAllCache();
+    await ViewStorageService.instance.clearAllViewState();
+    await LocalDatabase().clearUserScopedData();
+  }
+
   Future<void> checkAuthStatus() async {
     state = state.copyWith(isLoading: true);
     try {
@@ -69,6 +79,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
             } catch (e) {
               debugPrint('⚠️ Guest reseed refresh skipped: $e');
             }
+          } else {
+            await _ref.read(guestServiceProvider).clearGuestData();
           }
           state = state.copyWith(
             isLoading: false,
@@ -105,6 +117,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await _ref
           .read(sharedPreferencesProvider)
           .setBool(_demoGuestModePreferenceKey, false);
+      await _ref.read(guestServiceProvider).clearGuestData();
       final user = await _authRepository.login(usernameOrEmail, password);
       state = state.copyWith(isAuthenticated: true, user: user);
       SessionRefreshService.refreshSessionBoundProviders(_ref);
@@ -129,6 +142,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await _ref
           .read(sharedPreferencesProvider)
           .setBool(_demoGuestModePreferenceKey, false);
+      await _ref.read(guestServiceProvider).clearGuestData();
       final user = await _authRepository.socialLogin(
         provider: provider,
         token: token,
@@ -162,6 +176,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await _ref
           .read(sharedPreferencesProvider)
           .setBool(_demoGuestModePreferenceKey, false);
+      await _ref.read(guestServiceProvider).clearGuestData();
       final user = await _authRepository.register(
         username,
         email,
@@ -232,6 +247,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       final user = await _authRepository.updateProfile(data);
       state = state.copyWith(user: user);
+      SessionRefreshService.refreshSessionBoundProviders(_ref);
     } catch (e) {
       state = state.copyWith(error: e.toString());
       rethrow;
@@ -245,6 +261,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       final user = await _authRepository.updateAvatar(filePath);
       state = state.copyWith(user: user);
+      SessionRefreshService.refreshSessionBoundProviders(_ref);
     } catch (e) {
       state = state.copyWith(error: e.toString());
       rethrow;
@@ -448,6 +465,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await _ref
           .read(sharedPreferencesProvider)
           .setBool(_demoGuestModePreferenceKey, false);
+      await _ref.read(guestServiceProvider).clearGuestData();
       state = state.copyWith(isAuthenticated: true, user: user);
       SessionRefreshService.refreshSessionBoundProviders(_ref);
     } catch (e) {
@@ -484,6 +502,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await _ref
           .read(sharedPreferencesProvider)
           .setBool(_demoGuestModePreferenceKey, false);
+      await _ref.read(guestServiceProvider).clearGuestData();
       state = state.copyWith(isAuthenticated: true, user: user);
       SessionRefreshService.refreshSessionBoundProviders(_ref);
     } catch (e) {
@@ -496,6 +515,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> logout() async {
     await _authRepository.logout();
+    await _clearUserScopedLocalData();
     await _ref
         .read(sharedPreferencesProvider)
         .setBool(_demoGuestModePreferenceKey, false);

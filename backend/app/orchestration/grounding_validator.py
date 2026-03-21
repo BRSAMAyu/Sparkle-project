@@ -55,6 +55,31 @@ class GroundingValidator:
     TASK_LIMIT_CHECK_TOOLS = {"create_task", "batch_create_tasks"}
     KNOWLEDGE_READINESS_THRESHOLD = 30.0
 
+    @staticmethod
+    def _should_bypass_confirmation(plan: ExecutablePlan, tool_call: Any) -> bool:
+        """Allow safe auto-execution for tightly scoped planning chains.
+
+        `generate_tasks_for_plan` is normally confirmation-gated because it can
+        create multiple tasks. In the standard AI planning flow, however, the
+        user has already explicitly asked the assistant to generate a plan and
+        the executable DAG is limited to `create_plan -> generate_tasks_for_plan`.
+        For this specific `langgraph` planning path we auto-execute so the chat
+        flow can produce real plan/task cards instead of stalling on HITL.
+        """
+        if getattr(tool_call, "name", "") != "generate_tasks_for_plan":
+            return False
+        if getattr(plan, "source", "") != "langgraph":
+            return False
+        if getattr(tool_call, "point_of_no_return", False):
+            return False
+
+        upstream_tools = {
+            getattr(candidate, "name", "")
+            for candidate in getattr(plan, "tool_calls", [])
+            if getattr(candidate, "id", None) in (getattr(tool_call, "depends_on", []) or [])
+        }
+        return "create_plan" in upstream_tools
+
     def __init__(self, redis_client=None):
         self.redis = redis_client
         self._allowlist: set[str] | None = None
@@ -154,6 +179,8 @@ class GroundingValidator:
         for tool_call in plan.tool_calls:
             tool = dynamic_tool_registry.get_tool(tool_call.name)
             if tool and getattr(tool, "requires_confirmation", False):
+                if self._should_bypass_confirmation(plan, tool_call):
+                    continue
                 requires_hitl = True
                 if f"confirm:{tool_call.name}" not in risk_flags:
                     risk_flags.append(f"confirm:{tool_call.name}")

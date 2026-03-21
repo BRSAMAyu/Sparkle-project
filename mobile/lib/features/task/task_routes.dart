@@ -1,7 +1,9 @@
 import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
+import 'package:sparkle/core/widgets/bgm_scope.dart';
 import 'package:sparkle/features/task/presentation/screens/task_create_screen.dart';
 import 'package:sparkle/features/task/presentation/screens/task_detail_screen.dart';
 import 'package:sparkle/features/task/presentation/screens/task_execution_screen.dart';
@@ -39,7 +41,10 @@ class TaskRoutes {
           parentNavigatorKey: navigatorKey,
           pageBuilder: (context, state) => _buildTransitionPage(
             state: state,
-            child: const TaskListScreen(),
+            child: const BgmScope(
+              track: BgmTrack.task,
+              child: TaskListScreen(),
+            ),
           ),
         ),
         // Task create (modal-like, full-screen)
@@ -49,7 +54,10 @@ class TaskRoutes {
           parentNavigatorKey: navigatorKey,
           pageBuilder: (context, state) => _buildTransitionPage(
             state: state,
-            child: const TaskCreateScreen(),
+            child: const BgmScope(
+              track: BgmTrack.task,
+              child: TaskCreateScreen(),
+            ),
             type: SharedAxisTransitionType.scaled,
           ),
         ),
@@ -63,7 +71,10 @@ class TaskRoutes {
             final taskId = state.pathParameters['id']!;
             return _buildTransitionPage(
               state: state,
-              child: TaskDetailScreen(taskId: taskId),
+              child: BgmScope(
+                track: BgmTrack.task,
+                child: TaskDetailScreen(taskId: taskId),
+              ),
             );
           },
         ),
@@ -74,7 +85,10 @@ class TaskRoutes {
           parentNavigatorKey: navigatorKey,
           pageBuilder: (context, state) => _buildTransitionPage(
             state: state,
-            child: const TaskExecutionScreen(),
+            child: const BgmScope(
+              track: BgmTrack.focus,
+              child: TaskExecutionScreen(),
+            ),
             type: SharedAxisTransitionType.scaled,
           ),
         ),

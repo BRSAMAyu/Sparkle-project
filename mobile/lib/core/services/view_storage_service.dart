@@ -67,6 +67,21 @@ class ViewStorageService {
     await _prefs.setInt(_buildVersionKey(namespace), version);
   }
 
+  /// Clear all persisted view state namespaces.
+  Future<void> clearAllViewState() async {
+    final keys = _prefs
+        .getKeys()
+        .where((key) => key.startsWith(_viewStatePrefix))
+        .toList();
+    for (final timer in _debounceTimers.values) {
+      timer.cancel();
+    }
+    _debounceTimers.clear();
+    for (final key in keys) {
+      await _prefs.remove(key);
+    }
+  }
+
   // ==================== Primitive Get/Set ====================
 
   /// Get a string value
