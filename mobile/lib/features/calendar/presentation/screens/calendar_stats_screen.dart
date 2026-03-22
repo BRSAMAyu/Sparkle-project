@@ -180,27 +180,36 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
             child: ContentConstraint(
               child: Column(
                 children: [
-                  _buildHeader(context),
-                  _buildViewSwitcher(),
+                  SparkleStaggerItem(
+                    index: 0,
+                    child: _buildHeader(context),
+                  ),
+                  SparkleStaggerItem(
+                    index: 1,
+                    child: _buildViewSwitcher(),
+                  ),
                   const SizedBox(height: 10),
                   Expanded(
-                    child: _viewMode == CalendarViewMode.year
-                        ? _buildYearView()
-                        : _viewMode == CalendarViewMode.insights
-                            ? _buildInsightsView()
-                            : Column(
-                                children: [
-                                  _buildTableCalendar(notifier),
-                                  Divider(color: DS.brandPrimary10),
-                                  Expanded(
-                                    child: _buildAgendaList(
-                                      selectedEvents,
-                                      selectedTasks,
-                                      notifier,
+                    child: SparkleStaggerItem(
+                      index: 2,
+                      child: _viewMode == CalendarViewMode.year
+                          ? _buildYearView()
+                          : _viewMode == CalendarViewMode.insights
+                              ? _buildInsightsView()
+                              : Column(
+                                  children: [
+                                    _buildTableCalendar(notifier),
+                                    Divider(color: DS.brandPrimary10),
+                                    Expanded(
+                                      child: _buildAgendaList(
+                                        selectedEvents,
+                                        selectedTasks,
+                                        notifier,
+                                      ),
                                     ),
-                                  ),
-                                ],
-                              ),
+                                  ],
+                                ),
+                    ),
                   ),
                 ],
               ),

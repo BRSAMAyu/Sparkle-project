@@ -1,9 +1,11 @@
 import 'package:animations/animations.dart';
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/experience/experience_profile.dart';
+import 'package:sparkle/core/navigation/sparkle_route_transition.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
-import 'package:sparkle/core/widgets/bgm_scope.dart';
+import 'package:sparkle/core/widgets/scene_audio_scope.dart';
 import 'package:sparkle/features/community/presentation/screens/accountability_detail_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/accountability_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/blocked_users_screen.dart';
@@ -21,23 +23,6 @@ import 'package:sparkle/features/community/presentation/screens/group_moderation
 import 'package:sparkle/features/community/presentation/screens/group_search_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/group_tasks_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/user_search_screen.dart';
-
-Page<dynamic> _buildTransitionPage({
-  required GoRouterState state,
-  required Widget child,
-  SharedAxisTransitionType type = SharedAxisTransitionType.horizontal,
-}) =>
-    CustomTransitionPage<void>(
-      key: state.pageKey,
-      child: child,
-      transitionsBuilder: (context, animation, secondaryAnimation, child) =>
-          SharedAxisTransition(
-        animation: animation,
-        secondaryAnimation: secondaryAnimation,
-        transitionType: type,
-        child: child,
-      ),
-    );
 
 class CommunityRoutes {
   // Route constants for deep linking and navigation
@@ -59,8 +44,7 @@ class CommunityRoutes {
   static const String favorites = '/community/favorites';
   static const String blockedUsers = '/community/blocked';
   static const String accountability = '/community/accountability';
-  static const String accountabilityDetail =
-      '/community/accountability/:id';
+  static const String accountabilityDetail = '/community/accountability/:id';
 
   static List<RouteBase> get routes => [
         // Friends list (detail page, full-screen)
@@ -68,11 +52,13 @@ class CommunityRoutes {
           path: friends,
           name: 'friends',
           parentNavigatorKey: navigatorKey,
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
-            child: const BgmScope(
-              track: BgmTrack.community,
-              child: FriendsScreen(),
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.socialWarm.audioPolicy(
+                trackOverride: BgmTrack.community,
+              ),
+              child: const FriendsScreen(),
             ),
           ),
         ),
@@ -81,11 +67,13 @@ class CommunityRoutes {
           path: friendsDiscover,
           name: 'friendsDiscover',
           parentNavigatorKey: navigatorKey,
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
-            child: const BgmScope(
-              track: BgmTrack.community,
-              child: FriendsScreen(),
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.socialWarm.audioPolicy(
+                trackOverride: BgmTrack.community,
+              ),
+              child: const FriendsScreen(),
             ),
           ),
         ),
@@ -94,11 +82,13 @@ class CommunityRoutes {
           path: userSearch,
           name: 'userSearch',
           parentNavigatorKey: navigatorKey,
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
-            child: const BgmScope(
-              track: BgmTrack.community,
-              child: UserSearchScreen(),
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.socialWarm.audioPolicy(
+                trackOverride: BgmTrack.community,
+              ),
+              child: const UserSearchScreen(),
             ),
           ),
         ),
@@ -110,10 +100,12 @@ class CommunityRoutes {
           pageBuilder: (context, state) {
             final userId = state.pathParameters['id']!;
             final name = state.uri.queryParameters['name'];
-            return _buildTransitionPage(
+            return buildSparkleTransitionPage(
               state: state,
-              child: BgmScope(
-                track: BgmTrack.community,
+              child: SceneAudioScope(
+                policy: ExperienceProfiles.socialWarm.audioPolicy(
+                  trackOverride: BgmTrack.community,
+                ),
                 child: FriendProfileScreen(userId: userId, displayName: name),
               ),
             );
@@ -124,11 +116,13 @@ class CommunityRoutes {
           path: groups,
           name: 'groups',
           parentNavigatorKey: navigatorKey,
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
-            child: const BgmScope(
-              track: BgmTrack.community,
-              child: GroupListScreen(),
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.socialWarm.audioPolicy(
+                trackOverride: BgmTrack.community,
+              ),
+              child: const GroupListScreen(),
             ),
           ),
         ),
@@ -137,11 +131,13 @@ class CommunityRoutes {
           path: groupsSearch,
           name: 'groupSearch',
           parentNavigatorKey: navigatorKey,
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
-            child: const BgmScope(
-              track: BgmTrack.community,
-              child: GroupSearchScreen(),
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.socialWarm.audioPolicy(
+                trackOverride: BgmTrack.community,
+              ),
+              child: const GroupSearchScreen(),
             ),
           ),
         ),
@@ -150,11 +146,13 @@ class CommunityRoutes {
           path: groupsDiscover,
           name: 'groupDiscover',
           parentNavigatorKey: navigatorKey,
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
-            child: const BgmScope(
-              track: BgmTrack.community,
-              child: GroupDiscoverScreen(),
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.socialWarm.audioPolicy(
+                trackOverride: BgmTrack.community,
+              ),
+              child: const GroupDiscoverScreen(),
             ),
           ),
         ),
@@ -163,11 +161,14 @@ class CommunityRoutes {
           path: groupsCreate,
           name: 'createGroup',
           parentNavigatorKey: navigatorKey,
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
-            child: const BgmScope(
-              track: BgmTrack.community,
-              child: CreateGroupScreen(),
+            motionToken: SparkleMotionToken.scene,
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.socialWarm.audioPolicy(
+                trackOverride: BgmTrack.community,
+              ),
+              child: const CreateGroupScreen(),
             ),
             type: SharedAxisTransitionType.scaled,
           ),
@@ -176,11 +177,14 @@ class CommunityRoutes {
           path: postsCreate,
           name: 'createPost',
           parentNavigatorKey: navigatorKey,
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
-            child: const BgmScope(
-              track: BgmTrack.community,
-              child: CreatePostScreen(),
+            motionToken: SparkleMotionToken.scene,
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.socialWarm.audioPolicy(
+                trackOverride: BgmTrack.community,
+              ),
+              child: const CreatePostScreen(),
             ),
             type: SharedAxisTransitionType.scaled,
           ),
@@ -193,10 +197,12 @@ class CommunityRoutes {
           pageBuilder: (context, state) {
             // id is required in path, so it won't be null
             final groupId = state.pathParameters['id']!;
-            return _buildTransitionPage(
+            return buildSparkleTransitionPage(
               state: state,
-              child: BgmScope(
-                track: BgmTrack.community,
+              child: SceneAudioScope(
+                policy: ExperienceProfiles.socialWarm.audioPolicy(
+                  trackOverride: BgmTrack.community,
+                ),
                 child: GroupDetailScreen(groupId: groupId),
               ),
             );
@@ -210,10 +216,12 @@ class CommunityRoutes {
           pageBuilder: (context, state) {
             // id is required in path, so it won't be null
             final groupId = state.pathParameters['id']!;
-            return _buildTransitionPage(
+            return buildSparkleTransitionPage(
               state: state,
-              child: BgmScope(
-                track: BgmTrack.community,
+              child: SceneAudioScope(
+                policy: ExperienceProfiles.socialWarm.audioPolicy(
+                  trackOverride: BgmTrack.community,
+                ),
                 child: GroupTasksScreen(groupId: groupId),
               ),
             );
@@ -228,10 +236,12 @@ class CommunityRoutes {
             // id is required in path, so it won't be null
             final groupId = state.pathParameters['id']!;
             final groupName = state.uri.queryParameters['name'] ?? '';
-            return _buildTransitionPage(
+            return buildSparkleTransitionPage(
               state: state,
-              child: BgmScope(
-                track: BgmTrack.community,
+              child: SceneAudioScope(
+                policy: ExperienceProfiles.socialWarm.audioPolicy(
+                  trackOverride: BgmTrack.community,
+                ),
                 child: GroupMembersScreen(
                   groupId: groupId,
                   groupName: groupName,
@@ -247,10 +257,12 @@ class CommunityRoutes {
           parentNavigatorKey: navigatorKey,
           pageBuilder: (context, state) {
             final groupId = state.pathParameters['id']!;
-            return _buildTransitionPage(
+            return buildSparkleTransitionPage(
               state: state,
-              child: BgmScope(
-                track: BgmTrack.community,
+              child: SceneAudioScope(
+                policy: ExperienceProfiles.socialWarm.audioPolicy(
+                  trackOverride: BgmTrack.community,
+                ),
                 child: GroupFilesScreen(groupId: groupId),
               ),
             );
@@ -263,9 +275,14 @@ class CommunityRoutes {
           parentNavigatorKey: navigatorKey,
           pageBuilder: (context, state) {
             final groupId = state.pathParameters['id']!;
-            return _buildTransitionPage(
+            return buildSparkleTransitionPage(
               state: state,
-              child: GroupModerationScreen(groupId: groupId),
+              child: SceneAudioScope(
+                policy: ExperienceProfiles.socialWarm.audioPolicy(
+                  trackOverride: BgmTrack.community,
+                ),
+                child: GroupModerationScreen(groupId: groupId),
+              ),
             );
           },
         ),
@@ -274,9 +291,14 @@ class CommunityRoutes {
           path: favorites,
           name: 'favorites',
           parentNavigatorKey: navigatorKey,
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
-            child: const FavoritesScreen(),
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.socialWarm.audioPolicy(
+                trackOverride: BgmTrack.community,
+              ),
+              child: const FavoritesScreen(),
+            ),
           ),
         ),
         // Blocked users (Phase 4)
@@ -284,9 +306,14 @@ class CommunityRoutes {
           path: blockedUsers,
           name: 'blockedUsers',
           parentNavigatorKey: navigatorKey,
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
-            child: const BlockedUsersScreen(),
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.socialWarm.audioPolicy(
+                trackOverride: BgmTrack.community,
+              ),
+              child: const BlockedUsersScreen(),
+            ),
           ),
         ),
         // Accountability partner list
@@ -294,9 +321,14 @@ class CommunityRoutes {
           path: accountability,
           name: 'accountability',
           parentNavigatorKey: navigatorKey,
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
-            child: const AccountabilityScreen(),
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.socialWarm.audioPolicy(
+                trackOverride: BgmTrack.community,
+              ),
+              child: const AccountabilityScreen(),
+            ),
           ),
         ),
         // Accountability detail
@@ -306,9 +338,14 @@ class CommunityRoutes {
           parentNavigatorKey: navigatorKey,
           pageBuilder: (context, state) {
             final id = state.pathParameters['id']!;
-            return _buildTransitionPage(
+            return buildSparkleTransitionPage(
               state: state,
-              child: AccountabilityDetailScreen(partnershipId: id),
+              child: SceneAudioScope(
+                policy: ExperienceProfiles.socialWarm.audioPolicy(
+                  trackOverride: BgmTrack.community,
+                ),
+                child: AccountabilityDetailScreen(partnershipId: id),
+              ),
             );
           },
         ),

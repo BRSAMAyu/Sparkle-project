@@ -52,6 +52,9 @@ class FocusService:
             status=status
         )
         db.add(session)
+        await db.flush()
+        session_uuid = session.id
+        session_id = str(session.id)
 
         # Calculate Rewards
         flame_earned = 0
@@ -97,7 +100,7 @@ class FocusService:
 
             base_kwargs = {
                 "study_minutes": duration_minutes,
-                "session_id": str(session.id) if session else None,
+                "session_id": session_id,
                 "session_start_time": start_time,
             }
 
@@ -134,14 +137,13 @@ class FocusService:
         # ============================================
 
         await db.commit()
-        await db.refresh(session)
         try:
             await event_bus.publish("focus.session.completed", {
                 "event_type": "focus.session.completed",
                 "user_id": str(user_id),
-                "duration_minutes": session.duration_minutes,
-                "started_at": session.start_time.isoformat(),
-                "completed": session.status == FocusStatus.COMPLETED,
+                "duration_minutes": duration_minutes,
+                "started_at": start_time.isoformat(),
+                "completed": status == FocusStatus.COMPLETED,
                 "timestamp": _utcnow().isoformat(),
             })
         except Exception as e:
@@ -152,7 +154,7 @@ class FocusService:
             auto_collector = AutoFragmentCollector(db)
             await auto_collector.collect_from_focus_session(
                 user_id=user_id,
-                session_id=session.id,
+                session_id=session_uuid,
                 duration_minutes=duration_minutes,
                 status=status,
             )
@@ -161,7 +163,7 @@ class FocusService:
             logging.warning(f"Auto fragment collection failed for focus session: {e}")
 
         return {
-            "session": session,
+            "session_id": session_id,
             "rewards": {
                 "flame_earned": flame_earned,
                 "leveled_up": leveled_up,

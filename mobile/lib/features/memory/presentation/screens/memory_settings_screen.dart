@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -55,7 +57,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
   @override
   void initState() {
     super.initState();
-    _loadSettings();
+    unawaited(_loadSettings());
   }
 
   Future<void> _loadSettings() async {
@@ -179,20 +181,31 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
   Widget _buildError(BuildContext context) => Center(
         child: Padding(
           padding: const EdgeInsets.all(DS.lg),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                _error ?? '记忆控制不可用',
-                style: Theme.of(context).textTheme.bodyMedium,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: DS.md),
-              SparkleButton.primary(
-                label: '重试',
-                onPressed: _loadSettings,
-              ),
-            ],
+          child: GraphiteCardSurface(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.memory_rounded,
+                  size: 28,
+                  color: DS.textSecondary,
+                ),
+                const SizedBox(height: DS.spacing12),
+                Text(
+                  _error ?? '记忆控制不可用',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: DS.textSecondary,
+                        height: 1.45,
+                      ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: DS.md),
+                SparkleButton.primary(
+                  label: '重试',
+                  onPressed: _loadSettings,
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -201,168 +214,260 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
         child: ListView(
           padding: const EdgeInsets.all(DS.lg),
           children: [
-            GraphiteCardSurface(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '记忆控制',
-                    style: DS.titleLarge.copyWith(
-                      color: DS.textPrimary,
-                      fontWeight: FontWeight.w700,
+            SparkleStaggerItem(
+              index: 0,
+              child: GraphiteCardSurface(
+                surfaceRole: SparkleSurfaceRole.panel,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(
+                      spacing: DS.spacing8,
+                      runSpacing: DS.spacing8,
+                      children: [
+                        _buildStatusChip(
+                          icon: Icons.auto_awesome_outlined,
+                          label: _enabled ? '记忆已启用' : '记忆已暂停',
+                          color: _enabled ? DS.primaryBase : DS.textSecondary,
+                        ),
+                        _buildStatusChip(
+                          icon: Icons.privacy_tip_outlined,
+                          label: '偏好可控',
+                          color: const Color(0xFF71917D),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: DS.spacing8),
-                  Text(
-                    '控制系统长期记忆如何学习你的偏好、目标与经历。默认更克制，只有对后续决策真正有价值的信息才应保留。',
-                    style: DS.bodyMedium.copyWith(color: DS.textSecondary),
-                  ),
-                ],
+                    const SizedBox(height: DS.spacing12),
+                    Text(
+                      '控制系统长期记忆如何学习你的偏好、目标与经历。默认更克制，只有对后续决策真正有价值的信息才应保留。',
+                      style: DS.bodyMedium.copyWith(
+                        color: DS.textSecondary,
+                        height: 1.45,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: DS.lg),
-            GraphiteCardSurface(
-              child: Column(
-                children: [
-                  _buildToggleRow(
-                    title: '启用长期记忆',
-                    description: '关闭后会暂停新的记忆写入，但不会删除历史记录。',
-                    value: _enabled,
-                    onChanged: (value) => setState(() => _enabled = value),
-                  ),
-                ],
+            SparkleStaggerItem(
+              index: 1,
+              child: GraphiteCardSurface(
+                child: Column(
+                  children: [
+                    _buildToggleRow(
+                      title: '启用长期记忆',
+                      description: '关闭后会暂停新的记忆写入，但不会删除历史记录。',
+                      value: _enabled,
+                      onChanged: (value) => setState(() => _enabled = value),
+                    ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: DS.lg),
-            GraphiteCardSurface(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSectionTitle('记忆类型'),
-                  _buildToggleRow(
-                    title: '偏好',
-                    description: '记录回答风格、学习节奏和常见偏好。',
-                    value: _allowPreferences,
-                    enabled: _enabled,
-                    onChanged: (value) =>
-                        setState(() => _allowPreferences = value),
-                  ),
-                  _buildToggleRow(
-                    title: '目标',
-                    description: '记录已确认的长期目标和阶段意图。',
-                    value: _allowGoals,
-                    enabled: _enabled,
-                    onChanged: (value) => setState(() => _allowGoals = value),
-                  ),
-                  _buildToggleRow(
-                    title: '经历',
-                    description: '记录对后续决策有帮助的关键事件与反馈。',
-                    value: _allowEpisodic,
-                    enabled: _enabled,
-                    isLast: true,
-                    onChanged: (value) =>
-                        setState(() => _allowEpisodic = value),
-                  ),
-                ],
+            SparkleStaggerItem(
+              index: 2,
+              child: GraphiteCardSurface(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildSectionTitle(
+                      '记忆类型',
+                      subtitle: '决定哪些内容会被长期记住。',
+                    ),
+                    _buildToggleRow(
+                      title: '偏好',
+                      description: '记录回答风格、学习节奏和常见偏好。',
+                      value: _allowPreferences,
+                      enabled: _enabled,
+                      onChanged: (value) =>
+                          setState(() => _allowPreferences = value),
+                    ),
+                    _buildToggleRow(
+                      title: '目标',
+                      description: '记录已确认的长期目标和阶段意图。',
+                      value: _allowGoals,
+                      enabled: _enabled,
+                      onChanged: (value) => setState(() => _allowGoals = value),
+                    ),
+                    _buildToggleRow(
+                      title: '经历',
+                      description: '记录对后续决策有帮助的关键事件与反馈。',
+                      value: _allowEpisodic,
+                      enabled: _enabled,
+                      isLast: true,
+                      onChanged: (value) =>
+                          setState(() => _allowEpisodic = value),
+                    ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: DS.lg),
-            GraphiteCardSurface(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSectionTitle('捕获强度'),
-                  Wrap(
-                    spacing: DS.spacing8,
-                    runSpacing: DS.spacing8,
-                    children: const [
-                      ('low', '低'),
-                      ('medium', '中'),
-                      ('high', '高'),
-                    ].map((entry) {
-                      final value = entry.$1;
-                      final label = entry.$2;
-                      return _MemoryChoiceChip(
-                        value: value,
-                        label: label,
-                        selected: _captureLevel == value,
-                        enabled: _enabled,
-                        onSelected: () {
-                          setState(() {
-                            _captureLevel = value;
-                          });
-                        },
-                      );
-                    }).toList(),
-                  ),
-                ],
+            SparkleStaggerItem(
+              index: 3,
+              child: GraphiteCardSurface(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildSectionTitle(
+                      '捕获强度',
+                      subtitle: '越高越积极，但也会记录更多上下文。',
+                    ),
+                    Wrap(
+                      spacing: DS.spacing8,
+                      runSpacing: DS.spacing8,
+                      children: const [
+                        ('low', '低'),
+                        ('medium', '中'),
+                        ('high', '高'),
+                      ].map((entry) {
+                        final value = entry.$1;
+                        final label = entry.$2;
+                        return _MemoryChoiceChip(
+                          value: value,
+                          label: label,
+                          selected: _captureLevel == value,
+                          enabled: _enabled,
+                          onSelected: () {
+                            setState(() {
+                              _captureLevel = value;
+                            });
+                          },
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: DS.lg),
-            GraphiteCardSurface(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSectionTitle('屏蔽偏好'),
-                  Wrap(
-                    spacing: DS.sm,
-                    runSpacing: DS.sm,
-                    children: _prefKeyOptions
-                        .map(
-                          (key) => _MemoryFilterChip(
-                            label: key,
-                            selected: _blockedPrefKeys.contains(key),
-                            enabled: _enabled && _allowPreferences,
-                            onSelected: (selected) =>
-                                _togglePrefKey(key, selected),
-                          ),
-                        )
-                        .toList(),
-                  ),
-                ],
+            SparkleStaggerItem(
+              index: 4,
+              child: GraphiteCardSurface(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildSectionTitle(
+                      '屏蔽偏好',
+                      subtitle: '不希望长期存储的偏好项可以在这里关闭。',
+                    ),
+                    Wrap(
+                      spacing: DS.sm,
+                      runSpacing: DS.sm,
+                      children: _prefKeyOptions
+                          .map(
+                            (key) => _MemoryFilterChip(
+                              label: key,
+                              selected: _blockedPrefKeys.contains(key),
+                              enabled: _enabled && _allowPreferences,
+                              onSelected: (selected) =>
+                                  _togglePrefKey(key, selected),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: DS.lg),
-            GraphiteCardSurface(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSectionTitle('屏蔽来源'),
-                  Wrap(
-                    spacing: DS.sm,
-                    runSpacing: DS.sm,
-                    children: _sourceOptions
-                        .map(
-                          (source) => _MemoryFilterChip(
-                            label: source,
-                            selected: _blockedSources.contains(source),
-                            enabled: _enabled,
-                            onSelected: (selected) =>
-                                _toggleSource(source, selected),
-                          ),
-                        )
-                        .toList(),
-                  ),
-                ],
+            SparkleStaggerItem(
+              index: 5,
+              child: GraphiteCardSurface(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildSectionTitle(
+                      '屏蔽来源',
+                      subtitle: '限制哪些入口不会写入长期记忆。',
+                    ),
+                    Wrap(
+                      spacing: DS.sm,
+                      runSpacing: DS.sm,
+                      children: _sourceOptions
+                          .map(
+                            (source) => _MemoryFilterChip(
+                              label: source,
+                              selected: _blockedSources.contains(source),
+                              enabled: _enabled,
+                              onSelected: (selected) =>
+                                  _toggleSource(source, selected),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: DS.xl),
-            SparkleButton.primary(
-              label: _saving ? '保存中...' : '保存设置',
-              onPressed: _saving ? () {} : _saveSettings,
+            SparkleStaggerItem(
+              index: 6,
+              child: SparkleButton.primary(
+                label: _saving ? '保存中...' : '保存设置',
+                onPressed: _saving ? () {} : _saveSettings,
+              ),
             ),
           ],
         ),
       );
 
-  Widget _buildSectionTitle(String title) => Padding(
+  Widget _buildStatusChip({
+    required IconData icon,
+    required String label,
+    required Color color,
+  }) =>
+      Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing10,
+          vertical: DS.spacing6,
+        ),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: color.withValues(alpha: 0.16)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: color),
+            const SizedBox(width: DS.spacing6),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+          ],
+        ),
+      );
+
+  Widget _buildSectionTitle(String title, {String? subtitle}) => Padding(
         padding: const EdgeInsets.only(bottom: DS.sm),
-        child: Text(
-          title,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: DS.textPrimary,
-                fontWeight: FontWeight.w700,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: DS.textPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+            if (subtitle != null) ...[
+              const SizedBox(height: DS.spacing4),
+              Text(
+                subtitle,
+                style: DS.bodySmall.copyWith(
+                  color: DS.textSecondary,
+                  height: 1.4,
+                ),
               ),
+            ],
+          ],
         ),
       );
 
@@ -373,46 +478,48 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
     required ValueChanged<bool> onChanged,
     bool enabled = true,
     bool isLast = false,
-  }) => Container(
-      padding: const EdgeInsets.symmetric(vertical: DS.spacing8),
-      decoration: BoxDecoration(
-        border:
-            isLast ? null : Border(bottom: BorderSide(color: DS.borderSubtle)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: DS.bodyLarge.copyWith(
-                    color: enabled ? DS.textPrimary : DS.textDisabled,
-                    fontWeight: FontWeight.w600,
+  }) =>
+      Container(
+        padding: const EdgeInsets.symmetric(vertical: DS.spacing8),
+        decoration: BoxDecoration(
+          border: isLast
+              ? null
+              : Border(bottom: BorderSide(color: DS.borderSubtle)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: DS.bodyLarge.copyWith(
+                      color: enabled ? DS.textPrimary : DS.textDisabled,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-                const SizedBox(height: DS.spacing4),
-                Text(
-                  description,
-                  style: DS.bodySmall.copyWith(
-                    color: enabled ? DS.textSecondary : DS.textDisabled,
+                  const SizedBox(height: DS.spacing4),
+                  Text(
+                    description,
+                    style: DS.bodySmall.copyWith(
+                      color: enabled ? DS.textSecondary : DS.textDisabled,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: DS.spacing12),
-          Switch.adaptive(
-            value: value,
-            onChanged: enabled ? onChanged : null,
-            activeThumbColor: DS.primaryBase,
-            activeTrackColor: DS.primaryBase.withValues(alpha: 0.28),
-          ),
-        ],
-      ),
-    );
+            const SizedBox(width: DS.spacing12),
+            Switch.adaptive(
+              value: value,
+              onChanged: enabled ? onChanged : null,
+              activeThumbColor: DS.primaryBase,
+              activeTrackColor: DS.primaryBase.withValues(alpha: 0.28),
+            ),
+          ],
+        ),
+      );
 
   void _togglePrefKey(String key, bool selected) {
     setState(() {
@@ -452,20 +559,21 @@ class _MemoryChoiceChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ChoiceChip(
-      label: Text(label),
-      selected: selected,
-      onSelected: enabled ? (_) => onSelected() : null,
-      selectedColor: DS.primaryBase.withValues(alpha: 0.14),
-      backgroundColor: DS.surfaceSecondary,
-      side: BorderSide(
-        color:
-            selected ? DS.primaryBase.withValues(alpha: 0.28) : DS.borderSubtle,
-      ),
-      labelStyle: DS.bodySmall.copyWith(
-        color: selected ? DS.primaryBase : DS.textSecondary,
-        fontWeight: FontWeight.w600,
-      ),
-    );
+        label: Text(label),
+        selected: selected,
+        onSelected: enabled ? (_) => onSelected() : null,
+        selectedColor: DS.primaryBase.withValues(alpha: 0.14),
+        backgroundColor: DS.surfaceSecondary,
+        side: BorderSide(
+          color: selected
+              ? DS.primaryBase.withValues(alpha: 0.28)
+              : DS.borderSubtle,
+        ),
+        labelStyle: DS.bodySmall.copyWith(
+          color: selected ? DS.primaryBase : DS.textSecondary,
+          fontWeight: FontWeight.w600,
+        ),
+      );
 }
 
 class _MemoryFilterChip extends StatelessWidget {
@@ -483,22 +591,23 @@ class _MemoryFilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => FilterChip(
-      label: Text(label),
-      selected: selected,
-      onSelected: enabled ? onSelected : null,
-      selectedColor: DS.primaryBase.withValues(alpha: 0.12),
-      backgroundColor: DS.surfaceSecondary,
-      disabledColor: DS.surfaceSecondary.withValues(alpha: 0.8),
-      side: BorderSide(
-        color:
-            selected ? DS.primaryBase.withValues(alpha: 0.22) : DS.borderSubtle,
-      ),
-      labelStyle: DS.bodySmall.copyWith(
-        color: enabled
-            ? (selected ? DS.primaryBase : DS.textSecondary)
-            : DS.textDisabled,
-        fontWeight: FontWeight.w600,
-      ),
-      checkmarkColor: DS.primaryBase,
-    );
+        label: Text(label),
+        selected: selected,
+        onSelected: enabled ? onSelected : null,
+        selectedColor: DS.primaryBase.withValues(alpha: 0.12),
+        backgroundColor: DS.surfaceSecondary,
+        disabledColor: DS.surfaceSecondary.withValues(alpha: 0.8),
+        side: BorderSide(
+          color: selected
+              ? DS.primaryBase.withValues(alpha: 0.22)
+              : DS.borderSubtle,
+        ),
+        labelStyle: DS.bodySmall.copyWith(
+          color: enabled
+              ? (selected ? DS.primaryBase : DS.textSecondary)
+              : DS.textDisabled,
+          fontWeight: FontWeight.w600,
+        ),
+        checkmarkColor: DS.primaryBase,
+      );
 }

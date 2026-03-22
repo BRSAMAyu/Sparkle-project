@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/experience/experience_profile.dart';
 import 'package:sparkle/core/navigation/sensory_navigation_observer.dart';
 import 'package:sparkle/core/navigation/shell_navigation.dart';
+import 'package:sparkle/core/navigation/sparkle_route_transition.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/services/scene_audio_policy.dart';
-import 'package:sparkle/core/widgets/bgm_scope.dart';
 import 'package:sparkle/core/widgets/scene_audio_scope.dart';
 import 'package:sparkle/features/achievement/achievement_routes.dart';
 import 'package:sparkle/features/auth/auth.dart';
@@ -126,12 +127,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: '/home',
-                pageBuilder: (context, state) => MaterialPage<void>(
-                  key: state.pageKey,
+                pageBuilder: (context, state) => buildSparkleTransitionPage(
+                  state: state,
                   child: const SceneAudioScope(
                     policy: SceneAudioPolicy(
                       track: BgmTrack.dashboard,
-                      priority: BgmPriority.route,
                     ),
                     child: DashboardScreen(),
                   ),
@@ -144,11 +144,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: '/galaxy',
-                pageBuilder: (context, state) => MaterialPage<void>(
-                  key: state.pageKey,
-                  child: const BgmScope(
-                    track: BgmTrack.galaxy,
-                    child: GalaxyScreen(),
+                pageBuilder: (context, state) => buildSparkleTransitionPage(
+                  state: state,
+                  motionToken: SparkleMotionToken.scene,
+                  child: SceneAudioScope(
+                    policy: ExperienceProfiles.focusImmersive.audioPolicy(
+                      trackOverride: BgmTrack.galaxy,
+                    ),
+                    child: const GalaxyScreen(),
                   ),
                 ),
               ),
@@ -159,8 +162,9 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: '/chat',
-                pageBuilder: (context, state) => MaterialPage<void>(
-                  key: state.pageKey,
+                pageBuilder: (context, state) => buildSparkleTransitionPage(
+                  state: state,
+                  motionToken: SparkleMotionToken.scene,
                   child: SceneAudioScope(
                     policy: ExperienceProfiles.assistantFlow.audioPolicy(),
                     child: ChatScreen(
@@ -177,11 +181,13 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: '/community',
-                pageBuilder: (context, state) => MaterialPage<void>(
-                  key: state.pageKey,
-                  child: const BgmScope(
-                    track: BgmTrack.community,
-                    child: CommunityMainScreen(),
+                pageBuilder: (context, state) => buildSparkleTransitionPage(
+                  state: state,
+                  child: SceneAudioScope(
+                    policy: ExperienceProfiles.socialWarm.audioPolicy(
+                      trackOverride: BgmTrack.community,
+                    ),
+                    child: const CommunityMainScreen(),
                   ),
                 ),
               ),
@@ -192,11 +198,13 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: '/profile',
-                pageBuilder: (context, state) => MaterialPage<void>(
-                  key: state.pageKey,
-                  child: const BgmScope(
-                    track: BgmTrack.profile,
-                    child: ProfileScreen(),
+                pageBuilder: (context, state) => buildSparkleTransitionPage(
+                  state: state,
+                  child: SceneAudioScope(
+                    policy: ExperienceProfiles.dashboardProductive.audioPolicy(
+                      trackOverride: BgmTrack.profile,
+                    ),
+                    child: const ProfileScreen(),
                   ),
                 ),
               ),

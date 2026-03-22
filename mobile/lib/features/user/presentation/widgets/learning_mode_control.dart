@@ -63,6 +63,12 @@ class _LearningModeControlState extends State<LearningModeControl> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final gridColor = DS.brandPrimary10;
+    final glowColor = Color.lerp(
+          DS.info,
+          DS.semanticSuccess,
+          _currentCuriosity.clamp(0.0, 1.0),
+        ) ??
+        DS.primaryBase;
 
     return Column(
       children: [
@@ -78,15 +84,32 @@ class _LearningModeControlState extends State<LearningModeControl> {
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
-                    color: isDark ? DS.surfaceTertiary : DS.neutral100,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color.alphaBlend(
+                          DS.info
+                              .withValues(alpha: 0.12 + (_currentDepth * 0.08)),
+                          isDark ? DS.surfaceTertiary : DS.neutral100,
+                        ),
+                        Color.alphaBlend(
+                          DS.semanticSuccess.withValues(
+                            alpha: 0.08 + (_currentCuriosity * 0.1),
+                          ),
+                          isDark ? DS.surfaceSecondary : DS.surfacePrimary,
+                        ),
+                      ],
+                    ),
                     border: Border.all(
                       color: isDark ? DS.neutral700 : DS.neutral300,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: DS.primaryBase
-                            .withValues(alpha: 0.15 * _currentCuriosity),
-                        blurRadius: 16,
+                        color: glowColor.withValues(
+                          alpha: 0.12 + (0.08 * _currentCuriosity),
+                        ),
+                        blurRadius: 22,
                         spreadRadius: 2,
                       ),
                     ],
@@ -108,6 +131,27 @@ class _LearningModeControlState extends State<LearningModeControl> {
                       children: [
                         // Grid lines
                         _buildGrid(maxSize, maxSize, gridColor),
+
+                        Positioned(
+                          left: _currentCuriosity * maxSize - 52,
+                          top: (1.0 - _currentDepth) * maxSize - 52,
+                          child: IgnorePointer(
+                            child: Container(
+                              width: 104,
+                              height: 104,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: RadialGradient(
+                                  colors: [
+                                    glowColor.withValues(alpha: 0.22),
+                                    glowColor.withValues(alpha: 0.08),
+                                    Colors.transparent,
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
 
                         // Labels - positioned at edge centers
                         // Depth+ at top center
@@ -190,11 +234,11 @@ class _LearningModeControlState extends State<LearningModeControl> {
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
-                                  color: isDark
-                                      ? DS.neutral0.withValues(alpha: 0.4)
-                                      : DS.primaryBase.withValues(alpha: 0.6),
-                                  blurRadius: 8,
-                                  spreadRadius: 1,
+                                  color: glowColor.withValues(
+                                    alpha: isDark ? 0.28 : 0.24,
+                                  ),
+                                  blurRadius: 14,
+                                  spreadRadius: 2,
                                 ),
                               ],
                             ),

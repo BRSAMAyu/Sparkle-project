@@ -82,7 +82,8 @@ class _SessionManagementScreenState
     }
   }
 
-  String _formatTime(DateTime value) => Formatters.formatDateTime(value.toLocal());
+  String _formatTime(DateTime value) =>
+      Formatters.formatDateTime(value.toLocal());
 
   String _deviceTitle(UserSessionModel session) {
     final l10n = context.l10n;
@@ -93,29 +94,6 @@ class _SessionManagementScreenState
       return session.deviceType!.toUpperCase();
     }
     return l10n.sessionManagementUnknownDevice;
-  }
-
-  Widget _buildInfoRow(IconData icon, String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: DS.spacing8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 14, color: DS.textSecondary),
-          const SizedBox(width: DS.spacing8),
-          Expanded(
-            child: Text(
-              text,
-              style: TextStyle(
-                color: DS.textSecondary,
-                fontSize: 13,
-                height: 1.3,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
@@ -136,27 +114,52 @@ class _SessionManagementScreenState
             child: ListView(
               padding: const EdgeInsets.all(DS.spacing24),
               children: [
-                GraphiteCardSurface(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        context.l10n.sessionManagementIntro,
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      const SizedBox(height: DS.spacing16),
-                      SparkleButton(
-                        label: context.l10n.sessionManagementRevokeOthers,
-                        variant: ButtonVariant.destructive,
-                        expand: true,
-                        loading: _isRevokingOthers,
-                        onPressed: _isRevokingOthers
-                            ? null
-                            : () {
-                                unawaited(_revokeOthers());
-                              },
-                      ),
-                    ],
+                SparkleStaggerItem(
+                  index: 0,
+                  child: GraphiteCardSurface(
+                    surfaceRole: SparkleSurfaceRole.panel,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Wrap(
+                          spacing: DS.spacing8,
+                          runSpacing: DS.spacing8,
+                          children: [
+                            _buildPill(
+                              context,
+                              icon: Icons.smartphone_rounded,
+                              label: '共 ${_sessions.length} 台设备',
+                            ),
+                            _buildPill(
+                              context,
+                              icon: Icons.verified_user_outlined,
+                              label: '当前设备已保护',
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: DS.spacing12),
+                        Text(
+                          context.l10n.sessionManagementIntro,
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: DS.textSecondary,
+                                    height: 1.45,
+                                  ),
+                        ),
+                        const SizedBox(height: DS.spacing16),
+                        SparkleButton(
+                          label: context.l10n.sessionManagementRevokeOthers,
+                          variant: ButtonVariant.destructive,
+                          expand: true,
+                          loading: _isRevokingOthers,
+                          onPressed: _isRevokingOthers
+                              ? null
+                              : () {
+                                  unawaited(_revokeOthers());
+                                },
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: DS.spacing16),
@@ -170,129 +173,225 @@ class _SessionManagementScreenState
                     child: Text(context.l10n.sessionManagementEmpty),
                   )
                 else
-                  ..._sessions.map(
-                    (session) => Padding(
-                      padding: const EdgeInsets.only(bottom: DS.spacing12),
-                      child: GraphiteCardSurface(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(DS.spacing8),
-                                  decoration: BoxDecoration(
-                                    color: DS.primaryBase.withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(DS.spacing8),
-                                  ),
-                                  child: Icon(
-                                    session.isCurrent
-                                        ? Icons.smartphone_rounded
-                                        : Icons.devices_other_rounded,
-                                    color: DS.primaryBase,
-                                  ),
-                                ),
-                                const SizedBox(width: DS.spacing12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Wrap(
-                                        spacing: DS.spacing8,
-                                        crossAxisAlignment: WrapCrossAlignment.center,
-                                        children: [
-                                          Text(
-                                            _deviceTitle(session),
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .titleMedium
-                                                ?.copyWith(fontWeight: FontWeight.w700),
-                                          ),
-                                          if (session.isCurrent)
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(
-                                                horizontal: DS.spacing8,
-                                                vertical: DS.spacing4,
-                                              ),
-                                              decoration: BoxDecoration(
-                                                color: DS.success.withValues(alpha: 0.12),
-                                                borderRadius: BorderRadius.circular(999),
-                                              ),
-                                              child: Text(
-                                                context.l10n.sessionManagementCurrent,
-                                                style: TextStyle(
-                                                  fontSize: 12,
-                                                  color: DS.success,
-                                                  fontWeight: FontWeight.w500,
-                                                ),
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: DS.spacing12),
-                                      _buildInfoRow(
-                                        Icons.access_time_rounded,
-                                        context.l10n.sessionManagementLastActive(
-                                          _formatTime(session.lastActiveAt),
-                                        ),
-                                      ),
-                                      _buildInfoRow(
-                                        Icons.login_rounded,
-                                        context.l10n.sessionManagementFirstLogin(
-                                          _formatTime(session.createdAt),
-                                        ),
-                                      ),
-                                      if ((session.ipAddress ?? '').isNotEmpty)
-                                        _buildInfoRow(
-                                          Icons.wifi_rounded,
-                                          'IP: ${session.ipAddress}',
-                                        ),
-                                      if ((session.userAgent ?? '').isNotEmpty)
-                                        _buildInfoRow(
-                                          Icons.info_outline_rounded,
-                                          session.userAgent!,
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              ],
+                  ..._sessions.asMap().entries.map(
+                        (entry) => Padding(
+                          padding: const EdgeInsets.only(bottom: DS.spacing12),
+                          child: SparkleStaggerItem(
+                            index: entry.key + 1,
+                            child: _SessionCard(
+                              session: entry.value,
+                              deviceTitle: _deviceTitle(entry.value),
+                              formatTime: _formatTime,
+                              busy: _busySessionId == entry.value.sessionId,
+                              onRevoke: entry.value.isCurrent ||
+                                      _busySessionId != null
+                                  ? null
+                                  : () {
+                                      unawaited(
+                                        _revokeSession(entry.value.sessionId),
+                                      );
+                                    },
                             ),
-                            const SizedBox(height: DS.spacing16),
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: session.isCurrent
-                                  ? Text(
-                                      context.l10n
-                                          .sessionManagementCurrentHint,
-                                      style: TextStyle(
-                                        color: DS.textSecondary,
-                                      ),
-                                    )
-                                  : SparkleButton(
-                                      label: context
-                                          .l10n.sessionManagementRevokeThis,
-                                      variant: ButtonVariant.outline,
-                                      loading:
-                                          _busySessionId == session.sessionId,
-                                      onPressed: _busySessionId == null
-                                          ? () {
-                                              unawaited(
-                                                _revokeSession(
-                                                  session.sessionId,
-                                                ),
-                                              );
-                                            }
-                                          : null,
-                                    ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
-                    ),
-                  ),
               ],
             ),
+          ),
+        ),
+      );
+
+  Widget _buildPill(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+  }) =>
+      Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing10,
+          vertical: DS.spacing6,
+        ),
+        decoration: BoxDecoration(
+          color: DS.surfaceSecondary,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: DS.borderSubtle),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: DS.textSecondary),
+            const SizedBox(width: DS.spacing6),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: DS.textSecondary,
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+          ],
+        ),
+      );
+}
+
+class _SessionCard extends StatelessWidget {
+  const _SessionCard({
+    required this.session,
+    required this.deviceTitle,
+    required this.formatTime,
+    required this.busy,
+    required this.onRevoke,
+  });
+
+  final UserSessionModel session;
+  final String deviceTitle;
+  final String Function(DateTime value) formatTime;
+  final bool busy;
+  final VoidCallback? onRevoke;
+
+  @override
+  Widget build(BuildContext context) => GraphiteCardSurface(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(DS.spacing10),
+                  decoration: BoxDecoration(
+                    color: DS.primaryBase.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(DS.spacing12),
+                  ),
+                  child: Icon(
+                    session.isCurrent
+                        ? Icons.smartphone_rounded
+                        : Icons.devices_other_rounded,
+                    color: DS.primaryBase,
+                  ),
+                ),
+                const SizedBox(width: DS.spacing12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Wrap(
+                        spacing: DS.spacing8,
+                        runSpacing: DS.spacing8,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Text(
+                            deviceTitle,
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                          if (session.isCurrent)
+                            _SessionTag(
+                              label: context.l10n.sessionManagementCurrent,
+                              color: DS.success,
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: DS.spacing12),
+                      _SessionInfoRow(
+                        icon: Icons.access_time_rounded,
+                        text: context.l10n.sessionManagementLastActive(
+                          formatTime(session.lastActiveAt),
+                        ),
+                      ),
+                      _SessionInfoRow(
+                        icon: Icons.login_rounded,
+                        text: context.l10n.sessionManagementFirstLogin(
+                          formatTime(session.createdAt),
+                        ),
+                      ),
+                      if ((session.ipAddress ?? '').isNotEmpty)
+                        _SessionInfoRow(
+                          icon: Icons.wifi_rounded,
+                          text: 'IP: ${session.ipAddress}',
+                        ),
+                      if ((session.userAgent ?? '').isNotEmpty)
+                        _SessionInfoRow(
+                          icon: Icons.info_outline_rounded,
+                          text: session.userAgent!,
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: DS.spacing16),
+            Align(
+              alignment: Alignment.centerRight,
+              child: session.isCurrent
+                  ? Text(
+                      context.l10n.sessionManagementCurrentHint,
+                      style: TextStyle(color: DS.textSecondary),
+                    )
+                  : SparkleButton(
+                      label: context.l10n.sessionManagementRevokeThis,
+                      variant: ButtonVariant.outline,
+                      loading: busy,
+                      onPressed: onRevoke,
+                    ),
+            ),
+          ],
+        ),
+      );
+}
+
+class _SessionInfoRow extends StatelessWidget {
+  const _SessionInfoRow({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(bottom: DS.spacing8),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, size: 14, color: DS.textSecondary),
+            const SizedBox(width: DS.spacing8),
+            Expanded(
+              child: Text(
+                text,
+                style: TextStyle(
+                  color: DS.textSecondary,
+                  fontSize: 13,
+                  height: 1.3,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+}
+
+class _SessionTag extends StatelessWidget {
+  const _SessionTag({required this.label, required this.color});
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing8,
+          vertical: DS.spacing4,
+        ),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: color,
+            fontWeight: FontWeight.w600,
           ),
         ),
       );

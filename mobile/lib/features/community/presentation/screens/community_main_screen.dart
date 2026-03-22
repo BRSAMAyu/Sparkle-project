@@ -6,7 +6,9 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/experience/experience_profile.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/community/presentation/providers/focus_mode_provider.dart';
 import 'package:sparkle/features/community/presentation/widgets/friends_hub_view.dart';
 import 'package:sparkle/features/community/presentation/widgets/groups_hub_view.dart';
@@ -127,6 +129,9 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
 
   void _onTabChanged() {
     if (!_tabController.indexIsChanging) {
+      unawaited(
+        SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+      );
       ref.read(communityTabIndexProvider.notifier).state = _tabController.index;
       _saveTabIndex(_tabController.index);
     }
@@ -146,11 +151,13 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
 
   @override
   Widget build(BuildContext context) {
+    final experience = ExperienceProfiles.socialWarm;
     final focusMode = ref.watch(focusModeProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return GraphiteScaffold(
-      role: SparklePageRole.content,
+      role: experience.pageRole,
+      motionToken: experience.motionToken,
       appBar: AppBar(
         backgroundColor:
             DS.surfaceOverlay.withValues(alpha: isDark ? 0.88 : 0.94),

@@ -99,6 +99,7 @@ enum SensoryFeedbackEvent {
 enum AmbientScene {
   none,
   rain,
+  ocean,
   whiteNoise,
   cafe,
   piano,
@@ -108,6 +109,7 @@ extension AmbientSceneLabel on AmbientScene {
   String get label => switch (this) {
         AmbientScene.none => '无背景音',
         AmbientScene.rain => '雨声',
+        AmbientScene.ocean => '海浪',
         AmbientScene.whiteNoise => '白噪音',
         AmbientScene.cafe => '咖啡馆',
         AmbientScene.piano => '轻钢琴',
@@ -116,6 +118,7 @@ extension AmbientSceneLabel on AmbientScene {
   String? get assetPath => switch (this) {
         AmbientScene.none => null,
         AmbientScene.rain => 'audio/ambient/rain.ogg',
+        AmbientScene.ocean => 'audio/ambient/ocean_waves.ogg',
         AmbientScene.whiteNoise => 'audio/ambient/white_noise.ogg',
         AmbientScene.cafe => 'audio/ambient/cafe.ogg',
         AmbientScene.piano => 'audio/ambient/piano.ogg',
@@ -574,7 +577,7 @@ class SensoryFeedbackService {
       // Epic/legendary: heavy + delayed second pulse (handled in caller)
       case SensoryFeedbackEvent.achievementEpic:
       case SensoryFeedbackEvent.achievementLegendary:
-        HapticFeedback.heavyImpact();
+        unawaited(HapticFeedback.heavyImpact());
         return Future.delayed(
           const Duration(milliseconds: 180),
           HapticFeedback.heavyImpact,

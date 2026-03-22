@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/providers/locale_provider.dart';
 import 'package:sparkle/core/providers/theme_provider.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
@@ -146,6 +147,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final isCompact = MediaQuery.sizeOf(context).width < 380;
     final enterToSend = ref.watch(enterToSendProvider);
     final transparentMode = ref.watch(transparentModeProvider);
     final transparencyLevel = ref.watch(transparencyLevelProvider);
@@ -180,7 +182,10 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
       ),
       child: ContentConstraint(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(DS.spacing16),
+          padding: EdgeInsets.symmetric(
+            horizontal: isCompact ? 14 : DS.spacing16,
+            vertical: DS.spacing16,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -275,9 +280,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                     const SizedBox(height: DS.spacing16),
                     Text(
                       l10n.dragToAdjust,
-                      style: TextStyle(
-                        color: DS.brandPrimaryConst,
-                        fontSize: DS.fontSizeSm,
+                      style: DS.bodySmall.copyWith(
+                        color: DS.textSecondary,
                       ),
                     ),
                     const SizedBox(height: DS.spacing16),
@@ -299,9 +303,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                     const SizedBox(height: DS.spacing16),
                     Text(
                       l10n.adjustAndGenerate,
-                      style: TextStyle(
-                        color: DS.brandPrimaryConst,
-                        fontSize: DS.fontSizeSm,
+                      style: DS.bodySmall.copyWith(
+                        color: DS.textSecondary,
                       ),
                     ),
                     const SizedBox(height: DS.spacing16),
@@ -408,8 +411,11 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(DS.spacing12),
                       decoration: BoxDecoration(
-                        color: DS.surfaceSecondary,
                         borderRadius: DS.borderRadius12,
+                        color: Color.alphaBlend(
+                          DS.primaryBase.withValues(alpha: 0.06),
+                          DS.surfaceSecondary,
+                        ),
                       ),
                       child: Text(
                         _bgmModeDescription(_bgmMode),
@@ -470,8 +476,11 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(DS.spacing12),
                       decoration: BoxDecoration(
-                        color: DS.surfaceSecondary,
                         borderRadius: DS.borderRadius12,
+                        color: Color.alphaBlend(
+                          DS.info.withValues(alpha: 0.06),
+                          DS.surfaceSecondary,
+                        ),
                       ),
                       child: Text(
                         _bgmPaletteDescription(_bgmPalette),
@@ -493,31 +502,30 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                       leading: const Icon(Icons.brightness_6_outlined),
                       title: Text(l10n.theme),
                       subtitle: Text('${l10n.lightMode}/${l10n.darkMode}'),
-                      trailing: DropdownButton<AppThemeMode>(
-                        value: ref.watch(appThemeModeProvider),
-                        underline: const SizedBox.shrink(),
-                        onChanged: (AppThemeMode? newValue) {
-                          if (newValue != null) {
-                            ref
-                                .read(themeManagerProvider)
-                                .setAppThemeMode(newValue);
-                          }
-                        },
-                        items: [
-                          DropdownMenuItem(
-                            value: AppThemeMode.system,
-                            child: Text(l10n.followSystem),
-                          ),
-                          DropdownMenuItem(
-                            value: AppThemeMode.light,
-                            child: Text(l10n.lightMode),
-                          ),
-                          DropdownMenuItem(
-                            value: AppThemeMode.dark,
-                            child: Text(l10n.darkMode),
-                          ),
-                        ],
-                      ),
+                    ),
+                    _buildSettingsDropdownField<AppThemeMode>(
+                      value: ref.watch(appThemeModeProvider),
+                      items: [
+                        DropdownMenuItem(
+                          value: AppThemeMode.system,
+                          child: Text(l10n.followSystem),
+                        ),
+                        DropdownMenuItem(
+                          value: AppThemeMode.light,
+                          child: Text(l10n.lightMode),
+                        ),
+                        DropdownMenuItem(
+                          value: AppThemeMode.dark,
+                          child: Text(l10n.darkMode),
+                        ),
+                      ],
+                      onChanged: (newValue) {
+                        if (newValue != null) {
+                          ref
+                              .read(themeManagerProvider)
+                              .setAppThemeMode(newValue);
+                        }
+                      },
                     ),
                     const Divider(height: DS.spacing24),
                     SwitchListTile(
@@ -685,35 +693,34 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                         subtitle: Text(
                           '${l10n.basic}/${l10n.standard}/${l10n.advanced}',
                         ),
-                        trailing: DropdownButton<int>(
-                          value: transparencyLevel,
-                          underline: const SizedBox.shrink(),
-                          onChanged: (level) {
-                            if (level != null) {
-                              ref
-                                  .read(transparencyLevelProvider.notifier)
-                                  .setLevel(level);
-                            }
-                          },
-                          items: [
-                            DropdownMenuItem(
-                              value: 0,
-                              child: Text(l10n.cancel),
-                            ),
-                            DropdownMenuItem(
-                              value: 1,
-                              child: Text(l10n.basic),
-                            ),
-                            DropdownMenuItem(
-                              value: 2,
-                              child: Text(l10n.standard),
-                            ),
-                            DropdownMenuItem(
-                              value: 3,
-                              child: Text(l10n.advanced),
-                            ),
-                          ],
-                        ),
+                      ),
+                      _buildSettingsDropdownField<int>(
+                        value: transparencyLevel,
+                        items: [
+                          DropdownMenuItem(
+                            value: 0,
+                            child: Text(l10n.cancel),
+                          ),
+                          DropdownMenuItem(
+                            value: 1,
+                            child: Text(l10n.basic),
+                          ),
+                          DropdownMenuItem(
+                            value: 2,
+                            child: Text(l10n.standard),
+                          ),
+                          DropdownMenuItem(
+                            value: 3,
+                            child: Text(l10n.advanced),
+                          ),
+                        ],
+                        onChanged: (level) {
+                          if (level != null) {
+                            ref
+                                .read(transparencyLevelProvider.notifier)
+                                .setLevel(level);
+                          }
+                        },
                       ),
                     ],
                     const Divider(height: DS.spacing24),
@@ -721,28 +728,27 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                       contentPadding: EdgeInsets.zero,
                       title: Text(l10n.systemFeedback),
                       subtitle: Text(l10n.controlUpdateDetails),
-                      trailing: DropdownButton<int>(
-                        value: systemUpdateLevel,
-                        underline: const SizedBox.shrink(),
-                        onChanged: (level) {
-                          if (level != null) {
-                            ref
-                                .read(systemUpdateLevelProvider.notifier)
-                                .setLevel(level);
-                          }
-                        },
-                        items: [
-                          DropdownMenuItem(value: 0, child: Text(l10n.silent)),
-                          DropdownMenuItem(
-                            value: 1,
-                            child: Text(l10n.summary),
-                          ),
-                          DropdownMenuItem(
-                            value: 2,
-                            child: Text(l10n.detailed),
-                          ),
-                        ],
-                      ),
+                    ),
+                    _buildSettingsDropdownField<int>(
+                      value: systemUpdateLevel,
+                      items: [
+                        DropdownMenuItem(value: 0, child: Text(l10n.silent)),
+                        DropdownMenuItem(
+                          value: 1,
+                          child: Text(l10n.summary),
+                        ),
+                        DropdownMenuItem(
+                          value: 2,
+                          child: Text(l10n.detailed),
+                        ),
+                      ],
+                      onChanged: (level) {
+                        if (level != null) {
+                          ref
+                              .read(systemUpdateLevelProvider.notifier)
+                              .setLevel(level);
+                        }
+                      },
                     ),
                   ],
                 ),
@@ -853,9 +859,9 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   ) {
     final currentLocale = ref.read(localeProvider);
 
-    showDialog<void>(
+    showSensoryDialog<void>(
       context: context,
-      builder: (context) => Dialog(
+      builder: (dialogContext) => Dialog(
         backgroundColor: Colors.transparent,
         insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
         child: GraphiteModalSurface(
@@ -865,28 +871,37 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              ListTile(
-                title: Text(l10n.languageChinese),
-                trailing: currentLocale.languageCode == 'zh'
-                    ? Icon(Icons.check, color: DS.primaryBase)
-                    : null,
+              Text(
+                '选择你更习惯的阅读与交互语言，界面与系统文案会一起切换。',
+                style: Theme.of(dialogContext).textTheme.bodyMedium?.copyWith(
+                      color: DS.textSecondary,
+                      height: 1.45,
+                    ),
+              ),
+              const SizedBox(height: DS.spacing16),
+              _buildLanguageOption(
+                dialogContext,
+                title: l10n.languageChinese,
+                subtitle: '更适合中文阅读与本地化表达。',
+                selected: currentLocale.languageCode == 'zh',
                 onTap: () {
                   ref
                       .read(localeProvider.notifier)
                       .setLocale(const Locale('zh'));
-                  Navigator.pop(context);
+                  Navigator.pop(dialogContext);
                 },
               ),
-              ListTile(
-                title: Text(l10n.languageEnglish),
-                trailing: currentLocale.languageCode == 'en'
-                    ? Icon(Icons.check, color: DS.primaryBase)
-                    : null,
+              const SizedBox(height: DS.spacing8),
+              _buildLanguageOption(
+                dialogContext,
+                title: l10n.languageEnglish,
+                subtitle: '适合英文界面与更国际化的内容环境。',
+                selected: currentLocale.languageCode == 'en',
                 onTap: () {
                   ref
                       .read(localeProvider.notifier)
                       .setLocale(const Locale('en'));
-                  Navigator.pop(context);
+                  Navigator.pop(dialogContext);
                 },
               ),
             ],
@@ -895,6 +910,62 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
       ),
     );
   }
+
+  Widget _buildLanguageOption(
+    BuildContext context, {
+    required String title,
+    required String subtitle,
+    required bool selected,
+    required VoidCallback onTap,
+  }) =>
+      InkWell(
+        onTap: onTap,
+        borderRadius: DS.borderRadius16,
+        child: Container(
+          padding: const EdgeInsets.all(DS.spacing16),
+          decoration: BoxDecoration(
+            color: selected
+                ? DS.primaryBase.withValues(alpha: 0.08)
+                : DS.surfaceSecondary,
+            borderRadius: DS.borderRadius16,
+            border: Border.all(
+              color: selected
+                  ? DS.primaryBase.withValues(alpha: 0.2)
+                  : DS.borderSubtle,
+            ),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                    const SizedBox(height: DS.spacing4),
+                    Text(
+                      subtitle,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: DS.textSecondary,
+                            height: 1.4,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: DS.spacing12),
+              Icon(
+                selected ? Icons.check_circle_rounded : Icons.circle_outlined,
+                color: selected ? DS.primaryBase : DS.textSecondary,
+              ),
+            ],
+          ),
+        ),
+      );
 
   Widget _buildSectionHeader(IconData icon, String title) => Row(
         children: [
@@ -908,6 +979,32 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
             ),
           ),
         ],
+      );
+
+  Widget _buildSettingsDropdownField<T>({
+    required T value,
+    required List<DropdownMenuItem<T>> items,
+    required ValueChanged<T?> onChanged,
+  }) =>
+      Padding(
+        padding: const EdgeInsets.only(top: DS.spacing8),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: DS.borderRadius12,
+            border: Border.all(color: DS.borderSubtle),
+            color: DS.surfaceSecondary,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: DS.spacing12),
+            child: DropdownButton<T>(
+              value: value,
+              isExpanded: true,
+              underline: const SizedBox.shrink(),
+              onChanged: onChanged,
+              items: items,
+            ),
+          ),
+        ),
       );
 
   Widget _buildWeeklyAgendaSection(
@@ -1097,31 +1194,52 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
             children: [
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: Icon(statusIcon, color: statusColor),
+                leading: Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: Color.alphaBlend(
+                      statusColor.withValues(alpha: 0.1),
+                      DS.surfaceSecondary,
+                    ),
+                    borderRadius: DS.borderRadius12,
+                  ),
+                  child: Icon(statusIcon, color: statusColor),
+                ),
                 title: const Text('通知权限状态'),
                 subtitle: hintText != null
-                    ? Text(hintText, style: TextStyle(color: statusColor))
+                    ? Text(
+                        hintText,
+                        style: DS.bodySmall.copyWith(color: statusColor),
+                      )
                     : null,
                 trailing: hasPermission && !isPartial
-                    ? Icon(Icons.check_circle, color: statusColor)
-                    : TextButton(
+                    ? Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: DS.spacing8,
+                          vertical: DS.spacing6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: statusColor.withValues(alpha: 0.1),
+                          borderRadius: DS.borderRadius12,
+                        ),
+                        child: Icon(Icons.check_circle, color: statusColor),
+                      )
+                    : SparkleButton.ghost(
+                        label: !hasPermission ? '请求权限' : '打开设置',
                         onPressed: () async {
                           if (!hasPermission) {
-                            // Try to request permission first
                             final granted = await ref
                                 .read(notificationPermissionStatusProvider
                                     .notifier)
                                 .requestPermission();
                             if (!granted && context.mounted) {
-                              // Permission denied, show dialog to open settings
                               _showOpenSettingsDialog(context);
                             }
                           } else {
-                            // Partial permission, open settings
                             _showOpenSettingsDialog(context);
                           }
                         },
-                        child: Text(!hasPermission ? '请求权限' : '打开设置'),
                       ),
               ),
               if (isPartial) ...[
@@ -1131,18 +1249,18 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                     horizontal: DS.spacing16,
                     vertical: DS.spacing8,
                   ),
-                  child: Row(
+                  child: Wrap(
+                    spacing: DS.spacing8,
+                    runSpacing: DS.spacing8,
                     children: [
                       _buildPermissionChip(
                         'Alert',
                         status.alertEnabled ?? false,
                       ),
-                      const SizedBox(width: DS.spacing8),
                       _buildPermissionChip(
                         'Badge',
                         status.badgeEnabled ?? false,
                       ),
-                      const SizedBox(width: DS.spacing8),
                       _buildPermissionChip(
                         'Sound',
                         status.soundEnabled ?? false,
@@ -1243,8 +1361,12 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: DS.surfaceSecondary,
+        color: Color.alphaBlend(
+          DS.primaryBase.withValues(alpha: 0.05),
+          DS.surfaceSecondary,
+        ),
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: DS.borderSubtle),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1384,8 +1506,12 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: DS.surfaceSecondary,
+        color: Color.alphaBlend(
+          DS.info.withValues(alpha: 0.05),
+          DS.surfaceSecondary,
+        ),
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: DS.borderSubtle),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1478,8 +1604,12 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: DS.surfaceSecondary,
+        color: Color.alphaBlend(
+          DS.warning.withValues(alpha: 0.05),
+          DS.surfaceSecondary,
+        ),
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: DS.borderSubtle),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1586,7 +1716,10 @@ class _MetricChip extends StatelessWidget {
           vertical: DS.spacing8,
         ),
         decoration: BoxDecoration(
-          color: DS.surfacePrimary,
+          color: Color.alphaBlend(
+            DS.primaryBase.withValues(alpha: 0.06),
+            DS.surfacePrimary,
+          ),
           borderRadius: BorderRadius.circular(999),
           border: Border.all(color: DS.borderSubtle),
         ),

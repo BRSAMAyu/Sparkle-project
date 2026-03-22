@@ -90,7 +90,9 @@ class BgmService {
   static int _sequence = 0;
   static bool _isRefreshing = false;
   static bool _refreshQueued = false;
+  static int _duckSequence = 0;
   static BgmTrack? _currentTrack;
+  static BgmPriority? _currentPriority;
   static double _currentOutputVolume = 0;
 
   static Future<void> init() async {
@@ -200,6 +202,32 @@ class BgmService {
     await _refreshPlayback(force: true);
   }
 
+  static Future<void> duckForNavigation({bool isBackNavigation = false}) async {
+    final player = _player;
+    final currentTrack = _currentTrack;
+    if (player == null || currentTrack == null || _isRefreshing) {
+      return;
+    }
+
+    final sequence = ++_duckSequence;
+    final targetVolume = await _targetVolume(currentTrack);
+    final duckFactor = isBackNavigation ? 0.84 : 0.7;
+    final duckDuration = isBackNavigation
+        ? const Duration(milliseconds: 120)
+        : const Duration(milliseconds: 160);
+    final settleDuration = isBackNavigation
+        ? const Duration(milliseconds: 120)
+        : const Duration(milliseconds: 180);
+
+    await _fadeTo(targetVolume * duckFactor, duration: duckDuration, steps: 4);
+    await Future<void>.delayed(settleDuration);
+
+    if (sequence != _duckSequence || _isRefreshing || _player == null) {
+      return;
+    }
+    await _refreshPlayback();
+  }
+
   static Future<void> dispose() async {
     _registrations.clear();
     await _player?.dispose();
@@ -222,10 +250,14 @@ class BgmService {
 
       if (!enabled || desiredTrack == null) {
         if (_player != null) {
-          await _fadeTo(0);
+          await _fadeTo(
+            0,
+            duration: _fadeDurationForPriority(_currentPriority),
+          );
           await _player!.stop();
         }
         _currentTrack = null;
+        _currentPriority = null;
         _currentOutputVolume = 0;
       } else if (!force && desiredTrack == _currentTrack) {
         await _player?.setVolume(await _targetVolume(desiredTrack));
@@ -288,7 +320,10 @@ class BgmService {
       return;
     }
 
-    await _fadeTo(0);
+    final registration = _resolveRegistration();
+    final fadeDuration = _fadeDurationForPriority(registration?.priority);
+
+    await _fadeTo(0, duration: fadeDuration);
     await player.stop();
     await player.setReleaseMode(ReleaseMode.loop);
     await player.play(
@@ -297,7 +332,8 @@ class BgmService {
       mode: PlayerMode.mediaPlayer,
     );
     _currentTrack = track;
-    await _fadeTo(await _targetVolume(track));
+    _currentPriority = registration?.priority;
+    await _fadeTo(await _targetVolume(track), duration: fadeDuration);
   }
 
   static Future<double> _targetVolume(BgmTrack track) async =>
@@ -309,58 +345,92 @@ class BgmService {
       case BgmTrack.dashboard:
         return switch (palette) {
           BgmPalette.adaptive => 'audio/bgm/relax_background1.ogg',
-          BgmPalette.piano => 'audio/bgm/relax_background1.ogg',
-          BgmPalette.airy => 'audio/bgm/heavenly_loop.ogg',
+          BgmPalette.piano => 'audio/bgm/classical_piano_loop.ogg',
+          BgmPalette.airy => 'audio/bgm/oceanic_drift.ogg',
           BgmPalette.warm => 'audio/bgm/sunset_walk.ogg',
         };
       case BgmTrack.plan:
-        return 'audio/bgm/sunset_walk.ogg';
+        return switch (palette) {
+          BgmPalette.piano => 'audio/bgm/classical_piano_loop.ogg',
+          BgmPalette.airy => 'audio/bgm/heavenly_loop.ogg',
+          BgmPalette.warm => 'audio/bgm/sunset_walk.ogg',
+          BgmPalette.adaptive => 'audio/bgm/sunset_walk.ogg',
+        };
       case BgmTrack.chat:
         return switch (palette) {
-          BgmPalette.airy => 'audio/bgm/heavenly_loop.ogg',
+          BgmPalette.piano => 'audio/bgm/classical_piano_loop.ogg',
+          BgmPalette.airy => 'audio/bgm/oceanic_drift.ogg',
           BgmPalette.warm => 'audio/bgm/sunset_walk.ogg',
           _ => 'audio/bgm/calm_track_loop.ogg',
         };
       case BgmTrack.community:
         return switch (palette) {
-          BgmPalette.piano => 'audio/bgm/sunset_walk.ogg',
+          BgmPalette.piano => 'audio/bgm/classical_piano_loop.ogg',
           BgmPalette.airy => 'audio/bgm/heavenly_loop.ogg',
-          _ => 'audio/bgm/loop_city.ogg',
+          BgmPalette.warm => 'audio/bgm/loop_city.ogg',
+          BgmPalette.adaptive => 'audio/bgm/loop_city.ogg',
         };
       case BgmTrack.task:
         return switch (palette) {
-          BgmPalette.piano => 'audio/bgm/relax_background1.ogg',
-          BgmPalette.airy => 'audio/bgm/heavenly_loop.ogg',
+          BgmPalette.piano => 'audio/bgm/classical_piano_loop.ogg',
+          BgmPalette.airy => 'audio/bgm/oceanic_drift.ogg',
           BgmPalette.warm => 'audio/bgm/sunset_walk.ogg',
           BgmPalette.adaptive => 'audio/bgm/calm_track_loop.ogg',
         };
       case BgmTrack.calendar:
+        return switch (palette) {
+          BgmPalette.piano => 'audio/bgm/classical_piano_loop.ogg',
+          BgmPalette.airy => 'audio/bgm/heavenly_loop.ogg',
+          BgmPalette.warm => 'audio/bgm/sunset_walk.ogg',
+          BgmPalette.adaptive => 'audio/bgm/oceanic_drift.ogg',
+        };
       case BgmTrack.achievement:
+        return switch (palette) {
+          BgmPalette.piano => 'audio/bgm/classical_piano_loop.ogg',
+          BgmPalette.airy => 'audio/bgm/heavenly_loop.ogg',
+          BgmPalette.warm => 'audio/bgm/sunset_walk.ogg',
+          BgmPalette.adaptive => 'audio/bgm/heavenly_loop.ogg',
+        };
       case BgmTrack.galaxy:
+        return switch (palette) {
+          BgmPalette.piano => 'audio/bgm/classical_piano_loop.ogg',
+          BgmPalette.airy => 'audio/bgm/oceanic_drift.ogg',
+          BgmPalette.warm => 'audio/bgm/heavenly_loop.ogg',
+          BgmPalette.adaptive => 'audio/bgm/heavenly_loop.ogg',
+        };
       case BgmTrack.celebration:
-        return 'audio/bgm/heavenly_loop.ogg';
+        return switch (palette) {
+          BgmPalette.piano => 'audio/bgm/classical_piano_loop.ogg',
+          BgmPalette.airy => 'audio/bgm/heavenly_loop.ogg',
+          BgmPalette.warm => 'audio/bgm/sunset_walk.ogg',
+          BgmPalette.adaptive => 'audio/bgm/heavenly_loop.ogg',
+        };
       case BgmTrack.insights:
         return switch (palette) {
-          BgmPalette.airy => 'audio/bgm/heavenly_loop.ogg',
+          BgmPalette.piano => 'audio/bgm/classical_piano_loop.ogg',
+          BgmPalette.airy => 'audio/bgm/oceanic_drift.ogg',
           BgmPalette.warm => 'audio/bgm/sunset_walk.ogg',
           _ => 'audio/bgm/relax_background1.ogg',
         };
       case BgmTrack.tools:
         return switch (palette) {
-          BgmPalette.piano => 'audio/bgm/relax_background1.ogg',
+          BgmPalette.piano => 'audio/bgm/classical_piano_loop.ogg',
+          BgmPalette.airy => 'audio/bgm/oceanic_drift.ogg',
           BgmPalette.warm => 'audio/bgm/sunset_walk.ogg',
-          _ => 'audio/bgm/calm_track_loop.ogg',
+          BgmPalette.adaptive => 'audio/bgm/calm_track_loop.ogg',
         };
       case BgmTrack.profile:
         return switch (palette) {
           BgmPalette.airy => 'audio/bgm/heavenly_loop.ogg',
-          _ => 'audio/bgm/sunset_walk.ogg',
+          BgmPalette.warm => 'audio/bgm/sunset_walk.ogg',
+          _ => 'audio/bgm/classical_piano_loop.ogg',
         };
       case BgmTrack.focusStart:
         return switch (palette) {
           BgmPalette.airy => 'audio/bgm/heavenly_loop.ogg',
           BgmPalette.warm => 'audio/bgm/sunset_walk.ogg',
-          _ => 'audio/ambient/piano.ogg',
+          BgmPalette.piano => 'audio/bgm/classical_piano_loop.ogg',
+          BgmPalette.adaptive => 'audio/ambient/piano.ogg',
         };
       case BgmTrack.focus:
         return 'audio/ambient/piano.ogg';
@@ -369,7 +439,12 @@ class BgmService {
       case BgmTrack.thinking:
         return 'audio/ambient/piano.ogg';
       case BgmTrack.visualUnlock:
-        return 'audio/bgm/sunset_walk.ogg';
+        return switch (palette) {
+          BgmPalette.piano => 'audio/bgm/classical_piano_loop.ogg',
+          BgmPalette.airy => 'audio/bgm/heavenly_loop.ogg',
+          BgmPalette.warm => 'audio/bgm/sunset_walk.ogg',
+          BgmPalette.adaptive => 'audio/bgm/heavenly_loop.ogg',
+        };
     }
   }
 
@@ -390,6 +465,18 @@ class BgmService {
       await player.setVolume(next.clamp(0.0, 1.0));
       _currentOutputVolume = next.clamp(0.0, 1.0);
       await Future<void>.delayed(duration ~/ steps);
+    }
+  }
+
+  static Duration _fadeDurationForPriority(BgmPriority? priority) {
+    switch (priority) {
+      case BgmPriority.component:
+        return const Duration(milliseconds: 260);
+      case BgmPriority.stage:
+        return const Duration(milliseconds: 380);
+      case BgmPriority.route:
+      case null:
+        return const Duration(milliseconds: 560);
     }
   }
 }

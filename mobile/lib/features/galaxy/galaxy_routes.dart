@@ -1,25 +1,12 @@
 import 'package:animations/animations.dart';
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/experience/experience_profile.dart';
+import 'package:sparkle/core/navigation/sparkle_route_transition.dart';
+import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
+import 'package:sparkle/core/widgets/scene_audio_scope.dart';
 import 'package:sparkle/features/knowledge/presentation/screens/knowledge_detail_screen.dart';
-
-Page<dynamic> _buildTransitionPage({
-  required GoRouterState state,
-  required Widget child,
-  SharedAxisTransitionType type = SharedAxisTransitionType.horizontal,
-}) =>
-    CustomTransitionPage<void>(
-      key: state.pageKey,
-      child: child,
-      transitionsBuilder: (context, animation, secondaryAnimation, child) =>
-          SharedAxisTransition(
-        animation: animation,
-        secondaryAnimation: secondaryAnimation,
-        transitionType: type,
-        child: child,
-      ),
-    );
 
 class GalaxyRoutes {
   // Route constants for deep linking and navigation
@@ -34,9 +21,16 @@ class GalaxyRoutes {
           parentNavigatorKey: navigatorKey,
           pageBuilder: (context, state) {
             final nodeId = state.pathParameters['id']!;
-            return _buildTransitionPage(
+            return buildSparkleTransitionPage(
               state: state,
-              child: KnowledgeDetailScreen(nodeId: nodeId),
+              motionToken: SparkleMotionToken.scene,
+              type: SharedAxisTransitionType.scaled,
+              child: SceneAudioScope(
+                policy: ExperienceProfiles.focusImmersive.audioPolicy(
+                  trackOverride: BgmTrack.galaxy,
+                ),
+                child: KnowledgeDetailScreen(nodeId: nodeId),
+              ),
             );
           },
         ),

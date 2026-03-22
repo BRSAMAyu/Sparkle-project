@@ -51,73 +51,127 @@ class CapsuleGenerationPreview extends StatelessWidget {
     final depthLabel = depthLabelBuilder(context);
     final expectedCount = _expectedCount;
 
-    return Container(
-      padding: const EdgeInsets.all(DS.spacing16),
-      decoration: BoxDecoration(
-        color: isDark ? DS.surfaceTertiary : DS.surfaceSecondary,
-        borderRadius: DS.borderRadius16,
-        border: Border.all(
-          color: isDark ? DS.neutral700 : DS.neutral300,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 标题行
-          Row(
-            children: [
-              Icon(
-                Icons.auto_awesome_outlined,
-                color: DS.primaryBase,
-                size: 20,
-              ),
-              const SizedBox(width: DS.sm),
-              Text(
-                context.l10n.capsuleGenerationPreviewTitle,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? DS.textPrimary : DS.textPrimary,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 360;
+        return Container(
+          padding: const EdgeInsets.all(DS.spacing16),
+          decoration: BoxDecoration(
+            borderRadius: DS.borderRadius16,
+            border: Border.all(
+              color: isDark ? DS.neutral700 : DS.neutral300,
+            ),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color.alphaBlend(
+                  DS.primaryBase.withValues(alpha: isDark ? 0.12 : 0.08),
+                  isDark ? DS.surfaceTertiary : DS.surfaceSecondary,
                 ),
+                isDark ? DS.surfaceSecondary : DS.surfacePrimaryElevated,
+              ],
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.auto_awesome_outlined,
+                    color: DS.primaryBase,
+                    size: 20,
+                  ),
+                  const SizedBox(width: DS.sm),
+                  Expanded(
+                    child: Text(
+                      context.l10n.capsuleGenerationPreviewTitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: DS.textPrimary,
+                      ),
+                    ),
+                  ),
+                ],
               ),
+              const SizedBox(height: DS.spacing16),
+              compact
+                  ? Column(
+                      children: [
+                        _buildPreviewMetricCard(
+                          context,
+                          icon: Icons.library_books_outlined,
+                          label:
+                              context.l10n.capsuleGenerationPreviewCountLabel,
+                          value: context.l10n.capsuleGenerationPreviewCount(
+                            expectedCount,
+                          ),
+                          color: DS.info,
+                        ),
+                        const SizedBox(height: DS.spacing12),
+                        _buildPreviewMetricCard(
+                          context,
+                          icon: Icons.timeline_outlined,
+                          label:
+                              context.l10n.capsuleGenerationPreviewDepthLabel,
+                          value: depthLabel,
+                          color: DS.warning,
+                        ),
+                        const SizedBox(height: DS.spacing12),
+                        _buildPreviewMetricCard(
+                          context,
+                          icon: Icons.psychology_outlined,
+                          label:
+                              context.l10n.capsuleGenerationPreviewModelLabel,
+                          value: modelName,
+                          color: DS.success,
+                        ),
+                      ],
+                    )
+                  : Wrap(
+                      spacing: DS.spacing12,
+                      runSpacing: DS.spacing12,
+                      children: [
+                        _buildPreviewMetricCard(
+                          context,
+                          icon: Icons.library_books_outlined,
+                          label:
+                              context.l10n.capsuleGenerationPreviewCountLabel,
+                          value: context.l10n.capsuleGenerationPreviewCount(
+                            expectedCount,
+                          ),
+                          color: DS.info,
+                        ),
+                        _buildPreviewMetricCard(
+                          context,
+                          icon: Icons.timeline_outlined,
+                          label:
+                              context.l10n.capsuleGenerationPreviewDepthLabel,
+                          value: depthLabel,
+                          color: DS.warning,
+                        ),
+                        _buildPreviewMetricCard(
+                          context,
+                          icon: Icons.psychology_outlined,
+                          label:
+                              context.l10n.capsuleGenerationPreviewModelLabel,
+                          value: modelName,
+                          color: DS.success,
+                        ),
+                      ],
+                    ),
             ],
           ),
-          const SizedBox(height: DS.spacing16),
-
-          // 预计生成数量
-          _buildPreviewRow(
-            context,
-            icon: Icons.library_books_outlined,
-            label: context.l10n.capsuleGenerationPreviewCountLabel,
-            value: context.l10n.capsuleGenerationPreviewCount(expectedCount),
-            color: DS.info,
-          ),
-          const SizedBox(height: DS.md),
-
-          // 深度级别
-          _buildPreviewRow(
-            context,
-            icon: Icons.timeline_outlined,
-            label: context.l10n.capsuleGenerationPreviewDepthLabel,
-            value: depthLabel,
-            color: DS.warning,
-          ),
-          const SizedBox(height: DS.md),
-
-          // 使用模型
-          _buildPreviewRow(
-            context,
-            icon: Icons.psychology_outlined,
-            label: context.l10n.capsuleGenerationPreviewModelLabel,
-            value: modelName,
-            color: DS.success,
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildPreviewRow(
+  Widget _buildPreviewMetricCard(
     BuildContext context, {
     required IconData icon,
     required String label,
@@ -126,46 +180,55 @@ class CapsuleGenerationPreview extends StatelessWidget {
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(DS.sm),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.15),
-            borderRadius: DS.borderRadius8,
-          ),
-          child: Icon(
-            icon,
-            size: 18,
-            color: color,
-          ),
+    return Container(
+      width: 160,
+      padding: const EdgeInsets.all(DS.spacing12),
+      decoration: BoxDecoration(
+        borderRadius: DS.borderRadius12,
+        border: Border.all(
+          color: color.withValues(alpha: isDark ? 0.22 : 0.16),
         ),
-        const SizedBox(width: DS.md),
-        Expanded(
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 13,
-              color: isDark ? DS.textSecondary : DS.textSecondary,
+        color: Color.alphaBlend(
+          color.withValues(alpha: isDark ? 0.12 : 0.08),
+          isDark ? DS.surfacePrimaryElevated : DS.surfaceSecondary,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(DS.sm),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.15),
+              borderRadius: DS.borderRadius8,
+            ),
+            child: Icon(
+              icon,
+              size: 18,
+              color: color,
             ),
           ),
-        ),
-        const SizedBox(width: DS.spacing8),
-        Flexible(
-          child: Text(
+          const SizedBox(height: DS.spacing10),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: DS.textSecondary,
+            ),
+          ),
+          const SizedBox(height: DS.spacing6),
+          Text(
             value,
-            textAlign: TextAlign.right,
             style: TextStyle(
               fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: isDark ? DS.textPrimary : DS.textPrimary,
+              fontWeight: FontWeight.w700,
+              color: DS.textPrimary,
             ),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

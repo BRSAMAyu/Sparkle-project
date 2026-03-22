@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/universal_share_bottom_sheet.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/share_poster_service.dart';
@@ -144,6 +145,22 @@ class _PlanOverviewTab extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Wrap(
+                  spacing: DS.spacing8,
+                  runSpacing: DS.spacing8,
+                  children: [
+                    _PlanMetaChip(
+                      icon: Icons.flag_outlined,
+                      label: plan.subject ?? l10n.planTabOverview,
+                    ),
+                    _PlanMetaChip(
+                      icon: Icons.task_alt_rounded,
+                      label:
+                          '${plan.tasks?.where((task) => task.status == TaskStatus.completed).length ?? 0}/${plan.tasks?.length ?? 0} 任务',
+                    ),
+                  ],
+                ),
+                const SizedBox(height: DS.spacing12),
                 Text(
                   plan.name,
                   style: Theme.of(context).textTheme.headlineSmall,
@@ -229,21 +246,49 @@ class _PlanOverviewTab extends ConsumerWidget {
   }
 
   Future<void> _confirmArchive(BuildContext context, WidgetRef ref) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showSensoryDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(context.l10n.planArchiveTitle),
-        content: Text(context.l10n.planArchiveMessage),
-        actions: [
-          SparkleButton.ghost(
-            onPressed: () => Navigator.of(context).pop(false),
-            label: context.l10n.cancel,
+      builder: (dialogContext) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        child: GraphiteModalSurface(
+          title: context.l10n.planArchiveTitle,
+          showHandle: false,
+          borderRadius: BorderRadius.circular(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                context.l10n.planArchiveMessage,
+                style: Theme.of(dialogContext).textTheme.bodyMedium?.copyWith(
+                      color: DS.textSecondary,
+                      height: 1.45,
+                    ),
+              ),
+              const SizedBox(height: DS.spacing16),
+              Row(
+                children: [
+                  Expanded(
+                    child: SparkleButton.ghost(
+                      onPressed: () => Navigator.of(dialogContext).pop(false),
+                      label: context.l10n.cancel,
+                      expand: true,
+                    ),
+                  ),
+                  const SizedBox(width: DS.spacing12),
+                  Expanded(
+                    child: SparkleButton(
+                      onPressed: () => Navigator.of(dialogContext).pop(true),
+                      label: context.l10n.planArchiveConfirm,
+                      expand: true,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-          SparkleButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            label: context.l10n.planArchiveConfirm,
-          ),
-        ],
+        ),
       ),
     );
 
@@ -255,6 +300,40 @@ class _PlanOverviewTab extends ConsumerWidget {
       AppFeedback.success(context, context.l10n.planArchivedSuccess);
     }
   }
+}
+
+class _PlanMetaChip extends StatelessWidget {
+  const _PlanMetaChip({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing10,
+          vertical: DS.spacing6,
+        ),
+        decoration: BoxDecoration(
+          color: DS.surfaceSecondary,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: DS.borderSubtle),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: DS.textSecondary),
+            const SizedBox(width: DS.spacing6),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: DS.textSecondary,
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+          ],
+        ),
+      );
 }
 
 class _PlanProgressTab extends StatelessWidget {

@@ -1,8 +1,11 @@
 import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/experience/experience_profile.dart';
+import 'package:sparkle/core/navigation/sparkle_route_transition.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
-import 'package:sparkle/core/widgets/bgm_scope.dart';
+import 'package:sparkle/core/widgets/scene_audio_scope.dart';
 import 'package:sparkle/features/memory/presentation/screens/memory_settings_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/account_security_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/admin_operations_screen.dart';
@@ -19,23 +22,6 @@ import 'package:sparkle/features/user/presentation/screens/sync_center_screen.da
 import 'package:sparkle/features/user/presentation/screens/system_updates_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/unified_settings_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/user_persona_screen.dart';
-
-Page<dynamic> _buildTransitionPage({
-  required GoRouterState state,
-  required Widget child,
-  SharedAxisTransitionType type = SharedAxisTransitionType.horizontal,
-}) =>
-    CustomTransitionPage<void>(
-      key: state.pageKey,
-      child: child,
-      transitionsBuilder: (context, animation, secondaryAnimation, child) =>
-          SharedAxisTransition(
-        animation: animation,
-        secondaryAnimation: secondaryAnimation,
-        transitionType: type,
-        child: child,
-      ),
-    );
 
 class UserRoutes {
   static const String profile = '/profile';
@@ -75,32 +61,38 @@ class UserRoutes {
         GoRoute(
           path: editProfile,
           name: 'editProfile',
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
-            child: const BgmScope(
-              track: BgmTrack.profile,
-              child: EditProfileScreen(),
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.dashboardProductive.audioPolicy(
+                trackOverride: BgmTrack.profile,
+              ),
+              child: const EditProfileScreen(),
             ),
           ),
         ),
         GoRoute(
           path: settings,
           name: 'profileSettings',
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
-            child: const BgmScope(
-              track: BgmTrack.profile,
-              child: UnifiedSettingsScreen(),
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.dashboardProductive.audioPolicy(
+                trackOverride: BgmTrack.profile,
+              ),
+              child: const UnifiedSettingsScreen(),
             ),
           ),
         ),
         GoRoute(
           path: persona,
           name: 'profilePersona',
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
-            child: BgmScope(
-              track: BgmTrack.profile,
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.dashboardProductive.audioPolicy(
+                trackOverride: BgmTrack.profile,
+              ),
               child: UserPersonaScreen(
                 initialOverrideKey: state.uri.queryParameters['override'],
               ),
@@ -110,7 +102,7 @@ class UserRoutes {
         GoRoute(
           path: systemUpdates,
           name: 'systemUpdates',
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
             child: const SystemUpdatesScreen(),
           ),
@@ -118,8 +110,9 @@ class UserRoutes {
         GoRoute(
           path: passwordReset,
           name: 'passwordReset',
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
+            motionToken: SparkleMotionToken.scene,
             child: const PasswordResetScreen(),
             type: SharedAxisTransitionType.scaled,
           ),
@@ -127,7 +120,7 @@ class UserRoutes {
         GoRoute(
           path: memorySettings,
           name: 'profileMemorySettings',
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
             child: const MemorySettingsScreen(),
           ),
@@ -135,7 +128,7 @@ class UserRoutes {
         GoRoute(
           path: syncCenter,
           name: 'syncCenter',
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
             child: const SyncCenterScreen(),
           ),
@@ -143,7 +136,7 @@ class UserRoutes {
         GoRoute(
           path: socialAccounts,
           name: 'socialAccounts',
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
             child: const SocialAccountsScreen(),
           ),
@@ -151,7 +144,7 @@ class UserRoutes {
         GoRoute(
           path: sessionManagement,
           name: 'sessionManagement',
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
             child: const SessionManagementScreen(),
           ),
@@ -159,7 +152,7 @@ class UserRoutes {
         GoRoute(
           path: securityLog,
           name: 'securityLog',
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
             child: const SecurityLogScreen(),
           ),
@@ -167,7 +160,7 @@ class UserRoutes {
         GoRoute(
           path: accountSecurity,
           name: 'accountSecurity',
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
             child: const AccountSecurityScreen(),
           ),
@@ -175,8 +168,9 @@ class UserRoutes {
         GoRoute(
           path: deleteAccount,
           name: 'deleteAccount',
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
+            motionToken: SparkleMotionToken.scene,
             child: const DeleteAccountScreen(),
             type: SharedAxisTransitionType.scaled,
           ),
@@ -184,7 +178,7 @@ class UserRoutes {
         GoRoute(
           path: adminOperations,
           name: 'adminOperations',
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
             child: const AdminOperationsScreen(),
           ),
@@ -192,7 +186,7 @@ class UserRoutes {
         GoRoute(
           path: guestUpgrade,
           name: 'guestUpgrade',
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
             child: const GuestUpgradeScreen(),
           ),
@@ -200,7 +194,7 @@ class UserRoutes {
         GoRoute(
           path: '/settings/learning-mode',
           name: 'learningMode',
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
             child: const LearningModeScreen(),
           ),
@@ -208,7 +202,7 @@ class UserRoutes {
         GoRoute(
           path: personaOnboarding,
           name: 'personaOnboarding',
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
             child: const PersonaOnboardingScreen(),
           ),

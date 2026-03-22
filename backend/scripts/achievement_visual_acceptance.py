@@ -1,8 +1,13 @@
+import asyncio
 import json
 from dataclasses import dataclass
 
 import requests
 from app.config import settings
+from app.core.security import create_access_token
+from app.db.session import AsyncSessionLocal
+from app.models.user import User
+from sqlalchemy import select
 
 
 BASE_URL = "http://127.0.0.1:8000/api/v1"
@@ -41,17 +46,20 @@ def _request(
     return response
 
 
+async def _resolve_local_user() -> AcceptanceState:
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(select(User).where(User.username == USERNAME))
+        user = result.scalar_one_or_none()
+        if user is None:
+            raise RuntimeError(f"local smoke user not found: {USERNAME}")
+        return AcceptanceState(
+            token=create_access_token({"sub": str(user.id)}),
+            user_id=str(user.id),
+        )
+
+
 def _login() -> AcceptanceState:
-    response = _request(
-        "POST",
-        "/auth/login",
-        json={"username": USERNAME, "password": PASSWORD},
-    )
-    payload = response.json()
-    return AcceptanceState(
-        token=payload["access_token"],
-        user_id=payload["user"]["id"] if "user" in payload else "",
-    )
+    return asyncio.run(_resolve_local_user())
 
 
 def main() -> None:

@@ -47,6 +47,12 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
             builder: (context, constraints) {
               final size = constraints.biggest.shortestSide;
               const double handleSize = 40; // Size of the draggable flame icon
+              final glowColor = Color.lerp(
+                    DS.info,
+                    DS.semanticSuccess,
+                    _currentPosition.dx.clamp(0.0, 1.0),
+                  ) ??
+                  DS.primaryBase;
               final axisColor = Theme.of(context).brightness == Brightness.dark
                   ? DS.neutral600
                   : DS.neutral300;
@@ -106,9 +112,34 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
                     // Use theme-aware background with better contrast
                     // In dark mode: use surfaceTertiary (darker) to contrast with white control point
                     // In light mode: use surfaceSecondary (lighter) for better visibility
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? DS.surfaceTertiary
-                        : DS.surfaceSecondary,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color.alphaBlend(
+                          DS.info.withValues(
+                              alpha: 0.12 + (_currentPosition.dy * 0.08)),
+                          Theme.of(context).brightness == Brightness.dark
+                              ? DS.surfaceTertiary
+                              : DS.surfaceSecondary,
+                        ),
+                        Color.alphaBlend(
+                          DS.semanticSuccess.withValues(
+                            alpha: 0.08 + (_currentPosition.dx * 0.1),
+                          ),
+                          Theme.of(context).brightness == Brightness.dark
+                              ? DS.surfaceSecondary
+                              : DS.surfacePrimary,
+                        ),
+                      ],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: glowColor.withValues(alpha: 0.08),
+                        blurRadius: 28,
+                        offset: const Offset(0, 16),
+                      ),
+                    ],
                   ),
                   child: Stack(
                     children: [
@@ -123,7 +154,8 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
                               DS.info
                                   .withValues(alpha: 0.25), // Deep - blue tint
                               DS.warning.withValues(
-                                  alpha: 0.15,), // Shallow - warm tint
+                                alpha: 0.15,
+                              ), // Shallow - warm tint
                             ],
                           ),
                         ),
@@ -135,9 +167,11 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
                           gradient: LinearGradient(
                             colors: [
                               DS.brandSecondary.withValues(
-                                  alpha: 0.15,), // Focus - purple tint
+                                alpha: 0.15,
+                              ), // Focus - purple tint
                               DS.semanticSuccess.withValues(
-                                  alpha: 0.2,), // Curious - green tint
+                                alpha: 0.2,
+                              ), // Curious - green tint
                             ],
                           ),
                         ),
@@ -147,6 +181,27 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
                       CustomPaint(
                         size: Size(size, size),
                         painter: _GridAxisPainter(axisColor: axisColor),
+                      ),
+
+                      Positioned(
+                        left: x - 52,
+                        top: y - 52,
+                        child: IgnorePointer(
+                          child: Container(
+                            width: 104,
+                            height: 104,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: RadialGradient(
+                                colors: [
+                                  glowColor.withValues(alpha: 0.26),
+                                  glowColor.withValues(alpha: 0.08),
+                                  Colors.transparent,
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
 
                       // Labels
@@ -171,12 +226,14 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: Theme.of(context).brightness ==
-                                        Brightness.dark
-                                    ? DS.neutral0.withValues(alpha: 0.3)
-                                    : DS.primaryBase.withValues(alpha: 0.5),
-                                blurRadius: 10,
-                                spreadRadius: 2,
+                                color: glowColor.withValues(
+                                  alpha: Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? 0.34
+                                      : 0.28,
+                                ),
+                                blurRadius: 16,
+                                spreadRadius: 3,
                               ),
                             ],
                             border: Border.all(
@@ -209,7 +266,7 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
   Widget _buildQuadrantLabels() {
     const labelPadding = 8.0;
     final textStyle = TextStyle(
-      fontSize: 11,
+      fontSize: 10,
       fontWeight: FontWeight.bold,
       color: DS.textSecondary,
     );
@@ -251,8 +308,10 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
             padding: const EdgeInsets.only(right: labelPadding),
             child: RotatedBox(
               quarterTurns: 1,
-              child: Text(context.l10n.learningModeCuriosityHigh,
-                  style: textStyle,),
+              child: Text(
+                context.l10n.learningModeCuriosityHigh,
+                style: textStyle,
+              ),
             ),
           ),
         ),

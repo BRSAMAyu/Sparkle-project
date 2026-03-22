@@ -53,7 +53,7 @@ class DecayService:
         query = select(UserNodeStatus).where(
             and_(
                 UserNodeStatus.is_unlocked,
-                not UserNodeStatus.decay_paused,
+                UserNodeStatus.decay_paused.is_(False),
                 UserNodeStatus.last_study_at < now - timedelta(days=self.DECAY_CHECK_INTERVAL),
                 UserNodeStatus.mastery_score > self.MIN_MASTERY
             )

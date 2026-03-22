@@ -1,29 +1,13 @@
 import 'package:animations/animations.dart';
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/experience/experience_profile.dart';
+import 'package:sparkle/core/navigation/sparkle_route_transition.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/widgets/scene_audio_scope.dart';
 import 'package:sparkle/features/focus/presentation/screens/focus_main_screen.dart';
 import 'package:sparkle/features/focus/presentation/screens/mindfulness_mode_screen.dart';
-
-Page<dynamic> _buildTransitionPage({
-  required GoRouterState state,
-  required Widget child,
-  SharedAxisTransitionType type = SharedAxisTransitionType.horizontal,
-}) =>
-    CustomTransitionPage<void>(
-      key: state.pageKey,
-      child: child,
-      transitionsBuilder: (context, animation, secondaryAnimation, child) =>
-          SharedAxisTransition(
-        animation: animation,
-        secondaryAnimation: secondaryAnimation,
-        transitionType: type,
-        child: child,
-      ),
-    );
 
 class FocusRoutes {
   // Route constants for deep linking and navigation
@@ -36,14 +20,14 @@ class FocusRoutes {
           path: home,
           name: 'focus',
           parentNavigatorKey: navigatorKey,
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
+            motionToken: SparkleMotionToken.scene,
             child: SceneAudioScope(
               policy: ExperienceProfiles.focusImmersive.audioPolicy(
                 trackOverride: BgmTrack.focusStart,
-                priority: BgmPriority.route,
               ),
-              child: FocusMainScreen(),
+              child: const FocusMainScreen(),
             ),
             type: SharedAxisTransitionType.scaled,
           ),
@@ -56,12 +40,12 @@ class FocusRoutes {
           pageBuilder: (context, state) {
             // id is a required path parameter, so it won't be null
             final taskId = state.pathParameters['id']!;
-            return _buildTransitionPage(
+            return buildSparkleTransitionPage(
               state: state,
+              motionToken: SparkleMotionToken.scene,
               child: SceneAudioScope(
                 policy: ExperienceProfiles.focusImmersive.audioPolicy(
                   trackOverride: BgmTrack.focusDeep,
-                  priority: BgmPriority.route,
                   useSavedAmbient: true,
                 ),
                 child: MindfulnessModeScreen(taskId: taskId),

@@ -65,12 +65,11 @@ async def log_focus_session(
             FocusStatus(data.status)
         )
 
-        session = result["session"]
         rewards = result["rewards"]
 
         return {
             "success": True,
-            "id": str(session.id),
+            "id": result["session_id"],
             "rewards": rewards, # {flame_earned, leveled_up, new_level}
             "unlocked_achievements": result.get("unlocked_achievements", []),
         }

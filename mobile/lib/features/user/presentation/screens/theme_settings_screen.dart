@@ -7,13 +7,6 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/providers/theme_provider.dart';
 
-/// Theme Settings Screen - 主题设置屏幕
-///
-/// 用户可以在此屏幕上：
-/// - 切换深色/浅色/系统主题模式
-/// - 选择品牌预设 (Sparkle/Ocean/Forest)
-/// - 启用/禁用高对比度模式
-/// - 恢复默认设置
 class ThemeSettingsScreen extends ConsumerWidget {
   const ThemeSettingsScreen({super.key});
 
@@ -33,60 +26,55 @@ class ThemeSettingsScreen extends ConsumerWidget {
           onPressed: () => context.pop(),
         ),
         title: Text(context.l10n.themeSettings),
-        elevation: 0,
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        foregroundColor: Theme.of(context).textTheme.titleLarge?.color,
       ),
       child: ContentConstraint(
         child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: DS.lg,
-              vertical: DS.md,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                GraphiteCardSurface(
-                  child: _ThemeModeSection(
-                    currentMode: currentMode,
-                    onModeChanged: themeManager.setAppThemeMode,
-                  ),
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.lg,
+            vertical: DS.md,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              GraphiteCardSurface(
+                child: _ThemeModeSection(
+                  currentMode: currentMode,
+                  onModeChanged: themeManager.setAppThemeMode,
                 ),
-                const SizedBox(height: DS.xl),
-                GraphiteCardSurface(
-                  child: _BrandPresetSection(
-                    currentPreset: currentPreset,
-                    onPresetChanged: themeManager.setBrandPreset,
-                  ),
+              ),
+              const SizedBox(height: DS.xl),
+              GraphiteCardSurface(
+                child: _BrandPresetSection(
+                  currentPreset: currentPreset,
+                  onPresetChanged: themeManager.setBrandPreset,
                 ),
-                const SizedBox(height: DS.xl),
-                GraphiteCardSurface(
-                  child: _HighContrastSection(
-                    highContrast: highContrast,
-                    onToggled: themeManager.toggleHighContrast,
-                  ),
+              ),
+              const SizedBox(height: DS.xl),
+              GraphiteCardSurface(
+                child: _HighContrastSection(
+                  highContrast: highContrast,
+                  onToggled: themeManager.toggleHighContrast,
                 ),
-                const SizedBox(height: DS.xl),
-                GraphiteCardSurface(
-                  child: _ResetButton(
-                    onPressed: () {
-                      unawaited(themeManager.reset());
-                      if (context.mounted) {
-                        AppFeedback.success(
-                          context,
-                          context.l10n.themeResetSuccess,
-                        );
-                      }
-                    },
-                  ),
+              ),
+              const SizedBox(height: DS.xl),
+              GraphiteCardSurface(
+                child: _ResetButton(
+                  onPressed: () {
+                    unawaited(themeManager.reset());
+                    if (context.mounted) {
+                      AppFeedback.success(
+                        context,
+                        context.l10n.themeResetSuccess,
+                      );
+                    }
+                  },
                 ),
-                const SizedBox(height: DS.xl),
-                const GraphiteCardSurface(
-                  child: _ColorPreviewSection(),
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(height: DS.xl),
+              const GraphiteCardSurface(
+                child: _ColorPreviewSection(),
+              ),
+            ],
           ),
         ),
       ),
@@ -94,7 +82,6 @@ class ThemeSettingsScreen extends ConsumerWidget {
   }
 }
 
-/// 主题模式选择部分
 class _ThemeModeSection extends StatelessWidget {
   const _ThemeModeSection({
     required this.currentMode,
@@ -108,97 +95,93 @@ class _ThemeModeSection extends StatelessWidget {
   Widget build(BuildContext context) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            context.l10n.themeModeSection,
-            style: Theme.of(context).textTheme.titleMedium,
+          const _SectionIntro(
+            title: '主题模式',
+            description: '控制页面亮暗模式，让视觉节奏和使用环境保持一致。',
           ),
           const SizedBox(height: DS.md),
-          _SegmentedThemeButton(
-            currentMode: currentMode,
-            onModeChanged: onModeChanged,
+          DecoratedBox(
+            decoration: BoxDecoration(
+              border: Border.all(color: DS.borderSubtle),
+              borderRadius: BorderRadius.circular(DS.md),
+              color: DS.surfaceSecondary,
+            ),
+            child: Row(
+              children: [
+                _SegmentItem(
+                  label: context.l10n.themeModeLight,
+                  selected: currentMode == AppThemeMode.light,
+                  onTap: () => onModeChanged(AppThemeMode.light),
+                  isLeading: true,
+                ),
+                _SegmentItem(
+                  label: context.l10n.themeModeDark,
+                  selected: currentMode == AppThemeMode.dark,
+                  onTap: () => onModeChanged(AppThemeMode.dark),
+                ),
+                _SegmentItem(
+                  label: context.l10n.themeModeSystem,
+                  selected: currentMode == AppThemeMode.system,
+                  onTap: () => onModeChanged(AppThemeMode.system),
+                  isTrailing: true,
+                ),
+              ],
+            ),
           ),
         ],
       );
 }
 
-/// 分段的主题切换按钮
-class _SegmentedThemeButton extends StatelessWidget {
-  const _SegmentedThemeButton({
-    required this.currentMode,
-    required this.onModeChanged,
+class _SegmentItem extends StatelessWidget {
+  const _SegmentItem({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    this.isLeading = false,
+    this.isTrailing = false,
   });
 
-  final AppThemeMode currentMode;
-  final void Function(AppThemeMode) onModeChanged;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  final bool isLeading;
+  final bool isTrailing;
 
   @override
-  Widget build(BuildContext context) {
-    const modes = AppThemeMode.values;
-    final modeLabels = [
-      context.l10n.themeModeLight,
-      context.l10n.themeModeDark,
-      context.l10n.themeModeSystem,
-    ];
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        border: Border.all(color: DS.brandPrimary30),
-        borderRadius: BorderRadius.circular(DS.md),
-      ),
-      child: Row(
-        children: List.generate(modes.length, (index) {
-          final mode = modes[index];
-          final label = modeLabels[index];
-          final isSelected = currentMode == mode;
-
-          return Expanded(
-            child: GestureDetector(
-              onTap: () => onModeChanged(mode),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: DS.md),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? DS.brandPrimary
-                      : DS.surfacePrimary.withValues(alpha: 0),
-                  borderRadius: index == 0
+  Widget build(BuildContext context) => Expanded(
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: DS.md),
+            decoration: BoxDecoration(
+              color: selected ? DS.brandPrimary : Colors.transparent,
+              borderRadius: isLeading
+                  ? const BorderRadius.only(
+                      topLeft: Radius.circular(DS.md - 2),
+                      bottomLeft: Radius.circular(DS.md - 2),
+                    )
+                  : isTrailing
                       ? const BorderRadius.only(
-                          topLeft: Radius.circular(DS.md - 2),
-                          bottomLeft: Radius.circular(DS.md - 2),
+                          topRight: Radius.circular(DS.md - 2),
+                          bottomRight: Radius.circular(DS.md - 2),
                         )
-                      : index == modes.length - 1
-                          ? const BorderRadius.only(
-                              topRight: Radius.circular(DS.md - 2),
-                              bottomRight: Radius.circular(DS.md - 2),
-                            )
-                          : BorderRadius.zero,
-                  border: index > 0
-                      ? Border(
-                          left: BorderSide(color: DS.brandPrimary30),
-                        )
-                      : null,
-                ),
-                child: Center(
-                  child: Text(
-                    label,
-                    style: TextStyle(
-                      color: isSelected
-                          ? DS.textOnPrimary
-                          : Theme.of(context).textTheme.bodyMedium?.color,
-                      fontWeight:
-                          isSelected ? FontWeight.w600 : FontWeight.normal,
-                    ),
-                  ),
+                      : BorderRadius.zero,
+            ),
+            child: Center(
+              child: Text(
+                label,
+                style: DS.bodyMedium.copyWith(
+                  color: selected ? DS.textOnPrimary : DS.textPrimary,
+                  fontWeight:
+                      selected ? DS.fontWeightSemibold : DS.fontWeightRegular,
                 ),
               ),
             ),
-          );
-        }),
-      ),
-    );
-  }
+          ),
+        ),
+      );
 }
 
-/// 品牌预设选择部分
 class _BrandPresetSection extends StatelessWidget {
   const _BrandPresetSection({
     required this.currentPreset,
@@ -212,17 +195,17 @@ class _BrandPresetSection extends StatelessWidget {
   Widget build(BuildContext context) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            context.l10n.brandPresetSection,
-            style: Theme.of(context).textTheme.titleMedium,
+          const _SectionIntro(
+            title: '品牌预设',
+            description: '切换整套色彩底调，让整体气质更贴近你的使用习惯。',
           ),
           const SizedBox(height: DS.md),
           Wrap(
             spacing: DS.md,
             runSpacing: DS.md,
             children: BrandPreset.values.map((preset) {
-              final isSelected = currentPreset == preset;
-              final presetName = switch (preset) {
+              final selected = currentPreset == preset;
+              final label = switch (preset) {
                 BrandPreset.sparkle => context.l10n.brandPresetSparkle,
                 BrandPreset.ocean => context.l10n.brandPresetOcean,
                 BrandPreset.forest => context.l10n.brandPresetForest,
@@ -237,22 +220,28 @@ class _BrandPresetSection extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     border: Border.all(
-                      color: isSelected ? DS.brandPrimary : DS.brandPrimary30,
-                      width: isSelected ? 2 : 1,
+                      color: selected ? DS.brandPrimary : DS.borderSubtle,
+                      width: selected ? 2 : 1,
                     ),
                     borderRadius: BorderRadius.circular(DS.md),
-                    color: isSelected
-                        ? DS.brandPrimary12
-                        : DS.surfacePrimary.withValues(alpha: 0),
+                    color: selected ? DS.brandPrimary12 : DS.surfaceSecondary,
+                    boxShadow: selected
+                        ? [
+                            BoxShadow(
+                              color: DS.brandPrimary.withValues(alpha: 0.12),
+                              blurRadius: 18,
+                              offset: const Offset(0, 10),
+                            ),
+                          ]
+                        : null,
                   ),
                   child: Text(
-                    presetName,
-                    style: TextStyle(
-                      fontWeight:
-                          isSelected ? FontWeight.w600 : FontWeight.normal,
-                      color: isSelected
-                          ? DS.brandPrimary
-                          : Theme.of(context).textTheme.bodyMedium?.color,
+                    label,
+                    style: DS.bodyMedium.copyWith(
+                      fontWeight: selected
+                          ? DS.fontWeightSemibold
+                          : DS.fontWeightRegular,
+                      color: selected ? DS.brandPrimary : DS.textPrimary,
                     ),
                   ),
                 ),
@@ -263,7 +252,6 @@ class _BrandPresetSection extends StatelessWidget {
       );
 }
 
-/// 高对比度模式部分
 class _HighContrastSection extends StatelessWidget {
   const _HighContrastSection({
     required this.highContrast,
@@ -275,24 +263,15 @@ class _HighContrastSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                context.l10n.highContrastSection,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: DS.xs),
-              Text(
-                context.l10n.highContrastDesc,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: DS.textSecondary,
-                    ),
-              ),
-            ],
+          Expanded(
+            child: _SectionIntro(
+              title: context.l10n.highContrastSection,
+              description: context.l10n.highContrastDesc,
+            ),
           ),
+          const SizedBox(width: DS.spacing12),
           Switch(
             value: highContrast,
             onChanged: onToggled,
@@ -302,7 +281,6 @@ class _HighContrastSection extends StatelessWidget {
       );
 }
 
-/// 恢复默认值按钮
 class _ResetButton extends StatelessWidget {
   const _ResetButton({required this.onPressed});
 
@@ -319,7 +297,6 @@ class _ResetButton extends StatelessWidget {
       );
 }
 
-/// 颜色预览部分
 class _ColorPreviewSection extends ConsumerWidget {
   const _ColorPreviewSection();
 
@@ -331,12 +308,11 @@ class _ColorPreviewSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          context.l10n.colorPreviewSection,
-          style: Theme.of(context).textTheme.titleMedium,
+        const _SectionIntro(
+          title: '颜色预览',
+          description: '快速确认品牌色、语义色和任务色彩在当前主题下的表现。',
         ),
         const SizedBox(height: DS.md),
-        // Brand Colors
         Row(
           children: [
             Expanded(
@@ -355,7 +331,6 @@ class _ColorPreviewSection extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: DS.md),
-        // Semantic Colors
         Row(
           children: [
             Expanded(
@@ -381,12 +356,11 @@ class _ColorPreviewSection extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: DS.md),
-        // Task Type Colors
         Text(
           context.l10n.taskTypeColors,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+          style: DS.bodyMedium.copyWith(
+            fontWeight: DS.fontWeightSemibold,
+          ),
         ),
         const SizedBox(height: DS.md),
         Wrap(
@@ -430,7 +404,6 @@ class _ColorPreviewSection extends ConsumerWidget {
   }
 }
 
-/// 颜色展示框
 class _ColorBox extends StatelessWidget {
   const _ColorBox({
     required this.color,
@@ -461,10 +434,46 @@ class _ColorBox extends StatelessWidget {
             ),
           ),
           const SizedBox(height: DS.xs),
+          SizedBox(
+            width: size + 8,
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.bodySmall,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      );
+}
+
+class _SectionIntro extends StatelessWidget {
+  const _SectionIntro({
+    required this.title,
+    required this.description,
+  });
+
+  final String title;
+  final String description;
+
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall,
-            textAlign: TextAlign.center,
+            title,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: DS.fontWeightSemibold,
+                ),
+          ),
+          const SizedBox(height: DS.spacing4),
+          Text(
+            description,
+            style: DS.bodySmall.copyWith(
+              color: DS.textSecondary,
+              height: 1.35,
+            ),
           ),
         ],
       );

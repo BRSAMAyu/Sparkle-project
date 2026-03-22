@@ -54,6 +54,7 @@ Last updated: 2026-03-21
 | Scene | Asset | Duration | Notes |
 |---|---|---|---|
 | Rain | `rain.ogg` | 32s | periodic noise bed + droplet texture |
+| Ocean | `ocean_waves.ogg` | 96s | trimmed natural wave bed for calmer focus sessions |
 | White noise | `white_noise.ogg` | 32s | balanced broadband mask |
 | Cafe | `cafe.ogg` | 32s | warm room noise + sparse clink accents |
 | Piano | `piano.ogg` | 32s | soft tonal loop over subtle pad |

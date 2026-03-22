@@ -29,7 +29,7 @@ class ProfileScreen extends ConsumerWidget {
     if (user == null) return const SizedBox.shrink();
 
     return GraphiteScaffold(
-      role: SparklePageRole.content,
+      role: SparklePageRole.settings,
       safeArea: false,
       child: SingleChildScrollView(
         padding: EdgeInsets.zero,
@@ -98,12 +98,22 @@ class ProfileScreen extends ConsumerWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            prestigeColor.withValues(alpha: 0.16),
-            DS.surfaceSecondary,
+            Color.alphaBlend(
+              prestigeColor.withValues(alpha: 0.12),
+              DS.surfaceSecondary,
+            ),
+            DS.surfacePrimaryElevated,
           ],
         ),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: prestigeColor.withValues(alpha: 0.24)),
+        border: Border.all(color: prestigeColor.withValues(alpha: 0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: prestigeColor.withValues(alpha: 0.08),
+            blurRadius: 22,
+            offset: const Offset(0, 14),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -175,8 +185,16 @@ class ProfileScreen extends ConsumerWidget {
                 child: Container(
                   padding: const EdgeInsets.all(DS.spacing12),
                   decoration: BoxDecoration(
-                    color: DS.surfacePrimary.withValues(alpha: 0.9),
+                    color: Color.alphaBlend(
+                      _rarityColor(item.achievement.rarity)
+                          .withValues(alpha: 0.06),
+                      DS.surfacePrimary.withValues(alpha: 0.9),
+                    ),
                     borderRadius: DS.borderRadius16,
+                    border: Border.all(
+                      color: _rarityColor(item.achievement.rarity)
+                          .withValues(alpha: 0.14),
+                    ),
                   ),
                   child: Row(
                     children: [
@@ -311,6 +329,7 @@ class ProfileScreen extends ConsumerWidget {
                 children: [
                   const SizedBox(height: DS.spacing16),
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       // Avatar Area
                       DecoratedBox(
@@ -340,6 +359,8 @@ class ProfileScreen extends ConsumerWidget {
                           children: [
                             Text(
                               user.nickname ?? user.username,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: Theme.of(context)
                                   .textTheme
                                   .headlineSmall
@@ -349,41 +370,23 @@ class ProfileScreen extends ConsumerWidget {
                                   ),
                             ),
                             const SizedBox(height: DS.sm),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: DS.surfaceOverlay,
-                                borderRadius: DS.borderRadius20,
-                                border: Border.all(color: DS.borderSubtle),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.local_fire_department_rounded,
-                                    color: DS.brandPrimaryConst,
-                                    size: 16,
-                                  ),
-                                  const SizedBox(width: DS.xs),
-                                  Text(
-                                    '${l10n.levelPrefix}${user.flameLevel}',
-                                    style: DS.labelLarge.copyWith(
-                                      color: DS.textPrimary,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                  const SizedBox(width: DS.sm),
-                                  Text(
-                                    '${l10n.brightness} ${(user.flameBrightness * 100).toInt()}%',
-                                    style: DS.labelSmall.copyWith(
-                                      color: DS.textSecondary,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                            Wrap(
+                              spacing: DS.spacing8,
+                              runSpacing: DS.spacing8,
+                              children: [
+                                _buildHeaderPill(
+                                  icon: Icons.local_fire_department_rounded,
+                                  label:
+                                      '${l10n.levelPrefix}${user.flameLevel}',
+                                  accent: DS.brandPrimaryConst,
+                                ),
+                                _buildHeaderPill(
+                                  icon: Icons.bolt_rounded,
+                                  label:
+                                      '${l10n.brightness} ${(user.flameBrightness * 100).toInt()}%',
+                                  accent: DS.info,
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -398,6 +401,42 @@ class ProfileScreen extends ConsumerWidget {
       ),
     );
   }
+
+  Widget _buildHeaderPill({
+    required IconData icon,
+    required String label,
+    required Color accent,
+  }) =>
+      Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing10,
+          vertical: DS.spacing6,
+        ),
+        decoration: BoxDecoration(
+          color: Color.alphaBlend(
+            accent.withValues(alpha: 0.1),
+            DS.surfaceOverlay,
+          ),
+          borderRadius: DS.borderRadius20,
+          border: Border.all(
+            color: accent.withValues(alpha: 0.14),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: accent, size: 16),
+            const SizedBox(width: DS.spacing6),
+            Text(
+              label,
+              style: DS.labelSmall.copyWith(
+                color: DS.textPrimary,
+                fontWeight: DS.fontWeightSemibold,
+              ),
+            ),
+          ],
+        ),
+      );
 
   Widget _buildSettingsSection(
     BuildContext context,
@@ -593,9 +632,8 @@ class ProfileScreen extends ConsumerWidget {
         padding: const EdgeInsets.only(left: DS.spacing4),
         child: Text(
           title,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: DS.fontWeightMedium,
+          style: DS.labelLarge.copyWith(
+            letterSpacing: 0.2,
             color: DS.textSecondary,
           ),
         ),
@@ -614,7 +652,7 @@ class ProfileScreen extends ConsumerWidget {
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(
         horizontal: DS.spacing16,
-        vertical: DS.spacing4,
+        vertical: DS.spacing6,
       ),
       leading: Container(
         padding: const EdgeInsets.all(DS.sm),
@@ -634,11 +672,39 @@ class ProfileScreen extends ConsumerWidget {
         ),
         child: Icon(icon, color: accentColor, size: 20),
       ),
-      title: Text(
-        title,
-        style: TextStyle(
-          color: isDestructive ? DS.error : DS.textPrimary,
-          fontWeight: DS.fontWeightMedium,
+      title: Row(
+        children: [
+          Expanded(
+            child: Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: isDestructive ? DS.error : DS.textPrimary,
+                fontWeight: DS.fontWeightMedium,
+              ),
+            ),
+          ),
+          const SizedBox(width: DS.spacing8),
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: accentColor.withValues(alpha: 0.7),
+              shape: BoxShape.circle,
+            ),
+          ),
+        ],
+      ),
+      subtitle: Padding(
+        padding: const EdgeInsets.only(top: DS.spacing4),
+        child: Text(
+          _settingsSubtitle(title),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: DS.bodySmall.copyWith(
+            color: DS.textSecondary,
+          ),
         ),
       ),
       trailing: Icon(
@@ -647,6 +713,34 @@ class ProfileScreen extends ConsumerWidget {
         color: DS.neutral400,
       ),
     );
+  }
+
+  String _settingsSubtitle(String title) {
+    switch (title) {
+      case '成就':
+      case '成就系统':
+        return '查看已解锁的里程碑与荣誉进度';
+      case '视觉元素':
+        return '管理背景、粒子和视觉奖励';
+      case '我的画像':
+      case '我的人格画像':
+        return '查看系统理解到的学习特征与偏好';
+      case '个人资料':
+        return '编辑头像、昵称和基础资料';
+      case '偏好设置':
+      case '日程偏好':
+        return '管理感官反馈、学习模式与推送偏好';
+      case '账号安全':
+        return '查看安全信息、设备与隐私控制';
+      case '记忆管理':
+        return '调整长期记忆与上下文保留策略';
+      case '退出登录':
+        return '安全退出当前账号';
+      case '删除账号':
+        return '永久移除账号与相关数据';
+      default:
+        return '进入此页面继续调整详细设置';
+    }
   }
 }
 

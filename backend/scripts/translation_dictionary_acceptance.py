@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import time
+import uuid
 
 import httpx
 
@@ -33,6 +34,34 @@ def login(client: httpx.Client) -> str:
     raise RuntimeError(f"login failed: {last_error}")
 
 
+def register_ephemeral_user(client: httpx.Client) -> str:
+    username = f"translation_acc_{uuid.uuid4().hex[:10]}"
+    response = client.post(
+        f"{BASE_URL}/auth/register",
+        json={
+            "username": username,
+            "password": PASSWORD,
+            "email": f"{username}@example.com",
+            "accepted_tos": True,
+            "accepted_privacy": True,
+            "tos_version": "local-acceptance",
+            "privacy_version": "local-acceptance",
+            "agreed_locale": "zh-CN",
+        },
+    )
+    ensure(response.status_code == 200, f"ephemeral register failed: {response.status_code} {response.text[:400]}")
+    return response.json()["access_token"]
+
+
+def get_token(client: httpx.Client) -> str:
+    try:
+        return login(client)
+    except RuntimeError as exc:
+        if "429" not in str(exc):
+            raise
+        return register_ephemeral_user(client)
+
+
 def main() -> None:
     package_preview_path = (
         Path(__file__).resolve().parents[2]
@@ -45,7 +74,7 @@ def main() -> None:
         package_preview_path.unlink()
 
     with httpx.Client(timeout=60.0) as client:
-        token = login(client)
+        token = get_token(client)
         headers = {"Authorization": f"Bearer {token}"}
 
         lookup = client.get(

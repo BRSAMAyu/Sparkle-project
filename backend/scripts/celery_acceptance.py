@@ -46,6 +46,10 @@ from scripts._acceptance_common import BASE_URL, REQUEST_TIMEOUT_SECONDS, assert
 
 ROOT = Path(__file__).resolve().parents[2]
 PASSWORD = os.getenv("LOCAL_SMOKE_PASSWORD", "Chat123456")
+POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "change-me")
+REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", "change-me")
+BEAT_CONTAINER = "sparkle_celery_beat"
+BEAT_IMAGE = os.getenv("CELERY_BEAT_IMAGE", "sparkle-project-sparkle_api:latest")
 
 
 def _email(prefix: str) -> str:
@@ -65,6 +69,50 @@ def _run(cmd: str, *, check: bool = True) -> subprocess.CompletedProcess[str]:
         capture_output=True,
         check=check,
     )
+
+
+def _ensure_beat_running() -> None:
+    inspect = _run(f"docker inspect {BEAT_CONTAINER}", check=False)
+    if inspect.returncode == 0:
+        running = _run(
+            f"docker inspect -f '{{{{.State.Running}}}}' {BEAT_CONTAINER}",
+            check=False,
+        )
+        if running.stdout.strip() == "true":
+            return
+        _run(f"docker start {BEAT_CONTAINER}", check=False)
+        return
+
+    database_url = f"postgresql://postgres:{POSTGRES_PASSWORD}@sparkle_db:5432/sparkle"
+    broker_url = f"redis://:{REDIS_PASSWORD}@sparkle_redis:6379/1"
+    result_backend = f"redis://:{REDIS_PASSWORD}@sparkle_redis:6379/2"
+    _run(
+        " ".join(
+            [
+                f"docker run -d --name {BEAT_CONTAINER}",
+                "--network sparkle-project_default",
+                f"-e DATABASE_URL={database_url}",
+                f"-e REDIS_URL={broker_url}",
+                f"-e CELERY_BROKER_URL={broker_url}",
+                f"-e CELERY_RESULT_BACKEND={result_backend}",
+                BEAT_IMAGE,
+                "celery -A app.core.celery_app beat -l info",
+            ]
+        ),
+        check=False,
+    )
+
+
+def _wait_for_beat_logs(timeout_seconds: int = 30) -> str:
+    deadline = time.monotonic() + timeout_seconds
+    last_text = ""
+    while time.monotonic() < deadline:
+        beat_logs = _run(f"docker logs --tail=200 {BEAT_CONTAINER}", check=False)
+        last_text = f"{beat_logs.stdout}\n{beat_logs.stderr}"
+        if "Scheduler" in last_text or "beat:" in last_text or "Sending due task" in last_text:
+            return last_text
+        time.sleep(2)
+    raise RuntimeError("CEL-02 failed: beat logs do not show scheduler activity")
 
 
 async def _create_user(prefix: str) -> dict[str, str]:
@@ -205,9 +253,8 @@ async def main() -> int:
     summary["CEL-01"] = "PASS"
     summary["CEL-03"] = "PASS"
 
-    beat_logs = _run("docker logs --tail=200 sparkle_celery_beat", check=False)
-    beat_text = f"{beat_logs.stdout}\n{beat_logs.stderr}"
-    ensure("Scheduler" in beat_text or "beat:" in beat_text or "Sending due task" in beat_text, "CEL-02 failed: beat logs do not show scheduler activity")
+    _ensure_beat_running()
+    _wait_for_beat_logs()
     summary["CEL-02"] = "PASS"
 
     probe = celery_app.send_task("acceptance.sleep_probe_task", kwargs={"seconds": 2.2}, queue="default")

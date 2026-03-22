@@ -114,92 +114,109 @@ class _ToolLibraryScreenState extends ConsumerState<ToolLibraryScreen>
     return ListView(
       padding: const EdgeInsets.all(DS.spacing16),
       children: [
-        TextField(
-          controller: _searchController,
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: Color.alphaBlend(
-              DS.info.withValues(alpha: 0.02),
-              DS.surfacePrimary,
-            ),
-            hintText: l10n.toolsSearchHint,
-            prefixIcon: const Icon(Icons.search_rounded),
-            suffixIcon: query.isEmpty
-                ? null
-                : IconButton(
-                    onPressed: _searchController.clear,
-                    icon: const Icon(Icons.close_rounded),
-                  ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(18),
-              borderSide: BorderSide(
-                color: DS.border.withValues(alpha: 0.45),
+        SparkleStaggerItem(
+          index: 0,
+          child: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: Color.alphaBlend(
+                DS.info.withValues(alpha: 0.02),
+                DS.surfacePrimary,
               ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(18),
-              borderSide: BorderSide(
-                color: DS.info.withValues(alpha: 0.35),
+              hintText: l10n.toolsSearchHint,
+              prefixIcon: const Icon(Icons.search_rounded),
+              suffixIcon: query.isEmpty
+                  ? null
+                  : IconButton(
+                      onPressed: _searchController.clear,
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(18),
+                borderSide: BorderSide(
+                  color: DS.border.withValues(alpha: 0.45),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(18),
+                borderSide: BorderSide(
+                  color: DS.info.withValues(alpha: 0.35),
+                ),
               ),
             ),
           ),
         ),
         if (recentTools.isNotEmpty && query.isEmpty) ...[
           const SizedBox(height: DS.spacing20),
-          _SectionHeader(
-            title: l10n.toolsRecentTitle,
-            actionLabel: l10n.toolsManagePinned,
-            onTap: () {
-              _tabController.animateTo(1);
-            },
+          SparkleStaggerItem(
+            index: 1,
+            child: _SectionHeader(
+              title: l10n.toolsRecentTitle,
+              actionLabel: l10n.toolsManagePinned,
+              onTap: () {
+                _tabController.animateTo(1);
+              },
+            ),
           ),
           const SizedBox(height: DS.spacing12),
-          Wrap(
-            spacing: DS.spacing12,
-            runSpacing: DS.spacing12,
-            children: recentTools
-                .map(
-                  (tool) => _LibraryToolCard(
-                    tool: tool,
-                    pinned: prefs.pinnedToolIds.contains(tool.id),
-                    onOpen: () => launchTool(
-                      context,
-                      ref,
-                      tool.id,
-                      launchContext: ToolLaunchContext.toolLibrary,
+          SparkleStaggerItem(
+            index: 2,
+            child: Wrap(
+              spacing: DS.spacing12,
+              runSpacing: DS.spacing12,
+              children: recentTools
+                  .map(
+                    (tool) => _LibraryToolCard(
+                      tool: tool,
+                      pinned: prefs.pinnedToolIds.contains(tool.id),
+                      onOpen: () => launchTool(
+                        context,
+                        ref,
+                        tool.id,
+                        launchContext: ToolLaunchContext.toolLibrary,
+                      ),
+                      onTogglePin: () => ref
+                          .read(toolPreferencesProvider.notifier)
+                          .togglePinned(tool.id),
                     ),
-                    onTogglePin: () => ref
-                        .read(toolPreferencesProvider.notifier)
-                        .togglePinned(tool.id),
-                  ),
-                )
-                .toList(),
+                  )
+                  .toList(),
+            ),
           ),
         ],
         const SizedBox(height: DS.spacing20),
-        for (final entry in grouped.entries) ...[
-          _SectionHeader(title: _categoryLabel(entry.key, context)),
+        for (final indexedEntry in grouped.entries.indexed) ...[
+          SparkleStaggerItem(
+            index: indexedEntry.$1 + 3,
+            child: _SectionHeader(
+              title: _categoryLabel(indexedEntry.$2.key, context),
+            ),
+          ),
           const SizedBox(height: DS.spacing12),
-          Wrap(
-            spacing: DS.spacing12,
-            runSpacing: DS.spacing12,
-            children: entry.value
-                .map(
-                  (tool) => _LibraryToolCard(
-                    tool: tool,
-                    pinned: prefs.pinnedToolIds.contains(tool.id),
-                    onOpen: () => launchTool(
-                      context,
-                      ref,
-                      tool.id,
-                      launchContext: ToolLaunchContext.toolLibrary,
+          SparkleStaggerItem(
+            index: indexedEntry.$1 + 4,
+            child: Wrap(
+              spacing: DS.spacing12,
+              runSpacing: DS.spacing12,
+              children: indexedEntry.$2.value
+                  .map(
+                    (tool) => _LibraryToolCard(
+                      tool: tool,
+                      pinned: prefs.pinnedToolIds.contains(tool.id),
+                      onOpen: () => launchTool(
+                        context,
+                        ref,
+                        tool.id,
+                        launchContext: ToolLaunchContext.toolLibrary,
+                      ),
+                      onTogglePin: () => ref
+                          .read(toolPreferencesProvider.notifier)
+                          .togglePinned(tool.id),
                     ),
-                    onTogglePin: () => ref
-                        .read(toolPreferencesProvider.notifier)
-                        .togglePinned(tool.id),
-                  ),
-                )
-                .toList(),
+                  )
+                  .toList(),
+            ),
           ),
           const SizedBox(height: DS.spacing20),
         ],

@@ -124,10 +124,37 @@ smoke:
 	echo "🔎 Running config self-check..."; \
 	$(BACKEND_PYTHON) backend/scripts/check_config_effective.py; \
 	echo "🔎 Checking backend health..."; \
-	curl -fsS http://localhost:8000/health > /dev/null || (echo "❌ Backend /health failed" && exit 1); \
+	for i in 1 2 3 4 5 6 7 8 9 10; do \
+		if curl -fsS http://localhost:8000/health > /dev/null; then \
+			break; \
+		fi; \
+		if [ $$i -eq 10 ]; then \
+			echo "❌ Backend /health failed"; \
+			exit 1; \
+		fi; \
+		sleep 2; \
+	done; \
 	echo "🔎 Checking gateway health..."; \
-	curl -fsS http://localhost:8080/api/v1/health > /dev/null || (echo "❌ Gateway /api/v1/health failed" && exit 1); \
-	curl -fsS http://localhost:8080/api/v1/health/cqrs > /dev/null || (echo "❌ Gateway /api/v1/health/cqrs failed" && exit 1); \
+	for i in 1 2 3 4 5 6 7 8 9 10; do \
+		if curl -fsS http://localhost:8080/api/v1/health > /dev/null; then \
+			break; \
+		fi; \
+		if [ $$i -eq 10 ]; then \
+			echo "❌ Gateway /api/v1/health failed"; \
+			exit 1; \
+		fi; \
+		sleep 2; \
+	done; \
+	for i in 1 2 3 4 5 6 7 8 9 10; do \
+		if curl -fsS http://localhost:8080/api/v1/health/cqrs > /dev/null; then \
+			break; \
+		fi; \
+		if [ $$i -eq 10 ]; then \
+			echo "❌ Gateway /api/v1/health/cqrs failed"; \
+			exit 1; \
+		fi; \
+		sleep 2; \
+	done; \
 	echo "✅ Smoke checks passed."
 
 quality-baseline:
@@ -443,7 +470,7 @@ community-test:
 
 file-pipeline-test:
 	@echo "📎 Running file upload + vectorization smoke..."
-	@TOKEN=$$(cd backend && ../$(BACKEND_PYTHON) -c "import httpx; resp = httpx.post('http://127.0.0.1:8000/api/v1/auth/login', json={'username':'chat_test','password':'Chat123456'}, timeout=20.0); resp.raise_for_status(); print(resp.json()['access_token'])"); \
+	@TOKEN=$$(cd backend && ../$(BACKEND_PYTHON) scripts/print_local_smoke_token.py); \
 	DATABASE_URL=$$(cd backend && ../$(BACKEND_PYTHON) -c "import os, sys; sys.path.append(os.getcwd()); from app.config import settings; print(settings.DATABASE_URL)"); \
 	TOKEN="$$TOKEN" DATABASE_URL="$$DATABASE_URL" $(BACKEND_PYTHON) scripts/smoke_file_pipeline.py --file backend/test_weekly_report.pdf --token "$$TOKEN" --database-url "$$DATABASE_URL"
 

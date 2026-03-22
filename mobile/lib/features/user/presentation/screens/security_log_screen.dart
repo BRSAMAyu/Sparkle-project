@@ -43,7 +43,8 @@ class _SecurityLogScreenState extends ConsumerState<SecurityLogScreen> {
     }
   }
 
-  String _formatTime(DateTime value) => Formatters.formatDateTime(value.toLocal());
+  String _formatTime(DateTime value) =>
+      Formatters.formatDateTime(value.toLocal());
 
   String _actionLabel(String action) {
     final l10n = context.l10n;
@@ -141,10 +142,41 @@ class _SecurityLogScreenState extends ConsumerState<SecurityLogScreen> {
             child: ListView(
               padding: const EdgeInsets.all(DS.spacing24),
               children: [
-                GraphiteCardSurface(
-                  child: Text(
-                    context.l10n.securityLogIntro,
-                    style: Theme.of(context).textTheme.bodyMedium,
+                SparkleStaggerItem(
+                  index: 0,
+                  child: GraphiteCardSurface(
+                    surfaceRole: SparkleSurfaceRole.panel,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Wrap(
+                          spacing: DS.spacing8,
+                          runSpacing: DS.spacing8,
+                          children: [
+                            _buildInfoChip(
+                              context,
+                              icon: Icons.history_rounded,
+                              label: '共 ${_logs.length} 条记录',
+                            ),
+                            _buildInfoChip(
+                              context,
+                              icon: Icons.warning_amber_rounded,
+                              label:
+                                  '异常 ${_logs.where((item) => item.action == 'login_failed' || item.action == 'account_delete').length} 条',
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: DS.spacing12),
+                        Text(
+                          context.l10n.securityLogIntro,
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: DS.textSecondary,
+                                    height: 1.45,
+                                  ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: DS.spacing16),
@@ -167,109 +199,142 @@ class _SecurityLogScreenState extends ConsumerState<SecurityLogScreen> {
 
                       return Padding(
                         padding: const EdgeInsets.only(bottom: DS.spacing12),
-                        child: GraphiteCardSurface(
-                          child: InkWell(
-                            borderRadius: DS.borderRadius16,
-                            onTap: () {
-                              setState(() {
-                                if (isExpanded) {
-                                  _expandedIndices.remove(index);
-                                } else {
-                                  _expandedIndices.add(index);
-                                }
-                              });
-                            },
-                            child: Padding(
-                              padding: const EdgeInsets.all(DS.spacing16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(DS.sm),
-                                        decoration: BoxDecoration(
-                                          color: color.withValues(alpha: 0.12),
-                                          borderRadius: DS.borderRadius8,
+                        child: SparkleStaggerItem(
+                          index: index + 1,
+                          child: GraphiteCardSurface(
+                            child: InkWell(
+                              borderRadius: DS.borderRadius16,
+                              onTap: () {
+                                setState(() {
+                                  if (isExpanded) {
+                                    _expandedIndices.remove(index);
+                                  } else {
+                                    _expandedIndices.add(index);
+                                  }
+                                });
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.all(DS.spacing16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(DS.sm),
+                                          decoration: BoxDecoration(
+                                            color:
+                                                color.withValues(alpha: 0.12),
+                                            borderRadius: DS.borderRadius8,
+                                          ),
+                                          child: Icon(
+                                            _actionIcon(item.action),
+                                            size: 18,
+                                            color: color,
+                                          ),
                                         ),
-                                        child: Icon(
-                                          _actionIcon(item.action),
-                                          size: 18,
-                                          color: color,
-                                        ),
-                                      ),
-                                      const SizedBox(width: DS.spacing12),
-                                      Expanded(
-                                        child: Text(
-                                          _actionLabel(item.action),
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .titleMedium
-                                              ?.copyWith(
-                                                fontWeight: FontWeight.w700,
+                                        const SizedBox(width: DS.spacing12),
+                                        Expanded(
+                                          child: Wrap(
+                                            spacing: DS.spacing8,
+                                            runSpacing: DS.spacing8,
+                                            children: [
+                                              Text(
+                                                _actionLabel(item.action),
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .titleMedium
+                                                    ?.copyWith(
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                    ),
                                               ),
+                                              _SecurityStatePill(
+                                                label: item.action,
+                                                color: color,
+                                              ),
+                                            ],
+                                          ),
                                         ),
-                                      ),
-                                      Icon(
-                                        isExpanded
-                                            ? Icons.keyboard_arrow_up_rounded
-                                            : Icons.keyboard_arrow_down_rounded,
-                                        color: DS.textSecondary,
-                                        size: 20,
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: DS.spacing8),
-                                  Text(
-                                    context.l10n.securityLogOccurredAt(
-                                      _formatTime(item.occurredAt),
-                                    ),
-                                    style: TextStyle(
-                                      color: DS.textSecondary,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                  if ((item.ipAddress ?? '').isNotEmpty)
-                                    SelectableText(
-                                      'IP: ${item.ipAddress}',
-                                      style: TextStyle(
-                                        color: DS.textSecondary,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                  if (isExpanded) ...[
-                                    const SizedBox(height: DS.spacing8),
-                                    if ((item.userAgent ?? '').isNotEmpty)
-                                      Text(
-                                        context.l10n.securityLogDevice(
-                                          item.userAgent!,
+                                        Icon(
+                                          isExpanded
+                                              ? Icons.keyboard_arrow_up_rounded
+                                              : Icons
+                                                  .keyboard_arrow_down_rounded,
+                                          color: DS.textSecondary,
+                                          size: 20,
                                         ),
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodySmall
-                                            ?.copyWith(
-                                              color: DS.textSecondary,
+                                      ],
+                                    ),
+                                    const SizedBox(height: DS.spacing10),
+                                    _buildMetaLine(
+                                      context.l10n.securityLogOccurredAt(
+                                        _formatTime(item.occurredAt),
+                                      ),
+                                    ),
+                                    if ((item.ipAddress ?? '').isNotEmpty)
+                                      _buildMetaLine('IP: ${item.ipAddress}'),
+                                    if (isExpanded) ...[
+                                      const SizedBox(height: DS.spacing10),
+                                      if ((item.userAgent ?? '').isNotEmpty)
+                                        Container(
+                                          padding: const EdgeInsets.all(
+                                            DS.spacing12,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: DS.surfaceSecondary,
+                                            borderRadius: DS.borderRadius12,
+                                            border: Border.all(
+                                              color: DS.borderSubtle,
                                             ),
-                                        maxLines: 3,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    if ((item.metadata ?? const {})
-                                        .isNotEmpty) ...[
-                                      const SizedBox(height: DS.spacing4),
-                                      Text(
-                                        context.l10n.securityLogAdditionalInfo(
-                                          item.metadata.toString(),
-                                        ),
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodySmall
-                                            ?.copyWith(
-                                              color: DS.textSecondary,
+                                          ),
+                                          child: Text(
+                                            context.l10n.securityLogDevice(
+                                              item.userAgent!,
                                             ),
-                                      ),
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodySmall
+                                                ?.copyWith(
+                                                  color: DS.textSecondary,
+                                                  height: 1.4,
+                                                ),
+                                            maxLines: 3,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      if ((item.metadata ?? const {})
+                                          .isNotEmpty) ...[
+                                        const SizedBox(height: DS.spacing8),
+                                        Container(
+                                          padding: const EdgeInsets.all(
+                                            DS.spacing12,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: DS.surfaceSecondary,
+                                            borderRadius: DS.borderRadius12,
+                                            border: Border.all(
+                                              color: DS.borderSubtle,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            context.l10n
+                                                .securityLogAdditionalInfo(
+                                              item.metadata.toString(),
+                                            ),
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodySmall
+                                                ?.copyWith(
+                                                  color: DS.textSecondary,
+                                                  height: 1.4,
+                                                ),
+                                          ),
+                                        ),
+                                      ],
                                     ],
                                   ],
-                                ],
+                                ),
                               ),
                             ),
                           ),
@@ -280,6 +345,74 @@ class _SecurityLogScreenState extends ConsumerState<SecurityLogScreen> {
               ],
             ),
           ),
+        ),
+      );
+
+  Widget _buildInfoChip(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+  }) =>
+      Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing10,
+          vertical: DS.spacing6,
+        ),
+        decoration: BoxDecoration(
+          color: DS.surfaceSecondary,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: DS.borderSubtle),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: DS.textSecondary),
+            const SizedBox(width: DS.spacing6),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: DS.textSecondary,
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+          ],
+        ),
+      );
+
+  Widget _buildMetaLine(String text) => Padding(
+        padding: const EdgeInsets.only(bottom: DS.spacing4),
+        child: SelectableText(
+          text,
+          style: TextStyle(
+            color: DS.textSecondary,
+            fontSize: 13,
+          ),
+        ),
+      );
+}
+
+class _SecurityStatePill extends StatelessWidget {
+  const _SecurityStatePill({required this.label, required this.color});
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing8,
+          vertical: DS.spacing4,
+        ),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(
+          label,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w700,
+              ),
         ),
       );
 }
